@@ -20,6 +20,7 @@
 using maxscale::Monitor;
 using maxscale::MonitorServer;
 using std::string;
+using RType = ssh_util::CmdResult::Type;
 
 namespace
 {
@@ -57,8 +58,10 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
-std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
-bool        check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
+bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** error_out);
+bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
+
+string form_cmd_error_msg(const ssh_util::CmdResult& res, const char* cmd);
 
 /**
  * Command handlers. These are called by the rest-api.
@@ -1151,21 +1154,10 @@ MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
             bool have_tools = true;
 
             // Check installed tools.
-            auto target_tools = check_rebuild_tools(target, *target_ses);
-            auto source_tools = check_rebuild_tools(source, *source_ses);
+            auto target_tools = check_rebuild_tools(target, *target_ses, &rval.output);
+            auto source_tools = check_rebuild_tools(source, *source_ses, &rval.output);
 
-            if (!target_tools.empty())
-            {
-                have_tools = false;
-                rval.output = mxs_json_error_append(rval.output, "%s", target_tools.c_str());
-            }
-            if (!source_tools.empty() != 0)
-            {
-                have_tools = false;
-                rval.output = mxs_json_error_append(rval.output, "%s", source_tools.c_str());
-            }
-
-            if (have_tools)
+            if (target_tools && source_tools)
             {
                 int port = 4444;    // TODO: configurable
                 if (check_free_listen_port(*source_ses, source, port, &rval.output))
@@ -1228,7 +1220,7 @@ bool MariaDBMonitor::rebuild_check_preconds(MariaDBServer* target, MariaDBServer
 
 namespace
 {
-std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
+bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** error_out)
 {
     const char socat_cmd[] = "socat -V";
     const char pigz_cmd[] = "pigz -V";
@@ -1238,42 +1230,33 @@ std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
     auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, ssh_base_timeout);
     auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, ssh_base_timeout);
 
-    string rval;
-    if (socat_res.rc != 0 || pigz_res.rc != 0 || mbu_res.rc != 0)
-    {
-        // At least one is missing.
-        auto append_error = [&rval, server](const ssh_util::CmdResult& res, const char* tool,
-                                            const char* cmd){
+    bool all_ok = true;
+    auto check = [server, &all_ok, error_out](const ssh_util::CmdResult& res, const char* tool,
+                                              const char* cmd) {
+        if (res.type == RType::OK)
+        {
             if (res.rc != 0)
             {
-                string errmsg = mxb::string_printf("'%s' lacks '%s', which is required for server rebuild. "
-                                                   "Command '%s' failed with error %i",
-                                                   server->name(), tool, cmd, res.rc);
-
-                if (res.error_output.empty())
-                {
-                    errmsg.append(".");
-                }
-                else
-                {
-                    errmsg.append(": '").append(res.error_output).append("'.");
-                }
-                MXB_ERROR("%s", errmsg.c_str());
-
-                // Append the error message to the total message, as that message will be printed to json.
-                if (!rval.empty())
-                {
-                    rval.append(" ");
-                }
-                rval.append(errmsg);
+                string fail_reason = form_cmd_error_msg(res, cmd);
+                PRINT_MXS_JSON_ERROR(error_out, "'%s' lacks '%s', which is required for server rebuild. %s",
+                                     server->name(), tool, fail_reason.c_str());
+                all_ok = false;
             }
-        };
-        append_error(socat_res, "socat", socat_cmd);
-        append_error(pigz_res, "pigz", pigz_cmd);
-        append_error(mbu_res, "mariabackup", mbu_cmd);
-    }
+        }
+        else
+        {
+            string fail_reason = form_cmd_error_msg(res, cmd);
+            PRINT_MXS_JSON_ERROR(error_out, "Could not check that '%s' has '%s', which is required for "
+                                            "server rebuild. %s",
+                                 server->name(), tool, fail_reason.c_str());
+            all_ok = false;
+        }
+    };
 
-    return rval;
+    check(socat_res, "socat", socat_cmd);
+    check(pigz_res, "pigz", pigz_cmd);
+    check(mbu_res, "mariabackup", mbu_cmd);
+    return all_ok;
 }
 
 bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out)
@@ -1286,12 +1269,12 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
         // optional if users are not willing to give MaxScale sudo-privs.
         auto port_pid_cmd = mxb::string_printf("sudo lsof -i:%i | tr -s ' ' | cut --fields=2 --delimiter=' ' "
                                                "| tail -n+2", port);
-        auto port_info = ssh_util::run_cmd(ses, port_pid_cmd, ssh_base_timeout);
-        if (port_info.rc == 0)
+        auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, ssh_base_timeout);
+        if (port_res.type == RType::OK && port_res.rc == 0)
         {
-            if (!port_info.output.empty())
+            if (!port_res.output.empty())
             {
-                auto lines = mxb::strtok(port_info.output, "\n");
+                auto lines = mxb::strtok(port_res.output, "\n");
                 for (auto& line : lines)
                 {
                     int pid = 0;
@@ -1301,7 +1284,8 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(error_out, "Could not parse pid from text '%s'.", line.c_str());
+                        PRINT_MXS_JSON_ERROR(error_out, "Could not parse pid from text '%s'.",
+                                             line.c_str());
                         success = false;
                     }
                 }
@@ -1309,9 +1293,9 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Could not fetch pid of process using port %i on %s. "
-                                            "Command '%s' failed. %s", port, server->name(),
-                                 port_pid_cmd.c_str(), port_info.error_output.c_str());
+            string fail_reason = form_cmd_error_msg(port_res, port_pid_cmd.c_str());
+            PRINT_MXS_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
+                                 port, server->name(), fail_reason.c_str());
             success = false;
         }
         return pids;
@@ -1325,10 +1309,11 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
             MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.", port, server->name(), pid);
             auto kill_cmd = mxb::string_printf("kill -s SIGKILL %i", pid);
             auto kill_res = ssh_util::run_cmd(ses, kill_cmd, ssh_base_timeout);
-            if (kill_res.rc != 0)
+            if (kill_res.type != RType::OK || kill_res.rc != 0)
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to kill process %i on %s. Command '%s' failed. %s",
-                                     pid, server->name(), kill_cmd.c_str(), kill_res.error_output.c_str());
+                string fail_reason = form_cmd_error_msg(kill_res, kill_cmd.c_str());
+                PRINT_MXS_JSON_ERROR(error_out, "Failed to kill process %i on %s. %s",
+                                     pid, server->name(), fail_reason.c_str());
                 success = false;
             }
         }
@@ -1349,5 +1334,25 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
     }
 
     return success;
+}
+
+string form_cmd_error_msg(const ssh_util::CmdResult& res, const char* cmd)
+{
+    string rval;
+    if (res.type == RType::OK)
+    {
+        mxb_assert(res.rc != 0);
+        rval = mxb::string_printf("Command '%s' failed with error %i: '%s'", cmd, res.rc,
+                                  res.error_output.c_str());
+    }
+    else if (res.type == RType::TIMEOUT)
+    {
+        rval = mxb::string_printf("Command '%s' timed out.", cmd);
+    }
+    else
+    {
+        rval = mxb::string_printf("Failed to send command '%s'. %s", cmd, res.error_output.c_str());
+    }
+    return rval;
 }
 }
