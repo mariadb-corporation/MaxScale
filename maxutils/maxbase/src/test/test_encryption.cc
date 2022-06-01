@@ -93,11 +93,12 @@ int main()
                 }
 
                 std::vector<uint8_t> out2;
-                out2.resize(in.size());
+                out2.resize(out.size());
 
                 int out2_size = 0;
                 ok = cipher.decrypt(key.data(), iv.data(), out.data(), out_size, out2.data(), &out2_size);
                 ss << indent << "Decrypt: " << (ok ? "OK" : "ERR") << std::endl;
+                out2.resize(out2_size);
 
                 if (!ok)
                 {
