@@ -181,7 +181,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     auto last_file_name = last_string(file_names);
 
-    if (open_binlog(last_file_name))
+    if (open_binlog(last_file_name, &fmt_event))
     {
         m_ignore_preamble = true;
     }
@@ -189,7 +189,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
     return m_ignore_preamble;
 }
 
-bool FileWriter::open_binlog(const std::string& file_name)
+bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
 {
     std::ifstream log_file(file_name);
 
@@ -203,7 +203,8 @@ bool FileWriter::open_binlog(const std::string& file_name)
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
     bool rv = false;
 
-    if (event.event_type() == FORMAT_DESCRIPTION_EVENT)
+    if (event.event_type() == FORMAT_DESCRIPTION_EVENT
+        && (!ev || memcmp(ev->pHeader(), event.pHeader(), mxq::RPL_HEADER_LEN) == 0))
     {
         rv = true;
         m_current_pos.name = file_name;
