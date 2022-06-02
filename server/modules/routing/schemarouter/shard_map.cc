@@ -119,7 +119,7 @@ mxs::Target* Shard::get_location(std::string table)
 mxs::Target* Shard::get_statement(std::string stmt)
 {
     mxs::Target* rval = NULL;
-    ServerMap::iterator iter = stmt_map.find(stmt);
+    auto iter = stmt_map.find(stmt);
     if (iter != stmt_map.end())
     {
         rval = iter->second;
