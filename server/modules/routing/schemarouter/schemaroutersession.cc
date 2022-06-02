@@ -884,10 +884,8 @@ bool detect_show_shards(GWBUF* query)
 bool SchemaRouterSession::send_shards()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"});
-    ServerMap pContent;
-    m_shard.get_content(pContent);
 
-    for (const auto& a : pContent)
+    for (const auto& a : m_shard.get_content())
     {
         set->add_row({a.first, a.second->name()});
     }
@@ -1008,6 +1006,50 @@ bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
     return rv;
 }
 
+bool SchemaRouterSession::have_duplicates() const
+{
+    bool duplicates = false;
+    const auto m = m_shard.get_content();
+
+    // The iteration order of the std::unordered_map is not stable but elements with equal keys form a
+    // contiguous subrange. This means we can iterate over the map once and check if the subranges have more
+    // than one element in it and if they do, we have duplicates.
+    for (auto it = m.begin(); it != m.end();)
+    {
+        // Since the iterators of a std::unordered_multimap aren't random-access iterators, count the number
+        // of elements while we're iterating over them. This way we avoid iterating over them twice if we used
+        // std::distance.
+        int items = 0;
+        auto start = it;
+
+        while (it != m.end() && it->first == start->first)
+        {
+            ++items;
+            ++it;
+        }
+
+        if (items > 1)
+        {
+            if (!ignore_duplicate_table(start->first))
+            {
+                std::vector<const char*> data;
+
+                for (auto s = start; s != it; ++s)
+                {
+                    data.push_back(s->second->name());
+                }
+
+                duplicates = true;
+                MXS_ERROR("'%s' found on servers %s for user %s.",
+                          start->first.c_str(), mxb::join(data, ",", "'").c_str(),
+                          m_pSession->user_and_host().c_str());
+            }
+        }
+    }
+
+    return duplicates;
+}
+
 /**
  *
  * @param router_cli_ses Router client session
@@ -1023,6 +1065,11 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
         if (b.get() == bref && !b->is_mapped())
         {
             enum showdb_response rc = parse_mapping_response(b.get(), &writebuf);
+
+            if (rc == SHOWDB_FULL_RESPONSE && have_duplicates())
+            {
+                rc = SHOWDB_DUPLICATE_DATABASES;
+            }
 
             if (rc == SHOWDB_FULL_RESPONSE)
             {
@@ -1163,7 +1210,7 @@ std::string get_lenenc_str(uint8_t* ptr)
 static const std::set<std::string> always_ignore =
 {"mysql", "information_schema", "performance_schema", "sys"};
 
-bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
+bool SchemaRouterSession::ignore_duplicate_table(const std::string& data) const
 {
     bool rval = false;
 
@@ -1268,23 +1315,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
         if (!data.empty())
         {
-            if (!ignore_duplicate_table(data))
-            {
-                if (mxs::Target* duplicate = m_shard.get_location(data))
-                {
-                    duplicate_found = true;
-                    MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                              data.c_str(), target->name(), duplicate->name(),
-                              m_pSession->user_and_host().c_str());
-                }
-            }
-
-            if (!duplicate_found)
-            {
-                m_shard.add_location(data, target);
-            }
-
             MXS_INFO("<%s, %s>", target->name(), data.c_str());
+            m_shard.add_location(std::move(data), target);
         }
 
         ptr += packetlen;
@@ -1492,11 +1524,9 @@ enum route_target get_shard_route_target(uint32_t qtype)
  */
 void SchemaRouterSession::send_databases()
 {
-    ServerMap dblist;
     std::set<std::string> db_names;
-    m_shard.get_content(dblist);
 
-    for (auto a : dblist)
+    for (auto a : m_shard.get_content())
     {
         std::string db = a.first.substr(0, a.first.find("."));
         db_names.insert(db);

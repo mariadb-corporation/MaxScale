@@ -90,9 +90,9 @@ public:
     /**
      * @brief Retrieve all database to server mappings
      *
-     * @param keys A map where the database to server mappings are added
+     * @return The database to server mappings
      */
-    void get_content(ServerMap& dest);
+    const ServerMap& get_content() const;
 
     /**
      * @brief Check if this shard is newer than the other shard

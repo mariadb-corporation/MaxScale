@@ -160,12 +160,9 @@ bool Shard::empty() const
     return m_map.size() == 0;
 }
 
-void Shard::get_content(ServerMap& dest)
+const ServerMap& Shard::get_content() const
 {
-    for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
-    {
-        dest.insert(*it);
-    }
+    return m_map;
 }
 
 bool Shard::newer_than(const Shard& shard) const
