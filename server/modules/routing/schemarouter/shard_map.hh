@@ -26,10 +26,11 @@
 using namespace maxscale;
 
 /** This contains the database to server mapping */
-typedef std::unordered_multimap<std::string, mxs::Target*> ServerMap;
-typedef std::unordered_map<std::string, mxs::Target*>      StmtMap;
-typedef std::unordered_map<uint64_t, mxs::Target*>         BinaryPSMap;
-typedef std::unordered_map<uint32_t, uint32_t>             PSHandleMap;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, std::set<mxs::Target*>>> ServerMap;
+
+typedef std::unordered_map<std::string, mxs::Target*> StmtMap;
+typedef std::unordered_map<uint64_t, mxs::Target*>    BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t>        PSHandleMap;
 
 class Shard
 {
@@ -43,7 +44,7 @@ public:
      * @param db     Database to add
      * @param target Target where database is located
      */
-    void add_location(std::string db, mxs::Target* target);
+    void add_location(std::string db, std::string table, mxs::Target* target);
 
     /**
      * @brief Retrieve the location of a database
