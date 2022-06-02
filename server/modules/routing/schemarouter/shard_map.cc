@@ -18,7 +18,8 @@
 #include <maxbase/alloc.h>
 
 Shard::Shard()
-    : m_last_updated(time(NULL))
+    : m_map(std::make_shared<ServerMap>())
+    , m_last_updated(time(NULL))
 {
 }
 
@@ -28,7 +29,8 @@ Shard::~Shard()
 
 void Shard::add_location(std::string db, std::string table, mxs::Target* target)
 {
-    m_map[std::move(db)][std::move(table)].insert(target);
+    mxb_assert(m_map.unique());
+    (*m_map)[std::move(db)][std::move(table)].insert(target);
 }
 
 void Shard::add_statement(std::string stmt, mxs::Target* target)
@@ -103,9 +105,9 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string table)
         tbl = table.substr(pos + 1);
     }
 
-    auto db_it = m_map.find(db);
+    auto db_it = m_map->find(db);
 
-    if (db_it != m_map.end())
+    if (db_it != m_map->end())
     {
         auto tbl_it = db_it->second.find(tbl);
 
@@ -171,12 +173,12 @@ bool Shard::stale(double max_interval) const
 
 bool Shard::empty() const
 {
-    return m_map.size() == 0;
+    return m_map->size() == 0;
 }
 
 const ServerMap& Shard::get_content() const
 {
-    return m_map;
+    return *m_map;
 }
 
 bool Shard::newer_than(const Shard& shard) const

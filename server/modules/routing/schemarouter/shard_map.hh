@@ -105,11 +105,11 @@ public:
     bool newer_than(const Shard& shard) const;
 
 private:
-    ServerMap   m_map;
-    StmtMap     stmt_map;
-    BinaryPSMap m_binary_map;
-    PSHandleMap m_ps_handles;
-    time_t      m_last_updated;
+    std::shared_ptr<ServerMap> m_map;
+    StmtMap                    stmt_map;
+    BinaryPSMap                m_binary_map;
+    PSHandleMap                m_ps_handles;
+    time_t                     m_last_updated;
 };
 
 typedef std::unordered_map<std::string, Shard>   ShardMap;
