@@ -1168,9 +1168,14 @@ If `storage_redis` cannot connect to the Redis server, caching will silently
 be disabled and a connection attempt will be made after a [timeout](#timeout)
 interval.
 
-Note that since each connection attempt itself has the same timeout, reconnection
-attempts will thus be made at `2 * timeout` intervals. The same approach is followed
-also if the connection is lost during the lifetime of the session.
+If a timeout error occurs during an operation, reconnecting will be attempted
+after a delay, which will be an increasing multiple of `timeout`. For example,
+if `timeout` is the default 5 seconds, then reconnection attempts will first
+be made after 10 seconds, then after 15 seconds, then 20 and so on. However,
+once 60 seconds have been reached, the delay will no longer be increased but
+the delay will stay at one minute. Note that each time a reconnection attempt
+is made, unless the reason for the timeout has disappeared, the client will be
+stalled for `timeout` seconds.
 
 `storage_redis` has the following mandatory arguments:
 
