@@ -24,6 +24,7 @@
 #include <maxbase/worker.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/clock.hh>
 #include <maxscale/dcbhandler.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/protocol2.hh>
@@ -417,6 +418,13 @@ public:
     int64_t last_write() const
     {
         return m_last_write;
+    }
+
+    int64_t seconds_idle() const
+    {
+        // Only treat the connection as idle if there's no buffered data
+        return !m_writeq.empty() || !m_readq.empty() ? 0 :
+               MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_last_read, m_last_write));
     }
 
     bool is_open() const

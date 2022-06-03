@@ -26,10 +26,11 @@
 using namespace maxscale;
 
 /** This contains the database to server mapping */
-typedef std::unordered_multimap<std::string, mxs::Target*> ServerMap;
-typedef std::unordered_map<std::string, mxs::Target*>      StmtMap;
-typedef std::unordered_map<uint64_t, mxs::Target*>         BinaryPSMap;
-typedef std::unordered_map<uint32_t, uint32_t>             PSHandleMap;
+typedef std::unordered_map<std::string, std::unordered_map<std::string, std::set<mxs::Target*>>> ServerMap;
+
+typedef std::unordered_map<std::string, mxs::Target*> StmtMap;
+typedef std::unordered_map<uint64_t, mxs::Target*>    BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t>        PSHandleMap;
 
 class Shard
 {
@@ -43,7 +44,7 @@ public:
      * @param db     Database to add
      * @param target Target where database is located
      */
-    void add_location(std::string_view db, mxs::Target* target);
+    void add_location(std::string db, std::string table, mxs::Target* target);
 
     /**
      * @brief Retrieve the location of a database
@@ -52,13 +53,13 @@ public:
      *
      * @return The database or NULL if no server contains the database
      */
-    mxs::Target* get_location(std::string_view db);
+    mxs::Target* get_location(std::string db);
     mxs::Target* get_location(const std::vector<std::string>& db);
 
     /**
      * Same as get_location except returns all servers that have it
      */
-    std::set<mxs::Target*> get_all_locations(std::string_view db);
+    std::set<mxs::Target*> get_all_locations(std::string db);
     std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);
@@ -87,9 +88,9 @@ public:
     /**
      * @brief Retrieve all database to server mappings
      *
-     * @param keys A map where the database to server mappings are added
+     * @return The database to server mappings
      */
-    void get_content(ServerMap& dest);
+    const ServerMap& get_content() const;
 
     /**
      * @brief Check if this shard is newer than the other shard
@@ -101,11 +102,11 @@ public:
     bool newer_than(const Shard& shard) const;
 
 private:
-    ServerMap   m_map;
-    StmtMap     stmt_map;
-    BinaryPSMap m_binary_map;
-    PSHandleMap m_ps_handles;
-    time_t      m_last_updated;
+    std::shared_ptr<ServerMap> m_map;
+    StmtMap                    stmt_map;
+    BinaryPSMap                m_binary_map;
+    PSHandleMap                m_ps_handles;
+    time_t                     m_last_updated;
 };
 
 typedef std::unordered_map<std::string, Shard>   ShardMap;

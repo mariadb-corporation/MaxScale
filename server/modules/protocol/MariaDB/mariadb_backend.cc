@@ -1678,7 +1678,7 @@ void MariaDBBackendConnection::ping()
 {
     mxb_assert(m_reply.state() == ReplyState::DONE);
     mxb_assert(is_idle());
-    MXB_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
+    MXB_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), m_dcb->seconds_idle());
 
     constexpr uint8_t com_ping_packet[] =
     {
@@ -1704,19 +1704,6 @@ bool MariaDBBackendConnection::is_idle() const
            && m_reply.state() == ReplyState::DONE
            && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA
            && m_track_queue.empty();
-}
-
-int64_t MariaDBBackendConnection::seconds_idle() const
-{
-    int64_t idle = 0;
-
-    // Only treat the connection as idle if there's no buffered data
-    if (m_dcb->writeq_empty() && m_dcb->readq_empty())
-    {
-        idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
-    }
-
-    return idle;
 }
 
 json_t* MariaDBBackendConnection::diagnostics() const

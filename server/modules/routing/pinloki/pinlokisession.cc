@@ -247,9 +247,12 @@ int PinlokiSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* u
     PinlokiSession* pSession = static_cast<PinlokiSession*>(userdata);
     pSession->m_reader->set_in_high_water(false);
 
-    auto callback = [pSession]() {
+    auto callback = [pSession, ref = pSession->m_reader->get_ref()]() {
+        if (auto r = ref.lock())
+        {
             pSession->m_reader->send_events();
-        };
+        }
+    };
 
     pSession->m_pSession->worker()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 
