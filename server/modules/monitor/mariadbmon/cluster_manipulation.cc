@@ -55,14 +55,13 @@ const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
  * monitor will select the cluster master server. Otherwise must be a valid master server or a relay.
  * @return Result structure
  */
-MariaDBMonitor::ManualCommand::Result
-MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
+mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     auto error_out = &rval.output;
     if (!lock_status_is_ok())
     {
@@ -95,13 +94,13 @@ MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_failover()
+mon_op::Result MariaDBMonitor::manual_failover()
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     auto output = &rval.output;
     if (!lock_status_is_ok())
     {
@@ -132,13 +131,13 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_failover()
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
+mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     auto output = &rval.output;
     if (!lock_status_is_ok())
     {
@@ -230,16 +229,16 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_rejoin(SERVER* rejo
  * @param master_server Server to promote to master. If null, autoselect.
  * @return Result structure
  */
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
+mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
 {
     // This command is a last-resort type, so no need to be that careful. Users are only supposed to run this
     // when replication is broken and they know the cluster is in sync.
 
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     auto error_out = &rval.output;
     MariaDBServer* new_master = NULL;
     if (master_server)

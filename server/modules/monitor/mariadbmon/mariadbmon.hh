@@ -24,6 +24,7 @@
 #include <maxbase/threadpool.hh>
 #include <maxscale/monitor.hh>
 #include "mariadbserver.hh"
+#include "monitor_commands.hh"
 
 // Used by multiple source files.
 extern const char* const CN_AUTO_FAILOVER;
@@ -327,39 +328,6 @@ private:
         ServerArray cycle_members;
     };
 
-    /* Structure used to communicate commands and results between the admin and monitor threads.
-     * The monitor can only process one manual command at a time, which is already enforced by
-     * the admin thread. */
-    struct ManualCommand
-    {
-    public:
-        struct Result
-        {
-            void deep_copy_from(const Result& rhs);
-
-            bool    success {false};
-            json_t* output {nullptr};
-        };
-        using CmdMethod = std::function<Result (void)>;
-        enum class ExecState
-        {
-            NONE,
-            SCHEDULED,
-            RUNNING,
-            DONE
-        };
-
-        std::mutex lock;    /* Reads and writes should happen while this lock is held. */
-
-        std::atomic<ExecState> exec_state {ExecState::NONE};/* Manual command exec state */
-        std::string            cmd_name;                    /* Name of current command */
-        CmdMethod              method;                      /* Command implementation */
-
-        std::condition_variable cmd_complete_notifier;      /* Notified when the command has ran */
-
-        Result cmd_result;      /* Result storage. Should only be read/written under the lock. */
-    };
-
     class DNSResolver
     {
     public:
@@ -381,8 +349,10 @@ private:
 
     const ServerArray& servers() const;     /* Hides base class function. */
 
-    ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
-    IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
+    mon_op::ScheduledOp m_manual_cmd;   /* Communicates manual commands and results */
+    mon_op::SOperation  m_running_cmd;  /* Currently running command */
+
+    IdToServerMap m_servers_by_id;      /* Map from server id:s to MariaDBServer */
 
     /* The current state of a cluster modifying operation */
     std::atomic<State> m_state {State::IDLE};
@@ -513,13 +483,14 @@ private:
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
-    ~MariaDBMonitor() override;
-    void reset_server_info();
 
+    void reset_server_info();
     void reset_node_index_info();
-    bool execute_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+    bool execute_manual_command(mon_op::CmdMethod command, const std::string& cmd_name,
                                 json_t** error_out);
-    bool schedule_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
+    bool schedule_manual_command(mon_op::CmdMethod command, const std::string& cmd_name,
+                                 json_t** error_out);
+    bool schedule_manual_command(mon_op::SOperation op, const std::string& cmd_name,
                                  json_t** error_out);
     bool immediate_tick_required() override;
     bool server_locks_in_use() const;
@@ -566,24 +537,24 @@ private:
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 
     // Cluster operation launchers
-    ManualCommand::Result manual_switchover(SERVER* new_master, SERVER* current_master);
-    ManualCommand::Result manual_failover();
-    ManualCommand::Result manual_rejoin(SERVER* rejoin_cand_srv);
-    ManualCommand::Result manual_reset_replication(SERVER* master_server);
-    ManualCommand::Result manual_release_locks();
-    ManualCommand::Result manual_rebuild_server(SERVER* target, SERVER* source);
-    void                  handle_low_disk_space_master();
-    void                  handle_auto_failover();
-    void                  handle_auto_rejoin();
+    mon_op::Result manual_switchover(SERVER* new_master, SERVER* current_master);
+    mon_op::Result manual_failover();
+    mon_op::Result manual_rejoin(SERVER* rejoin_cand_srv);
+    mon_op::Result manual_reset_replication(SERVER* master_server);
+    mon_op::Result manual_release_locks();
+    mon_op::Result manual_rebuild_server(SERVER* target, SERVER* source);
+    void           handle_low_disk_space_master();
+    void           handle_auto_failover();
+    void           handle_auto_rejoin();
 
     // ColumnStore operations
-    ManualCommand::Result manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_get_status();
-    ManualCommand::Result manual_cs_start_cluster(std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_stop_cluster(std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_set_readonly(std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_set_readwrite(std::chrono::seconds timeout);
+    mon_op::Result manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout);
+    mon_op::Result manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout);
+    mon_op::Result manual_cs_get_status();
+    mon_op::Result manual_cs_start_cluster(std::chrono::seconds timeout);
+    mon_op::Result manual_cs_stop_cluster(std::chrono::seconds timeout);
+    mon_op::Result manual_cs_set_readonly(std::chrono::seconds timeout);
+    mon_op::Result manual_cs_set_readwrite(std::chrono::seconds timeout);
 
     enum class HttpCmd
     {

@@ -720,7 +720,7 @@ void MariaDBMonitor::tick()
 
 void MariaDBMonitor::process_state_changes()
 {
-    using ExecState = ManualCommand::ExecState;
+    using ExecState = mon_op::ExecState;
     m_state = State::EXECUTE_SCRIPTS;
     MonitorWorker::process_state_changes();
 
@@ -730,34 +730,62 @@ void MariaDBMonitor::process_state_changes()
         cluster_operation_disable_timer--;
     }
 
-    // Check for manual commands
-    if (m_manual_cmd.exec_state.load(mo_acquire) == ExecState::SCHEDULED)
-    {
-        // Looks like a command is waiting. Lock mutex, check again.
-        bool scheduled = false;
-        ManualCommand::CmdMethod command_method;
-
-        std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
-        scheduled = m_manual_cmd.exec_state.load(mo_acquire) == ExecState::SCHEDULED;
-        if (scheduled)
+    auto run_operation = [this]() {
+        auto complete = m_running_cmd->run();
+        if (complete)
         {
-            command_method = std::move(m_manual_cmd.method);
-            m_manual_cmd.exec_state.store(ExecState::RUNNING, mo_release);
+            bool running_cmd_is_manual = false;
+            // Operation complete. If it was user-triggered, save results and notify the waiting thread
+            // (if any) that it can continue.
+            std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
+
+            mxb_assert(m_manual_cmd.exec_state == ExecState::RUNNING);
+            running_cmd_is_manual = m_manual_cmd.current_op_is_manual;
+            if (running_cmd_is_manual)
+            {
+                // Should not have any previous results, since previous results were erased when
+                // the current command was scheduled.
+                auto& res_storage = m_manual_cmd.result_info;
+                mxb_assert(!res_storage);
+                res_storage = std::make_unique<mon_op::ResultInfo>();
+                res_storage->res = m_running_cmd->result();
+                res_storage->cmd_name = m_manual_cmd.op_name;
+            }
+            m_manual_cmd.exec_state = ExecState::DONE;
+            mxb_assert(!m_manual_cmd.op_name.empty());
+            m_manual_cmd.op_name.clear();
+
+            lock.unlock();
+
+            if (running_cmd_is_manual)
+            {
+                m_manual_cmd.result_ready_notifier.notify_one();
+            }
+            m_running_cmd = nullptr;
+        }
+    };
+
+    if (m_running_cmd)
+    {
+        // An operation (user or self-triggered) is in progress, continue it.
+        run_operation();
+    }
+    else
+    {
+        // No current running op, check if a command is scheduled.
+        std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
+        if (m_manual_cmd.exec_state == ExecState::SCHEDULED)
+        {
+            // Move the scheduled command into execution.
+            m_running_cmd = move(m_manual_cmd.op);
+            m_manual_cmd.exec_state = ExecState::RUNNING;
         }
         lock.unlock();
 
-        // Run the command outside the lock. Enables checking result state while command is running.
-        if (scheduled)
+        if (m_running_cmd)
         {
-            auto cmd_result = command_method();
-            // Manual command ran, signal the sender to continue.
-            lock.lock();
-            m_manual_cmd.exec_state.store(ExecState::DONE, mo_release);
-            // Remove any previous saved errors and replace with new ones.
-            json_decref(m_manual_cmd.cmd_result.output);
-            m_manual_cmd.cmd_result = cmd_result;
-            lock.unlock();
-            m_manual_cmd.cmd_complete_notifier.notify_one();
+            // An operation was just scheduled, run it.
+            run_operation();
         }
     }
 
@@ -901,7 +929,7 @@ bool MariaDBMonitor::check_sql_files()
  * @return True if command execution succeeded. False if monitor was in an invalid state
  * to run the command or command failed.
  */
-bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, const string& cmd_name,
+bool MariaDBMonitor::execute_manual_command(mon_op::CmdMethod command, const string& cmd_name,
                                             json_t** error_out)
 {
     bool rval = false;
@@ -910,13 +938,13 @@ bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, co
         // Wait for the result.
         std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
         auto cmd_complete = [this] {
-                return m_manual_cmd.exec_state == ManualCommand::ExecState::DONE;
-            };
-        m_manual_cmd.cmd_complete_notifier.wait(lock, cmd_complete);
+            return m_manual_cmd.exec_state == mon_op::ExecState::DONE;
+        };
+        m_manual_cmd.result_ready_notifier.wait(lock, cmd_complete);
 
         // Copy results similar to fetch-results.
-        ManualCommand::Result res;
-        res.deep_copy_from(m_manual_cmd.cmd_result);
+        mon_op::Result res;
+        res.deep_copy_from(m_manual_cmd.result_info->res);
 
         // There should not be any existing errors in the error output.
         mxb_assert(*error_out == nullptr);
@@ -935,11 +963,18 @@ bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, co
  * @return True if command execution was attempted. False if monitor was in an invalid state
  * to run the command.
  */
-bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, const string& cmd_name,
+bool MariaDBMonitor::schedule_manual_command(mon_op::CmdMethod command, const string& cmd_name,
                                              json_t** error_out)
 {
-    mxb_assert(is_main_worker());
-    using ExecState = ManualCommand::ExecState;
+    auto op = std::make_unique<mon_op::SimpleOp>(move(command));
+    return schedule_manual_command(move(op), cmd_name, error_out);
+}
+
+bool MariaDBMonitor::schedule_manual_command(mon_op::SOperation op, const std::string& cmd_name,
+                                             json_t** error_out)
+{
+    using ExecState = mon_op::ExecState;
+    mxb_assert(is_main_worker() && !cmd_name.empty());
     bool cmd_sent = false;
     if (!is_running())
     {
@@ -947,30 +982,34 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
     }
     else
     {
-        auto seen_state = ExecState::NONE;
-        string current_cmd_name;
-        // The lock is not essential, but does remove dependency on variable write order.
+        string current_op_name;
+        auto current_op_state = ExecState::NONE;
         std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
-        seen_state = m_manual_cmd.exec_state.load(mo_acquire);
-        if (seen_state == ExecState::NONE || seen_state == ExecState::DONE)
+        current_op_state = m_manual_cmd.exec_state.load(mo_acquire);
+        if (current_op_state == ExecState::NONE || current_op_state == ExecState::DONE)
         {
-            // Write the command. No need to signal monitor thread, as it checks for commands every loop.
-            m_manual_cmd.method = std::move(command);
-            m_manual_cmd.cmd_name = cmd_name;
+            // Write the command. No need to notify monitor thread, as it checks for commands every tick.
+            mxb_assert(!m_manual_cmd.op);
+            m_manual_cmd.op = move(op);
+            m_manual_cmd.op_name = cmd_name;
             m_manual_cmd.exec_state.store(ExecState::SCHEDULED, mo_release);
+            m_manual_cmd.current_op_is_manual = true;
+
+            // Remove any previous results.
+            m_manual_cmd.result_info = nullptr;
             cmd_sent = true;
         }
         else
         {
-            current_cmd_name = m_manual_cmd.cmd_name;
+            current_op_name = m_manual_cmd.op_name;
         }
         lock.unlock();
 
         if (!cmd_sent)
         {
-            auto seen_state_str = (seen_state == ExecState::SCHEDULED) ? "pending" : "running";
+            auto seen_state_str = (current_op_state == ExecState::SCHEDULED) ? "pending" : "running";
             PRINT_MXS_JSON_ERROR(error_out, "Cannot run manual %s, previous %s is still %s.",
-                                 cmd_name.c_str(), current_cmd_name.c_str(), seen_state_str);
+                                 cmd_name.c_str(), current_op_name.c_str(), seen_state_str);
         }
     }
     return cmd_sent;
@@ -979,7 +1018,7 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
 bool MariaDBMonitor::immediate_tick_required()
 {
     return mxs::MonitorWorker::immediate_tick_required() || m_cluster_modified
-           || (m_manual_cmd.exec_state.load(mo_relaxed) == ManualCommand::ExecState::SCHEDULED);
+           || (m_manual_cmd.exec_state.load(mo_relaxed) == mon_op::ExecState::SCHEDULED);
 }
 
 bool MariaDBMonitor::server_locks_in_use() const
@@ -1088,21 +1127,10 @@ bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
     return last_locking_attempt.split() > next_lock_attempt_delay;
 }
 
-MariaDBMonitor::~MariaDBMonitor()
-{
-    json_decref(m_manual_cmd.cmd_result.output);
-}
-
 bool MariaDBMonitor::cluster_ops_configured() const
 {
     return m_settings.auto_failover || m_settings.auto_rejoin
            || m_settings.enforce_read_only_slaves || m_settings.switchover_on_low_disk_space;
-}
-
-void MariaDBMonitor::ManualCommand::Result::deep_copy_from(const MariaDBMonitor::ManualCommand::Result& rhs)
-{
-    success = rhs.success;
-    output = json_deep_copy(rhs.output);
 }
 
 namespace journal_fields

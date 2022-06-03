@@ -700,13 +700,13 @@ bool MariaDBMonitor::schedule_release_locks(json_t** error_out)
     return schedule_manual_command(func, release_locks_cmd, error_out);
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_release_locks()
+mon_op::Result MariaDBMonitor::manual_release_locks()
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
+    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     auto error_out = &rval.output;
 
     bool success = false;
@@ -745,29 +745,36 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_release_locks()
 
 bool MariaDBMonitor::fetch_cmd_result(json_t** output)
 {
-    using ExecState = ManualCommand::ExecState;
-    auto current_state = ExecState::NONE;
-    string current_cmd_name;
-    ManualCommand::Result cmd_result;
+    using ExecState = mon_op::ExecState;
+    auto manual_cmd_state = ExecState::NONE;
+    string manual_cmd_name;
+    mon_op::Result manual_cmd_result;
 
     std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
-    // Copy the manual command related fields to local variables under the lock.
-    current_state = m_manual_cmd.exec_state.load(std::memory_order_acquire);
-    if (current_state != ExecState::NONE)
+    if (m_manual_cmd.result_info)
     {
-        current_cmd_name = m_manual_cmd.cmd_name;
-        if (current_state == ExecState::DONE)
+        // Deep copy the json, as another manual command may start writing to the container
+        // right after mutex is released.
+        manual_cmd_result.deep_copy_from(m_manual_cmd.result_info->res);
+        manual_cmd_name = m_manual_cmd.result_info->cmd_name;
+        manual_cmd_state = ExecState::DONE;
+    }
+    else
+    {
+        // No results are available. If current operation is a manual one, then make an error message from
+        // its info. If not, then a manual op must not have been ran yet as the results of manual op are
+        // only removed when a new one is scheduled.
+        if (m_manual_cmd.current_op_is_manual)
         {
-            // Deep copy the json, as another manual command may start writing to the container
-            // right after mutex is released.
-            cmd_result.deep_copy_from(m_manual_cmd.cmd_result);
+            manual_cmd_name = m_manual_cmd.op_name;
+            manual_cmd_state = m_manual_cmd.exec_state;
         }
     }
     lock.unlock();
 
     // The string contents here must match with GUI code.
     const char cmd_running_fmt[] = "No manual command results are available, %s is still %s.";
-    switch (current_state)
+    switch (manual_cmd_state)
     {
     case ExecState::NONE:
         // Command has not been ran.
@@ -775,27 +782,27 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         break;
 
     case ExecState::SCHEDULED:
-        *output = mxs_json_error_append(*output, cmd_running_fmt, current_cmd_name.c_str(), "pending");
+        *output = mxs_json_error_append(*output, cmd_running_fmt, manual_cmd_name.c_str(), "pending");
         break;
 
     case ExecState::RUNNING:
-        *output = mxs_json_error_append(*output, cmd_running_fmt, current_cmd_name.c_str(), "running");
+        *output = mxs_json_error_append(*output, cmd_running_fmt, manual_cmd_name.c_str(), "running");
         break;
 
     case ExecState::DONE:
         // If command has its own output, return that. Otherwise report success or error.
-        if (cmd_result.output)
+        if (manual_cmd_result.output)
         {
-            *output = cmd_result.output;
+            *output = manual_cmd_result.output;
         }
-        else if (cmd_result.success)
+        else if (manual_cmd_result.success)
         {
-            *output = json_sprintf("%s completed successfully.", current_cmd_name.c_str());
+            *output = json_sprintf("%s completed successfully.", manual_cmd_name.c_str());
         }
         else
         {
             // Command failed, but printed no results.
-            *output = json_sprintf("%s failed.", current_cmd_name.c_str());
+            *output = json_sprintf("%s failed.", manual_cmd_name.c_str());
         }
         break;
     }
@@ -915,14 +922,14 @@ MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::htt
     return {rval, err_str, json_data};
 }
 
-MariaDBMonitor::ManualCommand::Result
+mon_op::Result
 MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
                             {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "node", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -938,14 +945,14 @@ MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::se
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result
+mon_op::Result
 MariaDBMonitor::manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
                             {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::DELETE, "node", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -961,11 +968,11 @@ MariaDBMonitor::manual_cs_remove_node(const std::string& node_host, std::chrono:
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_get_status()
+mon_op::Result MariaDBMonitor::manual_cs_get_status()
 {
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::GET, "status", {}, 0s);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -981,12 +988,12 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_get_status()
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_start_cluster(std::chrono::seconds timeout)
+mon_op::Result MariaDBMonitor::manual_cs_start_cluster(std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "start", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -1001,12 +1008,12 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_start_cluster(st
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_stop_cluster(std::chrono::seconds timeout)
+mon_op::Result MariaDBMonitor::manual_cs_stop_cluster(std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "shutdown", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -1021,13 +1028,13 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_stop_cluster(std
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeout)
+mon_op::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
                             {"mode", "\"readonly\""}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -1043,13 +1050,13 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_set_readonly(std
     return rval;
 }
 
-MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_set_readwrite(std::chrono::seconds timeout)
+mon_op::Result MariaDBMonitor::manual_cs_set_readwrite(std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
                             {"mode", "\"readwrite\""}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
     if (ok)
     {
         rval.success = true;
@@ -1124,13 +1131,13 @@ bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, jso
     return schedule_manual_command(func, rebuild_server_cmd, error_out);
 }
 
-MariaDBMonitor::ManualCommand::Result
+mon_op::Result
 MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
 {
     auto* target = get_server(target_srv);
     auto* source = get_server(source_srv);
 
-    ManualCommand::Result rval;
+    mon_op::Result rval;
 
     if (rebuild_check_preconds(target, source, &rval.output))
     {

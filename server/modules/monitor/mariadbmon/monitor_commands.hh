@@ -44,6 +44,34 @@ public:
     virtual bool   cancel() = 0;
 };
 
+using SOperation = std::unique_ptr<Operation>;
+
+enum class ExecState
+{
+    NONE,
+    SCHEDULED,
+    RUNNING,
+    DONE
+};
+
+struct ResultInfo
+{
+    Result      res;
+    std::string cmd_name;
+};
+
+struct ScheduledOp
+{
+    std::mutex             lock;
+    SOperation             op;
+    std::string            op_name;
+    std::atomic<ExecState> exec_state {ExecState::NONE};
+
+    bool                        current_op_is_manual {false};
+    std::condition_variable     result_ready_notifier;
+    std::unique_ptr<ResultInfo> result_info;
+};
+
 using CmdMethod = std::function<Result (void)>;
 
 /**
