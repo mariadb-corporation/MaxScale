@@ -98,7 +98,7 @@ private:
     bool         have_servers();
     bool         handle_default_db();
     void         handle_default_db_response();
-    bool         ignore_duplicate_table(const std::string& data);
+    bool         ignore_duplicate_table(const std::string& data) const;
     mxs::Target* get_query_target(GWBUF* buffer);
     mxs::Target* get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
 
@@ -114,6 +114,7 @@ private:
     void                 send_databases();
     bool                 send_shards();
     void                 query_databases();
+    bool                 have_duplicates() const;
     int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer);
     void                 route_queued_query();
