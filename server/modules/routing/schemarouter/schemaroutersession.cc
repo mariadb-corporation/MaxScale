@@ -823,12 +823,16 @@ bool detect_show_shards(GWBUF* query)
 bool SchemaRouterSession::send_shards()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"});
-    ServerMap pContent;
-    m_shard.get_content(pContent);
 
-    for (const auto& a : pContent)
+    for (const auto& db : m_shard.get_content())
     {
-        set->add_row({a.first, a.second->name()});
+        for (const auto& tbl : db.second)
+        {
+            for (const auto* t : tbl.second)
+            {
+                set->add_row({db.first + "." + tbl.first, t->name()});
+            }
+        }
     }
 
     const mxs::ReplyRoute down;
@@ -942,6 +946,39 @@ bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
     return rv;
 }
 
+bool SchemaRouterSession::have_duplicates() const
+{
+    bool duplicates = false;
+
+    for (const auto& db : m_shard.get_content())
+    {
+        for (const auto& tbl : db.second)
+        {
+            if (tbl.second.size() > 1)
+            {
+                auto name = db.first + "." + tbl.first;
+
+                if (!ignore_duplicate_table(name))
+                {
+                    std::vector<const char*> data;
+
+                    for (const auto* t : tbl.second)
+                    {
+                        data.push_back(t->name());
+                    }
+
+                    duplicates = true;
+                    MXS_ERROR("'%s' found on servers %s for user %s.",
+                              name.c_str(), mxb::join(data, ",", "'").c_str(),
+                              m_pSession->user_and_host().c_str());
+                }
+            }
+        }
+    }
+
+    return duplicates;
+}
+
 /**
  *
  * @param router_cli_ses Router client session
@@ -957,6 +994,11 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
         if (b.get() == bref && !b->is_mapped())
         {
             enum showdb_response rc = parse_mapping_response(b.get(), &writebuf);
+
+            if (rc == SHOWDB_FULL_RESPONSE && have_duplicates())
+            {
+                rc = SHOWDB_DUPLICATE_DATABASES;
+            }
 
             if (rc == SHOWDB_FULL_RESPONSE)
             {
@@ -1069,35 +1111,51 @@ bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
  *
  * @return String value
  */
-std::string get_lenenc_str(uint8_t* ptr)
+std::string get_lenenc_str(uint8_t** input)
 {
+    std::string rv;
+    uint8_t* ptr = *input;
+
     if (*ptr < 251)
     {
-        return std::string((char*)ptr + 1, *ptr);
+        rv = std::string((char*)ptr + 1, *ptr);
+        ptr += 1;
     }
     else
     {
         switch (*(ptr))
         {
         case 0xfc:
-            return std::string((char*)ptr + 2, mariadb::get_byte2(ptr));
+            rv = std::string((char*)ptr + 2, mariadb::get_byte2(ptr));
+            ptr += 2;
+            break;
 
         case 0xfd:
-            return std::string((char*)ptr + 3, mariadb::get_byte3(ptr));
+            rv = std::string((char*)ptr + 3, mariadb::get_byte3(ptr));
+            ptr += 3;
+            break;
 
         case 0xfe:
-            return std::string((char*)ptr + 8, mariadb::get_byte8(ptr));
+            rv = std::string((char*)ptr + 8, mariadb::get_byte8(ptr));
+            ptr += 8;
+            break;
 
         default:
-            return "";
+            mxb_assert(!true);
+            break;
         }
     }
+
+    ptr += rv.size();
+    *input = ptr;
+
+    return rv;
 }
 
 static const std::set<std::string> always_ignore =
 {"mysql", "information_schema", "performance_schema", "sys"};
 
-bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
+bool SchemaRouterSession::ignore_duplicate_table(const std::string& data) const
 {
     bool rval = false;
 
@@ -1191,28 +1249,15 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
         int packetlen = payloadlen + 4;
-        auto data = get_lenenc_str(ptr + 4);
+        uint8_t* payload = ptr + 4;
+        auto db = get_lenenc_str(&payload);
+        auto tbl = get_lenenc_str(&payload);
         mxs::Target* target = bref->target();
 
-        if (!data.empty())
+        if (!db.empty())
         {
-            if (!ignore_duplicate_table(data))
-            {
-                if (mxs::Target* duplicate = m_shard.get_location(data))
-                {
-                    duplicate_found = true;
-                    MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                              data.c_str(), target->name(), duplicate->name(),
-                              m_pSession->user_and_host().c_str());
-                }
-            }
-
-            if (!duplicate_found)
-            {
-                m_shard.add_location(data, target);
-            }
-
-            MXS_INFO("<%s, %s>", target->name(), data.c_str());
+            MXS_INFO("<%s, %s, %s>", target->name(), db.c_str(), tbl.c_str());
+            m_shard.add_location(std::move(db), std::move(tbl), target);
         }
 
         ptr += packetlen;
@@ -1265,8 +1310,15 @@ void SchemaRouterSession::query_databases()
     m_state |= INIT_MAPPING;
     m_state &= ~INIT_UNINT;
 
-    GWBUF* buffer = modutil_create_query("SELECT DISTINCT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
-                                         "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
+    // It is important that the result also contains all the database names with the table set to an empty
+    // string. This causes a table with no name to be inserted into the resulting map that represent the
+    // database itself. With it, the shard map finds both databases and tables using the same code.
+    // The query in question will end up generating duplicate rows as we only select the lowercase forms. This
+    // is fine since the schemarouter transforms the names into lowercase before doing a lookup. The problem
+    // of double insertion (MXS-4092) is avoided by storing the targets in a set.
+    GWBUF* buffer = modutil_create_query("SELECT LOWER(t.table_schema), LOWER(t.table_name) FROM information_schema.tables t "
+                                         "UNION ALL "
+                                         "SELECT LOWER(s.schema_name), '' FROM information_schema.schemata s ");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
     for (const auto& b : m_backends)
@@ -1420,14 +1472,11 @@ enum route_target get_shard_route_target(uint32_t qtype)
  */
 void SchemaRouterSession::send_databases()
 {
-    ServerMap dblist;
     std::set<std::string> db_names;
-    m_shard.get_content(dblist);
 
-    for (auto a : dblist)
+    for (auto db : m_shard.get_content())
     {
-        std::string db = a.first.substr(0, a.first.find("."));
-        db_names.insert(db);
+        db_names.insert(db.first);
     }
 
     std::unique_ptr<ResultSet> set = ResultSet::create({"Database"});

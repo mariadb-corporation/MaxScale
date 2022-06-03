@@ -18,7 +18,8 @@
 #include <maxbase/alloc.h>
 
 Shard::Shard()
-    : m_last_updated(time(NULL))
+    : m_map(std::make_shared<ServerMap>())
+    , m_last_updated(time(NULL))
 {
 }
 
@@ -26,9 +27,10 @@ Shard::~Shard()
 {
 }
 
-void Shard::add_location(std::string db, mxs::Target* target)
+void Shard::add_location(std::string db, std::string table, mxs::Target* target)
 {
-    m_map.emplace(db, target);
+    mxb_assert(m_map.unique());
+    (*m_map)[std::move(db)][std::move(table)].insert(target);
 }
 
 void Shard::add_statement(std::string stmt, mxs::Target* target)
@@ -68,15 +70,29 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string table)
 {
     std::set<mxs::Target*> rval;
     std::transform(table.begin(), table.end(), table.begin(), ::tolower);
-    bool db_only = table.find(".") == std::string::npos;
+    std::string db;
+    std::string tbl;
+    auto pos = table.find(".");
 
-    for (const auto& a : m_map)
+    if (pos == std::string::npos)
     {
-        std::string db = db_only ? a.first.substr(0, a.first.find(".")) : a.first;
+        db = table;
+    }
+    else
+    {
+        db = table.substr(0, pos);
+        tbl = table.substr(pos + 1);
+    }
 
-        if (db == table)
+    auto db_it = m_map->find(db);
+
+    if (db_it != m_map->end())
+    {
+        auto tbl_it = db_it->second.find(tbl);
+
+        if (tbl_it != db_it->second.end())
         {
-            rval.insert(a.second);
+            rval = tbl_it->second;
         }
     }
 
@@ -98,7 +114,7 @@ mxs::Target* Shard::get_location(std::string table)
 mxs::Target* Shard::get_statement(std::string stmt)
 {
     mxs::Target* rval = NULL;
-    ServerMap::iterator iter = stmt_map.find(stmt);
+    auto iter = stmt_map.find(stmt);
     if (iter != stmt_map.end())
     {
         rval = iter->second;
@@ -136,15 +152,12 @@ bool Shard::stale(double max_interval) const
 
 bool Shard::empty() const
 {
-    return m_map.size() == 0;
+    return m_map->size() == 0;
 }
 
-void Shard::get_content(ServerMap& dest)
+const ServerMap& Shard::get_content() const
 {
-    for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
-    {
-        dest.insert(*it);
-    }
+    return *m_map;
 }
 
 bool Shard::newer_than(const Shard& shard) const
