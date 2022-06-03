@@ -133,6 +133,7 @@
 
 #define MXS_MODULE_NAME "storage_redis"
 #include "redisstorage.hh"
+#include <algorithm>
 #include <hiredis.h>
 #include <maxbase/alloc.h>
 #include <maxbase/worker.hh>
@@ -379,6 +380,25 @@ public:
     {
     }
 
+    int io_error_count() const
+    {
+        return m_io_error_count;
+    }
+
+    void check_for_io_error()
+    {
+        mxb_assert(m_pContext);
+
+        if (m_pContext->err == REDIS_ERR_IO)
+        {
+            ++m_io_error_count;
+        }
+        else
+        {
+            m_io_error_count = 0;
+        }
+    }
+
     void reset(redisContext* pContext)
     {
         redisFree(m_pContext);
@@ -526,23 +546,9 @@ public:
 
 private:
     redisContext* m_pContext;
+    int           m_io_error_count { 0 };
 };
 
-
-void log_error(const Redis& redis, const char* zContext)
-{
-    if (redis.err() == REDIS_ERR_EOF)
-    {
-        MXS_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
-                  "'timeout' is 0 (disabled) or very large. A reconnection will now be "
-                  "made, but this will hurt both the functionality and the performance.",
-                  zContext);
-    }
-    else
-    {
-        MXS_ERROR("%s: %s", zContext, redis.errstr());
-    }
-}
 
 class RedisToken : public std::enable_shared_from_this<RedisToken>,
                    public Storage::Token
@@ -600,6 +606,7 @@ public:
 
         mxs::thread_pool().execute([sThis, rkey, cb] () {
                 Redis::Reply reply = sThis->m_redis.command("GET %b", rkey.data(), rkey.size());
+                sThis->m_redis.check_for_io_error();
 
                 GWBUF* pValue = nullptr;
                 cache_result_t rv = CACHE_RESULT_ERROR;
@@ -628,7 +635,7 @@ public:
                 }
                 else
                 {
-                    log_error(sThis->m_redis, "Failed when getting cached value from Redis");
+                    sThis->log_error("Failed when getting cached value from Redis");
                 }
 
                 sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
@@ -667,6 +674,7 @@ public:
 
         mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
                 RedisAction action = sThis->put_value(rkey, invalidation_words, pClone);
+                sThis->m_redis.check_for_io_error();
 
                 cache_result_t rv;
 
@@ -677,7 +685,7 @@ public:
                     break;
 
                 case RedisAction::ERROR:
-                    log_error(sThis->m_redis, "Failed when putting value to Redis");
+                    sThis->log_error("Failed when putting value to Redis");
                     //[[fallthrough]]
                 case RedisAction::RETRY:
                     rv = CACHE_RESULT_ERROR;
@@ -715,6 +723,7 @@ public:
 
         mxs::thread_pool().execute([sThis, rkey, cb] () {
                 Redis::Reply reply = sThis->m_redis.command("DEL %b", rkey.data(), rkey.size());
+                sThis->m_redis.check_for_io_error();
 
                 cache_result_t rv = CACHE_RESULT_ERROR;
 
@@ -753,7 +762,7 @@ public:
                 }
                 else
                 {
-                    log_error(sThis->m_redis, "Failed when deleting cached value from Redis");
+                    sThis->log_error("Failed when deleting cached value from Redis");
                 }
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
@@ -782,6 +791,7 @@ public:
 
         mxs::thread_pool().execute([sThis, words, cb] () {
                 RedisAction action = sThis->invalidate(words);
+                sThis->m_redis.check_for_io_error();
 
                 cache_result_t rv;
 
@@ -792,7 +802,7 @@ public:
                     break;
 
                 case RedisAction::ERROR:
-                    log_error(sThis->m_redis, "Failed when invalidating");
+                    sThis->log_error("Failed when invalidating");
                     // [[fallthrough]]
                 case RedisAction::RETRY:
                     rv = CACHE_RESULT_ERROR;
@@ -839,13 +849,48 @@ public:
         }
         else
         {
-            log_error(m_redis, "Failed when clearing Redis");
+            log_error("Failed when clearing Redis");
         }
 
         return rv;
     }
 
 private:
+    std::chrono::milliseconds reconnect_after() const
+    {
+        constexpr std::chrono::milliseconds max_after = 60s;
+
+        auto after = m_timeout + m_redis.io_error_count() * m_timeout;
+
+        return std::min(after, max_after);
+    }
+
+    void log_error(const char* zContext)
+    {
+        switch (m_redis.err())
+        {
+        case REDIS_ERR_EOF:
+            MXS_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
+                      "'timeout' is 0 (disabled) or very large. A reconnection will now be "
+                      "made, but this will hurt both the functionality and the performance.",
+                      zContext);
+            break;
+
+        case REDIS_ERR_IO:
+            {
+                int ms = reconnect_after().count();
+
+                MXB_ERROR("%s. I/O-error; will attempt to reconnect after a %d milliseconds, "
+                          "until then no caching: %s",
+                          zContext, ms, m_redis.errstr());
+            }
+            break;
+
+        default:
+            MXS_ERROR("%s: %s", zContext, m_redis.errstr());
+        }
+    }
+
     enum class RedisAction
     {
         OK,
@@ -1229,7 +1274,9 @@ private:
             if (m_reconnecting)
             {
                 // Reconnected after having been disconnected, let's log a note.
-                MXS_NOTICE("Connected to Redis storage. Caching is enabled.");
+                // But we can't claim that we actually have been connected as that will
+                // become apparent only later.
+                MXS_NOTICE("Redis caching will again be attempted.");
             }
         }
 
@@ -1257,6 +1304,15 @@ private:
 
                 redisContext* pContext = redisConnectWithTimeout(host.c_str(), port, tv);
 
+                if (pContext)
+                {
+                    if (redisSetTimeout(pContext, tv) != REDIS_OK)
+                    {
+                        MXS_ERROR("Could not set timeout; in case of Redis errors, "
+                                  "operations may hang indefinitely.");
+                    }
+                }
+
                 sThis->m_pWorker->execute([sThis, pContext]() {
                         if (sThis.use_count() > 1) // The session is still alive
                         {
@@ -1277,8 +1333,9 @@ private:
             m_reconnecting = true;
 
             auto now = std::chrono::steady_clock::now();
+            auto ms = reconnect_after();
 
-            if (now - m_context_got > m_timeout)
+            if (now - m_context_got > ms)
             {
                 connect();
             }
