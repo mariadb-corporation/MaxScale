@@ -1,5 +1,12 @@
 # Changelog
 
+## MariaDB MaxScale 6.4
+
+* No new features, only bug fixes.
+
+For more details, please refer to:
+* [MariaDB MaxScale 6.4.0 Release Notes](Release-Notes/MaxScale-6.4.0-Release-Notes.md)
+
 ## MariaDB MaxScale 6.3
 
 * Nosqlprotocol now supports both SSL and authentication.
