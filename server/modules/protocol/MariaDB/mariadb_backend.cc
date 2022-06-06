@@ -332,15 +332,18 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  */
 void MariaDBBackendConnection::prepare_for_write(const GWBUF& buffer)
 {
-    TrackedQuery query(buffer);
+    if (m_session->capabilities() & RCAP_TYPE_REQUEST_TRACKING)
+    {
+        TrackedQuery query(buffer);
 
-    if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
-    {
-        track_query(query);
-    }
-    else
-    {
-        m_track_queue.push(std::move(query));
+        if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
+        {
+            track_query(query);
+        }
+        else
+        {
+            m_track_queue.push(std::move(query));
+        }
     }
 
     // TODO: These probably should be stored in TrackedQuery as well
