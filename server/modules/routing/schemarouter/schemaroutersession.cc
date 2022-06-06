@@ -1194,7 +1194,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
         {
             mxb_assert(row.size() == 2);
 
-            if (!row.empty() && !row[0].empty() && !row[1].empty())
+            if (!row.empty() && !row[0].empty())
             {
                 std::string db(row[0]);
                 std::string tbl(row[1]);
