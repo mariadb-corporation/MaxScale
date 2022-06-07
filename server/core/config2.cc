@@ -836,9 +836,20 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
 
 Type* Configuration::find_value(const string& name)
 {
-    auto it = m_values.find(name);
+    Type* pType = nullptr;
+    const Param* pParam = m_pSpecification->find_param(name);
 
-    return it != m_values.end() ? it->second : nullptr;
+    if (pParam)
+    {
+        auto it = m_values.find(pParam->final_name());
+
+        if (it != m_values.end())
+        {
+            pType = it->second;
+        }
+    }
+
+    return pType;
 }
 
 const Type* Configuration::find_value(const string& name) const

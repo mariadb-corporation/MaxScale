@@ -286,6 +286,18 @@ public:
     const std::string& name() const;
 
     /**
+     * The final name of the parameter. For all parameters but ParamAlias, the final name
+     * is the same as the name. For ParamAliases, the final name is the final name of the
+     * parameter the ParamAlias is an alias for.
+     *
+     * @return The final name of the parameter.
+     */
+    virtual const std::string& final_name() const
+    {
+        return name();
+    }
+
+    /**
      * @return The type of the parameter (human readable).
      */
     virtual std::string type() const = 0;
@@ -561,6 +573,51 @@ protected:
     }
 
     value_type m_default_value;
+};
+
+/**
+ * ParamAlias
+ */
+class ParamAlias : public Param
+{
+public:
+    ParamAlias(Specification* pSpecification,
+               const char* zName,
+               Param* pTarget)
+        : Param(pSpecification,
+                zName, pTarget->description().c_str(), pTarget->modifiable(), pTarget->kind())
+        , m_target(*pTarget)
+    {
+    }
+
+    const std::string& final_name() const override final
+    {
+        return m_target.final_name();
+    }
+
+
+    std::string type() const override final
+    {
+        return m_target.type();
+    }
+
+    std::string default_to_string() const override final
+    {
+        return m_target.default_to_string();
+    }
+
+    bool validate(const std::string& value_as_string, std::string* pMessage) const override final
+    {
+        return m_target.validate(value_as_string, pMessage);
+    }
+
+    bool validate(json_t* value_as_json, std::string* pMessage) const override final
+    {
+        return m_target.validate(value_as_json, pMessage);
+    }
+
+private:
+    Param& m_target;
 };
 
 /**
