@@ -381,13 +381,13 @@ the TLS/SSL support of listeners is available. Please see
 [TSLSSL encryption](Getting-Started/Configuration-Guide.md#tsl-encryption)
 for details.
 
-## Local Account Database
+## NoSQL Account Database
 
-So as to be able to log in on behalf of clients, nosqlprotocol
-must know their password. As the password is not transferred
-to nosqlprotocol during the authentication in a way that could
-be used when logging into MariaDB, the password must be stored
-locally when the user is created with [createUser](#createUser)
+So as to be able to connect to the MariaDB server on behalf of
+clients, nosqlprotocol must know their password. As the password
+is not transferred to nosqlprotocol during the authentication in
+a way that could be used when logging into MariaDB, the password
+must be stored when the user is created with [createUser](#createUser)
 or added with [mxsAddUser](#mxsAddUser).
 
 Note that the password is not stored in cleartext but as three
@@ -397,10 +397,18 @@ mechanism (if that is enabled for the user) and salted and hashed
 with sha256 for use with the `SCRAM-SHA-256` authentication mechanism
 (if that is enabled for the user).
 
-The account information of nosqlprotocol is stored in an
-[sqlite3](https://sqlite.org/index.html) database whose name is
-`<libdir>/nosqlprotocol/<listener-name>-v1.db`, where
-`<libdir>` is the _libdir_ of MaxScale, typically
+The account information can be stored _privately_, in which case it
+can be used only by a particular MaxScale instance, or in a
+_shared_ manner, in which case multiple MaxScale instances can
+share the information and a user created/added on one instance
+can be used on another.
+
+### Private
+
+In the private case, the account information of nosqlprotocol is
+stored in an [sqlite3](https://sqlite.org/index.html) database
+whose name is `<libdir>/nosqlprotocol/<listener-name>-v1.db`,
+where `<libdir>` is the _libdir_ of MaxScale, typically
 `/var/lib/maxscale`, `<listener-name>` is the name of the
 listener section in the MaxScale configuration file, and `-v1`
 a suffix for making schema evolution easier, should there be
@@ -440,6 +448,10 @@ however, that even if the way in which the account information is
 stored changes, existing account information will automatically
 be converted and no manual intervention, such as re-creation of
 accounts, will be needed.
+
+## Shared
+
+TBW
 
 # Client Library
 
@@ -503,6 +515,52 @@ with authentication being optional and authorization being disabled.
 
 NOTE: All client activity is _always_ subject to authorization performed by the
 MariaDB server.
+
+## `authentication_shared`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `false`
+
+Specifies whether the NoSQL account information should be stored in a shared
+manner or privately.
+
+## `authentication_db`
+
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `"NoSQL"`
+
+Specifies the database of the table where the NoSQL account information
+is stored, if `authentication_shared` is `true`.  If the database does not
+exist, nosqlprotocol will attempt to create it, so either is should be
+manually created or the used specified with `authentication_user` should
+have the grants required to do so.
+
+## `authentication_key`
+
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `""`
+
+The encryption key using which the NoSQL account information should be encrypted
+with when stored in the MariaDB server.
+
+## `authentication_user`
+
+- **Type**: string
+- **Mandatory**: Yes, **if** `authentication_shared` is true.
+
+Specifies the _user_ to be used when modifying and accessing the NoSQL
+account information stored in the MariaDB server.
+
+## `authentication_password`
+
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `""`
+
+Specifies the _password_ of `authentication_user`.
 
 ## `authorization_enabled`
 

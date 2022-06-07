@@ -59,6 +59,11 @@ public:
     std::string           password;
     std::string           host;
     bool                  authentication_required;
+    bool                  authentication_shared;
+    std::string           authentication_db;
+    std::string           authentication_key;
+    std::string           authentication_user;
+    std::string           authentication_password;
     bool                  authorization_enabled;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
@@ -78,6 +83,11 @@ public:
     static mxs::config::ParamString                      s_password;
     static mxs::config::ParamString                      s_host;
     static mxs::config::ParamBool                        s_authentication_required;
+    static mxs::config::ParamBool                        s_authentication_shared;
+    static mxs::config::ParamString                      s_authentication_db;
+    static mxs::config::ParamString                      s_authentication_key;
+    static mxs::config::ParamString                      s_authentication_user;
+    static mxs::config::ParamString                      s_authentication_password;
     static mxs::config::ParamBool                        s_authorization_enabled;
     static mxs::config::ParamCount                       s_id_length;
 

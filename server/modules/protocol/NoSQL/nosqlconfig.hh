@@ -33,6 +33,11 @@ public:
         , password(this->config_password)
         , host(config.host)
         , authentication_required(config.authentication_required)
+        , authentication_shared(config.authentication_shared)
+        , authentication_db(config.authentication_db)
+        , authentication_key(config.authentication_key)
+        , authentication_user(config.authentication_user)
+        , authentication_password(config.authentication_password)
         , authorization_enabled(config.authorization_enabled)
         , id_length(config.id_length)
         , auto_create_databases(config.auto_create_databases)
@@ -92,6 +97,11 @@ public:
     std::vector<uint8_t>       password;
     const std::string          host;
     const bool                 authentication_required;
+    const bool                 authentication_shared;
+    const std::string          authentication_db;
+    const std::string          authentication_key;
+    const std::string          authentication_user;
+    const std::string          authentication_password;
     const bool                 authorization_enabled;
     const int64_t              id_length;
 

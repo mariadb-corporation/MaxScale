@@ -54,6 +54,39 @@ mxs::config::ParamBool Configuration::s_authentication_required(
     "Whether nosqlprotocol authentication is required.",
     false);
 
+mxs::config::ParamBool Configuration::s_authentication_shared(
+    &nosqlprotocol::specification,
+    "authentication_shared",
+    "Whether NoSQL credentials should be stored in the MariaDB server, thus enabling the "
+    "use of several MaxScale instances with the same nosqlprotocol configuration.",
+    false);
+
+mxs::config::ParamString Configuration::s_authentication_db(
+    &nosqlprotocol::specification,
+    "authentication_db",
+    "What database shared NoSQL user information should be stored in.",
+    "NoSQL");
+
+mxs::config::ParamString Configuration::s_authentication_key(
+    &nosqlprotocol::specification,
+    "authentication_key",
+    "If present and non-empty, and if 'authentication_shared' is enabled, then the sensitive "
+    "parts of the NoSQL data will be encrypted with this key.",
+    "");
+
+mxs::config::ParamString Configuration::s_authentication_user(
+    &nosqlprotocol::specification,
+    "authentication_user",
+    "If 'authentication_shared' is enabled, this user should be used when storing the NoSQL "
+    "user data to the MariaDB server.",
+    "");
+
+mxs::config::ParamString Configuration::s_authentication_password(
+    &nosqlprotocol::specification,
+    "authentication_password",
+    "The password of the user specified with 'authentication_user'.",
+    "");
+
 mxs::config::ParamBool Configuration::s_authorization_enabled(
     &nosqlprotocol::specification,
     "authorization_enabled",
@@ -141,6 +174,11 @@ Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
     add_native(&Configuration::password, &s_password);
     add_native(&Configuration::host, &s_host);
     add_native(&Configuration::authentication_required, &s_authentication_required);
+    add_native(&Configuration::authentication_shared, &s_authentication_shared);
+    add_native(&Configuration::authentication_db, &s_authentication_db);
+    add_native(&Configuration::authentication_key, &s_authentication_key);
+    add_native(&Configuration::authentication_user, &s_authentication_user);
+    add_native(&Configuration::authentication_password, &s_authentication_password);
     add_native(&Configuration::authorization_enabled, &s_authorization_enabled);
     add_native(&Configuration::id_length, &s_id_length);
 
@@ -155,8 +193,24 @@ Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
 
 bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    m_instance.post_configure();
-    return true;
+    bool rv = true;
+
+    if (this->authentication_shared)
+    {
+        if (this->authentication_user.empty() || this->authentication_password.empty())
+        {
+            MXB_ERROR("If 'authentication_shared' is true, then 'authentication_user' and "
+                      "'authentication_password' must be specified.");
+            rv = false;
+        }
+    }
+
+    if (rv)
+    {
+        m_instance.post_configure();
+    }
+
+    return rv;
 }
 
 // static
