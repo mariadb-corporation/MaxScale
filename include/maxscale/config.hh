@@ -209,7 +209,7 @@ public:
 
     std::string               admin_ssl_key;    /**< Admin SSL key */
     std::string               admin_ssl_cert;   /**< Admin SSL cert */
-    std::string               admin_ssl_ca_cert;/**< Admin SSL CA cert */
+    std::string               admin_ssl_ca;     /**< Admin SSL CA cert */
     mxb::ssl_version::Version admin_ssl_version;/**< Admin allowed SSL versions */
 
     std::string  local_address;                 /**< Local address to use when connecting */
@@ -312,7 +312,8 @@ private:
     static config::ParamString                          s_admin_ssl_key;
     static config::ParamString                          s_admin_ssl_cert;
     static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;
-    static config::ParamString                          s_admin_ssl_ca_cert;
+    static config::ParamString                          s_admin_ssl_ca;
+    static config::ParamAlias                           s_admin_ssl_ca_cert; // -> s_admin_ca
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamBool                            s_persist_runtime_changes;

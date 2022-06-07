@@ -144,7 +144,7 @@ runtime and can only be defined in a configuration file:
 * `admin_pam_readwrite_service`
 * `admin_port`
 * `admin_secure_gui`
-* `admin_ssl_ca_cert`
+* `admin_ssl_ca`
 * `admin_ssl_cert`
 * `admin_ssl_key`
 * `admin_ssl_version`
@@ -1260,9 +1260,16 @@ documentation for more details.
 
 ### `admin_ssl_ca_cert`
 
+Deprecated since MariaDB MaxScale 22.08. See `admin_ssl_ca`.
+
+### `admin_ssl_ca`
+
 The path to the TLS CA certificate in PEM format. If defined, the client
 certificate, if provided, will be validated against it. This parameter is
 optional starting with MaxScale 2.3.19.
+
+**NOTE** Up until MariaDB MaxScale 6, the parameter was called `admin_ssl_ca_cert`,
+         which is still accepted as an alias for `admin_ssl_ca`.
 
 ### `admin_ssl_version`
 
@@ -2748,8 +2755,8 @@ certificate referred to in the previous parameter. It will be used to verify
 that the certificate is valid. This is a required parameter for both listeners
 and servers. The CA certificate can consist of a certificate chain.
 
-*NOTE* Up until MariaDB MaxScale 6, the parameter was called `ssl_ca_cert`,
-       which is still accepted as an alias for `ssl_ca`.
+**NOTE** Up until MariaDB MaxScale 6, the parameter was called `ssl_ca_cert`,
+         which is still accepted as an alias for `ssl_ca`.
 
 ### `ssl_version`
 

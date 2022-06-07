@@ -81,6 +81,7 @@ constexpr char CN_ADMIN_HOST[] = "admin_host";
 constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
 constexpr char CN_ADMIN_PORT[] = "admin_port";
+constexpr char CN_ADMIN_SSL_CA[] = "admin_ssl_ca";
 constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
@@ -550,11 +551,17 @@ config::ParamString Config::s_admin_ssl_cert(
     "Admin SSL cert",
     "");
 
-config::ParamString Config::s_admin_ssl_ca_cert(
+config::ParamString Config::s_admin_ssl_ca(
     &Config::s_specification,
-    CN_ADMIN_SSL_CA_CERT,
+    CN_ADMIN_SSL_CA,
     "Admin SSL CA cert",
     "");
+
+// Alias admin_ssl_ca_cert -> admin_ssl_ca.
+config::ParamAlias Config::s_admin_ssl_ca_cert(
+    &Config::s_specification,
+    CN_ADMIN_SSL_CA_CERT,
+    &Config::s_admin_ssl_ca);
 
 config::ParamString Config::s_local_address(
     &Config::s_specification,
@@ -802,7 +809,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_pam_ro_service, &s_admin_pam_ro_service);
     add_native(&Config::admin_ssl_key, &s_admin_ssl_key);
     add_native(&Config::admin_ssl_cert, &s_admin_ssl_cert);
-    add_native(&Config::admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
+    add_native(&Config::admin_ssl_ca, &s_admin_ssl_ca);
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);

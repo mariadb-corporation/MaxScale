@@ -369,7 +369,7 @@ static bool load_ssl_certificates()
     const auto& config = mxs::Config::get();
     const auto& key = config.admin_ssl_key;
     const auto& cert = config.admin_ssl_cert;
-    const auto& ca = config.admin_ssl_ca_cert;
+    const auto& ca = config.admin_ssl_ca;
 
     if (!key.empty() && !cert.empty())
     {
