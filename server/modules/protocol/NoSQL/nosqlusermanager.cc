@@ -577,13 +577,17 @@ vector<uint8_t> UserManager::UserInfo::salted_pwd_sha256() const
     return mxs::from_base64(this->salted_pwd_sha256_b64);
 }
 
-UserManager::UserManager(string path, sqlite3* pDb)
+UserManager::~UserManager()
+{
+}
+
+UserManagerSqlite3::UserManagerSqlite3(string path, sqlite3* pDb)
     : m_path(std::move(path))
     , m_db(*pDb)
 {
 }
 
-UserManager::~UserManager()
+UserManagerSqlite3::~UserManagerSqlite3()
 {
     sqlite3_close_v2(&m_db);
 }
@@ -609,7 +613,7 @@ bool is_accessible_by_others(const string& path)
 }
 
 //static
-unique_ptr<UserManager> UserManager::create(const string& name)
+unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
 {
     nosql::UserManager* pThis = nullptr;
 
@@ -651,7 +655,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
                     // provide a file mask to sqlite3, it's simpler to just do it always.
                     if (chmod(path.c_str(), S_IRUSR | S_IWUSR) == 0)
                     {
-                        pThis = new UserManager(std::move(path), pDb);
+                        pThis = new UserManagerSqlite3(std::move(path), pDb);
                     }
                     else
                     {
@@ -681,13 +685,13 @@ unique_ptr<UserManager> UserManager::create(const string& name)
     return unique_ptr<UserManager>(pThis);
 }
 
-bool UserManager::add_user(const string& db,
-                           string user,
-                           string pwd,
-                           const std::string& host,
-                           const std::string& custom_data, // Assumed to be JSON document.
-                           const vector<scram::Mechanism>& mechanisms,
-                           const vector<role::Role>& roles)
+bool UserManagerSqlite3::add_user(const string& db,
+                                  string user,
+                                  string pwd,
+                                  const std::string& host,
+                                  const std::string& custom_data, // Assumed to be JSON document.
+                                  const vector<scram::Mechanism>& mechanisms,
+                                  const vector<role::Role>& roles)
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
 
@@ -748,7 +752,7 @@ bool UserManager::add_user(const string& db,
     return rv == SQLITE_OK;
 }
 
-bool UserManager::remove_user(const string& db, const string& user)
+bool UserManagerSqlite3::remove_user(const string& db, const string& user)
 {
     string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
@@ -771,12 +775,12 @@ bool UserManager::remove_user(const string& db, const string& user)
     return rv == SQLITE_OK;
 }
 
-bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo) const
+bool UserManagerSqlite3::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
     return get_info(get_mariadb_user(db, nosql::escape_essential_chars(user)), pInfo);
 }
 
-bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
+bool UserManagerSqlite3::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     ostringstream ss;
     ss << SQL_SELECT_WHERE_MARIADB_USER_HEAD << "\"" << mariadb_user << "\"";
@@ -804,7 +808,7 @@ bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
     return !infos.empty();
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos() const
+vector<UserManager::UserInfo> UserManagerSqlite3::get_infos() const
 {
     vector<UserInfo> infos;
     char* pError = nullptr;
@@ -820,7 +824,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) const
+vector<UserManager::UserInfo> UserManagerSqlite3::get_infos(const std::string& db) const
 {
     ostringstream ss;
     ss << SQL_SELECT_WHERE_DB_HEAD << "\"" << db << "\"";
@@ -841,7 +845,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) cons
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& mariadb_users) const
+vector<UserManager::UserInfo> UserManagerSqlite3::get_infos(const vector<string>& mariadb_users) const
 {
     vector<UserInfo> infos;
 
@@ -877,7 +881,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& maria
     return infos;
 }
 
-vector<UserManager::Account> UserManager::get_accounts(const string& db) const
+vector<UserManager::Account> UserManagerSqlite3::get_accounts(const string& db) const
 {
     vector<Account> mariadb_accounts;
 
@@ -899,7 +903,7 @@ vector<UserManager::Account> UserManager::get_accounts(const string& db) const
     return mariadb_accounts;
 }
 
-bool UserManager::remove_accounts(const std::vector<Account>& accounts) const
+bool UserManagerSqlite3::remove_accounts(const std::vector<Account>& accounts) const
 {
     int rv = SQLITE_OK;
 
@@ -936,7 +940,7 @@ bool UserManager::remove_accounts(const std::vector<Account>& accounts) const
     return rv == SQLITE_OK;
 }
 
-bool UserManager::update(const string& db, const string& user, uint32_t what, const Update& data) const
+bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t what, const Update& data) const
 {
     mxb_assert((what & Update::MASK) != 0);
 

@@ -410,7 +410,7 @@ private:
             {
                 ostringstream ss;
                 ss << "Could add user '" << m_user << "' to the MariaDB database, "
-                   << "but could not add the user to the local database " << um.path() << ".";
+                   << "but could not store NoSQL credentials.";
 
                 string message = ss.str();
 

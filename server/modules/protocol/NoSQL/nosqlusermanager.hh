@@ -74,7 +74,10 @@ void from_bson(const bsoncxx::array::view& bson,
 class UserManager
 {
 public:
-    ~UserManager();
+    UserManager(const UserManager&) = delete;
+    UserManager& operator=(const UserManager&) = delete;
+
+    virtual ~UserManager();
 
     class UserInfo
     {
@@ -122,26 +125,19 @@ public:
         }
     };
 
-    static std::unique_ptr<UserManager> create(const std::string& name);
+    virtual bool add_user(const std::string& db,
+                          std::string user,
+                          std::string password, // Cleartext
+                          const std::string& host,
+                          const std::string& custom_data, // Assumed to be JSON document.
+                          const std::vector<scram::Mechanism>& mechanisms,
+                          const std::vector<role::Role>& roles) = 0;
 
-    const std::string& path() const
-    {
-        return m_path;
-    }
+    virtual bool remove_user(const std::string& db, const std::string& user) = 0;
 
-    bool add_user(const std::string& db,
-                  std::string user,
-                  std::string password, // Cleartext
-                  const std::string& host,
-                  const std::string& custom_data, // Assumed to be JSON document.
-                  const std::vector<scram::Mechanism>& mechanisms,
-                  const std::vector<role::Role>& roles);
+    virtual bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const = 0;
 
-    bool remove_user(const std::string& db, const std::string& user);
-
-    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
-
-    bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const;
+    virtual bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const = 0;
 
     bool get_info(const string_view& mariadb_user, UserInfo* pInfo) const
     {
@@ -168,11 +164,11 @@ public:
         return get_info(std::string(mariadb_user.data(), mariadb_user.length()), nullptr);
     }
 
-    std::vector<UserInfo> get_infos() const;
+    virtual std::vector<UserInfo> get_infos() const = 0;
 
-    std::vector<UserInfo> get_infos(const std::string& db) const;
+    virtual std::vector<UserInfo> get_infos(const std::string& db) const = 0;
 
-    std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const;
+    virtual std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const = 0;
 
     struct Account
     {
@@ -198,9 +194,9 @@ public:
         return rv;
     }
 
-    std::vector<Account> get_accounts(const std::string& db) const;
+    virtual std::vector<Account> get_accounts(const std::string& db) const = 0;
 
-    bool remove_accounts(const std::vector<Account>& accounts) const;
+    virtual bool remove_accounts(const std::vector<Account>& accounts) const = 0;
 
     struct Update
     {
@@ -220,7 +216,10 @@ public:
         std::vector<role::Role>       roles;
     };
 
-    bool update(const std::string& db, const std::string& user, uint32_t what, const Update& data) const;
+    virtual bool update(const std::string& db,
+                        const std::string& user,
+                        uint32_t what,
+                        const Update& data) const = 0;
 
     bool set_mechanisms(const std::string& db,
                         const std::string& user,
@@ -250,8 +249,55 @@ public:
         return db + "." + std::string(user.data(), user.length());
     }
 
+protected:
+    UserManager()
+    {
+    }
+};
+
+class UserManagerSqlite3 : public UserManager
+{
+public:
+    ~UserManagerSqlite3();
+
+    static std::unique_ptr<UserManager> create(const std::string& name);
+
+    const std::string& path() const
+    {
+        return m_path;
+    }
+
+    bool add_user(const std::string& db,
+                  std::string user,
+                  std::string password, // Cleartext
+                  const std::string& host,
+                  const std::string& custom_data, // Assumed to be JSON document.
+                  const std::vector<scram::Mechanism>& mechanisms,
+                  const std::vector<role::Role>& roles) override;
+
+    bool remove_user(const std::string& db, const std::string& user) override;
+
+    using UserManager::get_info;
+    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const override;
+    bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const override;
+
+    std::vector<UserInfo> get_infos() const override;
+
+    std::vector<UserInfo> get_infos(const std::string& db) const override;
+
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const override;
+
+    std::vector<Account> get_accounts(const std::string& db) const override;
+
+    bool remove_accounts(const std::vector<Account>& accounts) const override;
+
+    bool update(const std::string& db,
+                const std::string&
+                user, uint32_t what,
+                const Update& data) const override;
+
 private:
-    UserManager(std::string path, sqlite3* pDb);
+    UserManagerSqlite3(std::string path, sqlite3* pDb);
 
     std::string m_path;
     sqlite3&    m_db;

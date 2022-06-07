@@ -37,7 +37,7 @@ ProtocolModule* ProtocolModule::create(const std::string& name)
 {
     ProtocolModule* pThis = nullptr;
 
-    unique_ptr<nosql::UserManager> sUm = nosql::UserManager::create(name);
+    unique_ptr<nosql::UserManager> sUm = nosql::UserManagerSqlite3::create(name);
 
     if (sUm)
     {
