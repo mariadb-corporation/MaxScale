@@ -49,6 +49,7 @@ const char rebuild_server_cmd[] = "rebuild-server";
 
 // Assume simple commands complete in a reasonable time.
 const std::chrono::milliseconds ssh_base_timeout = 5s;
+int rebuild_port = 4444;    // TODO: configurable
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -1125,105 +1126,82 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
 
 bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out)
 {
-    auto func = [this, target, source]() {
-        return manual_rebuild_server(target, source);
-    };
-    return schedule_manual_command(func, rebuild_server_cmd, error_out);
+    auto op = std::make_unique<mon_op::RebuildServer>(*this, target, source);
+    return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
-mon_op::Result
-MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
+bool mon_op::RebuildServer::rebuild_check_preconds()
 {
-    auto* target = get_server(target_srv);
-    auto* source = get_server(source_srv);
+    auto* target = m_mon.get_server(m_target_srv);
+    auto* source = m_mon.get_server(m_source_srv);
+    auto error_out = &m_result.output;
+    bool rval = false;
 
-    mon_op::Result rval;
-
-    if (rebuild_check_preconds(target, source, &rval.output))
+    if (target && source)
     {
-        // Ok so far. Initiate SSH-sessions to both servers.
-        auto init_ssh = [this, &rval](MariaDBServer* server) {
-            auto [ses, errmsg_con] = ssh_util::init_ssh_session(server->server->address(),
-                                                                m_settings.ssh_user, m_settings.ssh_keyfile,
-                                                                ssh_base_timeout);
-            if (!ses)
-            {
-                PRINT_MXS_JSON_ERROR(&rval.output, "SSH connection to %s failed. %s",
-                                     server->name(), errmsg_con.c_str());
-            }
-            return ses;
-        };
+        bool target_ok = true;
+        bool source_ok = true;
+        bool settings_ok = true;
+        const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
 
-        auto target_ses = init_ssh(target);
-        auto source_ses = init_ssh(source);
-
-        if (target_ses && source_ses)
+        // The following do not actually prevent rebuilding, they are just safeguards against user errors.
+        if (target->is_master())
         {
-            bool have_tools = true;
+            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
+            target_ok = false;
+        }
+        else if (target->is_relay_master())
+        {
+            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
+            target_ok = false;
+        }
+        else if (target->is_slave())
+        {
+            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
+            target_ok = false;
+        }
 
-            // Check installed tools.
-            auto target_tools = check_rebuild_tools(target, *target_ses, &rval.output);
-            auto source_tools = check_rebuild_tools(source, *source_ses, &rval.output);
+        if (!source->is_slave() && !source->is_master())
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
+                                            "as source.", source->name());
+            source_ok = false;
+        }
 
-            if (target_tools && source_tools)
-            {
-                int port = 4444;    // TODO: configurable
-                if (check_free_listen_port(*source_ses, source, port, &rval.output))
-                {
-                    rval.success = true;
-                }
-            }
+        const char settings_err_fmt[] = "'%s' is not set. %s requires ssh access to servers.";
+        if (m_mon.m_settings.ssh_user.empty())
+        {
+            PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
+            settings_ok = false;
+        }
+        if (m_mon.m_settings.ssh_keyfile.empty())
+        {
+            // TODO: perhaps allow no authentication
+            PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
+            settings_ok = false;
+        }
+
+        if (target_ok && source_ok && settings_ok)
+        {
+            m_target = target;
+            m_source = source;
+            rval = true;
         }
     }
-
+    else
+    {
+        if (!target)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
+                                 m_target_srv->name(), m_mon.name());
+        }
+        if (!source)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as rebuild source.",
+                                 m_source_srv->name(), m_mon.name());
+        }
+    }
     return rval;
-}
-
-bool MariaDBMonitor::rebuild_check_preconds(MariaDBServer* target, MariaDBServer* source, json_t** error_out)
-{
-    bool target_ok = true;
-    bool source_ok = true;
-    bool settings_ok = true;
-    const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
-
-    // The following do not actually prevent rebuilding, they are just safeguards against user errors.
-    if (target->is_master())
-    {
-        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
-        target_ok = false;
-    }
-    else if (target->is_relay_master())
-    {
-        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
-        target_ok = false;
-    }
-    else if (target->is_slave())
-    {
-        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
-        target_ok = false;
-    }
-
-    if (!source->is_slave() && !source->is_master())
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it as source.",
-                             source->name());
-        source_ok = false;
-    }
-
-    const char settings_err_fmt[] = "'%s' is not set. %s requires ssh access to servers.";
-    if (m_settings.ssh_user.empty())
-    {
-        PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
-        settings_ok = false;
-    }
-    if (m_settings.ssh_keyfile.empty())
-    {
-        // TODO: perhaps allow no authentication
-        PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
-        settings_ok = false;
-    }
-
-    return target_ok && source_ok && settings_ok;
 }
 
 namespace
@@ -1403,5 +1381,250 @@ bool SimpleOp::cancel()
 {
     mxb_assert(!true);
     return false;
+}
+
+RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source)
+    : m_target_srv(target)
+    , m_source_srv(source)
+    , m_mon(mon)
+{
+}
+
+bool RebuildServer::run()
+{
+    bool command_complete = false;
+    bool advance = true;
+    while (advance)
+    {
+        switch (m_state)
+        {
+        case State::INIT:
+            advance = init();
+            break;
+
+        case State::START_BACKUP_SERVE:
+            advance = serve_backup();
+            break;
+
+        case State::PREPARE_TARGET:
+            advance = prepare_target();
+            break;
+
+        case State::START_TRANSFER:
+            advance = start_transfer();
+            break;
+
+        case State::WAIT_TRANSFER:
+            advance = wait_transfer();
+            break;
+
+        case State::DONE:
+            command_complete = true;
+            advance = false;
+            break;
+
+        case State::CLEANUP:
+            // TODO
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+
+    return command_complete;
+}
+
+bool RebuildServer::cancel()
+{
+    return false;
+}
+
+Result RebuildServer::result()
+{
+    return m_result;
+}
+
+bool RebuildServer::init()
+{
+    bool init_ok = false;
+
+    if (rebuild_check_preconds())
+    {
+        // Ok so far. Initiate SSH-sessions to both servers.
+        auto init_ssh = [this](MariaDBServer* server) {
+            auto [ses, errmsg_con] = ssh_util::init_ssh_session(
+                server->server->address(), m_mon.m_settings.ssh_user, m_mon.m_settings.ssh_keyfile,
+                ssh_base_timeout);
+
+            if (!ses)
+            {
+                PRINT_MXS_JSON_ERROR(&m_result.output, "SSH connection to %s failed. %s",
+                                     server->name(), errmsg_con.c_str());
+            }
+            return ses;
+        };
+
+        auto target_ses = init_ssh(m_target);
+        auto source_ses = init_ssh(m_source);
+
+        if (target_ses && source_ses)
+        {
+            bool have_tools = true;
+
+            // Check installed tools.
+            auto target_tools = check_rebuild_tools(m_target, *target_ses, &m_result.output);
+            auto source_tools = check_rebuild_tools(m_source, *source_ses, &m_result.output);
+
+            if (target_tools && source_tools)
+            {
+                if (check_free_listen_port(*source_ses, m_source, rebuild_port, &m_result.output))
+                {
+                    m_target_ses = move(target_ses);
+                    m_source_ses = move(source_ses);
+                    init_ok = true;
+                }
+            }
+        }
+    }
+
+    m_state = init_ok ? State::START_BACKUP_SERVE : State::CLEANUP;
+    return true;
+}
+
+bool mon_op::RebuildServer::serve_backup()
+{
+    auto& cs = m_source->conn_settings();
+    // Start serving the backup stream. The source will wait for a new connection.
+    const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup "
+                              "--target-dir=/tmp --stream=xbstream --parallel=%i "
+                              "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
+    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1,
+                                           rebuild_port);
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
+
+    auto error_out = &m_result.output;
+    bool rval = false;
+    if (cmd_handle)
+    {
+        // Wait a bit, then check that command started successfully and is still running.
+        sleep(1);
+        auto status = cmd_handle->update_status();
+
+        if (status == ssh_util::AsyncCmd::Status::BUSY)
+        {
+            rval = true;
+            m_source_cmd = move(cmd_handle);
+        }
+        else
+        {
+            // The ssh-command includes username & pw so mask those in the log message.
+            const char mask[] = "******";
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, rebuild_port);
+            if (status == ssh_util::AsyncCmd::Status::READY)
+            {
+                int rc = cmd_handle->rc();
+                string result = rc == 0 ? "succeeded" :
+                    mxb::string_printf("failed with error %i: '%s'",
+                                       rc, cmd_handle->error_output().c_str());
+                PRINT_MXS_JSON_ERROR(error_out, "Failed to stream data from %s. Command '%s' %s before data "
+                                                "was streamed.", m_mon.name(), masked_cmd.c_str(),
+                                     result.c_str());
+            }
+            else
+            {
+                ssh_errmsg = mxb::string_printf("Failed to read output. %s",
+                                                cmd_handle->error_output().c_str());
+            }
+        }
+    }
+
+    if (!ssh_errmsg.empty())
+    {
+        mxb_assert(!m_source_cmd);
+        PRINT_MXS_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
+                             m_mon.name(), ssh_errmsg.c_str());
+    }
+
+    m_state = rval ? State::PREPARE_TARGET : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::prepare_target()
+{
+    // TODO: shutdown server, clear data and log dirs
+    m_state = State::START_TRANSFER;
+    return true;
+}
+
+bool RebuildServer::start_transfer()
+{
+    bool transfer_started = false;
+
+    // Connect to source and start stream the backup. For now, save the stream to tmp.
+    const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
+                               "| mbstream -x --directory=/tmp";
+    int timeout_s = 5;      // TODO: configurable?
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), rebuild_port,
+                                            timeout_s);
+
+    bool rval = false;
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
+    if (cmd_handle)
+    {
+        transfer_started = true;
+        m_target_cmd = move(cmd_handle);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(&m_result.output, "Failed to start receiving data to %s. %s",
+                             m_mon.name(), ssh_errmsg.c_str());
+    }
+    m_state = transfer_started ? State::WAIT_TRANSFER : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::wait_transfer()
+{
+    using Status = ssh_util::AsyncCmd::Status;
+    auto error_out = &m_result.output;
+
+    auto source_status = m_source_cmd->update_status();
+    auto target_status = m_target_cmd->update_status();
+
+    bool wait_again = true;
+    bool transfer_success = false;
+
+    if (source_status == Status::READY && target_status == Status::READY)
+    {
+        // Both commands completed, check return codes.
+        if (m_source_cmd->rc() == 0 && m_target_cmd->rc() == 0)
+        {
+            transfer_success = true;
+        }
+        else
+        {
+            if (m_source_cmd->rc() != 0)
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Backup send ended in error %i: '%s'.",
+                                     m_source_cmd->rc(), m_source_cmd->error_output().c_str());
+            }
+            if (m_target_cmd->rc() != 0)
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Backup receive ended in error %i: '%s'.",
+                                     m_target_cmd->rc(), m_target_cmd->error_output().c_str());
+            }
+        }
+        wait_again = false;
+        m_source_cmd = nullptr;
+        m_target_cmd = nullptr;
+    }
+    // TODO: handle other status combinations.
+
+    if (!wait_again)
+    {
+        m_state = transfer_success ? State::DONE : State::CLEANUP;
+    }
+    return !wait_again;     // if !wait_again then advance to next state
 }
 }

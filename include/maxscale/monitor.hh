@@ -317,6 +317,8 @@ public:
      */
     virtual const EventList& new_custom_events() const;
 
+    const ConnectionSettings& conn_settings() const;
+
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */
     int     mon_err_count = 0;

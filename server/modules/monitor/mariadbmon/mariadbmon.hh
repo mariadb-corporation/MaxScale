@@ -46,6 +46,7 @@ private:
 public:
     class Test;
     friend class Test;
+    friend class mon_op::RebuildServer;
 
     // Weakly-typed enums since cast to integer.
     enum RequireLocks
@@ -542,7 +543,6 @@ private:
     mon_op::Result manual_rejoin(SERVER* rejoin_cand_srv);
     mon_op::Result manual_reset_replication(SERVER* master_server);
     mon_op::Result manual_release_locks();
-    mon_op::Result manual_rebuild_server(SERVER* target, SERVER* source);
     void           handle_low_disk_space_master();
     void           handle_auto_failover();
     void           handle_auto_rejoin();
@@ -611,9 +611,6 @@ private:
     bool     get_joinable_servers(ServerArray* output);
     bool     server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
-
-    // Server rebuild methods
-    bool rebuild_check_preconds(MariaDBServer* target, MariaDBServer* source, json_t** error_out);
 
     bool check_sql_files();
     void enforce_read_only_on_slaves();

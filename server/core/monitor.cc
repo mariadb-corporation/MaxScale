@@ -2357,6 +2357,11 @@ void MonitorServer::read_journal_data(const mxb::Json& data)
     mon_prev_status = status;
     server->set_status(status);
 }
+
+const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
+{
+    return m_shared.conn_settings;
+}
 }
 
 

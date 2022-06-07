@@ -17,6 +17,11 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include "ssh_utils.hh"
+
+class SERVER;
+class MariaDBServer;
+class MariaDBMonitor;
 
 namespace mon_op
 {
@@ -38,7 +43,12 @@ struct Result
 class Operation
 {
 public:
+    Operation(const Operation&) = delete;
+    Operation& operator=(const Operation&) = delete;
+
+    Operation() = default;
     virtual ~Operation() = default;
+
     virtual bool   run() = 0;
     virtual Result result() = 0;
     virtual bool   cancel() = 0;
@@ -89,5 +99,53 @@ public:
 private:
     CmdMethod m_func;
     Result    m_result;
+};
+
+class RebuildServer : public Operation
+{
+public:
+    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source);
+
+    bool   run() override;
+    Result result() override;
+    bool   cancel() override;
+
+private:
+    SERVER* m_target_srv {nullptr};
+    SERVER* m_source_srv {nullptr};
+
+    MariaDBMonitor& m_mon;
+    MariaDBServer*  m_target {nullptr};
+    MariaDBServer*  m_source {nullptr};
+
+    ssh_util::SSession m_target_ses;
+    ssh_util::SSession m_source_ses;
+
+    std::unique_ptr<ssh_util::AsyncCmd> m_target_cmd;
+    std::unique_ptr<ssh_util::AsyncCmd> m_source_cmd;
+
+    enum class State
+    {
+        INIT,
+        START_BACKUP_SERVE,
+        PREPARE_TARGET,
+        START_TRANSFER,
+        WAIT_TRANSFER,
+        PREPARE_BINLOGS,
+        START_TARGET,
+        DONE,
+        CLEANUP,
+    };
+    State m_state {State::INIT};
+
+    Result m_result;
+
+    bool init();
+    bool serve_backup();
+    bool prepare_target();
+    bool start_transfer();
+    bool wait_transfer();
+
+    bool rebuild_check_preconds();
 };
 }
