@@ -2682,7 +2682,7 @@ To enable TLS/SSL for a server, you must set the `ssl` parameter to
 `true`. If the backend database server has certificate verification
 enabled, the `ssl_cert` and `ssl_key` parameters must also be defined.
 
-Custom CA certificates can be defined with the `ssl_ca_cert` parameter.
+Custom CA certificates can be defined with the `ssl_ca` parameter.
 
 After this, MaxScale connections between the server and/or the client will be
 encrypted. Note that the database must also be configured to use TLS/SSL
@@ -2738,11 +2738,18 @@ parameter for listeners but an optional parameter for servers.
 
 ### `ssl_ca_cert`
 
+Deprecated since MariaDB MaxScale 22.08. See `ssl_ca`.
+
+### `ssl_ca`
+
 A string giving a file path that identifies an existing readable file. The file
 must be the Certificate Authority (CA) certificate for the CA that signed the
 certificate referred to in the previous parameter. It will be used to verify
 that the certificate is valid. This is a required parameter for both listeners
 and servers. The CA certificate can consist of a certificate chain.
+
+*NOTE* Up until MariaDB MaxScale 6, the parameter was called `ssl_ca_cert`,
+       which is still accepted as an alias for `ssl_ca`.
 
 ### `ssl_version`
 

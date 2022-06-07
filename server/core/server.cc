@@ -164,7 +164,10 @@ static cfg::ParamPath s_ssl_cert(
 static cfg::ParamPath s_ssl_key(
     &s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "", AT_RUNTIME);
 static cfg::ParamPath s_ssl_ca(
-    &s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "", AT_RUNTIME);
+    &s_spec, CN_SSL_CA, "TLS certificate authority", cfg::ParamPath::R, "", AT_RUNTIME);
+
+// Alias ssl_ca_cert -> ssl_ca.
+static cfg::ParamAlias ss_ssl_ca_cert(&s_spec, CN_SSL_CA_CERT, &s_ssl_ca);
 
 static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
     &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",

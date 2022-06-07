@@ -70,6 +70,7 @@ constexpr char CN_SOCKET[] = "socket";
 constexpr char CN_SOURCE[] = "source";
 constexpr char CN_SQL_MODE[] = "sql_mode";
 constexpr char CN_SSL[] = "ssl";
+constexpr char CN_SSL_CA[] = "ssl_ca";
 constexpr char CN_SSL_CA_CERT[] = "ssl_ca_cert";
 constexpr char CN_SSL_CERT[] = "ssl_cert";
 constexpr char CN_SSL_CERT_VERIFY_DEPTH[] = "ssl_cert_verify_depth";

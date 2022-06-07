@@ -38,6 +38,13 @@ MaxScale 22.8.
 
 ## Deprecated Features
 
+### `ssl_ca_cert`
+
+The server parameter `ssl_ca_cert` has been renamed to `ssl_ca` and
+`ssl_ca_cert` has been deprecated. `ssl_ca_cert` is now an alias for
+`ssl_ca` and can still be used, but we suggest taking `ssl_ca` into
+use, as the support for `ssl_ca_cert` will at some point be dropped.
+
 ## New Features
 
 ## Bug fixes
