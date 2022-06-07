@@ -59,3 +59,7 @@ add_test_executable_ex(NAME pinloki_passwords SOURCE pinloki_passwords.cc
 #  CONFIG pinloki_galera.cnf VMS repl_backend LABELS pinloki)
 
 add_test_executable(pinloki_galera.cc pinloki_galera pinloki_galera LABELS REPL_BACKEND GALERA_BACKEND)
+
+# MXS-2662: Pinloki encryption
+add_test_executable_ex(NAME pinloki_encryption SOURCE pinloki_encryption.cc
+  CONFIG pinloki_encryption.cnf VMS repl_backend LABELS pinloki)

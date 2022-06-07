@@ -8,23 +8,7 @@ public:
 
     void setup() override
     {
-        test.expect(maxscale.connect(), "Pinloki connection should work: %s", maxscale.error());
-        test.expect(master.connect(), "Master connection should work: %s", master.error());
-        test.expect(slave.connect(), "Slave connection should work: %s", slave.error());
-
-        // Use the latest GTID in case the binlogs have been purged and the complete history is not available
-        auto gtid = master.field("SELECT @@gtid_current_pos");
-
-        maxscale.query("STOP SLAVE");
-        maxscale.query("SET GLOBAL gtid_slave_pos = '" + gtid + "'");
-        maxscale.query("START SLAVE");
-
-        sync(master, maxscale);
-
-        slave.query("STOP SLAVE; RESET SLAVE ALL;");
-        slave.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port));
-        slave.query("START SLAVE");
-        sync(maxscale, slave);
+        setup_select_master();
     }
 
     void run() override
