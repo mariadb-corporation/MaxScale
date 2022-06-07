@@ -833,8 +833,8 @@ void MariaDBBackendConnection::send_history()
                 m_track_queue.push(query);
             }
 
-            MXB_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
-                     m_server.name(), history_query.get_sql().c_str());
+            MXB_INFO("Execute %s %u on '%s': %s", STRPACKETTYPE(query.command),
+                     history_query.id(), m_server.name(), history_query.get_sql().c_str());
 
             m_dcb->writeq_append(GWBUF(history_query));
             m_history_responses.push_back(history_query.id());
@@ -881,6 +881,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
                 if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
+                    MXB_INFO("Reply to %u complete", id);
                     m_history_responses.pop_front();
                 }
                 else

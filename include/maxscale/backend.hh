@@ -162,6 +162,16 @@ public:
     }
 
     /**
+     * @brief Check if a response is unexpected
+     *
+     * @return True if the result was not expected
+     */
+    bool unexpected_response() const
+    {
+        return m_responses.empty();
+    }
+
+    /**
      * @brief Check if the backend is closed
      *
      * @return True if the backend is closed
