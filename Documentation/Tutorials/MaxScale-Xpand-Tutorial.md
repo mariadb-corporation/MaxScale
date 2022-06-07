@@ -56,13 +56,14 @@ password=PASSWORD
 ```
 
 The user defined by the `user` parameter needs the following grants:
-
 ```
-CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
-GRANT SELECT ON system.membership TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON system.nodeinfo TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON system.softfailed_nodes TO 'maxscale'@'maxscalehost';
+CREATE USER 'maxscale-monitor'@'maxscalehost' IDENTIFIED BY 'maxscale-monitor-password';
+GRANT SELECT ON system.membership TO 'maxscale-monitor'@'maxscalehost';
+GRANT SELECT ON system.nodeinfo TO 'maxscale-monitor'@'maxscalehost';
+GRANT SELECT ON system.softfailed_nodes TO 'maxscale-monitor'@'maxscalehost';
 ```
+In case the same user is used both for the monitor and the service (see below),
+then the user must be given the grants required by the service as well.
 
 The bootstrap servers are only used for connecting to the Xpand
 cluster; thereafter the Xpand monitor will dynamically find out the
@@ -108,12 +109,13 @@ cluster=Xpand
 ```
 
 The user defined by the `user` parameter needs the following grants:
-
 ```
-CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
-GRANT SELECT ON system.users TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON system.user_acl TO 'maxscale'@'maxscalehost';
+CREATE USER 'maxscale-service'@'maxscalehost' IDENTIFIED BY 'maxscale-service-password';
+GRANT SELECT ON system.users TO 'maxscale-service'@'maxscalehost';
+GRANT SELECT ON system.user_acl TO 'maxscale-service'@'maxscalehost';
 ```
+In case the same user is used both for the monitor (see above) and the service,
+then the user must be given the grants required by the monitor as well.
 
 Note that the service does *not* list any specific servers, but
 instead refers, using the argument `cluster`, to the Xpand monitor.
@@ -169,8 +171,8 @@ The service is specified as follows:
 [Xpand-Service]
 type=service
 router=readwritesplit
-user=maxscale
-password=maxscale
+user=maxscale-service
+password=maxscale-service-password
 cluster=Xpand
 transaction_replay=true
 slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
