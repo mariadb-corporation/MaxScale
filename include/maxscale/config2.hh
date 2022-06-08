@@ -2034,6 +2034,10 @@ public:
      *                         to fail.
      *
      * @return True if could be configured.
+     *
+     * @note If @c json contains aliases it will be modified during the call, as
+     *       the value of the actual parameter will be set to that of an alias
+     *       and the alias itself will be removed.
      */
     virtual bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr);
 

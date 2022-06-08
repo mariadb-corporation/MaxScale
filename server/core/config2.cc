@@ -655,6 +655,10 @@ const config::Specification& Configuration::specification() const
 bool Configuration::configure(const mxs::ConfigParameters& params,
                               mxs::ConfigParameters* pUnrecognized)
 {
+    // Aliases need not be pruned here, because 'params' is coming from a config
+    // file and issues can occur only if a user configures in the same section
+    // using both the actual name and the alias.
+
     mxs::ConfigParameters unrecognized;
     mxb_assert(m_pSpecification->validate(params, &unrecognized));
     mxb_assert(m_pSpecification->size() >= size());
@@ -754,8 +758,33 @@ void insert_value(mxs::ConfigParameters& params, const char* zName, json_t* pVal
 }
 }
 
+namespace
+{
+
+void prune_aliases(json_t* pJson, const Specification& specification)
+{
+    const char* zKey;
+    json_t* pValue;
+    void* pTmp;
+    json_object_foreach_safe(pJson, pTmp, zKey, pValue)
+    {
+        if (const Param* pParam = specification.find_param(zKey))
+        {
+            if (pParam->final_name() != pParam->name())
+            {
+                json_object_set(pJson, pParam->final_name().c_str(), pValue);
+                json_object_del(pJson, pParam->name().c_str());
+            }
+        }
+    }
+}
+
+}
+
 bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
 {
+    prune_aliases(json, specification());
+
     set<string> unrecognized;
     mxb_assert(m_pSpecification->validate(json, &unrecognized));
     mxb_assert(m_pSpecification->size() >= size());
