@@ -585,7 +585,10 @@ public:
                const char* zName,
                Param* pTarget)
         : Param(pSpecification,
-                zName, pTarget->description().c_str(), pTarget->modifiable(), pTarget->kind())
+                zName,
+                create_description(pTarget).c_str(),
+                pTarget->modifiable(),
+                pTarget->kind())
         , m_target(*pTarget)
     {
     }
@@ -594,7 +597,6 @@ public:
     {
         return m_target.final_name();
     }
-
 
     std::string type() const override final
     {
@@ -617,6 +619,15 @@ public:
     }
 
 private:
+    static std::string create_description(Param* pTarget)
+    {
+        std::string rv("Alias for '");
+        rv += pTarget->name();
+        rv += "'";
+
+        return rv;
+    }
+
     Param& m_target;
 };
 
