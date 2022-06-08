@@ -11,10 +11,11 @@
  * Public License.
  */
 
-#include "mariadbmon.hh"
+#include "monitor_commands.hh"
 #include <maxbase/format.hh>
 #include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
+#include "mariadbmon.hh"
 #include "ssh_utils.hh"
 
 using maxscale::Monitor;
@@ -1354,5 +1355,46 @@ string form_cmd_error_msg(const ssh_util::CmdResult& res, const char* cmd)
         rval = mxb::string_printf("Failed to send command '%s'. %s", cmd, res.error_output.c_str());
     }
     return rval;
+}
+}
+
+namespace mon_op
+{
+
+Result::~Result()
+{
+    json_decref(output);
+}
+
+void mon_op::Result::deep_copy_from(const mon_op::Result& rhs)
+{
+    mxb_assert(!output);
+    success = rhs.success;
+    output = json_deep_copy(rhs.output);
+}
+
+SimpleOp::SimpleOp(CmdMethod func)
+    : m_func(move(func))
+{
+}
+
+bool SimpleOp::run()
+{
+    mxb_assert(!m_result.output);
+    m_result = m_func();
+    return true;
+}
+
+Result SimpleOp::result()
+{
+    Result rval = m_result;
+    json_incref(rval.output);
+    return rval;
+}
+
+bool SimpleOp::cancel()
+{
+    mxb_assert(!true);
+    return false;
 }
 }
