@@ -585,6 +585,11 @@ json_t* Param::to_json() const
     json_object_set_new(pJson, CN_MANDATORY, json_boolean(is_mandatory()));
     json_object_set_new(pJson, CN_MODIFIABLE, json_boolean(is_modifiable_at_runtime()));
 
+    if (is_deprecated())
+    {
+        json_object_set_new(pJson, CN_DEPRECATED, json_boolean(true));
+    }
+
     return pJson;
 }
 

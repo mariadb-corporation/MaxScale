@@ -334,6 +334,14 @@ public:
     bool is_optional() const;
 
     /**
+     * @return True, if the parameter is deprecated.
+     */
+    virtual bool is_deprecated() const
+    {
+        return false;
+    }
+
+    /**
      * Synonym for @c is_optional.
      *
      * @return True, if the parameter has a default value.
@@ -629,6 +637,21 @@ private:
     }
 
     Param& m_target;
+};
+
+/**
+ * ParamDeprecated
+ */
+template<class T>
+class ParamDeprecated : public T
+{
+public:
+    using T::T;
+
+    bool is_deprecated() const override
+    {
+        return true;
+    }
 };
 
 /**

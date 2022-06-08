@@ -313,7 +313,7 @@ private:
     static config::ParamString                          s_admin_ssl_cert;
     static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;
     static config::ParamString                          s_admin_ssl_ca;
-    static config::ParamAlias                           s_admin_ssl_ca_cert; // -> s_admin_ca
+    static config::ParamDeprecated<config::ParamAlias>  s_admin_ssl_ca_cert; // -> s_admin_ca
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamBool                            s_persist_runtime_changes;

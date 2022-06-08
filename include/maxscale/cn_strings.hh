@@ -35,6 +35,7 @@ constexpr char CN_CONFIG_SYNC_PASSWORD[] = "config_sync_password";
 constexpr char CN_CONFIG_SYNC_TIMEOUT[] = "config_sync_timeout";
 constexpr char CN_CONFIG_SYNC_INTERVAL[] = "config_sync_interval";
 constexpr char CN_DATA[] = "data";
+constexpr char CN_DEPRECATED[] = "deprecated";
 constexpr char CN_DESCRIPTION[] = "description";
 constexpr char CN_DISK_SPACE_THRESHOLD[] = "disk_space_threshold";
 constexpr char CN_ENABLE_ROOT_USER[] = "enable_root_user";

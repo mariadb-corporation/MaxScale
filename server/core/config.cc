@@ -558,7 +558,7 @@ config::ParamString Config::s_admin_ssl_ca(
     "");
 
 // Alias admin_ssl_ca_cert -> admin_ssl_ca.
-config::ParamAlias Config::s_admin_ssl_ca_cert(
+config::ParamDeprecated<config::ParamAlias> Config::s_admin_ssl_ca_cert(
     &Config::s_specification,
     CN_ADMIN_SSL_CA_CERT,
     &Config::s_admin_ssl_ca);
