@@ -281,8 +281,11 @@ This allows the Monitor to perform failover, and more importantly, switchover.
 It also allows the user to manually redirect the Binlogrouter. The current
 master is "sticky", meaning that the same master will be chosen on reboot.
 
-**NOTE:** Do not use the Monitor parameter `auto_rejoin`. This restriction will
-be lifted in a future version.
+**NOTE:** Do not use the `mariadbmon` parameter
+[`auto_rejoin`](../Monitor/MariaDB-Monitor.md#auto_rejoin) if the monitor is
+monitoring a binlogrouter. The binlogrouter does not support all the SQL
+commands that the monitor will send and the rejoin will fail. This restriction
+will be lifted in a future version.
 
 The GTID the replication will start from, will be based on the latest replicated
 GTID. If no GTID has been replicated, the router will start replication from the
