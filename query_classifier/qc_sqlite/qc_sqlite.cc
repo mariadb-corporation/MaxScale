@@ -642,11 +642,11 @@ public:
     class MatchFieldName : public std::unary_function<T, bool>
     {
     public:
-        MatchFieldName(string_view database,
-                       string_view table,
+        MatchFieldName(const char* zDatabase,
+                       const char* zTable,
                        const char* zColumn)
-            : m_database(database)
-            , m_table(table)
+            : m_database(zDatabase ? string_view(zDatabase) : string_view {})
+            , m_table(zTable ? string_view(zTable) : string_view {})
             , m_zColumn(zColumn)
         {
             mxb_assert(zColumn);
