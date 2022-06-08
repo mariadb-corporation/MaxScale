@@ -174,4 +174,109 @@ CmdResult run_cmd(ssh::Session& ses, const std::string& cmd, std::chrono::millis
 
     return rval;
 }
+
+AsyncCmd::AsyncCmd(std::shared_ptr<ssh::Session> ses, std::unique_ptr<ssh::Channel> chan)
+    : m_ses(move(ses))
+    , m_chan(move(chan))
+    , m_status(Status::BUSY)
+{
+}
+
+AsyncCmd::Status AsyncCmd::update_status()
+{
+    if (m_status != Status::BUSY)
+    {
+        return m_status;
+    }
+
+    auto read_output = [&](bool read_error) {
+        auto& output = read_error ? m_error_output : m_output;
+        size_t bufsize = 1024;
+        char buf[bufsize];
+
+        int read;
+        do
+        {
+            read = m_chan->readNonblocking(buf, bufsize, read_error);
+            if (read > 0)
+            {
+                output.append(buf, read);
+            }
+            // If read <= 0, nothing was available yet or remote end sent eof.
+        }
+        while (read > 0);
+    };
+
+    try
+    {
+        // Read all available data from both streams, then check for eof.
+        read_output(false);
+        read_output(true);
+
+        if (m_chan->isEof())
+        {
+            m_chan->close();
+            m_rc = m_chan->getExitStatus();
+            m_status = Status::READY;
+        }
+    }
+    catch (ssh::SshException& e)
+    {
+        m_error_output = mxb::string_printf("Error %i: %s", e.getCode(), e.getError().c_str());
+        m_status = Status::SSH_FAIL;
+    }
+
+    return m_status;
+}
+
+AsyncCmd::~AsyncCmd()
+{
+    if (m_status == Status::BUSY)
+    {
+        // If the remote command did not complete, try sending a signal to it before disconnecting.
+        // Typical commands terminate on disconnect, but "socat" will stay running. Sending a signal
+        // increases the likelihood that the process will actually end. TODO: see if this actually does
+        // anything.
+        try
+        {
+            m_chan->requestSendSignal("KILL");
+        }
+        catch (ssh::SshException& e)
+        {
+        }
+    }
+}
+
+const std::string& AsyncCmd::output() const
+{
+    return m_output;
+}
+
+const std::string& AsyncCmd::error_output() const
+{
+    return m_error_output;
+}
+
+int AsyncCmd::rc() const
+{
+    return m_rc;
+}
+
+std::tuple<std::unique_ptr<AsyncCmd>, std::string>
+start_async_cmd(std::shared_ptr<ssh::Session> ses, const std::string& cmd)
+{
+    // Open a channel and a channel session, then start command.
+    auto channel = std::make_unique<ssh::Channel>(*ses);
+    try
+    {
+        channel->openSession();
+        channel->requestExec(cmd.c_str());
+        auto async_cmd = std::make_unique<AsyncCmd>(move(ses), move(channel));
+        return {move(async_cmd), ""};
+    }
+    catch (ssh::SshException& e)
+    {
+        return {nullptr, mxb::string_printf("Error %i: %s", e.getCode(), e.getError().c_str())};
+    }
+}
 }

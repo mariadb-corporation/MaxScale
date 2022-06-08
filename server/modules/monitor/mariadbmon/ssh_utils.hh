@@ -51,10 +51,44 @@ struct CmdResult
     };
 
     Type        type {Type::SSH_FAIL};  /**< Result type */
-    int         rc {-1};                /**< If command was ran, its return code */
+    int         rc {-1};                /**< If command completed, its return code */
     std::string output;                 /**< Command standard output */
     std::string error_output;           /**< Command error output or ssh error message */
 };
 
 CmdResult run_cmd(ssh::Session& read_error_stream, const std::string& cmd, std::chrono::milliseconds timeout);
+
+class AsyncCmd
+{
+public:
+    AsyncCmd(std::shared_ptr<ssh::Session> ses, std::unique_ptr<ssh::Channel> chan);
+    ~AsyncCmd();
+
+    enum class Status {READY, SSH_FAIL, BUSY};
+    Status update_status();
+
+    const std::string& output() const;
+    const std::string& error_output() const;
+    int                rc() const;
+
+private:
+    // The session can be shared between multiple channels, each running a command.
+    std::shared_ptr<ssh::Session> m_ses;
+    std::unique_ptr<ssh::Channel> m_chan;
+
+    int         m_rc {-1};              /**< If command completed, its return code */
+    std::string m_output;               /**< Command standard output */
+    std::string m_error_output;         /**< Command error output or ssh error message */
+    Status      m_status {Status::SSH_FAIL};
+};
+
+/**
+ * Start an async ssh command.
+ *
+ * @param ses Existing ssh session
+ * @param cmd The command to execute
+ * @return If successful, the object. On failure, an error string.
+ */
+std::tuple<std::unique_ptr<AsyncCmd>, std::string>
+start_async_cmd(std::shared_ptr<ssh::Session> ses, const std::string& cmd);
 }
