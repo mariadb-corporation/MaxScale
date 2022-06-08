@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     // Create the encryption key before MaxScale is started
-    test.maxscale->ssh_node_f(true, "openssl rand -hex 32 > /tmp/encryption.key");
+    test.maxscale->ssh_node_f(true, "(echo -n '1;'; openssl rand -hex 32)|cat > /tmp/encryption.key");
     test.maxscale->start();
 
     return EncryptionTest(test).result();
