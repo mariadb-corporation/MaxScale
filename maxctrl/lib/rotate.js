@@ -31,6 +31,24 @@ exports.builder = function (yargs) {
         });
       }
     )
+    .command(
+      "encryption [id]",
+      "Rotate encryption keys used for file encryption",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "This command rotates one or more encryption keys used by MaxScale to encrypt data at rest. " +
+              "If a key ID is given, only that key is rotated. Otherwise all encryption keys are rotated."
+          )
+          .usage("Usage: rotate encryption [key]");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          var opt = argv.id ? "?id=" + argv.id : "";
+          return doRequest(host, "maxscale/encryption/rotate" + opt, { method: "POST" });
+        });
+      }
+    )
     .usage("Usage: rotate <command>")
     .help()
     .wrap(null)
