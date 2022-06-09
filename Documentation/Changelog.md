@@ -10,6 +10,13 @@ For more details, please refer to:
   replaced by `master_conditions` and `slave_conditions`.
 * The `dbfwfilter` module that was deprecated in version 6 has now been removed.
 
+## MariaDB MaxScale 6.4
+
+* No new features, only bug fixes.
+
+For more details, please refer to:
+* [MariaDB MaxScale 6.4.0 Release Notes](Release-Notes/MaxScale-6.4.0-Release-Notes.md)
+
 ## MariaDB MaxScale 6.3
 
 * Nosqlprotocol now supports both SSL and authentication.
