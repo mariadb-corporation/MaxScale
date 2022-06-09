@@ -4,6 +4,8 @@
 std::string case1 = "Earth is the third planet";
 std::string case2 = "Mars is the fourth planet";
 std::string case3 = "Jupiter is the fifth planet";
+std::string case4 = "Saturn is the sixth planet";
+std::string case5 = "Uranus is the seventh planet";
 
 class EncryptionTest : public TestCase
 {
@@ -52,6 +54,7 @@ public:
 
     void run() override
     {
+        test.tprintf("Sanity check");
         check_contents("test.t1", case1);
         check_contents("test.t2", case1);
         check_gtid();
@@ -62,6 +65,7 @@ public:
         query("INSERT INTO test.t1 VALUES ('" + case2 + "')");
         query("INSERT INTO test.t2 VALUES ('" + case3 + "')");
 
+        test.tprintf("Encryption after restart");
         // Reconnect to MaxScale since it was restarted and force the slave to reconnect as well.
         maxscale.connect();
         slave.query("STOP SLAVE; START SLAVE;");
@@ -69,7 +73,18 @@ public:
 
         check_contents("test.t1", case2);
         check_contents("test.t2", case3);
-        check_encryption({case1, case2, case3});
+
+        test.tprintf("Key rotation");
+        test.check_maxctrl("rotate encryption");
+
+        query("INSERT INTO test.t1 VALUES ('" + case4 + "')");
+        sync_all();
+        check_contents("test.t1", case4);
+
+        test.tprintf("Key reloading");
+        test.check_maxctrl("reload encryption");
+
+        check_encryption({case1, case2, case3, case4, case5});
     }
 
     void post() override
