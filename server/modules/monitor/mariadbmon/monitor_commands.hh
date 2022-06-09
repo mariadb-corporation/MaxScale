@@ -127,12 +127,13 @@ private:
     enum class State
     {
         INIT,
-        START_BACKUP_SERVE,
+        SERVE_BACKUP,
         PREPARE_TARGET,
         START_TRANSFER,
         WAIT_TRANSFER,
-        PREPARE_BINLOGS,
+        PROCESS_BACKUP,
         START_TARGET,
+        START_REPLICATION,
         DONE,
         CLEANUP,
     };
@@ -145,7 +146,11 @@ private:
     bool prepare_target();
     bool start_transfer();
     bool wait_transfer();
+    bool process_backup();
+    bool start_target();
+    bool start_replication();
 
     bool rebuild_check_preconds();
+    bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
 };
 }

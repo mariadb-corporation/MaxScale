@@ -49,7 +49,8 @@ const char rebuild_server_cmd[] = "rebuild-server";
 
 // Assume simple commands complete in a reasonable time.
 const std::chrono::milliseconds ssh_base_timeout = 5s;
-int rebuild_port = 4444;    // TODO: configurable
+const int rebuild_port = 4444;                      // TODO: configurable
+const string rebuild_datadir = "/var/lib/mysql";    // configurable?
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -1204,6 +1205,23 @@ bool mon_op::RebuildServer::rebuild_check_preconds()
     return rval;
 }
 
+bool mon_op::RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string& desc)
+{
+    bool rval = false;
+    auto res = ssh_util::run_cmd(*m_target_ses, cmd, ssh_base_timeout);
+    if (res.type == RType::OK && res.rc == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        string errmsg = form_cmd_error_msg(res, cmd.c_str());
+        PRINT_MXS_JSON_ERROR(&m_result.output, "Could not %s on %s. %s",
+                             desc.c_str(), m_target->name(), errmsg.c_str());
+    }
+    return rval;
+}
+
 namespace
 {
 bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** error_out)
@@ -1402,7 +1420,7 @@ bool RebuildServer::run()
             advance = init();
             break;
 
-        case State::START_BACKUP_SERVE:
+        case State::SERVE_BACKUP:
             advance = serve_backup();
             break;
 
@@ -1418,6 +1436,18 @@ bool RebuildServer::run()
             advance = wait_transfer();
             break;
 
+        case State::PROCESS_BACKUP:
+            advance = process_backup();
+            break;
+
+        case State::START_TARGET:
+            advance = start_target();
+            break;
+
+        case State::START_REPLICATION:
+            advance = start_replication();
+            break;
+
         case State::DONE:
             command_complete = true;
             advance = false;
@@ -1425,6 +1455,8 @@ bool RebuildServer::run()
 
         case State::CLEANUP:
             // TODO
+            command_complete = true;
+            advance = false;
             break;
 
         default:
@@ -1488,7 +1520,7 @@ bool RebuildServer::init()
         }
     }
 
-    m_state = init_ok ? State::START_BACKUP_SERVE : State::CLEANUP;
+    m_state = init_ok ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
@@ -1515,6 +1547,7 @@ bool mon_op::RebuildServer::serve_backup()
         {
             rval = true;
             m_source_cmd = move(cmd_handle);
+            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), rebuild_port);
         }
         else
         {
@@ -1552,8 +1585,17 @@ bool mon_op::RebuildServer::serve_backup()
 
 bool RebuildServer::prepare_target()
 {
-    // TODO: shutdown server, clear data and log dirs
-    m_state = State::START_TRANSFER;
+    string clear_datadir = mxb::string_printf("sudo rm -rf %s/*", rebuild_datadir.c_str());
+    if (run_cmd_on_target("sudo systemctl stop mariadb", "stop MariaDB Server")
+        && run_cmd_on_target(clear_datadir, "empty data directory"))
+    {
+        MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.", m_target->name());
+        m_state = State::START_TRANSFER;
+    }
+    else
+    {
+        m_state = State::CLEANUP;
+    }
     return true;
 }
 
@@ -1561,12 +1603,12 @@ bool RebuildServer::start_transfer()
 {
     bool transfer_started = false;
 
-    // Connect to source and start stream the backup. For now, save the stream to tmp.
+    // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
-                               "| mbstream -x --directory=/tmp";
+                               "| sudo mbstream -x --directory=%s";
     int timeout_s = 5;      // TODO: configurable?
     string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), rebuild_port,
-                                            timeout_s);
+                                            timeout_s, rebuild_datadir.c_str());
 
     bool rval = false;
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
@@ -1574,6 +1616,7 @@ bool RebuildServer::start_transfer()
     {
         transfer_started = true;
         m_target_cmd = move(cmd_handle);
+        MXB_NOTICE("Backup transfer from %s to %s started.", m_source->name(), m_target->name());
     }
     else
     {
@@ -1601,6 +1644,9 @@ bool RebuildServer::wait_transfer()
         if (m_source_cmd->rc() == 0 && m_target_cmd->rc() == 0)
         {
             transfer_success = true;
+            MXB_NOTICE("Backup transferred to %s.", m_target->name());
+            // TODO: return code is not entirely reliable. Should perhaps check if error output has some
+            // worrisome contents.
         }
         else
         {
@@ -1619,12 +1665,65 @@ bool RebuildServer::wait_transfer()
         m_source_cmd = nullptr;
         m_target_cmd = nullptr;
     }
-    // TODO: handle other status combinations.
-
-    if (!wait_again)
+    else
     {
-        m_state = transfer_success ? State::DONE : State::CLEANUP;
+        // TODO: handle other status combinations.
+        MXB_NOTICE("Backup transfer in progress.");
     }
-    return !wait_again;     // if !wait_again then advance to next state
+
+    if (wait_again)
+    {
+        return false;
+    }
+    else
+    {
+        m_state = transfer_success ? State::PROCESS_BACKUP : State::CLEANUP;
+        return true;
+    }
+}
+
+bool RebuildServer::process_backup()
+{
+    // TODO: Check if this step can take a while and use async cmd if necessary.
+    // Also, this step can fail if the previous step failed to write files. Just looking at the return value
+    // of "mbstream" is not reliable.
+    bool backup_prepared = false;
+    auto& cs = m_source->conn_settings();
+    // TODO: mask password when logging
+    const char prepare_fmt[] = "sudo mariabackup --user=%s --password=%s --use-memory=1G --prepare "
+                               "--target-dir=%s";
+    string prepare_cmd = mxb::string_printf(prepare_fmt, cs.username.c_str(), cs.password.c_str(),
+                                            rebuild_datadir.c_str());
+    if (run_cmd_on_target(prepare_cmd, "prepare backup"))
+    {
+        MXB_NOTICE("Backup processed on %s.", m_target->name());
+        m_state = State::START_TARGET;
+    }
+    else
+    {
+        m_state = State::CLEANUP;
+    }
+    return true;
+}
+
+bool RebuildServer::start_target()
+{
+    bool server_started = false;
+    string chown_cmd = mxb::string_printf("sudo chown -R mysql:mysql %s/*", rebuild_datadir.c_str());
+    if (run_cmd_on_target(chown_cmd, "change ownership of datadir contents")
+        && run_cmd_on_target("sudo systemctl start mariadb", "start MariaDB Server"))
+    {
+        server_started = true;
+    }
+
+    m_state = server_started ? State::START_REPLICATION : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::start_replication()
+{
+    // TODO
+    m_state = State::DONE;
+    return true;
 }
 }
