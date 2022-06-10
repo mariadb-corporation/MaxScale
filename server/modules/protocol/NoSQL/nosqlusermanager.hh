@@ -20,6 +20,8 @@
 #include <maxscale/sqlite3.hh>
 #include "nosqlscram.hh"
 
+class SERVICE;
+
 namespace nosql
 {
 
@@ -71,6 +73,9 @@ void from_bson(const bsoncxx::array::view& bson,
 
 }
 
+/**
+ * UserManager
+ */
 class UserManager
 {
 public:
@@ -255,6 +260,9 @@ protected:
     }
 };
 
+/**
+ * UserManagerSqlite3
+ */
 class UserManagerSqlite3 : public UserManager
 {
 public:
@@ -301,6 +309,49 @@ private:
 
     std::string m_path;
     sqlite3&    m_db;
+};
+
+/**
+ * UserManagerMariaDB
+ */
+class UserManagerMariaDB : public UserManager
+{
+public:
+    static std::unique_ptr<UserManager> create(std::string name, SERVICE* pService);
+
+    bool add_user(const std::string& db,
+                  std::string user,
+                  std::string password, // Cleartext
+                  const std::string& host,
+                  const std::string& custom_data, // Assumed to be JSON document.
+                  const std::vector<scram::Mechanism>& mechanisms,
+                  const std::vector<role::Role>& roles) override;
+
+    bool remove_user(const std::string& db, const std::string& user) override;
+
+    using UserManager::get_info;
+    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const override;
+    bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const override;
+
+    std::vector<UserInfo> get_infos() const override;
+
+    std::vector<UserInfo> get_infos(const std::string& db) const override;
+
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const override;
+
+    std::vector<Account> get_accounts(const std::string& db) const override;
+
+    bool remove_accounts(const std::vector<Account>& accounts) const override;
+
+    bool update(const std::string& db,
+                const std::string&
+                user, uint32_t what,
+                const Update& data) const override;
+
+private:
+    UserManagerMariaDB(std::string name, SERVICE* pService);
+
+    SERVICE& m_service;
 };
 
 }

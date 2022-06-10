@@ -552,6 +552,9 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+/**
+ * UserManager
+ */
 std::vector<uint8_t> UserManager::UserInfo::pwd_sha1() const
 {
     return mxs::from_base64(this->pwd_sha1_b64);
@@ -581,6 +584,9 @@ UserManager::~UserManager()
 {
 }
 
+/**
+ * UserManagerSqlite3
+ */
 UserManagerSqlite3::UserManagerSqlite3(string path, sqlite3* pDb)
     : m_path(std::move(path))
     , m_db(*pDb)
@@ -1026,5 +1032,80 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
 
     return rv == SQLITE_OK;
 }
+
+/**
+ * UserManagerMariaDB
+ */
+
+UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService)
+    : m_service(*pService)
+{
+}
+
+bool UserManagerMariaDB::add_user(const string& db,
+                                  string user,
+                                  string password, // Cleartext
+                                  const string& host,
+                                  const string& custom_data, // Assumed to be JSON document.
+                                  const vector<scram::Mechanism>& mechanisms,
+                                  const vector<role::Role>& roles)
+{
+    return false;
+}
+
+bool UserManagerMariaDB::remove_user(const string& db, const string& user)
+{
+    return false;
+}
+
+bool UserManagerMariaDB::get_info(const string& db, const string& user, UserInfo* pInfo) const
+{
+    return false;
+}
+
+bool UserManagerMariaDB::get_info(const string& mariadb_user, UserInfo* pInfo) const
+{
+    return false;
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::get_infos() const
+{
+    return vector<UserManager::UserInfo> {};
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::get_infos(const string& db) const
+{
+    return vector<UserManager::UserInfo> {};
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::get_infos(const vector<string>& mariadb_users) const
+{
+    return vector<UserManager::UserInfo> {};
+}
+
+vector<UserManager::Account> UserManagerMariaDB::get_accounts(const string& db) const
+{
+    return vector<UserManager::Account> {};
+}
+
+bool UserManagerMariaDB::remove_accounts(const vector<Account>& accounts) const
+{
+    return false;
+}
+
+bool UserManagerMariaDB::update(const string& db,
+                                const string& user,
+                                uint32_t what,
+                                const Update& data) const
+{
+    return false;
+}
+
+//static
+unique_ptr<UserManager> UserManagerMariaDB::create(string name, SERVICE* pService)
+{
+    return unique_ptr<UserManager>(new UserManagerMariaDB(name, pService));
+}
+
 
 }
