@@ -12,39 +12,47 @@
  */
 
 #include "protocolmodule.hh"
+#include <maxscale/cn_strings.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "../MariaDB/user_data.hh"
+#include "../../../core/internal/listener.hh"
 #include "clientconnection.hh"
 #include "nosqlcursor.hh"
 
 using namespace std;
+namespace config = mxs::config;
 
-ProtocolModule::ProtocolModule(const std::string& name, std::unique_ptr<nosql::UserManager> sUm)
+ProtocolModule::ProtocolModule(std::string name, SERVICE* pService)
     : m_config(name, this)
-    , m_sUm(std::move(sUm))
+    , m_service(*pService)
 {
 }
 
-void ProtocolModule::post_configure()
+bool ProtocolModule::post_configure()
 {
-    nosql::NoSQLCursor::start_purging_idle_cursors(m_config.cursor_timeout);
+    if (m_config.authentication_shared)
+    {
+        m_sUm = nosql::UserManagerMariaDB::create(m_config.name(), &m_service);
+    }
+    else
+    {
+        m_sUm = nosql::UserManagerSqlite3::create(m_config.name());
+    }
+
+    if (m_sUm)
+    {
+        nosql::NoSQLCursor::start_purging_idle_cursors(m_config.cursor_timeout);
+    }
+
+    return m_sUm.get() != nullptr;
 }
 
 // static
-ProtocolModule* ProtocolModule::create(const std::string& name, Listener*)
+ProtocolModule* ProtocolModule::create(const std::string& name, Listener* pListener)
 {
-    ProtocolModule* pThis = nullptr;
-
-    unique_ptr<nosql::UserManager> sUm = nosql::UserManagerSqlite3::create(name);
-
-    if (sUm)
-    {
-        pThis = new ProtocolModule(name, std::move(sUm));
-    }
-
-    return pThis;
+    return new ProtocolModule(name, pListener->service());
 }
 
 unique_ptr<mxs::ClientConnection>

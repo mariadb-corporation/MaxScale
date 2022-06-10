@@ -17,6 +17,8 @@
 #include "configuration.hh"
 #include "nosqlusermanager.hh"
 
+class SERVICE;
+
 class ProtocolModule : public mxs::ProtocolModule
 {
 public:
@@ -45,12 +47,13 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
-    void post_configure();
+    bool post_configure();
 
 private:
-    ProtocolModule(const std::string& name, std::unique_ptr<nosql::UserManager> sUm);
+    ProtocolModule(std::string name, SERVICE* pService);
 
 private:
     Configuration                       m_config;
+    SERVICE&                            m_service;
     std::unique_ptr<nosql::UserManager> m_sUm;
 };
