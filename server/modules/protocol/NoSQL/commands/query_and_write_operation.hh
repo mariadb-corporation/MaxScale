@@ -2392,7 +2392,7 @@ private:
 
     Execution interpret(const ComOK& response, int index) override
     {
-        Execution rv;
+        Execution rv = Execution::ABORT;
 
         switch (m_update_action)
         {

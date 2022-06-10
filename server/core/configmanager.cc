@@ -734,7 +734,7 @@ bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs, s
     if (lhs_type == rhs_type)
     {
         std::ostringstream ss;
-        mxs::ModuleType mod_type;
+        mxs::ModuleType mod_type = mxs::ModuleType::UNKNOWN;
 
         switch (to_type(lhs.get_string(CN_TYPE)))
         {

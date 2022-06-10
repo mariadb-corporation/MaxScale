@@ -676,7 +676,7 @@ public:
                 RedisAction action = sThis->put_value(rkey, invalidation_words, pClone);
                 sThis->m_redis.check_for_io_error();
 
-                cache_result_t rv;
+                cache_result_t rv = CACHE_RESULT_ERROR;
 
                 switch (action)
                 {
@@ -793,7 +793,7 @@ public:
                 RedisAction action = sThis->invalidate(words);
                 sThis->m_redis.check_for_io_error();
 
-                cache_result_t rv;
+                cache_result_t rv = CACHE_RESULT_ERROR;
 
                 switch (action)
                 {

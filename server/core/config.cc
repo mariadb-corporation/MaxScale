@@ -1885,7 +1885,7 @@ const char* get_missing_module_parameter_name(const ConfigSection* obj)
 bool is_valid_module(const ConfigSection* obj)
 {
     using mxs::ModuleType;
-    ModuleType expected;
+    ModuleType expected = ModuleType::UNKNOWN;
     string type_str = obj->m_parameters.get_string(CN_TYPE);
     string param_name;
 
