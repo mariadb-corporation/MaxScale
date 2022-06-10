@@ -1105,10 +1105,12 @@ void Listener::accept_connections()
 
 Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protocol_params)
 {
+    using SProtocolModule = std::unique_ptr<mxs::ProtocolModule>;
+
     SData rval;
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
-    std::unique_ptr<mxs::ProtocolModule> protocol_module(protocol_api->create_protocol_module(m_name));
+    SProtocolModule protocol_module(protocol_api->create_protocol_module(m_name, this));
 
     if (protocol_module && protocol_module->getConfiguration().configure(protocol_params))
     {

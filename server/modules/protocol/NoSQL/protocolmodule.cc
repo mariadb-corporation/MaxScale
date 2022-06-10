@@ -33,7 +33,7 @@ void ProtocolModule::post_configure()
 }
 
 // static
-ProtocolModule* ProtocolModule::create(const std::string& name)
+ProtocolModule* ProtocolModule::create(const std::string& name, Listener*)
 {
     ProtocolModule* pThis = nullptr;
 

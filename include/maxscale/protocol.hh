@@ -19,13 +19,14 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/config_common.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/dcbhandler.hh>
 #include <maxscale/target.hh>
 
 class DCB;
 class SERVER;
 class GWBUF;
+class Listener;
 class MXS_SESSION;
 
 namespace maxscale
@@ -93,11 +94,12 @@ struct MXS_PROTOCOL_API
     /**
      * Creates a new protocol module instance.
      *
-     * @param name The name of the listener for which this protocol is created
+     * @param name      The name of the listener for which this protocol is created
+     * @param listener  The listener for which the protocol module is created.
      *
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)(const std::string& name);
+    mxs::ProtocolModule* (* create_protocol_module)(const std::string& name, Listener* listener);
 };
 
 /**

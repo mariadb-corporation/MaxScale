@@ -444,9 +444,9 @@ public:
     ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
-    static mxs::ProtocolModule* create_protocol_module(const std::string& name)
+    static mxs::ProtocolModule* create_protocol_module(const std::string& name, Listener* listener)
     {
-        return ProtocolImplementation::create(name);
+        return ProtocolImplementation::create(name, listener);
     }
 
     static MXS_PROTOCOL_API s_api;

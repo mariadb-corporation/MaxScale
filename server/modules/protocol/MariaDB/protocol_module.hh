@@ -23,7 +23,7 @@ class MySQLProtocolModule : public mxs::ProtocolModule
 public:
     ~MySQLProtocolModule() override = default;
 
-    static MySQLProtocolModule* create(const std::string& name);
+    static MySQLProtocolModule* create(const std::string& name, Listener* listener);
 
     mxs::config::Configuration& getConfiguration() override final;
 
