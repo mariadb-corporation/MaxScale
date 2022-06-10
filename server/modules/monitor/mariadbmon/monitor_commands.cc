@@ -1127,7 +1127,8 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
 
 bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out)
 {
-    auto op = std::make_unique<mon_op::RebuildServer>(*this, target, source);
+    MariaDBServer* rebuild_master = (m_master && m_master->is_master()) ? m_master : nullptr;
+    auto op = std::make_unique<mon_op::RebuildServer>(*this, target, source, rebuild_master);
     return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
@@ -1401,10 +1402,11 @@ bool SimpleOp::cancel()
     return false;
 }
 
-RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source)
-    : m_target_srv(target)
+RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master)
+    : m_mon(mon)
+    , m_target_srv(target)
     , m_source_srv(source)
-    , m_mon(mon)
+    , m_repl_master(master)
 {
 }
 
@@ -1722,8 +1724,66 @@ bool RebuildServer::start_target()
 
 bool RebuildServer::start_replication()
 {
-    // TODO
-    m_state = State::DONE;
+    // The model script reads gtid position from xtrabackup_binlog_info and writes it to gtid_slave_pos.
+    // However, this does not seem necessary as gtid_slave_pos is already correct.
+
+    // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
+    // source server.
+    MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
+    GeneralOpData op(&m_result.output, ssh_base_timeout);
+    EndPoint ep(repl_master->server->address(), repl_master->server->port());
+    SlaveStatus::Settings slave_sett("", ep, m_target->name());
+
+    bool replicating = false;
+    auto res = m_target->ping_or_connect();
+    if (Monitor::connection_is_ok(res))
+    {
+        if (m_target->create_start_slave(op, slave_sett))
+        {
+            // Wait a bit and then check that replication works. This only affects the log message. Simplified
+            // from MariaDBMonitor::wait_cluster_stabilization().
+            std::this_thread::sleep_for(500ms);
+            string errmsg;
+            if (m_target->do_show_slave_status(&errmsg))
+            {
+                auto slave_conn = m_target->slave_connection_status_host_port(repl_master);
+                if (slave_conn)
+                {
+                    if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES
+                        && slave_conn->slave_sql_running == true)
+                    {
+                        replicating = true;
+                        MXB_NOTICE("%s replicating from %s.", m_target->name(), repl_master->name());
+                    }
+                    else
+                    {
+                        MXB_WARNING("%s did not start replicating from %s. IO/SQL running: %s/%s.",
+                                    m_target->name(), repl_master->name(),
+                                    SlaveStatus::slave_io_to_string(slave_conn->slave_io_running).c_str(),
+                                    slave_conn->slave_sql_running ? "Yes" : "No");
+                    }
+                }
+                else
+                {
+                    MXB_WARNING("Could not check replication from %s to %s: slave connection not found.",
+                                repl_master->name(), m_target->name());
+                }
+            }
+            else
+            {
+                MXB_WARNING("Could not check replication from %s to %s: %s",
+                            repl_master->name(), m_target->name(), errmsg.c_str());
+            }
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(&m_result.output, "Could not connect to to %s after rebuild.",
+                             m_target->name());
+        m_target->log_connect_error(res);   // This only goes to log.
+    }
+
+    m_state = replicating ? State::DONE : State::CLEANUP;
     return true;
 }
 }

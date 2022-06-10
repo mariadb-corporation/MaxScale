@@ -104,19 +104,20 @@ private:
 class RebuildServer : public Operation
 {
 public:
-    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source);
+    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master);
 
     bool   run() override;
     Result result() override;
     bool   cancel() override;
 
 private:
-    SERVER* m_target_srv {nullptr};
-    SERVER* m_source_srv {nullptr};
-
     MariaDBMonitor& m_mon;
-    MariaDBServer*  m_target {nullptr};
-    MariaDBServer*  m_source {nullptr};
+
+    SERVER*        m_target_srv {nullptr};
+    SERVER*        m_source_srv {nullptr};
+    MariaDBServer* m_target {nullptr};
+    MariaDBServer* m_source {nullptr};
+    MariaDBServer* m_repl_master {nullptr};
 
     ssh_util::SSession m_target_ses;
     ssh_util::SSession m_source_ses;
