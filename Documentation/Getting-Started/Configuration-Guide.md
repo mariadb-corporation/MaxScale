@@ -411,6 +411,11 @@ You can explicitly enable automatic configuration of this value by setting the
 value to `auto`. This way MariaDB MaxScale will detect the number of available
 processors and set the amount of threads to be equal to that number.
 
+Starting with MaxScale 22.08, if the `maxscale` process is started in a
+container with limited CPU resources (i.e. the `--cpus` and `--cpuset-cpus`
+options in Docker), the `auto` values uses the container's limits instead of the
+host system's limits.
+
 The maximum value for threads is 256.
 
 ```

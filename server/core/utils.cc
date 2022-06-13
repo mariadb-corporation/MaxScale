@@ -43,6 +43,8 @@
 #include <thread>
 #include <curl/curl.h>
 #include <crypt.h>
+#include <sched.h>
+#include <fstream>
 
 #include <maxscale/config.hh>
 #include <maxscale/secrets.hh>
@@ -595,13 +597,64 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
     return fd;
 }
 
-long get_processor_count()
+long get_current_processor_count()
 {
     mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
-    return std::max(std::thread::hardware_concurrency(), 1U);
+    unsigned int cpus = std::thread::hardware_concurrency();
+
+    cpu_set_t cpuset;
+    if (sched_getaffinity(getpid(), sizeof(cpuset), &cpuset) == 0)
+    {
+        cpus = std::min((unsigned int)CPU_COUNT(&cpuset), cpus);
+    }
+
+    int quota = 0;
+    int period = 0;
+
+    if (std::ifstream cpu_v2("/sys/fs/cgroup/cpu.max"); cpu_v2)
+    {
+        if (std::string line; std::getline(cpu_v2, line))
+        {
+            auto tok = mxb::strtok(line, " ");
+
+            if (tok.size() == 2 && tok[0] != "-1" && tok [0] != "max")
+            {
+                quota = atoi(tok[0].c_str());
+                period = atoi(tok[1].c_str());
+            }
+        }
+    }
+    else if (std::ifstream cpu_v1_quota("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"); cpu_v1_quota)
+    {
+        if (std::ifstream cpu_v1_period("/sys/fs/cgroup/cpu/cpu.cfs_period_us"); cpu_v1_period)
+        {
+            int tmp_quota = 0;
+            int tmp_period = 0;
+
+            if ((cpu_v1_quota >> tmp_quota) && (cpu_v1_period >> tmp_period) && tmp_quota > 0)
+            {
+                quota = tmp_quota;
+                period = tmp_period;
+            }
+        }
+    }
+
+    if (quota && period)
+    {
+        unsigned int vcpu = std::ceil((double)quota / period);
+        cpus = std::min(vcpu, cpus);
+    }
+
+    return std::max(cpus, 1U);
 }
 
-int64_t get_total_memory()
+long get_processor_count()
+{
+    static long cpus = get_current_processor_count();
+    return cpus;
+}
+
+int64_t get_current_total_memory()
 {
     int64_t pagesize = 0;
     int64_t num_pages = 0;
@@ -616,7 +669,27 @@ int64_t get_total_memory()
 #error _SC_PAGESIZE and _SC_PHYS_PAGES are not defined
 #endif
     mxb_assert(pagesize * num_pages > 0);
-    return pagesize * num_pages;
+    int64_t memory = pagesize * num_pages;
+
+    for (auto path : {"/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"})
+    {
+        if (std::ifstream mem(path); mem)
+        {
+            if (int64_t mem_tmp = 0; (mem >> mem_tmp))
+            {
+                memory = std::min(mem_tmp, memory);
+                break;
+            }
+        }
+    }
+
+    return std::max(memory, 0L);
+}
+
+int64_t get_total_memory()
+{
+    static int64_t total_memory = get_current_total_memory();
+    return total_memory;
 }
 
 namespace maxscale

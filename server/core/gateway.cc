@@ -1970,14 +1970,16 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %lu processor cores.",
+    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %u processor cores (%ld online).",
                cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
-               cnf.version.c_str(), cnf.machine.c_str(), get_processor_count());
+               cnf.version.c_str(), cnf.machine.c_str(), std::thread::hardware_concurrency(),
+               get_processor_count());
 
     struct sysinfo info;
     sysinfo(&info);
-    MXB_NOTICE("Total usable main memory: %s.",
-               mxb::pretty_size(info.mem_unit * info.totalram).c_str());
+    MXB_NOTICE("Total usable main memory: %s (%s available).",
+               mxb::pretty_size(info.mem_unit * info.totalram).c_str(),
+               mxb::pretty_size(get_total_memory()).c_str());
     MXB_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXB_NOTICE("MaxScale is running in process %i", getpid());
 
