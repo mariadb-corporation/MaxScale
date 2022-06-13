@@ -22,6 +22,13 @@ function check_file() {
     do
         if [ ! -f "$i" ]
         then
+            # Bash regular expressions must be unquoted, otherwise they'll be a part of the pattern
+            if [[ "$i" =~ MaxScale-[12][.][0-4]*[.][0-9]*-Release-Notes[.]md ]]
+            then
+                # Ignore old release notes, they've been removed from the repo
+                continue
+            fi
+
             # Using double bracets changes how the matching works.
             # See the documentation for the '==' operator: https://tldp.org/LDP/abs/html/comparison-ops.html
             if [[ $i != http* ]]
