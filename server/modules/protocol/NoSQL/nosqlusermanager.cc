@@ -16,10 +16,14 @@
 #include <uuid/uuid.h>
 #include <map>
 #include <maxscale/paths.hh>
+#include <maxscale/service.hh>
 #include <maxscale/utils.hh>
+#include "configuration.hh"
 #include "nosqlkeys.hh"
 
 using namespace std;
+
+using Guard = lock_guard<mutex>;
 
 namespace
 {
@@ -164,7 +168,7 @@ bool create_schema(sqlite3* pDb)
     return rv == SQLITE_OK;
 }
 
-sqlite3* open_or_create_db(const std::string& path)
+sqlite3* open_or_create_db(const string& path)
 {
     sqlite3* pDb = nullptr;
     int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_CREATE;
@@ -351,7 +355,7 @@ bool role::from_json(const mxb::Json& json, Role* pRole)
 
                 if (rv)
                 {
-                    pRole->db = std::move(db);
+                    pRole->db = move(db);
                     pRole->id = id;
                 }
             }
@@ -375,7 +379,7 @@ bool role::from_json(const string& s, Role* pRole)
     return rv;
 }
 
-string role::to_json(const std::vector<role::Role>& roles)
+string role::to_json(const vector<role::Role>& roles)
 {
     ostringstream ss;
 
@@ -402,7 +406,7 @@ string role::to_json(const std::vector<role::Role>& roles)
     return ss.str();
 }
 
-bool role::from_json(const string& s, std::vector<role::Role>* pRoles)
+bool role::from_json(const string& s, vector<role::Role>* pRoles)
 {
     bool rv = false;
 
@@ -527,8 +531,8 @@ void add_role(const bsoncxx::document::view& role_doc, vector<role::Role>& roles
 }
 
 void role::from_bson(const bsoncxx::array::view& bson,
-                     const std::string& default_db,
-                     std::vector<Role>* pRoles)
+                     const string& default_db,
+                     vector<Role>* pRoles)
 {
     vector<Role> roles;
 
@@ -555,7 +559,7 @@ void role::from_bson(const bsoncxx::array::view& bson,
 /**
  * UserManager
  */
-std::vector<uint8_t> UserManager::UserInfo::pwd_sha1() const
+vector<uint8_t> UserManager::UserInfo::pwd_sha1() const
 {
     return mxs::from_base64(this->pwd_sha1_b64);
 }
@@ -694,8 +698,8 @@ unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
 bool UserManagerSqlite3::add_user(const string& db,
                                   string user,
                                   string pwd,
-                                  const std::string& host,
-                                  const std::string& custom_data, // Assumed to be JSON document.
+                                  const string& host,
+                                  const string& custom_data, // Assumed to be JSON document.
                                   const vector<scram::Mechanism>& mechanisms,
                                   const vector<role::Role>& roles)
 {
@@ -830,7 +834,7 @@ vector<UserManager::UserInfo> UserManagerSqlite3::get_infos() const
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManagerSqlite3::get_infos(const std::string& db) const
+vector<UserManager::UserInfo> UserManagerSqlite3::get_infos(const string& db) const
 {
     ostringstream ss;
     ss << SQL_SELECT_WHERE_DB_HEAD << "\"" << db << "\"";
@@ -909,7 +913,7 @@ vector<UserManager::Account> UserManagerSqlite3::get_accounts(const string& db) 
     return mariadb_accounts;
 }
 
-bool UserManagerSqlite3::remove_accounts(const std::vector<Account>& accounts) const
+bool UserManagerSqlite3::remove_accounts(const vector<Account>& accounts) const
 {
     int rv = SQLITE_OK;
 
@@ -1037,9 +1041,23 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
  * UserManagerMariaDB
  */
 
-UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService)
-    : m_service(*pService)
+UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
+    : m_name(name)
+    , m_service(*pService)
+    , m_config(*pConfig)
 {
+    auto& settings = m_db.connection_settings();
+
+    settings.user = m_config.authentication_user;
+    settings.password = m_config.authentication_password;
+}
+
+//static
+unique_ptr<UserManager> UserManagerMariaDB::create(string name,
+                                                   SERVICE* pService,
+                                                   const Configuration* pConfig)
+{
+    return unique_ptr<UserManager>(new UserManagerMariaDB(name, pService, pConfig));
 }
 
 bool UserManagerMariaDB::add_user(const string& db,
@@ -1050,47 +1068,119 @@ bool UserManagerMariaDB::add_user(const string& db,
                                   const vector<scram::Mechanism>& mechanisms,
                                   const vector<role::Role>& roles)
 {
-    return false;
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_add_user(db, user, password, host, custom_data, mechanisms, roles);
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::remove_user(const string& db, const string& user)
 {
-    return false;
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_remove_user(db, user);
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
-    return false;
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_info(db, user, pInfo);
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
-    return false;
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_info(mariadb_user, pInfo);
+    }
+
+    return rv;
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::get_infos() const
 {
-    return vector<UserManager::UserInfo> {};
+    vector<UserInfo> rv;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_infos();
+    }
+
+    return rv;
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::get_infos(const string& db) const
 {
-    return vector<UserManager::UserInfo> {};
+    vector<UserInfo> rv;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_infos(db);
+    }
+
+    return rv;
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::get_infos(const vector<string>& mariadb_users) const
 {
-    return vector<UserManager::UserInfo> {};
+    vector<UserInfo> rv;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_infos(mariadb_users);
+    }
+
+    return rv;
 }
 
 vector<UserManager::Account> UserManagerMariaDB::get_accounts(const string& db) const
 {
-    return vector<UserManager::Account> {};
+    vector<Account> rv;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_get_accounts(db);
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::remove_accounts(const vector<Account>& accounts) const
 {
-    return false;
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_remove_accounts(accounts);
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::update(const string& db,
@@ -1098,14 +1188,164 @@ bool UserManagerMariaDB::update(const string& db,
                                 uint32_t what,
                                 const Update& data) const
 {
+    bool rv = false;
+
+    Guard guard(m_mutex);
+    if (check_connection())
+    {
+        rv = do_update(db, user, what, data);
+    }
+
+    return rv;
+}
+
+bool UserManagerMariaDB::check_connection() const
+{
+    if (m_db.is_open() && !status_is_master(m_pServer->status()))
+    {
+        m_db.close();
+        m_pServer = nullptr;
+    }
+
+    if (!m_db.is_open())
+    {
+        SERVER* pServer = nullptr;
+        auto servers = m_service.reachable_servers(); // Returns a value.
+
+        auto end = servers.end();
+        auto it = std::find_if(servers.begin(), end, std::mem_fun(&SERVER::is_master));
+
+        if (it != end)
+        {
+            SERVER* pServer = *it;
+
+            MXB_SINFO(m_name << " uses " << pServer->name() << " for storing user data.");
+
+            if (m_db.open(pServer->address(), pServer->port()))
+            {
+                if (prepare_server())
+                {
+                    m_pServer = pServer;
+                }
+                else
+                {
+                    m_db.close();
+                }
+            }
+            else
+            {
+                MXB_SERROR("Could not open connection to " << pServer->name() << " at "
+                           << pServer->address() << ":" << pServer->port() << ": " << m_db.error());
+            }
+        }
+        else
+        {
+            MXB_SWARNING("No master server currently available for " << m_name << ", users cannot be "
+                         "authenticated.");
+        }
+    }
+
+    mxb_assert((m_db.is_open() && m_pServer) || (!m_db.is_open() && !m_pServer));
+
+    return m_db.is_open();
+}
+
+bool UserManagerMariaDB::prepare_server() const
+{
+    bool rv = false;
+
+    mxb_assert(m_db.is_open());
+
+    string db = "`" + m_config.authentication_db + "`";
+
+    ostringstream sql;
+    sql << "CREATE DATABASE IF NOT EXISTS " << db;
+
+    if (m_db.cmd(sql.str()))
+    {
+        MXB_SINFO("Created database " << db << ".");
+
+        string table = db + ".`" + m_name + "`";
+
+        sql.str(string());
+        sql << "CREATE TABLE IF NOT EXISTS " << table
+            << " (mariadb_user VARCHAR(145) UNIQUE, db VARCHAR(64), user VARCHAR(80), data TEXT)";
+
+        if (m_db.cmd(sql.str()))
+        {
+            MXB_SINFO("Created table " << table << ".");
+            rv = true;
+        }
+        else
+        {
+            MXB_SERROR("Could not create table " << table << ": " << m_db.error());
+        }
+    }
+    else
+    {
+        MXB_SERROR("Could not create database " << m_config.authentication_db << ": " << m_db.error());
+    }
+
+    return rv;
+}
+
+bool UserManagerMariaDB::do_add_user(const string& db,
+                                     string user,
+                                     string password, // Cleartext
+                                     const string& host,
+                                     const string& custom_data, // Assumed to be JSON document.
+                                     const vector<scram::Mechanism>& mechanisms,
+                                     const vector<role::Role>& roles)
+{
     return false;
 }
 
-//static
-unique_ptr<UserManager> UserManagerMariaDB::create(string name, SERVICE* pService)
+bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
 {
-    return unique_ptr<UserManager>(new UserManagerMariaDB(name, pService));
+    return false;
 }
 
+bool UserManagerMariaDB::do_get_info(const string& db, const string& user, UserInfo* pInfo) const
+{
+    return false;
+}
+
+bool UserManagerMariaDB::do_get_info(const string& mariadb_user, UserInfo* pInfo) const
+{
+    return false;
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos() const
+{
+    return vector<UserInfo> {};
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const string& db) const
+{
+    return vector<UserInfo> {};
+}
+
+vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const vector<string>& mariadb_users) const
+{
+    return vector<UserInfo> {};
+}
+
+vector<UserManager::Account> UserManagerMariaDB::do_get_accounts(const string& db) const
+{
+    return vector<Account> {};
+}
+
+bool UserManagerMariaDB::do_remove_accounts(const vector<Account>& accounts) const
+{
+    return false;
+}
+
+bool UserManagerMariaDB::do_update(const string& db,
+                                   const string&
+                                   user, uint32_t what,
+                                   const Update& data) const
+{
+    return false;
+}
 
 }

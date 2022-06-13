@@ -15,11 +15,15 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <maxbase/json.hh>
+#include <maxsql/mariadb_connector.hh>
 #include <maxscale/sqlite3.hh>
 #include "nosqlscram.hh"
 
+class Configuration;
+class SERVER;
 class SERVICE;
 
 namespace nosql
@@ -317,7 +321,9 @@ private:
 class UserManagerMariaDB : public UserManager
 {
 public:
-    static std::unique_ptr<UserManager> create(std::string name, SERVICE* pService);
+    static std::unique_ptr<UserManager> create(std::string name,
+                                               SERVICE* pService,
+                                               const Configuration* pConfig);
 
     bool add_user(const std::string& db,
                   std::string user,
@@ -349,9 +355,45 @@ public:
                 const Update& data) const override;
 
 private:
-    UserManagerMariaDB(std::string name, SERVICE* pService);
+    UserManagerMariaDB(std::string name, SERVICE* pService, const Configuration* pConfig);
 
-    SERVICE& m_service;
+    bool check_connection() const;
+    bool prepare_server() const;
+
+    bool do_add_user(const std::string& db,
+                     std::string user,
+                     std::string password, // Cleartext
+                     const std::string& host,
+                     const std::string& custom_data, // Assumed to be JSON document.
+                     const std::vector<scram::Mechanism>& mechanisms,
+                     const std::vector<role::Role>& roles);
+
+    bool do_remove_user(const std::string& db, const std::string& user);
+
+    bool do_get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
+    bool do_get_info(const std::string& mariadb_user, UserInfo* pInfo) const;
+
+    std::vector<UserInfo> do_get_infos() const;
+
+    std::vector<UserInfo> do_get_infos(const std::string& db) const;
+
+    std::vector<UserInfo> do_get_infos(const std::vector<std::string>& mariadb_users) const;
+
+    std::vector<Account> do_get_accounts(const std::string& db) const;
+
+    bool do_remove_accounts(const std::vector<Account>& accounts) const;
+
+    bool do_update(const std::string& db,
+                   const std::string&
+                   user, uint32_t what,
+                   const Update& data) const;
+
+    std::string             m_name;
+    SERVICE&                m_service;
+    const Configuration&    m_config;
+    mutable SERVER*         m_pServer { nullptr };
+    mutable maxsql::MariaDB m_db;
+    mutable std::mutex      m_mutex;
 };
 
 }

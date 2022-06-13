@@ -34,7 +34,7 @@ bool ProtocolModule::post_configure()
 {
     if (m_config.authentication_shared)
     {
-        m_sUm = nosql::UserManagerMariaDB::create(m_config.name(), &m_service);
+        m_sUm = nosql::UserManagerMariaDB::create(m_config.name(), &m_service, &m_config);
     }
     else
     {
