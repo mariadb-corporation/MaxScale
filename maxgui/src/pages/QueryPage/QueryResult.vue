@@ -20,7 +20,7 @@
                 <span>{{ $t('dataPrvw') }} </span>
             </v-tab>
             <v-tab color="primary" :href="`#${SQL_QUERY_MODES.HISTORY}`">
-                <span>{{ $t('historyAndFavorite') }} </span>
+                <span>{{ $t('historyAndSnippets') }} </span>
             </v-tab>
         </v-tabs>
         <v-slide-x-transition>
@@ -46,7 +46,7 @@
                     :dynDim="componentDynDim"
                     v-on="$listeners"
                 />
-                <history-and-favorite
+                <history-and-snippets
                     v-else
                     :style="{
                         height: `calc(100% - 24px)`,
@@ -76,13 +76,13 @@
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
-import HistoryAndFavorite from './HistoryAndFavorite'
+import HistoryAndSnippets from './HistoryAndSnippets'
 export default {
     name: 'query-result',
     components: {
         PreviewDataTab,
         ResultTab,
-        HistoryAndFavorite,
+        HistoryAndSnippets,
     },
     props: {
         dynDim: {

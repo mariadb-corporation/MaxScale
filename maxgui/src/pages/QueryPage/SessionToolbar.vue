@@ -26,27 +26,19 @@
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
-                        class="save-to-fav-btn"
+                        class="create-snippet-btn"
                         icon
                         small
                         color="accent-dark"
                         :disabled="!query_txt"
                         v-on="on"
-                        @click="openFavoriteDialog"
+                        @click="openSnippetDlg"
                     >
                         <v-icon size="20"> mdi-bookmark </v-icon>
                     </v-btn>
                 </template>
                 <span style="white-space: pre;" class="d-inline-block text-center">
-                    {{
-                        selected_query_txt
-                            ? `${$t('saveStatementsToFavorite', {
-                                  quantity: $t('selected'),
-                              })}\nCmd/Ctrl + S`
-                            : `${$t('saveStatementsToFavorite', {
-                                  quantity: $t('all'),
-                              })}\nCmd/Ctrl + S`
-                    }}
+                    {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + S` }}
                 </span>
             </v-tooltip>
             <v-spacer />
@@ -86,15 +78,18 @@
                         }"
                     />
                 </div>
-                <template v-if="confDlg.isSavingFavoriteQuery">
-                    <label class="field__label color text-small-text label-required">
-                        {{ $t('name') }}
+                <template v-if="confDlg.isCreatingSnippet">
+                    <label
+                        class="field__label color text-small-text label-required text-capitalize"
+                    >
+                        {{ $t('prefix') }}
                     </label>
+                    <!-- TODO: validate snippet prefix value uniqueness -->
                     <v-text-field
-                        v-model="favorite.name"
+                        v-model="snippet.name"
                         type="text"
                         :rules="[
-                            val => !!val || $t('errors.requiredInput', { inputName: $t('name') }),
+                            val => !!val || $t('errors.requiredInput', { inputName: $t('prefix') }),
                         ]"
                         class="std error--text__bottom mb-2"
                         dense
@@ -105,7 +100,7 @@
                     />
                 </template>
             </template>
-            <template v-if="!confDlg.isSavingFavoriteQuery" v-slot:action-prepend>
+            <template v-if="!confDlg.isCreatingSnippet" v-slot:action-prepend>
                 <v-checkbox
                     v-model="dontShowConfirm"
                     class="pa-0 ma-0"
@@ -153,10 +148,10 @@ export default {
                 title: this.$t('confirmations.runQuery'),
                 type: 'run',
                 sqlTxt: '',
-                isSavingFavoriteQuery: false,
+                isCreatingSnippet: false,
                 onSave: () => null,
             },
-            favorite: { date: '', name: '' },
+            snippet: { date: '', name: '' },
         }
     },
     computed: {
@@ -196,7 +191,7 @@ export default {
         }),
         ...mapActions({
             fetchQueryResult: 'queryResult/fetchQueryResult',
-            pushQueryFavorite: 'persisted/pushQueryFavorite',
+            pushToQuerySnippets: 'persisted/pushToQuerySnippets',
         }),
         ...mapMutations({
             SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
@@ -225,7 +220,7 @@ export default {
                         isOpened: true,
                         title: this.$t('confirmations.runQuery'),
                         type: 'run',
-                        isSavingFavoriteQuery: false,
+                        isCreatingSnippet: false,
                         sqlTxt:
                             this.activeRunMode === 'selected'
                                 ? this.selected_query_txt
@@ -256,31 +251,29 @@ export default {
                     break
             }
         },
-        openFavoriteDialog() {
+        openSnippetDlg() {
             if (this.query_txt) {
-                this.favorite.date = new Date().valueOf()
-                this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
-                    value: this.favorite.date,
-                    formatType: 'DATE_RFC2822',
-                })}`
+                this.snippet.date = new Date().valueOf()
+                //TODO: generate an unique prefix name
+                this.snippet.name = `unique-prefix`
                 this.confDlg = {
                     ...this.confDlg,
                     isOpened: true,
-                    title: this.$t('confirmations.addToFavorite'),
+                    title: this.$t('confirmations.createSnippet'),
                     type: 'add',
-                    isSavingFavoriteQuery: true,
+                    isCreatingSnippet: true,
                     sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
-                    onSave: this.addToFavorite,
+                    onSave: this.addSnippet,
                 }
             }
         },
-        addToFavorite() {
+        addSnippet() {
             let payload = {
                 sql: this.query_txt,
-                ...this.favorite,
+                ...this.snippet,
             }
             if (this.selected_query_txt) payload.sql = this.selected_query_txt
-            this.pushQueryFavorite(payload)
+            this.pushToQuerySnippets(payload)
         },
     },
 }

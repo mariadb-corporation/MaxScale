@@ -188,7 +188,7 @@ export default {
             this.getSessionToolbar().handleRun('all')
         },
         onCtrlS() {
-            this.getSessionToolbar().openFavoriteDialog()
+            this.getSessionToolbar().openSnippetDlg()
         },
     },
 }

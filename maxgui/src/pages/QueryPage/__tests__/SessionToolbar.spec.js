@@ -63,47 +63,42 @@ describe(`SessionToolbar`, () => {
             expect(arg).to.be.equals(newVal)
         })
     })
-    describe('Save to favorite tests', () => {
-        it(`Should disable save to favorite button if query_txt is empty `, () => {
-            wrapper = mountFactory()
-            const saveToFavBtn = wrapper.find('.save-to-fav-btn')
-            expect(saveToFavBtn.element.disabled).to.be.true
+    describe('Save to snippets tests', () => {
+        let wrapper
+        it(`Should disable save to snippets button if query_txt is empty `, () => {
+            wrapper = mountFactory({ computed: { isTxtEditor: () => true } })
+            const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
+            expect(saveToSnippetsBtn.element.disabled).to.be.true
         })
-        it(`Should allow query to be saved to favorite if query_txt is not empty`, () => {
+        it(`Should allow query to be saved to snippets if query_txt is not empty`, () => {
             wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
-            const saveToFavBtn = wrapper.find('.save-to-fav-btn')
-            expect(saveToFavBtn.element.disabled).to.be.false
+            const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
+            expect(saveToSnippetsBtn.element.disabled).to.be.false
         })
-        it(`Should popup dialog to save query text to favorite`, () => {
+        it(`Should popup dialog to save query text to snippets`, () => {
             expect(wrapper.vm.confDlg.isOpened).to.be.false
             wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
-            wrapper.find('.save-to-fav-btn').trigger('click')
+            wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.confDlg.isOpened).to.be.true
         })
-        it(`Should generate favorite object before popup the dialog`, () => {
+        it(`Should generate snippet object before popup the dialog`, () => {
             wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
-            wrapper.find('.save-to-fav-btn').trigger('click')
-            const ts = new Date().valueOf()
-            const generatedName = `Favorite statements - ${wrapper.vm.$help.dateFormat({
-                value: ts,
-                formatType: 'DATE_RFC2822',
-            })}`
-            expect(wrapper.vm.favorite.date).to.be.equals(ts)
-            expect(wrapper.vm.favorite.name).to.be.equals(generatedName)
+            wrapper.find('.create-snippet-btn').trigger('click')
+            const generatedName = `unique-prefix`
+            expect(wrapper.vm.snippet.name).to.be.equals(generatedName)
         })
-        it(`Should call addToFavorite`, async () => {
+        it(`Should call addSnippet`, async () => {
             wrapper = mountFactory({
                 computed: { query_txt: () => 'SELECT 1', isTxtEditor: () => true },
             })
-            const addToFavoriteSpy = sinon.spy(wrapper.vm, 'addToFavorite')
-            // mock open dialog and save
-            wrapper.vm.openFavoriteDialog()
+            const addToSnippetsSpy = sinon.spy(wrapper.vm, 'addSnippet')
+            wrapper.vm.openSnippetDlg()
             await wrapper
                 .findComponent({ name: 'confirm-dialog' })
                 .find('.save')
                 .trigger('click')
             await wrapper.vm.$help.delay(300)
-            addToFavoriteSpy.should.have.been.calledOnce
+            addToSnippetsSpy.should.have.been.calledOnce
         })
     })
     describe('session-btns event handlers', () => {

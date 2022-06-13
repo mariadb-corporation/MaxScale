@@ -21,7 +21,7 @@ export default {
         query_max_rows: 10000,
         query_confirm_flag: 1,
         query_history: [],
-        query_favorite: [],
+        query_favorite: [], //aka query snippets
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
     },
@@ -130,7 +130,7 @@ export default {
                 )
             }
         },
-        pushQueryFavorite({ commit }, { date, name, sql }) {
+        pushToQuerySnippets({ commit }, { date, name, sql }) {
             try {
                 commit('UPDATE_QUERY_FAVORITE', {
                     payload: {
@@ -144,7 +144,7 @@ export default {
                     },
                 })
             } catch (e) {
-                const logger = this.vue.$logger('store-persisted-pushQueryFavorite')
+                const logger = this.vue.$logger('store-persisted-pushToQuerySnippets')
                 logger.error(e)
                 commit(
                     'SET_SNACK_BAR_MESSAGE',

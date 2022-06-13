@@ -239,7 +239,7 @@ export default {
                     run: () => this.$emit('onCtrlEnter'),
                 },
                 {
-                    label: this.$t('saveStatementsToFavorite', { quantity: '' }),
+                    label: this.$t('createQuerySnippet'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
                     run: () => this.$emit('onCtrlS'),
                 },

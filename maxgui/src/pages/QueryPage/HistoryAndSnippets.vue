@@ -16,7 +16,7 @@
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
-                    {{ $t('favorite') }}
+                    {{ $t('snippets') }}
                 </v-tab>
             </v-tabs>
         </div>
@@ -47,6 +47,9 @@
                             text="Connection Name"
                             :maxWidth="maxWidth"
                         />
+                    </template>
+                    <template v-if="activeView === SQL_QUERY_MODES.FAVORITE" v-slot:header-name>
+                        {{ $t('prefix') }}
                     </template>
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
@@ -126,18 +129,18 @@
                 v-html="
                     activeView === SQL_QUERY_MODES.HISTORY
                         ? $t('historyTabGuide')
-                        : $t('favoriteTabGuide')
+                        : $t('snippetTabGuide')
                 "
             />
         </keep-alive>
         <confirm-dialog
             v-model="isConfDlgOpened"
             :title="
-                $t('clearSelectedQueries', {
-                    targetType: $t(
-                        activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'favoriteQueries'
-                    ),
-                })
+                activeView === SQL_QUERY_MODES.HISTORY
+                    ? $t('clearSelectedQueries', {
+                          targetType: $t('queryHistory'),
+                      })
+                    : $t('deleteSnippets')
             "
             type="delete"
             minBodyWidth="624px"
@@ -152,9 +155,7 @@
                                     ? $t('entire')
                                     : $t('selected'),
                             targetType: $t(
-                                activeView === SQL_QUERY_MODES.HISTORY
-                                    ? 'queryHistory'
-                                    : 'favoriteQueries'
+                                activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
                             ),
                         })
                     }}
@@ -180,7 +181,7 @@
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
-    name: 'history-and-favorite',
+    name: 'history-and-snippets',
     components: {
         'table-list': ResultDataTable,
     },
