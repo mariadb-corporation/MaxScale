@@ -169,10 +169,46 @@ export default {
             try {
                 // release module memory states
                 dispatch('releaseQueryModulesMem', id)
-                await dispatch('querySession/deleteAllSessionsByWkeId', id, { root: true })
+                await dispatch('handleDeleteWkeSessions', id)
                 commit('DELETE_WKE', id)
             } catch (e) {
                 this.vue.$logger('store-wke-handleDeleteWke').error(e)
+            }
+        },
+        async handleDeleteWkeSessions({ dispatch, commit, rootState, rootGetters }, wke_id) {
+            try {
+                const sessions = rootGetters['querySession/getSessionsByWkeId'](wke_id)
+                const { SESSION } = rootState.app_config.QUERY_CONN_BINDING_TYPES
+                // Disconnect all cloned sessions
+                for (const session of sessions) {
+                    if (session.wke_id_fk === wke_id) {
+                        const {
+                            active_sql_conn: { id: conn_id = null, binding_type = '' } = {},
+                        } = session
+                        if (conn_id && binding_type === SESSION)
+                            await dispatch(
+                                'queryConn/disconnectClone',
+                                { id: conn_id },
+                                { root: true }
+                            )
+                    }
+                }
+                // finally release mem and delete session objects
+                sessions.forEach(s => {
+                    dispatch(
+                        'querySession/resetSessionStates',
+                        { session_id: s.id },
+                        { root: true }
+                    )
+                    commit('querySession/DELETE_SESSION', s.id, { root: true })
+                })
+                commit(
+                    'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                    { id: wke_id },
+                    { root: true }
+                )
+            } catch (e) {
+                this.vue.$logger('store-wke-handleDeleteWkeSessions').error(e)
             }
         },
         /**

@@ -106,7 +106,7 @@ export default {
                     //deleteInvalidConn
                     invalidCnctIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('querySession/resetSessionStates', id, { root: true })
+                        dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                     })
 
                     commit('SET_SQL_CONNS', validSqlConns)
@@ -270,7 +270,7 @@ export default {
                 const allRes = await Promise.all(
                     cnnIdsToBeDeleted.map(id => {
                         commit('DELETE_SQL_CONN', state.sql_conns[id])
-                        dispatch('querySession/resetSessionStates', id, { root: true })
+                        dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                         return this.$http.delete(`/sql/${id}`)
                     })
                 )
@@ -329,7 +329,11 @@ export default {
         clearConn({ commit, dispatch, state }) {
             try {
                 const active_sql_conn = state.active_sql_conn
-                dispatch('querySession/resetSessionStates', active_sql_conn.id, { root: true })
+                dispatch(
+                    'querySession/resetSessionStates',
+                    { conn_id: active_sql_conn.id },
+                    { root: true }
+                )
                 commit('DELETE_SQL_CONN', active_sql_conn)
             } catch (e) {
                 this.vue.$logger('store-queryConn-clearConn').error(e)

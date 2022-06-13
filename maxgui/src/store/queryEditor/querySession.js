@@ -140,20 +140,13 @@ export default {
             }
         },
         async handleDeleteSession({ commit, dispatch }, session) {
-            const { id: connId } = session.active_sql_conn || {}
+            const { id: conn_id } = session.active_sql_conn || {}
             // also send request to delete the bound connection and release memory
-            if (connId) {
-                await dispatch('queryConn/disconnectClone', { id: connId }, { root: true })
-                dispatch('resetSessionStates', connId)
+            if (conn_id) {
+                await dispatch('queryConn/disconnectClone', { id: conn_id }, { root: true })
+                dispatch('resetSessionStates', { conn_id })
             }
             commit('DELETE_SESSION', session.id)
-        },
-        async deleteAllSessionsByWkeId({ state, dispatch, commit }, wke_id) {
-            for (const session of state.query_sessions)
-                if (session.wke_id_fk === wke_id) {
-                    await dispatch('handleDeleteSession', session)
-                    commit('SET_ACTIVE_SESSION_BY_WKE_ID_MAP', { id: wke_id })
-                }
         },
         /**
          * @param {Object} param.session - session object to be sync to flat states
@@ -182,10 +175,18 @@ export default {
         /**
          * sessions cleanup
          * release memStates that uses session id as key,
-         * refresh targetSession to its initial state
+         * refresh targetSession to its initial state. The target session
+         * can be either found by using conn_id or session_id
+         * @param {String} param.conn_id - connection id
+         * @param {String} param.session_id - session id
          */
-        resetSessionStates({ rootState, commit, dispatch, getters }, conn_id) {
-            const targetSession = getters.getSessionByConnId(conn_id)
+        resetSessionStates(
+            { state, rootState, commit, dispatch, getters },
+            { conn_id, session_id }
+        ) {
+            const targetSession = conn_id
+                ? getters.getSessionByConnId(conn_id)
+                : state.query_sessions.find(s => s.id === session_id)
             dispatch('releaseQueryModulesMem', targetSession.id)
             commit('REFRESH_SESSION_OF_A_WKE', targetSession)
             const freshSession = rootState.querySession.query_sessions.find(
