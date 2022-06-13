@@ -95,7 +95,7 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         }
         else
         {
-            chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
+            chunk = _mm256_loadu_si256((const __m256i*)(pSource));
         }
 
         uint32_t ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
@@ -107,29 +107,25 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
         const __m256i less_eq_9 = _mm256_cmpgt_epi8(large_nines(), chunk);
         const __m256i all_digits = _mm256_and_si256(greater_eq_0, less_eq_9);
 
-        auto pDigs = reinterpret_cast<const unsigned char*>(&all_digits);
-        bool rightmost_is_ident_char = pDigs[SIMD_BYTES - 1] || (ident_bitmask & 0x80000000);
+        // Only 32 bit bitmasks after this point
+        const uint32_t all_digits_bitmask = _mm256_movemask_epi8(all_digits);
+        const bool rightmost_is_ident_char = ident_bitmask & 0x8000'0000;
 
-        const __m256i rshifted = _mm256_slli_si256(all_digits, 1);
-        const __m256i xored = _mm256_xor_si256(all_digits, rshifted);
-        const __m256i leading_digits = _mm256_and_si256(all_digits, xored);
-
-        uint32_t digit_bitmask = _mm256_movemask_epi8(leading_digits);
-
-        // If a leading digit is preceded by a char that can
-        // start or continue an identifier, drop the digit.
-        uint32_t ident_shftr = ident_bitmask << 1;
-        uint32_t not_a_number = digit_bitmask & ident_shftr;
-        digit_bitmask ^= not_a_number;
+        const uint32_t left_shifted_bitmask = all_digits_bitmask << 1;
+        const uint32_t xored_bitmask = all_digits_bitmask ^ left_shifted_bitmask;
+        uint32_t leading_digit_bitmask = all_digits_bitmask & xored_bitmask;
 
         // Register boundary check.
         // If the previous rightmost char was an identifier char,
-        // then if the current leftmost char is a digit, zero it out.
-        digit_bitmask &= ~uint32_t(previous_rightmost_is_ident_char);
+        // then if the current leftmost char is a digit, zero the marker out.
+        uint32_t ident_shift_left = ident_bitmask << 1;
+        uint32_t not_a_number = leading_digit_bitmask & ident_shift_left;
+        leading_digit_bitmask ^= not_a_number;
+        leading_digit_bitmask &= ~int32_t(previous_rightmost_is_ident_char);
 
         previous_rightmost_is_ident_char = rightmost_is_ident_char;
 
-        uint32_t bitmask = ascii_bitmask | digit_bitmask;
+        uint32_t bitmask = ascii_bitmask | leading_digit_bitmask;
 
         while (bitmask)
         {
