@@ -217,19 +217,22 @@ describe(`SidebarContainer - methods tests`, () => {
     it(`Should process handleGetNodeData method as expected`, () => {
         let clearDataPreviewCallCount = 0
         let queryModeParam, fetchPrvwParams
-        const active_wke_id = 'wke_123'
+        const active_session_id = 'SESSION_123_45'
         wrapper = mountFactory({
             methods: {
                 clearDataPreview: () => clearDataPreviewCallCount++,
                 SET_CURR_QUERY_MODE: mode => (queryModeParam = mode),
                 fetchPrvw: params => (fetchPrvwParams = params),
             },
-            computed: { active_wke_id: () => active_wke_id },
+            computed: { getActiveSessionId: () => active_session_id },
         })
         const mockParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
         wrapper.vm.handleGetNodeData(mockParam)
         expect(clearDataPreviewCallCount).to.be.equals(1)
-        expect(queryModeParam).to.be.eql({ payload: mockParam.SQL_QUERY_MODE, id: active_wke_id })
+        expect(queryModeParam).to.be.eql({
+            payload: mockParam.SQL_QUERY_MODE,
+            id: active_session_id,
+        })
         expect(fetchPrvwParams).to.be.deep.equals({
             tblId: mockParam.schemaId,
             prvwMode: mockParam.SQL_QUERY_MODE,

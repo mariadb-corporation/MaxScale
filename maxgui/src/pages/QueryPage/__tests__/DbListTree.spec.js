@@ -481,12 +481,13 @@ describe(`DbListTree - computed and other method tests`, () => {
         wrapper = mountFactory({
             computed: {
                 getAlteredActiveNode: () => ({ id: 'mock_altered_active_node' }),
+                getActiveSessionId: () => ({ id: 'SESSION_123_45' }),
             },
         })
         let fnSpy = sinon.spy(wrapper.vm, 'PATCH_TBL_CREATION_INFO_MAP')
         wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt: mockQueryOpts[0] })
         fnSpy.should.have.been.calledWithExactly({
-            id: wrapper.vm.active_wke_id,
+            id: wrapper.vm.getActiveSessionId,
             payload: { altered_active_node: null },
         })
     })

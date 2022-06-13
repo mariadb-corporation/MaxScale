@@ -28,27 +28,6 @@ const mountFactory = opts =>
         ...opts,
     })
 
-/**
- * stubs worksheet object in worksheets_arr with a valid connection
- * @param {Object} wrapper - A Wrapper is an object that contains a mounted component and methods to test the component
- * @return {Object} - return new wrapper
- */
-function stubCnctWke(wrapper) {
-    return mountFactory({
-        computed: {
-            worksheets_arr: () => [
-                {
-                    ...wrapper.vm.worksheets_arr[0],
-                    active_sql_conn: {
-                        id: '0',
-                        name: 'server_0',
-                        type: 'servers',
-                    },
-                },
-            ],
-        },
-    })
-}
 describe('Worksheets', () => {
     let wrapper
 
@@ -91,20 +70,23 @@ describe('Worksheets', () => {
     })
 
     it('Should show a tooltip when hovering a worksheet tab has a connection', () => {
-        wrapper = stubCnctWke(wrapper)
+        wrapper = mountFactory({
+            computed: {
+                getWkeDefConnByWkeId: () => () => ({ id: '0', name: 'server_0', type: 'servers' }),
+            },
+        })
         expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.false
     })
 })
 
 describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
-    let wrapper, wkeToolbar, pageToolbar, wke, handleRunSpy, openFavoriteDialogSpy
+    let wrapper, sessionToolbar, wke, handleRunSpy, openFavoriteDialogSpy
     beforeEach(() => {
         wrapper = mountFactory()
-        wkeToolbar = wrapper.vm.$refs.wkeToolbar
-        pageToolbar = wrapper.vm.$refs.pageToolbar
+        sessionToolbar = wrapper.vm.$refs.wke.$refs.sessionToolbar
         wke = wrapper.findComponent({ name: 'worksheet' })
-        handleRunSpy = sinon.spy(wkeToolbar, 'handleRun')
-        openFavoriteDialogSpy = sinon.spy(pageToolbar, 'openFavoriteDialog')
+        handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
+        openFavoriteDialogSpy = sinon.spy(sessionToolbar, 'openFavoriteDialog')
     })
 
     afterEach(() => {

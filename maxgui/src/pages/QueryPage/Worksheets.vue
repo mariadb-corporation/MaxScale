@@ -137,7 +137,6 @@ export default {
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
         }),
         ...mapGetters({

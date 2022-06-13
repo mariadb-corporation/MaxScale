@@ -33,6 +33,7 @@ function mockActiveConnState() {
         sql_conns: () => dummy_sql_conns,
         active_sql_conn: () => dummy_sql_conns['1'],
         wkeConns: () => Object.values(dummy_sql_conns),
+        getActiveSessionId: () => 'SESSION_123_45',
     }
 }
 
@@ -168,7 +169,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
     it(`Should return accurate value for usedConnections computed property`, () => {
         wrapper = mountFactory({
-            computed: { worksheets_arr: () => [{ active_sql_conn: dummy_sql_conns['1'] }] },
+            computed: { query_sessions: () => [{ active_sql_conn: dummy_sql_conns['1'] }] },
         })
         expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_sql_conns['1'].id])
     })
@@ -230,7 +231,7 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
         expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
         expect(setCurrCnctResourceArgs).to.be.deep.equals({
             payload: selectConn,
-            id: wrapper.vm.active_wke_id,
+            id: wrapper.vm.getActiveSessionId,
         })
         expect(handleDispatchInitialFetchArgs).to.be.deep.equals(selectConn)
     })
