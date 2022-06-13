@@ -34,6 +34,13 @@ CatSession::~CatSession()
 
 void CatSession::close()
 {
+    for (auto& backend : m_backends)
+    {
+        if (backend->in_use())
+        {
+            backend->close();
+        }
+    }
 }
 
 bool CatSession::next_backend()
