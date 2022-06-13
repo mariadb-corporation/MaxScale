@@ -61,11 +61,6 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
-bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** error_out);
-bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
-
-string form_cmd_error_msg(const ssh_util::CmdResult& res, const char* cmd);
-
 /**
  * Command handlers. These are called by the rest-api.
  */
@@ -1132,7 +1127,9 @@ bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, jso
     return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
-bool mon_op::RebuildServer::rebuild_check_preconds()
+namespace mon_op
+{
+bool RebuildServer::rebuild_check_preconds()
 {
     auto* target = m_mon.get_server(m_target_srv);
     auto* source = m_mon.get_server(m_source_srv);
@@ -1206,7 +1203,7 @@ bool mon_op::RebuildServer::rebuild_check_preconds()
     return rval;
 }
 
-bool mon_op::RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string& desc)
+bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string& desc)
 {
     bool rval = false;
     auto res = ssh_util::run_cmd(*m_target_ses, cmd, ssh_base_timeout);
@@ -1216,16 +1213,14 @@ bool mon_op::RebuildServer::run_cmd_on_target(const std::string& cmd, const std:
     }
     else
     {
-        string errmsg = form_cmd_error_msg(res, cmd.c_str());
+        string errmsg = ssh_util::form_cmd_error_msg(res, cmd.c_str());
         PRINT_MXS_JSON_ERROR(&m_result.output, "Could not %s on %s. %s",
                              desc.c_str(), m_target->name(), errmsg.c_str());
     }
     return rval;
 }
 
-namespace
-{
-bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** error_out)
+bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
 {
     const char socat_cmd[] = "socat -V";
     const char pigz_cmd[] = "pigz -V";
@@ -1235,6 +1230,7 @@ bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** erro
     auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, ssh_base_timeout);
     auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, ssh_base_timeout);
 
+    auto error_out = &m_result.output;
     bool all_ok = true;
     auto check = [server, &all_ok, error_out](const ssh_util::CmdResult& res, const char* tool,
                                               const char* cmd) {
@@ -1242,7 +1238,7 @@ bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** erro
         {
             if (res.rc != 0)
             {
-                string fail_reason = form_cmd_error_msg(res, cmd);
+                string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
                 PRINT_MXS_JSON_ERROR(error_out, "'%s' lacks '%s', which is required for server rebuild. %s",
                                      server->name(), tool, fail_reason.c_str());
                 all_ok = false;
@@ -1250,7 +1246,7 @@ bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** erro
         }
         else
         {
-            string fail_reason = form_cmd_error_msg(res, cmd);
+            string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
             PRINT_MXS_JSON_ERROR(error_out, "Could not check that '%s' has '%s', which is required for "
                                             "server rebuild. %s",
                                  server->name(), tool, fail_reason.c_str());
@@ -1264,7 +1260,8 @@ bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh, json_t** erro
     return all_ok;
 }
 
-bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out)
+bool
+RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out)
 {
     bool success = true;
 
@@ -1298,7 +1295,7 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
         }
         else
         {
-            string fail_reason = form_cmd_error_msg(port_res, port_pid_cmd.c_str());
+            string fail_reason = ssh_util::form_cmd_error_msg(port_res, port_pid_cmd.c_str());
             PRINT_MXS_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
                                  port, server->name(), fail_reason.c_str());
             success = false;
@@ -1316,7 +1313,7 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
             auto kill_res = ssh_util::run_cmd(ses, kill_cmd, ssh_base_timeout);
             if (kill_res.type != RType::OK || kill_res.rc != 0)
             {
-                string fail_reason = form_cmd_error_msg(kill_res, kill_cmd.c_str());
+                string fail_reason = ssh_util::form_cmd_error_msg(kill_res, kill_cmd.c_str());
                 PRINT_MXS_JSON_ERROR(error_out, "Failed to kill process %i on %s. %s",
                                      pid, server->name(), fail_reason.c_str());
                 success = false;
@@ -1341,36 +1338,12 @@ bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, 
     return success;
 }
 
-string form_cmd_error_msg(const ssh_util::CmdResult& res, const char* cmd)
-{
-    string rval;
-    if (res.type == RType::OK)
-    {
-        mxb_assert(res.rc != 0);
-        rval = mxb::string_printf("Command '%s' failed with error %i: '%s'", cmd, res.rc,
-                                  res.error_output.c_str());
-    }
-    else if (res.type == RType::TIMEOUT)
-    {
-        rval = mxb::string_printf("Command '%s' timed out.", cmd);
-    }
-    else
-    {
-        rval = mxb::string_printf("Failed to send command '%s'. %s", cmd, res.error_output.c_str());
-    }
-    return rval;
-}
-}
-
-namespace mon_op
-{
-
 Result::~Result()
 {
     json_decref(output);
 }
 
-void mon_op::Result::deep_copy_from(const mon_op::Result& rhs)
+void Result::deep_copy_from(const Result& rhs)
 {
     mxb_assert(!output);
     success = rhs.success;
@@ -1451,8 +1424,8 @@ bool RebuildServer::run()
             break;
 
         case State::DONE:
-            command_complete = true;
-            advance = false;
+            m_result.success = true;
+            m_state = State::CLEANUP;
             break;
 
         case State::CLEANUP:
@@ -1507,8 +1480,8 @@ bool RebuildServer::init()
             bool have_tools = true;
 
             // Check installed tools.
-            auto target_tools = check_rebuild_tools(m_target, *target_ses, &m_result.output);
-            auto source_tools = check_rebuild_tools(m_source, *source_ses, &m_result.output);
+            auto target_tools = check_rebuild_tools(m_target, *target_ses);
+            auto source_tools = check_rebuild_tools(m_source, *source_ses);
 
             if (target_tools && source_tools)
             {
@@ -1526,7 +1499,7 @@ bool RebuildServer::init()
     return true;
 }
 
-bool mon_op::RebuildServer::serve_backup()
+bool RebuildServer::serve_backup()
 {
     auto& cs = m_source->conn_settings();
     // Start serving the backup stream. The source will wait for a new connection.
@@ -1633,44 +1606,69 @@ bool RebuildServer::wait_transfer()
 {
     using Status = ssh_util::AsyncCmd::Status;
     auto error_out = &m_result.output;
+    bool wait_again = false;
+    bool target_success = false;
 
-    auto source_status = m_source_cmd->update_status();
     auto target_status = m_target_cmd->update_status();
-
-    bool wait_again = true;
-    bool transfer_success = false;
-
-    if (source_status == Status::READY && target_status == Status::READY)
+    if (target_status == Status::BUSY)
     {
-        // Both commands completed, check return codes.
-        if (m_source_cmd->rc() == 0 && m_target_cmd->rc() == 0)
-        {
-            transfer_success = true;
-            MXB_NOTICE("Backup transferred to %s.", m_target->name());
-            // TODO: return code is not entirely reliable. Should perhaps check if error output has some
-            // worrisome contents.
-        }
-        else
-        {
-            if (m_source_cmd->rc() != 0)
-            {
-                PRINT_MXS_JSON_ERROR(error_out, "Backup send ended in error %i: '%s'.",
-                                     m_source_cmd->rc(), m_source_cmd->error_output().c_str());
-            }
-            if (m_target_cmd->rc() != 0)
-            {
-                PRINT_MXS_JSON_ERROR(error_out, "Backup receive ended in error %i: '%s'.",
-                                     m_target_cmd->rc(), m_target_cmd->error_output().c_str());
-            }
-        }
-        wait_again = false;
-        m_source_cmd = nullptr;
-        m_target_cmd = nullptr;
+        // Target is receiving more data, keep waiting.
+        wait_again = true;
     }
     else
     {
-        // TODO: handle other status combinations.
-        MXB_NOTICE("Backup transfer in progress.");
+        if (target_status == Status::READY)
+        {
+            if (m_target_cmd->rc() == 0)
+            {
+                target_success = true;
+                MXB_NOTICE("Backup transferred to %s.", m_target->name());
+                // TODO: return code is not entirely reliable. Should perhaps check if error output has some
+                // worrisome contents. Not that it really matters for the end result.
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Failed to receive backup on %s. Error %i: '%s'.",
+                                     m_target->name(), m_target_cmd->rc(),
+                                     m_target_cmd->error_output().c_str());
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
+                                 m_target->name(), m_target_cmd->error_output().c_str());
+        }
+        m_target_cmd = nullptr;
+    }
+
+    // Update source status even if not used right now.
+    auto source_status = m_source_cmd->update_status();
+    if (!wait_again)
+    {
+        // Target has finished, check if source has as well.
+        if (source_status == Status::BUSY)
+        {
+            // Weird, source is still sending. Ignore and continue. Check it again during cleanup.
+        }
+        else
+        {
+            // Both stopped.
+            if (source_status == Status::READY)
+            {
+                if (m_source_cmd->rc() != 0)
+                {
+                    PRINT_MXS_JSON_ERROR(error_out, "Backup send failure on %s. Error %i: '%s'.",
+                                         m_source->name(), m_source_cmd->rc(),
+                                         m_source_cmd->error_output().c_str());
+                }
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
+                                     m_source->name(), m_source_cmd->error_output().c_str());
+            }
+            m_source_cmd = nullptr;
+        }
     }
 
     if (wait_again)
@@ -1679,7 +1677,7 @@ bool RebuildServer::wait_transfer()
     }
     else
     {
-        m_state = transfer_success ? State::PROCESS_BACKUP : State::CLEANUP;
+        m_state = target_success ? State::PROCESS_BACKUP : State::CLEANUP;
         return true;
     }
 }
@@ -1785,5 +1783,20 @@ bool RebuildServer::start_replication()
 
     m_state = replicating ? State::DONE : State::CLEANUP;
     return true;
+}
+
+void RebuildServer::cleanup()
+{
+    // Only one thing to do: Ensure that the source server is no longer serving the backup.
+    if (m_source_cmd)
+    {
+        m_source_cmd->update_status();
+        m_source_cmd = nullptr;
+    }
+
+    if (m_source_ses)
+    {
+        check_free_listen_port(*m_source_ses, m_source, rebuild_port, &m_result.output);
+    }
 }
 }

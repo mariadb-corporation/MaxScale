@@ -150,8 +150,12 @@ private:
     bool process_backup();
     bool start_target();
     bool start_replication();
+    void cleanup();
 
     bool rebuild_check_preconds();
+    bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
+    bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
+
     bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
 };
 }

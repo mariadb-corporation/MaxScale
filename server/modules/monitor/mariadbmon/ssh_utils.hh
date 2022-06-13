@@ -91,4 +91,6 @@ private:
  */
 std::tuple<std::unique_ptr<AsyncCmd>, std::string>
 start_async_cmd(std::shared_ptr<ssh::Session> ses, const std::string& cmd);
+
+std::string form_cmd_error_msg(const CmdResult& res, const char* cmd);
 }

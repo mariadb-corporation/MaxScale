@@ -279,4 +279,31 @@ start_async_cmd(std::shared_ptr<ssh::Session> ses, const std::string& cmd)
         return {nullptr, mxb::string_printf("Error %i: %s", e.getCode(), e.getError().c_str())};
     }
 }
+
+string form_cmd_error_msg(const CmdResult& res, const char* cmd)
+{
+    using RType = CmdResult::Type;
+    string rval;
+    if (res.type == RType::OK)
+    {
+        if (res.rc == 0)
+        {
+            rval = mxb::string_printf("Command '%s' succeeded.", cmd);
+        }
+        else
+        {
+            rval = mxb::string_printf("Command '%s' failed with error %i: '%s'", cmd, res.rc,
+                                      res.error_output.c_str());
+        }
+    }
+    else if (res.type == RType::TIMEOUT)
+    {
+        rval = mxb::string_printf("Command '%s' timed out.", cmd);
+    }
+    else
+    {
+        rval = mxb::string_printf("Failed to send command '%s'. %s", cmd, res.error_output.c_str());
+    }
+    return rval;
+}
 }
