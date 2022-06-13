@@ -47,7 +47,7 @@ inline __m256i sql_ascii_bit_map()
 inline __m256i ident_begin_bit_map()
 {
     static const __m256i ident_begin_bit_map =
-            make_ascii_bitmap(R"(_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
+            make_ascii_bitmap(R"($_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
 
     return ident_begin_bit_map;
 }
