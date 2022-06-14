@@ -144,7 +144,10 @@ public:
 
     virtual bool remove_user(const std::string& db, const std::string& user) = 0;
 
-    virtual bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const = 0;
+    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const
+    {
+        return get_info(get_mariadb_user(db, nosql::escape_essential_chars(user)), pInfo);
+    }
 
     virtual bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const = 0;
 
@@ -290,7 +293,6 @@ public:
     bool remove_user(const std::string& db, const std::string& user) override;
 
     using UserManager::get_info;
-    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const override;
     bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const override;
 
     std::vector<UserInfo> get_infos() const override;
@@ -336,7 +338,6 @@ public:
     bool remove_user(const std::string& db, const std::string& user) override;
 
     using UserManager::get_info;
-    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const override;
     bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const override;
 
     std::vector<UserInfo> get_infos() const override;
@@ -370,7 +371,6 @@ private:
 
     bool do_remove_user(const std::string& db, const std::string& user);
 
-    bool do_get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
     bool do_get_info(const std::string& mariadb_user, UserInfo* pInfo) const;
 
     std::vector<UserInfo> do_get_infos() const;

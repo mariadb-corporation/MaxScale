@@ -785,11 +785,6 @@ bool UserManagerSqlite3::remove_user(const string& db, const string& user)
     return rv == SQLITE_OK;
 }
 
-bool UserManagerSqlite3::get_info(const string& db, const string& user, UserInfo* pInfo) const
-{
-    return get_info(get_mariadb_user(db, nosql::escape_essential_chars(user)), pInfo);
-}
-
 bool UserManagerSqlite3::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     ostringstream ss;
@@ -1092,19 +1087,6 @@ bool UserManagerMariaDB::remove_user(const string& db, const string& user)
     return rv;
 }
 
-bool UserManagerMariaDB::get_info(const string& db, const string& user, UserInfo* pInfo) const
-{
-    bool rv = false;
-
-    Guard guard(m_mutex);
-    if (check_connection())
-    {
-        rv = do_get_info(db, user, pInfo);
-    }
-
-    return rv;
-}
-
 bool UserManagerMariaDB::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     bool rv = false;
@@ -1301,11 +1283,6 @@ bool UserManagerMariaDB::do_add_user(const string& db,
 }
 
 bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
-{
-    return false;
-}
-
-bool UserManagerMariaDB::do_get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
     return false;
 }
