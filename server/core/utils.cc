@@ -597,6 +597,60 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
     return fd;
 }
 
+std::string get_current_cgroup()
+{
+    std::string rv;
+
+    if (std::ifstream cgroup("/proc/self/cgroup"); cgroup)
+    {
+        for (std::string line; rv.empty() && std::getline(cgroup, line);)
+        {
+            if (line.substr(0, 3) == "0::")
+            {
+                // Unified hierarchy cgroups (v2). The format is `0::/path/to/cgroup/`, usually `0::/` for
+                // docker or when no cgroups are set.
+                rv = line.substr(3);
+            }
+            else
+            {
+                // Legacy cgroups (v1). The file will contain multiple lines and the format of each line is:
+                //
+                //   hierarchy-ID:controller-list:cgroup-path
+                //
+                // We must find the hierarchy with the `cpu` controller in it and use the cgroup-path for
+                // that. For docker this is unnecessary as it's always the root cgroup but for SystemD the
+                // path is different depending on the slice the process is in.
+                if (auto pos = line.find(':'); pos != std::string::npos)
+                {
+                    ++pos;
+
+                    if (auto end_pos = line.find(':', pos); end_pos != std::string::npos)
+                    {
+                        auto controller = line.substr(pos, end_pos - pos);
+
+                        for (const auto& tok : mxb::strtok(controller, ","))
+                        {
+                            if (tok == "cpu")
+                            {
+                                rv = line.substr(end_pos + 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
+const std::string& get_cgroup()
+{
+    static std::string cgroup = get_current_cgroup();
+    return cgroup;
+}
+
 long get_current_processor_count()
 {
     mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
@@ -610,8 +664,9 @@ long get_current_processor_count()
 
     int quota = 0;
     int period = 0;
+    const auto& cg = get_cgroup();
 
-    if (std::ifstream cpu_v2("/sys/fs/cgroup/cpu.max"); cpu_v2)
+    if (std::ifstream cpu_v2("/sys/fs/cgroup/" + cg + "/cpu.max"); cpu_v2)
     {
         if (std::string line; std::getline(cpu_v2, line))
         {
@@ -624,9 +679,9 @@ long get_current_processor_count()
             }
         }
     }
-    else if (std::ifstream cpu_v1_quota("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"); cpu_v1_quota)
+    else if (std::ifstream cpu_v1_quota("/sys/fs/cgroup/cpu/" + cg + "/cpu.cfs_quota_us"); cpu_v1_quota)
     {
-        if (std::ifstream cpu_v1_period("/sys/fs/cgroup/cpu/cpu.cfs_period_us"); cpu_v1_period)
+        if (std::ifstream cpu_v1_period("/sys/fs/cgroup/cpu/" + cg + "/cpu.cfs_period_us"); cpu_v1_period)
         {
             int tmp_quota = 0;
             int tmp_period = 0;
@@ -670,8 +725,10 @@ int64_t get_current_total_memory()
 #endif
     mxb_assert(pagesize * num_pages > 0);
     int64_t memory = pagesize * num_pages;
+    const auto& cg = get_cgroup();
 
-    for (auto path : {"/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"})
+    for (auto path : {"/sys/fs/cgroup/" + cg + "/memory.max",
+                      "/sys/fs/cgroup/memory/" + cg + "/memory.limit_in_bytes"})
     {
         if (std::ifstream mem(path); mem)
         {
