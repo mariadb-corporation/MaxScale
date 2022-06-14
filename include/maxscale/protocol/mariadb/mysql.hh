@@ -137,10 +137,11 @@ namespace mariadb
  * may be required.
  */
 
-uint8_t* set_byte2(uint8_t* buffer, uint16_t val);
-void     set_byte3(uint8_t* buffer, uint32_t val);
-void     set_byte4(uint8_t* buffer, uint32_t val);
-void     set_byte8(uint8_t* buffer, uint64_t val);
+size_t   set_byte1(uint8_t* buffer, uint8_t val);
+size_t   set_byte2(uint8_t* buffer, uint16_t val);
+size_t   set_byte3(uint8_t* buffer, uint32_t val);
+size_t   set_byte4(uint8_t* buffer, uint32_t val);
+size_t   set_byte8(uint8_t* buffer, uint64_t val);
 uint16_t get_byte2(const uint8_t* buffer);
 uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);
@@ -535,3 +536,75 @@ int response_length(bool with_ssl, bool ssl_established, const char* user, const
                     const char* dbname, const char* auth_module);
 
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd);
+
+
+/** IMPL **/
+namespace mariadb
+{
+
+inline size_t set_byte1(uint8_t* buffer, uint8_t val)
+{
+    *buffer = val;
+    return 1;
+}
+
+inline size_t set_byte2(uint8_t* buffer, uint16_t val)
+{
+    const size_t N = 2;
+    uint16_t le16 = htole16(val);
+    memcpy(buffer, &le16, N);
+    return N;
+}
+
+inline size_t set_byte3(uint8_t* buffer, uint32_t val)
+{
+    const size_t N = 3;
+    set_byte2(buffer, val);
+    buffer[2] = (val >> 16);
+    return N;
+}
+
+inline size_t set_byte4(uint8_t* buffer, uint32_t val)
+{
+    const size_t N = 4;
+    uint32_t le32 = htole32(val);
+    memcpy(buffer, &le32, N);
+    return N;
+}
+
+inline size_t set_byte8(uint8_t* buffer, uint64_t val)
+{
+    const size_t N = 8;
+    uint64_t le64 = htole64(val);
+    memcpy(buffer, &le64, N);
+    return N;
+}
+
+inline uint16_t get_byte2(const uint8_t* buffer)
+{
+    uint16_t le16;
+    memcpy(&le16, buffer, 2);
+    return le16toh(le16);
+}
+
+inline uint32_t get_byte3(const uint8_t* buffer)
+{
+    uint32_t low = get_byte2(buffer);
+    uint32_t high = buffer[2];
+    return low | (high << 16);
+}
+
+inline uint32_t get_byte4(const uint8_t* buffer)
+{
+    uint32_t le32;
+    memcpy(&le32, buffer, 4);
+    return le32toh(le32);
+}
+
+inline uint64_t get_byte8(const uint8_t* buffer)
+{
+    uint64_t le64;
+    memcpy(&le64, buffer, 8);
+    return le64toh(le64);
+}
+}
