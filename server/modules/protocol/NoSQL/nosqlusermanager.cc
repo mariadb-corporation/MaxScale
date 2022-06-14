@@ -1251,7 +1251,8 @@ bool UserManagerMariaDB::prepare_server() const
 
         sql.str(string());
         sql << "CREATE TABLE IF NOT EXISTS " << table
-            << " (mariadb_user VARCHAR(145) UNIQUE, db VARCHAR(64), user VARCHAR(80), data TEXT)";
+            << " (mariadb_user VARCHAR(145) UNIQUE, db VARCHAR(64), user VARCHAR(80), "
+            << "  host VARCHAR(60), data TEXT)";
 
         if (m_db.cmd(sql.str()))
         {
