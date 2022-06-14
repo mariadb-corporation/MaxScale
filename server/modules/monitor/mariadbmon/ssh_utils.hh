@@ -43,10 +43,18 @@ init_ssh_session(const std::string& host, const std::string& user, const std::st
 
 struct CmdResult
 {
-    int         rc {-1};
-    std::string output;
-    std::string error_output;
-    std::string ssh_error;
+    enum class Type
+    {
+        OK,         /**< Command was sent and output + return code fetched */
+        SSH_FAIL,   /**< Failed to send command or read result */
+        TIMEOUT     /**< Command timed out */
+    };
+
+    Type        type {Type::SSH_FAIL};  /**< Result type */
+    int         rc {-1};                /**< If command was ran, its return code */
+    std::string output;                 /**< Command standard output */
+    std::string error_output;           /**< Command error output or ssh error message */
 };
+
 CmdResult run_cmd(ssh::Session& read_error_stream, const std::string& cmd, std::chrono::milliseconds timeout);
 }

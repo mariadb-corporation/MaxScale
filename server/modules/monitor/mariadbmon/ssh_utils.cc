@@ -160,11 +160,16 @@ CmdResult run_cmd(ssh::Session& ses, const std::string& cmd, std::chrono::millis
         if (channel.isEof())
         {
             rval.rc = channel.getExitStatus();      // This can block, deal with it later.
+            rval.type = CmdResult::Type::OK;
+        }
+        else
+        {
+            rval.type = CmdResult::Type::TIMEOUT;
         }
     }
     catch (ssh::SshException& e)
     {
-        rval.ssh_error = mxb::string_printf("Error %i: %s", e.getCode(), e.getError().c_str());
+        rval.error_output = mxb::string_printf("Error %i: %s", e.getCode(), e.getError().c_str());
     }
 
     return rval;
