@@ -274,20 +274,11 @@ int Connection::affected_rows() const
 
 void Connection::discard_result()
 {
-    // TODO. There must be a fast way, mariadb_cancel?
-    auto res = result_set();
-    for (auto ite = res.begin(); ite != res.end(); ++ite)
-    {
-    }
+    mysql_free_result(mysql_use_result(m_conn));
 }
 
 maxbase::Host Connection::host() const
 {
     return m_details.host;
-}
-
-ResultSet Connection::result_set()
-{
-    return ResultSet(m_conn);
 }
 }

@@ -25,7 +25,6 @@ add_library(pinloki-core
   inventory.cc
   maria_rpl_event.cc
   reader.cc
-  resultset.cc
   rpl_event.cc
   writer.cc
   parser.cc

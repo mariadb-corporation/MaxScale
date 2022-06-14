@@ -16,7 +16,6 @@
 #include <maxsql/ccdefs.hh>
 #include <maxbase/host.hh>
 #include <maxbase/exception.hh>
-#include "resultset.hh"
 #include "gtid.hh"
 #include "maria_rpl_event.hh"
 
@@ -29,6 +28,7 @@ struct st_mysql_res;
 
 namespace maxsql
 {
+DEFINE_EXCEPTION(DatabaseError);
 
 // https://mariadb.com/kb/en/gtid_event/#flags
 enum GtidFlags
@@ -113,12 +113,6 @@ public:
      * @return
      */
     int affected_rows() const;
-
-    /**
-     * @brief result_set
-     * @return
-     */
-    ResultSet result_set();
 
     /**
      * @brief discard_result
