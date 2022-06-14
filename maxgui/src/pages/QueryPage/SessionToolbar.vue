@@ -64,6 +64,7 @@
             :type="confDlg.type"
             minBodyWidth="768px"
             :closeImmediate="true"
+            :lazyValidation="false"
             :onSave="confDlg.onSave"
         >
             <template v-slot:body-prepend>
@@ -84,13 +85,10 @@
                     >
                         {{ $t('prefix') }}
                     </label>
-                    <!-- TODO: validate snippet prefix value uniqueness -->
                     <v-text-field
                         v-model="snippet.name"
                         type="text"
-                        :rules="[
-                            val => !!val || $t('errors.requiredInput', { inputName: $t('prefix') }),
-                        ]"
+                        :rules="rules.snippetName"
                         class="std error--text__bottom mb-2"
                         dense
                         :height="36"
@@ -152,6 +150,9 @@ export default {
                 onSave: () => null,
             },
             snippet: { date: '', name: '' },
+            rules: {
+                snippetName: [val => this.validateSnippetName(val)],
+            },
         }
     },
     computed: {
@@ -164,6 +165,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+            query_favorite: state => state.persisted.query_favorite,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -254,13 +256,12 @@ export default {
         openSnippetDlg() {
             if (this.query_txt) {
                 this.snippet.date = new Date().valueOf()
-                //TODO: generate an unique prefix name
-                this.snippet.name = `unique-prefix`
+                this.snippet.name = ''
                 this.confDlg = {
                     ...this.confDlg,
                     isOpened: true,
                     title: this.$t('confirmations.createSnippet'),
-                    type: 'add',
+                    type: 'create',
                     isCreatingSnippet: true,
                     sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
                     onSave: this.addSnippet,
@@ -274,6 +275,12 @@ export default {
             }
             if (this.selected_query_txt) payload.sql = this.selected_query_txt
             this.pushToQuerySnippets(payload)
+        },
+        validateSnippetName(v) {
+            const names = this.query_favorite.map(q => q.name)
+            if (!v) return this.$t('errors.requiredInput', { inputName: this.$t('prefix') })
+            else if (names.includes(v)) return this.$t('errors.duplicatedValue', { inputValue: v })
+            return true
         },
     },
 }
