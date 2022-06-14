@@ -1266,7 +1266,6 @@ bool MonitorServer::fetch_variables()
         {
             m_last_variables_update = mxb::Clock::now();
 
-            set<string> found;
             Server::Variables variable_values;
             while (r->next_row())
             {
@@ -1276,14 +1275,28 @@ bool MonitorServer::fetch_variables()
                 variable_values[variable] = r->get_string(1);
 
                 variables.erase(variable);
-                found.insert(variable);
+            }
+
+            if (mxb_log_should_log(LOG_INFO))
+            {
+                auto old_variables = server->get_variables();
+                decltype(old_variables) changed;
+                std::set_difference(variable_values.begin(), variable_values.end(),
+                                    old_variables.begin(), old_variables.end(),
+                                    std::inserter(changed, changed.begin()));
+
+                if (!changed.empty())
+                {
+                    auto str = mxb::transform_join(changed, [](auto kv){
+                        return kv.first + " = " + kv.second;
+                    }, ", ", "'");
+
+                    MXB_INFO("Variables have changed on '%s', next check in %ld seconds: %s",
+                             server->name(), this_unit.variables_update_interval.count(), str.c_str());
+                }
             }
 
             server->set_variables(std::move(variable_values));
-
-            MXB_INFO("%s loaded from '%s', next update in %ld seconds.",
-                     !found.empty() ? mxb::join(found, ", ", "'").c_str() : "''",
-                     server->name(), this_unit.variables_update_interval.count());
 
             if (!variables.empty())
             {
