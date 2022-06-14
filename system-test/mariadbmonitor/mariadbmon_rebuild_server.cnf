@@ -1,0 +1,12 @@
+[maxscale]
+threads=###threads###
+
+###mariadb_monitor###
+ssh_user=###ssh_user###
+ssh_keyfile=/tmp/sshkey.pem
+
+###rwsplit_service###
+
+###rwsplit_listener###
+
+###server###

@@ -694,6 +694,13 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
     replace_text("###threads###", std::to_string(m_threads));
     replace_text("###access_homedir###", mxs.access_homedir());
 
+    const string ssh_user_tag = "###ssh_user###";
+    if (file_contents.find(ssh_user_tag) != string::npos)
+    {
+        // The "repl"-field may not exist so only read it when the tag is found.
+        replace_text("###ssh_user###", repl->backend(0)->vm_node().access_user());
+    }
+
     const string basic_mariadbmon =
         R"([MariaDB-Monitor]
 type=monitor
