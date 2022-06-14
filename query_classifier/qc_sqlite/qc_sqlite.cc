@@ -524,17 +524,9 @@ public:
         return rv;
     }
 
-    bool get_canonical(string_view* pCanonical) const
+    void get_canonical(string_view* pCanonical) const
     {
-        bool rv = false;
-
-        if (is_valid())
-        {
-            *pCanonical = m_canonical;
-            rv = true;
-        }
-
-        return rv;
+        *pCanonical = m_canonical;
     }
 
     // PUBLIC for now at least.
@@ -5695,8 +5687,7 @@ string_view qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo)
 
     string_view canonical;
 
-    MXB_AT_DEBUG(auto rv =) static_cast<const QcSqliteInfo*>(pInfo)->get_canonical(&canonical);
-    mxb_assert(rv);
+    static_cast<const QcSqliteInfo*>(pInfo)->get_canonical(&canonical);
 
     return canonical;
 }
