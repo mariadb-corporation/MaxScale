@@ -29,7 +29,7 @@
                                 ref="queryEditor"
                                 v-model="allQueryTxt"
                                 class="editor pt-2 pl-2"
-                                :cmplList="getDbCmplList"
+                                :cmplList="cmplList"
                                 isKeptAlive
                                 @on-selection="SET_SELECTED_QUERY_TXT($event)"
                                 v-on="$listeners"
@@ -121,11 +121,24 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            query_favorite: state => state.persisted.query_favorite,
+            CMPL_SNIPPET_KIND: state => state.app_config.CMPL_SNIPPET_KIND,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
+        snippetList() {
+            return this.query_favorite.map(q => ({
+                label: q.name,
+                detail: `SNIPPET - ${q.sql}`,
+                insertText: q.sql,
+                type: this.CMPL_SNIPPET_KIND,
+            }))
+        },
+        cmplList() {
+            return [...this.getDbCmplList, ...this.snippetList]
+        },
         showVisChart() {
             const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray
             return Boolean(this.$typy(this.chartOpt, 'type').safeString && datasets.length)

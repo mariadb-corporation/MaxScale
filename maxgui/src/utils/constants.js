@@ -111,6 +111,7 @@ export const APP_CONFIG = Object.freeze({
         'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
         'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
     }),
+    CMPL_SNIPPET_KIND: 'CMPL_SNIPPET_KIND',
     SQL_NODE_TYPES: Object.freeze({
         SCHEMA: 'Schema',
         TABLES: 'Tables',
