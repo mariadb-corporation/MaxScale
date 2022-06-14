@@ -136,7 +136,7 @@
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td"
                             :class="[
-                                h.draggable ? 'cursor--grab no-userSelect' : '',
+                                draggableCell && h.draggable ? 'cursor--grab no-userSelect' : '',
                                 h.text === $typy(lastVisHeader, 'text').safeString
                                     ? `td--last-cell ${!isYOverflowed ? 'pl-3 pr-0' : 'px-3'}`
                                     : 'px-3',
@@ -145,7 +145,11 @@
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
-                            v-on="h.draggable ? { mousedown: e => onCellDragStart(e) } : null"
+                            v-on="
+                                draggableCell && h.draggable
+                                    ? { mousedown: e => onCellDragStart(e) }
+                                    : null
+                            "
                             @contextmenu.prevent="
                                 e =>
                                     $emit('on-cell-right-click', {
@@ -246,6 +250,7 @@ export default {
         groupBy: { type: String, default: '' },
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
+        draggableCell: { type: Boolean, default: true },
     },
     data() {
         return {
