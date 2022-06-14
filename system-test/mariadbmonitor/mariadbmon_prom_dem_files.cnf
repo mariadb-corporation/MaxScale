@@ -10,7 +10,7 @@ user=mariadbmon
 password=mariadbmon
 replication_user=repl
 replication_password=repl
-monitor_interval=1000
+monitor_interval=1s
 promotion_sql_file=/tmp/sql_promotion.txt
 demotion_sql_file=/tmp/sql_demotion.txt
 
