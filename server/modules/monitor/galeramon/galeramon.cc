@@ -532,10 +532,10 @@ MonitorServer* GaleraMonitor::get_candidate_master()
         {
             int64_t priority = moitor_servers->server->priority();
 
-            if (m_use_priority && priority > 0)
+            if (m_use_priority && priority != 0)
             {
                 /** The priority is valid */
-                if (priority < minval)
+                if (priority > 0 && priority < minval)
                 {
                     minval = priority;
                     candidate_master = moitor_servers;
