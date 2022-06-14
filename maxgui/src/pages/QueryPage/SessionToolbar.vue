@@ -34,7 +34,7 @@
                         v-on="on"
                         @click="openSnippetDlg"
                     >
-                        <v-icon size="20"> mdi-bookmark </v-icon>
+                        <v-icon size="20"> mdi-star-plus-outline </v-icon>
                     </v-btn>
                 </template>
                 <span style="white-space: pre;" class="d-inline-block text-center">
