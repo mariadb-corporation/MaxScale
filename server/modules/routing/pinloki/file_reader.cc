@@ -263,6 +263,14 @@ maxsql::RplEvent FileReader::fetch_event_internal()
                 m_read_pos.next_pos = m_initial_gtid_file_pos;
                 m_read_pos.file.seekg(m_read_pos.next_pos);
                 rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
+
+                if (rpl.is_empty())
+                {
+                    mxb_assert(!m_read_pos.file.good());
+                    return maxsql::RplEvent();
+                }
+
+                m_read_pos.next_pos = m_read_pos.file.tellg();
             }
         }
     }
