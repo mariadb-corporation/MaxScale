@@ -235,6 +235,28 @@ Json Json::get_object(const string& key) const
     return get_object(key.c_str());
 }
 
+Json Json::get_array(const char* key) const
+{
+    json_t* obj = json_object_get(m_obj, key);
+    if (!obj)
+    {
+        m_errormsg = mxb::string_printf(key_not_found, key);
+    }
+    else if (!json_is_array(obj))
+    {
+        m_errormsg = mxb::string_printf("'%s' is a JSON %s, not a JSON array.",
+                                        key, json_type_to_string(obj));
+        obj = nullptr;
+    }
+
+    return Json(obj);
+}
+
+Json Json::get_array(const string& key) const
+{
+    return get_array(key.c_str());
+}
+
 std::vector<Json> Json::get_array_elems(const string& key) const
 {
     std::vector<Json> rval;

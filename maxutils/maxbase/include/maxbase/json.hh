@@ -174,6 +174,17 @@ public:
     Json get_object(const std::string& key) const;
 
     /**
+     * Get JSON array from a field
+     *
+     * @param key The name of the field.
+     *
+     * @return The JSON array or an empty Json if the key doesn't exist
+     *         or the value is not an array.
+     */
+    Json get_array(const char* key) const;
+    Json get_array(const std::string& key) const;
+
+    /**
      * Get JSON string from a field
      *
      * @param key The name of the field
