@@ -28,6 +28,9 @@ public:
 
         // All servers should be at the same GTID
         check_gtid();
+
+        // Run the diagnostics function, mainly for code coverage.
+        test.check_maxctrl("show services");
     }
 
     void post() override

@@ -58,6 +58,9 @@ public:
             test.expect(ssl == "Yes", "%s: Master_SSL_Allowed should be Yes not %s", query, ssl.c_str());
             test.expect(!ca.empty(), "%s: Master_SSL_CA_File should not be empty.", query);
         }
+
+        // Make sure the diagnostics work with SSL enabled
+        test.check_maxctrl("show services");
     }
 };
 
