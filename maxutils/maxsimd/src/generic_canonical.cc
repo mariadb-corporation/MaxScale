@@ -43,7 +43,7 @@ inline bool is_next(uint8_t* it, uint8_t* end, const std::string& str)
 const char IS_SPACE = 0b00000001;
 const char IS_DIGIT = 0b00000010;
 const char IS_ALPHA = 0b00000100;
-const char IS_ALNUM = 0b00001000;
+const char IS_IDENTIFIER = 0b00001000;
 const char IS_XDIGIT = 0b00010000;
 const char IS_SPECIAL = 0b00100000;
 
@@ -55,7 +55,9 @@ public:
         set(IS_SPACE, ::isspace);
         set(IS_DIGIT, ::isdigit);
         set(IS_ALPHA, ::isalpha);
-        set(IS_ALNUM, ::isalnum);
+        set(IS_IDENTIFIER, [](uint8_t c) {
+            return isalnum(c) || std::string("_$").find(c) != std::string::npos;
+        });
         set(IS_XDIGIT, ::isxdigit);
         set(IS_SPECIAL, [](uint8_t c) {
                 return isdigit(c) || std::string("\"'`#-/\\").find(
@@ -217,7 +219,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
             *it_out++ = *it;
         }
         else if (lut(IS_DIGIT, *it)
-                 && (it_out != it_out_begin && !lut(IS_ALNUM, *(it_out - 1)) && *(it_out - 1) != '_'))
+                 && (it_out != it_out_begin && !lut(IS_IDENTIFIER, *(it_out - 1))))
         {
             auto num_end = probe_number(it, end);
 
