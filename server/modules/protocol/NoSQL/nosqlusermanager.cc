@@ -326,7 +326,7 @@ bool role::from_string(const string& key, Id* pValue)
     return found;
 }
 
-string role::to_json(const Role& role)
+string role::to_json_string(const Role& role)
 {
     ostringstream ss;
 
@@ -389,7 +389,7 @@ bool role::from_json(const string& s, Role* pRole)
     return rv;
 }
 
-string role::to_json(const vector<role::Role>& roles)
+string role::to_json_string(const vector<role::Role>& roles)
 {
     ostringstream ss;
 
@@ -405,7 +405,7 @@ string role::to_json(const vector<role::Role>& roles)
             ss << ", ";
         }
 
-        ss << to_json(role);
+        ss << to_json_string(role);
     }
 
     ss << "]";
@@ -799,7 +799,7 @@ bool UserManagerSqlite3::add_user(const string& db,
        << au.salt_sha256_b64 << "', '"
        << au.salted_pwd_sha1_b64 << "', '"
        << au.salted_pwd_sha256_b64 << "', '"
-       << role::to_json(roles)
+       << role::to_json_string(roles)
        << "')";
 
     string sql = ss.str();
@@ -1067,7 +1067,7 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
 
     if (what & Update::ROLES)
     {
-        ss << delimiter << "roles = '" << role::to_json(data.roles) << "'";
+        ss << delimiter << "roles = '" << role::to_json_string(data.roles) << "'";
         delimiter = ", ";
     }
 

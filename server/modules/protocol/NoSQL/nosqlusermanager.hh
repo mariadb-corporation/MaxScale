@@ -61,13 +61,13 @@ inline bool from_string(const string_view& key, Id* pValue)
     return from_string(std::string(key.data(), key.length()), pValue);
 }
 
-std::string to_json(const Role& role);
+std::string to_json_string(const Role& role);
 mxb::Json to_json_object(const Role& role);
 
 bool from_json(const mxb::Json& json, Role* pRole);
 bool from_json(const std::string& json, Role* pRole);
 
-std::string to_json(const std::vector<Role>& roles);
+std::string to_json_string(const std::vector<Role>& roles);
 mxb::Json to_json_array(const std::vector<Role>& roles);
 
 bool from_json(const mxb::Json& json, std::vector<Role>* pRoles);
