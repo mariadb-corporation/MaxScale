@@ -58,3 +58,5 @@ select @v, coercibility(@v);
 select @@version, @@version_comment, @@version_compile_machine,       @@version_compile_os;
 SELECT @x_str_1, @x_int_1, @x_int_2, @x_int_3;
 SELECT user,host,password,insert_priv FROM user WHERE user=@u AND host=@h;
+SELECT a$1, $b5555, c$ from mysqltest.$test1
+SELECT 1ea10.1a20, 1e+ 1e+10 from 1ea10
