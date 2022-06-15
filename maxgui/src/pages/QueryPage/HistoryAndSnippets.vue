@@ -36,8 +36,10 @@
                     showGroupBy
                     groupBy="date"
                     :menuOpts="menuOpts"
+                    :showEditBtn="activeView === SQL_QUERY_MODES.FAVORITE"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
+                    @on-done-editing="onDoneEditingSnippets"
                     v-on="$listeners"
                 >
                     <template v-slot:header-connection_name="{ data: { maxWidth } }">
@@ -258,13 +260,15 @@ export default {
                         break
                     case 'action':
                         header.groupable = false
-                        header.draggable = true
                         break
                     case 'name':
                         header.width = 240
+                        if (this.activeView === this.SQL_QUERY_MODES.FAVORITE)
+                            header.editableCol = true
                         break
                     case 'sql':
-                        header.draggable = true
+                        if (this.activeView === this.SQL_QUERY_MODES.FAVORITE)
+                            header.editableCol = true
                 }
                 return header
             })
@@ -330,7 +334,6 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
             SET_QUERY_FAVORITE: 'persisted/SET_QUERY_FAVORITE',
         }),
         setHeaderHeight() {
@@ -408,6 +411,18 @@ export default {
                     this.$emit('place-to-editor', sqlTxt)
                     break
             }
+        },
+        onDoneEditingSnippets(changedCells) {
+            const { cloneDeep, isEqual } = this.$help.lodash
+            let cells = cloneDeep(changedCells)
+            let snippets = cloneDeep(this.query_favorite)
+            cells.forEach(c => {
+                delete c.objRow['#'] // Remove # col
+                const idxOfRow = this.query_favorite.findIndex(item => isEqual(item, c.objRow))
+                if (idxOfRow > -1)
+                    snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
+            })
+            this.SET_QUERY_FAVORITE(snippets)
         },
     },
 }
