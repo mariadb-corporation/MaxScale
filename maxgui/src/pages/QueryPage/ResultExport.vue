@@ -181,9 +181,10 @@
  * Public License.
  */
 export default {
-    name: 'result-data-table',
+    name: 'result-export',
     props: {
         rows: { type: Array, required: true },
+        defExportFileName: { type: String, required: true },
         headers: {
             type: Array,
             validator: arr => {
@@ -273,7 +274,7 @@ export default {
             }
         },
         getDefFileName() {
-            return `MaxScale Query Results - ${this.$help.dateFormat({
+            return `${this.defExportFileName} - ${this.$help.dateFormat({
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
             })}`

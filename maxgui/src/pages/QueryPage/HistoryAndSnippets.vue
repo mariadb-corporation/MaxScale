@@ -37,6 +37,11 @@
                     groupBy="date"
                     :menuOpts="menuOpts"
                     :showEditBtn="activeView === SQL_QUERY_MODES.FAVORITE"
+                    :defExportFileName="
+                        `MaxScale Query ${
+                            activeView === SQL_QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+                        }`
+                    "
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
                     @on-done-editing="onDoneEditingSnippets"

@@ -54,7 +54,11 @@
                 </template>
                 <span>{{ $t('deleteSelectedRows') }}</span>
             </v-tooltip>
-            <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
+            <result-export
+                :rows="filteredRows_wo_idx"
+                :headers="visHeaders_wo_idx"
+                :defExportFileName="defExportFileName"
+            />
             <filter-list
                 v-model="visHeaderIdxs"
                 selectAllOnActivated
@@ -186,6 +190,7 @@ export default {
         //menuOpts:[{ text:string, type:string, action:function}]
         menuOpts: { type: Array, default: () => [] },
         showEditBtn: { type: Boolean, default: false },
+        defExportFileName: { type: String, default: 'MaxScale Query Results' },
     },
     data() {
         return {
