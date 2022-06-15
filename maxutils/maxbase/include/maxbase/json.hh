@@ -363,12 +363,20 @@ public:
     void set_null(const char* key);
 
     /**
-     * Apend an element to an array
+     * Append an element to an array
      *
      * @param value The value to append
      */
     void add_array_elem(const Json& elem);
     void add_array_elem(Json&& elem);
+
+    /**
+     * Add an element to the array 'key'. If the array does not exist it's created.
+     *
+     * @param key The key of the array subobject
+     * @param elem Element to add
+     */
+    void add_array_elem(const char* key, Json&& elem);
 
     /**
      * Remove a field from a JSON object

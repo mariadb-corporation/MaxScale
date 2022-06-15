@@ -17,7 +17,7 @@
 #include <jansson.h>
 
 #include <maxscale/cn_strings.hh>
-#include <maxscale/config.hh>
+#include <maxbase/format.hh>
 
 #include "internal/monitormanager.hh"
 #include "internal/filter.hh"
@@ -360,6 +360,25 @@ json_t* mxs_json_error_append(json_t* obj, const char* format, ...)
     }
 
     return obj;
+}
+
+void mxs_json_error_append(mxb::Json& object, const char* format, ...)
+{
+    using mxb::Json;
+    auto obj_type = object.type();
+    mxb_assert(obj_type == Json::Type::OBJECT || obj_type == Json::Type::UNDEFINED);
+
+    if (obj_type == Json::Type::OBJECT)
+    {
+        va_list args;
+        va_start(args, format);
+        string errmsg = mxb::string_vprintf(format, args);
+        va_end(args);
+
+        Json error(Json::Type::OBJECT);
+        error.set_string(DETAIL, errmsg);
+        object.add_array_elem(ERRORS, std::move(error));
+    }
 }
 
 namespace

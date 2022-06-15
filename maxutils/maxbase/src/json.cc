@@ -467,6 +467,23 @@ void Json::add_array_elem(Json&& elem)
     elem.m_obj = nullptr;
 }
 
+void Json::add_array_elem(const char* key, Json&& elem)
+{
+    auto arr = json_object_get(m_obj, key);
+    if (arr)
+    {
+        mxb_assert(json_is_array(arr));
+        json_array_append_new(arr, elem.m_obj);
+    }
+    else
+    {
+        arr = json_array();
+        json_array_append_new(arr, elem.m_obj);
+        json_object_set_new(m_obj, key, arr);
+    }
+    elem.m_obj = nullptr;
+}
+
 void Json::set_object(const char* key, const Json& value)
 {
     json_object_set(m_obj, key, value.m_obj);

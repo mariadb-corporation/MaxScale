@@ -132,6 +132,15 @@ json_t* mxs_json_error(const std::vector<std::string>& errors);
 json_t* mxs_json_error_append(json_t* object, const char* format, ...) mxb_attribute((format (printf, 2, 3)));
 
 /**
+ * Add error to json object. If the object is empty (undefined), no error is added.
+ *
+ * @param object Existing json error object
+ * @param format Format string
+ * @param ...    Variable argument list
+ */
+void mxs_json_error_append(mxb::Json& object, const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+
+/**
  * @brief Append error to existing JSON object.
  *
  * @param object Existing json error object, or NULL.
