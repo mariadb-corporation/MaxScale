@@ -62,12 +62,15 @@ inline bool from_string(const string_view& key, Id* pValue)
 }
 
 std::string to_json(const Role& role);
+mxb::Json to_json_object(const Role& role);
 
 bool from_json(const mxb::Json& json, Role* pRole);
 bool from_json(const std::string& json, Role* pRole);
 
 std::string to_json(const std::vector<Role>& roles);
+mxb::Json to_json_array(const std::vector<Role>& roles);
 
+bool from_json(const mxb::Json& json, std::vector<Role>* pRoles);
 bool from_json(const std::string& json, std::vector<Role>* pRoles);
 
 // throws if invalid.
@@ -265,6 +268,27 @@ protected:
     UserManager()
     {
     }
+
+    struct AddUser
+    {
+        std::string mariadb_user;
+        std::string db;
+        std::string user;
+        std::string pwd;
+        std::string host;
+        std::string salt_sha1_b64;
+        std::string salted_pwd_sha1_b64;
+        std::string salt_sha256_b64;
+        std::string salted_pwd_sha256_b64;
+        std::string pwd_sha1_b64;
+        std::string uuid;
+    };
+
+    AddUser get_add_user_data(const std::string& db,
+                              std::string user,
+                              std::string pwd,
+                              const std::string& host,
+                              const std::vector<scram::Mechanism>& mechanisms);
 };
 
 /**
@@ -389,6 +413,7 @@ private:
                    const Update& data) const;
 
     std::string             m_name;
+    std::string             m_table;
     SERVICE&                m_service;
     const Configuration&    m_config;
     mutable SERVER*         m_pServer { nullptr };

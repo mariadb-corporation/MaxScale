@@ -338,6 +338,16 @@ string role::to_json(const Role& role)
     return ss.str();
 }
 
+mxb::Json role::to_json_object(const Role& role)
+{
+    mxb::Json json;
+
+    json.set_string("db", role.db);
+    json.set_string("role", to_string(role.id));
+
+    return json;
+}
+
 bool role::from_json(const mxb::Json& json, Role* pRole)
 {
     bool rv = false;
@@ -395,15 +405,72 @@ string role::to_json(const vector<role::Role>& roles)
             ss << ", ";
         }
 
-        ss << "{"
-           << "\"db\": \"" << role.db << "\", "
-           << "\"role\": \"" << to_string(role.id) << "\""
-           << "}";
+        ss << to_json(role);
     }
 
     ss << "]";
 
     return ss.str();
+}
+
+mxb::Json role::to_json_array(const vector<role::Role>& roles)
+{
+    mxb::Json json(mxb::Json::Type::ARRAY);
+
+    auto it = roles.begin();
+    for (; it != roles.end(); ++it)
+    {
+        const auto& role = *it;
+
+        json.add_array_elem(to_json_object(role));
+    }
+
+    return json;
+}
+
+bool role::from_json(const mxb::Json& json, vector<role::Role>* pRoles)
+{
+    bool rv = false;
+
+    vector<Role> roles;
+
+    auto elements = json.get_array_elems();
+
+    rv = true;
+    for (const auto& element : elements)
+    {
+        auto type = element.type();
+
+        Role role;
+
+        if (type == mxb::Json::Type::OBJECT)
+        {
+            rv = from_json(element, &role);
+
+            if (!rv)
+            {
+                MXB_ERROR("'%s' is not a valid.role.",
+                          element.to_string(mxb::Json::Format::NORMAL).c_str());
+                break;
+            }
+        }
+        else
+        {
+            MXB_ERROR("'%s' is a JSON array, but all elements are not objects.",
+                      json.to_string(mxb::Json::Format::NORMAL).c_str());
+            rv = false;
+            break;
+        }
+
+        roles.push_back(role);
+    }
+
+    if (rv)
+    {
+        pRoles->swap(roles);
+    }
+
+    return rv;
 }
 
 bool role::from_json(const string& s, vector<role::Role>* pRoles)
@@ -416,42 +483,7 @@ bool role::from_json(const string& s, vector<role::Role>* pRoles)
     {
         if (json.type() == mxb::Json::Type::ARRAY)
         {
-            vector<Role> roles;
-
-            auto elements = json.get_array_elems();
-
-            rv = true;
-            for (const auto& element : elements)
-            {
-                auto type = element.type();
-
-                Role role;
-
-                if (type == mxb::Json::Type::OBJECT)
-                {
-                    rv = from_json(element, &role);
-
-                    if (!rv)
-                    {
-                        MXB_ERROR("'%s' is not a valid.role.",
-                                  element.to_string(mxb::Json::Format::NORMAL).c_str());
-                        break;
-                    }
-                }
-                else
-                {
-                    MXB_ERROR("'%s' is a JSON array, but all elements are not objects.", s.c_str());
-                    rv = false;
-                    break;
-                }
-
-                roles.push_back(role);
-            }
-
-            if (rv)
-            {
-                pRoles->swap(roles);
-            }
+            rv = from_json(json, pRoles);
         }
         else
         {
@@ -588,6 +620,53 @@ UserManager::~UserManager()
 {
 }
 
+UserManager::AddUser UserManager::get_add_user_data(const string& db,
+                                                    string user,
+                                                    string pwd,
+                                                    const string& host,
+                                                    const vector<scram::Mechanism>& mechanisms)
+{
+    pwd = nosql::escape_essential_chars(pwd);
+
+    string salt_sha1_b64;
+    string salted_pwd_sha1_b64;
+    string salt_sha256_b64;
+    string salted_pwd_sha256_b64;
+
+    get_salts_and_salted_passwords(user, pwd,
+                                   mechanisms,
+                                   &salt_sha1_b64, &salted_pwd_sha1_b64,
+                                   &salt_sha256_b64, &salted_pwd_sha256_b64);
+
+    user = nosql::escape_essential_chars(user);
+
+    string mariadb_user = get_mariadb_user(db, user);
+
+    vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
+    string pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
+
+    uuid_t uuid;
+    uuid_generate(uuid);
+
+    char zUuid[NOSQL_UUID_STR_LEN];
+    uuid_unparse(uuid, zUuid);
+
+    AddUser rv;
+
+    rv.mariadb_user = mariadb_user;
+    rv.db = db;
+    rv.user = user;
+    rv.pwd = pwd;
+    rv.host = host;
+    rv.salt_sha1_b64 = salt_sha1_b64;
+    rv.salted_pwd_sha1_b64 = salted_pwd_sha1_b64;
+    rv.salt_sha256_b64 = salt_sha256_b64;
+    rv.salted_pwd_sha256_b64 = salted_pwd_sha256_b64;
+    rv.uuid = zUuid;
+
+    return rv;
+}
+
 /**
  * UserManagerSqlite3
  */
@@ -705,44 +784,21 @@ bool UserManagerSqlite3::add_user(const string& db,
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
 
-    pwd = nosql::escape_essential_chars(pwd);
-
-    string salt_sha1_b64;
-    string salted_pwd_sha1_b64;
-    string salt_sha256_b64;
-    string salted_pwd_sha256_b64;
-
-    get_salts_and_salted_passwords(user, pwd,
-                                   mechanisms,
-                                   &salt_sha1_b64, &salted_pwd_sha1_b64,
-                                   &salt_sha256_b64, &salted_pwd_sha256_b64);
-
-    user = nosql::escape_essential_chars(user);
-
-    string mariadb_user = get_mariadb_user(db, user);
-
-    vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
-    string pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
-
-    uuid_t uuid;
-    uuid_generate(uuid);
-
-    char zUuid[NOSQL_UUID_STR_LEN];
-    uuid_unparse(uuid, zUuid);
+    AddUser au = get_add_user_data(db, user, pwd, host, mechanisms);
 
     ostringstream ss;
     ss << SQL_INSERT_HEAD << "('"
-       << mariadb_user << "', '"
-       << db << "', '"
-       << user << "', '"
-       << pwd_sha1_b64 << "', '"
-       << host << "', '"
+       << au.mariadb_user << "', '"
+       << au.db << "', '"
+       << au.user << "', '"
+       << au.pwd_sha1_b64 << "', '"
+       << au.host << "', '"
        << custom_data << "', '"
-       << zUuid << "', '"
-       << salt_sha1_b64 << "', '"
-       << salt_sha256_b64 << "', '"
-       << salted_pwd_sha1_b64 << "', '"
-       << salted_pwd_sha256_b64 << "', '"
+       << au.uuid << "', '"
+       << au.salt_sha1_b64 << "', '"
+       << au.salt_sha256_b64 << "', '"
+       << au.salted_pwd_sha1_b64 << "', '"
+       << au.salted_pwd_sha256_b64 << "', '"
        << role::to_json(roles)
        << "')";
 
@@ -754,7 +810,7 @@ bool UserManagerSqlite3::add_user(const string& db,
     if (rv != SQLITE_OK)
     {
         MXB_ERROR("Could not add user '%s' to local database: %s",
-                  mariadb_user.c_str(),
+                  au.mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -1038,6 +1094,7 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
 
 UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
     : m_name(name)
+    , m_table("`" + pConfig->authentication_db + "`.`" + m_name + "`")
     , m_service(*pService)
     , m_config(*pConfig)
 {
@@ -1057,7 +1114,7 @@ unique_ptr<UserManager> UserManagerMariaDB::create(string name,
 
 bool UserManagerMariaDB::add_user(const string& db,
                                   string user,
-                                  string password, // Cleartext
+                                  string pwd, // Cleartext
                                   const string& host,
                                   const string& custom_data, // Assumed to be JSON document.
                                   const vector<scram::Mechanism>& mechanisms,
@@ -1068,7 +1125,7 @@ bool UserManagerMariaDB::add_user(const string& db,
     Guard guard(m_mutex);
     if (check_connection())
     {
-        rv = do_add_user(db, user, password, host, custom_data, mechanisms, roles);
+        rv = do_add_user(db, user, pwd, host, custom_data, mechanisms, roles);
     }
 
     return rv;
@@ -1247,21 +1304,19 @@ bool UserManagerMariaDB::prepare_server() const
     {
         MXB_SINFO("Created database " << db << ".");
 
-        string table = db + ".`" + m_name + "`";
-
         sql.str(string());
-        sql << "CREATE TABLE IF NOT EXISTS " << table
+        sql << "CREATE TABLE IF NOT EXISTS " << m_table
             << " (mariadb_user VARCHAR(145) UNIQUE, db VARCHAR(64), user VARCHAR(80), "
             << "  host VARCHAR(60), data TEXT)";
 
         if (m_db.cmd(sql.str()))
         {
-            MXB_SINFO("Created table " << table << ".");
+            MXB_SINFO("Created table " << m_table << ".");
             rv = true;
         }
         else
         {
-            MXB_SERROR("Could not create table " << table << ": " << m_db.error());
+            MXB_SERROR("Could not create table " << m_table << ": " << m_db.error());
         }
     }
     else
@@ -1274,56 +1329,427 @@ bool UserManagerMariaDB::prepare_server() const
 
 bool UserManagerMariaDB::do_add_user(const string& db,
                                      string user,
-                                     string password, // Cleartext
+                                     string pwd, // Cleartext
                                      const string& host,
-                                     const string& custom_data, // Assumed to be JSON document.
+                                     const string& custom_data_json, // Assumed to be JSON document.
                                      const vector<scram::Mechanism>& mechanisms,
                                      const vector<role::Role>& roles)
 {
-    return false;
+    bool rv = true;
+
+    mxb::Json custom_data(mxb::Json::Type::OBJECT);
+
+    if (!custom_data_json.empty())
+    {
+        MXB_AT_DEBUG(bool loaded) = custom_data.load_string(custom_data_json);
+        mxb_assert(loaded);
+    }
+
+    AddUser au = get_add_user_data(db, user, pwd, host, mechanisms);
+
+    mxb::Json json;
+
+    json.set_string("salt_sha1_b64", au.salt_sha1_b64);
+    json.set_string("salted_pwd_sha1_b64", au.salted_pwd_sha1_b64);
+    json.set_string("salt_sha256_b64", au.salt_sha256_b64);
+    json.set_string("salted_pwd_sha256_b64", au.salted_pwd_sha256_b64);
+    json.set_string("pwd_sha1_b64", au.pwd_sha1_b64);
+    json.set_string("uuid", au.uuid);
+    json.set_object("custom_data", std::move(custom_data));
+    json.set_object("roles", role::to_json_array(roles));
+
+    ostringstream ss;
+    ss << "INSERT INTO " << m_table << " VALUES ("
+       << "'" << au.mariadb_user << "', "
+       << "'" << au.db << "', "
+       << "'" << au.user << "', "
+       << "'" << au.host << "', "
+       << "'" << json.to_string(mxb::Json::Format::NORMAL) << "'"
+       << ")";
+
+    rv = m_db.cmd(ss.str());
+
+    if (!rv)
+    {
+        MXB_SERROR("Could not create user " << au.mariadb_user << ": " << m_db.error());
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
 {
-    return false;
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
+
+    ostringstream ss;
+    ss << "DELETE FROM " << m_table << " WHERE mariadb_user = '" << mariadb_user << "'";
+
+    bool rv = m_db.cmd(ss.str());
+
+    if (!rv)
+    {
+        MXB_SERROR("Could not remove user " << mariadb_user << ": " << m_db.error());
+    }
+
+    return rv;
+}
+
+namespace
+{
+
+bool user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo)
+{
+    // TODO: A bit of unnecessary work is made here if 'pInfo' is null.
+
+    UserManager::UserInfo info;
+
+    info.mariadb_user = pResult->get_string(0);
+    info.db = pResult->get_string(1);
+    info.user = pResult->get_string(2);
+    info.host = pResult->get_string(3);
+
+    mxb::Json json;
+
+    bool rv = json.load_string(pResult->get_string(4));
+
+    if (rv)
+    {
+        vector<nosql::role::Role> roles;
+        if (nosql::role::from_json(json.get_array("roles"), &roles))
+        {
+            info.roles = std::move(roles);
+        }
+        else
+        {
+            MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
+            rv = false;
+        }
+
+        if (rv)
+        {
+            info.pwd_sha1_b64 = json.get_string("pwd_sha1_b64");
+            info.uuid = json.get_string("uuid");
+            info.custom_data = json.get_object("custom_data").to_string(mxb::Json::Format::NORMAL);
+            info.salt_sha1_b64 = json.get_string("salt_sha1_b64");
+            info.salt_sha256_b64 = json.get_string("salt_sha256_b64");
+            info.salted_pwd_sha1_b64 = json.get_string("salted_pwd_sha1_b64");
+            info.salted_pwd_sha256_b64 = json.get_string("salted_pwd_sha256_b64");
+
+            if (!info.salt_sha1_b64.empty())
+            {
+                info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
+            }
+
+            if (!info.salt_sha256_b64.empty())
+            {
+                info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
+            }
+
+            if (pInfo)
+            {
+                *pInfo = std::move(info);
+            }
+        }
+    }
+    else
+    {
+        MXB_SERROR("Could not load Json data: " << json.error_msg());
+    }
+
+    return rv;
+}
+
+vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult)
+{
+    mxb_assert(pResult->get_col_count() == 5);
+
+    vector<UserManager::UserInfo> rv;
+
+    while (pResult->next_row())
+    {
+        UserManager::UserInfo ui;
+        if (user_info_from_result(pResult, &ui))
+        {
+            rv.push_back(ui);
+        }
+    }
+
+    return rv;
+}
+
 }
 
 bool UserManagerMariaDB::do_get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
-    return false;
+    bool rv = true;
+
+    ostringstream sql;
+    sql << "SELECT mariadb_user, db, user, host, data FROM " << m_table
+        << " WHERE mariadb_user = '" << mariadb_user << "'";
+
+    auto sResult = m_db.query(sql.str());
+
+    if (sResult)
+    {
+        if (sResult->get_row_count() == 1)
+        {
+            mxb_assert(sResult->get_col_count() == 5);
+            sResult->next_row();
+
+            rv = user_info_from_result(sResult.get(), pInfo);
+        }
+        else
+        {
+            MXB_SINFO("User '" << mariadb_user << "' not found.");
+            rv = false;
+        }
+    }
+    else
+    {
+        MXB_SERROR("Could not fetch user info for single user: " << m_db.error());
+        rv = false;
+    }
+
+    return rv;
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos() const
 {
-    return vector<UserInfo> {};
+    vector<UserInfo> rv;
+
+    ostringstream sql;
+    sql << "SELECT mariadb_user, db, user, host, data FROM " << m_table;
+
+    auto sResult = m_db.query(sql.str());
+
+    if (sResult)
+    {
+        rv = user_infos_from_result(sResult.get());
+    }
+    else
+    {
+        MXB_SERROR("Could not fetch all user infos: " << m_db.error());
+    }
+
+    return rv;
+
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const string& db) const
 {
-    return vector<UserInfo> {};
+    vector<UserInfo> rv;
+
+    ostringstream sql;
+    sql << "SELECT mariadb_user, db, user, host, data FROM " << m_table
+        << " WHERE db = '" << db << "'";
+
+    auto sResult = m_db.query(sql.str());
+
+    if (sResult)
+    {
+        rv = user_infos_from_result(sResult.get());
+    }
+    else
+    {
+        MXB_SERROR("Could not fetch user infos or particular db: " << m_db.error());
+    }
+
+    return rv;
 }
 
 vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const vector<string>& mariadb_users) const
 {
-    return vector<UserInfo> {};
+    vector<UserInfo> rv;
+
+    if (!mariadb_users.empty())
+    {
+        ostringstream sql;
+        sql << "SELECT mariadb_user, db, user, host, data FROM " << m_table
+            << " WHERE ";
+
+        for (auto it = mariadb_users.begin(); it != mariadb_users.end(); ++it)
+        {
+            if (it != mariadb_users.begin())
+            {
+                sql << " OR ";
+            }
+
+            sql << "mariadb_user = `" << *it << "`";
+        }
+
+        auto sResult = m_db.query(sql.str());
+
+        if (sResult)
+        {
+            rv = user_infos_from_result(sResult.get());
+        }
+        else
+        {
+            MXB_SERROR("Could not fetch user infos of particular users: " << m_db.error());
+        }
+    }
+
+    return rv;
 }
 
 vector<UserManager::Account> UserManagerMariaDB::do_get_accounts(const string& db) const
 {
-    return vector<Account> {};
+    vector<Account> rv;
+
+    ostringstream sql;
+    sql << "SELECT mariadb_user, user, db, host FROM " << m_table
+        << " WHERE db = '" << db << "'";
+
+    auto sResult = m_db.query(sql.str());
+
+    if (sResult)
+    {
+        mxb_assert(sResult->get_col_count() == 5);
+
+        while (sResult->next_row())
+        {
+            Account account;
+            account.mariadb_user = sResult->get_string(0);
+            account.user = sResult->get_string(1);
+            account.db = sResult->get_string(2);
+            account.host = sResult->get_string(3);
+
+            rv.push_back(account);
+        }
+    }
+    else
+    {
+        MXB_SERROR("Could not fetch account data: " << m_db.error());
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::do_remove_accounts(const vector<Account>& accounts) const
 {
-    return false;
+    bool rv;
+
+    if (!accounts.empty())
+    {
+        ostringstream sql;
+        sql << "DELETE FROM " << m_table << " WHERE ";
+
+        for (auto it = accounts.begin(); it != accounts.end(); ++it)
+        {
+            const auto& account = *it;
+
+            if (it != accounts.begin())
+            {
+                sql << " OR ";
+            }
+
+            sql << "mariadb_user = `" << account.mariadb_user << "`";
+        }
+
+        rv = m_db.cmd(sql.str());
+
+        if (!rv)
+        {
+            MXB_SERROR("Could not delete accounts: " << m_db.error());
+        }
+    }
+
+    return rv;
 }
 
 bool UserManagerMariaDB::do_update(const string& db,
-                                   const string&
-                                   user, uint32_t what,
+                                   const string& user,
+                                   uint32_t what,
                                    const Update& data) const
 {
-    return false;
+    mxb_assert((what & Update::MASK) != 0);
+
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
+
+    UserInfo info;
+    bool rv = do_get_info(mariadb_user, &info);
+
+    if (rv)
+    {
+        if (what & Update::CUSTOM_DATA)
+        {
+            info.custom_data = data.custom_data;
+        }
+
+        if (what & Update::PWD)
+        {
+            auto pwd = nosql::escape_essential_chars(data.pwd);
+            vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
+
+            info.pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
+
+            string salt_sha1_b64;
+            string salted_pwd_sha1_b64;
+            string salt_sha256_b64;
+            string salted_pwd_sha256_b64;
+
+            mxb_assert(!data.mechanisms.empty());
+            get_salts_and_salted_passwords(user, pwd,
+                                           data.mechanisms,
+                                           &info.salt_sha1_b64, &info.salted_pwd_sha1_b64,
+                                           &info.salt_sha256_b64, &info.salted_pwd_sha256_b64);
+        }
+
+        if ((what & Update::MECHANISMS) && !(what & Update::PWD))
+        {
+            auto begin = data.mechanisms.begin();
+            auto end = data.mechanisms.end();
+
+            if (std::find(begin, end, scram::Mechanism::SHA_1) == end)
+            {
+                info.salt_sha1_b64.clear();
+                info.salted_pwd_sha1_b64.clear();
+            }
+
+            if (std::find(begin, end, scram::Mechanism::SHA_256) == end)
+            {
+                info.salt_sha256_b64.clear();
+                info.salted_pwd_sha256_b64.clear();
+            }
+        }
+
+        if (what & Update::ROLES)
+        {
+            info.roles = data.roles;
+        }
+
+        mxb::Json custom_data(mxb::Json::Type::OBJECT);
+
+        if (!info.custom_data.empty())
+        {
+            MXB_AT_DEBUG(bool loaded) = custom_data.load_string(info.custom_data);
+            mxb_assert(loaded);
+        }
+
+        mxb::Json json;
+
+        json.set_string("salt_sha1_b64", info.salt_sha1_b64);
+        json.set_string("salted_pwd_sha1_b64", info.salted_pwd_sha1_b64);
+        json.set_string("salt_sha256_b64", info.salt_sha256_b64);
+        json.set_string("salted_pwd_sha256_b64", info.salted_pwd_sha256_b64);
+        json.set_string("pwd_sha1_b64", info.pwd_sha1_b64);
+        json.set_string("uuid", info.uuid);
+        json.set_object("custom_data", custom_data);
+        json.set_object("roles", role::to_json_array(info.roles));
+
+        ostringstream sql;
+        sql << "UPDATE " << m_table << " SET data = '" << json.to_string(mxb::Json::Format::NORMAL) << "' "
+            << "WHERE mariadb_user = '" << mariadb_user << "'";
+
+        rv = m_db.cmd(sql.str());
+
+        if (!rv)
+        {
+            MXB_SERROR("Could not update user " << mariadb_user << ": " << m_db.error());
+        }
+    }
+
+    return rv;
 }
 
 }
