@@ -22,6 +22,17 @@
             <slot name="left-table-tools-append" />
             <v-spacer />
             <slot name="right-table-tools-prepend" />
+            <v-btn
+                v-if="showEditBtn"
+                x-small
+                class="mr-2 pa-1 text-capitalize font-weight-medium"
+                outlined
+                depressed
+                color="accent-dark"
+                @click="handleEdit"
+            >
+                {{ isEditing ? $t('doneEditing') : $t('edit') }}
+            </v-btn>
             <v-tooltip
                 v-if="selectedItems.length"
                 top
@@ -31,7 +42,7 @@
                 <template v-slot:activator="{ on }">
                     <v-btn
                         x-small
-                        class="mr-2 pa-1 text-capitalize"
+                        class="mr-2 pa-1 text-capitalize font-weight-medium"
                         outlined
                         depressed
                         color="error"
@@ -94,6 +105,7 @@
                 :showSelect="showSelect"
                 :groupBy="groupBy"
                 :activeRow="activeRow"
+                :draggableCell="!isEditing"
                 @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"
@@ -101,9 +113,15 @@
             >
                 <template
                     v-for="h in visibleHeaders"
-                    v-slot:[h.text]="{ data: { cell, header, maxWidth } }"
+                    v-slot:[h.text]="{ data: { cell, header, maxWidth, rowData } }"
                 >
-                    <slot :name="`${h.text}`" :data="{ cell, header, maxWidth }" />
+                    <editable-cell
+                        v-if="isEditing && header.editableCol"
+                        :key="`${h.text}-${cell}`"
+                        :cellItem="toCellItem({ rowData, cell, colName: h.text })"
+                        :changedCells.sync="changedCells"
+                    />
+                    <slot v-else :name="`${h.text}`" :data="{ cell, header, maxWidth }" />
                 </template>
                 <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
                     <slot :name="`header-${h.text}`" :data="data" />
@@ -138,14 +156,17 @@
 
 /*
 @on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
+@on-done-editing: changedCells:[].  cells have its value changed
 Also emits other events from virtual-scroll-table via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
+import EditableCell from './EditableCell'
 import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
         'result-export': ResultExport,
+        'editable-cell': EditableCell,
     },
     props: {
         headers: {
@@ -164,6 +185,7 @@ export default {
         showGroupBy: { type: Boolean, default: false },
         //menuOpts:[{ text:string, type:string, action:function}]
         menuOpts: { type: Array, default: () => [] },
+        showEditBtn: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -177,6 +199,9 @@ export default {
             // states for ctx menu
             showCtxMenu: false,
             ctxMenuData: {},
+            // states for editing table cell
+            isEditing: false,
+            changedCells: [], // cells have its value changed
         }
     },
     computed: {
@@ -354,6 +379,22 @@ export default {
         onChooseOpt(opt) {
             // pass arguments opt and data to action function
             opt.action({ opt, data: this.ctxMenuData })
+        },
+        handleEdit() {
+            this.isEditing = !this.isEditing
+            if (!this.isEditing) this.$emit('on-done-editing', this.changedCells)
+        },
+        toCellItem({ rowData, cell, colName }) {
+            const objRow = this.tableHeaders.reduce((o, c, i) => ((o[c.text] = rowData[i]), o), {})
+            const rowId = objRow['#'] // Using # col as unique row id as its value isn't alterable
+            const cellItem = {
+                id: `rowId-${rowId}_colName-${colName}`,
+                rowId,
+                colName,
+                value: cell,
+                objRow,
+            }
+            return cellItem
         },
     },
 }
