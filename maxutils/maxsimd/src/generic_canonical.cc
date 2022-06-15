@@ -118,16 +118,23 @@ inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == end || (!lut(IS_DIGIT, *next_it) && *next_it != '-'))
+                if (next_it == end || !(*next_it != '-' || *next_it != '+') || lut(IS_DIGIT, *next_it))
                 {
                     rval.first = false;
                     break;
                 }
 
-                // Skip over the minus if we have one
-                if (*next_it == '-')
+                // Skip over the sign if there is one
+                if (*next_it == '-' || *next_it == '+')
                 {
-                    it++;
+                    it = next_it;
+                }
+
+                // There must be at least one digit
+                if (++it == end || !lut(IS_DIGIT, *it))
+                {
+                    rval.first = false;
+                    break;
                 }
             }
             else if (*it == '.')

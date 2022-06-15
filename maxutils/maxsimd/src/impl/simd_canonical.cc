@@ -251,16 +251,23 @@ inline const char* probe_number(const char* it, const char* const pEnd)
                 // Possible scientific notation number
                 auto next_it = it + 1;
 
-                if (next_it == pEnd || (!lut(IS_DIGIT, *next_it) && *next_it != '-'))
+                if (next_it == pEnd || !(*next_it != '-' || *next_it != '+') || lut(IS_DIGIT, *next_it))
                 {
                     rval = nullptr;
                     break;
                 }
 
-                // Skip over the dash if we have one
-                if (*next_it == '-')
+                // Skip over the sign if there is one
+                if (*next_it == '-' || *next_it == '+')
                 {
-                    it++;
+                    it = next_it;
+                }
+
+                // There must be at least one digit
+                if (++it == pEnd || !lut(IS_DIGIT, *it))
+                {
+                    rval = nullptr;
+                    break;
                 }
             }
             else if (*it == '.')
