@@ -234,6 +234,10 @@ std::string* get_canonical_impl(std::string* pSql, Markers* /*pMarkers*/)
                 it = num_end.second;
                 did_conversion = true;
             }
+            else
+            {
+                *it_out++ = *it;
+            }
         }
         else if (*it == '\'' || *it == '"')
         {
