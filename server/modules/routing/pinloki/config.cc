@@ -93,11 +93,6 @@ std::string Config::path(const std::string& name) const
     return name;
 }
 
-std::string Config::binlog_dir_path() const
-{
-    return m_binlog_dir;
-}
-
 std::string Config::gtid_file_path() const
 {
     return path(m_gtid_file);

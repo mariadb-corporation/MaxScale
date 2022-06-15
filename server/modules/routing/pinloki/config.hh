@@ -45,7 +45,6 @@ public:
      */
     std::string path(const std::string& name) const;
 
-    std::string binlog_dir_path() const;
     std::string inventory_file_path() const;
     std::string gtid_file_path() const;
     std::string requested_gtid_file_path() const;

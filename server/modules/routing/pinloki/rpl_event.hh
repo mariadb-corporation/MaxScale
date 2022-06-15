@@ -215,9 +215,6 @@ std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t pos,
                                       Kind kind);
 
-std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
-                                           uint32_t curr_pos);
-
 std::vector<char> create_start_encryption_event(uint32_t server_id, uint32_t key_version,
                                                 uint32_t current_pos);
 

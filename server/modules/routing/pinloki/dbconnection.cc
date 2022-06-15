@@ -100,67 +100,9 @@ MariaRplEvent Connection::get_rpl_msg()
     return MariaRplEvent {ptr, m_rpl};
 }
 
-
-uint64_t Connection::mariadb_error()
-{
-    return mysql_errno(m_conn);
-}
-
 std::string Connection::mariadb_error_str()
 {
     return mysql_error(m_conn);
-}
-
-uint64_t Connection::ping()
-{
-    mysql_ping(m_conn);
-
-    return mariadb_error();
-}
-
-void Connection::begin_trx()
-{
-    if (m_nesting_level++ == 0)
-    {
-        mysql_autocommit(m_conn, false);
-        if (mysql_ping(m_conn))
-        {
-            MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                          "begin_tran failed " << m_details.host << " : mysql_error "
-                                               << mysql_error(m_conn));
-        }
-    }
-}
-
-void Connection::commit_trx()
-{
-    if (--m_nesting_level == 0)
-    {
-        if (mysql_autocommit(m_conn, true))
-        {
-            MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                          "commit failed " << m_details.host << " : mysql_error "
-                                           << mysql_error(m_conn));
-        }
-    }
-}
-
-void Connection::rollback_trx()
-{
-    if (mysql_rollback(m_conn))
-    {
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "rollback failed " << m_details.host << " : mysql_error "
-                                         << mysql_error(m_conn));
-    }
-
-    mysql_autocommit(m_conn, true);
-    m_nesting_level = 0;
-}
-
-int Connection::nesting_level()
-{
-    return m_nesting_level;
 }
 
 void Connection::connect()
@@ -169,8 +111,6 @@ void Connection::connect()
     {
         MXB_THROW(DatabaseError, "connect(), already connected");
     }
-
-    // LOGI("Trying " << _details.host);
 
     m_conn = mysql_init(nullptr);
 
@@ -249,8 +189,6 @@ void Connection::connect()
         m_conn = nullptr;
         MXB_THROW(DatabaseError, "Could not establish an encrypted connection");
     }
-
-    // LOGI("Connection ok: " << _details.host);
 }
 
 void Connection::query(const std::string& sql)
@@ -265,16 +203,6 @@ void Connection::query(const std::string& sql)
                                             << ':' << m_details.host.port()
                                             << " : mysql_error " << mysql_error(m_conn));
     }
-}
-
-int Connection::affected_rows() const
-{
-    return mysql_affected_rows(m_conn);
-}
-
-void Connection::discard_result()
-{
-    mysql_free_result(mysql_use_result(m_conn));
 }
 
 maxbase::Host Connection::host() const

@@ -69,18 +69,6 @@ Gtid Gtid::from_string(const std::string& gtid_str)
     }
 }
 
-Gtid Gtid::previous() const
-{
-    if (m_is_valid && m_sequence_nr > 1)
-    {
-        return Gtid(m_domain_id, m_server_id, m_sequence_nr - 1);
-    }
-    else
-    {
-        return Gtid();
-    }
-}
-
 std::ostream& operator<<(std::ostream& os, const Gtid& gtid)
 {
     os << gtid.to_string();
@@ -94,12 +82,6 @@ GtidList::GtidList(const std::vector<Gtid>&& gtids)
     m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
         return gtid.is_valid();
     });
-}
-
-void GtidList::clear()
-{
-    m_gtids.clear();
-    m_is_valid = false;
 }
 
 void GtidList::replace(const Gtid& gtid)

@@ -60,11 +60,6 @@ struct Gtid
         return m_is_valid;
     }
 
-    /** Decrement the sequence number. If it would become 0,
-     *  return an invalid Gtid.
-     */
-    Gtid previous() const;
-
 private:
     uint32_t m_domain_id = -1;
     uint32_t m_server_id = -1;
@@ -98,7 +93,6 @@ public:
     GtidList& operator=(const GtidList&) = default;
     GtidList(const std::vector<Gtid>&& gtids);
 
-    void clear();
     void replace(const Gtid& gtid);
 
     std::string     to_string() const;

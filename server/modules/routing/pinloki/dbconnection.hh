@@ -76,48 +76,10 @@ public:
     MariaRplEvent get_rpl_msg();
 
     /**
-     * @brief ping - ping the server, and return mariadb_error()
-     * @return
-     */
-    uint64_t ping();
-
-    /**
-     * @brief begin_trx
-     */
-    void begin_trx();
-
-    /**
-     * @brief commit_trx
-     */
-    void commit_trx();
-
-    /**
-     * @brief rollback_trx
-     */
-    void rollback_trx();
-
-    /**
-     * @brief nesting_level - begin_trx(); begin_trx; => nesting_level()==2
-     * @return
-     */
-    int nesting_level();
-
-    /**
      * @brief query
      * @param sql
      */
     void query(const std::string& sql);
-
-    /**
-     * @brief affected_rows
-     * @return
-     */
-    int affected_rows() const;
-
-    /**
-     * @brief discard_result
-     */
-    void discard_result();
 
     /**
      * @brief host
@@ -126,24 +88,11 @@ public:
     maxbase::Host host() const;
 
     /**
-     * @brief mariadb_error - will not return an error if the server
-     *                        has timed out.
-     * @return mysql_errno()
-     */
-    uint64_t mariadb_error();
-
-    /**
      * @brief mariadb_error_str
      * @return error string, or empty() if there is no error
      */
     std::string mariadb_error_str();
 
-    /** Run any Connector/C function. Don't run a function that is explicitely in
-     *  this class's interface.
-     *  Example: mc.call(mysql_select_db, "information_schema");
-     */
-    template<typename R, typename ... Args>
-    R call(R (&foo)(st_mysql*, Args ...), Args ... args) const;
 private:
     st_mysql*         m_conn {nullptr};
     st_mariadb_rpl*   m_rpl {nullptr};
@@ -152,10 +101,4 @@ private:
 
     void connect();
 };
-
-template<typename R, typename ... Args>
-R Connection::call(R (&foo)(st_mysql*, Args ...), Args... args) const
-{
-    return foo(m_conn, std::forward<Args>(args)...);
-}
 }
