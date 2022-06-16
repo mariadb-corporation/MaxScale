@@ -220,10 +220,15 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
 
 void RWSplitSession::send_readonly_error()
 {
-    auto err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000",
-                                            "The MariaDB server is running with the --read-only"
-                                            " option so it cannot execute this statement");
-    set_response(err);
+    int errnum = ER_OPTION_PREVENTS_STATEMENT;
+    const char sqlstate[] = "HY000";
+    const char errmsg[] = "The MariaDB server is running with the --read-only"
+                          " option so it cannot execute this statement";
+
+    mxs::ReplyRoute route;
+    mxs::Reply reply;
+    reply.set_error(errnum, sqlstate, sqlstate + sizeof(sqlstate) - 1, errmsg, errmsg + sizeof(errmsg) - 1);
+    RouterSession::clientReply(modutil_create_mysql_err_msg(1, 0, errnum, sqlstate, errmsg), route, reply);
 }
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)

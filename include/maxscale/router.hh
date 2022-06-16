@@ -93,8 +93,9 @@ protected:
 
     /**
      * To be called by a router that short-circuits the request processing.
-     * If this function is called (in routeQuery), the router must return
-     * without passing the request further.
+     *
+     * This function can only be used inside the routeQuery function of the router. If this function is
+     * called, the router must return without passing the request further.
      *
      * @param pResponse  The response to be sent to the client.
      */
