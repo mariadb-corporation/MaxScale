@@ -867,7 +867,7 @@ void test_admin_users(TestConnections& test)
     test.tprintf("Create a new user, should work on both MaxScales");
     test.check_maxctrl("create user bob bob");
     expect_sync(test, ++version, 2);
-    expect_equal(test, "users/inet/bob", "/data");
+    expect_equal(test, "users/inet/bob", "/data/attributes/account");
     login_ok("admin", "mariadb");
     login_ok("bob", "bob");
     login_err("bob", "bob2");
@@ -875,13 +875,13 @@ void test_admin_users(TestConnections& test)
     test.tprintf("Change the password on the second MaxScale, first one should work");
     test.maxscale2->maxctrl("alter user bob bob2");
     expect_sync(test, ++version, 2);
-    expect_equal(test, "users/inet/bob", "/data");
+    expect_equal(test, "users/inet/bob", "/data/attributes/account");
     login_ok("admin", "mariadb");
     login_ok("bob", "bob2");
     login_err("bob", "bob");
 
     test.tprintf("Change password with --skip-sync on the first MaxScale, only first one should work");
-    test.maxscale2->maxctrl("alter user bob bob3 --skip-sync");
+    test.maxscale->maxctrl("alter user bob bob3 --skip-sync");
     sleep(2);   // Should work, sync interval is 100ms for this test
 
     test.expect(test.maxscale->maxctrl("-u bob -p bob3 show maxscale").rc == 0,
@@ -898,7 +898,7 @@ void test_admin_users(TestConnections& test)
     test.tprintf("Change the password without --skip-sync, login to both MaxScale should now work");
     test.maxscale2->maxctrl("alter user bob bob4");
     expect_sync(test, ++version, 2);
-    expect_equal(test, "users/inet/bob", "/data");
+    expect_equal(test, "users/inet/bob", "/data/attributes/account");
     login_ok("admin", "mariadb");
     login_ok("bob", "bob4");
     login_err("bob", "bob3");
