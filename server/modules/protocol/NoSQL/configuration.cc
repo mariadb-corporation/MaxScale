@@ -14,6 +14,7 @@
 #include "configuration.hh"
 #include <fstream>
 #include <maxscale/paths.hh>
+#include <maxscale/secrets.hh>
 #include "protocolmodule.hh"
 
 using namespace std;
@@ -231,12 +232,24 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
 
                 if (std::getline(in, encryption_key_hex))
                 {
-                    this->encryption_key.resize(encryption_key_hex.size() / 2);
+                    size_t required_keylen = mxs::SECRETS_CIPHER_BYTES * 2;
 
-                    if (!mxs::hex2bin(encryption_key_hex.data(), encryption_key_hex.length(),
-                                      this->encryption_key.data()))
+                    if (encryption_key_hex.length() == required_keylen)
                     {
-                        MXB_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
+                        this->encryption_key.resize(required_keylen / 2);
+
+                        if (!mxs::hex2bin(encryption_key_hex.data(), encryption_key_hex.length(),
+                                          this->encryption_key.data()))
+                        {
+                            MXB_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
+                            rv = false;
+                        }
+                    }
+                    else
+                    {
+                        MXB_ERROR("The encryption key in '%s' must be a %d character long "
+                                  "hexadecimal string. Use e.g. 'openssl rand -hex 32' for creating it.",
+                                  path.c_str(), (int)required_keylen);
                         rv = false;
                     }
                 }

@@ -20,6 +20,7 @@
 #include <maxscale/utils.hh>
 #include "configuration.hh"
 #include "nosqlkeys.hh"
+#include <maxscale/secrets.hh>
 
 using namespace std;
 
@@ -1358,20 +1359,36 @@ bool UserManagerMariaDB::do_add_user(const string& db,
     json.set_object("custom_data", std::move(custom_data));
     json.set_object("roles", role::to_json_array(roles));
 
-    ostringstream ss;
-    ss << "INSERT INTO " << m_table << " VALUES ("
-       << "'" << au.mariadb_user << "', "
-       << "'" << au.db << "', "
-       << "'" << au.user << "', "
-       << "'" << au.host << "', "
-       << "'" << json.to_string(mxb::Json::Format::NORMAL) << "'"
-       << ")";
+    string data = json.to_string(mxb::Json::Format::NORMAL);
 
-    rv = m_db.cmd(ss.str());
-
-    if (!rv)
+    if (!m_config.encryption_key.empty())
     {
-        MXB_SERROR("Could not create user " << au.mariadb_user << ": " << m_db.error());
+        data = mxs::encrypt_password(m_config.encryption_key, data);
+
+        if (data.empty())
+        {
+            MXB_SERROR("Could not encrypt NoSQL data, cannot create user '" << au.mariadb_user << "'.");
+            rv = false;
+        }
+    }
+
+    if (rv)
+    {
+        ostringstream ss;
+        ss << "INSERT INTO " << m_table << " VALUES ("
+           << "'" << au.mariadb_user << "', "
+           << "'" << au.db << "', "
+           << "'" << au.user << "', "
+           << "'" << au.host << "', "
+           << "'" << data << "'"
+           << ")";
+
+        rv = m_db.cmd(ss.str());
+
+        if (!rv)
+        {
+            MXB_SERROR("Could not create user " << au.mariadb_user << ": " << m_db.error());
+        }
     }
 
     return rv;
@@ -1397,7 +1414,9 @@ bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
 namespace
 {
 
-bool user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo)
+bool user_info_from_result(mxq::QueryResult* pResult,
+                           const Configuration& config,
+                           UserManager::UserInfo* pInfo)
 {
     // TODO: A bit of unnecessary work is made here if 'pInfo' is null.
 
@@ -1408,58 +1427,75 @@ bool user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pIn
     info.user = pResult->get_string(2);
     info.host = pResult->get_string(3);
 
-    mxb::Json json;
+    string data = pResult->get_string(4);
 
-    bool rv = json.load_string(pResult->get_string(4));
+    bool rv = true;
+    if (!config.encryption_key.empty())
+    {
+        data = mxs::decrypt_password(config.encryption_key, data);
+
+        if (data.empty())
+        {
+            MXB_SERROR("Could not decrypt NoSQL data of '" << info.mariadb_user << "'.");
+            rv = false;
+        }
+    }
 
     if (rv)
     {
-        vector<nosql::role::Role> roles;
-        if (nosql::role::from_json(json.get_array("roles"), &roles))
-        {
-            info.roles = std::move(roles);
-        }
-        else
-        {
-            MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
-            rv = false;
-        }
+        mxb::Json json;
+
+        rv = json.load_string(data);
 
         if (rv)
         {
-            info.pwd_sha1_b64 = json.get_string("pwd_sha1_b64");
-            info.uuid = json.get_string("uuid");
-            info.custom_data = json.get_object("custom_data").to_string(mxb::Json::Format::NORMAL);
-            info.salt_sha1_b64 = json.get_string("salt_sha1_b64");
-            info.salt_sha256_b64 = json.get_string("salt_sha256_b64");
-            info.salted_pwd_sha1_b64 = json.get_string("salted_pwd_sha1_b64");
-            info.salted_pwd_sha256_b64 = json.get_string("salted_pwd_sha256_b64");
-
-            if (!info.salt_sha1_b64.empty())
+            vector<nosql::role::Role> roles;
+            if (nosql::role::from_json(json.get_array("roles"), &roles))
             {
-                info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
+                info.roles = std::move(roles);
+            }
+            else
+            {
+                MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
+                rv = false;
             }
 
-            if (!info.salt_sha256_b64.empty())
+            if (rv)
             {
-                info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
-            }
+                info.pwd_sha1_b64 = json.get_string("pwd_sha1_b64");
+                info.uuid = json.get_string("uuid");
+                info.custom_data = json.get_object("custom_data").to_string(mxb::Json::Format::NORMAL);
+                info.salt_sha1_b64 = json.get_string("salt_sha1_b64");
+                info.salt_sha256_b64 = json.get_string("salt_sha256_b64");
+                info.salted_pwd_sha1_b64 = json.get_string("salted_pwd_sha1_b64");
+                info.salted_pwd_sha256_b64 = json.get_string("salted_pwd_sha256_b64");
 
-            if (pInfo)
-            {
-                *pInfo = std::move(info);
+                if (!info.salt_sha1_b64.empty())
+                {
+                    info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
+                }
+
+                if (!info.salt_sha256_b64.empty())
+                {
+                    info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
+                }
+
+                if (pInfo)
+                {
+                    *pInfo = std::move(info);
+                }
             }
         }
-    }
-    else
-    {
-        MXB_SERROR("Could not load Json data: " << json.error_msg());
+        else
+        {
+            MXB_SERROR("Could not load Json data of '" << info.mariadb_user << "': " << json.error_msg());
+        }
     }
 
     return rv;
 }
 
-vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult)
+vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult, const Configuration& config)
 {
     mxb_assert(pResult->get_col_count() == 5);
 
@@ -1468,7 +1504,7 @@ vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult)
     while (pResult->next_row())
     {
         UserManager::UserInfo ui;
-        if (user_info_from_result(pResult, &ui))
+        if (user_info_from_result(pResult, config, &ui))
         {
             rv.push_back(ui);
         }
@@ -1496,7 +1532,7 @@ bool UserManagerMariaDB::do_get_info(const string& mariadb_user, UserInfo* pInfo
             mxb_assert(sResult->get_col_count() == 5);
             sResult->next_row();
 
-            rv = user_info_from_result(sResult.get(), pInfo);
+            rv = user_info_from_result(sResult.get(), m_config, pInfo);
         }
         else
         {
@@ -1524,7 +1560,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos() const
 
     if (sResult)
     {
-        rv = user_infos_from_result(sResult.get());
+        rv = user_infos_from_result(sResult.get(), m_config);
     }
     else
     {
@@ -1547,7 +1583,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const string& db)
 
     if (sResult)
     {
-        rv = user_infos_from_result(sResult.get());
+        rv = user_infos_from_result(sResult.get(), m_config);
     }
     else
     {
@@ -1581,7 +1617,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const vector<stri
 
         if (sResult)
         {
-            rv = user_infos_from_result(sResult.get());
+            rv = user_infos_from_result(sResult.get(), m_config);
         }
         else
         {
@@ -1737,15 +1773,31 @@ bool UserManagerMariaDB::do_update(const string& db,
         json.set_object("custom_data", custom_data);
         json.set_object("roles", role::to_json_array(info.roles));
 
-        ostringstream sql;
-        sql << "UPDATE " << m_table << " SET data = '" << json.to_string(mxb::Json::Format::NORMAL) << "' "
-            << "WHERE mariadb_user = '" << mariadb_user << "'";
+        string data = json.to_string(mxb::Json::Format::NORMAL);
 
-        rv = m_db.cmd(sql.str());
-
-        if (!rv)
+        if (!m_config.encryption_key.empty())
         {
-            MXB_SERROR("Could not update user " << mariadb_user << ": " << m_db.error());
+            data = mxs::encrypt_password(m_config.encryption_key, data);
+
+            if (data.empty())
+            {
+                MXB_SERROR("Could not encrypt NoSQL data, cannot create user '" << mariadb_user << "'.");
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            ostringstream sql;
+            sql << "UPDATE " << m_table << " SET data = '" << data << "' "
+                << "WHERE mariadb_user = '" << mariadb_user << "'";
+
+            rv = m_db.cmd(sql.str());
+
+            if (!rv)
+            {
+                MXB_SERROR("Could not update user " << mariadb_user << ": " << m_db.error());
+            }
         }
     }
 
