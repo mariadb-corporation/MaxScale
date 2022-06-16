@@ -42,7 +42,13 @@
                 </v-form>
             </v-card-text>
             <v-card-actions class="v-card-actions_padding color border-top-reflection">
-                <slot :cancel="cancel" :save="save" :isSaveDisabled="isSaveDisabled" name="actions">
+                <slot
+                    :cancel="cancel"
+                    :save="save"
+                    :close="close"
+                    :isSaveDisabled="isSaveDisabled"
+                    name="actions"
+                >
                     <slot name="action-prepend"></slot>
                     <v-spacer />
                     <v-btn

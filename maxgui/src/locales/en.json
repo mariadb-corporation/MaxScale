@@ -252,6 +252,9 @@
     "addUser": "Add user",
     "killSession": "Kill session",
     "kill": "Kill",
+    "loadScript": "Load Script",
+    "override": "Override",
+    "loadInANewTab": "Load in a new tab",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -289,7 +292,8 @@
         "async-release-locks": "Are you sure you want to release locks?",
         "async-failover": "Are you sure you want to perform master failover?",
         "async-rejoin": "Rejoin <b>{targetId}</b> to this cluster?",
-        "killSession": "Are you sure you want to kill this session?"
+        "killSession": "Are you sure you want to kill this session?",
+        "loadScript": "Override <b>{targetId}</b> or load script in a new query tab?"
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",

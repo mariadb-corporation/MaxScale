@@ -33,13 +33,14 @@
                         v-on="on"
                         @click="openSnippetDlg"
                     >
-                        <v-icon size="20"> mdi-star-plus-outline </v-icon>
+                        <v-icon size="19"> mdi-star-plus-outline </v-icon>
                     </v-btn>
                 </template>
                 <span style="white-space: pre;" class="d-inline-block text-center">
                     {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + S` }}
                 </span>
             </v-tooltip>
+            <load-sql />
             <v-spacer />
             <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
                 <max-rows-input
@@ -128,6 +129,7 @@ import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import MaxRowsInput from './MaxRowsInput.vue'
 import SessionBtns from './SessionBtns'
 import QueryEditor from '@/components/QueryEditor'
+import LoadSql from './LoadSql'
 
 export default {
     name: 'session-toolbar',
@@ -135,6 +137,7 @@ export default {
         'max-rows-input': MaxRowsInput,
         'session-btns': SessionBtns,
         'readonly-query-editor': QueryEditor,
+        'load-sql': LoadSql,
     },
     data() {
         return {

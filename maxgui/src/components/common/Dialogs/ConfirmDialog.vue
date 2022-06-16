@@ -20,7 +20,9 @@
             <slot name="body-append"></slot>
         </template>
         <!-- Pass on all named slots -->
-        <slot v-for="slot in Object.keys($slots)" :slot="slot" :name="slot" />
+        <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+            <slot :name="slot" v-bind="props" />
+        </template>
     </base-dialog>
 </template>
 
