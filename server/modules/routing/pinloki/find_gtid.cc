@@ -121,19 +121,8 @@ bool FileReader::search_file(const std::string& file_name,
     enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
     GtidListResult result = NotFound;
     long file_pos = PINLOKI_MAGIC.size();
+    file.seekg(file_pos);
     std::unique_ptr<mxq::EncryptCtx> encrypt;
-
-    if (mxq::RplEvent fde = maxsql::RplEvent::read_event(file, &file_pos);
-        fde.event_type() == FORMAT_DESCRIPTION_EVENT)
-    {
-        if (mxq::RplEvent enc = maxsql::RplEvent::read_event(file, &file_pos);
-            enc.event_type() == START_ENCRYPTION_EVENT)
-        {
-            const auto& cnf = m_inventory.config();
-            encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, enc);
-            mxb_assert((size_t)file.tellg() == 4 + fde.buffer_size() + enc.buffer_size());
-        }
-    }
 
     while (result == NotFound)
     {
@@ -144,7 +133,12 @@ bool FileReader::search_file(const std::string& file_name,
             break;
         }
 
-        if (rpl.event_type() == GTID_LIST_EVENT)
+        if (rpl.event_type() == START_ENCRYPTION_EVENT)
+        {
+            const auto& cnf = m_inventory.config();
+            encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, rpl);
+        }
+        else if (rpl.event_type() == GTID_LIST_EVENT)
         {
             maxsql::GtidListEvent event = rpl.gtid_list();
 

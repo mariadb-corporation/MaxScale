@@ -142,6 +142,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         }
         catch (const GtidNotFoundError& err)
         {
+            MXB_SINFO("Could not find GTID: " << err.what());
             send(modutil_create_mysql_err_msg(1, 0, 1236, "HY000", err.what()));
             rval = 1;
         }
