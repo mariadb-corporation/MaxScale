@@ -943,13 +943,15 @@ bool MariaDBMonitor::execute_manual_command(mon_op::CmdMethod command, const str
         m_manual_cmd.result_ready_notifier.wait(lock, cmd_complete);
 
         // Copy results similar to fetch-results.
-        mon_op::Result res;
-        res.deep_copy_from(m_manual_cmd.result_info->res);
+        mon_op::Result res = m_manual_cmd.result_info->res.deep_copy();
 
         // There should not be any existing errors in the error output.
         mxb_assert(*error_out == nullptr);
         rval = res.success;
-        *error_out = res.output;
+        if (res.output.object_size() > 0)
+        {
+            *error_out = res.output.release();
+        }
     }
     return rval;
 }

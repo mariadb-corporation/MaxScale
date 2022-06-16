@@ -118,6 +118,8 @@ public:
     Json(Json&& rhs) noexcept;
     Json& operator=(Json&& rhs);
 
+    Json deep_copy() const;
+
     /**
      * Load data from json string. Removes any currently held object.
      *
@@ -274,6 +276,8 @@ public:
      * @return A vector of key names. If the held object is not an object, an empty vector is returned.
      */
     std::vector<std::string> keys() const;
+
+    size_t object_size() const;
 
     /**
      * Get value at JSON Pointer

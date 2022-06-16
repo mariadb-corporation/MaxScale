@@ -28,11 +28,12 @@ namespace mon_op
 
 struct Result
 {
-    ~Result();
-    void deep_copy_from(const Result& rhs);
+    Result deep_copy() const;
 
-    bool    success {false};
-    json_t* output {nullptr};
+    bool success {false};
+
+    // Error printing functions interpret an "undefined" json-object as null and won't print to it.
+    mxb::Json output {mxb::Json::Type::OBJECT};
 };
 
 /**
@@ -154,7 +155,7 @@ private:
 
     bool rebuild_check_preconds();
     bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
-    bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
+    bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, mxb::Json& error_out);
 
     bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
 };

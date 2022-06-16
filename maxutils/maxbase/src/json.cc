@@ -127,6 +127,11 @@ Json::Json(const Json& rhs)
     json_incref(m_obj);
 }
 
+Json Json::deep_copy() const
+{
+    return Json(json_deep_copy(m_obj), RefType::STEAL);
+}
+
 void Json::swap(Json& rhs) noexcept
 {
     std::swap(m_obj, rhs.m_obj);
@@ -652,6 +657,11 @@ bool Json::unpack_arr(const char* arr_name, const ElemOkHandler& elem_ok, const 
         }
     }
     return rval;
+}
+
+size_t Json::object_size() const
+{
+    return json_object_size(m_obj);
 }
 
 std::string json_dump(const json_t* json, int flags)

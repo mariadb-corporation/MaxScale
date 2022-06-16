@@ -21,6 +21,7 @@
 using maxscale::Monitor;
 using maxscale::MonitorServer;
 using std::string;
+using std::move;
 using RType = ssh_util::CmdResult::Type;
 
 namespace
@@ -704,7 +705,7 @@ mon_op::Result MariaDBMonitor::manual_release_locks()
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    auto error_out = &rval.output;
+    auto& error_out = rval.output;
 
     bool success = false;
     if (server_locks_in_use())
@@ -729,12 +730,12 @@ mon_op::Result MariaDBMonitor::manual_release_locks()
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Did not release any locks. %s", LOCK_DELAY_MSG);
+            PRINT_JSON_ERROR(error_out, "Did not release any locks. %s", LOCK_DELAY_MSG);
         }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Server locks are not in use, cannot release them.");
+        PRINT_JSON_ERROR(error_out, "Server locks are not in use, cannot release them.");
     }
     rval.success = success;
     return rval;
@@ -750,9 +751,8 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
     std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
     if (m_manual_cmd.result_info)
     {
-        // Deep copy the json, as another manual command may start writing to the container
-        // right after mutex is released.
-        manual_cmd_result.deep_copy_from(m_manual_cmd.result_info->res);
+        // Deep copy the json since ownership moves.
+        manual_cmd_result = m_manual_cmd.result_info->res.deep_copy();
         manual_cmd_name = m_manual_cmd.result_info->cmd_name;
         manual_cmd_state = ExecState::DONE;
     }
@@ -787,10 +787,10 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         break;
 
     case ExecState::DONE:
-        // If command has its own output, return that. Otherwise report success or error.
-        if (manual_cmd_result.output)
+        // If command has its own output, return that. Otherwise, report success or error.
+        if (manual_cmd_result.output.object_size() > 0)
         {
-            *output = manual_cmd_result.output;
+            *output = manual_cmd_result.output.release();
         }
         else if (manual_cmd_result.success)
         {
@@ -930,14 +930,13 @@ MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::se
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not add node '%s' to the ColumnStore cluster. %s",
                                            node_host.c_str(), rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -953,14 +952,13 @@ MariaDBMonitor::manual_cs_remove_node(const std::string& node_host, std::chrono:
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not remove node '%s' from the ColumnStore cluster: %s",
                                            node_host.c_str(), rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -973,14 +971,13 @@ mon_op::Result MariaDBMonitor::manual_cs_get_status()
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not fetch status from the ColumnStore cluster: %s",
                                            rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -994,13 +991,12 @@ mon_op::Result MariaDBMonitor::manual_cs_start_cluster(std::chrono::seconds time
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not start ColumnStore cluster: %s", rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -1014,13 +1010,12 @@ mon_op::Result MariaDBMonitor::manual_cs_stop_cluster(std::chrono::seconds timeo
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not stop ColumnStore cluster: %s", rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -1035,14 +1030,13 @@ mon_op::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeo
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not set ColumnStore cluster to read-only mode: %s",
                                            rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -1057,14 +1051,13 @@ mon_op::Result MariaDBMonitor::manual_cs_set_readwrite(std::chrono::seconds time
     if (ok)
     {
         rval.success = true;
-        rval.output = rest_output.release();
+        rval.output = move(rest_output);
     }
     else
     {
         string errmsg = mxb::string_printf("Could not set ColumnStore cluster to read-write mode: %s",
                                            rest_error.c_str());
-        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
-        MXB_ERROR("%s", errmsg.c_str());
+        PRINT_JSON_ERROR(rval.output, "%s", errmsg.c_str());
     }
     return rval;
 }
@@ -1133,7 +1126,7 @@ bool RebuildServer::rebuild_check_preconds()
 {
     auto* target = m_mon.get_server(m_target_srv);
     auto* source = m_mon.get_server(m_source_srv);
-    auto error_out = &m_result.output;
+    auto& error_out = m_result.output;
     bool rval = false;
 
     if (target && source)
@@ -1146,37 +1139,37 @@ bool RebuildServer::rebuild_check_preconds()
         // The following do not actually prevent rebuilding, they are just safeguards against user errors.
         if (target->is_master())
         {
-            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
+            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
             target_ok = false;
         }
         else if (target->is_relay_master())
         {
-            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
+            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
             target_ok = false;
         }
         else if (target->is_slave())
         {
-            PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
+            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
             target_ok = false;
         }
 
         if (!source->is_slave() && !source->is_master())
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
-                                            "as source.", source->name());
+            PRINT_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
+                                        "as source.", source->name());
             source_ok = false;
         }
 
         const char settings_err_fmt[] = "'%s' is not set. %s requires ssh access to servers.";
         if (m_mon.m_settings.ssh_user.empty())
         {
-            PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
+            PRINT_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
             settings_ok = false;
         }
         if (m_mon.m_settings.ssh_keyfile.empty())
         {
             // TODO: perhaps allow no authentication
-            PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
+            PRINT_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
             settings_ok = false;
         }
 
@@ -1191,13 +1184,13 @@ bool RebuildServer::rebuild_check_preconds()
     {
         if (!target)
         {
-            PRINT_MXS_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
-                                 m_target_srv->name(), m_mon.name());
+            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
+                             m_target_srv->name(), m_mon.name());
         }
         if (!source)
         {
-            PRINT_MXS_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as rebuild source.",
-                                 m_source_srv->name(), m_mon.name());
+            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as rebuild source.",
+                             m_source_srv->name(), m_mon.name());
         }
     }
     return rval;
@@ -1214,8 +1207,8 @@ bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string&
     else
     {
         string errmsg = ssh_util::form_cmd_error_msg(res, cmd.c_str());
-        PRINT_MXS_JSON_ERROR(&m_result.output, "Could not %s on %s. %s",
-                             desc.c_str(), m_target->name(), errmsg.c_str());
+        PRINT_JSON_ERROR(m_result.output, "Could not %s on %s. %s",
+                         desc.c_str(), m_target->name(), errmsg.c_str());
     }
     return rval;
 }
@@ -1230,26 +1223,25 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
     auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, ssh_base_timeout);
     auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, ssh_base_timeout);
 
-    auto error_out = &m_result.output;
+    auto& error_out = m_result.output;
     bool all_ok = true;
-    auto check = [server, &all_ok, error_out](const ssh_util::CmdResult& res, const char* tool,
-                                              const char* cmd) {
+    auto check = [server, &all_ok, &error_out](const ssh_util::CmdResult& res, const char* tool,
+                                               const char* cmd) {
         if (res.type == RType::OK)
         {
             if (res.rc != 0)
             {
                 string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
-                PRINT_MXS_JSON_ERROR(error_out, "'%s' lacks '%s', which is required for server rebuild. %s",
-                                     server->name(), tool, fail_reason.c_str());
+                PRINT_JSON_ERROR(error_out, "'%s' lacks '%s', which is required for server rebuild. %s",
+                                 server->name(), tool, fail_reason.c_str());
                 all_ok = false;
             }
         }
         else
         {
             string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
-            PRINT_MXS_JSON_ERROR(error_out, "Could not check that '%s' has '%s', which is required for "
-                                            "server rebuild. %s",
-                                 server->name(), tool, fail_reason.c_str());
+            PRINT_JSON_ERROR(error_out, "Could not check that '%s' has '%s', which is required for "
+                                        "server rebuild. %s", server->name(), tool, fail_reason.c_str());
             all_ok = false;
         }
     };
@@ -1260,12 +1252,12 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
     return all_ok;
 }
 
-bool
-RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out)
+bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port,
+                                           mxb::Json& error_out)
 {
     bool success = true;
 
-    auto get_port_pids = [&success, &ses, server, port, error_out]() {
+    auto get_port_pids = [&success, &ses, server, port, &error_out]() {
         std::vector<int> pids;
         // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
         // optional if users are not willing to give MaxScale sudo-privs.
@@ -1286,8 +1278,7 @@ RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, 
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(error_out, "Could not parse pid from text '%s'.",
-                                             line.c_str());
+                        PRINT_JSON_ERROR(error_out, "Could not parse pid from text '%s'.", line.c_str());
                         success = false;
                     }
                 }
@@ -1296,8 +1287,8 @@ RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, 
         else
         {
             string fail_reason = ssh_util::form_cmd_error_msg(port_res, port_pid_cmd.c_str());
-            PRINT_MXS_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
-                                 port, server->name(), fail_reason.c_str());
+            PRINT_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
+                             port, server->name(), fail_reason.c_str());
             success = false;
         }
         return pids;
@@ -1314,8 +1305,8 @@ RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, 
             if (kill_res.type != RType::OK || kill_res.rc != 0)
             {
                 string fail_reason = ssh_util::form_cmd_error_msg(kill_res, kill_cmd.c_str());
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to kill process %i on %s. %s",
-                                     pid, server->name(), fail_reason.c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to kill process %i on %s. %s",
+                                 pid, server->name(), fail_reason.c_str());
                 success = false;
             }
         }
@@ -1327,27 +1318,14 @@ RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, 
             auto pids2 = get_port_pids();
             if (success && !pids2.empty())
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild "
-                                                "source.",
-                                     port, server->name());
+                PRINT_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild source.",
+                                 port, server->name());
                 success = false;
             }
         }
     }
 
     return success;
-}
-
-Result::~Result()
-{
-    json_decref(output);
-}
-
-void Result::deep_copy_from(const Result& rhs)
-{
-    mxb_assert(!output);
-    success = rhs.success;
-    output = json_deep_copy(rhs.output);
 }
 
 SimpleOp::SimpleOp(CmdMethod func)
@@ -1357,16 +1335,14 @@ SimpleOp::SimpleOp(CmdMethod func)
 
 bool SimpleOp::run()
 {
-    mxb_assert(!m_result.output);
+    mxb_assert(m_result.output.object_size() == 0);
     m_result = m_func();
     return true;
 }
 
 Result SimpleOp::result()
 {
-    Result rval = m_result;
-    json_incref(rval.output);
-    return rval;
+    return m_result;
 }
 
 bool SimpleOp::cancel()
@@ -1466,8 +1442,8 @@ bool RebuildServer::init()
 
             if (!ses)
             {
-                PRINT_MXS_JSON_ERROR(&m_result.output, "SSH connection to %s failed. %s",
-                                     server->name(), errmsg_con.c_str());
+                PRINT_JSON_ERROR(m_result.output, "SSH connection to %s failed. %s",
+                                 server->name(), errmsg_con.c_str());
             }
             return ses;
         };
@@ -1485,7 +1461,7 @@ bool RebuildServer::init()
 
             if (target_tools && source_tools)
             {
-                if (check_free_listen_port(*source_ses, m_source, rebuild_port, &m_result.output))
+                if (check_free_listen_port(*source_ses, m_source, rebuild_port, m_result.output))
                 {
                     m_target_ses = move(target_ses);
                     m_source_ses = move(source_ses);
@@ -1510,7 +1486,7 @@ bool RebuildServer::serve_backup()
                                            rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
-    auto error_out = &m_result.output;
+    auto& error_out = m_result.output;
     bool rval = false;
     if (cmd_handle)
     {
@@ -1533,11 +1509,10 @@ bool RebuildServer::serve_backup()
             {
                 int rc = cmd_handle->rc();
                 string result = rc == 0 ? "succeeded" :
-                    mxb::string_printf("failed with error %i: '%s'",
-                                       rc, cmd_handle->error_output().c_str());
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to stream data from %s. Command '%s' %s before data "
-                                                "was streamed.", m_mon.name(), masked_cmd.c_str(),
-                                     result.c_str());
+                    mxb::string_printf("failed with error %i: '%s'", rc, cmd_handle->error_output().c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to stream data from %s. Command '%s' %s before data "
+                                            "was streamed.", m_mon.name(), masked_cmd.c_str(),
+                                 result.c_str());
             }
             else
             {
@@ -1550,8 +1525,8 @@ bool RebuildServer::serve_backup()
     if (!ssh_errmsg.empty())
     {
         mxb_assert(!m_source_cmd);
-        PRINT_MXS_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
-                             m_mon.name(), ssh_errmsg.c_str());
+        PRINT_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
+                         m_mon.name(), ssh_errmsg.c_str());
     }
 
     m_state = rval ? State::PREPARE_TARGET : State::CLEANUP;
@@ -1595,8 +1570,8 @@ bool RebuildServer::start_transfer()
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(&m_result.output, "Failed to start receiving data to %s. %s",
-                             m_mon.name(), ssh_errmsg.c_str());
+        PRINT_JSON_ERROR(m_result.output, "Failed to start receiving data to %s. %s",
+                         m_mon.name(), ssh_errmsg.c_str());
     }
     m_state = transfer_started ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
@@ -1605,7 +1580,7 @@ bool RebuildServer::start_transfer()
 bool RebuildServer::wait_transfer()
 {
     using Status = ssh_util::AsyncCmd::Status;
-    auto error_out = &m_result.output;
+    auto& error_out = m_result.output;
     bool wait_again = false;
     bool target_success = false;
 
@@ -1628,15 +1603,15 @@ bool RebuildServer::wait_transfer()
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to receive backup on %s. Error %i: '%s'.",
-                                     m_target->name(), m_target_cmd->rc(),
-                                     m_target_cmd->error_output().c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to receive backup on %s. Error %i: '%s'.",
+                                 m_target->name(), m_target_cmd->rc(),
+                                 m_target_cmd->error_output().c_str());
             }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
-                                 m_target->name(), m_target_cmd->error_output().c_str());
+            PRINT_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
+                             m_target->name(), m_target_cmd->error_output().c_str());
         }
         m_target_cmd = nullptr;
     }
@@ -1657,15 +1632,15 @@ bool RebuildServer::wait_transfer()
             {
                 if (m_source_cmd->rc() != 0)
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Backup send failure on %s. Error %i: '%s'.",
-                                         m_source->name(), m_source_cmd->rc(),
-                                         m_source_cmd->error_output().c_str());
+                    PRINT_JSON_ERROR(error_out, "Backup send failure on %s. Error %i: '%s'.",
+                                     m_source->name(), m_source_cmd->rc(),
+                                     m_source_cmd->error_output().c_str());
                 }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
-                                     m_source->name(), m_source_cmd->error_output().c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
+                                 m_source->name(), m_source_cmd->error_output().c_str());
             }
             m_source_cmd = nullptr;
         }
@@ -1728,7 +1703,8 @@ bool RebuildServer::start_replication()
     // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
     // source server.
     MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
-    GeneralOpData op(OpStart::MANUAL, &m_result.output, ssh_base_timeout);
+    json_t* dummy {nullptr};    // TODO: use mxb::Json in GeneralOpData
+    GeneralOpData op(OpStart::MANUAL, &dummy, ssh_base_timeout);
     EndPoint ep(repl_master->server->address(), repl_master->server->port());
     SlaveStatus::Settings slave_sett("", ep, m_target->name());
 
@@ -1776,8 +1752,8 @@ bool RebuildServer::start_replication()
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(&m_result.output, "Could not connect to to %s after rebuild.",
-                             m_target->name());
+        PRINT_JSON_ERROR(m_result.output, "Could not connect to to %s after rebuild.",
+                         m_target->name());
         m_target->log_connect_error(res);   // This only goes to log.
     }
 
@@ -1796,7 +1772,12 @@ void RebuildServer::cleanup()
 
     if (m_source_ses)
     {
-        check_free_listen_port(*m_source_ses, m_source, rebuild_port, &m_result.output);
+        check_free_listen_port(*m_source_ses, m_source, rebuild_port, m_result.output);
     }
+}
+
+Result Result::deep_copy() const
+{
+    return {success, output.deep_copy()};
 }
 }

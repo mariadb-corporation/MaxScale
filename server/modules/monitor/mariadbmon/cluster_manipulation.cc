@@ -62,7 +62,8 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    auto error_out = &rval.output;
+    json_t* tmp {nullptr};
+    auto error_out = &tmp;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(error_out);
@@ -91,6 +92,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
         PRINT_MXS_JSON_ERROR(error_out, "Switchover cancelled.");
     }
     rval.success = switchover_done;
+    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
@@ -101,7 +103,8 @@ mon_op::Result MariaDBMonitor::manual_failover()
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    auto output = &rval.output;
+    json_t* tmp {nullptr};
+    auto output = &tmp;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
@@ -128,6 +131,7 @@ mon_op::Result MariaDBMonitor::manual_failover()
         PRINT_MXS_JSON_ERROR(output, "Failover cancelled.");
     }
     rval.success = failover_done;
+    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
@@ -138,7 +142,8 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    auto output = &rval.output;
+    json_t* tmp {nullptr};
+    auto output = &tmp;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
@@ -222,6 +227,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
         PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, name());
     }
     rval.success = rejoin_done;
+    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
@@ -242,7 +248,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    auto error_out = &rval.output;
+    json_t* tmp {nullptr};
+    auto error_out = &tmp;
     MariaDBServer* new_master = NULL;
     if (master_server)
     {
@@ -464,6 +471,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
     }
     m_state = State::IDLE;
     rval.success = success;
+    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
