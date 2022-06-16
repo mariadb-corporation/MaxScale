@@ -1334,6 +1334,38 @@ bool UserManagerMariaDB::prepare_server() const
     return rv;
 }
 
+string UserManagerMariaDB::encrypt_data(const mxb::Json& json, const std::string& mariadb_user) const
+{
+    string data = json.to_string(mxb::Json::Format::NORMAL);
+
+    if (!m_config.encryption_key.empty())
+    {
+        data = mxs::encrypt_password(m_config.encryption_key, data);
+
+        if (data.empty())
+        {
+            MXB_SERROR("Could not encrypt NoSQL data, cannot create/update user '" << mariadb_user << "'.");
+        }
+    }
+
+    return data;
+}
+
+string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mariadb_user) const
+{
+    if (!m_config.encryption_key.empty())
+    {
+        data = mxs::decrypt_password(m_config.encryption_key, data);
+
+        if (data.empty())
+        {
+            MXB_SERROR("Could not decrypt NoSQL data of '" << mariadb_user << "'.");
+        }
+    }
+
+    return data;
+}
+
 bool UserManagerMariaDB::do_add_user(const string& db,
                                      string user,
                                      string pwd, // Cleartext
@@ -1365,18 +1397,8 @@ bool UserManagerMariaDB::do_add_user(const string& db,
     json.set_object("custom_data", std::move(custom_data));
     json.set_object("roles", role::to_json_array(roles));
 
-    string data = json.to_string(mxb::Json::Format::NORMAL);
-
-    if (!m_config.encryption_key.empty())
-    {
-        data = mxs::encrypt_password(m_config.encryption_key, data);
-
-        if (data.empty())
-        {
-            MXB_SERROR("Could not encrypt NoSQL data, cannot create user '" << au.mariadb_user << "'.");
-            rv = false;
-        }
-    }
+    string data = encrypt_data(json, au.mariadb_user);
+    rv = !data.empty();
 
     if (rv)
     {
@@ -1421,6 +1443,8 @@ bool UserManagerMariaDB::user_info_from_result(mxq::QueryResult* pResult, UserMa
 {
     // TODO: A bit of unnecessary work is made here if 'pInfo' is null.
 
+    bool rv = true;
+
     UserManager::UserInfo info;
 
     info.mariadb_user = pResult->get_string(0);
@@ -1428,19 +1452,8 @@ bool UserManagerMariaDB::user_info_from_result(mxq::QueryResult* pResult, UserMa
     info.user = pResult->get_string(2);
     info.host = pResult->get_string(3);
 
-    string data = pResult->get_string(4);
-
-    bool rv = true;
-    if (!m_config.encryption_key.empty())
-    {
-        data = mxs::decrypt_password(m_config.encryption_key, data);
-
-        if (data.empty())
-        {
-            MXB_SERROR("Could not decrypt NoSQL data of '" << info.mariadb_user << "'.");
-            rv = false;
-        }
-    }
+    string data = decrypt_data(pResult->get_string(4), info.mariadb_user);
+    rv = !data.empty();
 
     if (rv)
     {
@@ -1772,18 +1785,8 @@ bool UserManagerMariaDB::do_update(const string& db,
         json.set_object("custom_data", custom_data);
         json.set_object("roles", role::to_json_array(info.roles));
 
-        string data = json.to_string(mxb::Json::Format::NORMAL);
-
-        if (!m_config.encryption_key.empty())
-        {
-            data = mxs::encrypt_password(m_config.encryption_key, data);
-
-            if (data.empty())
-            {
-                MXB_SERROR("Could not encrypt NoSQL data, cannot create user '" << mariadb_user << "'.");
-                rv = false;
-            }
-        }
+        string data = encrypt_data(json, mariadb_user);
+        rv = !data.empty();
 
         if (rv)
         {

@@ -385,6 +385,9 @@ private:
     bool check_connection() const;
     bool prepare_server() const;
 
+    std::string encrypt_data(const mxb::Json& json, const std::string& mariadb_user) const;
+    std::string decrypt_data(std::string data, const std::string& mariadb_user) const;
+
     bool user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo) const;
     std::vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult) const;
 
