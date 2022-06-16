@@ -1,5 +1,5 @@
 <template>
-    <div class="d-inline-flex justify-center align-center icon-group">
+    <div class="d-inline-flex justify-center align-center">
         <!-- Run/Stop buttons-->
         <v-tooltip
             top
@@ -10,6 +10,7 @@
             <template v-slot:activator="{ on }">
                 <!-- disable button Prevent parallel querying of the same connection -->
                 <v-btn
+                    class="session-toolbar-square-btn"
                     :class="[getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn']"
                     text
                     color="accent-dark"
@@ -55,7 +56,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
-                    class="visualize-btn"
+                    class="session-toolbar-square-btn visualize-btn"
                     :depressed="show_vis_sidebar"
                     :text="!show_vis_sidebar"
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
@@ -150,18 +151,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.icon-group {
-    height: 28px;
-    ::v-deep .v-btn {
-        min-width: unset !important;
-        padding: 0px !important;
-        width: 28px;
-        height: 28px;
-        border-radius: 0px !important;
-        &:hover {
-            border-radius: 0px !important;
-        }
-    }
-}
-</style>

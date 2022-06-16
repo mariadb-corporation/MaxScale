@@ -129,3 +129,14 @@ tooltip needs to be disabled.
     position: absolute;
     transform: translateY(-50%);
 }
+
+.session-toolbar-square-btn {
+    min-width: unset !important;
+    padding: 0px !important;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 0px !important;
+    &:hover {
+        border-radius: 0px !important;
+    }
+}
