@@ -1444,7 +1444,7 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     return rval;
 }
 
-bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
+bool MariaDBServer::reset_all_slave_conns(mxb::Json& error_out)
 {
     string error_msg;
     bool error = false;
@@ -1461,7 +1461,7 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
                               name(), error_msg.c_str()) :
                 string_printf("Error when reseting the slave connection '%s' of '%s': %s",
                               conn_name.c_str(), name(), error_msg.c_str());
-            PRINT_MXS_JSON_ERROR(error_out, "%s", log_message.c_str());
+            PRINT_JSON_ERROR(error_out, "%s", log_message.c_str());
             break;
         }
     }

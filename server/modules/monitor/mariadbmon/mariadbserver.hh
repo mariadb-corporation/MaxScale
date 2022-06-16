@@ -383,7 +383,7 @@ public:
      * @param error_out Error output
      * @return True if successful. If false, some connections may have been successfully deleted.
      */
-    bool reset_all_slave_conns(json_t** error_out);
+    bool reset_all_slave_conns(mxb::Json& error_out);
 
     /**
      * Promote this server to take role of demotion target. Remove slave connections from this server.

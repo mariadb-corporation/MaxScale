@@ -248,21 +248,19 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    json_t* tmp {nullptr};
-    auto error_out = &tmp;
+    auto& error_out = rval.output;
     MariaDBServer* new_master = NULL;
     if (master_server)
     {
         MariaDBServer* new_master_cand = get_server(master_server);
         if (new_master_cand == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, master_server->name(), name());
+            PRINT_JSON_ERROR(error_out, NO_SERVER, master_server->name(), name());
         }
         else if (!new_master_cand->is_usable())
         {
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "Server '%s' is down or in maintenance and cannot be used as master.",
-                                 new_master_cand->name());
+            PRINT_JSON_ERROR(error_out, "Server '%s' is down or in maintenance and cannot be used as master.",
+                             new_master_cand->name());
         }
         else
         {
@@ -274,11 +272,11 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
         const char BAD_MASTER[] = "Could not autoselect new master for replication reset because %s";
         if (m_master == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out, BAD_MASTER, "the cluster has no master.");
+            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the cluster has no master.");
         }
         else if (!m_master->is_usable())
         {
-            PRINT_MXS_JSON_ERROR(error_out, BAD_MASTER, "the master is down or in maintenance.");
+            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the master is down or in maintenance.");
         }
         else
         {
@@ -310,7 +308,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
 
         // Helper function for running a command on all servers in the list.
         auto exec_cmd_on_array = [&error](const ServerArray& targets, const string& query,
-                                          json_t** error_out) {
+                                          mxb::Json& error_out) {
                 if (!error)
                 {
                     for (MariaDBServer* server : targets)
@@ -319,7 +317,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                         if (!server->execute_cmd(query, &error_msg))
                         {
                             error = true;
-                            PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                            PRINT_JSON_ERROR(error_out, "%s", error_msg.c_str());
                             break;
                         }
                     }
@@ -348,7 +346,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
             {
                 for (MariaDBServer* server : targets)
                 {
-                    if (!server->disable_events(MariaDBServer::BinlogMode::BINLOG_OFF, error_out))
+                    auto temp = rval.output.get_json();
+                    if (!server->disable_events(MariaDBServer::BinlogMode::BINLOG_OFF, &temp))
                     {
                         error = true;
                         break;
@@ -370,6 +369,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
         {
             string slave_pos = string_printf("%" PRIi64 "-%" PRIi64 "-0",
                                              new_master->m_gtid_domain_id, new_master->m_server_id);
+
             string set_slave_pos = string_printf("SET GLOBAL gtid_slave_pos='%s';", slave_pos.c_str());
             exec_cmd_on_array(targets, set_slave_pos, error_out);
             if (!error)
@@ -391,12 +391,13 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 {
                     if (old_master)
                     {
+                        auto temp = rval.output.get_json();
                         if (!new_master->enable_events(MariaDBServer::BinlogMode::BINLOG_ON,
-                                                       old_master->m_enabled_events, error_out))
+                                                       old_master->m_enabled_events, &temp))
                         {
                             error = true;
-                            PRINT_MXS_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
-                                                 new_master->name(), error_msg.c_str());
+                            PRINT_JSON_ERROR(error_out, "Could not enable events on '%s': %s",
+                                             new_master->name(), error_msg.c_str());
                         }
                     }
                     else
@@ -410,8 +411,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 if (!new_master->execute_cmd("FLUSH TABLES;", &error_msg))
                 {
                     error = true;
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not add event to '%s': %s",
-                                         new_master->name(), error_msg.c_str());
+                    PRINT_JSON_ERROR(error_out, "Could not add event to '%s': %s",
+                                     new_master->name(), error_msg.c_str());
                 }
 
                 // Step 7: Set all slaves to replicate from the master.
@@ -429,8 +430,9 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 {
                     SERVER* new_master_srv = new_master->server;
                     SlaveStatus::Settings new_conn("", new_master_srv);
+                    auto temp = rval.output.get_json();
                     // Expect this to complete quickly.
-                    GeneralOpData general(OpStart::MANUAL, error_out, 0s);
+                    GeneralOpData general(OpStart::MANUAL, &temp, 0s);
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
                     {
@@ -449,29 +451,28 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                     else
                     {
                         error = true;
-                        PRINT_MXS_JSON_ERROR(error_out,
-                                             "Some servers were not redirected to '%s'.", new_master->name());
+                        PRINT_JSON_ERROR(error_out, "Some servers were not redirected to '%s'.",
+                                         new_master->name());
                     }
                 }
             }
             else
             {
                 error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "Could not enable writes on '%s': %s",
-                                     new_master->name(), error_msg.c_str());
+                PRINT_JSON_ERROR(error_out, "Could not enable writes on '%s': %s",
+                                 new_master->name(), error_msg.c_str());
             }
         }
 
         if (error)
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Replication reset failed or succeeded only partially. "
-                                            "Server cluster may be in an invalid state for replication.");
+            PRINT_JSON_ERROR(error_out, "Replication reset failed or succeeded only partially. "
+                                        "Server cluster may be in an invalid state for replication.");
         }
         success = !error;
     }
     m_state = State::IDLE;
     rval.success = success;
-    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
