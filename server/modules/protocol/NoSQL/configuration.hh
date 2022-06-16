@@ -61,11 +61,13 @@ public:
     bool                  authentication_required;
     bool                  authentication_shared;
     std::string           authentication_db;
-    std::string           authentication_key;
+    std::string           authentication_key_file;
     std::string           authentication_user;
     std::string           authentication_password;
     bool                  authorization_enabled;
     int64_t               id_length {ID_LENGTH_DEFAULT};
+
+    std::vector<uint8_t>  encryption_key;
 
     // Can be changed from the NosQL API.
     bool                  auto_create_databases   {true};
@@ -85,7 +87,7 @@ public:
     static mxs::config::ParamBool                        s_authentication_required;
     static mxs::config::ParamBool                        s_authentication_shared;
     static mxs::config::ParamString                      s_authentication_db;
-    static mxs::config::ParamString                      s_authentication_key;
+    static mxs::config::ParamPath                        s_authentication_key_file;
     static mxs::config::ParamString                      s_authentication_user;
     static mxs::config::ParamString                      s_authentication_password;
     static mxs::config::ParamBool                        s_authorization_enabled;

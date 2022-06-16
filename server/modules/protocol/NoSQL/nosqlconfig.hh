@@ -35,11 +35,12 @@ public:
         , authentication_required(config.authentication_required)
         , authentication_shared(config.authentication_shared)
         , authentication_db(config.authentication_db)
-        , authentication_key(config.authentication_key)
+        , authentication_key_file(config.authentication_key_file)
         , authentication_user(config.authentication_user)
         , authentication_password(config.authentication_password)
         , authorization_enabled(config.authorization_enabled)
         , id_length(config.id_length)
+        , encryption_key(config.encryption_key)
         , auto_create_databases(config.auto_create_databases)
         , auto_create_tables(config.auto_create_tables)
         , cursor_timeout(config.cursor_timeout)
@@ -99,11 +100,12 @@ public:
     const bool                 authentication_required;
     const bool                 authentication_shared;
     const std::string          authentication_db;
-    const std::string          authentication_key;
+    const std::string          authentication_key_file;
     const std::string          authentication_user;
     const std::string          authentication_password;
     const bool                 authorization_enabled;
     const int64_t              id_length;
+    const std::vector<uint8_t> encryption_key;
 
     // Can be changed from the NosQL API.
     bool                                 auto_create_databases;

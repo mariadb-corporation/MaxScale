@@ -12,6 +12,8 @@
  */
 
 #include "configuration.hh"
+#include <fstream>
+#include <maxscale/paths.hh>
 #include "protocolmodule.hh"
 
 using namespace std;
@@ -67,11 +69,13 @@ mxs::config::ParamString Configuration::s_authentication_db(
     "What database shared NoSQL user information should be stored in.",
     "NoSQL");
 
-mxs::config::ParamString Configuration::s_authentication_key(
+mxs::config::ParamPath Configuration::s_authentication_key_file(
     &nosqlprotocol::specification,
-    "authentication_key",
+    "authentication_key_file",
     "If present and non-empty, and if 'authentication_shared' is enabled, then the sensitive "
-    "parts of the NoSQL data will be encrypted with this key.",
+    "parts of the NoSQL user data stored in the MariaDB server will be encrypted with the key "
+    "found in this file.",
+    mxs::config::ParamPath::Options::R,
     "");
 
 mxs::config::ParamString Configuration::s_authentication_user(
@@ -176,7 +180,7 @@ Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
     add_native(&Configuration::authentication_required, &s_authentication_required);
     add_native(&Configuration::authentication_shared, &s_authentication_shared);
     add_native(&Configuration::authentication_db, &s_authentication_db);
-    add_native(&Configuration::authentication_key, &s_authentication_key);
+    add_native(&Configuration::authentication_key_file, &s_authentication_key_file);
     add_native(&Configuration::authentication_user, &s_authentication_user);
     add_native(&Configuration::authentication_password, &s_authentication_password);
     add_native(&Configuration::authorization_enabled, &s_authorization_enabled);
@@ -202,6 +206,51 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
             MXB_ERROR("If 'authentication_shared' is true, then 'authentication_user' and "
                       "'authentication_password' must be specified.");
             rv = false;
+        }
+
+        string path = this->authentication_key_file;
+
+        if (path.empty())
+        {
+            MXS_WARNING("'authentication_key_file' is empty, NoSQL user data will be "
+                        "stored in the server without being encrypted.");
+        }
+        else
+        {
+            if (path.front() != '/')
+            {
+                path = string(mxs::module_configdir()) + "/" + path;
+            }
+
+            errno = 0;
+            std::ifstream in(path);
+
+            if (in)
+            {
+                string encryption_key_hex;
+
+                if (std::getline(in, encryption_key_hex))
+                {
+                    this->encryption_key.resize(encryption_key_hex.size() / 2);
+
+                    if (!mxs::hex2bin(encryption_key_hex.data(), encryption_key_hex.length(),
+                                      this->encryption_key.data()))
+                    {
+                        MXS_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
+                        rv = false;
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Could not read encryption key from '%s'.", path.c_str());
+                    rv = false;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Could not open '%s': (%d), %s", path.c_str(), errno, mxb_strerror(errno));
+                rv = false;
+            }
         }
     }
 

@@ -537,14 +537,21 @@ exist, nosqlprotocol will attempt to create it, so either is should be
 manually created or the used specified with `authentication_user` should
 have the grants required to do so.
 
-## `authentication_key`
+## `authentication_key_file`
 
-- **Type**: string
+- **Type**: Path
 - **Mandatory**: No
 - **Default**: `""`
 
-The encryption key using which the NoSQL account information should be encrypted
-with when stored in the MariaDB server.
+The file from which the encryption key, using which the NoSQL account
+information should be encrypted with when stored in the MariaDB server,
+should be read.
+
+If a relative path is provided, it is prefixed with the module config
+directory, which by default is `/etc/maxscale.modules.d`.
+
+The key must be specified in hexadecimal format and can be generated,
+for instance, with `openssl rand -hex 32`.
 
 ## `authentication_user`
 
