@@ -500,7 +500,7 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
 namespace
 {
 
-const int SQLITE3_SCHEMA_VERSION = 1;
+constexpr int SQLITE3_SCHEMA_VERSION = 1;
 
 //
 // User Database
@@ -1099,6 +1099,11 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
  * UserManagerMariaDB
  */
 
+constexpr int  MARIADB_ENCRYPTION_VERSION = 1;
+constexpr char MARIADB_ENCRYPTION_VERSION_STRING[] = "1";
+constexpr char MARIADB_ENCRYPTION_VERSION_DELIMITER[] = ":";
+constexpr char MARIADB_ENCRYPTION_VERSION_PREFIX[] = "1:";
+
 UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
     : m_name(name)
     , m_table("`" + pConfig->authentication_db + "`.`" + m_name + "`")
@@ -1342,7 +1347,11 @@ string UserManagerMariaDB::encrypt_data(const mxb::Json& json, const std::string
     {
         data = mxs::encrypt_password(m_config.encryption_key, data);
 
-        if (data.empty())
+        if (!data.empty())
+        {
+            data = MARIADB_ENCRYPTION_VERSION_PREFIX + data;
+        }
+        else
         {
             MXB_SERROR("Could not encrypt NoSQL data, cannot create/update user '" << mariadb_user << "'.");
         }
@@ -1351,15 +1360,89 @@ string UserManagerMariaDB::encrypt_data(const mxb::Json& json, const std::string
     return data;
 }
 
+namespace
+{
+
+string::size_type get_encryption_version(const std::string& data,
+                                         const std::string& mariadb_user,
+                                         int* pVersion)
+{
+    auto i = data.find(MARIADB_ENCRYPTION_VERSION_DELIMITER);
+
+    if (i != string::npos)
+    {
+        string version = data.substr(0, i);
+
+        if (version == MARIADB_ENCRYPTION_VERSION_STRING)
+        {
+            *pVersion = MARIADB_ENCRYPTION_VERSION;
+            i++;
+        }
+        else
+        {
+            char* zEnd;
+            long l = strtol(version.c_str(), &zEnd, 10);
+
+            if (*zEnd == 0)
+            {
+                *pVersion = l;
+                i++;
+            }
+            else
+            {
+                // Wasn't a number, so can't be encrypted data of correct format, probably just JSON.
+                i = string::npos;
+            }
+        }
+    }
+    else
+    {
+        // If encrypted, there should be the "N:" prefix. If not, a non-empty JSON
+        // object will contain a ":".
+        MXB_SERROR("The data of '" << mariadb_user << "' does not appear to be valid.");
+    }
+
+    return i;
+}
+
+}
+
 string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mariadb_user) const
 {
+    int version;
+    auto i = get_encryption_version(data, mariadb_user, &version);
+
     if (!m_config.encryption_key.empty())
     {
-        data = mxs::decrypt_password(m_config.encryption_key, data);
-
-        if (data.empty())
+        // Encryption enabled
+        if (i != string::npos)
         {
-            MXB_SERROR("Could not decrypt NoSQL data of '" << mariadb_user << "'.");
+            if (version == MARIADB_ENCRYPTION_VERSION)
+            {
+                data = mxs::decrypt_password(m_config.encryption_key, data.substr(i));
+            }
+            else
+            {
+                MXB_SERROR("The version '" << version << "' of the encrypted data of '"
+                           << mariadb_user << "' is unknown. User will be ignored.");
+                data.clear();
+            }
+        }
+        else
+        {
+            // Probably is JSON and if it isn't, it'll be found out when the data is later loaded as such.
+            MXB_SINFO("The data of '" << mariadb_user << "' lacks an encryption version prefix. "
+                      << "Assuming the data was saved when encryption was not enabled.");
+        }
+    }
+    else
+    {
+        // Encryption NOT enabled
+        if (i != string::npos)
+        {
+            MXB_SWARNING("The data of '" << mariadb_user << "' appears to be encrypted, "
+                         "but 'authentication_key_file' has not been specified. The "
+                         "subsequent parsing of it as JSON will fail.");
         }
     }
 
