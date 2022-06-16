@@ -31,183 +31,8 @@ namespace
 
 using namespace nosql;
 
-const int SCHEMA_VERSION = 1;
-
 // Not all uuid/uuid.h appears to have UUID_STR_LEN defined.
 const int NOSQL_UUID_STR_LEN = 37;
-
-//
-// User Database
-//
-static const char SQL_CREATE[] =
-    "CREATE TABLE IF NOT EXISTS accounts "
-    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd_sha1_b64 TEXT, host TEXT, "
-    "custom_data TEXT, uuid TEXT, "
-    "salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, salted_pwd_sha1_b64 TEXT, salted_pwd_sha256_b64 TEXT, "
-    "roles TEXT)";
-
-static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts "
-    "(mariadb_user, db, user, pwd_sha1_b64, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
-    "salted_pwd_sha1_b64, salted_pwd_sha256_b64, roles) "
-    "VALUES ";
-
-static const char SQL_DELETE_WHERE_MARIADB_USER_HEAD[] =
-    "DELETE FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_DELETE_WHERE_HEAD[] =
-    "DELETE FROM accounts WHERE ";
-
-static const char SQL_SELECT_WHERE_MARIADB_USER_HEAD[] =
-    "SELECT * FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_SELECT_ALL[] =
-    "SELECT * FROM accounts";
-
-static const char SQL_SELECT_WHERE_DB_HEAD[] =
-    "SELECT * FROM accounts WHERE db = ";
-
-static const char SQL_SELECT_WHERE_HEAD[] =
-    "SELECT * FROM accounts WHERE ";
-
-static const char SQL_SELECT_ACCOUNT_INFO_WHERE_DB_HEAD[] =
-    "SELECT mariadb_user, user, db, host FROM accounts WHERE db = ";
-
-static const char SQL_UPDATE_HEAD[] =
-    "UPDATE accounts SET ";
-
-static const char SQL_UPDATE_TAIL[] =
-    " WHERE mariadb_user = ";
-
-
-int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
-{
-    mxb_assert(nColumns == 12);
-
-    auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
-
-    nosql::UserManager::UserInfo info;
-    info.mariadb_user = pzColumn[0];
-    info.db = pzColumn[1];
-    info.user = pzColumn[2];
-    info.pwd_sha1_b64 = pzColumn[3];
-    info.host = pzColumn[4];
-    info.custom_data = pzColumn[5];
-    info.uuid = pzColumn[6];
-    info.salt_sha1_b64 = pzColumn[7];
-    info.salt_sha256_b64 = pzColumn[8];
-    info.salted_pwd_sha1_b64 = pzColumn[9];
-    info.salted_pwd_sha256_b64 = pzColumn[10];
-
-    if (!info.salt_sha1_b64.empty())
-    {
-        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
-    }
-
-    if (!info.salt_sha256_b64.empty())
-    {
-        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
-    }
-
-    bool ok = true;
-
-    if (!info.custom_data.empty())
-    {
-        mxb::Json json;
-
-        if (!json.load_string(info.custom_data) || json.type() != mxb::Json::Type::OBJECT)
-        {
-            MXB_ERROR("The 'custom_data' field of '%s' is not a JSON object.", info.mariadb_user.c_str());
-            ok = false;
-        }
-    }
-
-    vector<nosql::role::Role> roles;
-    if (nosql::role::from_json(pzColumn[11], &roles))
-    {
-        info.roles = std::move(roles);
-
-        pInfos->push_back(info);
-    }
-    else
-    {
-        MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
-        ok = false;
-    }
-
-    if (!ok)
-    {
-        MXB_WARNING("Ignoring user '%s'.", info.mariadb_user.c_str());
-    }
-
-    return 0;
-}
-
-int select_account_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
-{
-    mxb_assert(nColumns == 4);
-
-    using Account = nosql::UserManager::Account;
-    auto* pAccounts = static_cast<vector<Account>*>(pData);
-
-    pAccounts->emplace_back(Account { pzColumn[0], pzColumn[1], pzColumn[2], pzColumn[3] });
-
-    return 0;
-}
-
-bool create_schema(sqlite3* pDb)
-{
-    char* pError = nullptr;
-    int rv = sqlite3_exec(pDb, SQL_CREATE, nullptr, nullptr, &pError);
-
-    if (rv != SQLITE_OK)
-    {
-        MXB_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
-        sqlite3_free(pError);
-    }
-
-    return rv == SQLITE_OK;
-}
-
-sqlite3* open_or_create_db(const string& path)
-{
-    sqlite3* pDb = nullptr;
-    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_CREATE;
-    int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
-
-    if (rv == SQLITE_OK)
-    {
-        if (create_schema(pDb))
-        {
-            MXB_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
-        }
-        else
-        {
-            MXB_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
-
-            if (unlink(path.c_str()) != 0)
-            {
-                MXB_ERROR("Failed to delete database %s that could not be properly "
-                          "initialized. It should be deleted manually.", path.c_str());
-                sqlite3_close_v2(pDb);
-                pDb = nullptr;
-            }
-        }
-    }
-    else
-    {
-        if (pDb)
-        {
-            // Memory allocation failure is explained by the caller. Don't close the handle, as the
-            // caller will still use it even if open failed!!
-            MXB_ERROR("Opening/creating the sqlite3 database %s failed: %s",
-                      path.c_str(), sqlite3_errmsg(pDb));
-        }
-        MXB_ERROR("Could not open sqlite3 database for storing user information.");
-    }
-
-    return pDb;
-}
 
 void get_sha1_salt_and_salted_password(const string& user,
                                        const string& pwd,
@@ -671,6 +496,187 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
 /**
  * UserManagerSqlite3
  */
+
+namespace
+{
+
+const int SQLITE3_SCHEMA_VERSION = 1;
+
+//
+// User Database
+//
+static const char SQL_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS accounts "
+    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd_sha1_b64 TEXT, host TEXT, "
+    "custom_data TEXT, uuid TEXT, "
+    "salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, salted_pwd_sha1_b64 TEXT, salted_pwd_sha256_b64 TEXT, "
+    "roles TEXT)";
+
+static const char SQL_INSERT_HEAD[] =
+    "INSERT INTO accounts "
+    "(mariadb_user, db, user, pwd_sha1_b64, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
+    "salted_pwd_sha1_b64, salted_pwd_sha256_b64, roles) "
+    "VALUES ";
+
+static const char SQL_DELETE_WHERE_MARIADB_USER_HEAD[] =
+    "DELETE FROM accounts WHERE mariadb_user = ";
+
+static const char SQL_DELETE_WHERE_HEAD[] =
+    "DELETE FROM accounts WHERE ";
+
+static const char SQL_SELECT_WHERE_MARIADB_USER_HEAD[] =
+    "SELECT * FROM accounts WHERE mariadb_user = ";
+
+static const char SQL_SELECT_ALL[] =
+    "SELECT * FROM accounts";
+
+static const char SQL_SELECT_WHERE_DB_HEAD[] =
+    "SELECT * FROM accounts WHERE db = ";
+
+static const char SQL_SELECT_WHERE_HEAD[] =
+    "SELECT * FROM accounts WHERE ";
+
+static const char SQL_SELECT_ACCOUNT_INFO_WHERE_DB_HEAD[] =
+    "SELECT mariadb_user, user, db, host FROM accounts WHERE db = ";
+
+static const char SQL_UPDATE_HEAD[] =
+    "UPDATE accounts SET ";
+
+static const char SQL_UPDATE_TAIL[] =
+    " WHERE mariadb_user = ";
+
+
+int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+{
+    mxb_assert(nColumns == 12);
+
+    auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
+
+    nosql::UserManager::UserInfo info;
+    info.mariadb_user = pzColumn[0];
+    info.db = pzColumn[1];
+    info.user = pzColumn[2];
+    info.pwd_sha1_b64 = pzColumn[3];
+    info.host = pzColumn[4];
+    info.custom_data = pzColumn[5];
+    info.uuid = pzColumn[6];
+    info.salt_sha1_b64 = pzColumn[7];
+    info.salt_sha256_b64 = pzColumn[8];
+    info.salted_pwd_sha1_b64 = pzColumn[9];
+    info.salted_pwd_sha256_b64 = pzColumn[10];
+
+    if (!info.salt_sha1_b64.empty())
+    {
+        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
+    }
+
+    if (!info.salt_sha256_b64.empty())
+    {
+        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
+    }
+
+    bool ok = true;
+
+    if (!info.custom_data.empty())
+    {
+        mxb::Json json;
+
+        if (!json.load_string(info.custom_data) || json.type() != mxb::Json::Type::OBJECT)
+        {
+            MXB_ERROR("The 'custom_data' field of '%s' is not a JSON object.", info.mariadb_user.c_str());
+            ok = false;
+        }
+    }
+
+    vector<nosql::role::Role> roles;
+    if (nosql::role::from_json(pzColumn[11], &roles))
+    {
+        info.roles = std::move(roles);
+
+        pInfos->push_back(info);
+    }
+    else
+    {
+        MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
+        ok = false;
+    }
+
+    if (!ok)
+    {
+        MXB_WARNING("Ignoring user '%s'.", info.mariadb_user.c_str());
+    }
+
+    return 0;
+}
+
+int select_account_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+{
+    mxb_assert(nColumns == 4);
+
+    using Account = nosql::UserManager::Account;
+    auto* pAccounts = static_cast<vector<Account>*>(pData);
+
+    pAccounts->emplace_back(Account { pzColumn[0], pzColumn[1], pzColumn[2], pzColumn[3] });
+
+    return 0;
+}
+
+bool create_schema(sqlite3* pDb)
+{
+    char* pError = nullptr;
+    int rv = sqlite3_exec(pDb, SQL_CREATE, nullptr, nullptr, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXB_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+        sqlite3_free(pError);
+    }
+
+    return rv == SQLITE_OK;
+}
+
+sqlite3* open_or_create_db(const string& path)
+{
+    sqlite3* pDb = nullptr;
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_CREATE;
+    int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
+
+    if (rv == SQLITE_OK)
+    {
+        if (create_schema(pDb))
+        {
+            MXB_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+        }
+        else
+        {
+            MXB_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+
+            if (unlink(path.c_str()) != 0)
+            {
+                MXB_ERROR("Failed to delete database %s that could not be properly "
+                          "initialized. It should be deleted manually.", path.c_str());
+                sqlite3_close_v2(pDb);
+                pDb = nullptr;
+            }
+        }
+    }
+    else
+    {
+        if (pDb)
+        {
+            // Memory allocation failure is explained by the caller. Don't close the handle, as the
+            // caller will still use it even if open failed!!
+            MXB_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+                      path.c_str(), sqlite3_errmsg(pDb));
+        }
+        MXB_ERROR("Could not open sqlite3 database for storing user information.");
+    }
+
+    return pDb;
+}
+
+}
+
 UserManagerSqlite3::UserManagerSqlite3(string path, sqlite3* pDb)
     : m_path(std::move(path))
     , m_db(*pDb)
@@ -725,7 +731,7 @@ unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
         {
             path += name;
             path += "-v";
-            path += std::to_string(SCHEMA_VERSION);
+            path += std::to_string(SQLITE3_SCHEMA_VERSION);
             path += ".db";
 
             if (is_accessible_by_others(path))
