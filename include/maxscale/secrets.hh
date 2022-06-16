@@ -20,6 +20,33 @@
 
 namespace maxscale
 {
+
+constexpr size_t SECRETS_CIPHER_BYTES = 32;
+
+/**
+ * Encrypts string using provided key.
+ *
+ * @param key    The symmetric key. Its length must be @c SECRETS_CIPHER_BYTES.
+ * @param input  The string to be encrypted.
+ *
+ * @return @c input encrypted using @c key, prefixed with the used initialization vector.
+ *         Use @decrypt_password() for decrypting the string as it knows how to extract
+ *         the initialization vector.
+ */
+std::string encrypt_password(const std::vector<uint8_t>& key, const std::string& input);
+
+/**
+ * Decrypts string using provided key.
+ *
+ * @param key    The symmetric key. Its length must be @c SECRETS_CIPHER_BYTES.
+ * @param input  The string to be decrypted. *Must* have been created using
+ *               @c encrypt_password() so that the string contains the needed
+ *               initialization vector.
+ *
+ * @return @c input decrypted using @c key.
+ */
+std::string decrypt_password(const std::vector<uint8_t>& key, const std::string& input);
+
 /**
  * Decrypt an encrypted password using the key loaded at startup. If the password is not encrypted,
  * ie is not a HEX string, return the original.

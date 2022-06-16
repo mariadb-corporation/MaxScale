@@ -212,7 +212,7 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
 
         if (path.empty())
         {
-            MXS_WARNING("'authentication_key_file' is empty, NoSQL user data will be "
+            MXB_WARNING("'authentication_key_file' is empty, NoSQL user data will be "
                         "stored in the server without being encrypted.");
         }
         else
@@ -236,19 +236,19 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
                     if (!mxs::hex2bin(encryption_key_hex.data(), encryption_key_hex.length(),
                                       this->encryption_key.data()))
                     {
-                        MXS_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
+                        MXB_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
                         rv = false;
                     }
                 }
                 else
                 {
-                    MXS_ERROR("Could not read encryption key from '%s'.", path.c_str());
+                    MXB_ERROR("Could not read encryption key from '%s'.", path.c_str());
                     rv = false;
                 }
             }
             else
             {
-                MXS_ERROR("Could not open '%s': (%d), %s", path.c_str(), errno, mxb_strerror(errno));
+                MXB_ERROR("Could not open '%s': (%d), %s", path.c_str(), errno, mxb_strerror(errno));
                 rv = false;
             }
         }

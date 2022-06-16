@@ -288,7 +288,7 @@ int main(int argc, char** argv)
         }
         else if (encrypting)
         {
-            string encrypted = encrypt_password(keydata.key, input);
+            string encrypted = mxs::encrypt_password(keydata.key, input);
             if (!encrypted.empty())
             {
                 printf("%s\n", encrypted.c_str());
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
             auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
             if (is_hex && input.length() % 2 == 0)
             {
-                string decrypted = decrypt_password(keydata.key, input);
+                string decrypted = mxs::decrypt_password(keydata.key, input);
                 if (!decrypted.empty())
                 {
                     printf("%s\n", decrypted.c_str());

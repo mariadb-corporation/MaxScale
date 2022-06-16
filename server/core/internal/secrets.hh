@@ -28,9 +28,7 @@ extern const char* const SECRETS_FILENAME;
 constexpr auto SECRETS_CIPHER_MODE = mxb::Cipher::AES_CBC;
 constexpr size_t SECRETS_CIPHER_BITS = 256;
 
-bool        load_encryption_keys();
-std::string encrypt_password(const ByteVec& key, const std::string& input);
-std::string decrypt_password(const ByteVec& key, const std::string& input);
+bool load_encryption_keys();
 
 struct ReadKeyResult
 {

@@ -183,7 +183,7 @@ string decrypt_password(const string& input)
         auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
         if (is_hex)
         {
-            rval = ::decrypt_password(key, input);
+            rval = mxs::decrypt_password(key, input);
         }
         else
         {
@@ -191,7 +191,6 @@ string decrypt_password(const string& input)
         }
     }
     return rval;
-}
 }
 
 string decrypt_password(const ByteVec& key, const std::string& input)
@@ -267,6 +266,7 @@ string encrypt_password(const ByteVec& key, const string& input)
     }
 
     return rval;
+}
 }
 
 bool load_encryption_keys()
