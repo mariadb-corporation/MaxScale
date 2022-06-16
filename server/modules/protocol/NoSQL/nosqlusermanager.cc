@@ -1417,12 +1417,7 @@ bool UserManagerMariaDB::do_remove_user(const string& db, const string& user)
     return rv;
 }
 
-namespace
-{
-
-bool user_info_from_result(mxq::QueryResult* pResult,
-                           const Configuration& config,
-                           UserManager::UserInfo* pInfo)
+bool UserManagerMariaDB::user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo) const
 {
     // TODO: A bit of unnecessary work is made here if 'pInfo' is null.
 
@@ -1436,9 +1431,9 @@ bool user_info_from_result(mxq::QueryResult* pResult,
     string data = pResult->get_string(4);
 
     bool rv = true;
-    if (!config.encryption_key.empty())
+    if (!m_config.encryption_key.empty())
     {
-        data = mxs::decrypt_password(config.encryption_key, data);
+        data = mxs::decrypt_password(m_config.encryption_key, data);
 
         if (data.empty())
         {
@@ -1501,7 +1496,7 @@ bool user_info_from_result(mxq::QueryResult* pResult,
     return rv;
 }
 
-vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult, const Configuration& config)
+vector<UserManager::UserInfo> UserManagerMariaDB::user_infos_from_result(mxq::QueryResult* pResult) const
 {
     mxb_assert(pResult->get_col_count() == 5);
 
@@ -1510,15 +1505,13 @@ vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult, 
     while (pResult->next_row())
     {
         UserManager::UserInfo ui;
-        if (user_info_from_result(pResult, config, &ui))
+        if (user_info_from_result(pResult, &ui))
         {
             rv.push_back(ui);
         }
     }
 
     return rv;
-}
-
 }
 
 bool UserManagerMariaDB::do_get_info(const string& mariadb_user, UserInfo* pInfo) const
@@ -1538,7 +1531,7 @@ bool UserManagerMariaDB::do_get_info(const string& mariadb_user, UserInfo* pInfo
             mxb_assert(sResult->get_col_count() == 5);
             sResult->next_row();
 
-            rv = user_info_from_result(sResult.get(), m_config, pInfo);
+            rv = user_info_from_result(sResult.get(), pInfo);
         }
         else
         {
@@ -1566,7 +1559,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos() const
 
     if (sResult)
     {
-        rv = user_infos_from_result(sResult.get(), m_config);
+        rv = user_infos_from_result(sResult.get());
     }
     else
     {
@@ -1589,7 +1582,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const string& db)
 
     if (sResult)
     {
-        rv = user_infos_from_result(sResult.get(), m_config);
+        rv = user_infos_from_result(sResult.get());
     }
     else
     {
@@ -1623,7 +1616,7 @@ vector<UserManager::UserInfo> UserManagerMariaDB::do_get_infos(const vector<stri
 
         if (sResult)
         {
-            rv = user_infos_from_result(sResult.get(), m_config);
+            rv = user_infos_from_result(sResult.get());
         }
         else
         {

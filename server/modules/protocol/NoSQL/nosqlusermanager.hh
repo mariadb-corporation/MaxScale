@@ -385,6 +385,9 @@ private:
     bool check_connection() const;
     bool prepare_server() const;
 
+    bool user_info_from_result(mxq::QueryResult* pResult, UserManager::UserInfo* pInfo) const;
+    std::vector<UserManager::UserInfo> user_infos_from_result(mxq::QueryResult* pResult) const;
+
     bool do_add_user(const std::string& db,
                      std::string user,
                      std::string password, // Cleartext
