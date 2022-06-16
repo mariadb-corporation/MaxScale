@@ -188,7 +188,7 @@ function rawCollectionAsTable(arr, fields) {
   var table = getTable(header);
 
   arr.forEach((row) => {
-    table.push(row.map((val) => (val ? val : "")));
+    table.push(row.map((val) => (val !== null && val !== undefined ? val : "")));
   });
   return tableToString(table);
 }
