@@ -1,27 +1,37 @@
 <template>
-    <code v-if="source" class="d-block mariadb-code-style">
-        <span class="pr-4 color text-field-text">{{ source.timestamp }}</span>
-        <span
-            class="log-level d-inline-flex justify-start"
-            :class="logPriorityColorClasses(source.priority)"
-        >
-            <span>
-                <icon-sprite-sheet size="13" :frame="source.priority">
-                    logPriorities
-                </icon-sprite-sheet>
-            </span>
-            <span class="ml-1">{{ source.priority }}</span>
+    <code
+        v-if="source"
+        class="d-block mariadb-code-style text-wrap"
+        :class="logPriorityColorClasses(source.priority)"
+    >
+        <span class="color text-field-text">{{ source.timestamp }}&nbsp;&nbsp;</span>
+        <span class="log-level d-inline-block">
+            <icon-sprite-sheet size="13" :frame="source.priority">
+                logPriorities
+            </icon-sprite-sheet>
+            <span class="tk-azo-sans-web">&nbsp;</span>
+            <span>{{ source.priority }}</span>
         </span>
-
-        <span class="log-level-divider">:</span>
-
-        <span class="text-wrap" :class="logPriorityColorClasses(source.priority)">
-            {{ source.message }}
-        </span>
+        <span v-html="logLevelNbspGen(source.priority)" />
+        <span class="log-level-divider color text-code-color">:</span>
+        <span>&nbsp;</span>
+        <span>{{ source.message }}</span>
     </code>
 </template>
 
 <script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-06-06
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 export default {
     name: 'log-line',
     props: {
@@ -40,22 +50,20 @@ export default {
     methods: {
         logPriorityColorClasses: level =>
             `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
+        logLevelNbspGen(level) {
+            switch (level) {
+                case 'error':
+                case 'alert':
+                case 'debug':
+                    return '&nbsp;&nbsp;'
+                case 'notice':
+                    return '&nbsp;'
+                case 'info':
+                    return '&nbsp;&nbsp;&nbsp;'
+                case 'warning':
+                    return ''
+            }
+        },
     },
 }
 </script>
-<style lang="scss" scoped>
-.log-level {
-    width: 75px;
-}
-.log-lines-wrapper-enter-active,
-.log-lines-wrapper-leave-active {
-    height: 100%;
-    transition: 0.3s all ease;
-}
-
-.log-lines-wrapper-enter,
-.log-lines-wrapper-leave-active {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-</style>
