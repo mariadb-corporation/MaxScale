@@ -34,7 +34,8 @@ void sync_avro(TestConnections& test, Connection& c)
 void check_file_count(TestConnections& test, std::string count)
 {
     auto res = test.maxscale->ssh_output("ls -1 /tmp/test.t1.*.avro|wc -l").output;
-    test.expect(res == count, "/tmp/ should have %s Avro file(s)", count.c_str());
+    test.expect(res == count, "/tmp/ should have %s Avro file(s) but it has: %s",
+                count.c_str(), res.c_str());
 }
 
 int main(int argc, char* argv[])
@@ -75,6 +76,10 @@ int main(int argc, char* argv[])
     test.maxscale->restart();
 
     test.check_maxctrl("call command avrorouter rotate avro-service");
+
+    // Wait for a while to make sure the data is old enough
+    sleep(3);
+
     c.query("INSERT INTO test.t1 SELECT seq FROM seq_0_to_256");
     sync_avro(test, c);
 
