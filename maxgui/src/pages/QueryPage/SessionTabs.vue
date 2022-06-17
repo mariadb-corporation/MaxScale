@@ -20,9 +20,11 @@
                     class="fill-height d-flex align-center justify-space-between px-3"
                 >
                     <div class="d-inline-flex align-center">
-                        <span class="tab-name d-inline-block text-truncate" style="max-width:88px">
-                            {{ session.name }}
-                        </span>
+                        <truncate-string
+                            :text="`${session.name}`"
+                            :maxWidth="112"
+                            :nudgeLeft="48"
+                        />
                         <v-progress-circular
                             v-if="getLoadingQueryResultBySessionId(session.id)"
                             class="ml-2"
