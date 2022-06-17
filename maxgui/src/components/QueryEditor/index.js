@@ -246,8 +246,8 @@ export default {
                 },
                 {
                     label: this.$t('createQuerySnippet'),
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
-                    run: () => this.$emit('onCtrlS'),
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_D],
+                    run: () => this.$emit('onCtrlD'),
                 },
             ]
             for (const item of actionDescriptors) {

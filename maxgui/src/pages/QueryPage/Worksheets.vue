@@ -93,7 +93,7 @@
                 :ctrDim="ctrDim"
                 @onCtrlEnter="onCtrlEnter"
                 @onCtrlShiftEnter="onCtrlShiftEnter"
-                @onCtrlS="onCtrlS"
+                @onCtrlD="onCtrlD"
             />
         </keep-alive>
     </div>
@@ -164,9 +164,9 @@ export default {
         }),
         wkeShortKeyHandler(e) {
             switch (e.srcKey) {
-                case 'win-ctrl-s':
-                case 'mac-cmd-s':
-                    this.onCtrlS()
+                case 'win-ctrl-d':
+                case 'mac-cmd-d':
+                    this.onCtrlD()
                     break
                 case 'win-ctrl-enter':
                 case 'mac-cmd-enter':
@@ -187,7 +187,7 @@ export default {
         onCtrlShiftEnter() {
             this.getSessionToolbar().handleRun('all')
         },
-        onCtrlS() {
+        onCtrlD() {
             this.getSessionToolbar().openSnippetDlg()
         },
     },

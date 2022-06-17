@@ -104,8 +104,8 @@ describe('Should assign corresponding handler for worksheet shortcut keys accura
         handleRunSpy.should.have.been.calledOnce
         handleRunSpy.should.have.been.calledWith('all')
     })
-    it('Handle onCtrlS evt', () => {
-        wke.vm.$emit('onCtrlS')
+    it('Handle onCtrlD evt', () => {
+        wke.vm.$emit('onCtrlD')
         openSnippetDlgSpy.should.have.been.calledOnce
     })
 })

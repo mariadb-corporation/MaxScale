@@ -37,7 +37,7 @@
                     </v-btn>
                 </template>
                 <span style="white-space: pre;" class="d-inline-block text-center">
-                    {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + S` }}
+                    {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
                 </span>
             </v-tooltip>
             <load-sql />

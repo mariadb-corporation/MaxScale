@@ -104,8 +104,8 @@ export const APP_CONFIG = Object.freeze({
         FILTERS: 'filters',
     }),
     QUERY_SHORTCUT_KEYS: Object.freeze({
-        'win-ctrl-s': ['ctrl', 's'],
-        'mac-cmd-s': ['meta', 's'],
+        'win-ctrl-d': ['ctrl', 'd'],
+        'mac-cmd-d': ['meta', 'd'],
         'win-ctrl-enter': ['ctrl', 'enter'],
         'mac-cmd-enter': ['meta', 'enter'],
         'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
