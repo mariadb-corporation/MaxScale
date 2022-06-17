@@ -3,7 +3,6 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_filter)" class="pl-6">
             <page-header :currentFilter="current_filter" />
             <v-row class="my-0">
-                <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-table
                         :resourceId="current_filter.id"
@@ -12,13 +11,25 @@
                         :onEditSucceeded="dispatchFetchFilter"
                     />
                 </v-col>
-                <v-col cols="6">
-                    <relationship-table
-                        relationshipType="services"
-                        :tableRows="serviceTableRow"
-                        readOnly
-                        :addable="false"
-                    />
+                <v-col class="py-0 my-0" cols="6">
+                    <v-row class="my-0 pa-0 ma-0">
+                        <v-col cols="12">
+                            <relationship-table
+                                relationshipType="services"
+                                :tableRows="serviceTableRow"
+                                readOnly
+                                :addable="false"
+                            />
+                        </v-col>
+                        <v-col v-if="!$typy(filter_diagnostics).isEmptyObject" cols="12">
+                            <details-readonly-table
+                                :title="`${$tc('diagnostics', 2)}`"
+                                :tableData="filter_diagnostics"
+                                isTree
+                                expandAll
+                            />
+                        </v-col>
+                    </v-row>
                 </v-col>
             </v-row>
         </v-sheet>
@@ -51,9 +62,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            current_filter: state => state.filter.current_filter,
-        }),
+        ...mapState({ current_filter: state => state.filter.current_filter }),
+        filter_diagnostics() {
+            return this.$typy(this.current_filter, 'attributes.filter_diagnostics')
+                .safeObjectOrEmpty
+        },
     },
     watch: {
         // re-fetch when the route changes
