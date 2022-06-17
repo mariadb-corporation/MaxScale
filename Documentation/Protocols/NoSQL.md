@@ -442,7 +442,7 @@ access to others.
 to the database.**
 
 Note that we make **no** guarantees that the way in which the
-account information is stored by nosqlprotocol will remain the
+account information is stored by `nosqlprotocol` will remain the
 same _even_ between maintenance releases. We do guarantee,
 however, that even if the way in which the account information is
 stored changes, existing account information will automatically
@@ -451,7 +451,65 @@ accounts, will be needed.
 
 ## Shared
 
-TBW
+In the shared case, the account information of nosqlprotocol
+is stored in the cluster of the service in front of which the
+NoSQL listener resides. The master of the cluster will be used
+both for reading and writing data.
+
+A table whose name is the same as the listener's name in the
+MaxScale configuration will be created in the database
+specified with the [authentication_db](#authentication_db)
+parameter. If it is not specified explicitly, the default is
+`nosqlprotocol`. The name of the table will be the name of
+the listener section in the MaxScale configuration file.
+
+For instance, given a configuration like
+```
+[NoSQL-Listener]
+type=listener
+service=TheService
+protocol=nosqlprotocol
+...
+```
+the account information will be stored in the table
+`nosqlprotocol.NoSQL-Listener`.
+
+Note that since the table name is derived from the listener
+name, changing the name of the listener in the configuration
+file will have the effect of making all accounts disappear.
+To retain the accounts, the table should also be renamed.
+
+`nosqlprotocol` will create the table when needed, so the
+user specified with [authentication_user](#authentication_user)
+must have sufficient grants to be able to do that.
+
+`nosqlprotocol` will store in the table, data that allow
+any MaxScale to authenticate a MongoDB® client, irrespective
+of which MaxScale instance was used when the user was created.
+
+`nosqlprotocol` also stores in the table the SHA1 of a user's
+password, to be able to authenticate against the MariaDB server.
+Therefore it is **strongly** suggested to provide an authentication
+key with [authentication_key_file](#authentication_key_file) so
+that the data will be encrypted.
+
+If shared authentication has been enabled with
+[authentication_shared](#authentication_shared) then
+[authentication_user](#authentication_user) and
+[authentication_password](#authentication_password) must also
+be provided. With [authentication_db](#authentication_db) the
+database name can optionally be changed, and with
+[authentication_key_file](#authentication_key_file) an
+encryption key, using which the sensitive data is encrypted,
+can optionally be provided.
+
+Note that we make **no** guarantees that the table in which the
+account information is stored by `nosqlprotocol` will remain the
+same _even_ between maintenance releases. We do guarantee,
+however, that even if the way in which the account information is
+stored changes, existing account information will automatically
+be converted and no manual intervention, such as re-creation of
+accounts, will be needed.
 
 # Client Library
 
