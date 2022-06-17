@@ -463,6 +463,11 @@ void GaleraMonitor::post_tick()
 
     for (auto ptr : servers())
     {
+        // Although there's some replication lag in Galera, this isn't currently measured and having it be 0
+        // seconds is better than having it as undefined. Otherwise, using max_slave_replication_lag in
+        // readwritesplit causes the whole cluster to become unavailable.
+        ptr->server->set_replication_lag(0);
+
         const int repl_bits = (SERVER_SLAVE | SERVER_MASTER);
         if ((ptr->pending_status & SERVER_JOINED) && !m_config.disable_master_role_setting)
         {
@@ -595,10 +600,10 @@ MonitorServer* GaleraMonitor::get_candidate_master()
         {
             int64_t priority = moitor_servers->server->priority();
 
-            if (m_config.use_priority && priority > 0)
+            if (m_config.use_priority && priority != 0)
             {
                 /** The priority is valid */
-                if (priority < minval)
+                if (priority > 0 && priority < minval)
                 {
                     minval = priority;
                     candidate_master = moitor_servers;

@@ -2467,6 +2467,20 @@ The `main-site-master` and `main-site-slave` servers will be used as long as
 they are available. When they are no longer available, the `DR-site-master` and
 `DR-site-slave` will be used.
 
+### `priority`
+
+- **Type**: integer
+- **Default**: 0
+- **Dynamic**: Yes
+
+Server priority. Currently only used by galeramon to choose the order in which
+nodes are selected as the current master server. Refer to the
+[Server Priorities](../Monitors/Galera-Monitor.md#interaction-with-server-priorities)
+section of the galeramon documentation for more information on how to use it.
+
+Starting with MaxScale 2.5.21, this parameter also accepts negative values. In
+older versions, the parameter only accepted non-negative values.
+
 ## Monitor
 
 Monitor sections are used to define the monitoring module that watches a set of

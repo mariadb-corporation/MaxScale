@@ -167,9 +167,11 @@ a master server inside MaxScale. If all candidate servers have the same
 priority, the order of the servers in the `servers` parameter dictates which is
 chosen as the master.
 
-Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the
+Nodes with a negative value (_priority_ < 0) will never be chosen as the
 master. This allows you to mark some servers as permanent slaves by assigning a
-non-positive value into _priority_.
+non-positive value into _priority_. Nodes with the default priority of 0 are
+only selected if no nodes with higher priority are present and the normal node
+selection rules apply to them (i.e. selection is based on `wsrep_local_index`).
 
 Here is an example.
 

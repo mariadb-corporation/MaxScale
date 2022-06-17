@@ -65,10 +65,14 @@ void check_table(TestConnections& test, Connection& conn, int n)
 
 int main(int argc, char** argv)
 {
-    TestConnections::restart_galera(true);
     TestConnections test(argc, argv);
     test.galera->connect();
     auto galera_ids = test.galera->get_all_server_ids_str();
+
+    Connection rws = test.maxscale->rwsplit();
+    test.expect(rws.connect(), "RWS connection should work: %s", rws.error());
+    rws.query("FLUSH LOGS");
+    auto gtid_pos = rws.field("SELECT @@gtid_binlog_pos, @@last_insert_id", 0);
 
     Connection pinloki = test.maxscale->readconn_master();
     test.expect(pinloki.connect(), "Pinloki connection should work: %s", pinloki.error());
@@ -83,13 +87,11 @@ int main(int argc, char** argv)
     // and make it replicate from pinloki.
     pinloki_replica.query("STOP SLAVE");
     pinloki_replica.query("RESET SLAVE");
-    pinloki_replica.query("SET @@global.gtid_slave_pos = '0-101-1'");
+    pinloki_replica.query("SET @@global.gtid_slave_pos = '" + gtid_pos + "'");
     pinloki_replica.query(change_master_sql(pinloki.host().c_str(), pinloki.port()));
     pinloki_replica.query("START SLAVE");
 
     // Create a table via RWS (galera cluster) and insert one value
-    Connection rws = test.maxscale->rwsplit();
-    test.expect(rws.connect(), "RWS connection should work: %s", rws.error());
     rws.query("DROP TABLE if exists test.t1");
     test.expect(rws.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", rws.error());
     test.expect(rws.query("INSERT INTO test.t1 values(1)"), "INSERT 1 failed: %s", rws.error());

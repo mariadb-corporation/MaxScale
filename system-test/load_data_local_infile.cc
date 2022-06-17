@@ -80,8 +80,8 @@ void test_main(TestConnections& test)
                              i, max_dur_s);
                 // The following may need tuning if tester machine network or speed changes significantly.
                 // The idea is to detect any big changes in MaxScale behavior.
-                test.expect(i > 50 && i < 300, "Unexpected number of queries: %i.", i);
-                test.expect(max_dur_s > 0.1 && max_dur_s < 5, "Unexpected max query duration: %f.",
+                test.expect(i > 50 && i < 3000, "Unexpected number of queries: %i.", i);
+                test.expect(max_dur_s > 0.001 && max_dur_s < 5, "Unexpected max query duration: %f.",
                             max_dur_s);
             };
 
