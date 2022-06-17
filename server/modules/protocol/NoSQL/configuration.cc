@@ -68,7 +68,7 @@ mxs::config::ParamString Configuration::s_authentication_db(
     &nosqlprotocol::specification,
     "authentication_db",
     "What database shared NoSQL user information should be stored in.",
-    "NoSQL");
+    "nosqlprotocol");
 
 mxs::config::ParamPath Configuration::s_authentication_key_file(
     &nosqlprotocol::specification,
