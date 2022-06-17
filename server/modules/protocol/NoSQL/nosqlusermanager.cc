@@ -1459,14 +1459,6 @@ bool UserManagerMariaDB::do_add_user(const string& db,
 {
     bool rv = true;
 
-    mxb::Json custom_data(mxb::Json::Type::OBJECT);
-
-    if (!custom_data_json.empty())
-    {
-        MXB_AT_DEBUG(bool loaded) = custom_data.load_string(custom_data_json);
-        mxb_assert(loaded);
-    }
-
     AddUser au = get_add_user_data(db, user, pwd, host, mechanisms);
 
     mxb::Json json;
@@ -1477,7 +1469,13 @@ bool UserManagerMariaDB::do_add_user(const string& db,
     json.set_string("salted_pwd_sha256_b64", au.salted_pwd_sha256_b64);
     json.set_string("pwd_sha1_b64", au.pwd_sha1_b64);
     json.set_string("uuid", au.uuid);
-    json.set_object("custom_data", std::move(custom_data));
+    if (!custom_data_json.empty())
+    {
+        mxb::Json custom_data(mxb::Json::Type::OBJECT);
+        MXB_AT_DEBUG(bool loaded) = custom_data.load_string(custom_data_json);
+        mxb_assert(loaded);
+        json.set_object("custom_data", std::move(custom_data));
+    }
     json.set_object("roles", role::to_json_array(roles));
 
     string data = encrypt_data(json, au.mariadb_user);
@@ -1735,7 +1733,7 @@ vector<UserManager::Account> UserManagerMariaDB::do_get_accounts(const string& d
 
     if (sResult)
     {
-        mxb_assert(sResult->get_col_count() == 5);
+        mxb_assert(sResult->get_col_count() == 4);
 
         while (sResult->next_row())
         {
@@ -1774,7 +1772,7 @@ bool UserManagerMariaDB::do_remove_accounts(const vector<Account>& accounts) con
                 sql << " OR ";
             }
 
-            sql << "mariadb_user = `" << account.mariadb_user << "`";
+            sql << "mariadb_user = '" << account.mariadb_user << "'";
         }
 
         rv = m_db.cmd(sql.str());
@@ -1849,14 +1847,6 @@ bool UserManagerMariaDB::do_update(const string& db,
             info.roles = data.roles;
         }
 
-        mxb::Json custom_data(mxb::Json::Type::OBJECT);
-
-        if (!info.custom_data.empty())
-        {
-            MXB_AT_DEBUG(bool loaded) = custom_data.load_string(info.custom_data);
-            mxb_assert(loaded);
-        }
-
         mxb::Json json;
 
         json.set_string("salt_sha1_b64", info.salt_sha1_b64);
@@ -1865,7 +1855,14 @@ bool UserManagerMariaDB::do_update(const string& db,
         json.set_string("salted_pwd_sha256_b64", info.salted_pwd_sha256_b64);
         json.set_string("pwd_sha1_b64", info.pwd_sha1_b64);
         json.set_string("uuid", info.uuid);
-        json.set_object("custom_data", custom_data);
+        if (!info.custom_data.empty())
+        {
+            mxb::Json custom_data(mxb::Json::Type::OBJECT);
+            MXB_AT_DEBUG(bool loaded) = custom_data.load_string(info.custom_data);
+            mxb_assert(loaded);
+
+            json.set_object("custom_data", custom_data);
+        }
         json.set_object("roles", role::to_json_array(info.roles));
 
         string data = encrypt_data(json, mariadb_user);
