@@ -94,6 +94,7 @@
                 @onCtrlEnter="onCtrlEnter"
                 @onCtrlShiftEnter="onCtrlShiftEnter"
                 @onCtrlD="onCtrlD"
+                @onCtrlO="onCtrlO"
             />
         </keep-alive>
     </div>
@@ -176,6 +177,10 @@ export default {
                 case 'mac-cmd-shift-enter':
                     this.onCtrlShiftEnter()
                     break
+                case 'win-ctrl-o':
+                case 'mac-cmd-o':
+                    this.onCtrlO()
+                    break
             }
         },
         getSessionToolbar() {
@@ -189,6 +194,9 @@ export default {
         },
         onCtrlD() {
             this.getSessionToolbar().openSnippetDlg()
+        },
+        onCtrlO() {
+            this.getSessionToolbar().$refs.loadSql.handleFileImport()
         },
     },
 }

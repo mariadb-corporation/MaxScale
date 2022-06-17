@@ -40,7 +40,7 @@
                     {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
                 </span>
             </v-tooltip>
-            <load-sql />
+            <load-sql ref="loadSql" />
             <v-spacer />
             <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
                 <max-rows-input

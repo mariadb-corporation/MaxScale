@@ -80,18 +80,20 @@ describe('Worksheets', () => {
 })
 
 describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
-    let wrapper, sessionToolbar, wke, handleRunSpy, openSnippetDlgSpy
+    let wrapper, sessionToolbar, wke, handleRunSpy, openSnippetDlgSpy, handleFileImportSpy
     beforeEach(() => {
         wrapper = mountFactory()
         sessionToolbar = wrapper.vm.$refs.wke.$refs.sessionToolbar
         wke = wrapper.findComponent({ name: 'worksheet' })
         handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
         openSnippetDlgSpy = sinon.spy(sessionToolbar, 'openSnippetDlg')
+        handleFileImportSpy = sinon.spy(sessionToolbar.$refs.loadSql, 'handleFileImport')
     })
 
     afterEach(() => {
         handleRunSpy.restore()
         openSnippetDlgSpy.restore()
+        handleFileImportSpy.restore()
     })
 
     it('Handle onCtrlEnter evt', () => {
@@ -107,5 +109,9 @@ describe('Should assign corresponding handler for worksheet shortcut keys accura
     it('Handle onCtrlD evt', () => {
         wke.vm.$emit('onCtrlD')
         openSnippetDlgSpy.should.have.been.calledOnce
+    })
+    it('Handle onCtrlO evt', () => {
+        wke.vm.$emit('onCtrlO')
+        handleFileImportSpy.should.have.been.calledOnce
     })
 })

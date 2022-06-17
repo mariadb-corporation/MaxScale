@@ -110,6 +110,8 @@ export const APP_CONFIG = Object.freeze({
         'mac-cmd-enter': ['meta', 'enter'],
         'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
         'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
+        'win-ctrl-o': ['ctrl', 'o'],
+        'mac-cmd-o': ['meta', 'o'],
     }),
     CMPL_SNIPPET_KIND: 'CMPL_SNIPPET_KIND',
     SQL_NODE_TYPES: Object.freeze({

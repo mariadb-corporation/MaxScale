@@ -249,6 +249,11 @@ export default {
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_D],
                     run: () => this.$emit('onCtrlD'),
                 },
+                {
+                    label: this.$t('loadScript'),
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_O],
+                    run: () => this.$emit('onCtrlO'),
+                },
             ]
             for (const item of actionDescriptors) {
                 this.editor.addAction({
