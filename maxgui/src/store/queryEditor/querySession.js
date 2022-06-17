@@ -28,7 +28,7 @@ export default {
             const sessions_in_wke = state.query_sessions.filter(s => s.wke_id_fk === wke_id)
             if (sessions_in_wke.length) {
                 const lastSession = sessions_in_wke[sessions_in_wke.length - 1]
-                count = Number(lastSession.name.replace('Query Tab ', '')) + 1
+                count = lastSession.count + 1
                 name = `Query Tab ${count}`
             }
             const newSession = { ...defSessionState(wke_id), name, count }
