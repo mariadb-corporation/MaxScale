@@ -368,7 +368,7 @@ private:
         // Alternative monitor port if normal port fails
         mxs::config::Count m_extra_port;
         // The priority of this server, Currently only used by galeramon to pick which server is the master
-        mxs::config::Count m_priority;
+        mxs::config::Integer m_priority;
         // @see monuser
         mxs::config::String m_monitoruser;
         // @see monpw

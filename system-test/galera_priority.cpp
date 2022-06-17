@@ -34,6 +34,60 @@ int main(int argc, char** argv)
     return test.run_test(argc, argv, test_main);
 }
 
+void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>& ids)
+{
+    auto& galera = *test.galera;
+    auto& mxs = *test.maxscale;
+
+    test.log_printf("Alter servers with new priorities");
+    test.check_maxctrl("alter server server1 priority 1");
+    test.check_maxctrl("alter server server2 priority 2");
+    test.check_maxctrl("alter server server3 priority 0");
+    test.check_maxctrl("alter server server4 priority -1");
+
+    test.log_printf("server1 with priority 1 is Master");
+    check_server_id(test, ids[0]);
+
+    test.log_printf("server2 with priority 2 is Master");
+    galera.block_node(0);
+    mxs.wait_for_monitor(2);
+    check_server_id(test, ids[1]);
+
+    test.log_printf("server3 with no priority is Master");
+    galera.block_node(1);
+    mxs.wait_for_monitor(2);
+    check_server_id(test, ids[2]);
+
+    test.log_printf("server4 is not the Master");
+    galera.block_node(2);
+    mxs.wait_for_monitor(2);
+    int id = mxs.get_master_server_id();
+    test.expect(id == -1, "Expected no master but found one with ID %d", id);
+
+
+    test.log_printf("server3 is master after unblocking it");
+    galera.unblock_node(2);
+    mxs.wait_for_monitor(2);
+    check_server_id(test, ids[2]);
+
+    test.log_printf("server3 loses Master when altered with priority=-1");
+    test.check_maxctrl("alter server server3 priority -1");
+    id = mxs.get_master_server_id();
+    test.expect(id == -1, "Expected no master but found one with ID %d", id);
+
+    test.log_printf("server1 is master after unblocking all nodes");
+    galera.unblock_node(0);
+    galera.unblock_node(1);
+    mxs.wait_for_monitor(2);
+    check_server_id(test, ids[0]);
+
+    test.log_printf("Restore original priorities");
+    test.check_maxctrl("alter server server1 priority 2");
+    test.check_maxctrl("alter server server2 priority 4");
+    test.check_maxctrl("alter server server3 priority 1");
+    test.check_maxctrl("alter server server4 priority 3");
+}
+
 void test_main(TestConnections& test)
 {
     auto& galera = *test.galera;
@@ -186,5 +240,10 @@ void test_main(TestConnections& test)
                 test.add_failure(no_master);
             }
         }
+    }
+
+    if (test.ok())
+    {
+        mxs4165_zero_priority(test, ids);
     }
 }
