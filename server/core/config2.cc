@@ -709,6 +709,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
 
     if (configured)
     {
+        m_first_time = false;
         configured = post_configure(nested_parameters);
     }
 
@@ -770,6 +771,35 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
 
     const char* key;
     json_t* value;
+
+    if (!m_first_time)
+    {
+        // Check that only parameters that support reconfiguration are being modified.
+        json_object_foreach(json, key, value)
+        {
+            if (config::Type* pValue = find_value(key))
+            {
+                json_t* old_val = pValue->to_json();
+
+                if (!json_equal(old_val, value) && !pValue->parameter().is_modifiable_at_runtime())
+                {
+
+                    MXB_ERROR("%s: The parameter '%s' cannot be modified at runtime.",
+                              m_pSpecification->module().c_str(), key);
+                    configured = false;
+                }
+
+
+                json_decref(old_val);
+            }
+        }
+    }
+
+    if (!configured)
+    {
+        return configured;
+    }
+
     json_object_foreach(json, key, value)
     {
         if (json_typeof(value) == JSON_OBJECT && find_value(key) == nullptr)
