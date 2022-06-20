@@ -1472,7 +1472,7 @@ bool UserManagerMariaDB::do_add_user(const string& db,
     if (!custom_data_json.empty())
     {
         mxb::Json custom_data(mxb::Json::Type::OBJECT);
-        MXB_AT_DEBUG(bool loaded) = custom_data.load_string(custom_data_json);
+        MXB_AT_DEBUG(bool loaded =) custom_data.load_string(custom_data_json);
         mxb_assert(loaded);
         json.set_object("custom_data", std::move(custom_data));
     }
@@ -1858,7 +1858,7 @@ bool UserManagerMariaDB::do_update(const string& db,
         if (!info.custom_data.empty())
         {
             mxb::Json custom_data(mxb::Json::Type::OBJECT);
-            MXB_AT_DEBUG(bool loaded) = custom_data.load_string(info.custom_data);
+            MXB_AT_DEBUG(bool loaded =) custom_data.load_string(info.custom_data);
             mxb_assert(loaded);
 
             json.set_object("custom_data", custom_data);
