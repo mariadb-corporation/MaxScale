@@ -31,14 +31,14 @@ using namespace std::chrono_literals;
 
 namespace
 {
-void print_no_locks_error(json_t** error_out)
+void print_no_locks_error(mxb::Json& error_out)
 {
     const char locks_taken[] =
         "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
         "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
         "which connection id has a lock.";
     auto err_msg = string_printf(locks_taken, SERVER_LOCK_NAME);
-    PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
+    PRINT_JSON_ERROR(error_out, "%s", err_msg.c_str());
 }
 }
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
@@ -66,7 +66,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
     auto error_out = &tmp;
     if (!lock_status_is_ok())
     {
-        print_no_locks_error(error_out);
+        print_no_locks_error(rval.output);
         return rval;
     }
 
@@ -103,14 +103,14 @@ mon_op::Result MariaDBMonitor::manual_failover()
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    json_t* tmp {nullptr};
-    auto output = &tmp;
     if (!lock_status_is_ok())
     {
-        print_no_locks_error(output);
+        print_no_locks_error(rval.output);
         return rval;
     }
 
+    json_t* tmp {nullptr};
+    auto output = &tmp;
     bool failover_done = false;
     auto op = failover_prepare(Log::ON, OpStart::MANUAL, output);
     if (op)
@@ -142,8 +142,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    json_t* tmp {nullptr};
-    auto output = &tmp;
+    auto& output = rval.output;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
@@ -151,7 +150,8 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
     }
 
     maxbase::Duration time_limit(m_settings.switchover_timeout);
-    GeneralOpData op(OpStart::MANUAL, output, time_limit);
+    json_t* tmp = output.get_json();
+    GeneralOpData op(OpStart::MANUAL, &tmp, time_limit);
 
     bool rejoin_done = false;
     if (cluster_can_be_joined())
@@ -186,9 +186,9 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
                         }
                         else
                         {
-                            PRINT_MXS_JSON_ERROR(output, "'%s' cannot replicate from master server '%s': %s",
-                                                 rejoin_cand->name(), m_master->name(),
-                                                 no_rejoin_reason.c_str());
+                            PRINT_JSON_ERROR(output, "'%s' cannot replicate from master server '%s': %s",
+                                             rejoin_cand->name(), m_master->name(),
+                                             no_rejoin_reason.c_str());
                         }
                     }
 
@@ -202,32 +202,30 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
                         }
                         else
                         {
-                            PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                            PRINT_JSON_ERROR(output, "Rejoin attempted but failed.");
                         }
                     }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(output,
-                                         "The GTIDs of master server '%s' could not be updated: %s",
-                                         m_master->name(), gtid_update_error.c_str());
+                    PRINT_JSON_ERROR(output, "The GTIDs of master server '%s' could not be updated: %s",
+                                     m_master->name(), gtid_update_error.c_str());
                 }
             }   // server_is_rejoin_suspect has added any error messages to the output, no need to print here
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output, "%s is not monitored by %s, cannot rejoin.",
-                                 rejoin_cand_srv->name(), name());
+            PRINT_JSON_ERROR(output, "%s is not monitored by %s, cannot rejoin.",
+                             rejoin_cand_srv->name(), name());
         }
     }
     else
     {
         const char BAD_CLUSTER[] = "The server cluster of monitor %s is not in a valid state for joining. "
                                    "Either it has no master or its gtid domain is unknown.";
-        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, name());
+        PRINT_JSON_ERROR(output, BAD_CLUSTER, name());
     }
     rval.success = rejoin_done;
-    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
