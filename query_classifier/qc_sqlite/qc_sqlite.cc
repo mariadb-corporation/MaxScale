@@ -2657,6 +2657,12 @@ public:
                 m_operation = QUERY_OP_ALTER;
                 break;
 
+            case TK_ANALYZE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_READ;
+                m_operation = QUERY_OP_EXPLAIN;
+                break;
+
             case TK_BEGIN:
             case TK_DECLARE:
             case TK_FOR:

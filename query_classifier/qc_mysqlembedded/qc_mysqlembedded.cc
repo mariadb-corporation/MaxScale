@@ -2256,7 +2256,7 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 
             if (lex)
             {
-                if (lex->describe)
+                if (lex->describe || lex->analyze_stmt)
                 {
                     *operation = QUERY_OP_EXPLAIN;
                 }
@@ -2264,6 +2264,10 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                 {
                     switch (lex->sql_command)
                     {
+                    case SQLCOM_ANALYZE:
+                        *operation = QUERY_OP_EXPLAIN;
+                        break;
+
                     case SQLCOM_SELECT:
                         *operation = QUERY_OP_SELECT;
                         break;
