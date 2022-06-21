@@ -570,8 +570,8 @@ private:
                                                 maxbase::Duration* event_age_out,
                                                 maxbase::Duration* delay_out);
     std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
-                                                         Log log_mode, json_t** error_out);
-    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, json_t** error_out);
+                                                         Log log_mode, OpStart start, json_t** error_out);
+    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, json_t** error_out);
 
     bool switchover_perform(SwitchoverParams& operation);
     bool failover_perform(FailoverParams& op);
@@ -608,9 +608,9 @@ private:
 
     // Rejoin methods
     bool     cluster_can_be_joined();
-    bool     get_joinable_servers(ServerArray* output);
-    bool     server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
-    uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
+    bool     get_joinable_servers(GeneralOpData& op, ServerArray* output);
+    bool     server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* rejoin_cand);
+    uint32_t do_rejoin(GeneralOpData& op, const ServerArray& joinable_servers);
 
     bool check_sql_files();
     void enforce_read_only_on_slaves();

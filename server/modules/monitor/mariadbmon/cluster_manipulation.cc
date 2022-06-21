@@ -70,7 +70,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
     }
 
     bool switchover_done = false;
-    auto op = switchover_prepare(new_master, current_master, Log::ON, error_out);
+    auto op = switchover_prepare(new_master, current_master, Log::ON, OpStart::MANUAL, error_out);
     if (op)
     {
         switchover_done = switchover_perform(*op);
@@ -109,7 +109,7 @@ mon_op::Result MariaDBMonitor::manual_failover()
     }
 
     bool failover_done = false;
-    auto op = failover_prepare(Log::ON, output);
+    auto op = failover_prepare(Log::ON, OpStart::MANUAL, output);
     if (op)
     {
         failover_done = failover_perform(*op);
@@ -145,13 +145,16 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
         return rval;
     }
 
+    maxbase::Duration time_limit(m_settings.switchover_timeout);
+    GeneralOpData op(OpStart::MANUAL, output, time_limit);
+
     bool rejoin_done = false;
     if (cluster_can_be_joined())
     {
         MariaDBServer* rejoin_cand = get_server(rejoin_cand_srv);
         if (rejoin_cand)
         {
-            if (server_is_rejoin_suspect(rejoin_cand, output))
+            if (server_is_rejoin_suspect(op, rejoin_cand))
             {
                 string gtid_update_error;
                 if (m_master->update_gtids(&gtid_update_error))
@@ -187,7 +190,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
                     if (rejoin_allowed)
                     {
                         ServerArray joinable_server = {rejoin_cand};
-                        if (do_rejoin(joinable_server, output) == 1)
+                        if (do_rejoin(op, joinable_server) == 1)
                         {
                             rejoin_done = true;
                             MXB_NOTICE("Rejoin performed.");
@@ -419,7 +422,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 {
                     SERVER* new_master_srv = new_master->server;
                     SlaveStatus::Settings new_conn("", new_master_srv);
-                    GeneralOpData general(error_out, 0s);   // Expect this to complete quickly.
+                    // Expect this to complete quickly.
+                    GeneralOpData general(OpStart::MANUAL, error_out, 0s);
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
                     {
@@ -607,10 +611,9 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
  * Usually the list is created by get_joinable_servers().
  *
  * @param joinable_servers Which servers to rejoin
- * @param output Error output. Can be null.
  * @return The number of servers successfully rejoined
  */
-uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t** output)
+uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinable_servers)
 {
     SERVER* master_server = m_master->server;
     const char* master_name = master_server->name();
@@ -623,27 +626,23 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
         {
             const char* name = joinable->name();
             bool op_success = false;
-            // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
-            // the first phase of standalone rejoin is similar to switchover.
-            maxbase::Duration time_limit(m_settings.switchover_timeout);
-            GeneralOpData general(output, time_limit);
 
             if (joinable->m_slave_status.empty())
             {
                 // Assume that server is an old master which was failed over. Even if this is not really
                 // the case, the following is unlikely to do damage.
                 ServerOperation demotion(joinable, true);
-                if (joinable->demote(general, demotion, OperationType::REJOIN))
+                if (joinable->demote(op, demotion, OperationType::REJOIN))
                 {
                     MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
                     SlaveStatus::Settings new_conn("", master_server);
-                    op_success = joinable->create_start_slave(general, new_conn);
+                    op_success = joinable->create_start_slave(op, new_conn);
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(output,
+                    PRINT_MXS_JSON_ERROR(op.error_out,
                                          "Failed to prepare (demote) standalone server '%s' for rejoin.",
                                          name);
                 }
@@ -664,11 +663,10 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
 
                     MXB_NOTICE("Erasing %lu replication connections(s) from server '%s'.",
                                extra_conns.size(), name);
-                    joinable->remove_slave_conns(general, extra_conns);
+                    joinable->remove_slave_conns(op, extra_conns);
                 }
 
-                op_success = joinable->redirect_existing_slave_conn(general,
-                                                                    joinable->m_slave_status[0].settings,
+                op_success = joinable->redirect_existing_slave_conn(op, joinable->m_slave_status[0].settings,
                                                                     m_master);
             }
 
@@ -710,7 +708,7 @@ bool MariaDBMonitor::cluster_can_be_joined()
  * @return False, if there were possible rejoinable servers but communications error to master server
  * prevented final checks.
  */
-bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
+bool MariaDBMonitor::get_joinable_servers(GeneralOpData& op, ServerArray* output)
 {
     mxb_assert(output);
 
@@ -719,7 +717,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
     ServerArray suspects;
     for (MariaDBServer* server : servers())
     {
-        if (server_is_rejoin_suspect(server, NULL))
+        if (server_is_rejoin_suspect(op, server))
         {
             suspects.push_back(server);
         }
@@ -773,9 +771,10 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
  * @param output Error output. If NULL, no error is printed to log.
  * @return True, if server is a rejoin suspect.
  */
-bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output)
+bool MariaDBMonitor::server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* rejoin_cand)
 {
     bool is_suspect = false;
+    auto output = op.error_out;
     if (rejoin_cand->is_usable() && !rejoin_cand->is_master())
     {
         // Has no slave connection, yet is not a master.
@@ -812,7 +811,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             is_suspect = true;
         }
 
-        if (output != NULL && !is_suspect)
+        if (op.start == OpStart::MANUAL && !is_suspect)
         {
             /* User has requested a manual rejoin but with a server which has multiple slave connections or
              * is already connected or trying to connect to the correct master. TODO: Slave IO stopped is
@@ -830,7 +829,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
             }
         }
     }
-    else if (output != NULL)
+    else if (op.start == OpStart::MANUAL)
     {
         PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.", rejoin_cand->name());
     }
@@ -920,7 +919,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             // Reset the time limit since the last part may have used it all.
             MXB_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
             const mxb::Duration demotion_undo_time_limit(m_settings.switchover_timeout);
-            GeneralOpData general_undo(op.general.error_out, demotion_undo_time_limit);
+            GeneralOpData general_undo(op.general.start, op.general.error_out, demotion_undo_time_limit);
             if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
                 MXB_NOTICE("'%s' restored to original status.", demotion_target->name());
@@ -1387,7 +1386,8 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
  * @param error_out Error output
  * @return Operation object if cluster is suitable and failover may proceed, or NULL on error
  */
-unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log log_mode, json_t** error_out)
+unique_ptr<MariaDBMonitor::FailoverParams>
+MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out)
 {
     // This function resembles 'switchover_prepare', but does not yet support manual selection.
 
@@ -1486,7 +1486,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
-            GeneralOpData general(error_out, time_limit);
+            GeneralOpData general(start, error_out, time_limit);
             rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
     }
@@ -1563,7 +1563,7 @@ void MariaDBMonitor::handle_auto_failover()
             {
                 // Failover is required, but first we should check if preconditions are met.
                 Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-                auto op = failover_prepare(log_mode, NULL);
+                auto op = failover_prepare(log_mode, OpStart::AUTO, NULL);
                 if (op)
                 {
                     m_warn_failover_precond = true;
@@ -1695,7 +1695,7 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
  */
 unique_ptr<MariaDBMonitor::SwitchoverParams>
 MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server, Log log_mode,
-                                   json_t** error_out)
+                                   OpStart start, json_t** error_out)
 {
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
@@ -1794,7 +1794,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
         ServerOperation demotion(demotion_target, master_swap, promotion_target->m_slave_status,
                                  EventNameSet()    /* unused */);
-        GeneralOpData general(error_out, time_limit);
+        GeneralOpData general(start, error_out, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
     return rval;
@@ -1870,7 +1870,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
         // Looks like the master should be swapped out. Before trying it, check if there is even
         // a likely valid slave to swap to.
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
-        auto op = switchover_prepare(NULL, m_master->server, log_mode, NULL);
+        auto op = switchover_prepare(NULL, m_master->server, log_mode, OpStart::AUTO, NULL);
         if (op)
         {
             m_warn_switchover_precond = true;
@@ -1905,10 +1905,15 @@ void MariaDBMonitor::handle_low_disk_space_master()
 
 void MariaDBMonitor::handle_auto_rejoin()
 {
+    // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
+    // the first phase of standalone rejoin is similar to switchover.
+    maxbase::Duration time_limit(m_settings.switchover_timeout);
+    GeneralOpData op(OpStart::AUTO, NULL, time_limit);
+
     ServerArray joinable_servers;
-    if (get_joinable_servers(&joinable_servers))
+    if (get_joinable_servers(op, &joinable_servers))
     {
-        uint32_t joins = do_rejoin(joinable_servers, NULL);
+        uint32_t joins = do_rejoin(op, joinable_servers);
         if (joins > 0)
         {
             MXB_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);

@@ -281,13 +281,16 @@ enum class OperationType
     UNDO_DEMOTION   // Performed when switchover fails in its first stages.
 };
 
+enum class OpStart {MANUAL, AUTO};
+
 class GeneralOpData
 {
 public:
-    json_t** const    error_out;                    // Json error output
-    maxbase::Duration time_remaining;               // How much time remains to complete the operation
+    OpStart           start {OpStart::MANUAL};  // How operation was started
+    json_t** const    error_out;                // Json error output
+    maxbase::Duration time_remaining;           // How much time remains to complete the operation
 
-    GeneralOpData(json_t** error, maxbase::Duration time_remaining);
+    GeneralOpData(OpStart start, json_t** error, maxbase::Duration time_remaining);
 };
 
 // Operation data which concerns a single server

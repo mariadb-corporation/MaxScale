@@ -1728,7 +1728,7 @@ bool RebuildServer::start_replication()
     // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
     // source server.
     MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
-    GeneralOpData op(&m_result.output, ssh_base_timeout);
+    GeneralOpData op(OpStart::MANUAL, &m_result.output, ssh_base_timeout);
     EndPoint ep(repl_master->server->address(), repl_master->server->port());
     SlaveStatus::Settings slave_sett("", ep, m_target->name());
 
