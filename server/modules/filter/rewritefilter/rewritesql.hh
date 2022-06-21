@@ -39,12 +39,17 @@ public:
     size_t             num_replacements() const;
 
 private:
+    std::string make_ordinals();
+
     const std::string m_regex_template;
     const std::string m_replace_template;
     std::string       m_error_str;  // human readable error string, after construction
     std::string       m_regex_str;
     std::regex        m_regex;
     size_t            m_nreplacements = 0;
+
+    size_t              m_max_ordinal = 0;
+    std::vector<size_t> m_ordinals;
 
     Replacer m_replacer;
 };

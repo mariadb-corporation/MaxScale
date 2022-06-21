@@ -26,10 +26,6 @@ RewriteSql::RewriteSql(const std::string& match_template,
 {
     std::ostringstream error_stream;
 
-    // TODO: allow the same placeholder multiple times. This is the same
-    //       as forward references and is easy to do without changes to the
-    //       simple regex with groups, just ordinal numbers which are
-    //       currently implied (1,2,3,...).
     if (!m_replacer.is_valid())
     {
         error_stream << m_replacer.error_str();
@@ -68,12 +64,8 @@ RewriteSql::RewriteSql(const std::string& match_template,
                         goto end_constructor;
                     }
 
-                    if (n != m_nreplacements)
-                    {
-                        error_stream << "Placeholders must be numbered 1,2,3,... error at => "
-                                     << std::string(ite_before, last);
-                        goto end_constructor;
-                    }
+                    m_max_ordinal = std::max(m_max_ordinal, n);
+                    m_ordinals.push_back(n - 1);
 
                     const std::string group = "(.*)";
 
@@ -104,11 +96,13 @@ RewriteSql::RewriteSql(const std::string& match_template,
         }
     }
 
-    // TODO more error checking here: make sure the match_template and replace_template
-    // work together (in effect that the max ordinal in the replament is <= to that in the match)
-
 end_constructor:
     m_error_str = error_stream.str();
+
+    if (m_error_str.empty())
+    {
+        m_error_str = make_ordinals();
+    }
 
     if (m_error_str.empty())
     {
@@ -121,6 +115,28 @@ end_constructor:
             m_error_str = ex.what();
         }
     }
+}
+
+std::string RewriteSql::make_ordinals()
+{
+    if (m_replacer.max_placeholder_ordinal() > m_max_ordinal)
+    {
+        return "The replacement template has larger placeholder numbers than the match template";
+    }
+
+    auto ords = m_ordinals;
+    std::sort(begin(ords), end(ords));
+    ords.erase(std::unique(begin(ords), end(ords)), end(ords));
+
+    std::vector<size_t> monotonical(ords.size());
+    std::iota(begin(monotonical), end(monotonical), 0);
+
+    if (monotonical != ords)
+    {
+        return "The placeholder numbers must be strictly ordered (1,2,3,...)";
+    }
+
+    return "";
 }
 
 bool RewriteSql::replace(const std::string& sql, std::string* pSql) const
