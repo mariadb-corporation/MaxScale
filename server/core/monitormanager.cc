@@ -118,6 +118,10 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
             }
             else
             {
+                // Deactivate the monitor first. This triggers the removal of the servers from services that
+                // might use the monitor. This can't be done in the destructor as the monitor will be
+                // partially deleted and is no longer valid at that point.
+                new_monitor->deactivate();
                 delete new_monitor;
                 new_monitor = nullptr;
             }
