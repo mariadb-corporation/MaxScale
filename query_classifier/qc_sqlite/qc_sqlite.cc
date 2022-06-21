@@ -285,12 +285,6 @@ public:
         m_field_infos.shrink_to_fit();
         size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
 
-        m_function_infos.shrink_to_fit();
-        size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
-        for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
-                size += info.n_fields * sizeof(QC_FIELD_INFO);
-            });
-
         using VQFI = vector<QC_FIELD_INFO>;
         m_function_field_usage.shrink_to_fit();
         size += m_function_field_usage.capacity() * sizeof(VQFI);
@@ -299,11 +293,26 @@ public:
                 size += v.capacity() * sizeof(QC_FIELD_INFO);
             });
 
+        m_function_infos.shrink_to_fit();
+        size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
+        // Since the function infos point into function field usages, we must
+        // now ensure that, in case m_function_field_usage really was shrank
+        // to fit, that we do not point into la-la land.
+        int i = 0;
+        for_each(m_function_infos.begin(), m_function_infos.end(), [this, &i](QC_FUNCTION_INFO& info) {
+                VQFI& v = m_function_field_usage[i];
+
+                info.fields = v.data();
+                info.n_fields = v.size();
+                ++i;
+            });
+
         using VC = vector<char>;
         m_scratch_buffers.shrink_to_fit();
         size += m_scratch_buffers.capacity() * sizeof(VC);
         for_each(m_scratch_buffers.begin(), m_scratch_buffers.end(), [&size](VC& v) {
-                v.shrink_to_fit();
+                // 'v', the scratch buffer, cannot be shrank to fit as fields point to it.
+                // It should be of exactly the right size anyway.
                 size += v.capacity() * sizeof(char);
             });
 
