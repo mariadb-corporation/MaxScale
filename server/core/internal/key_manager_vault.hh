@@ -33,6 +33,7 @@ public:
         std::string ca;
         std::string mount;
         bool        tls;
+        int64_t     version;
     };
 
     VaultKey(Config config, std::vector<uint8_t> key);

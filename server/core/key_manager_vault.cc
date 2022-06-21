@@ -30,6 +30,7 @@ static mxs::config::ParamInteger s_port(&s_spec, "port", "Vault server port", 82
 static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R, "");
 static mxs::config::ParamString s_mount(&s_spec, "mount", "KeyValue mount", "secret");
 static mxs::config::ParamBool s_tls(&s_spec, "tls", "Use HTTPS with Vault server", true);
+static mxs::config::ParamCount s_version(&s_spec, "version", "Vault secret version", 0);
 
 std::vector<uint8_t> load_key(const VaultKey::Config& cnf)
 {
@@ -70,8 +71,9 @@ std::vector<uint8_t> load_key(const VaultKey::Config& cnf)
     Vault::SecretMount mount{cnf.mount};
     Vault::KeyValue kv{client, mount};
     Vault::Path key{cnf.id};
+    Vault::SecretVersion version{cnf.version};
 
-    if (auto response = kv.read(key))
+    if (auto response = cnf.version == 0 ? kv.read(key) : kv.read(key, version))
     {
         mxb::Json js;
         MXB_AT_DEBUG(bool ok = ) js.load_string(response.value());
@@ -136,4 +138,5 @@ VaultKey::Config::Config()
     add_native(&Config::ca, &s_ca);
     add_native(&Config::mount, &s_mount);
     add_native(&Config::tls, &s_tls);
+    add_native(&Config::version, &s_version);
 }

@@ -4,7 +4,7 @@ CHECK_INCLUDE_FILE_CXX(filesystem HAVE_CXX_FILESYSTEM CMAKE_REQUIRED_FLAGS -std=
 
 if (HAVE_CXX_FILESYSTEM)
   set(LIBVAULT_REPO "https://github.com/abedra/libvault.git" CACHE INTERNAL "libvault git repository")
-  set(LIBVAULT_TAG "0.50.0" CACHE INTERNAL "libvault tag")
+  set(LIBVAULT_TAG "0.51.0" CACHE INTERNAL "libvault tag")
 
   ExternalProject_Add(libvault
     GIT_REPOSITORY ${LIBVAULT_REPO}
