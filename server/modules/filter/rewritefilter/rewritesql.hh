@@ -51,6 +51,15 @@ private:
     size_t              m_max_ordinal = 0;
     std::vector<size_t> m_ordinals;
 
+    // A mapping from an (implied) index to its respective index in m_ordinals.
+    // This allows grabbing the match groups and placing them in
+    // the replacement vector for the Replacer, where index 0 contains @1,
+    // index 1 @2 etc.
+    std::vector<size_t> m_map_ordinals;
+
+    // Pairs in m_ordinals with the same ordinal (forward reference)
+    std::vector<std::pair<size_t, size_t>> m_match_pairs;
+
     Replacer m_replacer;
 };
 

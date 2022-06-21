@@ -3,6 +3,7 @@
 #include <sstream>
 #include <numeric>
 #include <memory>
+#include <set>
 
 using namespace std::string_literals;
 
@@ -126,14 +127,54 @@ std::string RewriteSql::make_ordinals()
 
     auto ords = m_ordinals;
     std::sort(begin(ords), end(ords));
+
+    // grab duplicates before making ords contain the unique ordinals
+    std::set<size_t> duplicates;
+    auto dup_ite = begin(ords);
+    while (dup_ite != end(ords))
+    {
+        auto dup_ite2 = std::adjacent_find(dup_ite, end(ords));
+        if (dup_ite2 != end(ords))
+        {
+            duplicates.insert(*dup_ite2++);
+        }
+        dup_ite = dup_ite2;
+    }
+
     ords.erase(std::unique(begin(ords), end(ords)), end(ords));
-
-    std::vector<size_t> monotonical(ords.size());
+    const auto& unique_ordinals = ords;
+    std::vector<size_t> monotonical(unique_ordinals.size());
     std::iota(begin(monotonical), end(monotonical), 0);
-
-    if (monotonical != ords)
+    if (monotonical != unique_ordinals)
     {
         return "The placeholder numbers must be strictly ordered (1,2,3,...)";
+    }
+
+    // Make m_map_ordinals
+    m_map_ordinals.resize(unique_ordinals.size());
+    auto begin_ordinals = begin(m_ordinals);
+    auto end_ordinals = end(m_ordinals);
+    for (size_t i = 0; i < m_map_ordinals.size(); ++i)
+    {
+        auto ite = std::find(begin_ordinals, end_ordinals, i);
+        mxb_assert(ite != end_ordinals);
+        m_map_ordinals[i] = ite - begin_ordinals;
+    }
+
+    // Make m_match_pairs
+    for (auto dup : duplicates)
+    {
+        auto ite = std::find(begin_ordinals, end_ordinals, dup);
+        mxb_assert(ite != end_ordinals);
+        while (ite != end_ordinals)
+        {
+            auto ite2 = std::find(ite + 1, end_ordinals, dup);
+            if (ite2 != end_ordinals)
+            {
+                m_match_pairs.push_back(std::make_pair(ite - begin_ordinals, ite2 - begin_ordinals));
+            }
+            ite = ite2;
+        }
     }
 
     return "";
@@ -149,11 +190,26 @@ bool RewriteSql::replace(const std::string& sql, std::string* pSql) const
         return false;
     }
 
-    std::vector<std::string> replacements;
-
-    for (size_t i = 1; i < match.size(); ++i)
+    // Check forward references if any
+    for (auto p : m_match_pairs)
     {
-        replacements.emplace_back(match[i]);
+        if (match[p.first + 1] != match[p.second + 1])
+        {
+            matched = false;
+            break;
+        }
+    }
+
+    if (!matched)
+    {
+        return false;
+    }
+
+    std::vector<std::string> replacements;      // TODO, use string_view.
+
+    for (size_t i = 0; i < m_map_ordinals.size(); ++i)
+    {
+        replacements.emplace_back(match[m_map_ordinals[i] + 1]);
     }
 
     *pSql = m_replacer.replace(replacements);
