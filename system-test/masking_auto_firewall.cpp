@@ -142,6 +142,13 @@ void run(TestConnections& test)
 
     // This SHOULD succeed as '*' is used in the statment.
     test_one(test, "select * FROM (select * from masking_auto_firewall) tbl", Expect::FAILURE);
+
+    // These SHOULD succeed as they do not access actual data, but wont unless
+    // the parser has been extended to parse these statements or the masking filter
+    // handles EXPLAIN|DESCRIBE|ANALYZE explicitly.
+    test_one(test, "EXPLAIN select a from masking_auto_firewall", Expect::SUCCESS);
+    test_one(test, "DESCRIBE select a from masking_auto_firewall", Expect::SUCCESS);
+    test_one(test, "ANALYZE select a from masking_auto_firewall", Expect::SUCCESS);
 }
 
 void run_ansi_quotes(TestConnections& test)
