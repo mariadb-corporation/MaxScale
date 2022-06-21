@@ -208,7 +208,7 @@ ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master)
 {
 }
 
-GeneralOpData::GeneralOpData(OpStart start, json_t** error, maxbase::Duration time_remaining)
+GeneralOpData::GeneralOpData(OpStart start, mxb::Json& error, maxbase::Duration time_remaining)
     : start(start)
     , error_out(error)
     , time_remaining(time_remaining)

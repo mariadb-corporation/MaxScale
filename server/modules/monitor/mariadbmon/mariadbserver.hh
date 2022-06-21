@@ -366,7 +366,7 @@ public:
      * @param error_out Error output
      * @return True if all SLAVESIDE_DISABLED events were enabled
      */
-    bool enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out);
+    bool enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, mxb::Json& error_out);
 
     /**
      * Disable any "ENABLED" events. Event scheduler is not touched.
@@ -375,7 +375,7 @@ public:
      * @param error_out Error output
      * @return True if all ENABLED events were disabled
      */
-    bool disable_events(BinlogMode binlog_mode, json_t** error_out);
+    bool disable_events(BinlogMode binlog_mode, mxb::Json& error_out);
 
     /**
      * Stop and delete all slave connections.
@@ -643,7 +643,7 @@ private:
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                 std::string* errmsg_out);
 
-    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, mxb::Json& error_out);
     bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
 
     struct ChangeMasterCmd
@@ -655,7 +655,7 @@ private:
 
     bool update_enabled_events();
 
-    bool alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out);
+    bool alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, mxb::Json& error_out);
     void warn_event_scheduler();
     bool events_foreach(EventManipulator& func, json_t** error_out);
     bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);

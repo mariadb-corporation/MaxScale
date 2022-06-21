@@ -287,10 +287,10 @@ class GeneralOpData
 {
 public:
     OpStart           start {OpStart::MANUAL};  // How operation was started
-    json_t** const    error_out;                // Json error output
+    mxb::Json&        error_out;                // Json error output
     maxbase::Duration time_remaining;           // How much time remains to complete the operation
 
-    GeneralOpData(OpStart start, json_t** error, maxbase::Duration time_remaining);
+    GeneralOpData(OpStart start, mxb::Json& error, maxbase::Duration time_remaining);
 };
 
 // Operation data which concerns a single server

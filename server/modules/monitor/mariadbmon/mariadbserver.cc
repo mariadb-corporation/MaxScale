@@ -588,7 +588,7 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
     bool time_is_up = false;    // Check at least once.
     bool gtid_reached = false;
     bool error = false;
-    json_t** error_out = op.error_out;
+    auto& error_out = op.error_out;
 
     Duration sleep_time(200ms);     // How long to sleep before next iteration. Incremented slowly.
     StopWatch timer;
@@ -623,14 +623,14 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
         else
         {
             error = true;
-            PRINT_MXS_JSON_ERROR(error_out, "Failed to update gtid on '%s' while waiting for catchup: %s",
-                                 name(), error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, "Failed to update gtid on '%s' while waiting for catchup: %s",
+                             name(), error_msg.c_str());
         }
     }
 
     if (!error && !gtid_reached)
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Slave catchup timed out on slave '%s'.", name());
+        PRINT_JSON_ERROR(error_out, "Slave catchup timed out on slave '%s'.", name());
     }
     return gtid_reached;
 }
@@ -1226,7 +1226,8 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
     return NULL;
 }
 
-bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out)
+bool
+MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, mxb::Json& error_out)
 {
     EventStatusMapper mapper = [&event_names](const EventInfo& event) {
             string rval;
@@ -1240,7 +1241,7 @@ bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& ev
     return alter_events(binlog_mode, mapper, error_out);
 }
 
-bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
+bool MariaDBServer::disable_events(BinlogMode binlog_mode, mxb::Json& error_out)
 {
     EventStatusMapper mapper = [](const EventInfo& event) {
             string rval;
@@ -1263,7 +1264,7 @@ bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
  * @return True if all requested alterations succeeded.
  */
 bool
-MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out)
+MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, mxb::Json& error_out)
 {
     // If the server is rejoining the cluster, no events may be added to binlog. The ALTER EVENT query
     // itself adds events. To prevent this, disable the binlog for this method.
@@ -1274,7 +1275,7 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
         if (!execute_cmd("SET @@session.sql_log_bin=0;", &error_msg))
         {
             const char FMT[] = "Could not disable session binlog on '%s': %s Server events not disabled.";
-            PRINT_MXS_JSON_ERROR(error_out, FMT, name(), error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, FMT, name(), error_msg.c_str());
             return false;
         }
     }
@@ -1298,7 +1299,8 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     bool rval = false;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
     // disable fails.
-    if (events_foreach(alterer, error_out))
+    json_t* tmp = error_out.get_json();
+    if (events_foreach(alterer, &tmp))
     {
         if (target_events > 0)
         {
@@ -1478,7 +1480,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
 {
     mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER
                || type == OperationType::UNDO_DEMOTION);
-    json_t** const error_out = general.error_out;
+    auto& error_out = general.error_out;
 
     StopWatch timer;
     bool stopped = false;
@@ -1489,9 +1491,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         mxb_assert(master_conn);
         if (master_conn == NULL)
         {
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "'%s' is not a slave of '%s' and cannot be promoted to its place.",
-                                 name(), demotion_target->name());
+            PRINT_JSON_ERROR(error_out, "'%s' is not a slave of '%s' and cannot be promoted to its place.",
+                             name(), demotion_target->name());
             return false;
         }
 
@@ -1534,7 +1535,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                     if (!events_enabled)
                     {
                         promotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out, "Failed to enable events on '%s'.", name());
+                        PRINT_JSON_ERROR(error_out, "Failed to enable events on '%s'.", name());
                     }
                 }
 
@@ -1542,14 +1543,14 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 const string& sql_file = m_settings.promotion_sql_file;
                 if (!promotion_error && !sql_file.empty())
                 {
-                    bool file_ran_ok = run_sql_from_file(sql_file, error_out);
+                    json_t* tmp = error_out.get_json();
+                    bool file_ran_ok = run_sql_from_file(sql_file, &tmp);
                     general.time_remaining -= timer.restart();
                     if (!file_ran_ok)
                     {
                         promotion_error = true;
-                        PRINT_MXS_JSON_ERROR(error_out,
-                                             "Execution of file '%s' failed during promotion of server '%s'.",
-                                             sql_file.c_str(), name());
+                        PRINT_JSON_ERROR(error_out, "Execution of file '%s' failed during promotion of "
+                                                    "server '%s'.", sql_file.c_str(), name());
                     }
                 }
             }
@@ -1567,8 +1568,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not copy slave connections from '%s' to '%s'.",
-                                         demotion_target->name(), name());
+                    PRINT_JSON_ERROR(error_out, "Could not copy slave connections from '%s' to '%s'.",
+                                     demotion_target->name(), name());
                 }
             }
             else if (type == OperationType::FAILOVER)
@@ -1579,8 +1580,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not merge slave connections from '%s' to '%s'.",
-                                         demotion_target->name(), name());
+                    PRINT_JSON_ERROR(error_out, "Could not merge slave connections from '%s' to '%s'.",
+                                     demotion_target->name(), name());
                 }
             }
             else if (type == OperationType::UNDO_DEMOTION)
@@ -1591,8 +1592,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not restore slave connections of '%s' when "
-                                                    "reversing demotion.", name());
+                    PRINT_JSON_ERROR(error_out, "Could not restore slave connections of '%s' when "
+                                                "reversing demotion.", name());
                 }
             }
         }
@@ -1604,7 +1605,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
 {
     mxb_assert(demotion.target == this);
     mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::REJOIN);
-    json_t** const error_out = general.error_out;
+    auto& error_out = general.error_out;
     bool success = false;
 
     // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
@@ -1660,7 +1661,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
                 if (!events_disabled)
                 {
                     demotion_error = true;
-                    PRINT_MXS_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
+                    PRINT_JSON_ERROR(error_out, "Failed to disable events on '%s'.", name());
                 }
             }
 
@@ -1668,14 +1669,15 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             const string& sql_file = m_settings.demotion_sql_file;
             if (!demotion_error && !sql_file.empty())
             {
-                bool file_ran_ok = run_sql_from_file(sql_file, error_out);
+                json_t* tmp = error_out.get_json();
+                bool file_ran_ok = run_sql_from_file(sql_file, &tmp);
                 general.time_remaining -= timer.lap();
                 if (!file_ran_ok)
                 {
                     demotion_error = true;
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "Execution of file '%s' failed during demotion of server '%s'.",
-                                         sql_file.c_str(), name());
+                    PRINT_JSON_ERROR(error_out,
+                                     "Execution of file '%s' failed during demotion of server '%s'.",
+                                     sql_file.c_str(), name());
                 }
             }
 
@@ -1689,9 +1691,8 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
                 if (!logs_flushed)
                 {
                     demotion_error = true;
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "Failed to flush binary logs of '%s' during demotion: %s.",
-                                         name(), error_msg.c_str());
+                    PRINT_JSON_ERROR(error_out, "Failed to flush binary logs of '%s' during demotion: %s.",
+                                     name(), error_msg.c_str());
                 }
             }
         }
@@ -1707,8 +1708,8 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             else
             {
                 demotion_error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to update gtid:s of '%s' during demotion: %s.",
-                                     name(), error_msg.c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to update gtid:s of '%s' during demotion: %s.",
+                                 name(), error_msg.c_str());
             }
         }
 
@@ -1719,7 +1720,8 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             // Even this is insufficient, because the server may still be executing the old
             // 'SET GLOBAL read_only=1' query.
             // TODO: add smarter undo, KILL QUERY etc.
-            set_read_only(ReadOnlySetting::DISABLE, 0s, NULL);
+            mxb::Json dummy(mxb::Json::Type::UNDEFINED);
+            set_read_only(ReadOnlySetting::DISABLE, 0s, dummy);
         }
     }
     return success;
@@ -1792,7 +1794,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
  */
 bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove)
 {
-    json_t** error_out = op.error_out;
+    auto& error_out = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     // Take a backup of the soon to be removed connections so they can be compared properly after an update.
@@ -1801,8 +1803,9 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
     {
+        json_t* tmp = error_out.get_json();
         if (!stop_slave_conn(conns_to_remove[i].settings.name, StopMode::RESET_ALL, time_remaining,
-                             error_out))
+                             &tmp))
         {
             stop_slave_error = true;
         }
@@ -1812,7 +1815,7 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool success = false;
     if (stop_slave_error)
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Failed to remove slave connection(s) from '%s'.", name());
+        PRINT_JSON_ERROR(error_out, "Failed to remove slave connection(s) from '%s'.", name());
     }
     else
     {
@@ -1845,22 +1848,21 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
             else
             {
                 // This means server is really bugging.
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "'%s' still has %i removed slave connections, "
-                                     "RESET SLAVE must have failed.", name(), found);
+                PRINT_JSON_ERROR(error_out, "'%s' still has %i removed slave connections, RESET SLAVE "
+                                            "must have failed.", name(), found);
             }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Failed to update slave connections of '%s': %s",
-                                 name(), error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, "Failed to update slave connections of '%s': %s",
+                             name(), error_msg.c_str());
         }
     }
     time_remaining -= timer.lap();
     return success;
 }
 
-bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, json_t** error_out)
+bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, mxb::Json& error_out)
 {
     int new_val = (setting == ReadOnlySetting::ENABLE) ? 1 : 0;
     string cmd = string_printf("SET GLOBAL read_only=%i;", new_val);
@@ -1869,9 +1871,8 @@ bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration tim
     if (!success)
     {
         string target_str = (setting == ReadOnlySetting::ENABLE) ? "enable" : "disable";
-        PRINT_MXS_JSON_ERROR(error_out,
-                             "Failed to %s read_only on '%s': %s",
-                             target_str.c_str(), name(), error_msg.c_str());
+        PRINT_JSON_ERROR(error_out, "Failed to %s read_only on '%s': %s", target_str.c_str(), name(),
+                         error_msg.c_str());
     }
     return success;
 }
@@ -2145,14 +2146,15 @@ bool
 MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
                                             const MariaDBServer* new_master)
 {
-    auto error_out = op.error_out;
+    auto& error_out = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     bool success = false;
 
     // First, just stop the slave connection.
     string conn_name = conn_settings.name;
-    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, error_out);
+    json_t* tmp = error_out.get_json();
+    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, &tmp);
     time_remaining -= timer.restart();
     if (stopped)
     {
@@ -2175,18 +2177,15 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "%s could not be started: %s",
-                                     modified_settings.to_string().c_str(), error_msg.c_str());
+                PRINT_JSON_ERROR(error_out, "%s could not be started: %s",
+                                 modified_settings.to_string().c_str(), error_msg.c_str());
             }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out,
-                                 "%s could not be redirected to %s: %s",
-                                 conn_settings.to_string().c_str(),
-                                 modified_settings.master_endpoint.to_string().c_str(),
-                                 error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, "%s could not be redirected to %s: %s",
+                             conn_settings.to_string().c_str(),
+                             modified_settings.master_endpoint.to_string().c_str(), error_msg.c_str());
         }
     }   // 'stop_slave_conn' prints its own errors
     return success;
@@ -2326,7 +2325,7 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 {
     bool error = false;
     Duration time_remaining = op.time_remaining;
-    auto error_out = op.error_out;
+    auto& error_out = op.error_out;
     // Only select unique rows...
     string get_ids_query = "SELECT DISTINCT * FROM ("
         // select conn id and username from live connections ...
@@ -2359,8 +2358,8 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
             else
             {
                 error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
-                                     conn_id, user.c_str(), error_msg.c_str());
+                PRINT_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
+                                 conn_id, user.c_str(), error_msg.c_str());
             }
             time_remaining -= timer.split();
         }
@@ -2379,7 +2378,7 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
         else
         {
             error = true;
-            PRINT_MXS_JSON_ERROR(error_out, "Could not query connected super-users: %s", error_msg.c_str());
+            PRINT_JSON_ERROR(error_out, "Could not query connected super-users: %s", error_msg.c_str());
         }
     }
     return !error;

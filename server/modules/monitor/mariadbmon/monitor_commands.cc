@@ -1703,8 +1703,6 @@ bool RebuildServer::start_replication()
     // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
     // source server.
     MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
-    json_t* dummy {nullptr};    // TODO: use mxb::Json in GeneralOpData
-    GeneralOpData op(OpStart::MANUAL, &dummy, ssh_base_timeout);
     EndPoint ep(repl_master->server->address(), repl_master->server->port());
     SlaveStatus::Settings slave_sett("", ep, m_target->name());
 
@@ -1712,6 +1710,7 @@ bool RebuildServer::start_replication()
     auto res = m_target->ping_or_connect();
     if (Monitor::connection_is_ok(res))
     {
+        GeneralOpData op(OpStart::MANUAL, m_result.output, ssh_base_timeout);
         if (m_target->create_start_slave(op, slave_sett))
         {
             // Wait a bit and then check that replication works. This only affects the log message. Simplified
