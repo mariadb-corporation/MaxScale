@@ -202,8 +202,14 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
     uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(option);
 
-    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
-        || !m_config.require_fully_parsed)
+    auto parse_result = qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto op = qc_get_operation(pPacket);
+
+    if (op == QUERY_OP_EXPLAIN)
+    {
+        rv = true;
+    }
+    else if (parse_result == QC_QUERY_PARSED || !m_config.require_fully_parsed)
     {
         if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
@@ -244,8 +250,14 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(option);
 
-    if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
-        || !m_config.require_fully_parsed)
+    auto parse_result = qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS);
+    auto op = qc_get_operation(pPacket);
+
+    if (op == QUERY_OP_EXPLAIN)
+    {
+        rv = true;
+    }
+    else if (parse_result == QC_QUERY_PARSED || !m_config.require_fully_parsed)
     {
         rv = check_query(pPacket);
     }
