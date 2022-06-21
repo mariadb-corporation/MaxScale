@@ -355,7 +355,7 @@ public:
      * @param error_out Error output
      * @return True if file was read and all commands were completed successfully
      */
-    bool run_sql_from_file(const std::string& path, json_t** error_out);
+    bool run_sql_from_file(const std::string& path, mxb::Json& error_out);
 
     /**
      * Enable any "SLAVESIDE_DISABLED" or "DISABLED events. Event scheduler is not touched. Only events
@@ -591,7 +591,7 @@ public:
     const EventList& new_custom_events() const override;
 
 private:
-    using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
+    using EventManipulator = std::function<void (const EventInfo& event, mxb::Json& error_out)>;
     using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
 
     enum class StopMode
@@ -634,7 +634,7 @@ private:
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
 
     bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
-                         json_t** error_out);
+                         mxb::Json& error_out);
 
     bool execute_cmd_ex(const std::string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
                         std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
@@ -657,8 +657,8 @@ private:
 
     bool alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, mxb::Json& error_out);
     void warn_event_scheduler();
-    bool events_foreach(EventManipulator& func, json_t** error_out);
-    bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);
+    bool events_foreach(EventManipulator& func, mxb::Json& error_out);
+    bool alter_event(const EventInfo& event, const std::string& target_status, mxb::Json& error_out);
 
     int64_t conn_id() const;
     void    clear_locks_info();

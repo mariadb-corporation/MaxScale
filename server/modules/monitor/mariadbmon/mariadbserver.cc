@@ -797,7 +797,7 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out
     return can_replicate;
 }
 
-bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
+bool MariaDBServer::run_sql_from_file(const string& path, mxb::Json& error_out)
 {
     MYSQL* conn = con;
     bool error = false;
@@ -813,10 +813,8 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
             std::getline(sql_file, line);
             if (sql_file.bad())
             {
-                PRINT_MXS_JSON_ERROR(error_out,
-                                     "Error when reading sql text file '%s': '%s'.",
-                                     path.c_str(),
-                                     mxb_strerror(errno));
+                PRINT_JSON_ERROR(error_out, "Error when reading sql text file '%s': '%s'.", path.c_str(),
+                                 mxb_strerror(errno));
                 error = true;
             }
             // Skip empty lines and comment lines
@@ -834,12 +832,9 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out,
-                                         "Failed to execute sql from text file '%s'. Query: '%s'. "
-                                         "Error: '%s'.",
-                                         path.c_str(),
-                                         line.c_str(),
-                                         mysql_error(conn));
+                    PRINT_JSON_ERROR(error_out, "Failed to execute sql from text file '%s'. Query: '%s'. "
+                                                "Error: '%s'.", path.c_str(), line.c_str(),
+                                     mysql_error(conn));
                     error = true;
                 }
             }
@@ -848,7 +843,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Could not open sql text file '%s'.", path.c_str());
+        PRINT_JSON_ERROR(error_out, "Could not open sql text file '%s'.", path.c_str());
         error = true;
     }
     return !error;
@@ -1284,7 +1279,7 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     int events_altered = 0;
     // Helper function which alters an event depending on the mapper-function.
     EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
-                                                                                json_t** error_out) {
+                                                                                mxb::Json& error_out) {
             string target_state = mapper(event);
             if (!target_state.empty())
             {
@@ -1299,8 +1294,7 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     bool rval = false;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
     // disable fails.
-    json_t* tmp = error_out.get_json();
-    if (events_foreach(alterer, &tmp))
+    if (events_foreach(alterer, error_out))
     {
         if (target_events > 0)
         {
@@ -1358,7 +1352,7 @@ void MariaDBServer::warn_event_scheduler()
  * @return True if event information could be read from information_schema.EVENTS. The return value does not
  * depend on the manipulator function.
  */
-bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
+bool MariaDBServer::events_foreach(EventManipulator& func, mxb::Json& error_out)
 {
     string error_msg;
     // Get info about all scheduled events on the server.
@@ -1401,7 +1395,7 @@ bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
  * @param error_out Error output
  * @return True if status was set
  */
-bool MariaDBServer::alter_event(const EventInfo& event, const string& target_status, json_t** error_out)
+bool MariaDBServer::alter_event(const EventInfo& event, const string& target_status, mxb::Json& error_out)
 {
     bool rval = false;
     string error_msg;
@@ -1441,7 +1435,7 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     else
     {
         const char FMT[] = "Could not alter event '%s' on server '%s': %s";
-        PRINT_MXS_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
+        PRINT_JSON_ERROR(error_out, FMT, event.name.c_str(), name(), error_msg.c_str());
     }
     return rval;
 }
@@ -1543,8 +1537,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 const string& sql_file = m_settings.promotion_sql_file;
                 if (!promotion_error && !sql_file.empty())
                 {
-                    json_t* tmp = error_out.get_json();
-                    bool file_ran_ok = run_sql_from_file(sql_file, &tmp);
+                    bool file_ran_ok = run_sql_from_file(sql_file, error_out);
                     general.time_remaining -= timer.restart();
                     if (!file_ran_ok)
                     {
@@ -1669,8 +1662,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             const string& sql_file = m_settings.demotion_sql_file;
             if (!demotion_error && !sql_file.empty())
             {
-                json_t* tmp = error_out.get_json();
-                bool file_ran_ok = run_sql_from_file(sql_file, &tmp);
+                bool file_ran_ok = run_sql_from_file(sql_file, error_out);
                 general.time_remaining -= timer.lap();
                 if (!file_ran_ok)
                 {
@@ -1737,7 +1729,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
  * @return True on success
  */
 bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode, Duration time_limit,
-                                    json_t** error_out)
+                                    mxb::Json& error_out)
 {
     /* STOP SLAVE is a bit problematic, since sometimes it seems to take several seconds to complete.
      * If this time is greater than the connection read timeout, connector-c will cut the connection/
@@ -1766,8 +1758,8 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to reset slave connection on '%s': %s",
-                                     name(), error_msg.c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to reset slave connection on '%s': %s", name(),
+                                 error_msg.c_str());
             }
         }
         else
@@ -1777,8 +1769,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Failed to stop slave connection on '%s': %s",
-                             name(), error_msg.c_str());
+        PRINT_JSON_ERROR(error_out, "Failed to stop slave connection on '%s': %s", name(), error_msg.c_str());
     }
     return rval;
 }
@@ -1803,9 +1794,8 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
     {
-        json_t* tmp = error_out.get_json();
         if (!stop_slave_conn(conns_to_remove[i].settings.name, StopMode::RESET_ALL, time_remaining,
-                             &tmp))
+                             error_out))
         {
             stop_slave_error = true;
         }
@@ -2153,8 +2143,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
 
     // First, just stop the slave connection.
     string conn_name = conn_settings.name;
-    json_t* tmp = error_out.get_json();
-    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, &tmp);
+    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, error_out);
     time_remaining -= timer.restart();
     if (stopped)
     {
