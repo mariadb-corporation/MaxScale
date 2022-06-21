@@ -62,16 +62,15 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
-    json_t* tmp {nullptr};
-    auto error_out = &tmp;
+    auto& output = rval.output;
     if (!lock_status_is_ok())
     {
-        print_no_locks_error(rval.output);
+        print_no_locks_error(output);
         return rval;
     }
 
     bool switchover_done = false;
-    auto op = switchover_prepare(new_master, current_master, Log::ON, OpStart::MANUAL, error_out);
+    auto op = switchover_prepare(new_master, current_master, Log::ON, OpStart::MANUAL, output);
     if (op)
     {
         switchover_done = switchover_perform(*op);
@@ -83,16 +82,15 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
         {
             string msg = string_printf(SWITCHOVER_FAIL,
                                        op->demotion.target->name(), op->promotion.target->name());
-            PRINT_MXS_JSON_ERROR(error_out, "%s", msg.c_str());
+            PRINT_JSON_ERROR(output, "%s", msg.c_str());
             delay_auto_cluster_ops();
         }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Switchover cancelled.");
+        PRINT_JSON_ERROR(output, "Switchover cancelled.");
     }
     rval.success = switchover_done;
-    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
@@ -103,14 +101,13 @@ mon_op::Result MariaDBMonitor::manual_failover()
     mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
+    auto& output = rval.output;
     if (!lock_status_is_ok())
     {
-        print_no_locks_error(rval.output);
+        print_no_locks_error(output);
         return rval;
     }
 
-    json_t* tmp {nullptr};
-    auto output = &tmp;
     bool failover_done = false;
     auto op = failover_prepare(Log::ON, OpStart::MANUAL, output);
     if (op)
@@ -122,16 +119,15 @@ mon_op::Result MariaDBMonitor::manual_failover()
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(output, FAILOVER_FAIL,
-                                 op->demotion_target->name(), op->promotion.target->name());
+            PRINT_JSON_ERROR(output, FAILOVER_FAIL, op->demotion_target->name(),
+                             op->promotion.target->name());
         }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(output, "Failover cancelled.");
+        PRINT_JSON_ERROR(output, "Failover cancelled.");
     }
     rval.success = failover_done;
-    rval.output = mxb::Json(tmp, mxb::Json::RefType::STEAL);
     return rval;
 }
 
@@ -1143,7 +1139,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
  */
 MariaDBServer*
 MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
-                                        int64_t* gtid_domain_out, json_t** error_out)
+                                        int64_t* gtid_domain_out, mxb::Json& error_out)
 {
     /* Select a new master candidate. Selects the one with the latest event in relay log.
      * If multiple slaves have same number of events, select the one with most processed events. */
@@ -1394,7 +1390,7 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
  * @return Operation object if cluster is suitable and failover may proceed, or NULL on error
  */
 unique_ptr<MariaDBMonitor::FailoverParams>
-MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out)
+MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out)
 {
     // This function resembles 'switchover_prepare', but does not yet support manual selection.
 
@@ -1456,7 +1452,7 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out
             // failover, it's best to just try again during the next monitor iteration. The difference
             // to a typical prepare-fail is that the relay log status should be logged
             // repeatedly since it is likely to change continuously.
-            if (error_out || log_mode == Log::ON)
+            if (start == OpStart::MANUAL || log_mode == Log::ON)
             {
                 const char unproc_fmt[] =
                     "The relay log of '%s' has %" PRIu64
@@ -1464,7 +1460,8 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out
                 string unproc_events = string_printf(unproc_fmt, promotion_target->name(), events,
                                                      slave_conn->gtid_io_pos.to_string().c_str(),
                                                      promotion_target->m_gtid_current_pos.to_string().c_str());
-                if (error_out)
+
+                if (start == OpStart::MANUAL)
                 {
                     /* Print a bit more helpful error for the user, goes to log too.
                      * This should be a very rare occurrence: either the dba managed to start failover
@@ -1475,7 +1472,7 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out
                         "%s To avoid data loss, failover should be postponed until "
                         "the log has been processed. Please try again later.";
                     string error_msg = string_printf(wait_relay_log, unproc_events.c_str());
-                    PRINT_MXS_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                    PRINT_JSON_ERROR(error_out, "%s", error_msg.c_str());
                 }
                 else if (log_mode == Log::ON)
                 {
@@ -1493,7 +1490,8 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, json_t** error_out
             bool promoting_to_master = (demotion_target == m_master);
             ServerOperation promotion(promotion_target, promoting_to_master,
                                       demotion_target->m_slave_status, demotion_target->m_enabled_events);
-            GeneralOpData general(start, error_out, time_limit);
+            json_t* tmp = error_out.get_json();
+            GeneralOpData general(start, &tmp, time_limit);
             rval.reset(new FailoverParams(promotion, demotion_target, general));
         }
     }
@@ -1570,7 +1568,8 @@ void MariaDBMonitor::handle_auto_failover()
             {
                 // Failover is required, but first we should check if preconditions are met.
                 Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-                auto op = failover_prepare(log_mode, OpStart::AUTO, NULL);
+                mxb::Json dummy(mxb::Json::Type::UNDEFINED);
+                auto op = failover_prepare(log_mode, OpStart::AUTO, dummy);
                 if (op)
                 {
                     m_warn_failover_precond = true;
@@ -1702,7 +1701,7 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
  */
 unique_ptr<MariaDBMonitor::SwitchoverParams>
 MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_server, Log log_mode,
-                                   OpStart start, json_t** error_out)
+                                   OpStart start, mxb::Json& error_out)
 {
     // Check that both servers are ok if specified, or autoselect them. Demotion target must be checked
     // first since the promotion target depends on it.
@@ -1801,7 +1800,8 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
         ServerOperation demotion(demotion_target, master_swap, promotion_target->m_slave_status,
                                  EventNameSet()    /* unused */);
-        GeneralOpData general(start, error_out, time_limit);
+        json_t* tmp = error_out.get_json();
+        GeneralOpData general(start, &tmp, time_limit);
         rval.reset(new SwitchoverParams(promotion, demotion, general));
     }
     return rval;
@@ -1877,7 +1877,8 @@ void MariaDBMonitor::handle_low_disk_space_master()
         // Looks like the master should be swapped out. Before trying it, check if there is even
         // a likely valid slave to swap to.
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
-        auto op = switchover_prepare(NULL, m_master->server, log_mode, OpStart::AUTO, NULL);
+        mxb::Json dummy(mxb::Json::Type::UNDEFINED);
+        auto op = switchover_prepare(NULL, m_master->server, log_mode, OpStart::AUTO, dummy);
         if (op)
         {
             m_warn_switchover_precond = true;
@@ -1940,7 +1941,7 @@ void MariaDBMonitor::handle_auto_rejoin()
  * @return True if gtid is used
  */
 bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
-                                            int64_t cluster_gtid_domain, json_t** error_out)
+                                            int64_t cluster_gtid_domain, mxb::Json& error_out)
 {
     bool gtid_domain_ok = false;
     if (cluster_gtid_domain == GTID_DOMAIN_UNKNOWN)

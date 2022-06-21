@@ -570,8 +570,8 @@ private:
                                                 maxbase::Duration* event_age_out,
                                                 maxbase::Duration* delay_out);
     std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
-                                                         Log log_mode, OpStart start, json_t** error_out);
-    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, json_t** error_out);
+                                                         Log log_mode, OpStart start, mxb::Json& error_out);
+    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out);
 
     bool switchover_perform(SwitchoverParams& operation);
     bool failover_perform(FailoverParams& op);
@@ -584,13 +584,13 @@ private:
 
     // Methods used by failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
-                                           int64_t* gtid_domain_out, json_t** error_out);
+                                           int64_t* gtid_domain_out, mxb::Json& error_out);
     bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              const MariaDBServer* demotion_target, uint32_t gtid_domain,
                              std::string* reason_out = NULL);
     bool server_is_excluded(const MariaDBServer* server);
     bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
-                                int64_t cluster_gtid_domain, json_t** error_out);
+                                int64_t cluster_gtid_domain, mxb::Json& error_out);
     int64_t guess_gtid_domain(MariaDBServer* demotion_target, const ServerArray& candidates,
                               int* id_missing_out) const;
 

@@ -36,7 +36,7 @@
 #define PRINT_ERROR_IF(log_mode, err_out, format, ...) \
     if (log_mode == Log::ON) \
     { \
-        PRINT_MXS_JSON_ERROR(err_out, format, ##__VA_ARGS__); \
+        PRINT_JSON_ERROR(err_out, format, ##__VA_ARGS__); \
     } \
 
 #define PRINT_JSON_ERROR(err_out, format, ...) \
