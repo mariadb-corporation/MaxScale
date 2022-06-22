@@ -488,6 +488,7 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
     rv.salted_pwd_sha1_b64 = salted_pwd_sha1_b64;
     rv.salt_sha256_b64 = salt_sha256_b64;
     rv.salted_pwd_sha256_b64 = salted_pwd_sha256_b64;
+    rv.pwd_sha1_b64 = pwd_sha1_b64;
     rv.uuid = zUuid;
 
     return rv;
