@@ -61,11 +61,8 @@ Encrypt a MaxScale plaintext password using the encryption key in the key file
                        for the password.
                      If '-i' is specified, a single argument is assumed to be the path
                      and two arguments is treated like an error.
-  -k, --keystore     Decrypt an encrypted keystore file . If used, the PATH is interpreted
-                     as a path to the encrypted keystore file given. The key given for PASSWORD
-                     must be formatted as a hexdecimal string.
 
-  PATH      The key file directory (default: '%s') or the keystore file if --keystore is used.
+  PATH      The key file directory (default: '%s').
   PASSWORD  The password to encrypt or decrypt. If --interactive is used, the password is read from stdin.
 )";
 
@@ -129,47 +126,6 @@ bool read_password(string* pPassword)
     return rv;
 }
 
-int decrypt_keystore(std::string key, std::string filepath)
-{
-    int rc = EXIT_FAILURE;
-    mxb::trim(key);
-
-    switch (key.size())
-    {
-    case 16 * 2:
-    case 24 * 2:
-    case 32 * 2:
-        if (auto [data, ferr] = mxb::load_file<std::vector<uint8_t>>(filepath); ferr.empty())
-        {
-            if (auto raw_key = mxs::from_hex(key); !raw_key.empty())
-            {
-                mxs::KeyManager::MasterKeyBase master_key(raw_key);
-
-                if (auto [ok, plain] = master_key.decrypt(data); ok)
-                {
-                    std::cout.write((const char*)plain.data(), plain.size());
-                    std::cout << std::endl;
-                    rc = EXIT_SUCCESS;
-                }
-            }
-            else
-            {
-                printf("Invalid hexadecimal string\n");
-            }
-        }
-        else
-        {
-            printf("Error: %s\n", ferr.c_str());
-        }
-        break;
-
-    default:
-        printf("Invalid encryption key size: %ld\n", key.size());
-        break;
-    }
-
-    return rc;
-}
 
 int main(int argc, char** argv)
 {
@@ -189,7 +145,7 @@ int main(int argc, char** argv)
     bool keystore = false;
 
     int c;
-    while ((c = getopt_long(argc, argv, "hdik", options, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "hdi", options, NULL)) != -1)
     {
         switch (c)
         {
@@ -203,10 +159,6 @@ int main(int argc, char** argv)
 
         case 'i':
             interactive = true;
-            break;
-
-        case 'k':
-            keystore = true;
             break;
 
         default:
@@ -268,11 +220,6 @@ int main(int argc, char** argv)
     }
 
     int rval = EXIT_FAILURE;
-
-    if (keystore)
-    {
-        return decrypt_keystore(input, path);
-    }
 
     string filepath = path;
     filepath.append("/").append(SECRETS_FILENAME);

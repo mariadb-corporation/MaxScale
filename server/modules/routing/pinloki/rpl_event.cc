@@ -645,7 +645,7 @@ std::unique_ptr<mxq::EncryptCtx> create_encryption_ctx(const std::string& key_id
     else if (auto key_manager = mxs::key_manager())
     {
         auto start_encryption = event.start_encryption_event();
-        auto [ok, key] = key_manager->key(key_id, start_encryption.key_version);
+        auto [ok, version, key] = key_manager->get_key(key_id, start_encryption.key_version);
 
         if (!ok)
         {

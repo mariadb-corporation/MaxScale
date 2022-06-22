@@ -294,7 +294,7 @@ void FileWriter::write_encrypted_to_file(maxsql::RplEvent& rpl_event)
 
         if (auto key_manager = mxs::key_manager())
         {
-            auto [ok, vers, key] = key_manager->latest_key(key_id);
+            auto [ok, vers, key] = key_manager->get_key(key_id);
 
             if (ok)
             {

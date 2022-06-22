@@ -74,13 +74,6 @@ public:
         check_contents("test.t1", case2);
         check_contents("test.t2", case3);
 
-        test.tprintf("Key rotation");
-        test.check_maxctrl("rotate encryption");
-
-        query("INSERT INTO test.t1 VALUES ('" + case4 + "')");
-        sync_all();
-        check_contents("test.t1", case4);
-
         test.tprintf("Key reloading");
         test.check_maxctrl("reload encryption");
 

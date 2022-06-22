@@ -20,7 +20,7 @@ router=binlogrouter
 user=maxskysql
 password=skysql
 cluster=mariadb-cluster
-encryption_key_id=pinloki
+encryption_key_id=1
 select_master=true
 
 [pinloki-listener]

@@ -83,12 +83,11 @@ exports.builder = function (yargs) {
     )
     .command(
       "encryption",
-      "Reload encryption keys and re-encrypt keystore file",
+      "Reload encryption keys",
       function (yargs) {
         return yargs
           .epilog(
-            "This command reloads the encryption keys from their respective " +
-              "key managers and re-encrypts the keystore file with new keys."
+            "This command reloads the encryption keys from their respective key managers."
           )
           .usage("Usage: reload encryption");
       },
