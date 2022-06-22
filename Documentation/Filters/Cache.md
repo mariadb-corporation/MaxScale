@@ -372,7 +372,7 @@ the following circumstances:
   `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
 * The `SELECT` uses system or user variables.
 
-Note that parsing all `SELECT` statements carries a _significant_ performance
+Note that parsing all `SELECT` statements carries a performance
 cost. Please read [performance](#performance) for more details.
 
 #### `cache_in_transactions`
@@ -1255,24 +1255,15 @@ The rules specify that the data of the table `sbtest` should be cached.
 
 ## Performance
 
-Perhaps the most significant factor affecting the performance of the cache is
-whether the statements need to be parsed or not. By default, all statements are
-parsed in order to exclude `SELECT` statements that use non-cacheable functions,
-access non-cacheable variables or refer to system or user variables.
+When the cache filter was introduced, the most significant factor affecting
+the performance of the cache was whether the statements needed to be parsed.
+Initially, all statements were parsed in order to exclude `SELECT` statements
+that use non-cacheable functions, access non-cacheable variables or refer
+to system or user variables. Later, the default value of the `selects` parameter
+was changed to `assume_cacheable`, to maximize the default performance.
 
-If it is known that no such statements are used or if it does not matter if the
-results are cached, that safety measure can be turned off. To do that, add the
-following line to the cache configuration:
-```
-[MyCache]
-...
-selects=assume_cacheable
-```
-
-With that configuration, the cache itself will not cause the statements to be
-parsed.
-
-But note that even with `assume_cacheable` configured, a rule referring
+With the default configuration, the cache itself will not cause the statements
+to be parsed. However, even with `assume_cacheable` configured, a rule referring
 specifically to a _database_, _table_ or _column_ will still cause the
 statement to be parsed.
 
@@ -1302,19 +1293,24 @@ If the rule is instead expressed using a regular expression
     ]
 }
 ```
-then the statement will again not be parsed.
+then the statement will not be parsed.
 
-However, even if regular expression matching performance wise is cheaper
-than parsing, it still carries a cost. In the following is a table with numbers
-giving a rough picture of the relative cost of different approaches.
+However, when the
+[query classifier cache](../Getting-Started/Configuration-Guide.md#query_classifier_cache_size)
+was introduced, the parsing cost was significantly reduced and
+currently the cost for parsing and regular expression matching
+is roughly the same.
+
+In the following is a table with numbers giving a rough picture
+of the relative cost of different approaches.
 
 In the table, _regexp match_ means that the cacheable statements
 were picked out using a rule like
 ```
 {
     "attribute": "query",
-    "op": "like",
-    "value": "FROM dbname"
+    "op": "unlike",
+    "value": "FROM nomatch"
 }
 ```
 while _exact match_ means that the cacheable statements were picked out using a
@@ -1322,23 +1318,33 @@ rule like
 ```
 {
     "attribute": "database",
-    "op": "=",
-    "value": "dbname"
+    "op": "!=",
+    "value": "nomatch"
 }
 ```
 The exact match rule requires all statements to be parsed.
 
-Note that the qps figures are only indicative and that the difference under
-high load may be significantly _greater_.
+As the purpose of the test is to illustrate the overhead of
+different approaches, the rules were formulated so that
+all SELECT statements would match.
+
+Note that these figures were obtained by running sysbench,
+MaxScale and the server in the same computer, so they are
+only indicative.
 
 | `selects`          | Rule           | qps |
 | -------------------| ---------------|-----|
 | `assume_cacheable` | none           | 100 |
-| `assume_cacheable` | _regexp match_ |  98 |
-| `assume_cacheable` | _exact match_  |  60 |
-| `verify_cacheable` | none           |  60 |
-| `verify_cacheable` | _regexp match_ |  58 |
-| `verify_cacheable` | _exact match_  |  58 |
+| `assume_cacheable` | _regexp match_ |  83 |
+| `assume_cacheable` | _exact match_  |  83 |
+| `verify_cacheable` | none           |  80 |
+| `verify_cacheable` | _regexp match_ |  80 |
+| `verify_cacheable` | _exact match_  |  80 |
+
+For comparison, without caching, the the qps is `33`.
+
+As can be seen, due to the query classifier cache there is
+no difference between exact and regex based matching.
 
 ### Summary
 
@@ -1346,6 +1352,7 @@ For maximum performance:
 
 * Arrange the situation so that the default `selects=assume_cacheable`
   can be used, and use _no_ rules.
-* If `selects=assume_cacheable` is used, use _only_ regexp based rules.
-* If `selects=verify_cacheable` has been configured, non-regex based
-  matching can be used.
+
+Otherwise it is mostly a personal preference whether exact or regex
+based rules are used. However, one should always test with real data
+and real queries before choosing one over the other.
