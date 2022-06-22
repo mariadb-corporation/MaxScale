@@ -66,13 +66,29 @@ describe(name, function () {
         return fetched_user;
     }
 
-    async function can_create_user(nosql, db) {
+    async function smoke_test_user(user, pwd, dbName) {
+        var host = test.config.host;
+        var port = test.config.nosql_port;
+        var uri = "mongodb://" + user + ":" + pwd + "@" + host + ":" + port + "/" + dbName;
+
+        var client = new test.mongodb.MongoClient(uri, { useUnifiedTopology: true });
+        await client.connect();
+        var db = await client.db(dbName);
+
+        // This will cause an authentication all the way to the backend using the provided credentials.
+        var coll = await db.command({find: "this_should_not_exist"});
+        client.close();
+    }
+
+    async function can_create_user(nosql, dbPrefix) {
+        var dbName = nosql.dbName();
+
         var user = {
             user: "bob",
             pwd: "bobspwd",
             roles: [
-                {db: "nosql", role: "userAdmin"},
-                {db: "nosql", role: "readWrite"},
+                {db: dbName, role: "userAdmin"},
+                {db: dbName, role: "readWrite"},
             ],
             mechanisms: ["SCRAM-SHA-1", "SCRAM-SHA-256"]
         };
@@ -85,9 +101,11 @@ describe(name, function () {
 
         assert.deepEqual(user, fetched_user);
 
-        var rv = await mariadb.query("SELECT user FROM mysql.user WHERE user = '" + db + "bob'");
+        var rv = await mariadb.query("SELECT user FROM mysql.user WHERE user = '" + dbPrefix + "bob'");
 
         assert.equal(rv.length, 1);
+
+        await smoke_test_user("bob", "bobspwd", dbName);
     }
 
     /*
