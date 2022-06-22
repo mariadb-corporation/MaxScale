@@ -17,6 +17,7 @@ var nosql_port;
 if (!maxscale_host) {
     console.log("The environment variable 'maxscale_000_network' is not set, " +
                 "assuming 127.0.0.1.");
+    maxscale_host="127.0.0.1"
     nosql_port = 17017;
 }
 else
