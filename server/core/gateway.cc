@@ -1493,7 +1493,7 @@ int main(int argc, char** argv)
     this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
-    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p";
+    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p:R:r:";
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     string cnf_file_arg;    /*< conf filename from cmd-line arg */
@@ -2545,6 +2545,10 @@ static bool handle_path_arg(std::string* dest, const char* path, const char* arg
         }
         if (arg2)
         {
+            if (tmp.back() != '/')
+            {
+                tmp += '/';
+            }
             tmp += arg2;
         }
 
