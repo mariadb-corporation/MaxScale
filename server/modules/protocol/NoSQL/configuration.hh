@@ -61,7 +61,7 @@ public:
     bool                  authentication_required;
     bool                  authentication_shared;
     std::string           authentication_db;
-    std::string           authentication_key_file;
+    std::string           authentication_key_id;
     std::string           authentication_user;
     std::string           authentication_password;
     bool                  authorization_enabled;
@@ -88,7 +88,7 @@ public:
     static mxs::config::ParamBool                        s_authentication_required;
     static mxs::config::ParamBool                        s_authentication_shared;
     static mxs::config::ParamString                      s_authentication_db;
-    static mxs::config::ParamPath                        s_authentication_key_file;
+    static mxs::config::ParamString                      s_authentication_key_id;
     static mxs::config::ParamString                      s_authentication_user;
     static mxs::config::ParamString                      s_authentication_password;
     static mxs::config::ParamBool                        s_authorization_enabled;

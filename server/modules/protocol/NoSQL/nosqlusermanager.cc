@@ -1345,8 +1345,7 @@ string UserManagerMariaDB::encrypt_data(const mxb::Json& json, const std::string
     {
         if (auto km = mxs::key_manager())
         {
-            // TODO: Add key ID
-            if (auto [ok, vers, key] = km->get_key("nosqlprtocol"); ok)
+            if (auto [ok, vers, key] = km->get_key(m_config.authentication_key_id); ok)
             {
                 data = mxs::encrypt_password(key, data);
 
@@ -1428,8 +1427,7 @@ string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mar
             }
             else if (auto km = mxs::key_manager())
             {
-                // TODO: Add key ID
-                if (auto [ok, vers, key] = km->get_key("nosqlprotocol", version); ok)
+                if (auto [ok, vers, key] = km->get_key(m_config.authentication_key_id, version); ok)
                 {
                     if (key.size() == mxs::SECRETS_CIPHER_BYTES)
                     {

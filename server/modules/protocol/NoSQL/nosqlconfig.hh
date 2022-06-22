@@ -35,7 +35,7 @@ public:
         , authentication_required(config.authentication_required)
         , authentication_shared(config.authentication_shared)
         , authentication_db(config.authentication_db)
-        , authentication_key_file(config.authentication_key_file)
+        , authentication_key_id(config.authentication_key_id)
         , authentication_user(config.authentication_user)
         , authentication_password(config.authentication_password)
         , authorization_enabled(config.authorization_enabled)
@@ -101,7 +101,7 @@ public:
     const bool                 authentication_required;
     const bool                 authentication_shared;
     const std::string          authentication_db;
-    const std::string          authentication_key_file;
+    const std::string          authentication_key_id;
     const std::string          authentication_user;
     const std::string          authentication_password;
     const bool                 authorization_enabled;

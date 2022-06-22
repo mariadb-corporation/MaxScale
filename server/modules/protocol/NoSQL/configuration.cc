@@ -71,13 +71,11 @@ mxs::config::ParamString Configuration::s_authentication_db(
     "What database shared NoSQL user information should be stored in.",
     "nosqlprotocol");
 
-mxs::config::ParamPath Configuration::s_authentication_key_file(
+mxs::config::ParamString Configuration::s_authentication_key_id(
     &nosqlprotocol::specification,
-    "authentication_key_file",
+    "authentication_key_id",
     "If present and non-empty, and if 'authentication_shared' is enabled, then the sensitive "
-    "parts of the NoSQL user data stored in the MariaDB server will be encrypted with the key "
-    "found in this file.",
-    mxs::config::ParamPath::Options::R,
+    "parts of the NoSQL user data stored in the MariaDB server will be encrypted with this key ID.",
     "");
 
 mxs::config::ParamString Configuration::s_authentication_user(
@@ -182,7 +180,7 @@ Configuration::Configuration(const std::string& name, ProtocolModule* pInstance)
     add_native(&Configuration::authentication_required, &s_authentication_required);
     add_native(&Configuration::authentication_shared, &s_authentication_shared);
     add_native(&Configuration::authentication_db, &s_authentication_db);
-    add_native(&Configuration::authentication_key_file, &s_authentication_key_file);
+    add_native(&Configuration::authentication_key_id, &s_authentication_key_id);
     add_native(&Configuration::authentication_user, &s_authentication_user);
     add_native(&Configuration::authentication_password, &s_authentication_password);
     add_native(&Configuration::authorization_enabled, &s_authorization_enabled);
@@ -209,26 +207,28 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
                       "'authentication_password' must be specified.");
             rv = false;
         }
-        else if (auto km = mxs::key_manager(); !km)
+        else if (!this->authentication_key_id.empty())
         {
-            MXB_WARNING("'key_manager' has not been configured, NoSQL user data will be "
-                        "stored in the server without being encrypted.");
-        }
-        // TODO: Add key ID
-        else if (auto [ok, version, key] = km->get_key("nosqlprotocol"); !ok)
-        {
-            MXB_ERROR("Failed to retrieve encryption key.");
-            rv = false;
-        }
-        else if (key.size() != mxs::SECRETS_CIPHER_BYTES)
-        {
-            MXB_ERROR("Configured encryption key is not a 256-bit key.");
-            rv = false;
-        }
-        else
-        {
-            this->encryption_key = std::move(key);
-            this->encryption_key_version = version;
+            if (auto km = mxs::key_manager(); !km)
+            {
+                MXB_ERROR("The 'key_manager' has not been configured, cannot retrieve encryption keys");
+                rv = false;
+            }
+            else if (auto [ok, version, key] = km->get_key(this->authentication_key_id); !ok)
+            {
+                MXB_ERROR("Failed to retrieve encryption key.");
+                rv = false;
+            }
+            else if (key.size() != mxs::SECRETS_CIPHER_BYTES)
+            {
+                MXB_ERROR("Configured encryption key is not a 256-bit key.");
+                rv = false;
+            }
+            else
+            {
+                this->encryption_key = std::move(key);
+                this->encryption_key_version = version;
+            }
         }
     }
 

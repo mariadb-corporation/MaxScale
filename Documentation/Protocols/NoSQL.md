@@ -489,8 +489,9 @@ of which MaxScale instance was used when the user was created.
 
 `nosqlprotocol` also stores in the table the SHA1 of a user's
 password, to be able to authenticate against the MariaDB server.
-Therefore it is **strongly** suggested to provide an authentication
-key with [authentication_key_file](#authentication_key_file) so
+Therefore it is **strongly** suggested to enable encryption key
+management in MaxScale and to provide an authentication
+key ID with [authentication_key_id](#authentication_key_id) so
 that the data will be encrypted.
 
 If shared authentication has been enabled with
@@ -499,8 +500,8 @@ If shared authentication has been enabled with
 [authentication_password](#authentication_password) must also
 be provided. With [authentication_db](#authentication_db) the
 database name can optionally be changed, and with
-[authentication_key_file](#authentication_key_file) an
-encryption key, using which the sensitive data is encrypted,
+[authentication_key_id](#authentication_key_id) an
+encryption key ID, using which the sensitive data is encrypted,
 can optionally be provided.
 
 Note that we make **no** guarantees that the table in which the
@@ -595,21 +596,18 @@ exist, nosqlprotocol will attempt to create it, so either is should be
 manually created or the used specified with `authentication_user` should
 have the grants required to do so.
 
-## `authentication_key_file`
+## `authentication_key_id`
 
-- **Type**: Path
+- **Type**: string
 - **Mandatory**: No
 - **Default**: `""`
 
-The file from which the encryption key, using which the NoSQL account
-information should be encrypted with when stored in the MariaDB server,
-should be read.
+The encryption key ID, using which the NoSQL account information should be
+encrypted with when stored in the MariaDB server. If an encryption key ID is
+given, the encryption key manager in MaxScale must also be enabled.
 
-If a relative path is provided, it is prefixed with the module config
-directory, which by default is `/etc/maxscale.modules.d`.
-
-The key must be specified in hexadecimal format and can be generated,
-for instance, with `openssl rand -hex 32`.
+The encryption key must be a 256-bit key. Keys of shorter length are rejected
+as invalid encryption keys.
 
 ## `authentication_user`
 
