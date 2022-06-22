@@ -82,7 +82,7 @@ std::vector<uint8_t> load_key(const VaultKey::Config& cnf)
 
         if (auto data = js.at(path))
         {
-            rval = mxs::from_hex(data.get_string());
+            rval = mxs::from_hex(mxb::trimmed_copy(data.get_string()));
 
             if (rval.empty())
             {
