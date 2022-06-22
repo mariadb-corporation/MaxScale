@@ -68,6 +68,7 @@ public:
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
     std::vector<uint8_t>  encryption_key;
+    uint32_t              encryption_key_version;
 
     // Can be changed from the NosQL API.
     bool                  auto_create_databases   {true};

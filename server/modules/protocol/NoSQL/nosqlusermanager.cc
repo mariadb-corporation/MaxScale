@@ -1100,10 +1100,7 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
  * UserManagerMariaDB
  */
 
-constexpr int  MARIADB_ENCRYPTION_VERSION = 1;
-constexpr char MARIADB_ENCRYPTION_VERSION_STRING[] = "1";
 constexpr char MARIADB_ENCRYPTION_VERSION_DELIMITER[] = ":";
-constexpr char MARIADB_ENCRYPTION_VERSION_PREFIX[] = "1:";
 
 UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
     : m_name(name)
@@ -1346,15 +1343,29 @@ string UserManagerMariaDB::encrypt_data(const mxb::Json& json, const std::string
 
     if (!m_config.encryption_key.empty())
     {
-        data = mxs::encrypt_password(m_config.encryption_key, data);
+        if (auto km = mxs::key_manager())
+        {
+            // TODO: Add key ID
+            if (auto [ok, vers, key] = km->get_key("nosqlprtocol"); ok)
+            {
+                data = mxs::encrypt_password(key, data);
 
-        if (!data.empty())
-        {
-            data = MARIADB_ENCRYPTION_VERSION_PREFIX + data;
-        }
-        else
-        {
-            MXB_SERROR("Could not encrypt NoSQL data, cannot create/update user '" << mariadb_user << "'.");
+                if (!data.empty())
+                {
+                    data = std::to_string(vers) + MARIADB_ENCRYPTION_VERSION_DELIMITER + data;
+                }
+                else
+                {
+                    MXB_ERROR("Could not encrypt NoSQL data, cannot create/update user '%s'.",
+                              mariadb_user.c_str());
+                }
+            }
+            else
+            {
+                MXB_ERROR("Could not retrieve encryption key, cannot create/update user '%s'.",
+                          mariadb_user.c_str());
+                data.clear();
+            }
         }
     }
 
@@ -1374,26 +1385,18 @@ string::size_type get_encryption_version(const std::string& data,
     {
         string version = data.substr(0, i);
 
-        if (version == MARIADB_ENCRYPTION_VERSION_STRING)
+        char* zEnd;
+        long l = strtol(version.c_str(), &zEnd, 10);
+
+        if (*zEnd == 0)
         {
-            *pVersion = MARIADB_ENCRYPTION_VERSION;
+            *pVersion = l;
             i++;
         }
         else
         {
-            char* zEnd;
-            long l = strtol(version.c_str(), &zEnd, 10);
-
-            if (*zEnd == 0)
-            {
-                *pVersion = l;
-                i++;
-            }
-            else
-            {
-                // Wasn't a number, so can't be encrypted data of correct format, probably just JSON.
-                i = string::npos;
-            }
+            // Wasn't a number, so can't be encrypted data of correct format, probably just JSON.
+            i = string::npos;
         }
     }
     else
@@ -1418,15 +1421,39 @@ string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mar
         // Encryption enabled
         if (i != string::npos)
         {
-            if (version == MARIADB_ENCRYPTION_VERSION)
+            if ((uint32_t)version == m_config.encryption_key_version)
             {
+                // Same version as the current encryption key
                 data = mxs::decrypt_password(m_config.encryption_key, data.substr(i));
+            }
+            else if (auto km = mxs::key_manager())
+            {
+                // TODO: Add key ID
+                if (auto [ok, vers, key] = km->get_key("nosqlprotocol", version); ok)
+                {
+                    if (key.size() == mxs::SECRETS_CIPHER_BYTES)
+                    {
+                        data = mxs::decrypt_password(key, data.substr(i));
+                    }
+                    else
+                    {
+                        MXB_SERROR("Encryption key version '" << version << "' is not a 256-bit key.");
+                        data.clear();
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("The version '%d' of the encrypted data of '%s' is "
+                              "unknown or the key retrieval failed. User will be ignored.",
+                              version, mariadb_user.c_str());
+                    data.clear();
+                }
             }
             else
             {
-                MXB_SERROR("The version '" << version << "' of the encrypted data of '"
-                           << mariadb_user << "' is unknown. User will be ignored.");
+                MXB_ERROR("Found encrypted password but encryption key manager is no longer enabled");
                 data.clear();
+                mxb_assert_message(!true, "KeyManager should not be disabled if encryption_key is not empty");
             }
         }
         else
@@ -1441,9 +1468,8 @@ string UserManagerMariaDB::decrypt_data(std::string data, const std::string& mar
         // Encryption NOT enabled
         if (i != string::npos)
         {
-            MXB_SWARNING("The data of '" << mariadb_user << "' appears to be encrypted, "
-                         "but 'authentication_key_file' has not been specified. The "
-                         "subsequent parsing of it as JSON will fail.");
+            MXB_WARNING("The data of '%s' appears to be encrypted, but 'key_manager' has not been enabled. "
+                        "The subsequent parsing of it as JSON will fail.", mariadb_user.c_str());
         }
     }
 

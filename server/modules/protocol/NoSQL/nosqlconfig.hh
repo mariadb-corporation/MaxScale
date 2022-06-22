@@ -41,6 +41,7 @@ public:
         , authorization_enabled(config.authorization_enabled)
         , id_length(config.id_length)
         , encryption_key(config.encryption_key)
+        , encryption_key_version(config.encryption_key_version)
         , auto_create_databases(config.auto_create_databases)
         , auto_create_tables(config.auto_create_tables)
         , cursor_timeout(config.cursor_timeout)
@@ -106,6 +107,7 @@ public:
     const bool                 authorization_enabled;
     const int64_t              id_length;
     const std::vector<uint8_t> encryption_key;
+    const uint32_t             encryption_key_version;
 
     // Can be changed from the NosQL API.
     bool                                 auto_create_databases;

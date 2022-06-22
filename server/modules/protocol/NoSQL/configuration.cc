@@ -15,6 +15,7 @@
 #include <fstream>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/key_manager.hh>
 #include "protocolmodule.hh"
 
 using namespace std;
@@ -208,62 +209,26 @@ bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParame
                       "'authentication_password' must be specified.");
             rv = false;
         }
-
-        string path = this->authentication_key_file;
-
-        if (path.empty())
+        else if (auto km = mxs::key_manager(); !km)
         {
-            MXB_WARNING("'authentication_key_file' is empty, NoSQL user data will be "
+            MXB_WARNING("'key_manager' has not been configured, NoSQL user data will be "
                         "stored in the server without being encrypted.");
+        }
+        // TODO: Add key ID
+        else if (auto [ok, version, key] = km->get_key("nosqlprotocol"); !ok)
+        {
+            MXB_ERROR("Failed to retrieve encryption key.");
+            rv = false;
+        }
+        else if (key.size() != mxs::SECRETS_CIPHER_BYTES)
+        {
+            MXB_ERROR("Configured encryption key is not a 256-bit key.");
+            rv = false;
         }
         else
         {
-            if (path.front() != '/')
-            {
-                path = string(mxs::module_configdir()) + "/" + path;
-            }
-
-            errno = 0;
-            std::ifstream in(path);
-
-            if (in)
-            {
-                string encryption_key_hex;
-
-                if (std::getline(in, encryption_key_hex))
-                {
-                    size_t required_keylen = mxs::SECRETS_CIPHER_BYTES * 2;
-
-                    if (encryption_key_hex.length() == required_keylen)
-                    {
-                        this->encryption_key.resize(required_keylen / 2);
-
-                        if (!mxs::hex2bin(encryption_key_hex.data(), encryption_key_hex.length(),
-                                          this->encryption_key.data()))
-                        {
-                            MXB_ERROR("Invalid hexadecimal string in '%s'.", path.c_str());
-                            rv = false;
-                        }
-                    }
-                    else
-                    {
-                        MXB_ERROR("The encryption key in '%s' must be a %d character long "
-                                  "hexadecimal string. Use e.g. 'openssl rand -hex 32' for creating it.",
-                                  path.c_str(), (int)required_keylen);
-                        rv = false;
-                    }
-                }
-                else
-                {
-                    MXB_ERROR("Could not read encryption key from '%s'.", path.c_str());
-                    rv = false;
-                }
-            }
-            else
-            {
-                MXB_ERROR("Could not open '%s': (%d), %s", path.c_str(), errno, mxb_strerror(errno));
-                rv = false;
-            }
+            this->encryption_key = std::move(key);
+            this->encryption_key_version = version;
         }
     }
 
