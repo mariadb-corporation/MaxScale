@@ -34,7 +34,6 @@ static mxs::config::ParamInteger s_port(&s_spec, "port", "KMIP server port");
 static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R);
 static mxs::config::ParamPath s_cert(&s_spec, "cert", "Client certificate", Opt::R);
 static mxs::config::ParamPath s_key(&s_spec, "key", "Private key", Opt::R);
-static mxs::config::ParamString s_id(&s_spec, "id", "Key ID");
 
 const char* get_kmip_error(int code)
 {
@@ -181,20 +180,14 @@ std::unique_ptr<mxs::KeyManager::MasterKey> KMIPKey::create(const mxs::ConfigPar
 
     if (s_spec.validate(params) && config.configure(params))
     {
-        auto key = load_key(config.host, config.port, config.ca, config.cert, config.key, config.id);
-
-        if (!key.empty())
-        {
-            rv = std::make_unique<KMIPKey>(std::move(config), std::move(key));
-        }
+        rv = std::make_unique<KMIPKey>(std::move(config));
     }
 
     return rv;
 }
 
-KMIPKey::KMIPKey(Config config, std::vector<uint8_t> key)
-    : mxs::KeyManager::MasterKeyBase(std::move(key))
-    , m_config(std::move(config))
+KMIPKey::KMIPKey(Config config)
+    : m_config(std::move(config))
 {
 }
 
@@ -206,5 +199,11 @@ KMIPKey::Config::Config()
     add_native(&Config::ca, &s_ca);
     add_native(&Config::cert, &s_cert);
     add_native(&Config::key, &s_key);
-    add_native(&Config::id, &s_id);
+}
+
+std::tuple<bool, uint32_t, std::vector<uint8_t>>
+KMIPKey::get_key(const std::string& id, uint32_t version) const
+{
+    auto key = load_key(m_config.host, m_config.port, m_config.ca, m_config.cert, m_config.key, id);
+    return {!key.empty(), MasterKey::NO_VERSIONING, key};
 }

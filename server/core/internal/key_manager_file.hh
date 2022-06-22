@@ -22,10 +22,9 @@ using Opt = mxs::config::ParamPath::Options;
 
 static mxs::config::Specification spec {"key_manager_file", mxs::config::Specification::GLOBAL};
 static mxs::config::ParamPath keyfile {&cfg::spec, "keyfile", "Path to the encryption key", Opt::R};
-static mxs::config::ParamInteger id {&cfg::spec, "id", "Encryption key ID to use", 1};
 }
 
-class FileKey : public mxs::KeyManager::MasterKeyBase
+class FileKey : public mxs::KeyManager::MasterKey
 {
 public:
     static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options)
@@ -44,8 +43,21 @@ public:
         return rv;
     }
 
+    std::tuple<bool, uint32_t, std::vector<uint8_t>>
+    get_key(const std::string& id, uint32_t version) const override final
+    {
+        std::vector<uint8_t> key;
+        auto it = m_keys.find(id);
+
+        if (it != m_keys.end())
+        {
+            key = it->second;
+        }
+
+        return {it != m_keys.end(), MasterKey::NO_VERSIONING, key};
+    }
+
 private:
-    using MasterKeyBase::MasterKeyBase;
 
     class Config : public mxs::config::Configuration
     {
@@ -54,12 +66,16 @@ private:
             : mxs::config::Configuration(cfg::spec.module(), &cfg::spec)
         {
             add_native(&Config::keyfile, &cfg::keyfile);
-            add_native(&Config::id, &cfg::id);
         }
 
         std::string keyfile;
         int64_t     id;
     };
+
+    FileKey(std::map<std::string, std::vector<uint8_t>> keys)
+        : m_keys(std::move(keys))
+    {
+    }
 
     static bool is_hex_key(const std::string& key)
     {
@@ -74,9 +90,9 @@ private:
         return false;
     }
 
-    static std::vector<uint8_t> load_key_file(const Config& config)
+    static std::map<std::string, std::vector<uint8_t>> load_key_file(const Config& config)
     {
-        std::vector<uint8_t> rval;
+        std::map<std::string, std::vector<uint8_t>> rval;
         auto [str, err] = mxb::load_file<std::string>(config.keyfile);
 
         if (!str.empty())
@@ -92,11 +108,15 @@ private:
                 {
                     mxb::trim(tok[0]);
                     mxb::trim(tok[1]);
+                    char* end;
 
-                    if (tok[0] == id && is_hex_key(tok[1]))
+
+                    if (is_hex_key(tok[1]) && strtoul(tok[0].c_str(), &end, 10) && *end == '\0')
                     {
-                        rval = mxs::from_hex(tok[1]);
-                        break;
+                        if (auto key = mxs::from_hex(tok[1]); !key.empty())
+                        {
+                            rval.emplace(std::move(tok[0]), std::move(key));
+                        }
                     }
                 }
             }
@@ -113,4 +133,6 @@ private:
 
         return rval;
     }
+
+    std::map<std::string, std::vector<uint8_t>> m_keys;
 };

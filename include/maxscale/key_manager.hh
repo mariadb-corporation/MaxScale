@@ -42,7 +42,7 @@ public:
         // KMIP key manager, reads keys from a remote KMIP server.
         KMIP,
 
-        // HashiCorp Vault key manager, reads keys from a Vault server.
+        // HashiCorp Vault key manager, reads keys from a Vault server. Supports versioned master keys.
         VAULT,
     };
 
@@ -52,26 +52,22 @@ public:
     public:
         virtual ~MasterKey() = default;
 
-        virtual std::pair<bool, std::vector<uint8_t>> decrypt(std::vector<uint8_t> input) = 0;
+        static constexpr uint32_t NO_VERSIONING = 0;
 
-        virtual std::pair<bool, std::vector<uint8_t>> encrypt(std::vector<uint8_t> input) = 0;
-    };
-
-    // Base implementation of a MasterKey that provides generic AES-GCM encryption.
-    class MasterKeyBase : public MasterKey
-    {
-    public:
-        virtual ~MasterKeyBase() = default;
-
-        MasterKeyBase(std::vector<uint8_t> key);
-
-        std::pair<bool, std::vector<uint8_t>> decrypt(std::vector<uint8_t> input) override;
-
-        std::pair<bool, std::vector<uint8_t>> encrypt(std::vector<uint8_t> input) override;
-
-    protected:
-        std::vector<uint8_t> m_key;
-        mxb::Cipher          m_cipher;
+        /**
+         * Get the master encryption key
+         *
+         * @param id      The key ID to get
+         * @param version The version of the key to return. If the value is 0, the latest version is returned.
+         *                Otherwise the requested version is returned if found.
+         *
+         * @return Whether the key retrieval was successful, the key version and the encryption key itself. If
+         *         the MasterKey implementation does not support key versioning, it must return NO_VERSIONING
+         *         as the version. It must also treat any requests for version other than 0 as missing keys,
+         *         that is, return false as the first value.
+         */
+        virtual std::tuple<bool, uint32_t, std::vector<uint8_t>>
+        get_key(const std::string& id, uint32_t version) const = 0;
     };
 
     /**
@@ -84,51 +80,29 @@ public:
     static bool configure(bool force = false);
 
     /**
-     * Get the latest version of this key
+     * Get master encryption key
      *
-     * @param id The key identifier
+     * Get the encryption key used to encrypt the keyring. This is only available for MasterKey
+     * implementations that provide access the encryption keys. The ones that do not support it will always
+     * return false from this.
      *
-     * @return std::tuple with true, the key version and the encryption key if one was found or created.
-     *         False if an error occured and the key could not be created.
+     * @param id      The key ID to get
+     * @param version The version of the key to use. If the value is 0, the newest key
+     *                is returned. If the MasterKey implementation does not support versioning, any requests
+     *                for versions other than 0 will fail.
+     *
+     * @return Whether key retrieval was successful, the key version and the encryption key itself. MasterKey
+     *         implementations that do not support versioning return MasterKey::NO_VERSIONING as the version.
      */
-    std::tuple<bool, uint32_t, std::vector<uint8_t>> latest_key(const std::string& id);
-
-    /**
-     * Get a specific version of this key
-     *
-     * @param id      The key identifier
-     * @param version The key version
-     *
-     * @return std::pair with true and the encryption key if it was found.
-     *         False if an error occured or the key was not found.
-     */
-    std::pair<bool, std::vector<uint8_t>> key(const std::string& id, uint32_t version);
-
-    /**
-     * Rotate an encryption key
-     *
-     * @param id The identifier for the key to be rotated. If the key is empty, all keys are rotated.
-     *
-     * @return True if key rotation was successful
-     */
-    bool rotate(const std::string& id);
+    std::tuple<bool, uint32_t, std::vector<uint8_t>> get_key(const std::string& id,
+                                                             uint32_t version = 0) const;
 
 private:
-    // Keys mapped to their versions
-    using KeyMap = std::map<uint32_t, std::vector<uint8_t>>;
+    KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key);
 
-    KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key, std::string keystore);
-    bool load_keys();
-    bool save_keys();
-    bool rotate_key(KeyMap& keymap);
-    bool rotate_all_keys();
-
-    std::map<std::string, KeyMap> m_keys;       // Keymaps mapped to key IDs
-    std::unique_ptr<MasterKey>    m_master_key; // MasterKey implementation
-    std::string                   m_keystore;   // Path to the keystore file
-    Type                          m_type;       // Key manager type
-    std::string                   m_options;    // The raw key manager options
-    std::mutex                    m_lock;       // Protects m_keys
+    std::unique_ptr<MasterKey> m_master_key;    // MasterKey implementation
+    Type                       m_type;          // Key manager type
+    std::string                m_options;       // The raw key manager options
 };
 
 /**

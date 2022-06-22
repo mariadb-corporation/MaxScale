@@ -16,10 +16,13 @@
 #include <maxscale/key_manager.hh>
 #include <maxscale/config2.hh>
 
-class KMIPKey : public mxs::KeyManager::MasterKeyBase
+class KMIPKey : public mxs::KeyManager::MasterKey
 {
 public:
     static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options);
+
+    std::tuple<bool, uint32_t, std::vector<uint8_t>>
+    get_key(const std::string& id, uint32_t version) const override final;
 
     class Config : public mxs::config::Configuration
     {
@@ -34,7 +37,7 @@ public:
         std::string id;
     };
 
-    KMIPKey(Config config, std::vector<uint8_t> key);
+    KMIPKey(Config config);
 
 private:
     Config m_config;

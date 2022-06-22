@@ -16,10 +16,13 @@
 #include <maxscale/key_manager.hh>
 #include <maxscale/config2.hh>
 
-class VaultKey : public mxs::KeyManager::MasterKeyBase
+class VaultKey : public mxs::KeyManager::MasterKey
 {
 public:
     static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options);
+
+    std::tuple<bool, uint32_t, std::vector<uint8_t>>
+    get_key(const std::string& id, uint32_t version) const override final;
 
     class Config : public mxs::config::Configuration
     {
@@ -27,16 +30,14 @@ public:
         Config();
 
         std::string token;
-        std::string id;
         std::string host;
         int64_t     port;
         std::string ca;
         std::string mount;
         bool        tls;
-        int64_t     version;
     };
 
-    VaultKey(Config config, std::vector<uint8_t> key);
+    VaultKey(Config config);
 
 private:
     Config m_config;
