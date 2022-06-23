@@ -78,6 +78,12 @@ public:
         test.check_maxctrl("reload encryption");
 
         check_encryption({case1, case2, case3, case4, case5});
+
+        test.tprintf("Encrypted binlogs with bad configuration should not work");
+        test.maxscale->ssh_node_f(true, "sed -i '/encryption_key_id/ d' /etc/maxscale.cnf");
+        test.maxscale->restart();
+        test.expect(maxscale.connect(), "Connection should work: %s", maxscale.error());
+        slave.query("STOP SLAVE; START SLAVE;");
     }
 
     void post() override
@@ -96,5 +102,7 @@ int main(int argc, char** argv)
     test.maxscale->ssh_node_f(true, "(echo -n '1;'; openssl rand -hex 32)|cat > /tmp/encryption.key");
     test.maxscale->start();
 
-    return EncryptionTest(test).result();
+    auto rv = EncryptionTest(test).result();
+    test.maxscale->ssh_node_f(true, "rm /tmp/encryption.key");
+    return rv;
 }
