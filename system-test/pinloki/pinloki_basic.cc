@@ -31,6 +31,13 @@ public:
 
         // Run the diagnostics function, mainly for code coverage.
         test.check_maxctrl("show services");
+
+        // Some simple sanity checks
+        auto rows = maxscale.rows("SHOW MASTER STATUS");
+        test.expect(!rows.empty(), "SHOW MASTER STATUS should return a resultset");
+        test.expect(!maxscale.query("This should not break anything"), "Bad SQL should fail");
+        test.expect(!maxscale.query("CHANGE MASTER 'name' TO MASTER_HOST='localhost'"),
+                    "CHANGE MASTER with connection name should fail");
     }
 
     void post() override
