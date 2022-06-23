@@ -659,12 +659,12 @@ std::string json_dump(const json_t* json, int flags)
     std::string rval;
 
     auto dump_cb = [](const char* buffer, size_t size, void* data) {
-            std::string* str = reinterpret_cast<std::string*>(data);
-            str->append(buffer, size);
-            return 0;
-        };
+        std::string* str = reinterpret_cast<std::string*>(data);
+        str->append(buffer, size);
+        return 0;
+    };
 
-    json_dump_callback(json, dump_cb, &rval, flags);
+    json_dump_callback(json, dump_cb, &rval, flags | JSON_ENCODE_ANY);
     return rval;
 }
 
