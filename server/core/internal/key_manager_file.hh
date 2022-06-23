@@ -97,6 +97,7 @@ private:
 
         if (!str.empty())
         {
+            bool error = false;
             mxb::trim(str);
             std::string id = std::to_string(config.id);
 
@@ -110,20 +111,37 @@ private:
                     mxb::trim(tok[1]);
                     char* end;
 
-
-                    if (is_hex_key(tok[1]) && strtoul(tok[0].c_str(), &end, 10) && *end == '\0')
+                    if (tok[0].empty() || strtol(tok[0].c_str(), &end, 10) <= 0 || *end != '\0')
                     {
-                        if (auto key = mxs::from_hex(tok[1]); !key.empty())
-                        {
-                            rval.emplace(std::move(tok[0]), std::move(key));
-                        }
+                        MXB_ERROR("Key ID is not a number.");
+                        error = true;
                     }
+                    else if (!is_hex_key(tok[1]))
+                    {
+                        MXB_ERROR("Encryption key is not 128, 192 or 256 bits.");
+                        error = true;
+                    }
+                    else if (auto key = mxs::from_hex(tok[1]); key.empty())
+                    {
+                        MXB_ERROR("Invalid hexadecimal data in encryption key.");
+                        error = true;
+                    }
+                    else
+                    {
+                        rval.emplace(std::move(tok[0]), std::move(key));
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("Found incorrectly formatted row.");
+                    error = true;
                 }
             }
 
-            if (rval.empty())
+            if (error)
             {
                 MXB_ERROR("File '%s' does not contain a valid encryption key.", config.keyfile.c_str());
+                rval.clear();
             }
         }
         else if (!err.empty())
