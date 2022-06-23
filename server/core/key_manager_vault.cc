@@ -23,7 +23,7 @@ using Opt = mxs::config::ParamPath::Options;
 
 static mxs::config::Specification s_spec("key_manager_vault", mxs::config::Specification::GLOBAL);
 
-static mxs::config::ParamString s_token(&s_spec, "token", "Authentication token");
+static mxs::config::ParamPassword s_token(&s_spec, "token", "Authentication token");
 static mxs::config::ParamString s_host(&s_spec, "host", "Vault server host", "localhost");
 static mxs::config::ParamInteger s_port(&s_spec, "port", "Vault server port", 8200);
 static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R, "");
