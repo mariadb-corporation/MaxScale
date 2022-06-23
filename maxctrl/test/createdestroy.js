@@ -81,6 +81,18 @@ describe("Create/Destroy Commands", function () {
     return doCommand("create monitor my-monitor mariadbmon not-a-param").should.be.rejected;
   });
 
+  it("will not create monitor with duplicate servers", async function () {
+    await doCommand("create server test_server1 127.0.0.1 6789");
+    await doCommand(
+      "create monitor my-monitor mariadbmon user=maxuser password=maxpwd --servers test_server1 test_server1"
+    ).should.be.rejected;
+    await doCommand(
+      "create monitor my-monitor mariadbmon user=maxuser password=maxpwd --servers test_server1"
+    );
+    await doCommand("destroy monitor my-monitor --force");
+    await doCommand("destroy server test_server1 --force");
+  });
+
   it("create monitor with options", function () {
     return doCommand("unlink monitor MariaDB-Monitor server4")
       .then(() =>

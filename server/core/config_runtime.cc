@@ -830,68 +830,6 @@ bool link_target_to_objects(const std::string& target, StringSet& relations)
     return rval;
 }
 
-bool have_ssl_json(json_t* params)
-{
-    return mxs_json_pointer(params, CN_SSL_KEY)
-           || mxs_json_pointer(params, CN_SSL_CERT)
-           || mxs_json_pointer(params, CN_SSL_CA_CERT);
-}
-
-enum object_type
-{
-    OT_SERVER,
-    OT_LISTENER
-};
-
-bool validate_ssl_json(json_t* params, object_type type)
-{
-    bool rval = true;
-
-    if (runtime_is_string_or_null(params, CN_SSL_KEY)
-        && runtime_is_string_or_null(params, CN_SSL_CERT)
-        && runtime_is_string_or_null(params, CN_SSL_CA_CERT)
-        && runtime_is_string_or_null(params, CN_SSL_VERSION)
-        && runtime_is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
-    {
-        json_t* key = mxs_json_pointer(params, CN_SSL_KEY);
-        json_t* cert = mxs_json_pointer(params, CN_SSL_CERT);
-        json_t* ca_cert = mxs_json_pointer(params, CN_SSL_CA_CERT);
-
-        if (type == OT_LISTENER && !(key && cert && ca_cert))
-        {
-            MXB_ERROR("SSL configuration for listeners requires '%s', '%s' and '%s' parameters",
-                      CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
-            rval = false;
-        }
-        else if (type == OT_SERVER)
-        {
-            if (!ca_cert)
-            {
-                MXB_ERROR("SSL configuration for servers requires at least the '%s' parameter",
-                          CN_SSL_CA_CERT);
-                rval = false;
-            }
-            else if ((key == nullptr) != (cert == nullptr))
-            {
-                MXB_ERROR("Both '%s' and '%s' must be defined", CN_SSL_KEY, CN_SSL_CERT);
-                rval = false;
-            }
-        }
-
-        json_t* ssl_version = mxs_json_pointer(params, CN_SSL_VERSION);
-        const char* ssl_version_str = ssl_version ? json_string_value(ssl_version) : NULL;
-
-        if (ssl_version_str
-            && mxb::ssl_version::from_string(ssl_version_str) == mxb::ssl_version::SSL_UNKNOWN)
-        {
-            MXB_ERROR("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
-            rval = false;
-        }
-    }
-
-    return rval;
-}
-
 bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_json)
 {
     if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL
@@ -1201,8 +1139,7 @@ bool validate_listener_json(json_t* json)
     else if (runtime_is_count_or_null(param, CN_PORT)
              && runtime_is_string_or_null(param, CN_ADDRESS)
              && runtime_is_string_or_null(param, CN_AUTHENTICATOR)
-             && runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS)
-             && (!have_ssl_json(param) || validate_ssl_json(param, OT_LISTENER)))
+             && runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS))
     {
         rval = true;
     }

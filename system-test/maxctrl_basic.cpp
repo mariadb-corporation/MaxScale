@@ -155,6 +155,16 @@ int main(int argc, char** argv)
     rc = test.maxscale->ssh_node_f(false, "cd / && maxctrl list servers");
     test.expect(rc == 0, "Failed to execute a command from the root directory");
 
+    test.tprintf("MXS-4169: Listeners wrongly require ssl_ca_cert when created at runtime");
+    test.check_maxctrl("create service my-test-service readconnroute user=maxskysql password=skysql");
+    std::string home = test.maxscale->access_homedir();
+    test.check_maxctrl(
+        "create listener my-test-service my-test-listener 6789 ssl=true "
+        "ssl_key=" + home + "/certs/server-key.pem "
+        + "ssl_cert=" + home + "/certs/server-cert.pem");
+    test.check_maxctrl("destroy listener my-test-listener");
+    test.check_maxctrl("destroy service my-test-service");
+
     // Also checks that MaxCtrl works correctly when the REST API uses encryption.
     test.tprintf("MXS-4041: Reloading of REST API TLS certificates");
     test_reload_tls(test);

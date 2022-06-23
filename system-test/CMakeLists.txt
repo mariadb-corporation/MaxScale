@@ -252,6 +252,7 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 
 # Basic MaxCtrl test. Also covers the following bugs:
 # MXS-3697: ENOENT: no such file or directory, stat '/~/.maxctrl.cnf' when running commands from the root directory.
+# MXS-4169: Listeners wrongly require ssl_ca_cert during creation
 add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl REPL_BACKEND)
 
 # MXS-2167: Monitors should be able to use extra_port
