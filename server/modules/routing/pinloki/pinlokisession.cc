@@ -12,6 +12,7 @@
  */
 
 #include "pinlokisession.hh"
+#include "rpl_event.hh"
 
 #include <maxscale/modutil.hh>
 #include <maxscale//protocol/mariadb/resultset.hh>
@@ -149,6 +150,10 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         catch (const BinlogReadError& err)
         {
             MXB_ERROR("Binlog read error: %s", err.what());
+        }
+        catch (const mxq::EncryptionError& err)
+        {
+            MXB_ERROR("Encryption error: %s", err.what());
         }
         break;
 
