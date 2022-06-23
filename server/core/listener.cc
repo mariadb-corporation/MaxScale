@@ -982,6 +982,7 @@ bool Listener::listen_shared()
 bool Listener::listen_unique()
 {
     auto open_socket = [this]() {
+            mxb::LogScope scope(name());
             bool rval = false;
             int fd = start_listening(address(), port());
 

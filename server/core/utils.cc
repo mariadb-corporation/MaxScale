@@ -489,13 +489,25 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
             }
             else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
             {
-                MXB_ERROR("Failed to bind on '%s:%u': %d, %s",
-                          host,
-                          port,
-                          errno,
-                          mxb_strerror(errno));
-                close(so);
-                so = -1;
+                // Try again with IP_FREEBIND in case the network is not up yet.
+                int one = 1;
+                if (setsockopt(so, SOL_IP, IP_FREEBIND, &one, sizeof(one)) != 0)
+                {
+                    MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+                    close(so);
+                    so = -1;
+                }
+                else if (bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+                {
+                    MXB_ERROR("Failed to bind on '%s:%u': %d, %s", host, port, errno, mxb_strerror(errno));
+                    close(so);
+                    so = -1;
+                }
+                else
+                {
+                    MXB_WARNING("The interface for '[%s]:%u' might be down or it does not exist. "
+                                "Will listen for connections on it regardless of this.", host, port);
+                }
             }
             else if (type == MXS_SOCKET_NETWORK)
             {
