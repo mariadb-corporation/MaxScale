@@ -31,7 +31,7 @@ static mxs::config::Specification s_spec("key_manager_kmip", mxs::config::Specif
 
 static mxs::config::ParamString s_host(&s_spec, "host", "KMIP server host");
 static mxs::config::ParamInteger s_port(&s_spec, "port", "KMIP server port");
-static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R);
+static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R, "");
 static mxs::config::ParamPath s_cert(&s_spec, "cert", "Client certificate", Opt::R);
 static mxs::config::ParamPath s_key(&s_spec, "key", "Private key", Opt::R);
 
@@ -121,7 +121,11 @@ std::vector<uint8_t> load_key(std::string host, int64_t port, std::string ca,
         }
         else
         {
-            if (SSL_CTX_load_verify_locations(ctx, ca.c_str(), NULL) != 1)
+            if (ca.empty() && SSL_CTX_set_default_verify_paths(ctx) != 0)
+            {
+                MXB_ERROR("Failed to set default CA verify paths: %s", mxb::get_openssl_errors().c_str());
+            }
+            else if (!ca.empty() && SSL_CTX_load_verify_locations(ctx, ca.c_str(), NULL) != 1)
             {
                 MXB_ERROR("Loading the CA file failed: %s", mxb::get_openssl_errors().c_str());
             }
