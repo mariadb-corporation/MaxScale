@@ -162,7 +162,7 @@ module.exports = {
         ])
     },
 
-    transpileDependencies: ['vuetify'],
+    transpileDependencies: ['vuetify', 'vuex-persist'],
 
     outputDir: `${process.env.buildPath}/gui`,
 

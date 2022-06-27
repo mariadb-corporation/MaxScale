@@ -26,7 +26,8 @@ import visualization from './visualization'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
-import createPersistedState from 'vuex-persistedstate'
+import VuexPersistence from 'vuex-persist'
+
 import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
@@ -39,21 +40,23 @@ const plugins = store => {
     store.$cancelAllRequests = cancelAllRequests
 }
 
+const vuexLocalForage = new VuexPersistence({
+    key: 'maxgui',
+    storage: window.localStorage,
+    reducer: state => ({
+        persisted: state.persisted,
+        wke: { worksheets_arr: state.wke.worksheets_arr },
+        queryConn: { sql_conns: state.queryConn.sql_conns },
+        querySession: {
+            query_sessions: state.querySession.query_sessions,
+            active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
+        },
+        user: { logged_in_user: state.user.logged_in_user },
+    }),
+})
+
 const store = new Vuex.Store({
-    plugins: [
-        plugins,
-        createPersistedState({
-            key: 'maxgui',
-            paths: [
-                'persisted',
-                'wke.worksheets_arr',
-                'queryConn.sql_conns',
-                'querySession.query_sessions',
-                'querySession.active_session_by_wke_id_map',
-                'user.logged_in_user',
-            ],
-        }),
-    ],
+    plugins: [plugins, vuexLocalForage.plugin],
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {
