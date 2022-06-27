@@ -84,8 +84,7 @@ describe(`SessionToolbar`, () => {
         it(`Should generate snippet object before popup the dialog`, () => {
             wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
             wrapper.find('.create-snippet-btn').trigger('click')
-            const generatedName = `unique-prefix`
-            expect(wrapper.vm.snippet.name).to.be.equals(generatedName)
+            expect(wrapper.vm.snippet.name).to.be.equals('')
         })
         it(`Should call addSnippet`, async () => {
             wrapper = mountFactory({

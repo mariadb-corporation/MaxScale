@@ -196,7 +196,7 @@ export default {
             this.getSessionToolbar().openSnippetDlg()
         },
         onCtrlO() {
-            this.getSessionToolbar().$refs.loadSql.handleFileImport()
+            this.getSessionToolbar().$refs.loadSql.handleFileOpen()
         },
     },
 }

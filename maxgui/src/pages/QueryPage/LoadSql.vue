@@ -5,7 +5,6 @@
             :title="confDlg.title"
             :type="confDlg.type"
             :item="confDlg.item"
-            saveText="override"
             minBodyWidth="768px"
             :closeImmediate="true"
             :lazyValidation="false"
@@ -35,7 +34,7 @@
                     depressed
                     @click="save"
                 >
-                    {{ $t('override') }}
+                    {{ $t(supportFs ? 'saveAndOpen' : 'load') }}
                 </v-btn>
                 <v-btn
                     small
@@ -47,7 +46,7 @@
                     depressed
                     @click="handleLoadInANewTab(close)"
                 >
-                    {{ $t('loadInANewTab') }}
+                    {{ $t(supportFs ? 'openInANewTab' : 'loadInANewTab') }}
                 </v-btn>
             </template>
         </confirm-dialog>
@@ -63,15 +62,15 @@
                     type="file"
                     :loading="isSelecting"
                     v-on="on"
-                    @click="handleFileImport"
+                    @click="handleFileOpen"
                 >
                     <v-icon size="18" color="accent-dark">
-                        mdi-file-upload-outline
+                        {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
                     </v-icon>
-                    <input ref="uploader" class="d-none" type="file" @input="onFileChanged" />
+                    <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
                 </v-btn>
             </template>
-            <span>{{ $t('loadScript') }}</span>
+            <span>{{ supportFs ? $t('openScript') : $t('loadScript') }}</span>
         </v-tooltip>
     </div>
 </template>
@@ -89,6 +88,8 @@
  * Public License.
  */
 import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+import { fileOpen, supported } from 'browser-fs-access'
+
 export default {
     name: 'load-sql',
     data() {
@@ -96,13 +97,13 @@ export default {
             isSelecting: false,
             confDlg: {
                 isOpened: false,
-                title: this.$t('loadScript'),
+                title: this.$t('openScript'),
                 item: null,
-                type: 'loadScript',
+                type: 'openScript',
                 onSave: () => null,
             },
-            reader: null,
-            file: null,
+            fileHandle: null,
+            fileTxt: null,
         }
     },
     computed: {
@@ -114,7 +115,11 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getActiveSession: 'querySession/getActiveSession',
         }),
+        supportFs() {
+            return supported
+        },
     },
+
     methods: {
         ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
         ...mapMutations({
@@ -122,41 +127,32 @@ export default {
             UPDATE_SESSION: 'querySession/UPDATE_SESSION',
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
         }),
-        handleFileImport() {
-            this.isSelecting = true
-            window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
-            this.$refs.uploader.click()
-        },
-        onFileChanged(e) {
-            this.reader = new FileReader()
-            this.file = e.target.files[0]
-            this.reader.readAsText(this.file)
-            this.reader.onload = () => {
-                this.confDlg = {
-                    ...this.confDlg,
-                    isOpened: true,
-                    item: { id: this.getActiveSession.name },
-                    onSave: this.loadScriptToActiveSession,
-                }
+        openConfDlg() {
+            this.confDlg = {
+                ...this.confDlg,
+                isOpened: true,
+                title: this.$t(this.supportFs ? 'openScript' : 'loadScript'),
+                type: this.supportFs ? 'openScript' : 'loadScript',
+                item: { id: this.getActiveSession.name },
+                onSave: this.loadScriptToActiveSession,
             }
-            this.reader.onerror = () =>
-                this.SET_SNACK_BAR_MESSAGE({ text: [this.reader.error], type: 'error' })
         },
         loadScriptToActiveSession() {
-            this.SET_QUERY_TXT({ payload: this.reader.result, id: this.getActiveSessionId })
+            this.SET_QUERY_TXT({ payload: this.fileTxt, id: this.getActiveSessionId })
             const sessionIdx = this.query_sessions.findIndex(s => s.id === this.getActiveSessionId)
             this.UPDATE_SESSION({
                 idx: sessionIdx,
                 session: {
                     ...this.$help.lodash.cloneDeep(this.getActiveSession),
-                    name: this.file.name,
+                    name: this.fileHandle.name,
                 },
             })
-            /**
-             * clear the uploader file input so that if the user upload the same file,
-             * onFileChanged event handler can be triggered again to show the dialog
-             */
-            this.$refs.uploader.value = ''
+            if (!this.supportFs)
+                /**
+                 * clear the uploader file input so that if the user upload the same file,
+                 * onFileLoadChanged event handler can be triggered again to show the dialog
+                 */
+                this.$refs.uploader.value = ''
         },
         /**
          * @param {Function} close - close dialog function
@@ -165,6 +161,36 @@ export default {
             await this.handleAddNewSession(this.active_wke_id)
             this.loadScriptToActiveSession()
             close()
+        },
+        async handleFileOpen() {
+            if (!this.supportFs) this.handleFileUpload()
+            const blob = await fileOpen({ description: 'Text files' })
+            this.fileHandle = blob.handle
+            // get file contents
+            const file = await this.fileHandle.getFile()
+            this.fileTxt = await file.text()
+            /* TODO: detect unsaved changes, if it's saved or if there is no file opened yet,
+             * call loadScriptToActiveSession
+             */
+            this.openConfDlg()
+        },
+        // legacy upload support
+        handleFileUpload() {
+            this.isSelecting = true
+            window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
+            this.$refs.uploader.click()
+        },
+        // legacy upload file changed support
+        onFileLoadChanged(e) {
+            const reader = new FileReader()
+            this.fileHandle = e.target.files[0]
+            reader.readAsText(this.fileHandle)
+            reader.onload = () => {
+                this.fileTxt = reader.result
+                this.openConfDlg()
+            }
+            reader.onerror = () =>
+                this.SET_SNACK_BAR_MESSAGE({ text: [reader.error], type: 'error' })
         },
     },
 }
