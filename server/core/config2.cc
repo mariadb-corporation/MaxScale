@@ -779,18 +779,12 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         {
             if (config::Type* pValue = find_value(key))
             {
-                json_t* old_val = pValue->to_json();
-
-                if (!json_equal(old_val, value) && !pValue->parameter().is_modifiable_at_runtime())
+                if (!pValue->is_equal(value) && !pValue->parameter().is_modifiable_at_runtime())
                 {
-
                     MXB_ERROR("%s: The parameter '%s' cannot be modified at runtime.",
                               m_pSpecification->module().c_str(), key);
                     configured = false;
                 }
-
-
-                json_decref(old_val);
             }
         }
     }
@@ -818,9 +812,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         {
             if (config::Type* pValue = find_value(key))
             {
-                json_t* old_val = pValue->to_json();
-
-                if (!json_equal(old_val, value))
+                if (!pValue->is_equal(value))
                 {
                     changed = true;
                     string message;
@@ -831,8 +823,6 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
                         configured = false;
                     }
                 }
-
-                json_decref(old_val);
             }
             else if (!is_core_param(m_pSpecification->kind(), key))
             {

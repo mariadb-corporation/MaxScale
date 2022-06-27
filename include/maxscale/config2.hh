@@ -1894,6 +1894,17 @@ public:
     virtual bool set_from_json(const json_t* pJson,
                                std::string* pMessage = nullptr) = 0;
 
+    /**
+     * Compare equality to a JSON value.
+     *
+     * This function is used to detect whether a parameter is being modified to a new value.
+     *
+     * @param json The JSON value to compare to
+     *
+     * @return True, if the value is equal to the given JSON value.
+     */
+    virtual bool is_equal(const json_t* pJson) const = 0;
+
 protected:
     Type(Configuration* pConfiguration, const Param* pParam);
 
@@ -1998,6 +2009,12 @@ public:
         }
 
         return rv;
+    }
+
+    bool is_equal(const json_t* pJson) const override final
+    {
+        value_type value;
+        return parameter().from_json(pJson, &value) && get() == value;
     }
 
     value_type get() const
@@ -2127,6 +2144,12 @@ public:
         }
 
         return rv;
+    }
+
+    bool is_equal(const json_t* pJson) const override final
+    {
+        value_type value;
+        return parameter().from_json(pJson, &value) && get() == value;
     }
 
     value_type get() const
@@ -2265,6 +2288,12 @@ public:
         return rv;
     }
 
+    bool is_equal(const json_t* pJson) const override final
+    {
+        value_type value;
+        return parameter().from_json(pJson, &value) && get() == value;
+    }
+
     value_type get() const
     {
         return (static_cast<ConfigurationType*>(m_pConfiguration)->*m_pArray)[m_index].*m_pValue;
@@ -2354,6 +2383,12 @@ public:
         }
 
         return rv;
+    }
+
+    bool is_equal(const json_t* pJson) const override final
+    {
+        value_type value;
+        return parameter().from_json(pJson, &value) && get() == value;
     }
 
     value_type get() const
@@ -2536,6 +2571,12 @@ public:
         }
 
         return rv;
+    }
+
+    bool is_equal(const json_t* pJson) const override final
+    {
+        value_type value;
+        return parameter().from_json(pJson, &value) && get() == value;
     }
 
     value_type get() const

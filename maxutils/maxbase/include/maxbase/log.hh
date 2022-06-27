@@ -16,6 +16,11 @@
 #include <stdexcept>
 #include <maxbase/log.h>
 
+inline bool operator==(const MXB_LOG_THROTTLING& lhs, const MXB_LOG_THROTTLING& rhs)
+{
+    return lhs.count == rhs.count && lhs.window_ms == rhs.window_ms && lhs.suppress_ms == rhs.suppress_ms;
+}
+
 enum mxb_log_target_t
 {
     MXB_LOG_TARGET_DEFAULT,
