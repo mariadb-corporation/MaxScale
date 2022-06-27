@@ -58,12 +58,11 @@ constexpr char CONFIG_SSH_KEYFILE[] = "ssh_keyfile";
 // Helper class for concatenating strings with a delimiter.
 class DelimitedPrinter
 {
-private:
+public:
     DelimitedPrinter(const DelimitedPrinter&) = delete;
     DelimitedPrinter& operator=(const DelimitedPrinter&) = delete;
     DelimitedPrinter() = delete;
-public:
-    DelimitedPrinter(const std::string& separator);
+    explicit DelimitedPrinter(std::string separator);
 
     /**
      * Add to string.

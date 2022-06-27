@@ -25,8 +25,8 @@ const char* MASTER_LOCK_NAME = "maxscale_mariadbmonitor_master";
 
 using std::string;
 
-DelimitedPrinter::DelimitedPrinter(const string& separator)
-    : m_separator(separator)
+DelimitedPrinter::DelimitedPrinter(string separator)
+    : m_separator(std::move(separator))
 {
 }
 

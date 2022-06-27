@@ -19,6 +19,7 @@
 #include "mariadbserver.hh"
 
 using std::string;
+using std::move;
 using maxbase::string_printf;
 
 namespace
@@ -45,7 +46,7 @@ string SlaveStatus::to_string() const
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
-        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %ld",
+        "  Host: %22s, IO/SQL running: %7s, Master ID: %4ld, Gtid_IO_Pos: %s, R.Lag: %ld",
         settings.master_endpoint.to_string().c_str(),
         running_states.c_str(),
         master_server_id,
@@ -166,7 +167,7 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     else if (master_id <= 0)
     {
         accepted = false;
-        ignore_reason = string_printf("its Master_Server_Id (%" PRIi64 ") is invalid .", master_id);
+        ignore_reason = string_printf("its Master_Server_Id (%li) is invalid .", master_id);
     }
 
     if (!accepted)
@@ -176,10 +177,10 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-SlaveStatus::Settings::Settings(const std::string& name, const EndPoint& target, const std::string& owner)
-    : name(name)
-    , master_endpoint(target)
-    , m_owner(owner)
+SlaveStatus::Settings::Settings(string name, EndPoint target, string owner)
+    : name(move(name))
+    , master_endpoint(move(target))
+    , m_owner(move(owner))
 {
 }
 
@@ -188,23 +189,22 @@ SlaveStatus::Settings::Settings(const std::string& name, const SERVER* target)
 {
 }
 
-SlaveStatus::Settings::Settings(const std::string& owner)
-    : m_owner(owner)
+SlaveStatus::Settings::Settings(string owner)
+    : m_owner(move(owner))
 {
 }
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
-                                 const SlaveStatusArray& conns_to_copy,
-                                 const EventNameSet& events_to_enable)
+ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master, SlaveStatusArray conns_to_copy,
+                                 EventNameSet events_to_enable)
     : target(target)
     , to_from_master(was_is_master)
-    , conns_to_copy(conns_to_copy)
-    , events_to_enable(events_to_enable)
+    , conns_to_copy(move(conns_to_copy))
+    , events_to_enable(move(events_to_enable))
 {
 }
 
 ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master)
-    : ServerOperation(target, was_is_master, SlaveStatusArray()    /* empty */, EventNameSet()    /* empty */)
+    : ServerOperation(target, was_is_master, SlaveStatusArray(), EventNameSet())
 {
 }
 
@@ -217,14 +217,14 @@ GeneralOpData::GeneralOpData(OpStart start, mxb::Json& error, maxbase::Duration 
 
 GtidList GtidList::from_string(const string& gtid_string)
 {
-    mxb_assert(gtid_string.size());
+    mxb_assert(!gtid_string.empty());
     GtidList rval;
     bool error = false;
     bool have_more = false;
     const char* str = gtid_string.c_str();
     do
     {
-        char* endptr = NULL;
+        char* endptr = nullptr;
         auto new_triplet = Gtid::from_string(str, &endptr);
         if (new_triplet.m_server_id == SERVER_ID_UNKNOWN)
         {
@@ -268,15 +268,15 @@ string GtidList::to_string() const
 {
     string rval;
     string separator;
-    for (auto iter = m_triplets.begin(); iter != m_triplets.end(); iter++)
+    for (const auto& triplet : m_triplets)
     {
-        rval += separator + iter->to_string();
+        rval.append(separator).append(triplet.to_string());
         separator = ",";
     }
     return rval;
 }
 
-bool GtidList::can_replicate_from(const GtidList& master_gtid)
+bool GtidList::can_replicate_from(const GtidList& master_gtid) const
 {
     /* The result of this function is false if the source and master have a common domain id where
      * the source is ahead of the master. */
@@ -355,7 +355,7 @@ Gtid Gtid::from_string(const char* str, char** endptr)
      *  MaxScale may crash if string is wrong. */
     mxb_assert(endptr);
     const char* ptr = str;
-    char* strtoull_endptr = NULL;
+    char* strtoull_endptr = nullptr;
     // Parse three numbers separated by -
     uint64_t parsed_numbers[3];
     bool error = false;
@@ -393,11 +393,11 @@ Gtid Gtid::from_string(const char* str, char** endptr)
     if (!error)
     {
         *endptr = strtoull_endptr;
-        return Gtid((uint32_t)parsed_numbers[0], parsed_numbers[1], parsed_numbers[2]);
+        return {(uint32_t)parsed_numbers[0], (int64_t)parsed_numbers[1], parsed_numbers[2]};
     }
     else
     {
-        return Gtid();
+        return {};
     }
 }
 
@@ -425,7 +425,7 @@ string Gtid::to_string() const
     string rval;
     if (m_server_id != SERVER_ID_UNKNOWN)
     {
-        rval += string_printf("%" PRIu32 "-%" PRIi64 "-%" PRIu64, m_domain, m_server_id, m_sequence);
+        rval += string_printf("%u-%li-%lu", m_domain, m_server_id, m_sequence);
     }
     return rval;
 }
@@ -435,10 +435,7 @@ Gtid GtidList::get_gtid(uint32_t domain) const
     Gtid rval;
     // Make a dummy triplet for the domain search
     Gtid search_val(domain, -1, 0);
-    auto found = std::lower_bound(m_triplets.begin(),
-                                  m_triplets.end(),
-                                  search_val,
-                                  Gtid::compare_domains);
+    auto found = std::lower_bound(m_triplets.begin(), m_triplets.end(), search_val, Gtid::compare_domains);
     if (found != m_triplets.end() && found->m_domain == domain)
     {
         rval = *found;
@@ -478,7 +475,7 @@ bool EndPoint::operator==(const EndPoint& rhs) const
 
 std::string EndPoint::to_string() const
 {
-    return "[" + m_host.address() + "]:" + std::to_string(m_host.port());
+    return mxb::string_printf("[%s]:%d", m_host.address().c_str(), m_host.port());
 }
 
 void ServerLock::set_status(Status new_status, int64_t owner_id)

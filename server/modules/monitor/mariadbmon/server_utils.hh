@@ -119,7 +119,7 @@ public:
      * @param master_gtid Master server gtid
      * @return True if replication looks possible
      */
-    bool can_replicate_from(const GtidList& master_gtid);
+    bool can_replicate_from(const GtidList& master_gtid) const;
 
     /**
      * Is the gtid empty.
@@ -219,9 +219,9 @@ public:
     class Settings
     {
     public:
-        Settings(const std::string& name, const EndPoint& target, const std::string& owner);
+        Settings(std::string name, EndPoint target, std::string owner);
         Settings(const std::string& name, const SERVER* target);
-        explicit Settings(const std::string& owner);
+        explicit Settings(std::string owner);
 
         /**
          * Create a short description in the form of "Slave connection from <owner> to <[host]:port>."
@@ -303,9 +303,8 @@ public:
 
     const EventNameSet events_to_enable;    // Scheduled event names last seen on master.
 
-    ServerOperation(MariaDBServer* target, bool was_is_master,
-                    const SlaveStatusArray& conns_to_copy,
-                    const EventNameSet& events_to_enable);
+    ServerOperation(MariaDBServer* target, bool was_is_master, SlaveStatusArray conns_to_copy,
+                    EventNameSet events_to_enable);
 
     ServerOperation(MariaDBServer* target, bool was_is_master);
 };
