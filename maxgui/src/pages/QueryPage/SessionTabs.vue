@@ -21,6 +21,7 @@
                 >
                     <div class="d-inline-flex align-center">
                         <truncate-string
+                            :key="`${session.name}`"
                             :text="`${session.name}`"
                             :maxWidth="112"
                             :nudgeLeft="48"
