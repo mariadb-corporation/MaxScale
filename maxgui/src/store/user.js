@@ -12,6 +12,7 @@
  */
 import { OVERLAY_LOGOUT } from 'store/overlayTypes'
 import { resetState } from 'store/index'
+import localForage from 'localforage'
 export default {
     namespaced: true,
     state: {
@@ -98,9 +99,9 @@ export default {
             // Clear all but keeping persistedState
             const persistedState = this.vue.$help.lodash.cloneDeep(rootState.persisted)
             resetState()
-            localStorage.clear()
+            await localForage.clear()
             this.vue.$help.deleteAllCookies()
-            localStorage.setItem('maxgui', JSON.stringify({ persisted: persistedState }))
+            await localForage.setItem('maxgui', { persisted: persistedState })
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {

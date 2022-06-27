@@ -27,6 +27,7 @@ import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
 import VuexPersistence from 'vuex-persist'
+import localForage from 'localforage'
 
 import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
@@ -42,7 +43,8 @@ const plugins = store => {
 
 const vuexLocalForage = new VuexPersistence({
     key: 'maxgui',
-    storage: window.localStorage,
+    storage: localForage,
+    asyncStorage: true,
     reducer: state => ({
         persisted: state.persisted,
         wke: { worksheets_arr: state.wke.worksheets_arr },

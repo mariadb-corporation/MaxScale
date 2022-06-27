@@ -27,6 +27,10 @@ let router = new Router({
     routes: routes,
 })
 router.beforeEach(async (to, from, next) => {
+    /* Make vuex-persist work with localForage by await store.restored
+     *  https://github.com/championswimmer/vuex-persist#how-to-know-when-async-store-has-been-replaced
+     */
+    await store.restored
     store.commit('SET_PREV_ROUTE', from)
     const isGuardedRoutes = to.matched.some(record => record.meta.requiresAuth)
     if (isGuardedRoutes) await resolvingGuardedRoutes(to, from, next)
