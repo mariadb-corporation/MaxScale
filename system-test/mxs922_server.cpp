@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     config.alter_server(1, "address", test->repl->ip_private(1));
     sleep(1);
     test->check_maxscale_alive();
-    config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
+    config.alter_server(1, "address", "127.0.0.1");
     config.alter_server(1, "port", 12345);
     test->maxscale->connect_maxscale();
     test->add_result(execute_query_silent(test->maxscale->conn_rwsplit, "SELECT 1") == 0,
