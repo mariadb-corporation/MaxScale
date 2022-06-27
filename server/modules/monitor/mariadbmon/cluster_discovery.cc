@@ -14,7 +14,6 @@
 #include "mariadbmon.hh"
 
 #include <algorithm>
-#include <inttypes.h>
 #include <string>
 #include <queue>
 #include <maxbase/format.hh>
@@ -79,9 +78,7 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
  * @param next_ind Visitation index of next node
  * @param next_cycle Index of next found cycle
  */
-void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
-                                           ServerArray* stack,
-                                           int* next_ind,
+void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node, ServerArray* stack, int* next_ind,
                                            int* next_cycle)
 {
     /** Assign an index to this node */
@@ -190,7 +187,7 @@ void MariaDBMonitor::build_replication_graph()
             if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && slave_conn.slave_sql_running)
             {
                 // Looks promising, check hostname or server id.
-                MariaDBServer* found_master = NULL;
+                MariaDBServer* found_master = nullptr;
                 bool is_external = false;
                 if (use_hostnames)
                 {
@@ -293,13 +290,13 @@ void MariaDBMonitor::find_graph_cycles()
 MariaDBServer* MariaDBMonitor::find_best_reach_server(const ServerArray& candidates)
 {
     mxb_assert(!candidates.empty());
-    MariaDBServer* best_reach = NULL;
+    MariaDBServer* best_reach = nullptr;
     /* Search for the server with the best reach. */
     for (MariaDBServer* candidate : candidates)
     {
         calculate_node_reach(candidate);
         // This is the first valid node or this node has better reach than the so far best found ...
-        if (best_reach == NULL || (candidate->m_node.reach > best_reach->m_node.reach))
+        if (best_reach == nullptr || (candidate->m_node.reach > best_reach->m_node.reach))
         {
             best_reach = candidate;
         }
@@ -702,8 +699,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
                         // Write the replication lag for this slave. It may have multiple slave connections,
                         // in which case take the smallest value. This only counts the slave connections
                         // leading to the master or a relay.
-                        int curr_rlag = slave->m_replication_lag;
-                        int new_rlag = sstatus->seconds_behind_master;
+                        int64_t curr_rlag = slave->m_replication_lag;
+                        int64_t new_rlag = sstatus->seconds_behind_master;
                         if (new_rlag != mxs::Target::RLAG_UNDEFINED
                             && (curr_rlag == mxs::Target::RLAG_UNDEFINED || new_rlag < curr_rlag))
                         {
@@ -877,7 +874,7 @@ void MariaDBMonitor::update_topology()
     if (m_next_master)
     {
         assign_new_master(m_next_master);
-        m_next_master = NULL;
+        m_next_master = nullptr;
     }
 
     if (m_cluster_topology_changed || !m_master || !m_master->is_usable()

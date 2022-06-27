@@ -311,8 +311,8 @@ const ServerArray& MariaDBMonitor::servers() const
 void MariaDBMonitor::reset_server_info()
 {
     m_servers_by_id.clear();
-    assign_new_master(NULL);
-    m_next_master = NULL;
+    assign_new_master(nullptr);
+    m_next_master = nullptr;
     m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;
     m_resolver = DNSResolver();     // Erases result cache.
 }
@@ -327,7 +327,7 @@ void MariaDBMonitor::reset_node_index_info()
 
 MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 {
-    MariaDBServer* found = NULL;
+    MariaDBServer* found = nullptr;
     // Phase 1: Direct string compare
     for (auto server : servers())
     {
@@ -389,7 +389,7 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server) const
             return iter;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
@@ -628,7 +628,7 @@ void MariaDBMonitor::pre_loop()
         if (server->con)
         {
             mysql_close(server->con);
-            server->con = NULL;
+            server->con = nullptr;
         }
     }
 
@@ -690,7 +690,7 @@ void MariaDBMonitor::tick()
     // (e.g. slave sql state).
     assign_server_roles();
 
-    if (m_master != NULL && m_master->is_master())
+    if (m_master && m_master->is_master())
     {
         // Update cluster-wide values dependant on the current master.
         update_gtid_domain();
@@ -704,7 +704,7 @@ void MariaDBMonitor::tick()
     }
 
     // Sanity check. Master may not be both slave and master.
-    mxb_assert(m_master == NULL || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
+    mxb_assert(m_master == nullptr || !m_master->has_status(SERVER_SLAVE | SERVER_MASTER));
 
     if (server_locks_in_use() && is_cluster_owner())
     {
@@ -891,32 +891,6 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
     update_master_cycle_info();
     m_warn_current_master_invalid = true;
     m_warn_cannot_find_master = true;
-}
-
-/**
- * Check sql text file parameters. A parameter should either be empty or a valid file which can be opened.
- *
- * @return True if no errors occurred when opening the files
- */
-bool MariaDBMonitor::check_sql_files()
-{
-    const char ERRMSG[] = "%s ('%s') does not exist or cannot be accessed for reading: '%s'.";
-
-    bool rval = true;
-    auto prom_file = m_settings.shared.promotion_sql_file;
-    if (!prom_file.empty() && access(prom_file.c_str(), R_OK) != 0)
-    {
-        rval = false;
-        MXB_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, prom_file.c_str(), mxb_strerror(errno));
-    }
-
-    auto dem_file = m_settings.shared.demotion_sql_file;
-    if (!dem_file.empty() && access(dem_file.c_str(), R_OK) != 0)
-    {
-        rval = false;
-        MXB_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, dem_file.c_str(), mxb_strerror(errno));
-    }
-    return rval;
 }
 
 /**

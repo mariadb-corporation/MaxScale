@@ -40,10 +40,10 @@ typedef std::map<int, ServerArray> CycleMap;
 // MariaDB Monitor instance data
 class MariaDBMonitor : public maxscale::MonitorWorker
 {
-private:
+public:
     MariaDBMonitor(const MariaDBMonitor&) = delete;
     MariaDBMonitor& operator=(const MariaDBMonitor&) = delete;
-public:
+
     class Test;
     friend class Test;
     friend class mon_op::RebuildServer;
@@ -307,7 +307,7 @@ private:
         ServerOperation demotion;
         GeneralOpData   general;
 
-        SwitchoverParams(const ServerOperation& promotion, const ServerOperation& demotion,
+        SwitchoverParams(ServerOperation  promotion, ServerOperation  demotion,
                          const GeneralOpData& general);
     };
 
@@ -318,7 +318,7 @@ private:
         const MariaDBServer* const demotion_target;
         GeneralOpData              general;
 
-        FailoverParams(const ServerOperation& promotion, const MariaDBServer* demotion_target,
+        FailoverParams(ServerOperation  promotion, const MariaDBServer* demotion_target,
                        const GeneralOpData& general);
     };
 
@@ -424,10 +424,7 @@ private:
 
         // Replication topology detection settings.
 
-        bool ignore_external_masters;   /* Ignore masters outside of the monitor configuration.
-                                         * TODO: requires work */
-        bool assume_unique_hostnames;   /* Are server hostnames consistent between MaxScale and
-                                         * servers */
+        bool assume_unique_hostnames; /* Are server hostnames consistent between MaxScale and servers */
 
         int64_t failcount;      /* Number of ticks master must be down before it's considered
                                  * totally down, allowing failover or master change. */
@@ -568,7 +565,7 @@ private:
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,
-                                                maxbase::Duration* delay_out);
+                                                maxbase::Duration* delay_out) const;
     std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
                                                          Log log_mode, OpStart start, mxb::Json& error_out);
     std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out);
@@ -587,7 +584,7 @@ private:
                                            int64_t* gtid_domain_out, mxb::Json& error_out);
     bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
                              const MariaDBServer* demotion_target, uint32_t gtid_domain,
-                             std::string* reason_out = NULL);
+                             std::string* reason_out = nullptr);
     bool server_is_excluded(const MariaDBServer* server);
     bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
                                 int64_t cluster_gtid_domain, mxb::Json& error_out);
@@ -612,7 +609,6 @@ private:
     bool     server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* rejoin_cand);
     uint32_t do_rejoin(GeneralOpData& op, const ServerArray& joinable_servers);
 
-    bool check_sql_files();
     void enforce_read_only_on_slaves();
     void enforce_writable_on_master();
     void set_low_disk_slaves_maintenance();
