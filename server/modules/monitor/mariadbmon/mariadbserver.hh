@@ -206,7 +206,7 @@ public:
      * @param slave_conn The slave connection to calculate for
      * @return Number of events in relay log. Always  0 or greater.
      */
-    uint64_t relay_log_events(const SlaveStatus& slave_conn);
+    uint64_t relay_log_events(const SlaveStatus& slave_conn) const;
 
     /**
      * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
@@ -217,19 +217,20 @@ public:
      * @param errno_out Error code output. Can be null.
      * @return Pointer to query results, or an empty pointer on failure
      */
-    std::unique_ptr<mxq::QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL,
-                                                    unsigned int* errno_out = NULL);
+    std::unique_ptr<mxq::QueryResult>
+    execute_query(const std::string& query, std::string* errmsg_out = nullptr,
+                  unsigned int* errno_out = nullptr);
 
     /**
      * execute_cmd_ex with query retry ON.
      */
-    bool execute_cmd(const std::string& cmd, std::string* errmsg_out = NULL);
+    bool execute_cmd(const std::string& cmd, std::string* errmsg_out = nullptr);
 
     /**
      * execute_cmd_ex with query retry OFF.
      */
     bool execute_cmd_no_retry(const std::string& cmd, const std::string& masked_cmd,
-                              std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+                              std::string* errmsg_out = nullptr, unsigned int* errno_out = nullptr);
 
     /**
      * Update server slave connection information.
@@ -238,7 +239,7 @@ public:
      * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return True on success
      */
-    bool do_show_slave_status(std::string* errmsg_out = NULL);
+    bool do_show_slave_status(std::string* errmsg_out = nullptr);
 
     /**
      * Query gtid_current_pos and gtid_binlog_pos and save the values to the server.
@@ -246,7 +247,7 @@ public:
      * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return True if query succeeded
      */
-    bool update_gtids(std::string* errmsg_out = NULL);
+    bool update_gtids(std::string* errmsg_out = nullptr);
 
     /**
      * Query a few miscellaneous replication settings.
@@ -254,7 +255,7 @@ public:
      * @param error_out Query error output
      * @return True on success
      */
-    bool update_replication_settings(std::string* error_out = NULL);
+    bool update_replication_settings(std::string* error_out = nullptr);
 
     /**
      * Query and save server_id, read_only and (if 10.X) gtid_domain_id.
@@ -262,7 +263,7 @@ public:
      * @param errmsg_out Where to store an error message if query fails. Can be null.
      * @return True on success.
      */
-    bool read_server_variables(std::string* errmsg_out = NULL);
+    bool read_server_variables(std::string* errmsg_out = nullptr);
 
     /**
      * Print warnings if gtid_strict_mode or log_slave_updates is off. Does not query the server,
@@ -312,7 +313,7 @@ public:
      * @param reason_out Details the reason for a negative result
      * @return True if slave can replicate from master
      */
-    bool can_replicate_from(MariaDBServer* master, std::string* reason_out);
+    bool can_replicate_from(MariaDBServer* master, std::string* reason_out) const;
 
     /**
      * Check if the server can be demoted by switchover.
@@ -334,7 +335,7 @@ public:
      * @param reason_out Output explaining why server cannot be demoted
      * @return True if server can be demoted
      */
-    bool can_be_demoted_failover(FailoverType failover_mode, std::string* reason_out);
+    bool can_be_demoted_failover(FailoverType failover_mode, std::string* reason_out) const;
 
     /**
      * Check if the server can be promoted by switchover or failover.
@@ -629,15 +630,15 @@ private:
 
     EventList m_new_events;
 
-    bool               update_slave_status(std::string* errmsg_out = NULL);
-    bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
+    bool               update_slave_status(std::string* errmsg_out = nullptr);
+    bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status) const;
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
 
     bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
                          mxb::Json& error_out);
 
     bool execute_cmd_ex(const std::string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
-                        std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+                        std::string* errmsg_out = nullptr, unsigned int* errno_out = nullptr);
     bool execute_cmd_time_limit(const std::string& cmd, const std::string& masked_cmd,
                                 maxbase::Duration time_limit, std::string* errmsg_out);
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,

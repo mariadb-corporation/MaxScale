@@ -14,7 +14,7 @@
 #include "mariadbserver.hh"
 
 #include <fstream>
-#include <inttypes.h>
+#include <cinttypes>
 #include <set>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -70,7 +70,7 @@ void NodeData::reset_indexes()
     in_stack = false;
 }
 
-uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
+uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn) const
 {
     /* The events_ahead-call below ignores domains where current_pos is ahead of io_pos. This situation is
      * rare but is possible (I guess?) if the server is replicating a domain from multiple masters
@@ -120,11 +120,11 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, const std::string& masked_
             MYSQL_RES* result = mysql_store_result(conn);
             if (result)
             {
-                int cols = mysql_num_fields(result);
-                int rows = mysql_num_rows(result);
+                unsigned int cols = mysql_num_fields(result);
+                my_ulonglong rows = mysql_num_rows(result);
                 if (results_errmsg.empty())
                 {
-                    results_errmsg = string_printf("Query '%s' on '%s' returned %d columns and %d rows "
+                    results_errmsg = string_printf("Query '%s' on '%s' returned %u columns and %llu rows "
                                                    "of data when none was expected.",
                                                    logged_query.c_str(), name(), cols, rows);
                 }
@@ -439,7 +439,7 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
 
     bool rval = false;
     auto result = execute_query(query, errmsg_out);
-    if (result.get() != NULL)
+    if (result)
     {
         Guard guard(m_arraylock);
 
@@ -461,7 +461,7 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
 
                 for (auto d : m_gtid_current_pos.domains())
                 {
-                    positions.push_back({d, m_gtid_current_pos.get_gtid(d).m_sequence});
+                    positions.emplace_back(d, m_gtid_current_pos.get_gtid(d).m_sequence);
                 }
 
                 server->set_gtid_list(positions);
@@ -492,7 +492,7 @@ bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
     bool rval = false;
 
     auto result = execute_query(query, errmsg_out);
-    if (result.get() != NULL && result->next_row())
+    if (result && result->next_row())
     {
         rval = true;
         m_rpl_settings.gtid_strict_mode = result->get_bool(0);
@@ -769,7 +769,7 @@ json_t* MariaDBServer::to_json() const
     return result;
 }
 
-bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out)
+bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out) const
 {
     mxb_assert(reason_out);
     mxb_assert(is_usable());    // The server must be running.
@@ -825,7 +825,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, mxb::Json& error_out)
                     lines_executed++;
                     // Discard results if any.
                     MYSQL_RES* res = mysql_store_result(conn);
-                    if (res != NULL)
+                    if (res)
                     {
                         mysql_free_result(res);
                     }
@@ -961,7 +961,7 @@ void MariaDBServer::check_permissions()
     string err_msg;
     auto result = execute_query(query, &err_msg);
 
-    if (result.get() == NULL)
+    if (result == nullptr)
     {
         /* In theory, this could be due to other errors as well, but that is quite unlikely since the
          * connection was just checked. The end result is in any case that the server is not updated,
@@ -998,7 +998,7 @@ void MariaDBServer::set_status(uint64_t bits)
  * @param new_slave_status Right hand side
  * @return True if equal
  */
-bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status)
+bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status) const
 {
     bool rval = true;
     const SlaveStatusArray& old_slave_status = m_slave_status;
@@ -1010,8 +1010,8 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
     {
         for (size_t i = 0; i < old_slave_status.size(); i++)
         {
-            const auto new_row = new_slave_status[i];
-            const auto old_row = old_slave_status[i];
+            const auto& new_row = new_slave_status[i];
+            const auto& old_row = old_slave_status[i];
 
             if (!new_row.equal(old_row))
             {
@@ -1041,7 +1041,7 @@ const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& s
 
     // Usually the same slave connection can be found from the same index than in the previous slave
     // status array, but this is not 100% (e.g. dba has just added a new connection).
-    const SlaveStatus* rval = NULL;
+    const SlaveStatus* rval = nullptr;
     if (guess_ind < m_slave_status.size() && compare_rows(m_slave_status[guess_ind], search_row))
     {
         rval = &m_slave_status[guess_ind];
@@ -1105,7 +1105,7 @@ bool MariaDBServer::can_be_demoted_switchover(string* reason_out)
     return demotable;
 }
 
-bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* reason_out)
+bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* reason_out) const
 {
     bool demotable = false;
     string reason;
@@ -1159,7 +1159,7 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
         // Failover promotion with low disk space is allowed since it's better than nothing.
         reason = "it is low on disk space.";
     }
-    else if (sstatus == NULL)
+    else if (sstatus == nullptr)
     {
         reason = string_printf("it is not replicating from '%s'.", demotion_target->name());
     }
@@ -1196,7 +1196,7 @@ const SlaveStatus* MariaDBServer::slave_connection_status(const MariaDBServer* t
     mxb_assert(target);
     // The slave node may have several slave connections, need to find the one that is
     // connected to the parent. Most of this has already been done in 'build_replication_graph'.
-    const SlaveStatus* rval = NULL;
+    const SlaveStatus* rval = nullptr;
     for (const SlaveStatus& ss : m_slave_status)
     {
         if (ss.master_server == target)
@@ -1218,7 +1218,7 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
             return &ss;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -1330,7 +1330,7 @@ void MariaDBServer::warn_event_scheduler()
     const string scheduler_query = "SELECT * FROM information_schema.PROCESSLIST "
                                    "WHERE User = 'event_scheduler' AND Command = 'Daemon';";
     auto proc_list = execute_query(scheduler_query, &error_msg);
-    if (proc_list.get() == NULL)
+    if (proc_list == nullptr)
     {
         MXB_ERROR("Could not query the event scheduler status of '%s': %s", name(), error_msg.c_str());
     }
@@ -1357,7 +1357,7 @@ bool MariaDBServer::events_foreach(EventManipulator& func, mxb::Json& error_out)
     string error_msg;
     // Get info about all scheduled events on the server.
     auto event_info = execute_query("SELECT * FROM information_schema.EVENTS;", &error_msg);
-    if (event_info.get() == NULL)
+    if (event_info == nullptr)
     {
         MXB_ERROR("Could not query event status of '%s': %s Event handling can be disabled by "
                   "setting '%s' to false.",
@@ -1483,7 +1483,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         // In normal circumstances, this should only be called for a master-slave pair.
         auto master_conn = slave_connection_status(demotion_target);
         mxb_assert(master_conn);
-        if (master_conn == NULL)
+        if (master_conn == nullptr)
         {
             PRINT_JSON_ERROR(error_out, "'%s' is not a slave of '%s' and cannot be promoted to its place.",
                              name(), demotion_target->name());
@@ -2186,7 +2186,7 @@ bool MariaDBServer::update_enabled_events()
     // Get names of all enabled scheduled events on the server.
     auto event_info = execute_query("SELECT Event_schema, Event_name FROM information_schema.EVENTS WHERE "
                                     "Status = 'ENABLED';", &error_msg);
-    if (event_info.get() == NULL)
+    if (event_info == nullptr)
     {
         std::string errmsg = mxb::string_printf("Could not query events of '%s': %s",
                                                 name(), error_msg.c_str());
@@ -2575,7 +2575,7 @@ int MariaDBServer::release_all_locks()
 
 int64_t MariaDBServer::conn_id() const
 {
-    return con ? con->thread_id : -1;
+    return con ? (int64_t)con->thread_id : -1;
 }
 
 bool MariaDBServer::marked_as_master(string* why_not) const
