@@ -1272,6 +1272,11 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                 }
             }
 
+            // TODO: Remove the modulecmd error system and use only runtime errors. This currently causes
+            // information to be lost if something logs it with MXB_ERROR but not with any of the other
+            // systems.
+            json_decref(runtime_get_json_error());
+
             return HttpResponse(rc, output);
         }
     }
