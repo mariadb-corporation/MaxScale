@@ -41,7 +41,8 @@ Replacer::Replacer(const std::string& replace_template)
                 if (n == 0)
                 {
                     error_stream << "Invalid number at: " << std::string(ite_before, last);
-                    goto get_out;
+                    ite = last;
+                    continue;
                 }
 
                 m_max_placeholder_ordinal = std::max(m_max_placeholder_ordinal, n);
@@ -67,7 +68,6 @@ Replacer::Replacer(const std::string& replace_template)
         m_parts.push_back(current_sql_part);
     }
 
-get_out:
     m_error_str = error_stream.str();
 }
 

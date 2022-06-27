@@ -30,7 +30,6 @@ RewriteSql::RewriteSql(const std::string& match_template,
     if (!m_replacer.is_valid())
     {
         error_stream << m_replacer.error_str();
-        goto end_constructor;
     }
     else
     {
@@ -62,14 +61,14 @@ RewriteSql::RewriteSql(const std::string& match_template,
                     if (n == 0)
                     {
                         error_stream << "Invalid placeholder at: " << std::string(ite_before, last);
-                        goto end_constructor;
+                        ite = last;
+                        continue;
                     }
 
                     m_max_ordinal = std::max(m_max_ordinal, n);
                     m_ordinals.push_back(n - 1);
 
                     const std::string group = "(.*)";
-
                     m_regex_str += group;
 
                     if (ite != last)
@@ -89,15 +88,8 @@ RewriteSql::RewriteSql(const std::string& match_template,
                 ++ite;
             }
         }
-
-        if (m_nreplacements == 0)
-        {
-            error_stream << "No replacements (@{1}, @{2}, ...) found in regex_template";
-            goto end_constructor;
-        }
     }
 
-end_constructor:
     m_error_str = error_stream.str();
 
     if (m_error_str.empty())
