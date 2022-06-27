@@ -273,7 +273,7 @@ export default {
         async checkAsyncCmdRes({ dispatch }, { cmdName, monitorModule, monitorId, successCb }) {
             try {
                 const { status, data: { meta } = {} } = await this.$http.get(
-                    `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
+                    `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
                 )
                 // response ok
                 if (status === 200) {
