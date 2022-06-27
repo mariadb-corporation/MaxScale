@@ -16,19 +16,23 @@
 var maxctrl = require("./lib/core.js");
 var process = require("process");
 
-function print(out) {
+function print(out, func) {
   if (out) {
     if (!process.stdout.isTTY) {
       var utils = require("./lib/utils.js");
       out = utils.strip_colors(out);
     }
 
-    console.log(out);
+    func(out);
   }
 }
 
+function log(out){
+  print(out, console.log);
+}
+
 function err(out) {
-  print(out);
+  print(out, console.error);
   process.exit(1);
 }
 
@@ -39,4 +43,4 @@ if (process.argv[0] == process.execPath) {
   process.argv.shift();
 }
 
-maxctrl.execute(process.argv).then(print, err);
+maxctrl.execute(process.argv).then(log, err);
