@@ -16,16 +16,21 @@
 #include <string>
 
 using std::string;
-namespace config = mxs::config;
+namespace cfg = mxs::config;
 
 namespace
 {
 namespace rewritefilter
 {
 
-config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
+cfg::Specification specification(MXB_MODULE_NAME, cfg::Specification::FILTER);
+
+cfg::ParamBool nocase(
+    &specification, "nocase", "Matching is case insensitive", false, cfg::Param::AT_RUNTIME);
 }
 }
+
+static uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT;
 
 //
 // Global symbols of the Module
@@ -42,7 +47,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "Rewrite filter.",
         "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        CAPABILITIES,
         &mxs::FilterApi<RewriteFilter>::s_api,
         nullptr,    /* Process init. */
         nullptr,    /* Process finish. */
@@ -58,14 +63,37 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // RewriteFilter
 //
 
-RewriteFilter::RewriteFilter::Config::Config(const std::string& name)
-    : config::Configuration(name, &rewritefilter::specification)
+RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFilter& filter)
+    : cfg::Configuration(name, &rewritefilter::specification)
+    , m_filter(filter)
+
 {
+    add_native(&Config::m_settings, &Settings::nocase, &rewritefilter::nocase);
+}
+
+bool RewriteFilter::Config::post_configure(const std::map<std::string,
+                                                          maxscale::ConfigParameters>& nested_params)
+{
+    m_filter.set_settings(std::make_unique<Settings>(m_settings));
+
+    return true;
 }
 
 RewriteFilter::RewriteFilter(const std::string& name)
-    : m_config(name)
+    : m_config(name, *this)
 {
+}
+
+void RewriteFilter::set_settings(std::unique_ptr<Settings> settings)
+{
+    std::lock_guard<std::mutex> guard(m_settings_mutex);
+    m_sSettings = std::move(settings);
+}
+
+std::shared_ptr<Settings> RewriteFilter::get_settings() const
+{
+    std::lock_guard<std::mutex> guard(m_settings_mutex);
+    return m_sSettings;
 }
 
 // static
@@ -73,7 +101,6 @@ RewriteFilter* RewriteFilter::create(const char* zName)
 {
     return new RewriteFilter(zName);
 }
-
 
 RewriteFilterSession* RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
@@ -88,5 +115,5 @@ json_t* RewriteFilter::diagnostics() const
 
 uint64_t RewriteFilter::getCapabilities() const
 {
-    return m_config.capabilities;
+    return CAPABILITIES;
 }

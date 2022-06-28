@@ -17,21 +17,20 @@
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 
+#include <memory>
+
 class RewriteFilterSession;
+
+struct Settings
+{
+    bool nocase;
+};
 
 class RewriteFilter : public mxs::Filter
 {
 public:
     RewriteFilter(const RewriteFilter&) = delete;
     RewriteFilter& operator=(const RewriteFilter&) = delete;
-
-    class Config : public mxs::config::Configuration
-    {
-    public:
-        Config(const std::string& name);
-
-        uint32_t capabilities;
-    };
 
     static RewriteFilter* create(const char* zName);
 
@@ -50,5 +49,24 @@ private:
     RewriteFilter(const std::string& name);
 
 private:
-    Config m_config;
+    class Config : public mxs::config::Configuration
+    {
+    public:
+        Config(const std::string& name, RewriteFilter& filter);
+
+    private:
+        // Calls RewriteFilter::set_settings()
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
+        RewriteFilter& m_filter;
+        Settings       m_settings;
+    };
+
+    // Thread-safe set and get of current settings.
+    void                      set_settings(std::unique_ptr<Settings> settings);
+    std::shared_ptr<Settings> get_settings() const;
+
+    Config                    m_config;
+    mutable std::mutex        m_settings_mutex;
+    std::shared_ptr<Settings> m_sSettings;
 };
