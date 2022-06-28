@@ -136,7 +136,7 @@ export default {
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
             UPDATE_SESSION: 'querySession/UPDATE_SESSION',
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
-            SET_FILE_HANDLE: 'editor/SET_FILE_HANDLE',
+            SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
         }),
         // legacy support for reading uploaded file
         readUploadedFileAsText(fileHandle) {
@@ -163,29 +163,27 @@ export default {
             return await this.readUploadedFileAsText(fileHandle)
         },
 
-        async dontSave({ fileHandle }) {
-            await this.loadScriptToActiveSession({ fileHandle })
+        async dontSave(blob) {
+            await this.loadScriptToActiveSession(blob)
             this.confDlg.isOpened = false
         },
 
-        async onSave({ fileHandle }) {
+        async onSave(blob) {
             /* TODO: Handle saving file to user's local device if supportFs or downloading it
              * before calling loadScriptToActiveSession
              */
-            await this.loadScriptToActiveSession({ fileHandle })
+            await this.loadScriptToActiveSession(blob)
         },
 
-        async loadScriptToActiveSession({ fileHandle }) {
-            this.SET_QUERY_TXT({
-                payload: await this.getFileTxt(fileHandle),
-                id: this.getActiveSessionId,
-            })
+        async loadScriptToActiveSession(blob) {
+            const blobTxt = await this.getFileTxt(blob.handle)
+            this.SET_QUERY_TXT({ payload: blobTxt, id: this.getActiveSessionId })
             const sessionIdx = this.query_sessions.findIndex(s => s.id === this.getActiveSessionId)
             this.UPDATE_SESSION({
                 idx: sessionIdx,
                 session: {
                     ...this.$help.lodash.cloneDeep(this.getActiveSession),
-                    name: fileHandle.name,
+                    name: blob.handle.name,
                 },
             })
             if (!this.supportFs)
@@ -194,43 +192,42 @@ export default {
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
-            // once script is loaded, store fileHandle to the session
-            this.SET_FILE_HANDLE({
+            // once script is loaded, store file_handle to the session
+            this.SET_BLOB_FILE({
                 payload: {
-                    file: fileHandle,
+                    file_handle: blob.handle,
                     /* store its txt so that it can be retrieved
                      * because the permission to read the file is withdrawn
                      * when the browser is refreshed or closed
                      */
-                    txt: await this.getFileTxt(fileHandle),
+                    txt: blobTxt,
                 },
                 id: this.getActiveSessionId,
             })
         },
 
-        openConfDlg({ fileHandle }) {
+        openConfDlg(blob) {
             this.confDlg = {
                 ...this.confDlg,
                 isOpened: true,
                 title: this.$t('openScript'),
                 type: 'openScript',
                 item: { id: this.getActiveSession.name },
-                fileNameToBeOpened: fileHandle.name,
-                onSave: async () => await this.onSave({ fileHandle }),
-                dontSave: async () => await this.dontSave({ fileHandle }),
+                fileNameToBeOpened: blob.handle.name,
+                onSave: async () => await this.onSave(blob),
+                dontSave: async () => await this.dontSave(blob),
             }
         },
 
-        async handleLoadScript(fileHandle) {
-            if (this.getIsFileUnsaved) this.openConfDlg({ fileHandle })
-            else await this.loadScriptToActiveSession({ fileHandle })
+        async handleLoadScript(blob) {
+            if (this.getIsFileUnsaved) this.openConfDlg(blob)
+            else await this.loadScriptToActiveSession(blob)
         },
 
         async handleFileOpen() {
             if (this.supportFs) {
                 const blob = await fileOpen({ description: 'Text files' })
-                const fileHandle = blob.handle
-                await this.handleLoadScript(fileHandle)
+                await this.handleLoadScript(blob)
             } else {
                 this.isSelecting = true
                 window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
@@ -240,7 +237,7 @@ export default {
 
         // legacy upload file changed support
         async onFileLoadChanged(e) {
-            await this.handleLoadScript(e.target.files[0])
+            await this.handleLoadScript({ handle: e.target.files[0] })
         },
     },
 }

@@ -274,7 +274,16 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
 function syncStateCreator(namespace) {
     switch (namespace) {
         case 'editor':
-            return { query_txt: '', curr_ddl_alter_spec: '', file_handle: {} }
+            return {
+                query_txt: '',
+                curr_ddl_alter_spec: '',
+                /**
+                 * holds these properties:
+                 * txt?: string: txt content of the blob file
+                 * file_handle?: FileSystemFileHandle. File handle.
+                 */
+                blob_file: {},
+            }
         case 'queryConn':
             return { active_sql_conn: {} }
         case 'queryResult':
@@ -475,11 +484,14 @@ function releaseMemory({ namespace, commit, id, memStates }) {
  * @public
  * This helps to detect unsaved changes of the opened file or unsaved query tab.
  * @param {String} param.query_txt -current query text in the editor
- * @param {Object} param.file_handle - opened file_handle
+ * @param {Object} param.blob_file - opened blob_file
  * @returns {Boolean} returns true if there is unsaved changes
  */
-function detectUnsavedChanges({ query_txt, file_handle }) {
-    const { txt: file_handle_txt = '', file: { name: file_handle_name = '' } = {} } = file_handle
+function detectUnsavedChanges({ query_txt, blob_file }) {
+    const {
+        txt: file_handle_txt = '',
+        file_handle: { name: file_handle_name = '' } = {},
+    } = blob_file
     // no unsaved changes if it's a blank session tab
     if (!query_txt && !file_handle_name) return false
     /** If there is no file opened (e.g when file_handle_txt === ''), but there is value for query_txt

@@ -177,15 +177,15 @@ export default {
             return altered_active_node
         },
         getIsFileUnsaved: state => {
-            const { file_handle, query_txt = '' } = state
-            return queryHelper.detectUnsavedChanges({ query_txt, file_handle })
+            const { blob_file = {}, query_txt = '' } = state
+            return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
         },
         getIsFileUnsavedBySessionId: (state, getters, rootState) => {
             return session_id => {
                 const session =
                     rootState.querySession.query_sessions.find(s => s.id === session_id) || {}
-                const { file_handle, query_txt = '' } = session
-                return queryHelper.detectUnsavedChanges({ query_txt, file_handle })
+                const { blob_file = {}, query_txt = '' } = session
+                return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
             }
         },
     },
