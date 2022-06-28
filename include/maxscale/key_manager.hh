@@ -15,6 +15,7 @@
 
 #include <maxbase/ccdefs.hh>
 #include <maxbase/secrets.hh>
+#include <maxscale/config2.hh>
 
 #include <string>
 #include <vector>
@@ -55,6 +56,13 @@ public:
         static constexpr uint32_t NO_VERSIONING = 0;
 
         /**
+         * Get the Specification for a MasterKey
+         *
+         * @return The Specification for this MasterKey
+         */
+        static mxs::config::Specification* specification();
+
+        /**
          * Get the master encryption key
          *
          * @param id      The key ID to get
@@ -69,6 +77,16 @@ public:
         virtual std::tuple<bool, uint32_t, std::vector<uint8_t>>
         get_key(const std::string& id, uint32_t version) const = 0;
     };
+
+    /**
+     * Get the Specification for the given key manager
+     *
+     * @param type The key manager type
+     *
+     * @return The Specification for the type, if one is found. If a key manager is not enabled or is not
+     *         valid, the function returns null.
+     */
+    static mxs::config::Specification* specification(Type type);
 
     /**
      * Configure the key manager
@@ -98,11 +116,11 @@ public:
                                                              uint32_t version = 0) const;
 
 private:
-    KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key);
+    KeyManager(Type type, mxs::ConfigParameters options, std::unique_ptr<MasterKey> master_key);
 
     std::unique_ptr<MasterKey> m_master_key;    // MasterKey implementation
     Type                       m_type;          // Key manager type
-    std::string                m_options;       // The raw key manager options
+    mxs::ConfigParameters      m_options;       // The key manager options
 };
 
 /**

@@ -27,6 +27,12 @@ static mxs::config::ParamPath keyfile {&cfg::spec, "keyfile", "Path to the encry
 class FileKey : public mxs::KeyManager::MasterKey
 {
 public:
+
+    static mxs::config::Specification* specification()
+    {
+        return &cfg::spec;
+    }
+
     static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options)
     {
         Config config;

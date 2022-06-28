@@ -19,6 +19,7 @@
 class KMIPKey : public mxs::KeyManager::MasterKey
 {
 public:
+    static mxs::config::Specification*                 specification();
     static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options);
 
     std::tuple<bool, uint32_t, std::vector<uint8_t>>

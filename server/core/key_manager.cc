@@ -46,12 +46,50 @@ namespace maxscale
 {
 
 // static
+mxs::config::Specification* KeyManager::specification(KeyManager::Type type)
+{
+    mxs::config::Specification* rval = nullptr;
+
+    switch (type)
+    {
+    case KeyManager::Type::FILE:
+        rval = FileKey::specification();
+        break;
+
+    case KeyManager::Type::KMIP:
+#ifdef BUILD_KMIP_KEY_MANAGER
+        rval = KMIPKey::specification();
+#else
+        MXB_ERROR("KMIP key manager is not included in this MaxScale installation.");
+#endif
+        break;
+
+    case KeyManager::Type::VAULT:
+#ifdef BUILD_VAULT_KEY_MANAGER
+        rval = VaultKey::specification();
+#else
+        MXB_ERROR("Vault key manager is not included in this MaxScale installation.");
+#endif
+        break;
+
+    case KeyManager::Type::NONE:
+        break;
+
+    default:
+        mxb_assert(!true);
+        break;
+    }
+
+    return rval;
+}
+
+// static
 bool KeyManager::configure(bool force)
 {
     std::lock_guard guard(this_unit.lock);
     const auto& cnf = mxs::Config::get();
     Type type = cnf.key_manager;
-    mxs::ConfigParameters opts;
+    const auto& opts = cnf.key_manager_options;
 
     if (type == Type::NONE)
     {
@@ -63,23 +101,11 @@ bool KeyManager::configure(bool force)
         return !this_unit.manager;
     }
     else if (!force && this_unit.manager && this_unit.manager->m_type == type
-             && this_unit.manager->m_options == cnf.key_manager_options)
+             && std::equal(this_unit.manager->m_options.begin(), this_unit.manager->m_options.end(),
+                           opts.begin(), opts.end()))
     {
         // No change in key manager type or options.
         return true;
-    }
-
-    for (std::string tok : mxb::strtok(cnf.key_manager_options, ","))
-    {
-        auto pos = tok.find('=');
-
-        if (pos == std::string::npos)
-        {
-            MXB_ERROR("Invalid option string value: %s", tok.c_str());
-            return false;
-        }
-
-        opts.set(mxb::trimmed_copy(tok.substr(0, pos)), mxb::trimmed_copy(tok.substr(pos + 1)));
     }
 
     std::unique_ptr<MasterKey> master_key;
@@ -116,7 +142,7 @@ bool KeyManager::configure(bool force)
     if (master_key)
     {
         ok = true;
-        this_unit.manager.reset(new KeyManager(type, cnf.key_manager_options, std::move(master_key)));
+        this_unit.manager.reset(new KeyManager(type, opts, std::move(master_key)));
     }
 
     return ok;
@@ -128,7 +154,7 @@ std::shared_ptr<KeyManager> key_manager()
     return this_unit.manager;
 }
 
-KeyManager::KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key)
+KeyManager::KeyManager(Type type, mxs::ConfigParameters options, std::unique_ptr<MasterKey> master_key)
     : m_master_key(std::move(master_key))
     , m_type(type)
     , m_options(std::move(options))

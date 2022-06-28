@@ -115,6 +115,12 @@ load_key(const VaultKey::Config& cnf, const std::string& id, int64_t version)
 }
 
 // static
+mxs::config::Specification* VaultKey::specification()
+{
+    return &s_spec;
+}
+
+// static
 std::unique_ptr<mxs::KeyManager::MasterKey> VaultKey::create(const mxs::ConfigParameters& params)
 {
     VaultKey::Config config;

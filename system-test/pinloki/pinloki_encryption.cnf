@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 key_manager=file
-key_manager_options=keyfile=/tmp/encryption.key
+file.keyfile=/tmp/encryption.key
 
 ###server###
 

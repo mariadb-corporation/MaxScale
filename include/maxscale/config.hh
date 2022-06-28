@@ -122,6 +122,26 @@ public:
                          std::string* pMessage) const;
     };
 
+    class ParamKeyManager : public config::ParamEnum<mxs::KeyManager::Type>
+    {
+    public:
+        using config::ParamEnum<mxs::KeyManager::Type>::ParamEnum;
+
+        bool takes_parameters() const override;
+
+        bool validate_parameters(const std::string& value,
+                                 const mxs::ConfigParameters& params,
+                                 mxs::ConfigParameters* pUnrecognized = nullptr) const override;
+
+        bool validate_parameters(const std::string& value,
+                                 json_t* pParams,
+                                 std::set<std::string>* pUnrecognized = nullptr) const override;
+
+    private:
+        template<class Params, class Unknown>
+        bool do_validate_parameters(const std::string& value, Params params, Unknown* pUnrecognized) const;
+    };
+
     class ParamLogThrottling : public config::ConcreteParam<ParamLogThrottling, MXB_LOG_THROTTLING>
     {
     public:
@@ -208,9 +228,10 @@ public:
                                                      * this % amount from load-average, rebalancing will
                                                      * be made.
                                                      */
-    config::Milliseconds rebalance_period;          /**< How often should rebalancing be made. */
-    config::Count        rebalance_window;          /**< How many seconds should be taken into account. */
-    config::Bool         skip_name_resolve;         /**< Reverse DNS lookups */
+    config::Milliseconds  rebalance_period;         /**< How often should rebalancing be made. */
+    config::Count         rebalance_window;         /**< How many seconds should be taken into account. */
+    config::Bool          skip_name_resolve;        /**< Reverse DNS lookups */
+    mxs::KeyManager::Type key_manager;
 
     // NON-modifiable automatically configured parameters.
     ParamAutoTune::value_type auto_tune;        /**< Vector of parameter names. */
@@ -245,12 +266,10 @@ public:
     std::string  debug;
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
 
-    mxs::KeyManager::Type key_manager;
-    std::string           key_manager_options;
-
     // The following will not be configured via the configuration mechanism.
-    bool config_check;                              /**< Only check config */
-    char release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
+    mxs::ConfigParameters key_manager_options;
+    bool                  config_check;                         /**< Only check config */
+    char                  release_string[RELEASE_STR_LENGTH];   /**< The release name string of the system */
 
     std::string sysname {"undefined"};      // Name of the implementation of the operating system
     std::string nodename {"undefined"};     // Name of this node on the network (i.e. hostname)
@@ -349,7 +368,6 @@ private:
     static config::ParamBool                            s_secure_gui;
     static config::ParamString                          s_debug;
     static config::ParamSize                            s_max_read_amount;
-    static config::ParamEnum<mxs::KeyManager::Type>     s_key_manager;
-    static config::ParamString                          s_key_manager_options;
+    static ParamKeyManager                              s_key_manager;
 };
 }

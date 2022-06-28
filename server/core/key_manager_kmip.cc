@@ -177,6 +177,12 @@ std::vector<uint8_t> load_key(std::string host, int64_t port, std::string ca,
 }
 
 // static
+mxs::config::Specification* KMIPKey::specification()
+{
+    return &s_spec;
+}
+
+// static
 std::unique_ptr<mxs::KeyManager::MasterKey> KMIPKey::create(const mxs::ConfigParameters& params)
 {
     KMIPKey::Config config;

@@ -642,7 +642,7 @@ config::ParamSize Config::s_max_read_amount(
     "Maximum amount of data read before return to epoll_wait.",
     DEFAULT_MAX_READ_AMOUNT);
 
-config::ParamEnum<mxs::KeyManager::Type> Config::s_key_manager(
+Config::ParamKeyManager Config::s_key_manager(
     &Config::s_specification, "key_manager", "Key manager type",
     {
         {mxs::KeyManager::Type::NONE, "none"},
@@ -651,12 +651,6 @@ config::ParamEnum<mxs::KeyManager::Type> Config::s_key_manager(
         {mxs::KeyManager::Type::VAULT, "vault"},
     },
     mxs::KeyManager::Type::NONE,
-    config::Param::AT_RUNTIME
-    );
-
-config::ParamString Config::s_key_manager_options(
-    &Config::s_specification, "key_manager_options",
-    "Comma-separated key-value list of options for the key manager", "",
     config::Param::AT_RUNTIME
     );
 }
@@ -842,7 +836,6 @@ Config::Config(int argc, char** argv)
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
     add_native(&Config::key_manager, &s_key_manager);
-    add_native(&Config::key_manager_options, &s_key_manager_options);
 
     /* get release string */
     if (!get_release_string(this->release_string))
@@ -995,6 +988,13 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 std::ostream& Config::persist_maxscale(std::ostream& os) const
 {
     mxs::config::Configuration::persist(os);
+    auto prefix = s_key_manager.to_string(key_manager);
+
+    for (const auto& [k, v] : key_manager_options)
+    {
+        os << prefix << '.' << k << '=' << v << '\n';
+    }
+
     return os;
 }
 
@@ -1019,6 +1019,13 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
                 rv = false;
             }
         }
+    }
+
+    it = nested_params.find(s_key_manager.to_string(key_manager));
+
+    if (it != nested_params.end())
+    {
+        key_manager_options = it->second;
     }
 
     auto whw = this->writeq_high_water.get();
@@ -1128,6 +1135,42 @@ bool Config::ParamUsersRefreshTime::from_string(const std::string& value_as_stri
     }
 
     return rv;
+}
+
+bool Config::ParamKeyManager::takes_parameters() const
+{
+    return true;
+}
+
+bool Config::ParamKeyManager::validate_parameters(const std::string& value,
+                                                  const mxs::ConfigParameters& params,
+                                                  mxs::ConfigParameters* pUnrecognized) const
+{
+    return do_validate_parameters(value, params, pUnrecognized);
+}
+
+bool Config::ParamKeyManager::validate_parameters(const std::string& value, json_t* pParams,
+                                                  std::set<std::string>* pUnrecognized) const
+{
+    return do_validate_parameters(value, pParams, pUnrecognized);
+}
+
+template<class Params, class Unknown>
+bool Config::ParamKeyManager::do_validate_parameters(const std::string& value,
+                                                     Params params, Unknown* pUnrecognized) const
+{
+    bool ok = false;
+    value_type val;
+
+    if (from_string(value, &val, nullptr))
+    {
+        if (auto* spec = mxs::KeyManager::specification(val))
+        {
+            ok = spec->validate(params, pUnrecognized);
+        }
+    }
+
+    return ok;
 }
 
 std::string Config::ParamLogThrottling::type() const
@@ -2896,6 +2939,17 @@ json_t* mxs::Config::maxscale_to_json(const char* host)
 
     // This will dump all parameters defined using the new configuration mechanism.
     fill(param);
+
+    if (key_manager != mxs::KeyManager::Type::NONE)
+    {
+        auto prefix = s_key_manager.to_string(key_manager);
+
+        for (const auto& [k, v] : key_manager_options)
+        {
+            auto name = prefix + "." + k;
+            json_object_set_new(param, name.c_str(), json_string(v.c_str()));
+        }
+    }
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
