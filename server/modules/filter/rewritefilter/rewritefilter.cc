@@ -104,7 +104,7 @@ RewriteFilter* RewriteFilter::create(const char* zName)
 
 RewriteFilterSession* RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return RewriteFilterSession::create(pSession, pService, this);
+    return RewriteFilterSession::create(pSession, pService, get_settings());
 }
 
 // static

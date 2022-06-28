@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 
-class RewriteFilter;
+class Settings;
 
 class RewriteFilterSession : public maxscale::FilterSession
 {
@@ -23,14 +23,18 @@ public:
     ~RewriteFilterSession();
 
     static RewriteFilterSession* create(MXS_SESSION* pSession,
-                                        SERVICE* pService, const RewriteFilter* pFilter);
+                                        SERVICE* pService,
+                                        const std::shared_ptr<Settings>& sSettings
+                                        );
 
 private:
-    RewriteFilterSession(MXS_SESSION* pSession, SERVICE* pService, const RewriteFilter* pFilter);
+    RewriteFilterSession(MXS_SESSION* pSession,
+                         SERVICE* pService,
+                         const std::shared_ptr<Settings>& sSettings);
 
     RewriteFilterSession(const RewriteFilterSession&);
     RewriteFilterSession& operator=(const RewriteFilterSession&);
 
 private:
-    const RewriteFilter& m_filter;
+    std::shared_ptr<Settings> m_sSettings;
 };

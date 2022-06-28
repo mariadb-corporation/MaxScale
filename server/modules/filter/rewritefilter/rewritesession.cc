@@ -13,12 +13,13 @@
 
 #define MXB_MODULE_NAME "rewitefilter"
 #include "rewritesession.hh"
+#include "rewritefilter.hh"
 
 RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,
-                                           const RewriteFilter* pFilter)
+                                           const std::shared_ptr<Settings>& sSettings)
     : maxscale::FilterSession(pSession, pService)
-    , m_filter(*pFilter)
+    , m_sSettings(sSettings)
 {
 }
 
@@ -27,8 +28,9 @@ RewriteFilterSession::~RewriteFilterSession()
 }
 
 // static
-RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
-                                                   const RewriteFilter* pFilter)
+RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
+                                                   SERVICE* pService,
+                                                   const std::shared_ptr<Settings>& sSettings)
 {
-    return new RewriteFilterSession(pSession, pService, pFilter);
+    return new RewriteFilterSession(pSession, pService, sSettings);
 }
