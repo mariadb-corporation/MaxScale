@@ -250,7 +250,7 @@ export default {
                     run: () => this.$emit('onCtrlD'),
                 },
                 {
-                    label: this.$t('loadScript'),
+                    label: this.$t('openScript'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_O],
                     run: () => this.$emit('onCtrlO'),
                 },

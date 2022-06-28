@@ -10,7 +10,7 @@
             :lazyValidation="false"
             :onSave="confDlg.onSave"
         >
-            <template v-slot:actions="{ cancel, save, close }">
+            <template v-slot:actions="{ cancel, save }">
                 <v-spacer />
                 <v-btn
                     small
@@ -28,25 +28,25 @@
                     small
                     height="36"
                     color="primary"
+                    class="cancel font-weight-medium px-7 text-capitalize"
+                    rounded
+                    outlined
+                    depressed
+                    @click="confDlg.dontSave"
+                >
+                    {{ $t('dontSave') }}
+                </v-btn>
+                <v-btn
+                    small
+                    height="36"
+                    color="primary"
                     class="save font-weight-medium px-7 text-capitalize"
                     rounded
                     outlined
                     depressed
                     @click="save"
                 >
-                    {{ $t(supportFs ? 'saveAndOpen' : 'load') }}
-                </v-btn>
-                <v-btn
-                    small
-                    height="36"
-                    color="primary"
-                    class="cancel font-weight-medium px-7 text-capitalize"
-                    rounded
-                    outlined
-                    depressed
-                    @click="handleLoadInANewTab(close)"
-                >
-                    {{ $t(supportFs ? 'openInANewTab' : 'loadInANewTab') }}
+                    {{ $t('save') }}
                 </v-btn>
             </template>
         </confirm-dialog>
@@ -70,7 +70,7 @@
                     <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
                 </v-btn>
             </template>
-            <span>{{ supportFs ? $t('openScript') : $t('loadScript') }}</span>
+            <span>{{ $t('openScript') }}</span>
         </v-tooltip>
     </div>
 </template>
@@ -87,7 +87,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 import { fileOpen, supported } from 'browser-fs-access'
 
 export default {
@@ -101,15 +101,15 @@ export default {
                 item: null,
                 type: 'openScript',
                 onSave: () => null,
+                dontSave: () => null,
             },
-            fileHandle: null,
-            fileTxt: null,
         }
     },
     computed: {
         ...mapState({
             query_sessions: state => state.querySession.query_sessions,
             active_wke_id: state => state.wke.active_wke_id,
+            file_handle: state => state.editor.file_handle,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -121,30 +121,60 @@ export default {
     },
 
     methods: {
-        ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
         ...mapMutations({
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
             UPDATE_SESSION: 'querySession/UPDATE_SESSION',
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
+            SET_FILE_HANDLE: 'editor/SET_FILE_HANDLE',
         }),
-        openConfDlg() {
-            this.confDlg = {
-                ...this.confDlg,
-                isOpened: true,
-                title: this.$t(this.supportFs ? 'openScript' : 'loadScript'),
-                type: this.supportFs ? 'openScript' : 'loadScript',
-                item: { id: this.getActiveSession.name },
-                onSave: this.loadScriptToActiveSession,
-            }
+        // legacy support for reading uploaded file
+        readUploadedFileAsText(fileHandle) {
+            const reader = new FileReader()
+            return new Promise((resolve, reject) => {
+                reader.onerror = () => {
+                    reader.abort()
+                    reject(new DOMException('Problem parsing input file.'))
+                    this.SET_SNACK_BAR_MESSAGE({ text: [reader.error], type: 'error' })
+                }
+                reader.onload = () => {
+                    resolve(reader.result)
+                }
+                reader.readAsText(fileHandle)
+            })
         },
-        loadScriptToActiveSession() {
-            this.SET_QUERY_TXT({ payload: this.fileTxt, id: this.getActiveSessionId })
+
+        async getFileTxt(fileHandle) {
+            if (this.supportFs) {
+                // get file contents
+                const file = await fileHandle.getFile()
+                return await file.text()
+            }
+            return await this.readUploadedFileAsText(fileHandle)
+        },
+
+        async dontSave({ fileHandle }) {
+            await this.loadScriptToActiveSession({ fileHandle })
+            this.confDlg.isOpened = false
+        },
+
+        async onSave({ fileHandle }) {
+            /* TODO: Handle saving file to user's local device if supportFs or downloading it
+             * before calling loadScriptToActiveSession
+             */
+            await this.loadScriptToActiveSession({ fileHandle })
+        },
+
+        async loadScriptToActiveSession({ fileHandle }) {
+            this.SET_QUERY_TXT({
+                payload: await this.getFileTxt(fileHandle),
+                id: this.getActiveSessionId,
+            })
             const sessionIdx = this.query_sessions.findIndex(s => s.id === this.getActiveSessionId)
             this.UPDATE_SESSION({
                 idx: sessionIdx,
                 session: {
                     ...this.$help.lodash.cloneDeep(this.getActiveSession),
-                    name: this.fileHandle.name,
+                    name: fileHandle.name,
                 },
             })
             if (!this.supportFs)
@@ -153,44 +183,41 @@ export default {
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
+            // once script is loaded, store fileHandle to the session
+            this.SET_FILE_HANDLE({ payload: fileHandle, id: this.getActiveSessionId })
         },
-        /**
-         * @param {Function} close - close dialog function
-         */
-        async handleLoadInANewTab(close) {
-            await this.handleAddNewSession(this.active_wke_id)
-            this.loadScriptToActiveSession()
-            close()
+
+        openConfDlg({ fileHandle }) {
+            this.confDlg = {
+                ...this.confDlg,
+                isOpened: true,
+                title: this.$t('openScript'),
+                type: 'openScript',
+                item: { id: this.getActiveSession.name },
+                onSave: async () => await this.onSave({ fileHandle }),
+                dontSave: async () => await this.dontSave({ fileHandle }),
+            }
         },
+
         async handleFileOpen() {
             if (!this.supportFs) this.handleFileUpload()
             const blob = await fileOpen({ description: 'Text files' })
-            this.fileHandle = blob.handle
-            // get file contents
-            const file = await this.fileHandle.getFile()
-            this.fileTxt = await file.text()
-            /* TODO: detect unsaved changes, if it's saved or if there is no file opened yet,
-             * call loadScriptToActiveSession
-             */
-            this.openConfDlg()
+            const fileHandle = blob.handle
+            //TODO: detect unsaved changes, openConfDlg if it's true
+            this.openConfDlg({ fileHandle })
         },
+
         // legacy upload support
         handleFileUpload() {
             this.isSelecting = true
             window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
             this.$refs.uploader.click()
         },
+
         // legacy upload file changed support
         onFileLoadChanged(e) {
-            const reader = new FileReader()
-            this.fileHandle = e.target.files[0]
-            reader.readAsText(this.fileHandle)
-            reader.onload = () => {
-                this.fileTxt = reader.result
-                this.openConfDlg()
-            }
-            reader.onerror = () =>
-                this.SET_SNACK_BAR_MESSAGE({ text: [reader.error], type: 'error' })
+            //TODO: detect unsaved changes, openConfDlg if it's true
+            this.openConfDlg({ fileHandle: e.target.files[0] })
         },
     },
 }

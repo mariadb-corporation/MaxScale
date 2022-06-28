@@ -274,7 +274,7 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
 function syncStateCreator(namespace) {
     switch (namespace) {
         case 'editor':
-            return { query_txt: '', curr_ddl_alter_spec: '' }
+            return { query_txt: '', curr_ddl_alter_spec: '', file_handle: {} }
         case 'queryConn':
             return { active_sql_conn: {} }
         case 'queryResult':
