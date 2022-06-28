@@ -47,6 +47,7 @@ const char cs_stop_cluster_cmd[] = "cs-stop-cluster";
 const char cs_set_readonly_cmd[] = "cs-set-readonly";
 const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 const char rebuild_server_cmd[] = "rebuild-server";
+const char mask[] = "******";
 
 // Assume simple commands complete in a reasonable time.
 const std::chrono::milliseconds ssh_base_timeout = 5s;
@@ -1387,8 +1388,12 @@ bool RebuildServer::run()
             advance = wait_transfer();
             break;
 
-        case State::PROCESS_BACKUP:
-            advance = process_backup();
+        case State::START_BACKUP_PREPARE:
+            advance = start_backup_prepare();
+            break;
+
+        case State::WAIT_BACKUP_PREPARE:
+            advance = wait_backup_prepare();
             break;
 
         case State::START_TARGET:
@@ -1504,7 +1509,6 @@ bool RebuildServer::serve_backup()
         else
         {
             // The ssh-command includes username & pw so mask those in the log message.
-            const char mask[] = "******";
             string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, rebuild_port);
             if (status == ssh_util::AsyncCmd::Status::READY)
             {
@@ -1653,33 +1657,121 @@ bool RebuildServer::wait_transfer()
     }
     else
     {
-        m_state = target_success ? State::PROCESS_BACKUP : State::CLEANUP;
+        m_state = target_success ? State::START_BACKUP_PREPARE : State::CLEANUP;
         return true;
     }
 }
 
-bool RebuildServer::process_backup()
+bool RebuildServer::start_backup_prepare()
 {
-    // TODO: Check if this step can take a while and use async cmd if necessary.
-    // Also, this step can fail if the previous step failed to write files. Just looking at the return value
+    // This step can fail if the previous step failed to write files. Just looking at the return value
     // of "mbstream" is not reliable.
-    bool backup_prepared = false;
-    auto& cs = m_source->conn_settings();
-    // TODO: mask password when logging
+    auto& cs = m_target->conn_settings();
     const char prepare_fmt[] = "sudo mariabackup --user=%s --password=%s --use-memory=1G --prepare "
                                "--target-dir=%s";
     string prepare_cmd = mxb::string_printf(prepare_fmt, cs.username.c_str(), cs.password.c_str(),
                                             rebuild_datadir.c_str());
-    if (run_cmd_on_target(prepare_cmd, "prepare backup"))
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, prepare_cmd);
+
+    auto& error_out = m_result.output;
+    bool need_wait = false;
+    bool success = false;
+
+    if (cmd_handle)
     {
-        MXB_NOTICE("Backup processed on %s.", m_target->name());
-        m_state = State::START_TARGET;
+        // Wait a bit, then check that command started/finished successfully.
+        sleep(1);
+        auto status = cmd_handle->update_status();
+
+        if (status == ssh_util::AsyncCmd::Status::BUSY)
+        {
+            success = true;
+            need_wait = true;
+            m_target_cmd = move(cmd_handle);
+            MXB_NOTICE("Processing backup on %s.", m_target->name());
+        }
+        else if (status == ssh_util::AsyncCmd::Status::SSH_FAIL)
+        {
+            ssh_errmsg = mxb::string_printf("Failed to read output. %s",
+                                            cmd_handle->error_output().c_str());
+        }
+        else
+        {
+            // The prepare-command completed quickly, which is normal in case source was not receiving
+            // more trx during transfer.
+            if (cmd_handle->rc() == 0)
+            {
+                success = true;
+                MXB_NOTICE("Backup processed on %s.", m_target->name());
+            }
+            else
+            {
+                // Again, the command includes username & pw so mask those in the log message.
+                string masked_cmd = mxb::string_printf(prepare_fmt, mask, mask, rebuild_datadir.c_str());
+                PRINT_JSON_ERROR(error_out, "Failed to process backup data on %s. Command '%s' failed "
+                                            "with error %i: '%s'", m_target->name(), masked_cmd.c_str(),
+                                 cmd_handle->rc(), cmd_handle->error_output().c_str());
+            }
+        }
+    }
+
+    if (!ssh_errmsg.empty())
+    {
+        mxb_assert(!m_target_cmd);
+        PRINT_JSON_ERROR(error_out, "Failed to process backup data on %s. %s",
+                         m_target->name(), ssh_errmsg.c_str());
+    }
+
+    m_state = success ? (need_wait ? State::WAIT_BACKUP_PREPARE : State::START_TARGET) : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::wait_backup_prepare()
+{
+    using Status = ssh_util::AsyncCmd::Status;
+    auto& error_out = m_result.output;
+    bool wait_again = false;
+    bool target_success = false;
+
+    auto target_status = m_target_cmd->update_status();
+    if (target_status == Status::BUSY)
+    {
+        // Target is still processing, keep waiting.
+        wait_again = true;
     }
     else
     {
-        m_state = State::CLEANUP;
+        if (target_status == Status::READY)
+        {
+            if (m_target_cmd->rc() == 0)
+            {
+                target_success = true;
+                MXB_NOTICE("Backup processed on %s.", m_target->name());
+            }
+            else
+            {
+                PRINT_JSON_ERROR(error_out, "Failed to process backup on %s. Error %i: '%s'.",
+                                 m_target->name(), m_target_cmd->rc(),
+                                 m_target_cmd->error_output().c_str());
+            }
+        }
+        else
+        {
+            PRINT_JSON_ERROR(error_out, "Failed to check backup processing status on %s. %s",
+                             m_target->name(), m_target_cmd->error_output().c_str());
+        }
+        m_target_cmd = nullptr;
     }
-    return true;
+
+    if (wait_again)
+    {
+        return false;
+    }
+    else
+    {
+        m_state = target_success ? State::START_TARGET : State::CLEANUP;
+        return true;
+    }
 }
 
 bool RebuildServer::start_target()

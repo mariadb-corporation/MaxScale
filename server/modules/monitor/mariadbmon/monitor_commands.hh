@@ -133,7 +133,8 @@ private:
         PREPARE_TARGET,
         START_TRANSFER,
         WAIT_TRANSFER,
-        PROCESS_BACKUP,
+        START_BACKUP_PREPARE,
+        WAIT_BACKUP_PREPARE,
         START_TARGET,
         START_REPLICATION,
         DONE,
@@ -148,7 +149,9 @@ private:
     bool prepare_target();
     bool start_transfer();
     bool wait_transfer();
-    bool process_backup();
+    bool start_backup_prepare();
+    bool wait_backup_prepare();
+
     bool start_target();
     bool start_replication();
     void cleanup();
