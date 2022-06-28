@@ -485,10 +485,16 @@ public:
         return m_last_write;
     }
 
-    int64_t seconds_idle() const
+    std::chrono::milliseconds idle_time() const
     {
         // Only treat the connection as idle if there's no buffered data
-        return m_writeq || m_readq ? 0 : MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_last_read, m_last_write));
+        int64_t val = m_writeq || m_readq ? 0 : mxs_clock() - std::max(m_last_read, m_last_write);
+        return std::chrono::milliseconds(val * 100);
+    }
+
+    int64_t seconds_idle() const
+    {
+        return std::chrono::duration_cast<std::chrono::seconds>(idle_time()).count();
     }
 
     bool is_open() const

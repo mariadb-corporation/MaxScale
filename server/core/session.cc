@@ -342,9 +342,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     if (client_dcb->state() == DCB::State::POLLING)
     {
-        double idle = (mxs_clock() - client_dcb->last_read());
-        idle = idle > 0 ? idle / 10.f : 0;
-        json_object_set_new(attr, "idle", json_real(idle));
+        json_object_set_new(attr, "idle", json_real(mxb::to_secs(client_dcb->idle_time())));
     }
 
     json_t* connection_arr = json_array();
