@@ -40,7 +40,7 @@ mxs::config::ParamString Configuration::s_user(
     "The user to use when connecting to the backend.",
     "");
 
-mxs::config::ParamString Configuration::s_password(
+mxs::config::ParamPassword Configuration::s_password(
     &nosqlprotocol::specification,
     "password",
     "The password to use when connecting to the backend.",
@@ -85,7 +85,7 @@ mxs::config::ParamString Configuration::s_authentication_user(
     "user data to the MariaDB server.",
     "");
 
-mxs::config::ParamString Configuration::s_authentication_password(
+mxs::config::ParamPassword Configuration::s_authentication_password(
     &nosqlprotocol::specification,
     "authentication_password",
     "The password of the user specified with 'authentication_user'.",
