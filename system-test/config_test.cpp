@@ -33,10 +33,9 @@ const char* bad_configs[] =
 
 int main(int argc, char** argv)
 {
+    TestConnections::skip_maxscale_start(true);
     TestConnections* test = new TestConnections(argc, argv);
     int rval = 0;
-
-    test->maxscale->stop();
 
     for (int i = 0; bad_configs[i]; i++)
     {

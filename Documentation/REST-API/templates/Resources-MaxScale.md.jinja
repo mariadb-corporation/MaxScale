@@ -31,14 +31,9 @@ PATCH /v1/maxscale
 ```
 
 Update MaxScale parameters. The request body must define updated values for the
-`data.attributes.parameters` object. The following parameters can be altered:
-
-- [admin_auth](../Getting-Started/Configuration-Guide.md#admin_auth)
-- [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
-- [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
-- [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
-- [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
-- [passive](../Getting-Started/Configuration-Guide.md#passive)
+`data.attributes.parameters` object. The parameters that can be modified are
+listed in the `/v1/maxscale/modules/maxscale` endpoint and have the `modifiable`
+value set to `true`.
 
 #### Response
 
@@ -318,6 +313,9 @@ The `maxscale` module will display the global configuration options
 
 The `servers` module displays the server object type and the configuration
 parameters it accepts as a module.
+
+Any parameter with the `modifiable` value set to `true` can be modified
+at runtime using a PATCH command on the corresponding object endpoint.
 
 #### Response
 

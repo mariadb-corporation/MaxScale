@@ -169,6 +169,20 @@ int main(int argc, char** argv)
     test.tprintf("MXS-4041: Reloading of REST API TLS certificates");
     test_reload_tls(test);
 
+    test.tprintf("MXS-4171: Runtime modifications to static parameters");
+
+    auto res = test.maxctrl("alter service RW-Split-Router router=readwritesplit");
+    test.expect(res.rc == 0, "Changing `router` to its current value should succeed: %s", res.output.c_str());
+
+    res = test.maxctrl("alter service RW-Split-Router router=readconnroute");
+    test.expect(res.rc != 0, "Changing `router` to a new value should fail.");
+
+    res = test.maxctrl("alter listener RW-Split-Listener protocol=MySQLClient");
+    test.expect(res.rc == 0, "Old alias for module name should compare equal: %s", res.output.c_str());
+
+    res = test.maxctrl("alter listener RW-Split-Listener protocol=cdc");
+    test.expect(res.rc != 0, "Changing listener protocol should fail.");
+
     test.check_maxscale_alive();
     return test.global_result;
 }
