@@ -211,7 +211,7 @@ bool save_config(const mxs::Config& config)
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
-        config.persist(ss);
+        config.persist_maxscale(ss);
         ok = runtime_save_config("maxscale", ss.str());
         config_set_mask_passwords(old_val);
     }

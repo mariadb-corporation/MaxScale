@@ -84,6 +84,24 @@ public:
      */
     static json_t* object_source_to_json(const std::string& name);
 
+    /**
+     * Persists global MaxScale options to a stream
+     *
+     * @param os The stream where the configuration is written to
+     *
+     * @return The same output stream
+     */
+    std::ostream& persist_maxscale(std::ostream& os) const;
+
+    /**
+     * Get global MaxScale configuration as JSON
+     *
+     * @param host Hostname of this server
+     *
+     * @return The global MaxScale configuration as a JSON object
+     */
+    json_t* maxscale_to_json(const char* host);
+
     class ParamAutoTune : public config::ParamStringList
     {
     public:

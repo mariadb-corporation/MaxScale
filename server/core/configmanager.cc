@@ -584,7 +584,7 @@ mxb::Json ConfigManager::create_config(int64_t version)
     append_config(arr.get_json(), service_list_to_json(""));
     append_config(arr.get_json(), FilterDef::filter_list_to_json(""));
     append_config(arr.get_json(), Listener::to_json_collection(""));
-    append_config(arr.get_json(), remove_local_parameters(config_maxscale_to_json("")));
+    append_config(arr.get_json(), remove_local_parameters(mxs::Config::get().maxscale_to_json("")));
 
     mxb::Json rval(mxb::Json::Type::OBJECT);
 

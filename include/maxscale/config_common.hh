@@ -214,14 +214,6 @@ int config_threadcount(void);
 
 
 /**
- * @brief List all path parameters as JSON
- *
- * @param host Hostname of this server
- * @return JSON object representing the paths used by MaxScale
- */
-json_t* config_maxscale_to_json(const char* host);
-
-/**
  * @brief  Get DCB write queue high water mark
  *
  * @return  Number of high water mark in bytes

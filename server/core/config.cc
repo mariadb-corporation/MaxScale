@@ -992,10 +992,14 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
     return configured;
 }
 
+std::ostream& Config::persist_maxscale(std::ostream& os) const
+{
+    mxs::config::Configuration::persist(os);
+    return os;
+}
+
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    mxb_assert(nested_params.empty() || (nested_params.size() == 1 && nested_params.count("event")));
-
     bool rv = true;
     auto it = nested_params.find("event");
 
@@ -2875,7 +2879,7 @@ std::vector<string> config_break_list_string(const string& list_string)
     return tokenized;
 }
 
-json_t* config_maxscale_to_json(const char* host)
+json_t* mxs::Config::maxscale_to_json(const char* host)
 {
     json_t* param = json_object();
 
@@ -2890,13 +2894,12 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_PERSISTDIR, json_string(mxs::config_persistdir()));
     json_object_set_new(param, CN_PIDDIR, json_string(mxs::piddir()));
 
-    const mxs::Config& cnf = mxs::Config::get();
     // This will dump all parameters defined using the new configuration mechanism.
-    cnf.fill(param);
+    fill(param);
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
-    time_t activated = started + MXS_CLOCK_TO_SEC(cnf.promoted_at);
+    time_t activated = started + MXS_CLOCK_TO_SEC(promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
     json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
