@@ -120,12 +120,11 @@ export default {
         ...mapState({
             query_sessions: state => state.querySession.query_sessions,
             active_wke_id: state => state.wke.active_wke_id,
-            file_handle: state => state.editor.file_handle,
-            query_txt: state => state.editor.query_txt,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getActiveSession: 'querySession/getActiveSession',
+            getIsFileUnsaved: 'editor/getIsFileUnsaved',
         }),
         supportFs() {
             return supported
@@ -222,14 +221,8 @@ export default {
             }
         },
 
-        detectUnsavedChanges() {
-            if (!this.query_txt) return false
-            return this.file_handle.txt !== this.query_txt
-        },
-
         async handleLoadScript(fileHandle) {
-            const hasUnsavedChanges = this.detectUnsavedChanges()
-            if (hasUnsavedChanges) this.openConfDlg({ fileHandle })
+            if (this.getIsFileUnsaved) this.openConfDlg({ fileHandle })
             else await this.loadScriptToActiveSession({ fileHandle })
         },
 

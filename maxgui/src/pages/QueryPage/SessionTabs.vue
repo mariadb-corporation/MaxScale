@@ -26,6 +26,10 @@
                             :maxWidth="112"
                             :nudgeLeft="48"
                         />
+                        <span
+                            v-if="getIsFileUnsavedBySessionId(session.id)"
+                            class="unsaved-changes-indicator"
+                        />
                         <v-progress-circular
                             v-if="getLoadingQueryResultBySessionId(session.id)"
                             class="ml-2"
@@ -95,6 +99,7 @@ export default {
             getActiveSession: 'querySession/getActiveSession',
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
+            getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
         }),
         activeSessionId: {
             get() {
@@ -137,3 +142,14 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.unsaved-changes-indicator::after {
+    content: ' *';
+    color: $primary;
+    padding-left: 4px;
+    font-size: 0.875rem;
+    position: relative;
+    font-weight: 500;
+    font-family: $heading-font-family;
+}
+</style>
