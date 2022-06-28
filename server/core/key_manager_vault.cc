@@ -29,6 +29,7 @@ static mxs::config::ParamInteger s_port(&s_spec, "port", "Vault server port", 82
 static mxs::config::ParamPath s_ca(&s_spec, "ca", "CA certificate", Opt::R, "");
 static mxs::config::ParamString s_mount(&s_spec, "mount", "KeyValue mount", "secret");
 static mxs::config::ParamBool s_tls(&s_spec, "tls", "Use HTTPS with Vault server", true);
+static mxs::config::ParamSeconds s_timeout(&s_spec, "timeout", "Timeout for the Vault server", 30s);
 
 std::tuple<std::vector<uint8_t>, uint32_t>
 load_key(const VaultKey::Config& cnf, const std::string& id, int64_t version)
@@ -59,7 +60,9 @@ load_key(const VaultKey::Config& cnf, const std::string& id, int64_t version)
     auto builder = Vault::ConfigBuilder()
         .withTlsEnabled(cnf.tls)
         .withPort(Vault::Port {std::to_string(cnf.port)})
-        .withHost(Vault::Host {cnf.host});
+        .withHost(Vault::Host {cnf.host})
+        .withConnectTimeout(Vault::Timeout {cnf.timeout.count()})
+        .withRequestTimeout(Vault::Timeout {cnf.timeout.count()});
 
     if (!cnf.ca.empty())
     {
@@ -155,4 +158,5 @@ VaultKey::Config::Config()
     add_native(&Config::ca, &s_ca);
     add_native(&Config::mount, &s_mount);
     add_native(&Config::tls, &s_tls);
+    add_native(&Config::timeout, &s_timeout);
 }

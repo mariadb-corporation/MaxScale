@@ -30,12 +30,13 @@ public:
     public:
         Config();
 
-        std::string token;
-        std::string host;
-        int64_t     port;
-        std::string ca;
-        std::string mount;
-        bool        tls;
+        std::string          token;
+        std::string          host;
+        int64_t              port;
+        std::string          ca;
+        std::string          mount;
+        bool                 tls;
+        std::chrono::seconds timeout;
     };
 
     VaultKey(Config config);
