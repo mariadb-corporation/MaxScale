@@ -94,7 +94,7 @@
                         </label>
                         <v-text-field
                             id="db-user"
-                            v-model="body.user"
+                            v-model.trim="body.user"
                             :rules="rules.user"
                             class="std error--text__bottom user"
                             name="db-user"
@@ -113,7 +113,7 @@
                         </label>
                         <v-text-field
                             id="db-password"
-                            v-model="body.password"
+                            v-model.trim="body.password"
                             :rules="rules.password"
                             :type="isPwdVisible ? 'text' : 'password'"
                             class="std error--text__bottom password"
@@ -135,7 +135,7 @@
                             {{ $t('database') }}
                         </label>
                         <v-text-field
-                            v-model="body.db"
+                            v-model.trim="body.db"
                             class="std error--text__bottom"
                             name="db"
                             dense
