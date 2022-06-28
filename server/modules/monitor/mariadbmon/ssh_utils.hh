@@ -39,7 +39,7 @@ using SSession = std::shared_ptr<ssh::Session>;
  */
 std::tuple<SSession, std::string>
 init_ssh_session(const std::string& host, const std::string& user, const std::string& keyfile,
-                 std::chrono::milliseconds timeout);
+                 bool check_host, std::chrono::milliseconds timeout);
 
 struct CmdResult
 {

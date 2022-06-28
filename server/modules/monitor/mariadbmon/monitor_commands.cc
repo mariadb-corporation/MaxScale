@@ -1436,8 +1436,9 @@ bool RebuildServer::init()
     {
         // Ok so far. Initiate SSH-sessions to both servers.
         auto init_ssh = [this](MariaDBServer* server) {
+            const auto& sett = m_mon.m_settings;
             auto [ses, errmsg_con] = ssh_util::init_ssh_session(
-                server->server->address(), m_mon.m_settings.ssh_user, m_mon.m_settings.ssh_keyfile,
+                server->server->address(), sett.ssh_user, sett.ssh_keyfile, sett.ssh_host_check,
                 ssh_base_timeout);
 
             if (!ses)

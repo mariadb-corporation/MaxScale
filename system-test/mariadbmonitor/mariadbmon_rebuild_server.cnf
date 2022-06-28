@@ -4,6 +4,7 @@ threads=###threads###
 ###mariadb_monitor###
 ssh_user=###ssh_user###
 ssh_keyfile=/tmp/sshkey.pem
+ssh_check_host_key=false
 
 ###rwsplit_service###
 

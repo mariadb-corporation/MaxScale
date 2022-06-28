@@ -243,6 +243,8 @@ cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER, "SSH username. Used for ac
 
 cfg::ParamPath s_ssh_keyfile(&s_spec, CONFIG_SSH_KEYFILE, "SSH keyfile. Used for accessing servers.",
                              cfg::ParamPath::R | cfg::ParamPath::F, "");
+cfg::ParamBool s_ssh_check_host_key(&s_spec, "ssh_check_host_key", "Is SSH host key check enabled.", true,
+                                    cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool Spec::do_post_validate(Params params) const
@@ -437,6 +439,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::cs_admin_api_key, &s_cs_admin_api_key);
     add_native(&Settings::ssh_user, &s_ssh_user);
     add_native(&Settings::ssh_keyfile, &s_ssh_keyfile);
+    add_native(&Settings::ssh_host_check, &s_ssh_check_host_key);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,

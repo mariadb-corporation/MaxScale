@@ -47,7 +47,7 @@ namespace ssh_util
 {
 
 std::tuple<SSession, std::string>
-init_ssh_session(const string& host, const string& user, const string& keyfile,
+init_ssh_session(const string& host, const string& user, const string& keyfile, bool check_host,
                  std::chrono::milliseconds timeout)
 {
     auto [privkey, key_errmsg] = read_private_key(keyfile);
@@ -74,17 +74,30 @@ init_ssh_session(const string& host, const string& user, const string& keyfile,
 
         ses->connect();
 
-        int pubkey_res = ses->isServerKnown();
-        if (pubkey_res == SSH_KNOWN_HOSTS_OK)
+        bool host_ok = false;
+        if (check_host)
         {
-            // Server is known. Authenticate.
-            ses->userauthPublickey(privkey);
-            rval = move(ses);
+            int pubkey_res = ses->isServerKnown();
+            if (pubkey_res == SSH_KNOWN_HOSTS_OK)
+            {
+                // Server is known. Authenticate.
+                host_ok = true;
+            }
+            else
+            {
+                errmsg = "Public key of server was not found in known_hosts file. Either connect to the "
+                         "server manually or disable key checking.";
+            }
         }
         else
         {
-            // Maybe add ability to write pubkey to known_hosts.
-            errmsg = "Public key of server was not found in known_hosts file.";
+            host_ok = true;
+        }
+
+        if (host_ok)
+        {
+            ses->userauthPublickey(privkey);
+            rval = move(ses);
         }
     }
     catch (ssh::SshException& e)

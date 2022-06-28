@@ -60,6 +60,9 @@ void test_main(TestConnections& test)
         };
         install_tools(source_ind);
         install_tools(target_ind);
+
+        // Firewall on the source server may interfere with the transfer, stop it.
+        repl.backend(source_ind)->vm_node().run_cmd_output_sudo("systemctl stop iptables");
     }
 
     if (test.ok())
@@ -196,5 +199,6 @@ void test_main(TestConnections& test)
         rwsplit_conn->cmd("drop database test;");
     }
 
+    repl.backend(source_ind)->vm_node().run_cmd_output_sudo("systemctl start iptables");
     mxs.vm_node().delete_from_node(keypath);
 }

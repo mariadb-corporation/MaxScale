@@ -468,8 +468,9 @@ private:
         std::string cs_admin_base_path; /* ColumnStore rest-api base path */
         std::string cs_admin_api_key;   /* ColumnStore rest-api key */
 
-        std::string ssh_user;           /**< SSH username for accessing servers */
-        std::string ssh_keyfile;        /**< SSH keyfile for accessing server */
+        std::string ssh_user;               /**< SSH username for accessing servers */
+        std::string ssh_keyfile;            /**< SSH keyfile for accessing server */
+        bool        ssh_host_check {true};  /**< Check that host is in known_hosts */
 
     private:
         MariaDBMonitor* m_monitor;
