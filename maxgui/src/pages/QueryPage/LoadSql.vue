@@ -10,6 +10,16 @@
             :lazyValidation="false"
             :onSave="confDlg.onSave"
         >
+            <template v-slot:form-body>
+                <p
+                    v-html="
+                        $t(`confirmations.${confDlg.type}`, {
+                            targetId: $typy(confDlg, 'item.id').safeString,
+                            fileNameToBeOpened: confDlg.fileNameToBeOpened,
+                        })
+                    "
+                />
+            </template>
             <template v-slot:actions="{ cancel, save }">
                 <v-spacer />
                 <v-btn
@@ -102,6 +112,7 @@ export default {
                 type: 'openScript',
                 onSave: () => null,
                 dontSave: () => null,
+                fileNameToBeOpened: '',
             },
         }
     },
@@ -205,6 +216,7 @@ export default {
                 title: this.$t('openScript'),
                 type: 'openScript',
                 item: { id: this.getActiveSession.name },
+                fileNameToBeOpened: fileHandle.name,
                 onSave: async () => await this.onSave({ fileHandle }),
                 dontSave: async () => await this.dontSave({ fileHandle }),
             }
