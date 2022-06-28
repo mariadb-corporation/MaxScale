@@ -110,6 +110,7 @@ export default {
             query_sessions: state => state.querySession.query_sessions,
             active_wke_id: state => state.wke.active_wke_id,
             file_handle: state => state.editor.file_handle,
+            query_txt: state => state.editor.query_txt,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -184,7 +185,17 @@ export default {
                  */
                 this.$refs.uploader.value = ''
             // once script is loaded, store fileHandle to the session
-            this.SET_FILE_HANDLE({ payload: fileHandle, id: this.getActiveSessionId })
+            this.SET_FILE_HANDLE({
+                payload: {
+                    file: fileHandle,
+                    /* store its txt so that it can be retrieved
+                     * because the permission to read the file is withdrawn
+                     * when the browser is refreshed or closed
+                     */
+                    txt: await this.getFileTxt(fileHandle),
+                },
+                id: this.getActiveSessionId,
+            })
         },
 
         openConfDlg({ fileHandle }) {
@@ -199,25 +210,32 @@ export default {
             }
         },
 
-        async handleFileOpen() {
-            if (!this.supportFs) this.handleFileUpload()
-            const blob = await fileOpen({ description: 'Text files' })
-            const fileHandle = blob.handle
-            //TODO: detect unsaved changes, openConfDlg if it's true
-            this.openConfDlg({ fileHandle })
+        detectUnsavedChanges() {
+            if (!this.query_txt) return false
+            return this.file_handle.txt !== this.query_txt
         },
 
-        // legacy upload support
-        handleFileUpload() {
-            this.isSelecting = true
-            window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
-            this.$refs.uploader.click()
+        async handleLoadScript(fileHandle) {
+            const hasUnsavedChanges = this.detectUnsavedChanges()
+            if (hasUnsavedChanges) this.openConfDlg({ fileHandle })
+            else await this.loadScriptToActiveSession({ fileHandle })
+        },
+
+        async handleFileOpen() {
+            if (this.supportFs) {
+                const blob = await fileOpen({ description: 'Text files' })
+                const fileHandle = blob.handle
+                await this.handleLoadScript(fileHandle)
+            } else {
+                this.isSelecting = true
+                window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
+                this.$refs.uploader.click()
+            }
         },
 
         // legacy upload file changed support
-        onFileLoadChanged(e) {
-            //TODO: detect unsaved changes, openConfDlg if it's true
-            this.openConfDlg({ fileHandle: e.target.files[0] })
+        async onFileLoadChanged(e) {
+            await this.handleLoadScript(e.target.files[0])
         },
     },
 }
