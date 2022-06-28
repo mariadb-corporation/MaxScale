@@ -1420,6 +1420,35 @@ Timeout for all SQL operations done during the configuration synchronization. If
 an operation exceeds this timeout, the configuration change is treated as failed
 and an error is reported to the client that did the change.
 
+### `key_manager`
+
+- **Type**: enum
+- **Dynamic**: Yes
+- **Values**: `none`, `file`, `kmip`, `vault`
+- **Default**: `none`
+
+The encryption key manager to use. The available encryption key managers are:
+
+* `none` - No key manager, encryption keys are not available.
+
+* `file` - [File-based key manager](#file-based-key-manager)
+
+* `kmip` - [KMIP key manager](#kmip-key-manager)
+
+* `vault` - [HashiCorp Vault key manager](#hashicorp-vault-key-manager)
+
+Refer to the [Encryption Key Managers](#encryption-key-managers) section for
+more information on how to configure the key managers. The key managers each
+have their configuration in their own namespace and must have their name as a
+prefix.
+
+For example to configure the `file` key manager, the following must be used:
+
+```
+key_manager=file
+file.keyfile=/path/to/keyfile
+```
+
 ## Events
 
 MaxScale logs warnings and errors for various reasons and often it is self-
@@ -3149,6 +3178,234 @@ configuration into the it. This allows new MaxScale instances to be easily set
 up without requiring copying of all runtime configuration files. The user
 executing the command must be able to read all MaxScale configuration files as
 well as create and write the provided filename.
+
+# Encryption Key Managers
+
+The encryption key managers are how MaxScale retrieves symmetric encryption keys
+from a key management system. Some parts of MaxScale require the `key_manager`
+to be configured in order to work. The key manager that is used is selected with
+the `key_manager` parameter and the key manager itself is configured by placing
+the parameters in the `[maxscale]` section.
+
+The encryption key managers can be enabled at runtime using `maxctrl alter
+maxscale` but cannot be disabled once enabled. To disable the encryption key
+management, stop Maxscale, remove any persisted configuration files and remove
+`key_manager` as well as any key manager options from the static configuration
+files.
+
+## Reloading Encryption Keys
+
+The encryption keys can be reloaded using the `maxctrl reload encryption`
+command. This causes the key managers to re-read their configuration and to
+optionally reload the encryption keys. Currently only the `file` key manager
+re-reads the encryption keys from the file when this command is executed: other
+key managers retrieve the keys whenever they are needed.
+
+## File-based Key Manager
+
+The encryption keys are stored in a text file stored on a local filesystem.
+
+The file uses the same format as the MariaDB server [File Key Management
+Encryption Plugin]
+(https://mariadb.com/kb/en/file-key-management-encryption-plugin/): a file
+consisting of an encryption key ID number and the hex-encoded encryption key
+separated by a semicolon. Read [Creating the Key
+File](https://mariadb.com/kb/en/file-key-management-encryption-plugin/#creating-the-key-file)
+for more details on how to create the file.
+
+For example, to configure encryption for the `nosqlprotocol` shared credentials
+using the file-based encryption key:
+
+1. Create the key file with `(echo -n '1;' ; openssl rand -hex 32) | cat > /var/lib/maxscale/encryption.key`
+
+2. Give MaxScale read permissions on it with `chown maxscale:maxscale /var/lib/maxscale/encryption.key`
+
+3. Configure MaxScale with the following:
+
+```
+[maxscale]
+key_manager=file
+file.keyfile=/var/lib/maxscale/encryption.key
+
+[NoSQL-Listener]
+type=listener
+service=My-Service
+protocol=nosqlprotocol
+nosqlprotocol.authentication_key_id=1
+nosqlprotocol.authentication_user=my_user
+nosqlprotocol.authentication_password=my_password
+
+# Add services, servers, monitors etc.
+```
+
+4. Start MaxScale
+
+### Limitations
+
+* Key versioning is not supported
+
+### Parameters
+
+#### `file.keyfile`
+
+- **Type**: path
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+Path to the file that contains the encryption keys. The user MaxScale runs as
+(almost always `maxscale`) must be able to read this file.
+
+## KMIP Key Manager
+
+Encryption keys are read from a KMIP server.
+
+The KMIP key manager has been verified to work with the PyKMIP server.
+
+### Limitations
+
+* Key versioning is not supported
+
+* Encryption keys are not cached locally: whenever MaxScale needs an encryption
+  key, it retrieves it from the KMIP server.
+
+### Parameters
+
+#### `kmip.host`
+
+- **Type**: string
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+The host where the KMIP server is.
+
+#### `kmip.port`
+
+- **Type**: integer
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+The port on which the KMIP server listens on.
+
+#### `kmip.cert`
+
+- **Type**: path
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+The client public certificate used when connecting to the KMIP server.
+
+#### `kmip.key`
+
+- **Type**: path
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+The client private key used when connecting to the KMIP server.
+
+#### `kmip.ca`
+
+- **Type**: path
+- **Default**: `""`
+- **Dynamic**: Yes
+
+The CA certificate to use. By default the system default certificates are used.
+
+## HashiCorp Vault Key Manager
+
+Encryption keys are read from a local or remote Vault server using the secret
+engine included in the Vault. This key manager supports versioned keys. Only
+version 2 key-value stores are supported.
+
+The encryption keys use the same format as the MariaDB [HashiCorp Vault Key
+Management Plugin](https://mariadb.com/kb/en/hashicorp-key-management-plugin/):
+The key-value secret for each encryption key ID must contain the field `data`
+which must contain a hex-encoded string that is either 32, 48 or 64 characters
+long.
+
+An easy way to generate a correct encryption key is to use the `vault` and
+`openssl` command line clients. The following command creates a 256-bit
+encryption key using `openssl` and stores it using the key ID `1`:
+
+```
+$ openssl rand -hex 32|vault kv put secret/1 data=-
+== Secret Path ==
+secret/data/1
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-23T06:50:55.29063873Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+```
+
+### Limitations
+
+* Encryption keys are not cached locally: whenever MaxScale needs an encryption
+  key, it retrieves it from the Vault server.
+
+### Parameters
+
+#### `vault.token`
+
+- **Type**: password
+- **Mandatory**: Yes
+- **Dynamic**: Yes
+
+The authentication token used to connect to the Vault server. This can be
+encrypted using `maxpasswd`, similar to how other passwords are encrypted.
+
+#### `vault.host`
+
+- **Type**: string
+- **Default**: `localhost`
+- **Dynamic**: Yes
+
+The host where the Vault server is.
+
+#### `vault.port`
+
+- **Type**: integer
+- **Default**: `8200`
+- **Dynamic**: Yes
+
+The port on which the Vault server listens on.
+
+#### `vault.ca`
+
+- **Type**: path
+- **Default**: `""`
+- **Dynamic**: Yes
+
+The CA certificate to use. By default the system default certificates are used.
+
+#### `vault.tls`
+
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
+
+Whether to use encrypted connections (i.e. HTTPS or HTTP) when communicating
+with the Vault server.
+
+#### `vault.mount`
+
+- **Type**: string
+- **Default**: `secret`
+- **Dynamic**: Yes
+
+The Key-Value mount where the secret is stored. By default the `secret` mount is
+used which is present by default in most Vault installations.
+
+#### `vault.timeout`
+
+- **Type**: [duration](#durations)
+- **Default**: 30s
+- **Dynamic**: Yes
+
+The connection and request timeout used with the Vault server.
 
 # Error Reporting
 
