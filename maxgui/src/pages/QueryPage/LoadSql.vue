@@ -93,7 +93,7 @@
                     type="file"
                     :disabled="!getIsFileUnsaved"
                     v-on="on"
-                    @click="supportFs ? saveFile() : saveFileLegacy()"
+                    @click="supportFs && isInSecureCtx ? saveFile() : saveFileLegacy()"
                 >
                     <v-icon size="20" color="accent-dark">
                         {{
@@ -152,8 +152,10 @@ export default {
         supportFs() {
             return supported
         },
+        isInSecureCtx() {
+            return window.location.protocol.includes('https')
+        },
     },
-
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',

@@ -13,6 +13,7 @@
 
 const path = require('path')
 const { gitDescribeSync } = require('git-describe')
+const fs = require('fs')
 
 process.env.VUE_APP_VERSION = require('./package.json').version
 try {
@@ -33,7 +34,12 @@ module.exports = {
             '@CreateResource',
             path.resolve(__dirname, 'src/components/common/CreateResource')
         )
-
+        const key = process.env.httpsKey
+        const cert = process.env.httpsCert
+        const isHttps = Boolean(key && cert)
+        const https = isHttps
+            ? { https: { key: fs.readFileSync(key), cert: fs.readFileSync(cert) } }
+            : {}
         config.when(process.env.NODE_ENV === 'development', config => {
             // devtool
             config.merge({
@@ -50,6 +56,7 @@ module.exports = {
                             target: process.env.VUE_APP_API,
                         },
                     },
+                    ...https,
                 },
             })
         })
