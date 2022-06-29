@@ -124,13 +124,19 @@ bool config_add_to_context(const std::string& type, ConfigSection::SourceType so
                            const mxb::ini::map_result::Configuration& input, ConfigSectionMap& output);
 
 /**
- * Enable or disable masking of passwords
- *
- * @param enable If true, passwords are masked (the default state). If false, the passwords are not masked.
- *
- * @return The old value
+ * Unmasks passwords when constructed, restores the old value when the object is destroyed. Use this in
+ * code that uses the JSON generated from a mxs::config::Configuration to configure something else.
  */
-bool config_set_mask_passwords(bool enable);
+class UnmaskPasswords
+{
+public:
+    UnmaskPasswords();
+
+    ~UnmaskPasswords();
+
+private:
+    bool m_old_val;
+};
 
 /**
  * Check if passwords should be masked
