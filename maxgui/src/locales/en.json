@@ -254,6 +254,7 @@
     "kill": "Kill",
     "openScript": "Open Script",
     "dontSave": "Don't save",
+    "saveScript": "Save Script",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
