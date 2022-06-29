@@ -121,7 +121,7 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
-            query_favorite: state => state.persisted.query_favorite,
+            query_snippets: state => state.persisted.query_snippets,
             CMPL_SNIPPET_KIND: state => state.app_config.CMPL_SNIPPET_KIND,
         }),
         ...mapGetters({
@@ -129,7 +129,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         snippetList() {
-            return this.query_favorite.map(q => ({
+            return this.query_snippets.map(q => ({
                 label: q.name,
                 detail: `SNIPPET - ${q.sql}`,
                 insertText: q.sql,

@@ -21,7 +21,7 @@ export default {
         query_max_rows: 10000,
         query_confirm_flag: 1,
         query_history: [],
-        query_favorite: [], //aka query snippets
+        query_snippets: [], //aka query snippets
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
     },
@@ -45,12 +45,12 @@ export default {
         SET_QUERY_HISTORY_EXPIRED_TIME(state, timestamp) {
             state.query_history_expired_time = timestamp // Unix time
         },
-        UPDATE_QUERY_FAVORITE(state, { idx, payload }) {
-            if (idx) state.query_favorite.splice(idx, 1)
-            else state.query_favorite.unshift(payload)
+        UPDATE_QUERY_SNIPPETS(state, { idx, payload }) {
+            if (idx) state.query_snippets.splice(idx, 1)
+            else state.query_snippets.unshift(payload)
         },
-        SET_QUERY_FAVORITE(state, payload) {
-            state.query_favorite = payload
+        SET_QUERY_SNIPPETS(state, payload) {
+            state.query_snippets = payload
         },
         SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(state, payload) {
             state.query_show_sys_schemas_flag = payload
@@ -132,7 +132,7 @@ export default {
         },
         pushToQuerySnippets({ commit }, { date, name, sql }) {
             try {
-                commit('UPDATE_QUERY_FAVORITE', {
+                commit('UPDATE_QUERY_SNIPPETS', {
                     payload: {
                         date, // Unix time
                         time: this.vue.$help.dateFormat({

@@ -167,7 +167,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            query_favorite: state => state.persisted.query_favorite,
+            query_snippets: state => state.persisted.query_snippets,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -279,7 +279,7 @@ export default {
             this.pushToQuerySnippets(payload)
         },
         validateSnippetName(v) {
-            const names = this.query_favorite.map(q => q.name)
+            const names = this.query_snippets.map(q => q.name)
             if (!v) return this.$t('errors.requiredInput', { inputName: this.$t('prefix') })
             else if (names.includes(v)) return this.$t('errors.duplicatedValue', { inputValue: v })
             return true

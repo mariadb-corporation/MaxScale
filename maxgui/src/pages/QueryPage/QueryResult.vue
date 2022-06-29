@@ -122,7 +122,7 @@ export default {
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.SQL_QUERY_MODES.PRVW_DATA:
                         return this.SQL_QUERY_MODES.PRVW_DATA
-                    case this.SQL_QUERY_MODES.FAVORITE:
+                    case this.SQL_QUERY_MODES.SNIPPETS:
                     case this.SQL_QUERY_MODES.HISTORY:
                         return this.SQL_QUERY_MODES.HISTORY
                     default:

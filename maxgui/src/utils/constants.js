@@ -143,7 +143,7 @@ export const APP_CONFIG = Object.freeze({
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
         QUERY_VIEW: 'QUERY_VIEW',
         HISTORY: 'HISTORY',
-        FAVORITE: 'FAVORITE',
+        SNIPPETS: 'SNIPPETS',
     }),
     SQL_DDL_ALTER_SPECS: Object.freeze({
         COLUMNS: 'COLUMNS',

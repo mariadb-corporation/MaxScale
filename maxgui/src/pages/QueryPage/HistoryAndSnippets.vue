@@ -11,8 +11,8 @@
                     {{ $t('history') }}
                 </v-tab>
                 <v-tab
-                    :key="SQL_QUERY_MODES.FAVORITE"
-                    :href="`#${SQL_QUERY_MODES.FAVORITE}`"
+                    :key="SQL_QUERY_MODES.SNIPPETS"
+                    :href="`#${SQL_QUERY_MODES.SNIPPETS}`"
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
@@ -25,7 +25,7 @@
                 <table-list
                     v-if="
                         activeView === SQL_QUERY_MODES.HISTORY ||
-                            activeView === SQL_QUERY_MODES.FAVORITE
+                            activeView === SQL_QUERY_MODES.SNIPPETS
                     "
                     :key="activeView"
                     :height="dynDim.height - headerHeight"
@@ -36,7 +36,7 @@
                     showGroupBy
                     groupBy="date"
                     :menuOpts="menuOpts"
-                    :showEditBtn="activeView === SQL_QUERY_MODES.FAVORITE"
+                    :showEditBtn="activeView === SQL_QUERY_MODES.SNIPPETS"
                     :defExportFileName="
                         `MaxScale Query ${
                             activeView === SQL_QUERY_MODES.HISTORY ? 'History' : 'Snippets'
@@ -55,7 +55,7 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-if="activeView === SQL_QUERY_MODES.FAVORITE" v-slot:header-name>
+                    <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $t('prefix') }}
                     </template>
                     <template v-slot:date="{ data: { cell, maxWidth } }">
@@ -216,7 +216,7 @@ export default {
             SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.persisted.query_history,
-            query_favorite: state => state.persisted.query_favorite,
+            query_snippets: state => state.persisted.query_snippets,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -228,7 +228,7 @@ export default {
             set(value) {
                 if (
                     this.curr_query_mode === this.SQL_QUERY_MODES.HISTORY ||
-                    this.curr_query_mode === this.SQL_QUERY_MODES.FAVORITE
+                    this.curr_query_mode === this.SQL_QUERY_MODES.SNIPPETS
                 )
                     this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
@@ -242,8 +242,8 @@ export default {
                 case this.SQL_QUERY_MODES.HISTORY:
                     data = this.query_history
                     break
-                case this.SQL_QUERY_MODES.FAVORITE:
-                    data = this.query_favorite
+                case this.SQL_QUERY_MODES.SNIPPETS:
+                    data = this.query_snippets
             }
             return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => {
                 let header = {
@@ -268,11 +268,11 @@ export default {
                         break
                     case 'name':
                         header.width = 240
-                        if (this.activeView === this.SQL_QUERY_MODES.FAVORITE)
+                        if (this.activeView === this.SQL_QUERY_MODES.SNIPPETS)
                             header.editableCol = true
                         break
                     case 'sql':
-                        if (this.activeView === this.SQL_QUERY_MODES.FAVORITE)
+                        if (this.activeView === this.SQL_QUERY_MODES.SNIPPETS)
                             header.editableCol = true
                 }
                 return header
@@ -282,8 +282,8 @@ export default {
             switch (this.activeView) {
                 case this.SQL_QUERY_MODES.HISTORY:
                     return this.query_history
-                case this.SQL_QUERY_MODES.FAVORITE:
-                    return this.query_favorite
+                case this.SQL_QUERY_MODES.SNIPPETS:
+                    return this.query_snippets
                 default:
                     return []
             }
@@ -339,7 +339,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_QUERY_FAVORITE: 'persisted/SET_QUERY_FAVORITE',
+            SET_QUERY_SNIPPETS: 'persisted/SET_QUERY_SNIPPETS',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
@@ -399,7 +399,7 @@ export default {
                     sql = rowData[0].action.sql
                     break
                 }
-                case this.SQL_QUERY_MODES.FAVORITE:
+                case this.SQL_QUERY_MODES.SNIPPETS:
                     sql = rowData[0].sql
             }
             const {
@@ -420,14 +420,14 @@ export default {
         onDoneEditingSnippets(changedCells) {
             const { cloneDeep, isEqual } = this.$help.lodash
             let cells = cloneDeep(changedCells)
-            let snippets = cloneDeep(this.query_favorite)
+            let snippets = cloneDeep(this.query_snippets)
             cells.forEach(c => {
                 delete c.objRow['#'] // Remove # col
-                const idxOfRow = this.query_favorite.findIndex(item => isEqual(item, c.objRow))
+                const idxOfRow = this.query_snippets.findIndex(item => isEqual(item, c.objRow))
                 if (idxOfRow > -1)
                     snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
             })
-            this.SET_QUERY_FAVORITE(snippets)
+            this.SET_QUERY_SNIPPETS(snippets)
         },
     },
 }
