@@ -663,7 +663,7 @@ const std::string& get_cgroup()
     return cgroup;
 }
 
-long get_current_processor_count()
+long get_vcpu_count()
 {
     mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
     unsigned int cpus = std::thread::hardware_concurrency();
@@ -717,11 +717,11 @@ long get_current_processor_count()
 
 long get_processor_count()
 {
-    static long cpus = get_current_processor_count();
-    return cpus;
+    mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
+    return std::max(std::thread::hardware_concurrency(), 1U);
 }
 
-int64_t get_current_total_memory()
+int64_t get_available_memory()
 {
     int64_t pagesize = 0;
     int64_t num_pages = 0;
@@ -757,8 +757,20 @@ int64_t get_current_total_memory()
 
 int64_t get_total_memory()
 {
-    static int64_t total_memory = get_current_total_memory();
-    return total_memory;
+    int64_t pagesize = 0;
+    int64_t num_pages = 0;
+#if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
+    if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
+    {
+        MXB_WARNING("Unable to establish total system memory");
+        pagesize = 0;
+        num_pages = 0;
+    }
+#else
+#error _SC_PAGESIZE and _SC_PHYS_PAGES are not defined
+#endif
+    mxb_assert(pagesize * num_pages > 0);
+    return pagesize * num_pages;
 }
 
 namespace maxscale

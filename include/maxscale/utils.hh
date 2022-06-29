@@ -125,11 +125,33 @@ bool mxs_mkdir_all(const char* path, int mask, bool log_errors = true);
 long get_processor_count();
 
 /**
+ * Get number of virtual CPUs that are available to the process
+ *
+ * This differs from get_processor_count() by taking CPU affinities and cgroup CPU quotas into account. This
+ * results in a "virtual" CPU count that estimates how much CPU resoures, in terms of CPU cores, are
+ * available.
+ *
+ * @return The "virtual" CPU count available to this process. If no limits or quotas have been placed, this
+ *         will return the same value as get_processor_count().
+ */
+long get_vcpu_count();
+
+/**
  * Return total system memory
  *
  * @return Total memory in bytes or 0 if the information is not available
  */
 int64_t get_total_memory();
+
+/**
+ * @brief Get the current available memory
+ *
+ * Compared to get_total_memory(), this function takes cgroup memory limitations into use.
+ *
+ * @return The amount of memory this process can use. If no limits have been placed, this will return the same
+ *         value as get_total_memory()
+ */
+int64_t get_available_memory();
 
 namespace maxscale
 {
