@@ -15,6 +15,8 @@
 #include "rewritesession.hh"
 #include "rewritefilter.hh"
 
+#include <maxscale/modutil.hh>
+
 RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,
                                            const std::shared_ptr<Settings>& sSettings)
@@ -33,4 +35,23 @@ RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
                                                    const std::shared_ptr<Settings>& sSettings)
 {
     return new RewriteFilterSession(pSession, pService, sSettings);
+}
+
+bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
+{
+    auto& settings = *m_sSettings.get();
+    const auto& sql = pBuffer->get_sql();
+
+    for (const auto& r : settings.rewriters)
+    {
+        std::string new_sql;
+        if (r.replace(sql, &new_sql))
+        {
+            gwbuf_free(pBuffer);
+            pBuffer = modutil_create_query(new_sql.c_str());
+            break;
+        }
+    }
+
+    return mxs::FilterSession::routeQuery(pBuffer);
 }
