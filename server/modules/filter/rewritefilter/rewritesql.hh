@@ -13,10 +13,12 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include "replacer.hh"
+#include "template_reader.hh"
+
 #include <string>
 #include <regex>
 #include <memory>
-#include "replacer.hh"
 
 class Replacer;
 
@@ -31,7 +33,7 @@ class Replacer;
 class RewriteSql
 {
 public:
-    RewriteSql(const std::string& match_template, const std::string& replace_template);
+    RewriteSql(const TemplateDef& template_def);
 
     // Did parsing of the templates succeed?
     bool        is_valid() const;

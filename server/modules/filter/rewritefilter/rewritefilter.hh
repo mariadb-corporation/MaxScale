@@ -15,6 +15,7 @@
 #include <maxbase/ccdefs.hh>
 #include "rewritesession.hh"
 #include "template_reader.hh"
+#include "rewritesql.hh"
 
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
@@ -28,6 +29,7 @@ struct Settings
     bool                     nocase;
     std::string              template_file;
     std::vector<TemplateDef> templates;
+    std::vector<RewriteSql>  rewriters;
 };
 
 class RewriteFilter : public mxs::Filter
@@ -60,7 +62,9 @@ private:
 
     private:
         // Calls RewriteFilter::set_settings()
-        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>&) override final;
+
+        std::pair<bool, std::vector<RewriteSql>> create_rewriters();
 
         RewriteFilter& m_filter;
         Settings       m_settings;

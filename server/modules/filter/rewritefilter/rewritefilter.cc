@@ -76,18 +76,45 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
     add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
 }
 
-bool RewriteFilter::Config::post_configure(const std::map<std::string,
-                                                          maxscale::ConfigParameters>& nested_params)
+bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale::ConfigParameters>&)
 {
-    m_settings.templates.clear();
+    bool ok = true;
+
     if (!m_settings.template_file.empty())
     {
         TemplateReader reader(m_settings.template_file);
-        m_settings.templates = reader.templates();
+        m_settings.templates = reader.templates();      // TODO this also needs to return an ok
+        std::tie(ok, m_settings.rewriters) = create_rewriters();
     }
 
-    m_filter.set_settings(std::make_unique<Settings>(m_settings));
-    return true;
+    if (ok)
+    {
+        m_filter.set_settings(std::make_unique<Settings>(m_settings));
+    }
+    else
+    {
+        MXB_SERROR("Invalid config. Keeping current config.");
+    }
+
+    return ok;
+}
+
+std::pair<bool, std::vector<RewriteSql>> RewriteFilter::Config::create_rewriters()
+{
+    std::vector<RewriteSql> rewriters;
+    bool ok = true;
+
+    for (auto& template_def : m_settings.templates)
+    {
+        RewriteSql rewriter(template_def);
+        if (ok = rewriter.is_valid(); !ok)
+        {
+            break;
+        }
+        rewriters.emplace_back(std::move(rewriter));
+    }
+
+    return {ok, rewriters};
 }
 
 RewriteFilter::RewriteFilter(const std::string& name)
