@@ -165,6 +165,8 @@ public:
      */
     DomainList domains() const;
 
+    const std::vector<Gtid>& triplets() const;
+
 private:
     std::vector<Gtid> m_triplets;
 };

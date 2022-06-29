@@ -453,6 +453,11 @@ GtidList::DomainList GtidList::domains() const
     return rval;
 }
 
+const std::vector<Gtid>& GtidList::triplets() const
+{
+    return m_triplets;
+}
+
 EndPoint::EndPoint(const std::string& host, int port)
     : m_host(host, port)
 {

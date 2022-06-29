@@ -441,46 +441,48 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
     auto result = execute_query(query, errmsg_out);
     if (result)
     {
-        Guard guard(m_arraylock);
+        GtidList current_pos;
+        GtidList binlog_pos;
 
-        rval = true;
         if (result->next_row())
         {
             // Query returned at least some data.
             auto current_str = result->get_string(i_current_pos);
             auto binlog_str = result->get_string(i_binlog_pos);
-            if (current_str.empty())
+            if (!current_str.empty())
             {
-                m_gtid_current_pos = GtidList();
-            }
-            else
-            {
-                m_gtid_current_pos = GtidList::from_string(current_str);
-
-                std::vector<std::pair<uint32_t, uint64_t>> positions;
-
-                for (auto d : m_gtid_current_pos.domains())
-                {
-                    positions.emplace_back(d, m_gtid_current_pos.get_gtid(d).m_sequence);
-                }
-
-                server->set_gtid_list(positions);
+                current_pos = GtidList::from_string(current_str);
             }
 
-            if (binlog_str.empty())
+            if (!binlog_str.empty())
             {
-                m_gtid_binlog_pos = GtidList();
-            }
-            else
-            {
-                m_gtid_binlog_pos = GtidList::from_string(binlog_str);
+                binlog_pos = GtidList::from_string(binlog_str);
             }
         }
         else
         {
-            // Query succeeded but returned 0 rows. This means that the server has no gtid:s.
-            m_gtid_current_pos = GtidList();
-            m_gtid_binlog_pos = GtidList();
+            // Query succeeded but returned 0 rows. This means that the server has no gtid:s. Write defaults.
+        }
+
+        rval = true;
+        if (!(current_pos == m_gtid_current_pos && binlog_pos == m_gtid_binlog_pos))
+        {
+            // Gtid:s changed. If the new current_pos is valid, save it to server.
+            if (!current_pos.empty())
+            {
+                std::vector<std::pair<uint32_t, uint64_t>> positions;
+                const auto& triplets = current_pos.triplets();
+                positions.reserve(triplets.size());
+                for (const auto& gtid : triplets)
+                {
+                    positions.emplace_back(gtid.m_domain, gtid.m_sequence);
+                }
+                server->set_gtid_list(positions);
+            }
+
+            Guard guard(m_arraylock);
+            m_gtid_current_pos = std::move(current_pos);
+            m_gtid_binlog_pos = std::move(binlog_pos);
         }
     }   // If query failed, do not update gtid:s.
     return rval;
