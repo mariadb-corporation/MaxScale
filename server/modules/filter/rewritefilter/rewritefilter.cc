@@ -25,8 +25,8 @@ namespace rewritefilter
 
 cfg::Specification specification(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
-cfg::ParamBool nocase(
-    &specification, "nocase", "Matching is case insensitive", false, cfg::Param::AT_RUNTIME);
+cfg::ParamBool case_sensitive(
+    &specification, "case_sensitive", "Matching default case sensitivity", true, cfg::Param::AT_RUNTIME);
 
 cfg::ParamPath template_file(
     &specification, "template_file", "templates", cfg::ParamPath::R, cfg::Param::AT_RUNTIME);
@@ -71,8 +71,7 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
     , m_filter(filter)
 
 {
-    // TODO move nocase to the template file, maybe
-    add_native(&Config::m_settings, &Settings::nocase, &rewritefilter::nocase);
+    add_native(&Config::m_settings, &Settings::case_sensitive, &rewritefilter::case_sensitive);
     add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
 }
 
@@ -80,9 +79,11 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
 {
     bool ok = true;
 
+    TemplateDef default_template {m_settings.case_sensitive};
+
     if (!m_settings.template_file.empty())
     {
-        TemplateReader reader(m_settings.template_file);
+        TemplateReader reader(m_settings.template_file, default_template);
         std::tie(ok, m_settings.templates) = reader.templates();
         if (ok)
         {

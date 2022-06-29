@@ -17,6 +17,7 @@
 
 struct TemplateDef
 {
+    bool        case_sensitive = true;
     std::string match_template;
     std::string replace_template;
 };
@@ -25,8 +26,9 @@ struct TemplateDef
 class TemplateReader
 {
 public:
-    TemplateReader(const std::string& template_file);
+    TemplateReader(const std::string& template_file, const TemplateDef& dfault);
     std::pair<bool, std::vector<TemplateDef>> templates() const;
 private:
     std::string m_path;
+    TemplateDef m_default_template;
 };

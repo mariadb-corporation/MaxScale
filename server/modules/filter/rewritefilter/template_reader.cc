@@ -17,8 +17,9 @@
 
 using mxb::Json;
 
-TemplateReader::TemplateReader(const std::string& template_file)
+TemplateReader::TemplateReader(const std::string& template_file, const TemplateDef& dfault)
     : m_path(template_file)
+    , m_default_template(dfault)
 {
 }
 
@@ -33,16 +34,26 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
         auto arr = json.get_array_elems("templates");
         for (auto& t : arr)
         {
-            TemplateDef def;
-            def.match_template = t.get_string("match_template");
-            def.replace_template = t.get_string("replace_template");
+            TemplateDef def {m_default_template};
 
-            if (!json.ok())
+            bool case_sensitive;
+            if (t.try_get_bool("case_sensitive", &case_sensitive))
             {
-                MXB_SERROR("Failed read rewrite template file: "
+                def.case_sensitive = case_sensitive;
+            }
+
+            def.match_template = t.get_string("match_template");
+            if (t.ok())
+            {
+                def.replace_template = t.get_string("replace_template");
+            }
+
+            if (!t.ok())
+            {
+                MXB_SERROR("Failed to read rewrite template file: "
                            << m_path
                            << " error: "
-                           << json.error_msg().c_str());
+                           << t.error_msg().c_str());
                 ok = false;
                 break;
             }
