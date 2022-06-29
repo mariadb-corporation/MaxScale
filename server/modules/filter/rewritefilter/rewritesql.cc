@@ -113,7 +113,7 @@ RewriteSql::RewriteSql(const TemplateDef& template_def)
     {
         try
         {
-            m_regex = std::regex{m_regex_str};
+            m_regex = make_regex(template_def);
         }
         catch (const std::exception& ex)
         {
@@ -182,6 +182,20 @@ std::string RewriteSql::make_ordinals()
     }
 
     return "";
+}
+
+std::regex RewriteSql::make_regex(const TemplateDef& def)
+{
+    namespace rx = std::regex_constants;
+
+    auto flags = rx::ECMAScript | rx::optimize;
+
+    if (def.case_sensitive == false)
+    {
+        flags |= rx::icase;
+    }
+
+    return std::regex{m_regex_str, flags};
 }
 
 bool RewriteSql::replace(const std::string& sql, std::string* pSql) const

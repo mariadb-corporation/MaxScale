@@ -54,6 +54,7 @@ public:
 
 private:
     std::string make_ordinals();
+    std::regex  make_regex(const TemplateDef& def);
 
     const std::string m_regex_template;
     const std::string m_replace_template;
