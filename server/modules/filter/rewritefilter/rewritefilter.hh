@@ -14,6 +14,8 @@
 
 #include <maxbase/ccdefs.hh>
 #include "rewritesession.hh"
+#include "template_reader.hh"
+
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 
@@ -23,7 +25,9 @@ class RewriteFilterSession;
 
 struct Settings
 {
-    bool nocase;
+    bool                     nocase;
+    std::string              template_file;
+    std::vector<TemplateDef> templates;
 };
 
 class RewriteFilter : public mxs::Filter

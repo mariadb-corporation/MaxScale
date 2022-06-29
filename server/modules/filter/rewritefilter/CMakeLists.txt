@@ -3,6 +3,7 @@ add_library(rewritefilter SHARED
   rewritesession.cc
   rewritesql.cc
   replacer.cc
+  template_reader.cc
   )
 target_link_libraries(rewritefilter maxscale-common)
 set_target_properties(rewritefilter PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)

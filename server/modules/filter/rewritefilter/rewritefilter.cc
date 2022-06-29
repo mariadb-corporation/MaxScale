@@ -27,6 +27,9 @@ cfg::Specification specification(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamBool nocase(
     &specification, "nocase", "Matching is case insensitive", false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamPath template_file(
+    &specification, "template_file", "templates", cfg::ParamPath::R, cfg::Param::AT_RUNTIME);
 }
 }
 
@@ -68,14 +71,22 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
     , m_filter(filter)
 
 {
+    // TODO move nocase to the template file, maybe
     add_native(&Config::m_settings, &Settings::nocase, &rewritefilter::nocase);
+    add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
 }
 
 bool RewriteFilter::Config::post_configure(const std::map<std::string,
                                                           maxscale::ConfigParameters>& nested_params)
 {
-    m_filter.set_settings(std::make_unique<Settings>(m_settings));
+    m_settings.templates.clear();
+    if (!m_settings.template_file.empty())
+    {
+        TemplateReader reader(m_settings.template_file);
+        m_settings.templates = reader.templates();
+    }
 
+    m_filter.set_settings(std::make_unique<Settings>(m_settings));
     return true;
 }
 
