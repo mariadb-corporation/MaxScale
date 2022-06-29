@@ -56,6 +56,9 @@ void test_reload_tls(TestConnections& test)
             t.join();
         }
     }
+
+    test.maxscale->ssh_node_f(true, "sed -i  -e '/admin_ssl/ d' /etc/maxscale.cnf");
+    test.maxscale->restart();
 }
 
 int main(int argc, char** argv)
@@ -112,9 +115,7 @@ int main(int argc, char** argv)
                               "maxctrl drain server server1;"
                               "maxctrl clear server server1 maintenance;"
                               "maxctrl enable log-priority info;"
-                              "maxctrl enable account vagrant;"
                               "maxctrl disable log-priority info;"
-                              "maxctrl disable account vagrant;"
                               "maxctrl create server server5 127.0.0.1 3306;"
                               "maxctrl create monitor mon1 mariadbmon user=skysql password=skysql;"
                               "maxctrl create service svc1 readwritesplit user=skysql password=skysql;"
@@ -123,7 +124,7 @@ int main(int argc, char** argv)
                               "maxctrl create user maxuser maxpwd;"
                               "maxctrl link service svc1 server5;"
                               "maxctrl link monitor mon1 server5;"
-                              "maxctrl alter service-filters svc1 qla2"
+                              "maxctrl alter service-filters svc1 qla2;"
                               "maxctrl unlink service svc1 server5;"
                               "maxctrl unlink monitor mon1 server5;"
                               "maxctrl alter service-filters svc1"
@@ -143,7 +144,7 @@ int main(int argc, char** argv)
                               "maxctrl alter server server1 port 3306;"
                               "maxctrl alter monitor MySQL-Monitor auto_failover true;"
                               "maxctrl alter service RW-Split-Router max_slave_connections=3;"
-                              "maxctrl alter logging highprecision true;"
+                              "maxctrl alter logging ms_timestamp true;"
                               "maxctrl alter maxscale passive true;"
                               "maxctrl rotate logs;"
                               "maxctrl call command mariadbmon reset-replication MySQL-Monitor;"
