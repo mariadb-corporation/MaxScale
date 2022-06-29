@@ -70,9 +70,8 @@
                     text
                     class="load-sql-btn session-toolbar-square-btn"
                     type="file"
-                    :loading="isSelecting"
                     v-on="on"
-                    @click="handleFileOpen"
+                    @click="supportFs ? openFile() : openFileLegacy()"
                 >
                     <v-icon size="18" color="accent-dark">
                         {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
@@ -104,7 +103,6 @@ export default {
     name: 'load-sql',
     data() {
         return {
-            isSelecting: false,
             confDlg: {
                 isOpened: false,
                 title: this.$t('openScript'),
@@ -138,8 +136,12 @@ export default {
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
         }),
-        // legacy support for reading uploaded file
-        readUploadedFileAsText(fileHandle) {
+        /**
+         * Legacy support for reading uploaded file
+         * @param {FileSystemFileHandle} fileHandle File handle
+         * @returns {String} returns file content
+         */
+        getFileTextLegacy(fileHandle) {
             const reader = new FileReader()
             return new Promise((resolve, reject) => {
                 reader.onerror = () => {
@@ -153,28 +155,74 @@ export default {
                 reader.readAsText(fileHandle)
             })
         },
-
+        /**
+         * @param {FileSystemFileHandle} fileHandle File handle.
+         * @returns {String} returns file content
+         */
         async getFileTxt(fileHandle) {
             if (this.supportFs) {
                 // get file contents
                 const file = await fileHandle.getFile()
                 return await file.text()
             }
-            return await this.readUploadedFileAsText(fileHandle)
+            return await this.getFileTextLegacy(fileHandle)
         },
 
+        /**
+         * @param {Blob} blob - blob
+         */
         async dontSave(blob) {
             await this.loadScriptToActiveSession(blob)
             this.confDlg.isOpened = false
         },
-
+        /**
+         * @param {Blob} blob - blob
+         */
         async onSave(blob) {
             /* TODO: Handle saving file to user's local device if supportFs or downloading it
              * before calling loadScriptToActiveSession
              */
             await this.loadScriptToActiveSession(blob)
         },
+        /**
+         * @param {Blob} blob - blob
+         */
+        openConfDlg(blob) {
+            this.confDlg = {
+                ...this.confDlg,
+                isOpened: true,
+                title: this.$t('openScript'),
+                type: 'openScript',
+                item: { id: this.getActiveSession.name },
+                fileNameToBeOpened: blob.handle.name,
+                onSave: async () => await this.onSave(blob),
+                dontSave: async () => await this.dontSave(blob),
+            }
+        },
 
+        // legacy upload file changed support
+        async onFileLoadChanged(e) {
+            const blob = { handle: e.target.files[0] }
+            await this.handleLoadScript(blob)
+        },
+        async openFileLegacy() {
+            await this.$refs.uploader.click()
+        },
+        async openFile() {
+            const blob = await fileOpen({ description: 'Text files' })
+            await this.handleLoadScript(blob)
+        },
+
+        /**
+         * @param {Blob} blob - blob
+         */
+        async handleLoadScript(blob) {
+            if (this.getIsFileUnsaved) this.openConfDlg(blob)
+            else await this.loadScriptToActiveSession(blob)
+        },
+        /**
+         * @param {Blob} blob - blob
+         */
         async loadScriptToActiveSession(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
             this.SET_QUERY_TXT({ payload: blobTxt, id: this.getActiveSessionId })
@@ -204,40 +252,6 @@ export default {
                 },
                 id: this.getActiveSessionId,
             })
-        },
-
-        openConfDlg(blob) {
-            this.confDlg = {
-                ...this.confDlg,
-                isOpened: true,
-                title: this.$t('openScript'),
-                type: 'openScript',
-                item: { id: this.getActiveSession.name },
-                fileNameToBeOpened: blob.handle.name,
-                onSave: async () => await this.onSave(blob),
-                dontSave: async () => await this.dontSave(blob),
-            }
-        },
-
-        async handleLoadScript(blob) {
-            if (this.getIsFileUnsaved) this.openConfDlg(blob)
-            else await this.loadScriptToActiveSession(blob)
-        },
-
-        async handleFileOpen() {
-            if (this.supportFs) {
-                const blob = await fileOpen({ description: 'Text files' })
-                await this.handleLoadScript(blob)
-            } else {
-                this.isSelecting = true
-                window.addEventListener('focus', () => (this.isSelecting = false), { once: true })
-                this.$refs.uploader.click()
-            }
-        },
-
-        // legacy upload file changed support
-        async onFileLoadChanged(e) {
-            await this.handleLoadScript({ handle: e.target.files[0] })
         },
     },
 }
