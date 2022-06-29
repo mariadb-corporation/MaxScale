@@ -93,7 +93,7 @@
                     type="file"
                     :disabled="!getIsFileUnsaved"
                     v-on="on"
-                    @click="supportFs && isInSecureCtx ? saveFile() : saveFileLegacy()"
+                    @click="handleSaveScript"
                 >
                     <v-icon size="20" color="accent-dark">
                         {{
@@ -165,7 +165,7 @@ export default {
         }),
         /**
          * Legacy support for reading uploaded file
-         * @param {FileSystemFileHandle} fileHandle File handle
+         * @param {<FileSystemFileHandle>} fileHandle File handle
          * @returns {String} returns file content
          */
         getFileTextLegacy(fileHandle) {
@@ -183,7 +183,7 @@ export default {
             })
         },
         /**
-         * @param {FileSystemFileHandle} fileHandle File handle.
+         * @param {<FileSystemFileHandle>} fileHandle File handle.
          * @returns {String} returns file content
          */
         async getFileTxt(fileHandle) {
@@ -276,7 +276,7 @@ export default {
          * @param {Blob} blob - blob
          */
         async onSave(blob) {
-            if (this.supportFs) await this.saveFile()
+            await this.handleSaveScript()
             // load new blob
             await this.loadScriptToActiveSession(blob)
         },
@@ -332,9 +332,30 @@ export default {
             }
         },
 
+        async handleSaveScript() {
+            const hasFileHandle = Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
+            const hasFullSupport = this.supportFs && this.isInSecureCtx
+            if (hasFileHandle && hasFullSupport) await this.saveFile()
+            // Save as a new file
+            else if (hasFullSupport) await this.saveFileAs()
+            else this.saveFileLegacy()
+        },
+        async saveFileAs() {
+            let fileHandle = await this.getNewFileHandle(`${this.getActiveSession.name}.sql`)
+            try {
+                await this.writeFile({ fileHandle, contents: this.query_txt })
+                // update blob_file
+                this.SET_BLOB_FILE({
+                    payload: { file_handle: fileHandle, txt: this.query_txt },
+                    id: this.getActiveSessionId,
+                })
+            } catch (ex) {
+                this.$logger('LoadSql-saveFileAs').error('Unable to write file')
+            }
+        },
         /**
          * Writes the contents to disk.
-         * @param {FileSystemFileHandle} param.fileHandle File handle to write to.
+         * @param {<FileSystemFileHandle>} param.fileHandle File handle to write to.
          * @param {string} param.contents Contents to write.
          */
         async writeFile({ fileHandle, contents }) {
@@ -359,7 +380,7 @@ export default {
         /**
          * Verify the user has granted permission to read and write to the file, if
          * permission hasn't been granted, request permission.
-         * @param {FileSystemFileHandle} fileHandle File handle to check.
+         * @param {<FileSystemFileHandle>} fileHandle File handle to check.
          * @return {boolean} True if the user has granted read/write permission.
          */
         async verifyWritePriv(fileHandle) {
@@ -372,6 +393,44 @@ export default {
             if ((await fileHandle.requestPermission(opts)) === 'granted') return true
             // The user didn't grant permission, return false.
             return false
+        },
+
+        /**
+         * Create a handle to a new text file on the local file system.
+         * @param {string} suggestedName - suggestedName for the file
+         * @returns {Promise<FileSystemFileHandle>} Handle to the new file.
+         */
+        getNewFileHandle(suggestedName) {
+            try {
+                // For Chrome 86 and later...
+                if ('showSaveFilePicker' in window)
+                    return window.showSaveFilePicker({
+                        suggestedName,
+                        types: [
+                            {
+                                description: 'Text file',
+                                accept: { 'text/plain': ['.txt'] },
+                            },
+                        ],
+                    })
+                // For Chrome 85 and earlier...
+                return window.chooseFileSystemEntries({
+                    suggestedName,
+                    type: 'save-file',
+                    accepts: [
+                        {
+                            description: 'Text file',
+                            extensions: ['txt'],
+                            mimeTypes: ['text/plain'],
+                        },
+                    ],
+                })
+            } catch (ex) {
+                if (!ex.name === 'AbortError')
+                    this.$logger('LoadSql-getNewFileHandle').error(
+                        'An error occurred trying to open the file.'
+                    )
+            }
         },
     },
 }
