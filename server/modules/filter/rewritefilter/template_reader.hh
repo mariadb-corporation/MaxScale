@@ -26,7 +26,7 @@ class TemplateReader
 {
 public:
     TemplateReader(const std::string& template_file);
-    std::vector<TemplateDef> templates() const;
+    std::pair<bool, std::vector<TemplateDef>> templates() const;
 private:
     std::string m_path;
 };

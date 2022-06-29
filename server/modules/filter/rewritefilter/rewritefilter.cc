@@ -83,8 +83,11 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     if (!m_settings.template_file.empty())
     {
         TemplateReader reader(m_settings.template_file);
-        m_settings.templates = reader.templates();      // TODO this also needs to return an ok
-        std::tie(ok, m_settings.rewriters) = create_rewriters();
+        std::tie(ok, m_settings.templates) = reader.templates();
+        if (ok)
+        {
+            std::tie(ok, m_settings.rewriters) = create_rewriters();
+        }
     }
 
     if (ok)

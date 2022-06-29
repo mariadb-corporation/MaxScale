@@ -22,10 +22,12 @@ TemplateReader::TemplateReader(const std::string& template_file)
 {
 }
 
-std::vector<TemplateDef> TemplateReader::templates() const
+std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
 {
     std::vector<TemplateDef> ret;
+    bool ok = true;
     Json json;
+
     if (json.load(m_path))
     {
         auto arr = json.get_array_elems("templates");
@@ -34,6 +36,16 @@ std::vector<TemplateDef> TemplateReader::templates() const
             TemplateDef def;
             def.match_template = t.get_string("match_template");
             def.replace_template = t.get_string("replace_template");
+
+            if (!json.ok())
+            {
+                MXB_SERROR("Failed read rewrite template file: "
+                           << m_path
+                           << " error: "
+                           << json.error_msg().c_str());
+                ok = false;
+                break;
+            }
 
             ret.push_back(std::move(def));
         }
@@ -44,7 +56,8 @@ std::vector<TemplateDef> TemplateReader::templates() const
                    << m_path
                    << " error: "
                    << json.error_msg().c_str());
+        ok = false;
     }
 
-    return ret;
+    return {ok, ret};
 }
