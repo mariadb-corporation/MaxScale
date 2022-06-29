@@ -46,10 +46,11 @@ struct UserInfo
     {
     }
 
-    enum IncludePW { WITH_PW, NO_PW };
+    enum Contents { PRIVATE, PUBLIC };
 
-    // Convert user to JSON: use WITH_PW to include the password in the output.
-    json_t* to_json(IncludePW include_pw) const;
+    // Convert user to JSON: use Contents::PRIVATE to include the password in the output for exporting to
+    // other MaxScale instances.
+    json_t* to_json(Contents include_pw) const;
 
     std::string       name;
     std::string       password;

@@ -171,7 +171,7 @@ static json_t* admin_user_json_data(const char* host, const mxs::UserInfo& user)
 
     json_object_set_new(entry, CN_ID, json_string(user.name.c_str()));
     json_object_set_new(entry, CN_TYPE, json_string(CN_INET));
-    json_object_set_new(entry, CN_ATTRIBUTES, user.to_json(mxs::UserInfo::NO_PW));
+    json_object_set_new(entry, CN_ATTRIBUTES, user.to_json(mxs::UserInfo::PUBLIC));
     json_object_set_new(entry, CN_LINKS, mxs_json_self_link(host, path.c_str(), user.name.c_str()));
 
     return entry;

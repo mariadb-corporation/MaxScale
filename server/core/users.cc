@@ -194,7 +194,7 @@ json_t* Users::diagnostics() const
 
     for (const auto& [key, val] : m_data)
     {
-        json_array_append_new(rval, val.to_json(UserInfo::NO_PW));
+        json_array_append_new(rval, val.to_json(UserInfo::PUBLIC));
     }
 
     return rval;
@@ -219,7 +219,7 @@ json_t* Users::to_json() const
 
     for (const auto& [key, val] : m_data)
     {
-        json_array_append_new(arr, val.to_json(UserInfo::WITH_PW));
+        json_array_append_new(arr, val.to_json(UserInfo::PRIVATE));
     }
 
     return arr;
@@ -366,19 +366,24 @@ mxs::user_account_type json_to_account_type(json_t* json)
     return mxs::USER_ACCOUNT_UNKNOWN;
 }
 
-json_t* mxs::UserInfo::to_json(IncludePW include_pw) const
+json_t* mxs::UserInfo::to_json(Contents contents) const
 {
     json_t* obj = json_object();
 
     json_object_set_new(obj, CN_NAME, json_string(name.c_str()));
     json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(permissions)));
-    json_object_set_new(obj, CN_CREATED, date_or_null(created));
-    json_object_set_new(obj, CN_LAST_UPDATE, date_or_null(last_update));
-    json_object_set_new(obj, CN_LAST_LOGIN, date_or_null(last_login));
 
-    if (include_pw == WITH_PW)
+    if (contents == PRIVATE)
     {
+        // For internal use only: include the password and don't add the timestamps. This way the users
+        // are compare equal when compared as JSON.
         json_object_set_new(obj, CN_PASSWORD, json_string(password.c_str()));
+    }
+    else
+    {
+        json_object_set_new(obj, CN_CREATED, date_or_null(created));
+        json_object_set_new(obj, CN_LAST_UPDATE, date_or_null(last_update));
+        json_object_set_new(obj, CN_LAST_LOGIN, date_or_null(last_login));
     }
 
     return obj;
