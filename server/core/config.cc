@@ -537,6 +537,8 @@ namespace
 
 struct ThisUnit
 {
+    bool mask_passwords = true;
+
     const char*    config_file = nullptr;
     bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
     CONFIG_CONTEXT config_context;
@@ -4947,4 +4949,19 @@ bool config_set_rebalance_threshold(const char* value)
     }
 
     return rv;
+}
+
+UnmaskPasswords::UnmaskPasswords()
+    : m_old_val(std::exchange(this_unit.mask_passwords, false))
+{
+}
+
+UnmaskPasswords::~UnmaskPasswords()
+{
+    this_unit.mask_passwords = m_old_val;
+}
+
+bool config_mask_passwords()
+{
+    return this_unit.mask_passwords;
 }

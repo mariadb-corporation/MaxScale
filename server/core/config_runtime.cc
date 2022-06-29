@@ -1710,6 +1710,9 @@ json_t* runtime_get_json_error()
 bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port,
                                     const mxs::ConfigParameters& extra)
 {
+    UnmaskPasswords unmask;
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)
     {
@@ -1741,6 +1744,7 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
 
 bool runtime_destroy_server(Server* server, bool force)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (force)
@@ -1779,6 +1783,7 @@ bool runtime_destroy_server(Server* server, bool force)
 
 bool runtime_destroy_listener(Service* service, const char* name)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (!service_remove_listener(service, name))
@@ -1796,6 +1801,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
 
 bool runtime_destroy_filter(const SFilterDef& filter, bool force)
 {
+    UnmaskPasswords unmask;
     mxb_assert(filter);
     bool rval = false;
 
@@ -1822,6 +1828,7 @@ bool runtime_destroy_filter(const SFilterDef& filter, bool force)
 
 bool runtime_destroy_service(Service* service, bool force)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
     mxb_assert(service && service->active());
 
@@ -1844,6 +1851,7 @@ bool runtime_destroy_service(Service* service, bool force)
 
 bool runtime_destroy_monitor(Monitor* monitor, bool force)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (force)
@@ -1871,6 +1879,7 @@ bool runtime_destroy_monitor(Monitor* monitor, bool force)
 
 bool runtime_create_server_from_json(json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
     StringSet relations;
 
@@ -1907,6 +1916,7 @@ bool runtime_create_server_from_json(json_t* json)
 
 bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
     std::unique_ptr<json_t> old_json(ServerManager::server_to_json_resource(server, ""));
     mxb_assert(old_json.get());
@@ -1971,6 +1981,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
 bool runtime_alter_server_relationships_from_json(Server* server, const char* type, json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
     std::unique_ptr<json_t> old_json(ServerManager::server_to_json_resource(server, ""));
     mxb_assert(old_json.get());
@@ -1995,6 +2006,7 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
 
 bool runtime_create_monitor_from_json(json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (validate_monitor_json(json))
@@ -2045,6 +2057,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 
 bool runtime_create_filter_from_json(json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (validate_filter_json(json))
@@ -2078,6 +2091,7 @@ bool update_service_relationships(Service* service, json_t* json)
 
 bool runtime_create_service_from_json(json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (validate_create_service_json(json))
@@ -2129,6 +2143,7 @@ bool runtime_create_service_from_json(json_t* json)
 
 bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
+    UnmaskPasswords unmask;
     bool success = false;
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
@@ -2155,6 +2170,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
 bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, const char* type, json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
     mxb_assert(old_json.get());
@@ -2179,6 +2195,7 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, const char*
 
 bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (is_valid_relationship_body(json))
@@ -2201,6 +2218,7 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 
 bool can_modify_service_params(Service* service, const mxs::ConfigParameters& params)
 {
+    UnmaskPasswords unmask;
     bool rval = true;
 
     const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
@@ -2243,6 +2261,7 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
 
 bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (validate_service_json(new_json))
@@ -2380,6 +2399,7 @@ bool runtime_alter_logs_from_json(json_t* json)
 
 bool runtime_create_listener_from_json(json_t* json, Service* service)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (!service && !(service = get_service_from_listener_json(json)))
@@ -2505,6 +2525,7 @@ bool runtime_alter_user(const std::string& user, const std::string& type, json_t
 
 bool runtime_alter_maxscale_from_json(json_t* json)
 {
+    UnmaskPasswords unmask;
     bool rval = false;
 
     if (validate_object_json(json))
