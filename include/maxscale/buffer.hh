@@ -307,6 +307,48 @@ public:
 
     uint8_t operator[](size_t ind) const;
 
+    /**
+     * Returns the static size of the instance, i.e. sizeof(*this).
+     *
+     * @return The static size.
+     */
+    size_t static_size() const
+    {
+        return sizeof(*this);
+    }
+
+    /**
+     * Returns the current size of the varying part of the instance.
+     *
+     * @return The varying size.
+     */
+    size_t varying_size() const
+    {
+        size_t rv = 0;
+
+        if (m_sbuf)
+        {
+            rv += sizeof(*m_sbuf.get());
+            rv += m_sbuf->size() / m_sbuf.use_count();
+        }
+
+        rv += m_sql.capacity();
+        rv += m_canonical.capacity();
+        rv += m_markers.capacity() * sizeof(decltype(m_markers)::value_type);
+
+        return rv;
+    }
+
+    /**
+     * Returns the runtime size of the instance; i.e. the static size + the varying size.
+     *
+     * @return The runtime size.
+     */
+    size_t runtime_size() const
+    {
+        return static_size() + varying_size();
+    }
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 
@@ -1426,6 +1468,36 @@ public:
      * @param log_level Log priority where the message is written
      */
     void hexdump_pretty(int log_level = LOG_INFO) const;
+
+    /**
+     * Returns the static size of the instance, i.e. sizeof(*this).
+     *
+     * @return The static size.
+     */
+    size_t static_size() const
+    {
+        return sizeof(*this);
+    }
+
+    /**
+     * Returns the current size of the varying part of the instance.
+     *
+     * @return The varying size.
+     */
+    size_t varying_size() const
+    {
+        return m_pBuffer ? m_pBuffer->runtime_size() : 0;
+    }
+
+    /**
+     * Returns the runtime size of the instance; i.e. the static size + the varying size.
+     *
+     * @return The runtime size.
+     */
+    size_t runtime_size() const
+    {
+        return static_size() + varying_size();
+    }
 
 private:
     // To prevent @c Buffer from being created on the heap.
