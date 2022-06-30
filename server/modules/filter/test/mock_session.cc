@@ -74,6 +74,11 @@ public:
     {
         return true;
     }
+
+    size_t sizeof_buffers() const override
+    {
+        return 0;
+    }
 };
 
 bool Session::Endpoint::routeQuery(GWBUF* buffer)

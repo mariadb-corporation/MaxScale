@@ -272,6 +272,11 @@ private:
             return write(buffer);
         }
 
+        size_t sizeof_buffers() const override
+        {
+            return 0;
+        }
+
     private:
         ResultSetDCB& m_owner;
     };

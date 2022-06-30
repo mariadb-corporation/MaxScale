@@ -156,6 +156,11 @@ private:
             return write(buffer);
         }
 
+        size_t sizeof_buffers() const override
+        {
+            return m_dcb ? m_dcb->runtime_size() : 0;
+        }
+
     private:
         Dcb::Handler* m_pHandler;
         Dcb*          m_dcb {nullptr};

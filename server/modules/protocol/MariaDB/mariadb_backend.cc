@@ -1710,6 +1710,20 @@ bool MariaDBBackendConnection::is_idle() const
            && m_track_queue.empty();
 }
 
+size_t MariaDBBackendConnection::sizeof_buffers() const
+{
+    size_t rv = 0;
+
+    for (const auto& buffer : m_delayed_packets)
+    {
+        rv += buffer.runtime_size();
+    }
+
+    rv += (m_dcb ? m_dcb->runtime_size() : 0);
+
+    return rv;
+}
+
 json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{sissss}", "connection_id", m_thread_id, "server", m_server.name(),

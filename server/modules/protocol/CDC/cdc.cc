@@ -324,3 +324,8 @@ bool CDCClientConnection::safe_to_restart() const
 {
     return true;
 }
+
+size_t CDCClientConnection::sizeof_buffers() const
+{
+    return ClientConnectionBase::sizeof_buffers();
+}

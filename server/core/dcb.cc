@@ -2292,3 +2292,8 @@ bool mxs::ClientConnectionBase::in_routing_state() const
 {
     return m_dcb != nullptr;
 }
+
+size_t mxs::ClientConnectionBase::sizeof_buffers() const
+{
+    return m_dcb ? m_dcb->runtime_size() : 0;
+}

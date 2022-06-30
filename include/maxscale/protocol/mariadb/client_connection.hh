@@ -52,6 +52,7 @@ public:
     void    wakeup() override;
     bool    is_movable() const override;
     bool    is_idle() const override;
+    size_t  sizeof_buffers() const override;
     bool    safe_to_restart() const override;
     void    kill() override;
 

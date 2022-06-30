@@ -263,6 +263,8 @@ public:
 
     bool in_routing_state() const override;
 
+    size_t sizeof_buffers() const override = 0;
+
 protected:
     ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
 };

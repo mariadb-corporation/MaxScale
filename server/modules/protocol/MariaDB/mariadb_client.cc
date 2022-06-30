@@ -2156,6 +2156,13 @@ bool MariaDBClientConnection::is_idle() const
     return in_routing_state();
 }
 
+size_t MariaDBClientConnection::sizeof_buffers() const
+{
+    size_t rv = ClientConnectionBase::sizeof_buffers();
+
+    return rv;
+}
+
 bool MariaDBClientConnection::safe_to_restart() const
 {
     return !m_session_data->is_trx_active() && !m_session_data->is_trx_ending();

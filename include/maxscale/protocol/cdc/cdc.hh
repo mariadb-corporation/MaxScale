@@ -100,6 +100,8 @@ public:
 
     bool safe_to_restart() const override;
 
+    size_t sizeof_buffers() const override;
+
 private:
     int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
 

@@ -84,6 +84,13 @@ public:
     {
         return true;
     }
+
+    /**
+     * Size of internal buffers.
+     *
+     * @return The size of internal buffers in bytes.
+     */
+    virtual size_t sizeof_buffers() const = 0;
 };
 }
 /**
