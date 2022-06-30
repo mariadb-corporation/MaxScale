@@ -396,6 +396,36 @@ bool MYSQL_session::is_trx_active() const
     return trx_state & TrxState::TRX_ACTIVE;
 }
 
+size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
+{
+    size_t rv = 0;
+
+    size_t sescmd_history = 0;
+    for (const GWBUF& buf : this->history)
+    {
+        sescmd_history += buf.runtime_size();
+    }
+
+    // The map overhead is ignored.
+    sescmd_history += this->history_responses.size() * sizeof(decltype(this->history_responses)::value_type);
+    sescmd_history += this->history_info.size() * sizeof(decltype(this->history_info)::value_type);
+
+    json_object_set_new(memory, "sescmd_history", json_integer(sescmd_history));
+    rv += sescmd_history;
+
+    size_t exec_metadata = 0;
+    for (const auto& kv : this->exec_metadata)
+    {
+        exec_metadata += sizeof(decltype(this->exec_metadata)::value_type);
+        exec_metadata += kv.second.capacity();
+    }
+
+    json_object_set_new(memory, "exec_metadata", json_integer(exec_metadata));
+    rv += exec_metadata;
+
+    return rv;
+}
+
 namespace mariadb
 {
 uint64_t AuthenticatorModule::capabilities() const

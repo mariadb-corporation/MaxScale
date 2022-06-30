@@ -147,6 +147,15 @@ public:
          * @return True if a transaction is ending
          */
         virtual bool is_trx_ending() const = 0;
+
+        /**
+         * Amend provided json object with significant memory usage statistics.
+         *
+         * @param memory  Json object to be populated.
+         *
+         * @return Total amount of memory added.
+         */
+        virtual size_t amend_memory_statistics(json_t* memory) const = 0;
     };
 
     class EventSubscriber

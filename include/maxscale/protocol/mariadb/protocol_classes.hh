@@ -244,6 +244,8 @@ public:
      */
     bool is_trx_ending() const override;
 
+    size_t amend_memory_statistics(json_t* memory) const override;
+
     /**
      * Sets the capabilities required by the client protocol, to be used by the
      * backend protocol. This is primarily intended for client protocols other than
