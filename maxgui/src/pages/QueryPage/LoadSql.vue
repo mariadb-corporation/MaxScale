@@ -71,7 +71,7 @@
                     class="load-sql-btn session-toolbar-square-btn"
                     type="file"
                     v-on="on"
-                    @click="supportFs ? openFile() : openFileLegacy()"
+                    @click="handleFileOpen"
                 >
                     <v-icon size="18" color="accent-dark">
                         {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
@@ -223,7 +223,10 @@ export default {
             const blob = await fileOpen({ description: 'Text files' })
             await this.handleLoadScript(blob)
         },
-
+        async handleFileOpen() {
+            if (this.supportFs) this.openFile()
+            else this.openFileLegacy()
+        },
         /**
          * @param {Blob} blob - blob
          */
@@ -333,12 +336,16 @@ export default {
         },
 
         async handleSaveScript() {
-            const hasFileHandle = Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
-            const hasFullSupport = this.supportFs && this.isInSecureCtx
-            if (hasFileHandle && hasFullSupport) await this.saveFile()
-            // Save as a new file
-            else if (hasFullSupport) await this.saveFileAs()
-            else this.saveFileLegacy()
+            if (this.getIsFileUnsaved) {
+                const hasFileHandle = Boolean(
+                    this.$typy(this.blob_file, 'file_handle.name').safeString
+                )
+                const hasFullSupport = this.supportFs && this.isInSecureCtx
+                if (hasFileHandle && hasFullSupport) await this.saveFile()
+                // Save as a new file
+                else if (hasFullSupport) await this.saveFileAs()
+                else this.saveFileLegacy()
+            }
         },
         async saveFileAs() {
             let fileHandle = await this.getNewFileHandle(`${this.getActiveSession.name}.sql`)
