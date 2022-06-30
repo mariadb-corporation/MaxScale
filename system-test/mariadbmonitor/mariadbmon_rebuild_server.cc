@@ -138,7 +138,7 @@ void test_main(TestConnections& test)
             test.expect(master_gtid_parts[1] != target_gtid_parts[1], "Gtid server_ids should be different");
             if (test.ok())
             {
-                auto res = mxs.maxctrl("call command mariadbmon rebuild-server MariaDB-Monitor "
+                auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
                                        "server4 server2");
                 if (res.rc == 0)
                 {

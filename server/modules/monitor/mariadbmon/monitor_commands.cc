@@ -225,7 +225,7 @@ bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
     SERVER* target = args->argv[1].value.server;
-    SERVER* source = args->argv[2].value.server;
+    SERVER* source = args->argc > 2 ? args->argv[2].value.server : nullptr;
     return mon->schedule_rebuild_server(target, source, output);
 }
 
@@ -610,10 +610,10 @@ void register_monitor_commands()
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_SERVER, "Target server" },
-        { MODULECMD_ARG_SERVER, "Source server" }
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Source server (optional)" }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "rebuild-server", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", MODULECMD_TYPE_ACTIVE,
                                handle_async_rebuild_server,
                                MXS_ARRAY_NELEMS(rebuild_server_argv), rebuild_server_argv,
                                "Rebuild a server with mariabackup. Does not wait for completion.");
@@ -1125,11 +1125,36 @@ namespace mon_op
 {
 bool RebuildServer::rebuild_check_preconds()
 {
-    auto* target = m_mon.get_server(m_target_srv);
-    auto* source = m_mon.get_server(m_source_srv);
     auto& error_out = m_result.output;
-    bool rval = false;
+    MariaDBServer* target = m_mon.get_server(m_target_srv);
+    if (!target)
+    {
+        PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
+                         m_target_srv->name(), m_mon.name());
+    }
 
+    MariaDBServer* source = nullptr;
+    if (m_source_srv)
+    {
+        source = m_mon.get_server(m_source_srv);
+        if (!source)
+        {
+            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as rebuild source.",
+                             m_source_srv->name(), m_mon.name());
+        }
+    }
+    else if (target)
+    {
+        // User did not give a source server, so autoselect. Prefer a slave.
+        source = autoselect_source_srv(target);
+        if (!source)
+        {
+            PRINT_JSON_ERROR(error_out, "Could not autoselect rebuild source server. A valid source must "
+                                        "be either a master or slave.");
+        }
+    }
+
+    bool rval = false;
     if (target && source)
     {
         bool target_ok = true;
@@ -1179,19 +1204,6 @@ bool RebuildServer::rebuild_check_preconds()
             m_target = target;
             m_source = source;
             rval = true;
-        }
-    }
-    else
-    {
-        if (!target)
-        {
-            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
-                             m_target_srv->name(), m_mon.name());
-        }
-        if (!source)
-        {
-            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as rebuild source.",
-                             m_source_srv->name(), m_mon.name());
         }
     }
     return rval;
@@ -1866,6 +1878,33 @@ void RebuildServer::cleanup()
     {
         check_free_listen_port(*m_source_ses, m_source, rebuild_port, m_result.output);
     }
+}
+
+MariaDBServer* RebuildServer::autoselect_source_srv(const MariaDBServer* target)
+{
+    MariaDBServer* rval = nullptr;
+    for (auto* cand : m_mon.servers())
+    {
+        if (cand != target && (cand->is_master() || cand->is_slave()))
+        {
+            // Anything is better than nothing, a slave is better than master.
+            if (!rval || (rval->is_master() && cand->is_slave()))
+            {
+                rval = cand;
+            }
+            else if (rval->is_slave() && cand->is_slave())
+            {
+                // From two slaves, select one with highest gtid.
+                const auto& curr_gtid = rval->m_gtid_current_pos;
+                const auto& cand_gtid = cand->m_gtid_current_pos;
+                if (cand_gtid.events_ahead(curr_gtid, GtidList::MISSING_DOMAIN_IGNORE) > 0)
+                {
+                    rval = cand;
+                }
+            }
+        }
+    }
+    return rval;
 }
 
 Result Result::deep_copy() const
