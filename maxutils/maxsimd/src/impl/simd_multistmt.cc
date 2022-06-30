@@ -48,6 +48,9 @@ public:
         set(IS_COMMENT, [](uint8_t c) {
                 return std::string("/#-").find(c) != std::string::npos;
             });
+        set(IS_ESCAPE, [](uint8_t c) {
+            return c == '\\';
+        });
     }
 
     inline bool operator()(char bit, uint8_t c) const
