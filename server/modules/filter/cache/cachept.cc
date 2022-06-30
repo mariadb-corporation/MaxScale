@@ -26,7 +26,7 @@ using std::string;
 namespace
 {
 
-int u_current_thread_id = 0;
+std::atomic_int u_current_thread_id {0};
 thread_local int u_thread_id = -1;
 
 /**
@@ -39,7 +39,7 @@ inline int thread_index()
     // A value of -1 indicates that the value has not been initialized,
     if (u_thread_id == -1)
     {
-        u_thread_id = atomic_add(&u_current_thread_id, 1);
+        u_thread_id = u_current_thread_id.fetch_add(1);
     }
 
     return u_thread_id;

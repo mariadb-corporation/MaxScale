@@ -15,6 +15,7 @@
 #include <maxbase/ccdefs.hh>
 
 #include <array>
+#include <atomic>
 #include <cstring>
 #include <functional>
 #include <map>
@@ -541,13 +542,8 @@ public:
         return m_statistics;
     }
 
-    /**
-     * Return the count of descriptors.
-     *
-     * @param pnCurrent  On output the current number of descriptors.
-     * @param pnTotal    On output the total number of descriptors.
-     */
-    void get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal);
+    int64_t current_fd_count() const;
+    int64_t total_fd_count() const;
 
     /**
      * Return the random engine of this worker.
@@ -737,6 +733,8 @@ public:
      * @return The worker instance, or NULL if the current thread does not have a worker.
      */
     static Worker* get_current();
+
+    bool is_current() const;
 
     /**
      * Loop call; the provided function will be called right before the
@@ -1170,16 +1168,17 @@ private:
     using PendingPolls = std::unordered_map<int, PendingPoll>;
     using LCalls       = std::vector<std::function<void ()>>;
 
-    const int32_t m_id;                        /*< The id of the worker. */
+    const int32_t    m_id;               /*< The id of the worker. */
+    MessageQueue*    m_pQueue {nullptr}; /*< The message queue of the worker. */
+    std::thread      m_thread;           /*< The thread object of the worker. */
+    std::atomic_bool m_started {false};  /*< Whether the thread has been started or not. */
+
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
     STATISTICS    m_statistics;                /*< Worker statistics. */
-    MessageQueue* m_pQueue {nullptr};          /*< The message queue of the worker. */
-    std::thread   m_thread;                    /*< The thread object of the worker. */
-    bool          m_started {false};           /*< Whether the thread has been started or not. */
     bool          m_should_shutdown {false};   /*< Whether shutdown should be performed. */
     bool          m_shutdown_initiated {false};/*< Whether shutdown has been initated. */
-    uint32_t      m_nCurrent_descriptors {0};  /*< Current number of descriptors. */
-    uint64_t      m_nTotal_descriptors {0};    /*< Total number of descriptors. */
+    int64_t       m_nCurrent_descriptors {0};  /*< Current number of descriptors. */
+    int64_t       m_nTotal_descriptors {0};    /*< Total number of descriptors. */
     Load          m_load;                      /*< The worker load. */
     PrivateTimer* m_pTimer;                    /*< The worker's own timer. */
     DCallsByTime  m_sorted_calls;              /*< Current delayed calls sorted by time. */

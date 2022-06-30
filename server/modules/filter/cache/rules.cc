@@ -32,14 +32,18 @@
 
 using mxb::sv_case_eq;
 
-static int next_thread_id = 0;
-static thread_local int current_thread_id = -1;
+namespace
+{
+std::atomic_int next_thread_id {0};
+thread_local int current_thread_id = -1;
+}
+
 
 inline int get_current_thread_id()
 {
     if (current_thread_id == -1)
     {
-        current_thread_id = atomic_add(&next_thread_id, 1);
+        current_thread_id = next_thread_id.fetch_add(1);
     }
 
     return current_thread_id;

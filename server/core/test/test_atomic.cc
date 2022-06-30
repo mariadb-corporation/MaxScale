@@ -25,18 +25,6 @@
 static int running = 0;
 static int expected = 0;
 
-void test_add(void* data)
-{
-    int id = (size_t)data;
-
-    while (atomic_load_int32(&running))
-    {
-        atomic_add(&expected, id);
-        atomic_add(&expected, -id);
-        mxb_assert(atomic_load_int32(&expected) >= 0);
-    }
-}
-
 void test_load_store(void* data)
 {
     int id = (size_t)data;
@@ -45,34 +33,9 @@ void test_load_store(void* data)
     {
         if (atomic_load_int32(&expected) % NTHR == id)
         {
-            mxb_assert(atomic_add(&expected, 1) % NTHR == id + 1);
+            mxb_assert(__atomic_fetch_add(&expected, 1, __ATOMIC_SEQ_CST) % NTHR == id + 1);
         }
     }
-}
-
-static void* cas_dest = (void*)1;
-
-void test_cas(void* data)
-{
-    size_t id = (size_t)data - 1;
-    static int loops = 0;
-
-    while (atomic_load_int32(&running))
-    {
-        void* my_value;
-        void* my_expected;
-
-        do
-        {
-            my_value = (void*)((id + 1) % NTHR);
-            my_expected = (void*)id;
-        }
-        while (!atomic_cas_ptr(&cas_dest, &my_expected, my_value));
-
-        loops++;
-    }
-
-    mxb_assert(loops > 0);
 }
 
 int run_test(void (* func)(void*))
@@ -104,10 +67,5 @@ int main(int argc, char** argv)
 
     printf("test_load_store\n");
     run_test(test_load_store);
-    printf("test_add\n");
-    run_test(test_add);
-    printf("test_cas\n");
-    run_test(test_cas);
-
     return rval;
 }

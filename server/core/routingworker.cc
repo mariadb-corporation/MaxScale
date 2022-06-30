@@ -1852,6 +1852,7 @@ public:
     void execute(Worker& worker) override final
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
+        mxb_assert(rworker.is_current());
 
         json_t* pStats = json_object();
         const Worker::STATISTICS& s = rworker.statistics();
@@ -1865,9 +1866,8 @@ public:
         json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
         json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
 
-        uint32_t nCurrent;
-        uint64_t nTotal;
-        rworker.get_descriptor_counts(&nCurrent, &nTotal);
+        int64_t nCurrent = rworker.current_fd_count();
+        int64_t nTotal = rworker.total_fd_count();
         json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
         json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
 

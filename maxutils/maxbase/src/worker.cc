@@ -553,10 +553,14 @@ void Worker::finish()
     this_unit.initialized = false;
 }
 
-void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
+int64_t Worker::current_fd_count() const
 {
-    *pnCurrent = atomic_load_uint32(&m_nCurrent_descriptors);
-    *pnTotal = atomic_load_uint64(&m_nTotal_descriptors);
+    return m_nCurrent_descriptors;
+}
+
+int64_t Worker::total_fd_count() const
+{
+    return m_nTotal_descriptors;
 }
 
 Worker::RandomEngine& Worker::random_engine()
@@ -582,6 +586,7 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
 
 bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
 {
+    mxb_assert(!m_started || is_current());
     mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == nullptr);
 
     bool rv = true;
@@ -595,8 +600,8 @@ bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0)
     {
-        mxb::atomic::add(&m_nCurrent_descriptors, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&m_nTotal_descriptors, 1, mxb::atomic::RELAXED);
+        m_nCurrent_descriptors++;
+        m_nTotal_descriptors++;
 
         if (pPollable->is_unique())
         {
@@ -614,6 +619,7 @@ bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
 
 bool Worker::remove_pollable(Pollable* pPollable)
 {
+    mxb_assert(!m_started || is_current());
     bool rv = true;
 
     int fd = pPollable->poll_fd();
@@ -622,7 +628,7 @@ bool Worker::remove_pollable(Pollable* pPollable)
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0)
     {
-        mxb::atomic::add(&m_nCurrent_descriptors, -1, mxb::atomic::RELAXED);
+        m_nCurrent_descriptors--;
 
         if (!m_scheduled_polls.empty())
         {
@@ -659,6 +665,11 @@ bool Worker::remove_pollable(Pollable* pPollable)
 Worker* Worker::get_current()
 {
     return this_thread.pCurrent_worker;
+}
+
+bool Worker::is_current() const
+{
+    return this_thread.pCurrent_worker == this;
 }
 
 bool Worker::execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode)
