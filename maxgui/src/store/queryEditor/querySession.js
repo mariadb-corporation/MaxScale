@@ -149,6 +149,23 @@ export default {
             commit('DELETE_SESSION', session.id)
         },
         /**
+         * Clear all session's data except active_sql_conn data
+         * @param {Object} param.session - session to be cleared
+         */
+        handleClearTheLastSession({ state, commit, dispatch }, session) {
+            const freshSession = {
+                ...defSessionState(session.wke_id_fk),
+                id: session.id,
+                name: 'Query Tab 1',
+                count: 1,
+                active_sql_conn: session.active_sql_conn,
+            }
+            const idx = state.query_sessions.findIndex(s => s.id === session.id)
+            commit('UPDATE_SESSION', { idx, session: freshSession })
+            dispatch('releaseQueryModulesMem', session.id)
+            dispatch('handleSyncSession', freshSession)
+        },
+        /**
          * @param {Object} param.session - session object to be sync to flat states
          */
         handleSyncSession({ commit }, session) {

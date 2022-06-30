@@ -39,14 +39,12 @@
                             indeterminate
                         />
                     </div>
-                    <!-- Prevent the deletion of the first session -->
                     <v-btn
-                        v-if="session.count !== 1"
                         class="ml-1 del-session-btn"
                         icon
                         x-small
                         :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
-                        @click="handleDisconnectSession(session)"
+                        @click="handleDeleteSessTab(session)"
                     >
                         <v-icon
                             size="8"
@@ -126,6 +124,7 @@ export default {
         ...mapActions({
             handleDeleteSession: 'querySession/handleDeleteSession',
             handleSyncSession: 'querySession/handleSyncSession',
+            handleClearTheLastSession: 'querySession/handleClearTheLastSession',
         }),
         addGetActiveSessionIdWatcher() {
             this.rmGetActiveSessionIdWatcher = this.$watch(
@@ -136,8 +135,9 @@ export default {
                 { immediate: true }
             )
         },
-        async handleDisconnectSession(session) {
-            await this.handleDeleteSession(session)
+        async handleDeleteSessTab(session) {
+            if (this.getSessionsOfActiveWke.length === 1) this.handleClearTheLastSession(session)
+            else await this.handleDeleteSession(session)
         },
     },
 }
