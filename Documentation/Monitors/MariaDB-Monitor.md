@@ -136,8 +136,9 @@ For a list of optional parameters that all monitors support, read the
 
 These are optional parameters specific to the MariaDB Monitor. Failover,
 switchover and rejoin-specific parameters are listed in their own
-[section](#cluster-manipulation-operations). ColumnStore parameters are
-described in the [ColumnStore commands-section](#settings).
+[section](#cluster-manipulation-operations). Rebuild-related parameters are
+described in the [server rebuild-section](#server-rebuild). ColumnStore
+parameters are described in the [ColumnStore commands-section](#settings).
 
 ### `assume_unique_hostnames`
 
@@ -1019,6 +1020,74 @@ MaxScale. Only use it when there is another monitor ready to claim the locks.
 ```
 maxctrl call command mariadbmon release-locks MyMonitor1
 ```
+
+## Rebuild server
+
+The rebuild server-feature replaces the contents of a database server with the
+contents of another server. The source server is effectively cloned and all data
+on the target server is lost. This is useful when a slave server has diverged
+from the master server, or when adding a new server to the cluster. The
+MariaDB-server configuration files are not affected.
+
+MariaDB-Monitor can perform this operation by running
+[Mariabackup](#https://mariadb.com/kb/en/mariabackup/) on both the source and
+target servers. To do this, MaxScale needs to have ssh-access on the machines.
+Also, the following tools need to be installed on the source and target
+machines:
+1. *Mariabackup*. Backups and restores MariaDB-server contents. Installed e.g.
+with `yum install MariaDB-backup`.
+2. *pigz*. Compresses and decompresses the backup stream. Installed e.g. with
+`yum install pigz`.
+3. *socat*. Streams data from one machine to another. Is likely already
+installed. If not, can be installed e.g. with `yum install socat`.
+
+When launched, the rebuild operation proceeds as below. If any step fails, the
+operation is stopped and the target server will be left in an unspecified state.
+1. Log in to both servers with ssh and check that the tools listed above are
+present (e.g. `mariabackup -v` should succeed).
+2. Check that the port used for transferring the backup is free on the source
+server. If not, kill the process holding it. This requires running *lsof* and
+ *kill*.
+3. Launch *Mariabackup* on the source machine, compress the stream and listen
+for an incoming connection. This is performed with a command like
+`mariabackup --backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
+4. Stop MariaDB-server on the target machine and delete all contents of the data
+directory */var/lib/mysql*.
+5. On the target machine, connect to the source machine, read the backup stream,
+decompress it and write to the data directory. This is performed with a command
+like `socat -u TCP:<host>:<port> STDOUT | pigz -dc | mbstream -x`. This step can
+take a long time if there is much data to transfer.
+6. Prepare the backup on the target server with a command like
+`mariabackup --use-memory=1G --prepare`. This step can also take some time if
+the source server performed writes during data transfer.
+7. On the target server, change ownership of datadir contents to the
+ *mysql*-user and start MariaDB-server.
+8. Have the target server start replicating from the master.
+
+The rebuild-operation is a monitor module command and is best launched with
+MaxCtrl. The command takes three arguments: the monitor name, target server name
+and source server name.
+```
+maxctrl call command mariadbmon async-rebuild-server MariaDB-Monitor MyServer3 MyServer2
+```
+The operation does not launch if the target server is already replicating or if
+the source server is not a master or slave.
+
+### Settings
+
+#### `ssh_user`
+
+String. Ssh username. Used when logging in to backend servers to run commands.
+
+#### `ssh_keyfile`
+
+Path to file with an ssh private key. Used when logging in to backend servers to
+run commands.
+
+#### `ssh_check_host_key`
+
+Boolean, default: true. When logging in to backends, require that the server is
+already listed in the known_hosts-file of the user running MaxScale.
 
 ## ColumnStore commands
 
