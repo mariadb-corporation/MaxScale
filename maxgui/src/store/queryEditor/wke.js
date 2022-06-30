@@ -165,12 +165,31 @@ export default {
                 )
             }
         },
-        async handleDeleteWke({ commit, dispatch }, id) {
+        async handleDeleteWke({ commit, dispatch, state, getters, rootGetters }, id) {
             try {
+                const currActiveWkeId = state.active_wke_id
                 // release module memory states
                 dispatch('releaseQueryModulesMem', id)
                 await dispatch('handleDeleteWkeSessions', id)
                 commit('DELETE_WKE', id)
+                /**
+                 * Handle a case where the current active worksheet is not the one being deleted.
+                 * In that case, the worksheet and its sessions are not synced with syncedStates and memStates
+                 * So it should dispatch handleSyncWke and querySession/handleSyncSession
+                 * to get the right data
+                 */
+                if (currActiveWkeId !== id) {
+                    // get the next active wke, it's chosen automatically by v-tabs .i.e state.active_wke_id
+                    const activeWke = getters.getActiveWke
+                    if (activeWke) {
+                        dispatch('handleSyncWke', activeWke)
+                        dispatch(
+                            'querySession/handleSyncSession',
+                            rootGetters['querySession/getActiveSession'],
+                            { root: true }
+                        )
+                    }
+                }
             } catch (e) {
                 this.vue.$logger('store-wke-handleDeleteWke').error(e)
             }
