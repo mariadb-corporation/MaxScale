@@ -2246,7 +2246,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
             }
         }
 
-        if (cfg.specification().validate(params) && cfg.configure(params) && mxs::KeyManager::configure())
+        if (cfg.specification().validate(params) && cfg.configure(params))
         {
             rval = save_config(cfg);
         }

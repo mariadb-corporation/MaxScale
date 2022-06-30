@@ -84,7 +84,7 @@ mxs::config::Specification* KeyManager::specification(KeyManager::Type type)
 }
 
 // static
-bool KeyManager::configure(bool force)
+bool KeyManager::configure()
 {
     std::lock_guard guard(this_unit.lock);
     const auto& cnf = mxs::Config::get();

@@ -1028,6 +1028,11 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         key_manager_options = it->second;
     }
 
+    if (!mxs::KeyManager::configure())
+    {
+        rv = false;
+    }
+
     auto whw = this->writeq_high_water.get();
     auto wlw = this->writeq_low_water.get();
 
@@ -2370,14 +2375,6 @@ static bool process_config_context(ConfigSectionMap& context)
         return rval;
     };
     std::sort(objects.begin(), objects.end(), compare);
-
-    // Configure the encryption key manager before any objects are created. This makes sure that it is
-    // correctly configured if any of the objects requires decryption or encryption while it is being created.
-    if (!mxs::KeyManager::configure())
-    {
-        MXB_ERROR("Key manager initialization failed.");
-        return false;
-    }
 
     /**
      * Build the servers first to keep them in configuration file order. As
