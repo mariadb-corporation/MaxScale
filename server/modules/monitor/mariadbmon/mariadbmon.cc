@@ -245,6 +245,10 @@ cfg::ParamPath s_ssh_keyfile(&s_spec, CONFIG_SSH_KEYFILE, "SSH keyfile. Used for
                              cfg::ParamPath::R | cfg::ParamPath::F, "");
 cfg::ParamBool s_ssh_check_host_key(&s_spec, "ssh_check_host_key", "Is SSH host key check enabled.", true,
                                     cfg::Param::AT_RUNTIME);
+cfg::ParamSeconds s_ssh_timeout(&s_spec, "ssh_timeout", "SSH connection and command timeout", 10s,
+                                cfg::Param::AT_RUNTIME);
+cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for transferring server backup.",
+                               4444, 0, 65535, cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool Spec::do_post_validate(Params params) const
@@ -440,6 +444,8 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::ssh_user, &s_ssh_user);
     add_native(&Settings::ssh_keyfile, &s_ssh_keyfile);
     add_native(&Settings::ssh_host_check, &s_ssh_check_host_key);
+    add_native(&Settings::ssh_timeout, &s_ssh_timeout);
+    add_native(&Settings::rebuild_port, &s_rebuild_port);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,

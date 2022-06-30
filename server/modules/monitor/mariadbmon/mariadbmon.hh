@@ -468,9 +468,11 @@ private:
         std::string cs_admin_base_path; /* ColumnStore rest-api base path */
         std::string cs_admin_api_key;   /* ColumnStore rest-api key */
 
-        std::string ssh_user;               /**< SSH username for accessing servers */
-        std::string ssh_keyfile;            /**< SSH keyfile for accessing server */
-        bool        ssh_host_check {true};  /**< Check that host is in known_hosts */
+        std::string          ssh_user;              /**< SSH username for accessing servers */
+        std::string          ssh_keyfile;           /**< SSH keyfile for accessing server */
+        bool                 ssh_host_check {true}; /**< Check that host is in known_hosts */
+        std::chrono::seconds ssh_timeout;           /**< SSH connection and command timeout */
+        int64_t              rebuild_port {0};      /**< Listen port for server backup transfer */
 
     private:
         MariaDBMonitor* m_monitor;

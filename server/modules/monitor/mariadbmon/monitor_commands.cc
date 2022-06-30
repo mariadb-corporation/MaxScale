@@ -49,9 +49,6 @@ const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 const char rebuild_server_cmd[] = "rebuild-server";
 const char mask[] = "******";
 
-// Assume simple commands complete in a reasonable time.
-const std::chrono::milliseconds ssh_base_timeout = 5s;
-const int rebuild_port = 4444;                      // TODO: configurable
 const string rebuild_datadir = "/var/lib/mysql";    // configurable?
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
@@ -1212,7 +1209,7 @@ bool RebuildServer::rebuild_check_preconds()
 bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string& desc)
 {
     bool rval = false;
-    auto res = ssh_util::run_cmd(*m_target_ses, cmd, ssh_base_timeout);
+    auto res = ssh_util::run_cmd(*m_target_ses, cmd, m_ssh_timeout);
     if (res.type == RType::OK && res.rc == 0)
     {
         rval = true;
@@ -1232,9 +1229,9 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
     const char pigz_cmd[] = "pigz -V";
     const char mbu_cmd[] = "mariabackup -v";
 
-    auto socat_res = ssh_util::run_cmd(ssh, socat_cmd, ssh_base_timeout);
-    auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, ssh_base_timeout);
-    auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, ssh_base_timeout);
+    auto socat_res = ssh_util::run_cmd(ssh, socat_cmd, m_ssh_timeout);
+    auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, m_ssh_timeout);
+    auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, m_ssh_timeout);
 
     auto& error_out = m_result.output;
     bool all_ok = true;
@@ -1265,18 +1262,18 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
     return all_ok;
 }
 
-bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port,
-                                           mxb::Json& error_out)
+bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server)
 {
     bool success = true;
+    auto& error_out = m_result.output;
 
-    auto get_port_pids = [&success, &ses, server, port, &error_out]() {
+    auto get_port_pids = [this, &success, &ses, server, &error_out]() {
         std::vector<int> pids;
         // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
         // optional if users are not willing to give MaxScale sudo-privs.
         auto port_pid_cmd = mxb::string_printf("sudo lsof -i:%i | tr -s ' ' | cut --fields=2 --delimiter=' ' "
-                                               "| tail -n+2", port);
-        auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, ssh_base_timeout);
+                                               "| tail -n+2", m_port);
+        auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, m_ssh_timeout);
         if (port_res.type == RType::OK && port_res.rc == 0)
         {
             if (!port_res.output.empty())
@@ -1301,7 +1298,7 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         {
             string fail_reason = ssh_util::form_cmd_error_msg(port_res, port_pid_cmd.c_str());
             PRINT_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
-                             port, server->name(), fail_reason.c_str());
+                             m_port, server->name(), fail_reason.c_str());
             success = false;
         }
         return pids;
@@ -1312,9 +1309,10 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
     {
         for (auto pid : pids)
         {
-            MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.", port, server->name(), pid);
+            MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.", m_port, server->name(),
+                        pid);
             auto kill_cmd = mxb::string_printf("kill -s SIGKILL %i", pid);
-            auto kill_res = ssh_util::run_cmd(ses, kill_cmd, ssh_base_timeout);
+            auto kill_res = ssh_util::run_cmd(ses, kill_cmd, m_ssh_timeout);
             if (kill_res.type != RType::OK || kill_res.rc != 0)
             {
                 string fail_reason = ssh_util::form_cmd_error_msg(kill_res, kill_cmd.c_str());
@@ -1332,7 +1330,7 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
             if (success && !pids2.empty())
             {
                 PRINT_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild source.",
-                                 port, server->name());
+                                 m_port, server->name());
                 success = false;
             }
         }
@@ -1370,6 +1368,9 @@ RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source
     , m_source_srv(source)
     , m_repl_master(master)
 {
+    const auto& sett = m_mon.m_settings;
+    m_port = (int)sett.rebuild_port;
+    m_ssh_timeout = sett.ssh_timeout;
 }
 
 bool RebuildServer::run()
@@ -1456,7 +1457,7 @@ bool RebuildServer::init()
             const auto& sett = m_mon.m_settings;
             auto [ses, errmsg_con] = ssh_util::init_ssh_session(
                 server->server->address(), sett.ssh_user, sett.ssh_keyfile, sett.ssh_host_check,
-                ssh_base_timeout);
+                m_ssh_timeout);
 
             if (!ses)
             {
@@ -1479,7 +1480,7 @@ bool RebuildServer::init()
 
             if (target_tools && source_tools)
             {
-                if (check_free_listen_port(*source_ses, m_source, rebuild_port, m_result.output))
+                if (check_free_listen_port(*source_ses, m_source))
                 {
                     m_target_ses = move(target_ses);
                     m_source_ses = move(source_ses);
@@ -1500,8 +1501,7 @@ bool RebuildServer::serve_backup()
     const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1,
-                                           rebuild_port);
+    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1, m_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -1516,12 +1516,12 @@ bool RebuildServer::serve_backup()
         {
             rval = true;
             m_source_cmd = move(cmd_handle);
-            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), rebuild_port);
+            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_port);
         }
         else
         {
             // The ssh-command includes username & pw so mask those in the log message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, rebuild_port);
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_port);
             if (status == ssh_util::AsyncCmd::Status::READY)
             {
                 int rc = cmd_handle->rc();
@@ -1574,8 +1574,8 @@ bool RebuildServer::start_transfer()
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
                                "| sudo mbstream -x --directory=%s";
     int timeout_s = 5;      // TODO: configurable?
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), rebuild_port,
-                                            timeout_s, rebuild_datadir.c_str());
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_port, timeout_s,
+                                            rebuild_datadir.c_str());
 
     bool rval = false;
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
@@ -1815,7 +1815,7 @@ bool RebuildServer::start_replication()
     auto res = m_target->ping_or_connect();
     if (Monitor::connection_is_ok(res))
     {
-        GeneralOpData op(OpStart::MANUAL, m_result.output, ssh_base_timeout);
+        GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
         if (m_target->create_start_slave(op, slave_sett))
         {
             // Wait a bit and then check that replication works. This only affects the log message. Simplified
@@ -1856,8 +1856,7 @@ bool RebuildServer::start_replication()
     }
     else
     {
-        PRINT_JSON_ERROR(m_result.output, "Could not connect to to %s after rebuild.",
-                         m_target->name());
+        PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", m_target->name());
         m_target->log_connect_error(res);   // This only goes to log.
     }
 
@@ -1876,7 +1875,7 @@ void RebuildServer::cleanup()
 
     if (m_source_ses)
     {
-        check_free_listen_port(*m_source_ses, m_source, rebuild_port, m_result.output);
+        check_free_listen_port(*m_source_ses, m_source);
     }
 }
 
