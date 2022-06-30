@@ -100,13 +100,6 @@ bool KeyManager::configure(bool force)
 
         return !this_unit.manager;
     }
-    else if (!force && this_unit.manager && this_unit.manager->m_type == type
-             && std::equal(this_unit.manager->m_options.begin(), this_unit.manager->m_options.end(),
-                           opts.begin(), opts.end()))
-    {
-        // No change in key manager type or options.
-        return true;
-    }
 
     std::unique_ptr<MasterKey> master_key;
 

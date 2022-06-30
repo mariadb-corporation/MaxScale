@@ -81,22 +81,6 @@ exports.builder = function (yargs) {
         });
       }
     )
-    .command(
-      "encryption",
-      "Reload encryption keys",
-      function (yargs) {
-        return yargs
-          .epilog(
-            "This command reloads the encryption keys from their respective key managers."
-          )
-          .usage("Usage: reload encryption");
-      },
-      function (argv) {
-        maxctrl(argv, function (host) {
-          return doRequest(host, "maxscale/encryption/reload", { method: "POST" });
-        });
-      }
-    )
     .usage("Usage: reload <command>")
     .help()
     .wrap(null)

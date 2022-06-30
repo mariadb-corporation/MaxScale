@@ -3193,14 +3193,6 @@ management, stop Maxscale, remove any persisted configuration files and remove
 `key_manager` as well as any key manager options from the static configuration
 files.
 
-## Reloading Encryption Keys
-
-The encryption keys can be reloaded using the `maxctrl reload encryption`
-command. This causes the key managers to re-read their configuration and to
-optionally reload the encryption keys. Currently only the `file` key manager
-re-reads the encryption keys from the file when this command is executed: other
-key managers retrieve the keys whenever they are needed.
-
 ## File-based Key Manager
 
 The encryption keys are stored in a text file stored on a local filesystem.
@@ -3253,7 +3245,9 @@ nosqlprotocol.authentication_password=my_password
 - **Dynamic**: Yes
 
 Path to the file that contains the encryption keys. The user MaxScale runs as
-(almost always `maxscale`) must be able to read this file.
+(almost always `maxscale`) must be able to read this file. Encryption keys are
+read from disk only during startup or when any global MaxScale parameter is
+modified at runtime.
 
 ## KMIP Key Manager
 

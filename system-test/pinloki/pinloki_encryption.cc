@@ -74,9 +74,6 @@ public:
         check_contents("test.t1", case2);
         check_contents("test.t2", case3);
 
-        test.tprintf("Key reloading");
-        test.check_maxctrl("reload encryption");
-
         check_encryption({case1, case2, case3, case4, case5});
 
         test.tprintf("Encrypted binlogs with bad configuration should not work");

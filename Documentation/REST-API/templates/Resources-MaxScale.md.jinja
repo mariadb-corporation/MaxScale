@@ -286,19 +286,6 @@ only reloaded if all other certificate reloads were successful.
 
 `Status: 204 No Content`
 
-## Reload encryption keys
-
-```
-POST /v1/maxscale/encryption/reload
-```
-
-Reloads the configured encryption key manager without having to change the
-configuration. If the reloading fails, the old encryption keys remain in use.
-
-#### Response
-
-`Status: 204 No Content`
-
 ## Get a loaded module
 
 ```
