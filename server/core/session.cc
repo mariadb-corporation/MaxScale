@@ -200,6 +200,72 @@ const char* session_state_to_string(MXS_SESSION::State state)
     }
 }
 
+mxb::Json Session::get_memory_statistics() const
+{
+    mxb::Json memory;
+
+    size_t total = 0;
+
+    //
+    // connection_buffers
+    //
+    size_t connection_buffers = 0;
+    mxb_assert(m_client_conn);
+    connection_buffers += m_client_conn->sizeof_buffers();
+
+    for (const auto* conn : m_backends_conns)
+    {
+        connection_buffers += conn->sizeof_buffers();
+    }
+
+    memory.set_int("connection_buffers", connection_buffers);
+    total += connection_buffers;
+
+    //
+    // last_queries
+    //
+    size_t last_queries = 0;
+
+    for (const auto& qi : m_last_queries)
+    {
+        last_queries += qi.runtime_size();
+    }
+
+    memory.set_int("last_queries", last_queries);
+    total += last_queries;
+
+    //
+    // variables
+    //
+    size_t variables = 0;
+
+    for (const auto& kv : m_variables)
+    {
+        variables += sizeof(kv);
+        variables += kv.first.capacity();
+    }
+
+    memory.set_int("variables", variables);
+    total += variables;
+
+    //
+    // protocol data
+    //
+    const auto* p = protocol_data();
+
+    if (p)
+    {
+        total += p->amend_memory_statistics(memory.get_json());
+    }
+
+    //
+    // total
+    //
+    memory.set_int("total", total);
+
+    return memory;
+}
+
 void Session::deliver_response()
 {
     mxb_assert(response.buffer);
@@ -342,6 +408,9 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     {
         json_object_set_new(attr, "idle", json_real(mxb::to_secs(client_dcb->idle_time())));
     }
+
+    mxb::Json memory = get_memory_statistics();
+    json_object_set_new(attr, "memory", memory.release());
 
     json_t* connection_arr = json_array();
     for (auto conn : backend_connections())

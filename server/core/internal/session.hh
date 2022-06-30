@@ -95,6 +95,26 @@ public:
             timespec processed;
         };
 
+        size_t static_size() const
+        {
+            return sizeof(*this);
+        }
+
+        size_t varying_size() const
+        {
+            size_t rv = 0;
+
+            rv += m_query.varying_size();
+            rv += m_server_infos.capacity() * sizeof(ServerInfo);
+
+            return rv;
+        }
+
+        size_t runtime_size() const
+        {
+            return static_size() + varying_size();
+        }
+
     private:
         GWBUF                   m_query;            /*< The packet, COM_QUERY *or* something else. */
         timespec                m_received;         /*< When was it received. */
@@ -275,6 +295,8 @@ public:
     bool    can_pool_backends() const override;
     void    set_can_pool_backends(bool value) override;
     int64_t pooling_time_ms() const;
+
+    mxb::Json get_memory_statistics() const;
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
