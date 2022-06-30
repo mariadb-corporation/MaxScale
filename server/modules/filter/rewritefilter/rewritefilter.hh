@@ -26,6 +26,7 @@ class RewriteFilterSession;
 
 struct Settings
 {
+    bool                     reload;
     bool                     case_sensitive;
     std::string              template_file;
     std::vector<TemplateDef> templates;

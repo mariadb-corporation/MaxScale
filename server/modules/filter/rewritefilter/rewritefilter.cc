@@ -25,6 +25,11 @@ namespace rewritefilter
 
 cfg::Specification specification(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
+// This config parameter is meant to be used as a configuration reload trigger.
+// Setting it to true causes a reload, post_configure() sets it back to false.
+cfg::ParamBool reload(
+    &specification, "reload", "Reload configuration", false, cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool case_sensitive(
     &specification, "case_sensitive", "Matching default case sensitivity", true, cfg::Param::AT_RUNTIME);
 
@@ -71,6 +76,7 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
     , m_filter(filter)
 
 {
+    add_native(&Config::m_settings, &Settings::reload, &rewritefilter::reload);
     add_native(&Config::m_settings, &Settings::case_sensitive, &rewritefilter::case_sensitive);
     add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
 }
@@ -99,6 +105,8 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     {
         MXB_SERROR("Invalid config. Keeping current config.");
     }
+
+    m_settings.reload = false;
 
     return ok;
 }
