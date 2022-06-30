@@ -35,6 +35,9 @@ cfg::ParamBool case_sensitive(
 
 cfg::ParamPath template_file(
     &specification, "template_file", "templates", cfg::ParamPath::R, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool log_replacement(
+    &specification, "log_replacement", "Log replacements at INFO level", false, cfg::Param::AT_RUNTIME);
 }
 }
 
@@ -78,6 +81,7 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
 {
     add_native(&Config::m_settings, &Settings::reload, &rewritefilter::reload);
     add_native(&Config::m_settings, &Settings::case_sensitive, &rewritefilter::case_sensitive);
+    add_native(&Config::m_settings, &Settings::log_replacement, &rewritefilter::log_replacement);
     add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
 }
 

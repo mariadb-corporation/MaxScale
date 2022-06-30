@@ -25,6 +25,11 @@ RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
 {
 }
 
+void RewriteFilterSession::log_replacement(const std::string& from, const std::string& to)
+{
+    MXB_SINFO("Replace:\n" << from << "\nwith:\n" << to);
+}
+
 RewriteFilterSession::~RewriteFilterSession()
 {
 }
@@ -47,6 +52,10 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
         std::string new_sql;
         if (r.replace(sql, &new_sql))
         {
+            if (settings.log_replacement)
+            {
+                log_replacement(sql, new_sql);
+            }
             gwbuf_free(pBuffer);
             pBuffer = modutil_create_query(new_sql.c_str());
             break;

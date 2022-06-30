@@ -28,6 +28,7 @@ struct Settings
 {
     bool                     reload;
     bool                     case_sensitive;
+    bool                     log_replacement;
     std::string              template_file;
     std::vector<TemplateDef> templates;
     std::vector<RewriteSql>  rewriters;
