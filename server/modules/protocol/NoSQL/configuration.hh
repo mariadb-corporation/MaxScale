@@ -83,14 +83,14 @@ public:
 
     // Can only be changed via MaxScale
     static mxs::config::ParamString                      s_user;
-    static mxs::config::ParamString                      s_password;
+    static mxs::config::ParamPassword                    s_password;
     static mxs::config::ParamString                      s_host;
     static mxs::config::ParamBool                        s_authentication_required;
     static mxs::config::ParamBool                        s_authentication_shared;
     static mxs::config::ParamString                      s_authentication_db;
     static mxs::config::ParamString                      s_authentication_key_id;
     static mxs::config::ParamString                      s_authentication_user;
-    static mxs::config::ParamString                      s_authentication_password;
+    static mxs::config::ParamPassword                    s_authentication_password;
     static mxs::config::ParamBool                        s_authorization_enabled;
     static mxs::config::ParamCount                       s_id_length;
 
