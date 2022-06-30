@@ -555,6 +555,34 @@ public:
         m_silence_errors = true;
     }
 
+    virtual size_t static_size() const = 0;
+
+    virtual size_t varying_size() const
+    {
+        size_t rv = 0;
+
+        rv += m_remote.capacity();
+        rv += m_client_remote.capacity();
+
+        auto* callback = m_callbacks;
+
+        while (callback)
+        {
+            rv += sizeof(*callback);
+            callback = callback->next;
+        }
+
+        rv += m_writeq.varying_size();
+        rv += m_readq.varying_size();
+
+        return rv;
+    }
+
+    size_t runtime_size() const
+    {
+        return static_size() + varying_size();
+    }
+
 protected:
     DCB(int fd,
         const std::string& remote,
@@ -705,6 +733,21 @@ public:
 
     static void close(ClientDCB* dcb);
 
+    size_t static_size() const override
+    {
+        return sizeof(*this);
+    }
+
+    size_t varying_size() const override
+    {
+        size_t rv = DCB::varying_size();
+
+        // TODO: m_protocol is owned by this, but that's the wrong way around,
+        // TODO: so it is consciously ignored.
+
+        return rv;
+    }
+
 protected:
     // Only for InternalDCB.
     ClientDCB(int fd,
@@ -801,6 +844,21 @@ public:
      * @param dcb Dcb to close
      */
     static void close(BackendDCB* dcb);
+
+    size_t static_size() const override
+    {
+        return sizeof(*this);
+    }
+
+    size_t varying_size() const override
+    {
+        size_t rv = DCB::varying_size();
+
+        // TODO: m_protocol is owned by this, but that's the wrong way around,
+        // TODO: so it is consciously ignored. m_ssl ignored for now.
+
+        return rv;
+    }
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
