@@ -13,13 +13,3 @@
 
 #include <maxbase/atomic.hh>
 
-int32_t atomic_load_int32(const int32_t* variable)
-{
-    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
-}
-
-void atomic_store_int32(int32_t* variable, int32_t value)
-{
-    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
-}
-

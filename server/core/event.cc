@@ -13,6 +13,7 @@
 
 #include "internal/event.hh"
 #include <algorithm>
+#include <atomic>
 #include <string.h>
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
@@ -181,8 +182,9 @@ struct EVENT
 {
     const char* zName;
     event::id_t id;
-    int32_t     facility;
-    int32_t     level;
+
+    std::atomic_int32_t facility;
+    std::atomic_int32_t level;
 };
 
 // Keep these in alphabetical order.
@@ -456,19 +458,15 @@ void set_log_facility(id_t id, int32_t facility)
 
     // We silently strip away other than the relevant bits.
     facility = facility & LOG_FACMASK;
-
     EVENT& event = this_unit.events[id];
-
-    atomic_store_int32(&event.facility, facility);
+    event.facility = facility;
 }
 
 int32_t get_log_facility(id_t id)
 {
     mxb_assert((id >= 0) && (id < N_EVENTS));
-
     const EVENT& event = this_unit.events[id];
-
-    return atomic_load_int32(&event.facility);
+    return event.facility;
 }
 
 void set_log_level(id_t id, int32_t level)
@@ -477,19 +475,15 @@ void set_log_level(id_t id, int32_t level)
 
     // We silently strip away other than the relevant bits.
     level = level & LOG_PRIMASK;
-
     EVENT& event = this_unit.events[id];
-
-    atomic_store_int32(&event.level, level);
+    event.level = level;
 }
 
 int32_t get_log_level(id_t id)
 {
     mxb_assert((id >= 0) && (id < N_EVENTS));
-
     const EVENT& event = this_unit.events[id];
-
-    return atomic_load_int32(&event.level);
+    return event.level;
 }
 
 result_t validate(const char* zName, const char* zValue)
@@ -516,7 +510,7 @@ void log(id_t event_id,
 
     const EVENT& event = this_unit.events[event_id];
 
-    int priority = atomic_load_int32(&event.facility) | atomic_load_int32(&event.level);
+    int priority = event.facility.load() | event.level.load();
 
     va_start(valist, format);
     int len = vsnprintf(NULL, 0, format, valist);

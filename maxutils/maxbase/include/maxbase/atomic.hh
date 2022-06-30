@@ -25,10 +25,6 @@
 #endif
 #endif
 
-int32_t  atomic_load_int32(const int32_t* variable);
-
-void atomic_store_int32(int32_t* variable, int32_t value);
-
 namespace maxbase
 {
 

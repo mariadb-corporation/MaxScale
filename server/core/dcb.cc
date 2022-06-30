@@ -1244,7 +1244,6 @@ public:
     SerialDcbTask(bool (*func)(DCB*, void*), void* data)
         : m_func(func)
         , m_data(data)
-        , m_more(1)
     {
     }
 
@@ -1253,9 +1252,7 @@ public:
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
         const auto& dcbs = rworker.dcbs();
 
-        for (auto it = dcbs.begin();
-             it != dcbs.end() && atomic_load_int32(&m_more);
-             ++it)
+        for (auto it = dcbs.begin(); it != dcbs.end() && m_more; ++it)
         {
             DCB* dcb = *it;
 
@@ -1263,7 +1260,7 @@ public:
             {
                 if (!m_func(dcb, m_data))
                 {
-                    atomic_store_int32(&m_more, 0);
+                    m_more = false;
                     break;
                 }
             }
@@ -1285,7 +1282,8 @@ public:
 private:
     bool (* m_func)(DCB* dcb, void* data);
     void* m_data;
-    int   m_more;
+
+    std::atomic_bool m_more {true};
 };
 
 uint32_t DCB::process_events(uint32_t events)
