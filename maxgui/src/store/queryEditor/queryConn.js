@@ -11,6 +11,7 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
+import { findLast } from 'utils/helpers'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
 const memStates = queryHelper.memStateCreator('queryConn')
@@ -150,7 +151,7 @@ export default {
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
+                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
                     }
                     commit('ADD_SQL_CONN', sql_conn)
                     // sync the first session tab to persisted obj
@@ -242,8 +243,8 @@ export default {
             }
         },
         /**
-         * This handles deleting a connection. If the target connection is the default connection
-         * of a worksheet, then all of its clone connections (session tabs)will be also deleted. Otherwise,
+         * This handles deleting a connection. If the provided connection id is the first opened connection
+         * of a worksheet, then all of its clone connections will be also deleted. Otherwise,
          * it will find the default connection using `clone_of_conn_id` attribute and delete them all.
          * This action is meant to be used by `connection-manager` component to "unlink" a resource connection
          * from the worksheet. It's also be used by the `disconnectAll` action to delete all connection when
@@ -377,16 +378,17 @@ export default {
                 state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
-        getWkeDefConnByWkeId: (state, getters, rootState) => {
+        getWkeLastSessConnByWkeId: (state, getters, rootState) => {
             const query_sessions = rootState.querySession.query_sessions
             return wke_id => {
                 const def_session =
-                    query_sessions.find(
+                    findLast(
+                        query_sessions,
                         s =>
                             s.wke_id_fk === wke_id &&
                             s.active_sql_conn &&
                             s.active_sql_conn.binding_type ===
-                                rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                                rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
                     ) || {}
                 return def_session.active_sql_conn || {}
             }

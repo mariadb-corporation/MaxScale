@@ -24,7 +24,7 @@
                     active-class="tab-btn--active"
                 >
                     <v-tooltip
-                        :disabled="!$typy(getWkeDefConnByWkeId(wke.id), 'name').safeString"
+                        :disabled="!$typy(getWkeLastSessConnByWkeId(wke.id), 'name').safeString"
                         top
                         transition="slide-x-transition"
                         content-class="shadow-drop"
@@ -78,7 +78,7 @@
                         </template>
                         <span class="color text-text py-2 px-4">
                             {{ $t('connectedTo') }}
-                            {{ $typy(getWkeDefConnByWkeId(wke.id), 'name').safeString }}
+                            {{ $typy(getWkeLastSessConnByWkeId(wke.id), 'name').safeString }}
                         </span>
                     </v-tooltip>
                 </v-tab>
@@ -143,7 +143,7 @@ export default {
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
-            getWkeDefConnByWkeId: 'queryConn/getWkeDefConnByWkeId',
+            getWkeLastSessConnByWkeId: 'queryConn/getWkeLastSessConnByWkeId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
             getCurrEditorMode: 'editor/getCurrEditorMode',
         }),

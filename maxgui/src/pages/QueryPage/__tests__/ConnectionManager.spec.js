@@ -16,8 +16,8 @@ import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_sql_conns = {
-    1: { id: '1', name: 'server_0', type: 'servers', binding_type: 'WORKSHEET' },
-    2: { id: '2', name: 'server_1', type: 'servers', binding_type: 'WORKSHEET' },
+    1: { id: '1', name: 'server_0', type: 'servers', binding_type: 'SESSION' },
+    2: { id: '2', name: 'server_1', type: 'servers', binding_type: 'SESSION' },
 }
 
 const mountFactory = opts =>

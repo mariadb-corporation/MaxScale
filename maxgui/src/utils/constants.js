@@ -86,7 +86,6 @@ export const APP_CONFIG = Object.freeze({
     }),
     QUERY_CONN_BINDING_TYPES: Object.freeze({
         SESSION: 'SESSION',
-        WORKSHEET: 'WORKSHEET', // AKA default session of a worksheet. TODO: remove it
         BACKGROUND: 'BACKGROUND', // used to stop the running query
     }),
     RESOURCE_FORM_TYPES: Object.freeze({

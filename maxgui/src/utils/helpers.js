@@ -33,6 +33,7 @@ export const keyBy = require('lodash/keyBy')
 export const values = require('lodash/values')
 export const mergeWith = require('lodash/mergeWith')
 export const camelCase = require('lodash/camelCase')
+export const findLast = require('lodash/findLast')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -52,6 +53,7 @@ export const lodash = {
     keyBy,
     values,
     camelCase,
+    findLast,
 }
 
 export function isNull(v) {

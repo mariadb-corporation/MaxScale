@@ -147,7 +147,7 @@ export default {
         }),
         wkeConns() {
             return Object.values(this.sql_conns).filter(
-                conn => conn.binding_type === this.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                conn => conn.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION
             )
         },
         /**

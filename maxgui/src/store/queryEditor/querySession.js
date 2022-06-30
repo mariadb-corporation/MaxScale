@@ -99,7 +99,7 @@ export default {
          */
         async handleAddNewSession({ commit, state, dispatch, rootState, rootGetters }, wke_id) {
             try {
-                const conn_to_be_cloned = rootGetters['queryConn/getWkeDefConnByWkeId'](wke_id)
+                const conn_to_be_cloned = rootGetters['queryConn/getWkeLastSessConnByWkeId'](wke_id)
                 let sessionConn
                 if (conn_to_be_cloned.id) {
                     await dispatch(

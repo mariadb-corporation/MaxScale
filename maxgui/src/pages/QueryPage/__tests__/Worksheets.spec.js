@@ -72,7 +72,11 @@ describe('Worksheets', () => {
     it('Should show a tooltip when hovering a worksheet tab has a connection', () => {
         wrapper = mountFactory({
             computed: {
-                getWkeDefConnByWkeId: () => () => ({ id: '0', name: 'server_0', type: 'servers' }),
+                getWkeLastSessConnByWkeId: () => () => ({
+                    id: '0',
+                    name: 'server_0',
+                    type: 'servers',
+                }),
             },
         })
         expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.false
