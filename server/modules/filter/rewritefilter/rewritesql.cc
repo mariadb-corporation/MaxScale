@@ -203,34 +203,30 @@ bool RewriteSql::replace(const std::string& sql, std::string* pSql) const
     std::smatch match;
     bool matched = std::regex_search(sql, match, m_regex);
 
-    if (!matched || match.size() != m_nreplacements + 1)
+    if (matched && match.size() == m_nreplacements + 1)
     {
-        return false;
-    }
-
-    // Check forward references if any
-    for (auto p : m_match_pairs)
-    {
-        if (match[p.first + 1] != match[p.second + 1])
+        // Check forward references if any
+        for (auto p : m_match_pairs)
         {
-            matched = false;
-            break;
+            if (match[p.first + 1] != match[p.second + 1])
+            {
+                matched = false;
+                break;
+            }
+        }
+
+        if (matched)
+        {
+            std::vector<std::string> replacements;      // TODO, use string_view.
+
+            for (size_t i = 0; i < m_map_ordinals.size(); ++i)
+            {
+                replacements.emplace_back(match[m_map_ordinals[i] + 1]);
+            }
+
+            *pSql = m_replacer.replace(replacements);
         }
     }
 
-    if (!matched)
-    {
-        return false;
-    }
-
-    std::vector<std::string> replacements;      // TODO, use string_view.
-
-    for (size_t i = 0; i < m_map_ordinals.size(); ++i)
-    {
-        replacements.emplace_back(match[m_map_ordinals[i] + 1]);
-    }
-
-    *pSql = m_replacer.replace(replacements);
-
-    return true;
+    return matched;
 }

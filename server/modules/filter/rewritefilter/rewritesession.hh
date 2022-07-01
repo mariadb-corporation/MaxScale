@@ -24,7 +24,7 @@ public:
 
     static RewriteFilterSession* create(MXS_SESSION* pSession,
                                         SERVICE* pService,
-                                        const std::shared_ptr<Settings>& sSettings
+                                        const std::shared_ptr<const Settings>& sSettings
                                         );
 
     bool routeQuery(GWBUF* pBuffer) override final;
@@ -32,12 +32,12 @@ public:
 private:
     RewriteFilterSession(MXS_SESSION* pSession,
                          SERVICE* pService,
-                         const std::shared_ptr<Settings>& sSettings);
+                         const std::shared_ptr<const Settings>& sSettings);
 
     RewriteFilterSession(const RewriteFilterSession&);
     RewriteFilterSession& operator=(const RewriteFilterSession&);
 
 private:
     void log_replacement(const std::string& from, const std::string& to);
-    std::shared_ptr<Settings> m_sSettings;
+    std::shared_ptr<const Settings> m_sSettings;
 };

@@ -19,7 +19,7 @@
 
 RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,
-                                           const std::shared_ptr<Settings>& sSettings)
+                                           const std::shared_ptr<const Settings>& sSettings)
     : maxscale::FilterSession(pSession, pService)
     , m_sSettings(sSettings)
 {
@@ -27,7 +27,7 @@ RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
 
 void RewriteFilterSession::log_replacement(const std::string& from, const std::string& to)
 {
-    MXB_SINFO("Replace:\n" << from << "\nwith:\n" << to);
+    MXB_SNOTICE("Replace \"" << from << "\" with \"" << to << '"');
 }
 
 RewriteFilterSession::~RewriteFilterSession()
@@ -37,7 +37,7 @@ RewriteFilterSession::~RewriteFilterSession()
 // static
 RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
                                                    SERVICE* pService,
-                                                   const std::shared_ptr<Settings>& sSettings)
+                                                   const std::shared_ptr<const Settings>& sSettings)
 {
     return new RewriteFilterSession(pSession, pService, sSettings);
 }

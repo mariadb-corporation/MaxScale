@@ -26,9 +26,9 @@ class RewriteFilterSession;
 
 struct Settings
 {
-    bool                     reload;
-    bool                     case_sensitive;
-    bool                     log_replacement;
+    bool                     reload = false;
+    bool                     case_sensitive = true;
+    bool                     log_replacement = false;
     std::string              template_file;
     std::vector<TemplateDef> templates;
     std::vector<RewriteSql>  rewriters;
@@ -70,13 +70,17 @@ private:
 
         RewriteFilter& m_filter;
         Settings       m_settings;
+        // Don't warn if this is the first time, the filter will not be created
+        // and plenty of errors will be logged.
+        bool m_warn_bad_config = false;
     };
 
     // Thread-safe set and get of current settings.
-    void                      set_settings(std::unique_ptr<Settings> settings);
-    std::shared_ptr<Settings> get_settings() const;
+    void                            set_settings(std::unique_ptr<const Settings> settings);
+    std::shared_ptr<const Settings> get_settings() const;
 
-    Config                    m_config;
-    mutable std::mutex        m_settings_mutex;
-    std::shared_ptr<Settings> m_sSettings;
+    Config                          m_config;
+    mutable std::mutex              m_settings_mutex;
+    std::shared_ptr<const Settings> m_sSettings;
+    bool                            m_warn_bad_config = false;
 };

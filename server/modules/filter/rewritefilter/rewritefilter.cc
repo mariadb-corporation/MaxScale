@@ -103,13 +103,15 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
 
     if (ok)
     {
-        m_filter.set_settings(std::make_unique<Settings>(m_settings));
+        m_filter.set_settings(std::make_unique<const Settings>(m_settings));
     }
-    else
+    else if (m_warn_bad_config)
     {
-        MXB_SERROR("Invalid config. Keeping current config.");
+        MXB_SERROR("Invalid config. Keeping current config unchanged.");
     }
 
+
+    m_warn_bad_config = true;
     m_settings.reload = false;
 
     return ok;
@@ -138,13 +140,13 @@ RewriteFilter::RewriteFilter(const std::string& name)
 {
 }
 
-void RewriteFilter::set_settings(std::unique_ptr<Settings> settings)
+void RewriteFilter::set_settings(std::unique_ptr<const Settings> settings)
 {
     std::lock_guard<std::mutex> guard(m_settings_mutex);
     m_sSettings = std::move(settings);
 }
 
-std::shared_ptr<Settings> RewriteFilter::get_settings() const
+std::shared_ptr<const Settings> RewriteFilter::get_settings() const
 {
     std::lock_guard<std::mutex> guard(m_settings_mutex);
     return m_sSettings;
