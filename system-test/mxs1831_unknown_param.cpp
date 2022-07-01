@@ -10,12 +10,10 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    int rc = test.maxscale->ssh_node_f(true,
-                                       "maxctrl alter monitor MySQL-Monitor not_a_parameter not_a_value|grep Error");
-    test.expect(rc == 0, "Altering unknown parameter should cause an error");
-    rc = test.maxscale->ssh_node_f(true,
-                                   "maxctrl alter monitor MySQL-Monitor auto_rejoin on_sunday_afternoons|grep Error");
-    test.expect(rc == 0, "Invalid parameter value should cause an error");
+    auto rv = test.maxctrl("alter monitor MySQL-Monitor not_a_parameter not_a_value");
+    test.expect(rv.rc != 0, "Altering unknown parameter should cause an error: %s", rv.output.c_str());
+    rv = test.maxctrl("alter monitor MySQL-Monitor auto_rejoin on_sunday_afternoons");
+    test.expect(rv.rc != 0, "Invalid parameter value should cause an error: %s", rv.output.c_str());
 
     return test.global_result;
 }
