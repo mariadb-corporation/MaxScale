@@ -257,34 +257,41 @@ export default {
             { showSnackbar, id: wkeBoundCnnId }
         ) {
             try {
-                const sessionConnIds = Object.values(state.sql_conns)
-                    .filter(
-                        c =>
-                            c.clone_of_conn_id === wkeBoundCnnId &&
-                            c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
+                if (state.sql_conns[wkeBoundCnnId]) {
+                    const sessionConnIds = Object.values(state.sql_conns)
+                        .filter(
+                            c =>
+                                c.clone_of_conn_id === wkeBoundCnnId &&
+                                c.binding_type ===
+                                    rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
+                        )
+                        .map(c => c.id)
+                    const cnnIdsToBeDeleted = [wkeBoundCnnId, ...sessionConnIds]
+
+                    dispatch('wke/resetWkeStates', wkeBoundCnnId, { root: true })
+
+                    const allRes = await Promise.all(
+                        cnnIdsToBeDeleted.map(id => {
+                            commit('DELETE_SQL_CONN', state.sql_conns[id])
+                            dispatch(
+                                'querySession/resetSessionStates',
+                                { conn_id: id },
+                                { root: true }
+                            )
+                            return this.$http.delete(`/sql/${id}`)
+                        })
                     )
-                    .map(c => c.id)
-                const cnnIdsToBeDeleted = [wkeBoundCnnId, ...sessionConnIds]
 
-                dispatch('wke/resetWkeStates', wkeBoundCnnId, { root: true })
-
-                const allRes = await Promise.all(
-                    cnnIdsToBeDeleted.map(id => {
-                        commit('DELETE_SQL_CONN', state.sql_conns[id])
-                        dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
-                        return this.$http.delete(`/sql/${id}`)
-                    })
-                )
-
-                if (allRes.every(promise => promise.status === 204) && showSnackbar)
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('info.disconnSuccessfully')],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
+                    if (allRes.every(promise => promise.status === 204) && showSnackbar)
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [this.i18n.t('info.disconnSuccessfully')],
+                                type: 'success',
+                            },
+                            { root: true }
+                        )
+                }
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnect').error(e)
             }
