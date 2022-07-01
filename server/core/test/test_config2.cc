@@ -467,6 +467,54 @@ int test_string(config::String& value)
     return test(value, entries, elements_in_array(entries));
 }
 
+#define CHECK(a, msg) [&]() {if (!(a)) {cout << msg << endl; return 1;} return 0;} ()
+
+int test_noop_modification()
+{
+    static config::Specification s_spec("no-op-modification", config::Specification::FILTER);
+    static config::ParamString s_str(&s_spec, "str", "description", "default", config::Param::AT_RUNTIME);
+
+    class Config : public mxs::config::Configuration
+    {
+    public:
+        Config()
+            : config::Configuration("config", &s_spec)
+        {
+            add_native(&Config::m_str, &s_str);
+        }
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
+        {
+            m_configures++;
+            return true;
+        }
+
+        std::string m_str = "init";
+        int         m_configures = 0;
+    };
+
+    Config my_cnf;
+    int err = 0;
+    err += CHECK(my_cnf.m_str == "default", "Value should be 'default': " << my_cnf.m_str);
+
+    mxs::ConfigParameters params;
+    params.set("str", "val1");
+
+    err += CHECK(my_cnf.specification().validate(params), "Validation failed");
+    err += CHECK(my_cnf.configure(params), "First configuration failed");
+    err += CHECK(my_cnf.m_str == "val1", "Value should be 'val1': " << my_cnf.m_str);
+    err += CHECK(my_cnf.m_configures == 1, "Expected 1 calls to post_configure, not " << my_cnf.m_configures);
+    err += CHECK(my_cnf.configure(params), "Second configuration failed");
+    err += CHECK(my_cnf.m_str == "val1", "Value should be 'val1': " << my_cnf.m_str);
+    err += CHECK(my_cnf.m_configures == 2, "Expected 2 calls to post_configure, not " << my_cnf.m_configures);
+    params.set("str", "val2");
+    err += CHECK(my_cnf.configure(params), "Third configuration failed");
+    err += CHECK(my_cnf.m_str == "val2", "Value should be 'val2': " << my_cnf.m_str);
+    err += CHECK(my_cnf.m_configures == 3, "Expected 3 calls to post_configure, not " << my_cnf.m_configures);
+
+    return err;
+}
+
 int main()
 {
     int nErrors = 0;
@@ -528,6 +576,8 @@ int main()
 
             config::String value_string(&configuration, &param_string);
             nErrors += test_string(value_string);
+
+            nErrors += test_noop_modification();
 
             ServerManager::destroy_all();
         });
