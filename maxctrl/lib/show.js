@@ -311,6 +311,11 @@ const session_fields = [
     path: "attributes.log",
     description: "Per-session log messages",
   },
+  {
+    name: "Memory",
+    path: "attributes.memory",
+    description: "Memory usage (not exhaustive)"
+  },
 ];
 
 const filter_fields = [

@@ -163,6 +163,11 @@ const list_sessions_fields = [
     path: "relationships.services.data[].id",
     description: "The service where the session connected",
   },
+  {
+    name: "Memory",
+    path: "attributes.memory.total",
+    description: "Memory usage (not exhaustive)"
+  }
 ];
 
 const list_filters_fields = [
