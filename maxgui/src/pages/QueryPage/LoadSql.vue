@@ -4,60 +4,16 @@
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
-            :item="confDlg.item"
             minBodyWidth="768px"
             :closeImmediate="true"
             :lazyValidation="false"
             :onSave="confDlg.onSave"
+            cancelText="dontSave"
+            saveText="save"
+            @on-cancel="confDlg.dontSave"
         >
             <template v-slot:form-body>
-                <p
-                    v-html="
-                        $t(`confirmations.${confDlg.type}`, {
-                            targetId: $typy(confDlg, 'item.id').safeString,
-                            fileNameToBeOpened: confDlg.fileNameToBeOpened,
-                        })
-                    "
-                />
-            </template>
-            <template v-slot:actions="{ cancel, save }">
-                <v-spacer />
-                <v-btn
-                    small
-                    height="36"
-                    color="primary"
-                    class="cancel font-weight-medium px-7 text-capitalize"
-                    rounded
-                    outlined
-                    depressed
-                    @click="cancel"
-                >
-                    {{ $t('cancel') }}
-                </v-btn>
-                <v-btn
-                    small
-                    height="36"
-                    color="primary"
-                    class="cancel font-weight-medium px-7 text-capitalize"
-                    rounded
-                    outlined
-                    depressed
-                    @click="confDlg.dontSave"
-                >
-                    {{ $t('dontSave') }}
-                </v-btn>
-                <v-btn
-                    small
-                    height="36"
-                    color="primary"
-                    class="save font-weight-medium px-7 text-capitalize"
-                    rounded
-                    outlined
-                    depressed
-                    @click="save"
-                >
-                    {{ $t('save') }}
-                </v-btn>
+                <p v-html="confDlg.confirmMsg" />
             </template>
         </confirm-dialog>
         <v-tooltip
@@ -129,11 +85,10 @@ export default {
             confDlg: {
                 isOpened: false,
                 title: this.$t('openScript'),
-                item: null,
                 type: 'openScript',
+                confirmMsg: '',
                 onSave: () => null,
                 dontSave: () => null,
-                fileNameToBeOpened: '',
             },
         }
     },
@@ -204,8 +159,10 @@ export default {
                 isOpened: true,
                 title: this.$t('openScript'),
                 type: 'openScript',
-                item: { id: this.getActiveSession.name },
-                fileNameToBeOpened: blob.handle.name,
+                confirmMsg: this.$t('confirmations.openScript', {
+                    targetId: this.getActiveSession.name,
+                    fileNameToBeOpened: blob.handle.name,
+                }),
                 onSave: async () => await this.onSave(blob),
                 dontSave: async () => await this.dontSave(blob),
             }
