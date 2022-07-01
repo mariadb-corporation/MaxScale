@@ -192,10 +192,3 @@ const store = new Vuex.Store({
     },
 })
 export default store
-
-const initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
-
-/** for state hydration*/
-export function resetState() {
-    store.replaceState(initialState)
-}

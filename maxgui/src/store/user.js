@@ -11,7 +11,6 @@
  * Public License.
  */
 import { OVERLAY_LOGOUT } from 'store/overlayTypes'
-import { resetState } from 'store/index'
 import localForage from 'localforage'
 export default {
     namespaced: true,
@@ -96,12 +95,21 @@ export default {
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
 
-            // Clear all but keeping persistedState
-            const persistedState = this.vue.$help.lodash.cloneDeep(rootState.persisted)
-            resetState()
+            // Clear all but persist some states of some modules
+            const persistedState = this.vue.$help.lodash.cloneDeep({
+                persisted: rootState.persisted,
+                wke: {
+                    worksheets_arr: rootState.wke.worksheets_arr,
+                },
+                querySession: {
+                    active_session_by_wke_id_map:
+                        rootState.querySession.active_session_by_wke_id_map,
+                    query_sessions: rootState.querySession.query_sessions,
+                },
+            })
             await localForage.clear()
             this.vue.$help.deleteAllCookies()
-            await localForage.setItem('maxgui', { persisted: persistedState })
+            await localForage.setItem('maxgui', persistedState)
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {
