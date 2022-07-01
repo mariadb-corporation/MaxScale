@@ -866,15 +866,11 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         }
     }
 
-    if (configured && (m_first_time || changed || !nested_parameters.empty()))
+    if (configured)
     {
-        // If this is the first time a configuration is being configured, call post_configure() even if no
-        // changes were done. This makes sure that it is always called during object construction.
-        //
-        // If the configuration was given to the object being constructed, the initial configuration could be
-        // done in the constructor of the object. This would remove the need for a variable that tracks
-        // whether the configuration has been configured. The problem with this is that post_configure() would
-        // have to be manually called in the constructor of each object that uses a Configuration.
+        // Always call post_configure() even if no changes were done. This makes sure that any side-effects
+        // that the post_configure call has (e.g. reading files from disk) are re-applied when an attempt to
+        // modify the configuration is made.
         m_first_time = false;
 
         // Mark the configuration as changed on the first attempt even if it really didn't
