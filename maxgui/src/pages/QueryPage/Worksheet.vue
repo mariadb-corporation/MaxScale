@@ -16,7 +16,9 @@
         <template slot="pane-right">
             <div class="d-flex flex-column fill-height">
                 <div class="d-flex flex-column">
-                    <session-tabs />
+                    <session-tabs
+                        :sessionToolbarRef="$typy($refs, 'sessionToolbar').safeObjectOrEmpty"
+                    />
                     <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
                     <session-toolbar ref="sessionToolbar" />
                 </div>

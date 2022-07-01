@@ -44,7 +44,9 @@
                         icon
                         x-small
                         :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
-                        @click="handleDeleteSessTab(session)"
+                        @click="
+                            getIsFileUnsaved ? openConfDlg(session) : handleDeleteSessTab(session)
+                        "
                     >
                         <v-icon
                             size="8"
@@ -82,6 +84,9 @@ import SessionTabsToolbar from './SessionTabsToolbar.vue'
 export default {
     name: 'session-tabs',
     components: { 'session-tabs-toolbar': SessionTabsToolbar },
+    props: {
+        sessionToolbarRef: { type: Object, required: true },
+    },
     data() {
         return {
             sessionToolbarWidth: 0,
@@ -98,6 +103,7 @@ export default {
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
+            getIsFileUnsaved: 'editor/getIsFileUnsaved',
         }),
         activeSessionId: {
             get() {
@@ -134,6 +140,24 @@ export default {
                 },
                 { immediate: true }
             )
+        },
+        /**
+         * @param {Object} session - session object
+         */
+        openConfDlg(session) {
+            const loadSql = this.$typy(this.sessionToolbarRef, '$refs.loadSql').safeObject
+            loadSql.confDlg = {
+                ...loadSql.confDlg,
+                isOpened: true,
+                title: this.$t('deleteSession'),
+                type: 'deleteSession',
+                confirmMsg: this.$t('confirmations.deleteSession', { targetId: session.name }),
+                onSave: async () => {
+                    await loadSql.handleSaveScript()
+                    await this.handleDeleteSessTab(session)
+                },
+                dontSave: async () => await this.handleDeleteSessTab(session),
+            }
         },
         async handleDeleteSessTab(session) {
             if (this.getSessionsOfActiveWke.length === 1) this.handleClearTheLastSession(session)
