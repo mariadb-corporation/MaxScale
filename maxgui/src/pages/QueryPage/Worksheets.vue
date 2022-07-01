@@ -60,7 +60,7 @@
                                         $typy(is_conn_busy_map[getActiveSessionId], 'value')
                                             .safeBoolean
                                     "
-                                    @click.stop="handleDeleteWke(wke.id)"
+                                    @click.stop.prevent="handleDeleteWke(wke.id)"
                                 >
                                     <v-icon
                                         size="8"

@@ -63,7 +63,6 @@ export default {
             },
         },
         active_wke_id: {
-            immediate: true,
             handler(v) {
                 if (v) {
                     this.updateRoute(v)

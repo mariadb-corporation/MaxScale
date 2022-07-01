@@ -117,11 +117,10 @@ export default {
                     }
                 }
             } else if (state.worksheets_arr.length) {
-                const currActiveWkeId = state.active_wke_id
-                const nextActiveWkeId = state.worksheets_arr[0].id
                 // set the first wke as active if route param id is not specified
-                commit('SET_ACTIVE_WKE_ID', state.worksheets_arr[0].id)
-                if (currActiveWkeId === nextActiveWkeId) dispatch('updateRoute', nextActiveWkeId)
+                const activeWkeId = state.worksheets_arr[0].id
+                commit('SET_ACTIVE_WKE_ID', activeWkeId)
+                dispatch('updateRoute', activeWkeId)
             }
         },
         /**
