@@ -96,6 +96,7 @@
                 @onCtrlD="onCtrlD"
                 @onCtrlO="onCtrlO"
                 @onCtrlS="onCtrlS"
+                @onCtrlShiftS="onCtrlShiftS"
             />
         </keep-alive>
     </div>
@@ -186,6 +187,10 @@ export default {
                 case 'mac-cmd-s':
                     await this.onCtrlS()
                     break
+                case 'win-ctrl-shift-s':
+                case 'mac-cmd-shift-s':
+                    await this.onCtrlShiftS()
+                    break
             }
         },
         getSessionToolbar() {
@@ -210,6 +215,12 @@ export default {
             const loadSql = this.getLoadSql()
             if (loadSql.getIsFileUnsaved && loadSql.hasFullSupport && loadSql.hasFileHandle)
                 await loadSql.saveFile()
+        },
+        async onCtrlShiftS() {
+            const loadSql = this.getLoadSql()
+            if (loadSql.getIsFileUnsaved)
+                if (loadSql.hasFullSupport) await loadSql.saveFileAs()
+                else loadSql.saveFileLegacy()
         },
     },
 }
