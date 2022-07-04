@@ -164,7 +164,7 @@ export default {
         ...mapActions({
             handleDeleteWke: 'wke/handleDeleteWke',
         }),
-        wkeShortKeyHandler(e) {
+        async wkeShortKeyHandler(e) {
             switch (e.srcKey) {
                 case 'win-ctrl-d':
                 case 'mac-cmd-d':
@@ -172,11 +172,11 @@ export default {
                     break
                 case 'win-ctrl-enter':
                 case 'mac-cmd-enter':
-                    this.onCtrlEnter()
+                    await this.onCtrlEnter()
                     break
                 case 'win-ctrl-shift-enter':
                 case 'mac-cmd-shift-enter':
-                    this.onCtrlShiftEnter()
+                    await this.onCtrlShiftEnter()
                     break
                 case 'win-ctrl-o':
                 case 'mac-cmd-o':
@@ -184,18 +184,21 @@ export default {
                     break
                 case 'win-ctrl-s':
                 case 'mac-cmd-s':
-                    this.onCtrlS()
+                    await this.onCtrlS()
                     break
             }
         },
         getSessionToolbar() {
             return this.$typy(this.$refs, `wke.$refs.sessionToolbar`).safeObject
         },
-        onCtrlEnter() {
-            this.getSessionToolbar().handleRun('selected')
+        getLoadSql() {
+            return this.getSessionToolbar().$refs.loadSql
         },
-        onCtrlShiftEnter() {
-            this.getSessionToolbar().handleRun('all')
+        async onCtrlEnter() {
+            await this.getSessionToolbar().handleRun('selected')
+        },
+        async onCtrlShiftEnter() {
+            await this.getSessionToolbar().handleRun('all')
         },
         onCtrlD() {
             this.getSessionToolbar().openSnippetDlg()
@@ -203,8 +206,10 @@ export default {
         onCtrlO() {
             this.getSessionToolbar().$refs.loadSql.handleFileOpen()
         },
-        onCtrlS() {
-            this.getSessionToolbar().$refs.loadSql.handleSaveScript()
+        async onCtrlS() {
+            const loadSql = this.getLoadSql()
+            if (loadSql.getIsFileUnsaved && loadSql.hasFullSupport && loadSql.hasFileHandle)
+                await loadSql.saveFile()
         },
     },
 }

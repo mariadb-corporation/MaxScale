@@ -153,7 +153,7 @@ export default {
                 type: 'deleteSession',
                 confirmMsg: this.$t('confirmations.deleteSession', { targetId: session.name }),
                 onSave: async () => {
-                    await loadSql.handleSaveScript()
+                    await loadSql.handleSaveFile()
                     await this.handleDeleteSessTab(session)
                 },
                 dontSave: async () => await this.handleDeleteSessTab(session),

@@ -38,6 +38,28 @@
             <span>{{ $t('openScript') }}</span>
         </v-tooltip>
         <v-tooltip
+            v-if="hasFullSupport"
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    text
+                    class="save-sql-btn session-toolbar-square-btn"
+                    type="file"
+                    :disabled="!getIsFileUnsaved || !hasFileHandle"
+                    v-on="on"
+                    @click="saveFile"
+                >
+                    <v-icon size="20" color="accent-dark">
+                        mdi-content-save-outline
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span>{{ $t('saveScript') }}</span>
+        </v-tooltip>
+        <v-tooltip
             top
             transition="slide-y-transition"
             content-class="shadow-drop color text-navigation py-1 px-4"
@@ -49,32 +71,7 @@
                     type="file"
                     :disabled="!getIsFileUnsaved"
                     v-on="on"
-                    @click="handleSaveScript"
-                >
-                    <v-icon size="20" color="accent-dark">
-                        {{
-                            supportFs ? 'mdi-content-save-outline' : 'mdi-content-save-edit-outline'
-                        }}
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span>{{ $t('saveScript') }}</span>
-        </v-tooltip>
-        <!-- When the tab is loaded with a blob file,
-         show the "Save Script As" button for browsers support File System Access API -->
-        <v-tooltip
-            v-if="supportFs && !$typy(blob_file).isEmptyObject"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="save-sql-btn session-toolbar-square-btn"
-                    type="file"
-                    v-on="on"
-                    @click="saveFileAs"
+                    @click="hasFullSupport ? saveFileAs() : saveFileLegacy()"
                 >
                     <v-icon size="20" color="accent-dark">
                         mdi-content-save-edit-outline
@@ -132,6 +129,12 @@ export default {
         },
         isInSecureCtx() {
             return window.location.protocol.includes('https')
+        },
+        hasFullSupport() {
+            return this.supportFs && this.isInSecureCtx
+        },
+        hasFileHandle() {
+            return Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
         },
     },
     methods: {
@@ -194,14 +197,14 @@ export default {
         // legacy upload file changed support
         async onFileLoadChanged(e) {
             const blob = { handle: e.target.files[0] }
-            await this.handleLoadScript(blob)
+            await this.handleLoadFile(blob)
         },
         async openFileLegacy() {
             await this.$refs.uploader.click()
         },
         async openFile() {
             const blob = await fileOpen({ description: 'Text files' })
-            await this.handleLoadScript(blob)
+            await this.handleLoadFile(blob)
         },
         async handleFileOpen() {
             if (this.supportFs) this.openFile()
@@ -210,14 +213,14 @@ export default {
         /**
          * @param {Blob} blob - blob
          */
-        async handleLoadScript(blob) {
+        async handleLoadFile(blob) {
             if (this.getIsFileUnsaved) this.openConfDlg(blob)
-            else await this.loadScriptToActiveSession(blob)
+            else await this.loadFileToActiveSession(blob)
         },
         /**
          * @param {Blob} blob - blob
          */
-        async loadScriptToActiveSession(blob) {
+        async loadFileToActiveSession(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
             this.SET_QUERY_TXT({ payload: blobTxt, id: this.getActiveSessionId })
             const sessionIdx = this.query_sessions.findIndex(s => s.id === this.getActiveSessionId)
@@ -234,7 +237,7 @@ export default {
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
-            // once script is loaded, store file_handle to the session
+            // once file is loaded, store file_handle to the session
             this.SET_BLOB_FILE({
                 payload: {
                     file_handle: blob.handle,
@@ -252,22 +255,26 @@ export default {
          * @param {Blob} blob - blob
          */
         async dontSave(blob) {
-            await this.loadScriptToActiveSession(blob)
+            await this.loadFileToActiveSession(blob)
             this.confDlg.isOpened = false
         },
         /**
          * @param {Blob} blob - blob
          */
         async onSave(blob) {
-            await this.handleSaveScript()
+            await this.handleSaveFile()
             // load new blob
-            await this.loadScriptToActiveSession(blob)
+            await this.loadFileToActiveSession(blob)
         },
-
+        async handleSaveFile() {
+            if (!this.hasFullSupport) this.saveFileLegacy()
+            else if (this.hasFileHandle) await this.saveFile()
+            else await this.saveFileAs()
+        },
         /*
          * Download the file to user's local device
          */
-        async saveFileLegacy() {
+        saveFileLegacy() {
             let a = document.createElement('a')
             /** legacy download file name
              *  If there is no file_handle, use the current session tab name
@@ -312,19 +319,6 @@ export default {
                 }
             } catch (e) {
                 this.$logger('LoadSql-saveFile').error(e)
-            }
-        },
-
-        async handleSaveScript() {
-            if (this.getIsFileUnsaved) {
-                const hasFileHandle = Boolean(
-                    this.$typy(this.blob_file, 'file_handle.name').safeString
-                )
-                const hasFullSupport = this.supportFs && this.isInSecureCtx
-                if (hasFileHandle && hasFullSupport) await this.saveFile()
-                // Save as a new file
-                else if (hasFullSupport) await this.saveFileAs()
-                else this.saveFileLegacy()
             }
         },
         async saveFileAs() {
