@@ -229,9 +229,8 @@ export default {
         async loadFileToActiveSession(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
             this.SET_QUERY_TXT({ payload: blobTxt, id: this.getActiveSessionId })
-            const sessionIdx = this.query_sessions.findIndex(s => s.id === this.getActiveSessionId)
             this.UPDATE_SESSION({
-                idx: sessionIdx,
+                idx: this.query_sessions.indexOf(this.getActiveSession),
                 session: {
                     ...this.$help.lodash.cloneDeep(this.getActiveSession),
                     name: blob.handle.name,
@@ -337,6 +336,14 @@ export default {
                 this.SET_BLOB_FILE({
                     payload: { file_handle: fileHandle, txt: this.query_txt },
                     id: this.getActiveSessionId,
+                })
+                // update session tab name
+                this.UPDATE_SESSION({
+                    idx: this.query_sessions.indexOf(this.getActiveSession),
+                    session: {
+                        ...this.$help.lodash.cloneDeep(this.getActiveSession),
+                        name: fileHandle.name,
+                    },
                 })
             } catch (ex) {
                 this.$logger('LoadSql-saveFileAs').error('Unable to write file')
