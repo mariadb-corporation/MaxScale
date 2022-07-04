@@ -60,6 +60,29 @@
             </template>
             <span>{{ $t('saveScript') }}</span>
         </v-tooltip>
+        <!-- When the tab is loaded with a blob file,
+         show the "Save Script As" button for browsers support File System Access API -->
+        <v-tooltip
+            v-if="supportFs && !$typy(blob_file).isEmptyObject"
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    text
+                    class="save-sql-btn session-toolbar-square-btn"
+                    type="file"
+                    v-on="on"
+                    @click="saveFileAs"
+                >
+                    <v-icon size="20" color="accent-dark">
+                        mdi-content-save-edit-outline
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span>{{ $t('saveScriptAs') }}</span>
+        </v-tooltip>
     </div>
 </template>
 <script>

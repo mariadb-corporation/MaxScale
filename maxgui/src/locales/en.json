@@ -255,6 +255,7 @@
     "openScript": "Open Script",
     "dontSave": "Don't save",
     "saveScript": "Save Script",
+    "saveScriptAs": "Save Script As",
     "deleteSession": "Delete Session",
     "errors": {
         "requiredInput": "{inputName} is required",
