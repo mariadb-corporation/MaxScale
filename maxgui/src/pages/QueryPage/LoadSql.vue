@@ -328,7 +328,9 @@ export default {
             }
         },
         async saveFileAs() {
-            let fileHandle = await this.getNewFileHandle(`${this.getActiveSession.name}.sql`)
+            let fileHandle = await this.getNewFileHandle(
+                `${this.getActiveSession.name}${this.hasFileHandle ? '' : '.sql'}`
+            )
             try {
                 await this.writeFile({ fileHandle, contents: this.query_txt })
                 // update blob_file
@@ -393,24 +395,11 @@ export default {
                 if ('showSaveFilePicker' in window)
                     return window.showSaveFilePicker({
                         suggestedName,
-                        types: [
-                            {
-                                description: 'Text file',
-                                accept: { 'text/plain': ['.txt'] },
-                            },
-                        ],
                     })
                 // For Chrome 85 and earlier...
                 return window.chooseFileSystemEntries({
                     suggestedName,
                     type: 'save-file',
-                    accepts: [
-                        {
-                            description: 'Text file',
-                            extensions: ['txt'],
-                            mimeTypes: ['text/plain'],
-                        },
-                    ],
                 })
             } catch (ex) {
                 if (!ex.name === 'AbortError')
