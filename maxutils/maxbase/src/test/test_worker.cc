@@ -14,6 +14,7 @@
 #include <iostream>
 #include <maxbase/assert.hh>
 #include <maxbase/maxbase.hh>
+#include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 
 using namespace maxbase;
@@ -151,6 +152,7 @@ class MoveTest : public Worker::Callable
 public:
     MoveTest(Worker* pW1, Worker* pW2, Worker* pW3)
         : Worker::Callable(pW1)
+        , m_pW(pW1)
         , m_pW1(pW1)
         , m_pW2(pW2)
         , m_pW3(pW3)
@@ -164,10 +166,60 @@ public:
 
     void start()
     {
-        dcall(10ms, &MoveTest::move, this);
+        cout << "Ping: " << flush;
+        dcall(10ms, &MoveTest::ping, this);
     }
 
-    bool move(Callable::Action action)
+    void move()
+    {
+        m_moving = true;
+
+        auto* pW = worker();
+        mxb_assert(pW == m_pW);
+
+        ++m_nMoves;
+
+        cout << "Move(" << m_nMoves << "): " << m_pW << endl;
+
+        if (m_nMoves < 100)
+        {
+            suspend_dcalls();
+            set_worker(nullptr);
+            m_pW = nullptr;
+
+            if (pW == m_pW1)
+            {
+                pW = m_pW2;
+            }
+            else if (pW == m_pW2)
+            {
+                pW = m_pW3;
+            }
+            else
+            {
+                mxb_assert(pW == m_pW3);
+                pW = m_pW1;
+            }
+
+            pW->execute([this, pW]() {
+                    m_moving = false;
+                    m_pW = pW;
+                    m_stopwatch.restart();
+
+                    cout << "Ping: " << flush;
+                    set_worker(pW);
+                    resume_dcalls();
+                }, mxb::Worker::EXECUTE_QUEUED);
+        }
+        else
+        {
+            m_pW3->shutdown();
+            m_pW2->shutdown();
+            m_pW1->shutdown();
+        }
+    }
+
+    bool ping(Callable::Action action)
     {
         if (action == Callable::CANCEL)
         {
@@ -175,52 +227,28 @@ public:
         }
 
         auto* pW = worker();
+        mxb_assert(pW == m_pW);
 
-        cout << pW << endl;
+        cout << "." << flush;
 
-        suspend_dcalls();
-        set_worker(nullptr);
-
-        if (pW == m_pW1)
+        if (!m_moving && m_stopwatch.split() > std::chrono::milliseconds(100))
         {
-            pW = m_pW2;
-        }
-        else if (pW == m_pW2)
-        {
-            pW = m_pW3;
-        }
-        else
-        {
-            mxb_assert(pW == m_pW3);
-            pW = m_pW1;
-        }
-
-        ++m_nMoves;
-        if (m_nMoves < 200)
-        {
-            pW->execute([this, pW]() {
-                    set_worker(pW);
-                    resume_dcalls();
-                }, mxb::Worker::EXECUTE_QUEUED);
-        }
-        else
-        {
-            set_worker(m_pW1); // Back where we started.
-
-            m_pW3->shutdown();
-            m_pW2->shutdown();
-            m_pW1->shutdown();
+            cout << endl;
+            move();
         }
 
         return true;
     }
 
 private:
-    Worker*      m_pW1;
-    Worker*      m_pW2;
-    Worker*      m_pW3;
-    Worker::DCId m_dcid { 0 };
-    int32_t      m_nMoves { 0 };
+    Worker*        m_pW { nullptr };
+    Worker*        m_pW1;
+    Worker*        m_pW2;
+    Worker*        m_pW3;
+    Worker::DCId   m_dcid { 0 };
+    int32_t        m_nMoves { 0 };
+    mxb::StopWatch m_stopwatch;
+    bool           m_moving { false };
 };
 
 void run_move_test()
@@ -249,7 +277,8 @@ int main()
 {
     mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
-    int rv = run_timer_test();
+    int rv = 0;
+    rv = run_timer_test();
     run_move_test(); // Expected to crash, if there are issues.
 
     return rv;
