@@ -35,7 +35,9 @@
                     <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
                 </v-btn>
             </template>
-            <span>{{ $t('openScript') }}</span>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ `${$t('openScript')}\nCmd/Ctrl + O` }}
+            </span>
         </v-tooltip>
         <v-tooltip
             v-if="hasFullSupport"
@@ -57,7 +59,9 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span>{{ $t('saveScript') }}</span>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ `${$t('saveScript')}\nCmd/Ctrl + S` }}
+            </span>
         </v-tooltip>
         <v-tooltip
             top
@@ -78,7 +82,9 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span>{{ $t('saveScriptAs') }}</span>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ `${$t('saveScriptAs')}\nCmd/Ctrl + Shift + S` }}
+            </span>
         </v-tooltip>
     </div>
 </template>
