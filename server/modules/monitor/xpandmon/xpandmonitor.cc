@@ -14,6 +14,7 @@
 #include "xpandmonitor.hh"
 #include <algorithm>
 #include <set>
+#include <maxbase/host.hh>
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/json_api.hh>
@@ -1162,10 +1163,26 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
+        unordered_set<string> ips;
+        string error;
+        if (!mxb::name_lookup(pMs->server->address(), &ips, &error))
+        {
+            MXB_SERROR("Could not lookup address '" << pMs->server->address()
+                       << "', status of bootstrap node '"
+                       << pMs->server->name() << "' may be incorrectly reported: "
+                       << error);
+
+            // Insert the address just like that, in case the name lookup
+            // failed for some random reason and the address happens to
+            // already be an IP-address.
+            ips.insert(pMs->server->address());
+        }
+
         auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pMs](const std::pair<int, XpandNode>& element) -> bool {
+                          [&ips](const std::pair<int, XpandNode>& element) -> bool {
                               const XpandNode& info = element.second;
-                              return pMs->server->address() == info.ip();
+                              auto it = find(ips.begin(), ips.end(), info.ip());
+                              return it != ips.end();
                           });
 
         if (it != m_nodes_by_id.end())

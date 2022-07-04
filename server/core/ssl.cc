@@ -23,70 +23,6 @@
 namespace
 {
 
-static RSA* rsa_512 = NULL;
-static RSA* rsa_1024 = NULL;
-
-static RSA* create_rsa(int bits)
-{
-#ifdef OPENSSL_1_1
-    BIGNUM* bn = BN_new();
-    BN_set_word(bn, RSA_F4);
-    RSA* rsa = RSA_new();
-    RSA_generate_key_ex(rsa, bits, bn, NULL);
-    BN_free(bn);
-    return rsa;
-#else
-    return RSA_generate_key(bits, RSA_F4, NULL, NULL);
-#endif
-}
-
-/**
- * The RSA key generation callback function for OpenSSL.
- * @param s SSL structure
- * @param is_export Not used
- * @param keylength Length of the key
- * @return Pointer to RSA structure
- */
-static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
-{
-    RSA* rsa_tmp = NULL;
-
-    switch (keylength)
-    {
-    case 512:
-        if (rsa_512)
-        {
-            rsa_tmp = rsa_512;
-        }
-        else
-        {
-            /* generate on the fly, should not happen in this example */
-            rsa_tmp = create_rsa(keylength);
-            rsa_512 = rsa_tmp;      /* Remember for later reuse */
-        }
-        break;
-
-    case 1024:
-        if (rsa_1024)
-        {
-            rsa_tmp = rsa_1024;
-        }
-        break;
-
-    default:
-        /* Generating a key on the fly is very costly, so use what is there */
-        if (rsa_1024)
-        {
-            rsa_tmp = rsa_1024;
-        }
-        else
-        {
-            rsa_tmp = rsa_512;      /* Use at least a shorter key */
-        }
-    }
-    return rsa_tmp;
-}
-
 static thread_local std::string ssl_errbuf;
 
 static const char* get_ssl_errors()
@@ -165,7 +101,7 @@ bool SSLContext::init()
 #endif
         break;
 
-    /** Rest of these use the maximum available SSL/TLS methods */
+        /** Rest of these use the maximum available SSL/TLS methods */
     case mxb::ssl_version::SSL_MAX:
     case mxb::ssl_version::TLS_MAX:
     case mxb::ssl_version::SSL_TLS_MAX:
@@ -203,25 +139,7 @@ bool SSLContext::init()
     // Disable session cache
     SSL_CTX_set_session_cache_mode(m_ctx, SSL_SESS_CACHE_OFF);
 
-    //
-    // Note: This is not safe if SSL initialization is done concurrently
-    //
-    /** Generate the 512-bit and 1024-bit RSA keys */
-    if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
-    {
-        MXB_ERROR("512-bit RSA key generation failed.");
-        return false;
-    }
-    else if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
-    {
-        MXB_ERROR("1024-bit RSA key generation failed.");
-        return false;
-    }
-    else
-    {
-        mxb_assert(rsa_512 && rsa_1024);
-        SSL_CTX_set_tmp_rsa_callback(m_ctx, tmp_rsa_callback);
-    }
+    SSL_CTX_set_ecdh_auto(m_ctx, 1);
 
     if (!m_cfg.ca.empty())
     {
