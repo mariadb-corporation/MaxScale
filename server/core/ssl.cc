@@ -179,7 +179,7 @@ bool SSLContext::init()
     // Disable session cache
     SSL_CTX_set_session_cache_mode(m_ctx, SSL_SESS_CACHE_OFF);
 
-    SSL_CTX_set_ecdh_auto(ctx, 1);
+    SSL_CTX_set_ecdh_auto(m_ctx, 1);
 
     if (!m_cfg.ca.empty())
     {
