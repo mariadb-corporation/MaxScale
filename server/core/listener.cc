@@ -503,7 +503,6 @@ bool Listener::force_config_reload()
     mxb::Json js(json_parameters(), mxb::Json::RefType::STEAL);
     js.remove_nulls();
 
-    m_config.mark_as_modified();
     return m_config.specification().validate(js.get_json()) && m_config.configure(js.get_json());
 }
 

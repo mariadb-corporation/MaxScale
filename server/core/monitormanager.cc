@@ -364,12 +364,6 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, json_t* paramete
     {
         if (base.configure(parameters, &unknown))
         {
-            if (base.was_modified())
-            {
-                // This forces post_configure() to be called even if the module's parameters do not change.
-                mod.mark_as_modified();
-            }
-
             success = mod.configure(parameters);
         }
     }

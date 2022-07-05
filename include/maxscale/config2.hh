@@ -2122,18 +2122,6 @@ public:
         return m_was_modified;
     }
 
-    /**
-     * Mark the configuration as changed even if all the values are the same
-     *
-     * This is relevant when a configuration depends on the core configuration and performs some actions in
-     * post_configure. By forcing a call to post_configure() in these cases, we make sure that it is always
-     * called whenever either a core or a module parameter is changed.
-     */
-    void mark_as_modified()
-    {
-        m_first_time = true;
-    }
-
 protected:
     /**
      * Called when configuration has initially been configured, to allow a Configuration to configure
