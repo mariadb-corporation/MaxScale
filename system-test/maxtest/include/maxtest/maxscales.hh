@@ -382,7 +382,15 @@ public:
 
     int  ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
     bool copy_to_node(const char* src, const char* dest);
+    bool copy_to_node(const std::string& src, const std::string& dest)
+    {
+        return copy_to_node(src.c_str(), dest.c_str());
+    }
     bool copy_from_node(const char* src, const char* dest);
+    bool copy_from_node(const std::string& src, const std::string& dest)
+    {
+        return copy_from_node(src.c_str(), dest.c_str());
+    }
 
     /**
      * Copy rules file for firewall filter to MaxScale machine.
