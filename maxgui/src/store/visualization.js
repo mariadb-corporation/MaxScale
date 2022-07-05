@@ -41,7 +41,7 @@ export default {
                     //TODO: Handle other monitors, now it only handles mariadbmon
                     if (monitor.attributes.module === 'mariadbmon') {
                         let cluster = getters.getMariadbmonCluster(monitor)
-                        if (cluster.children.length) clusters[monitor.id] = cluster
+                        clusters[monitor.id] = cluster
                     }
                 })
                 commit('SET_CLUSTERS', clusters)

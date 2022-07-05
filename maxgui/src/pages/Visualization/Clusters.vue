@@ -41,6 +41,7 @@
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
                                 <cluster-server-tooltip
+                                    v-if="$typy(cluster, 'children[0]').isDefined"
                                     :servers="[$typy(cluster, 'children[0]').safeObject]"
                                 >
                                     <template v-slot:activator="{ on }">
