@@ -14,6 +14,7 @@
 #include <maxscale/target.hh>
 #include <maxscale/service.hh>
 #include <maxscale/server.hh>
+#include <maxbase/pretty_print.hh>
 
 #include <mysqld_error.h>
 
@@ -366,7 +367,7 @@ std::string Reply::describe() const
         }
         else if (is_resultset())
         {
-            ss << "Resultset: " << rows_read() << " rows";
+            ss << "Resultset: " << rows_read() << " rows in " << mxb::pretty_size(size());
         }
         else
         {
