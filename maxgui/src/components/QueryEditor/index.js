@@ -251,23 +251,23 @@ export default {
                 },
                 {
                     label: this.$t('createQuerySnippet'),
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_D],
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
                     run: () => this.$emit('onCtrlD'),
                 },
                 {
                     label: this.$t('openScript'),
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_O],
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO],
                     run: () => this.$emit('onCtrlO'),
                 },
                 {
                     label: this.$t('saveScript'),
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
                     run: () => this.$emit('onCtrlS'),
                 },
                 {
                     label: this.$t('saveScriptAs'),
                     keybindings: [
-                        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_S,
+                        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
                     ],
                     run: () => this.$emit('onCtrlShiftS'),
                 },
