@@ -225,8 +225,13 @@ export default {
                 const editorValue = this.getEditorValue()
                 if (this.value !== editorValue) this.$emit('change', editorValue, event)
             })
+            let prevSelectedTxt = ''
             editor.onDidChangeCursorSelection(event => {
-                this.$emit('on-selection', this.getSelectedTxt(event.selection))
+                const tmp = this.getSelectedTxt(event.selection)
+                if (tmp !== prevSelectedTxt) {
+                    this.$emit('on-selection', tmp)
+                    prevSelectedTxt = tmp
+                }
             })
         },
         addCustomCmds(monaco) {
