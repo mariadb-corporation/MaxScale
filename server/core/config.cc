@@ -4354,7 +4354,7 @@ json_t* config_maxscale_to_json(const char* host)
     // This will dump all parameters defined using the new configuration mechanism.
     cnf.fill(param);
 
-    if (config_mask_passwords())
+    if (config_mask_passwords() && !cnf.config_sync_password.empty())
     {
         json_object_set_new(param, CN_CONFIG_SYNC_PASSWORD, json_string("*****"));
     }
