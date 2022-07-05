@@ -66,16 +66,27 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
  */
 void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
 {
-    uint8_t header[3];
-    uint32_t offset = 0;
+    mxs::Buffer buf(buffer);
+    auto it = buf.begin();
+    auto end = buf.end();
+    mxb_assert_message(buf.length() > MYSQL_HEADER_LEN, "Should never receive partial packets");
 
-    while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
+    while (it != end)
     {
-        uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-        uint8_t* seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
-        *seq = m_next_seq++;
-        offset += packet_len;
+        mxb_assert(std::distance(it, end) > MYSQL_HEADER_LEN);
+        uint32_t len = *it++;
+        len |= (*it++) << 8;
+        len |= (*it++) << 16;
+        *it++ = m_next_seq++;
+
+        // MXS-4172: If the buffer contains a partial packet, the call to it.advance() will not go past the
+        // end. This means that if a bug ends up returning either a partial packet or malformed data, the
+        // iteration won't go past the end of the buffer.
+        mxb_assert(std::distance(it, end) >= len);
+        it.advance(len);
     }
+
+    buf.release();
 }
 
 GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
