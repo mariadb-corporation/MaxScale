@@ -77,6 +77,10 @@ int main(int argc, char** argv)
     Connection pinloki = test.maxscale->readconn_master();
     test.expect(pinloki.connect(), "Pinloki connection should work: %s", pinloki.error());
 
+    pinloki.query("STOP SLAVE");
+    pinloki.query("SET @@global.gtid_slave_pos = '" + gtid_pos + "'");
+    pinloki.query("START SLAVE");
+
     // Pick a regular replica and make it replicate from pinloki
     Connection pinloki_replica {test.repl->get_connection(2)};
     test.expect(pinloki_replica.connect(), "Regular replica connection should work: %s",

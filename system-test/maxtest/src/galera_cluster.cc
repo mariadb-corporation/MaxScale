@@ -46,10 +46,7 @@ bool GaleraCluster::start_replication()
 
     auto gcomm = ss.str();
 
-    for (int i = 0; i < N; i++)
-    {
-        // Remove the grastate.dat file
-
+    run_on_every_backend([&](int i){
         ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
         ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
         ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
@@ -63,7 +60,8 @@ bool GaleraCluster::start_replication()
                    "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
                    "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera*/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
                    ip_private(i));
-    }
+        return true;
+    });
 
     printf("Starting new Galera cluster\n");
     fflush(stdout);
@@ -71,16 +69,20 @@ bool GaleraCluster::start_replication()
     // Start the first node that also starts a new cluster
     ssh_node_f(0, true, "galera_new_cluster");
 
-    for (int i = 1; i < N; i++)
-    {
-        if (start_node(i, "") != 0)
+    run_on_every_backend([&](int i){
+        bool ok = true;
+
+        if (i != 0 && start_node(i, "") != 0)
         {
+            ok = false;
             cout << "Failed to start node" << i << endl;
             cout << "---------- BEGIN LOGS ----------" << endl;
             cout << ssh_output("sudo journalctl -u mariadb | tail -n 50", i, true).output;
             cout << "----------- END LOGS -----------" << endl;
         }
-    }
+
+        return ok;
+    });
 
     string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
     copy_to_node(0, str.c_str(), access_homedir(0));
