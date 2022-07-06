@@ -2,7 +2,7 @@
 
 set -e
 
-systemctl --user start vault-dev.service
+sudo systemctl start vault-dev.service
 
 # Give it a few seconds to start up: the API takes a few seconds to start up.
 sleep 2

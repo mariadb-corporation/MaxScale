@@ -2,4 +2,4 @@
 
 set -e
 
-systemctl --user stop vault-dev.service
+sudo systemctl stop vault-dev.service
