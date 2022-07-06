@@ -120,6 +120,7 @@ export default {
                 { text: 'Client', value: 'user' },
                 { text: 'Connected', value: 'connected' },
                 { text: 'IDLE (s)', value: 'idle' },
+                { text: 'Memory', value: 'memory' },
             ],
         }
     },
@@ -145,7 +146,7 @@ export default {
             this.all_sessions.forEach(session => {
                 const {
                     id,
-                    attributes: { idle, connected, user, remote, connections },
+                    attributes: { idle, connected, user, remote, connections, memory },
                 } = session
 
                 let connectionOfThisServer = connections.find(
@@ -158,6 +159,7 @@ export default {
                         user: `${user}@${remote}`,
                         connected: this.$help.dateFormat({ value: connected }),
                         idle: idle,
+                        memory,
                     })
                 }
             })

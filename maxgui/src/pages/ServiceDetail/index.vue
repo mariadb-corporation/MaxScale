@@ -69,7 +69,7 @@
                     <!-- Sessions & Diagnostics tab -->
                     <v-tab-item class="pt-5">
                         <v-row>
-                            <v-col class="py-0 my-0" cols="6">
+                            <v-col class="py-0 my-0" cols="5">
                                 <details-readonly-table
                                     ref="diagnostics-table"
                                     :title="`${$t('routerDiagnostics')}`"
@@ -78,7 +78,7 @@
                                     isTree
                                 />
                             </v-col>
-                            <v-col class="py-0 my-0" cols="6">
+                            <v-col class="py-0 my-0" cols="7">
                                 <sessions-table
                                     :search="search_keyword"
                                     :collapsible="true"
@@ -143,6 +143,7 @@ export default {
                 { text: 'Client', value: 'user' },
                 { text: 'Connected', value: 'connected' },
                 { text: 'IDLE (s)', value: 'idle' },
+                { text: 'Memory', value: 'memory' },
             ],
         }
     },
@@ -174,11 +175,12 @@ export default {
         },
         sessionsTableRows() {
             return this.sessions_by_service.map(
-                ({ id, attributes: { idle, connected, user, remote } }) => ({
+                ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
                     id,
                     user: `${user}@${remote}`,
                     connected: this.$help.dateFormat({ value: connected }),
                     idle,
+                    memory,
                 })
             )
         },

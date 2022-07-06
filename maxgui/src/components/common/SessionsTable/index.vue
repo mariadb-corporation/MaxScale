@@ -41,6 +41,34 @@
                     <span>{{ $t('killSession') }}</span>
                 </v-tooltip>
             </template>
+            <template
+                v-if="headers.find(h => h.value === 'memory')"
+                v-slot:memory="{ data: { item: { memory } } }"
+            >
+                <v-menu
+                    top
+                    offset-y
+                    transition="slide-y-transition"
+                    :close-on-content-click="false"
+                    open-on-hover
+                    allow-overflow
+                    content-class="shadow-drop"
+                >
+                    <template v-slot:activator="{ on }">
+                        <div class="pointer override-td--padding" v-on="on">
+                            {{ memory.total }}
+                        </div>
+                    </template>
+                    <v-sheet class="py-4 px-3 text-body-2">
+                        <table class="info-table px-1">
+                            <tr v-for="(value, key) in memory" :key="key">
+                                <td class="pr-5">{{ key }}</td>
+                                <td>{{ value }}</td>
+                            </tr>
+                        </table>
+                    </v-sheet>
+                </v-menu>
+            </template>
         </data-table>
         <confirm-dialog
             v-model="confDlg.isOpened"
@@ -124,3 +152,12 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.info-table {
+    td {
+        white-space: nowrap;
+        height: 24px;
+        line-height: 1.5;
+    }
+}
+</style>
