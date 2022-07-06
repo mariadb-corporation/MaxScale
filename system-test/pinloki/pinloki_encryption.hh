@@ -77,10 +77,24 @@ public:
         check_encryption({case1, case2, case3, case4, case5});
 
         test.tprintf("Encrypted binlogs with bad configuration should not work");
-        test.maxscale->ssh_node_f(true, "sed -i '/encryption_key_id/ d' /etc/maxscale.cnf");
+        test.maxscale->ssh_node_f(true, "sed -i 's/encryption_key_id/#encryption_key_id/' /etc/maxscale.cnf");
         test.maxscale->restart();
         test.expect(maxscale.connect(), "Connection should work: %s", maxscale.error());
         slave.query("STOP SLAVE; START SLAVE;");
+
+        query("FLUSH LOGS");
+        query("INSERT INTO test.t1 VALUES ('unencrypted1')");
+        query("INSERT INTO test.t2 VALUES ('unencrypted2')");
+
+        test.maxscale->ssh_node_f(true, "sed -i 's/#encryption_key_id/encryption_key_id/' /etc/maxscale.cnf");
+        test.maxscale->restart();
+        test.expect(maxscale.connect(), "Connection should work: %s", maxscale.error());
+        slave.query("STOP SLAVE; START SLAVE;");
+
+        query("FLUSH LOGS");
+        query("INSERT INTO test.t1 VALUES ('unencrypted3')");
+        query("INSERT INTO test.t2 VALUES ('unencrypted4')");
+        sync_all();
     }
 
     void post() override
