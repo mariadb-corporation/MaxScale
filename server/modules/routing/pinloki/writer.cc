@@ -234,6 +234,13 @@ void Writer::run()
                 }
             }
         }
+        catch (const mxq::EncryptionError& x)
+        {
+            MXB_ERROR("Encryption error (%s), cannot continue. "
+                      "Restart replication to attempt again.",
+                      x.what());
+            m_running = false;
+        }
         catch (const maxsql::DatabaseError& x)
         {
             error = Error {x.code(), x.what()};

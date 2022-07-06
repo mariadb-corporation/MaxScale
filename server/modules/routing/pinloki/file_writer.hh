@@ -51,7 +51,6 @@ private:
     bool open_for_appending(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event);
     void perform_rotate(const maxsql::Rotate& rotate);
     void write_to_file(maxsql::RplEvent& rpl_event);
-    void write_encrypted_to_file(maxsql::RplEvent& rpl_event);
     void write_plain_to_file(const char* ptr, size_t bytes);
     void write_stop(const std::string& file_name);
     void write_rotate(const std::string& to_file_name);

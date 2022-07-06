@@ -269,22 +269,9 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 
 void FileWriter::write_to_file(maxsql::RplEvent& rpl_event)
 {
-    if (!m_inventory.config().key_id().empty())
-    {
-        write_encrypted_to_file(rpl_event);
-    }
-    else
-    {
-        write_plain_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
-    }
-}
-
-void FileWriter::write_encrypted_to_file(maxsql::RplEvent& rpl_event)
-{
     const std::string& key_id = m_inventory.config().key_id();
-    mxb_assert(!key_id.empty());
 
-    if (rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT)
+    if (rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT && !key_id.empty())
     {
         // Reset the encryption context for every new binlog. Both the FORMAT_DESCRIPTION and the
         // START_ENCRYPTION events must be unencrypted even if the previous file was also encrypted.
@@ -309,24 +296,28 @@ void FileWriter::write_encrypted_to_file(maxsql::RplEvent& rpl_event)
             }
             else
             {
-                MXB_THROW(BinlogWriteError, "Failed to open encryption key '" << key_id << "'.");
+                MXB_THROW(mxq::EncryptionError, "Failed to open encryption key '" << key_id << "'.");
             }
         }
         else
         {
-            MXB_THROW(BinlogWriteError,
+            MXB_THROW(mxq::EncryptionError,
                       "Encryption key ID is set to '" << key_id << "' but key manager is not enabled. "
                                                       << "Cannot write encrypted binlog files.");
         }
     }
-    else
+    else if (m_encrypt)
     {
         // All other events in the binlog are encrypted
-        mxb_assert(m_encrypt);
+        mxb_assert(!key_id.empty());
 
         std::vector<char> plaintext(rpl_event.pBuffer(), rpl_event.pEnd());
         auto encrypted = m_encrypt->encrypt_event(plaintext, m_current_pos.write_pos);
         write_plain_to_file(encrypted.data(), encrypted.size());
+    }
+    else
+    {
+        write_plain_to_file(rpl_event.pBuffer(), rpl_event.buffer_size());
     }
 }
 
