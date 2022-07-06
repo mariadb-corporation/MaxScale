@@ -145,20 +145,35 @@ std::vector<uint8_t> load_key(std::string host, int64_t port, std::string ca,
                     }
                     else
                     {
+                        KMIP kmip_context {0};
+                        kmip_init(&kmip_context, NULL, 0, KMIP_1_0);
+
                         int len = 0;
                         char* out = nullptr;
 
-                        int result = kmip_bio_get_symmetric_key(bio, id.data(), id.size(), &out, &len);
+                        int result = kmip_bio_get_symmetric_key_with_context(
+                            &kmip_context, bio, id.data(), id.size(), &out, &len);
+
 
                         if (result != 0)
                         {
-                            MXB_ERROR("Failed to get key: %d, %s", result, get_kmip_error(result));
+                            std::string errmsg;
+
+                            if (kmip_context.error_message && kmip_context.error_message_size)
+                            {
+                                errmsg.assign(kmip_context.error_message, kmip_context.error_message_size);
+                            }
+
+                            MXB_ERROR("Failed to get key '%s': %d, %s, %s", id.c_str(), result,
+                                      get_kmip_error(result), errmsg.c_str());
                         }
                         else
                         {
                             rval.assign(out, out + len);
                             free(out);
                         }
+
+                        kmip_destroy(&kmip_context);
                     }
 
                     BIO_free_all(bio);
