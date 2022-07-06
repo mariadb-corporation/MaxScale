@@ -1435,7 +1435,9 @@ The encryption key manager to use. The available encryption key managers are:
 
 * `kmip` - [KMIP key manager](#kmip-key-manager)
 
-* `vault` - [HashiCorp Vault key manager](#hashicorp-vault-key-manager)
+* `vault` - [HashiCorp Vault key manager](#hashicorp-vault-key-manager). This
+            key manager is only included on systems with GCC 9 or newer which
+            means it cannot be used on Ubuntu 18.04.
 
 Refer to the [Encryption Key Managers](#encryption-key-managers) section for
 more information on how to configure the key managers. The key managers each
