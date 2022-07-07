@@ -1,95 +1,24 @@
 <template>
-    <details-page-title>
-        <template v-slot:setting-menu>
-            <details-icon-group-wrapper multiIcons>
-                <template v-slot:body>
-                    <v-tooltip
-                        v-for="op in [
-                            monitorOps[MONITOR_OP_TYPES.STOP],
-                            monitorOps[MONITOR_OP_TYPES.START],
-                        ]"
-                        :key="op.text"
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
-                    >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                :class="`${op.type}-btn`"
-                                text
-                                :color="op.color"
-                                :disabled="op.disabled"
-                                v-on="on"
-                                @click="handleClick(op)"
-                            >
-                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ op.text }} </span>
-                    </v-tooltip>
-                </template>
-            </details-icon-group-wrapper>
-            <details-icon-group-wrapper>
-                <template v-slot:body>
-                    <v-tooltip
-                        v-for="op in [monitorOps[MONITOR_OP_TYPES.DESTROY]]"
-                        :key="op.text"
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
-                    >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                :class="`${op.type}-btn`"
-                                text
-                                :color="op.color"
-                                :disabled="op.disabled"
-                                v-on="on"
-                                @click="handleClick(op)"
-                            >
-                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ op.text }} </span>
-                    </v-tooltip>
-                </template>
-            </details-icon-group-wrapper>
-        </template>
-        <template v-slot:append>
-            <portal to="page-header--right">
-                <global-search class="d-inline-block" />
-                <create-resource
-                    class="ml-4 d-inline-block"
-                    :defFormType="RESOURCE_FORM_TYPES.SERVER"
-                    :defRelationshipObj="{
-                        id: $route.params.id,
-                        type: RELATIONSHIP_TYPES.MONITORS,
-                    }"
-                />
-            </portal>
+    <monitor-page-header
+        :targetMonitor="currentMonitor"
+        @on-choose-op="onChooseOp"
+        v-on="$listeners"
+    >
+        <template v-slot:page-title="{ pageId }">
+            <router-link :to="`/visualization/clusters/${pageId}`" class="rsrc-link">
+                {{ pageId }}
+            </router-link>
             <confirm-dialog
-                v-model="isConfDlgOpened"
-                :title="dialogTitle"
-                :type="dialogType"
-                :item="currentMonitor"
-                :onSave="confirmSave"
+                v-model="confDlg.isOpened"
+                :title="confDlg.title"
+                :type="confDlg.type"
+                :saveText="confDlgSaveTxt"
+                :item="confDlg.targetNode"
+                :smallInfo="confDlg.smallInfo"
+                :onSave="onConfirm"
             />
-            <icon-sprite-sheet
-                size="16"
-                class="monitor-state-icon mr-1"
-                :frame="$help.monitorStateIcon(currState)"
-            >
-                monitors
-            </icon-sprite-sheet>
-            <span class="resource-state color text-navigation text-body-2">
-                {{ currState }}
-            </span>
-            <span class="color text-field-text text-body-2">
-                |
-                <span class="resource-module">{{ getModule }}</span>
-            </span>
         </template>
-    </details-page-title>
+    </monitor-page-header>
 </template>
 
 <script>
@@ -106,7 +35,7 @@
  * Public License.
  */
 
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import goBack from 'mixins/goBack'
 
 export default {
@@ -118,61 +47,84 @@ export default {
     },
     data() {
         return {
-            dialogTitle: '',
-            dialogType: 'destroy',
-            opParams: '',
-            isConfDlgOpened: false,
+            // states for confirm-dialog
+            confDlg: {
+                opType: '',
+                isOpened: false,
+                title: '',
+                type: '',
+                targetNode: null,
+                smallInfo: '',
+            },
         }
     },
     computed: {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
-            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
-            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
-        ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
-        currState() {
-            const { attributes: { state = 'null' } = {} } = this.currentMonitor
-            return state
-        },
         getModule() {
             const { attributes: { module: monitorModule = null } = {} } = this.currentMonitor
             return monitorModule
         },
-        monitorOps() {
-            return this.getMonitorOps({ currState: this.currState, scope: this })
+        confDlgSaveTxt() {
+            const { RESET_REP, RELEASE_LOCKS, FAILOVER } = this.MONITOR_OP_TYPES
+            switch (this.confDlg.type) {
+                case RESET_REP:
+                    return 'reset'
+                case RELEASE_LOCKS:
+                    return 'release'
+                case FAILOVER:
+                    return 'perform'
+                default:
+                    return this.confDlg.type
+            }
         },
     },
     methods: {
         ...mapActions('monitor', ['manipulateMonitor']),
-        async confirmSave() {
-            await this.handleMonitorOp(this.dialogType)
-        },
-
-        async handleMonitorOp(type) {
-            const { id } = this.currentMonitor
-            const { STOP, START, DESTROY } = this.MONITOR_OP_TYPES
+        async onConfirm() {
+            const {
+                STOP,
+                START,
+                DESTROY,
+                RESET_REP,
+                RELEASE_LOCKS,
+                FAILOVER,
+            } = this.MONITOR_OP_TYPES
             let payload = {
-                id,
-                type,
-                opParams: this.opParams,
+                id: this.currentMonitor.id,
+                type: this.confDlg.opType,
+                callback: this.onEditSucceeded,
             }
-            switch (type) {
-                case DESTROY:
-                    payload.callback = this.goBack
+            switch (this.confDlg.opType) {
+                case RESET_REP:
+                case RELEASE_LOCKS:
+                case FAILOVER: {
+                    await this.manipulateMonitor({
+                        ...payload,
+                        opParams: { moduleType: this.getModule, params: '' },
+                    })
                     break
+                }
                 case STOP:
                 case START:
-                    payload.callback = this.onEditSucceeded
+                    await this.manipulateMonitor({ ...payload, opParams: this.confDlg.opParams })
+                    break
+                case DESTROY:
+                    await this.manipulateMonitor({ ...payload, callback: this.goBack })
             }
-            await this.manipulateMonitor(payload)
         },
-
-        handleClick({ type, text, params }) {
-            this.dialogType = type
-            this.dialogTitle = text
-            this.opParams = params
-            this.isConfDlgOpened = true
+        onChooseOp({ type, text, info, params }) {
+            this.confDlg = {
+                ...this.confDlg,
+                type,
+                opType: type,
+                title: text,
+                opParams: params,
+                targetNode: { id: this.currentMonitor.id },
+                smallInfo: info,
+                isOpened: true,
+            }
         },
     },
 }

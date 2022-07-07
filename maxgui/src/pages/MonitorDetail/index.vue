@@ -1,7 +1,11 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
-            <page-header :currentMonitor="current_monitor" :onEditSucceeded="fetchMonitor" />
+            <page-header
+                :currentMonitor="current_monitor"
+                :onEditSucceeded="fetchMonitor"
+                @on-count-done="initialFetch"
+            />
             <overview-header :currentMonitor="current_monitor" @switch-over="handleSwitchover" />
             <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->

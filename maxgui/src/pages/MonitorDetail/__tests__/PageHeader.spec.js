@@ -13,13 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/MonitorDetail/PageHeader'
-
-import {
-    dummy_all_monitors,
-    triggerBtnClick,
-    openConfirmDialog,
-    assertSendingRequest,
-} from '@tests/unit/utils'
+import { dummy_all_monitors, assertSendingRequest } from '@tests/unit/utils'
 
 const computedFactory = (computed = {}) =>
     mount({
@@ -28,128 +22,131 @@ const computedFactory = (computed = {}) =>
         propsData: {
             currentMonitor: dummy_all_monitors[0],
         },
+        stubs: {
+            'refresh-rate': "<div class='refresh-rate'></div>",
+        },
         computed,
     })
 
-const ALL_BTN_CLASS_PREFIXES = ['stop', 'start', 'destroy']
-
+const ALL_OP_CLASS_NAMES = [
+    'stop',
+    'start',
+    'destroy',
+    'async-reset-replication',
+    'async-release-locks',
+    'async-failover',
+]
+let wrapper
 describe('MonitorDetail - PageHeader', () => {
-    let wrapper, axiosDeleteStub, axiosPutStub
-
-    beforeEach(() => {
-        wrapper = mount({
-            shallow: false,
-            component: PageHeader,
-            propsData: {
-                currentMonitor: dummy_all_monitors[0],
-            },
-        })
-        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
-        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
-    })
-
-    afterEach(() => {
-        axiosDeleteStub.restore()
-        axiosPutStub.restore()
-    })
-
-    it(`Should render monitor state accurately`, () => {
-        const span = wrapper.find('.resource-state')
-        expect(span.exists()).to.be.true
-        expect(span.text()).to.be.equals(dummy_all_monitors[0].attributes.state)
-    })
-
-    it(`Should render monitor module accurately`, () => {
-        const span = wrapper.find('.resource-module')
-        expect(span.exists()).to.be.true
-        expect(span.text()).to.be.equals(dummy_all_monitors[0].attributes.module)
-    })
-
     it(`Should pass necessary props to confirm-dialog`, () => {
+        wrapper = computedFactory()
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
         })
         expect(confirmDialog.exists()).to.be.true
-        const { value, title, onSave } = confirmDialog.vm.$attrs
-        const { type, item } = confirmDialog.vm.$props
-        const { dialogTitle, dialogType, isConfDlgOpened } = wrapper.vm.$data
+        const { value, title, saveText, onSave } = confirmDialog.vm.$attrs
+        const { type, item, smallInfo } = confirmDialog.vm.$props
+        const {
+            isOpened,
+            title: confDlgTitle,
+            type: confDlgType,
+            targetNode,
+            smallInfo: confDlgSmallInfo,
+        } = wrapper.vm.$data.confDlg
 
-        expect(value).to.be.equals(isConfDlgOpened)
-        expect(title).to.be.equals(dialogTitle)
-        expect(type).to.be.equals(dialogType)
-        expect(item).to.be.deep.equals(wrapper.vm.$props.currentMonitor)
-        expect(onSave).to.be.equals(wrapper.vm.confirmSave)
+        expect(value).to.be.equals(isOpened)
+        expect(title).to.be.equals(confDlgTitle)
+        expect(type).to.be.equals(confDlgType)
+        expect(item).to.be.deep.equals(targetNode)
+        expect(smallInfo).to.be.equals(confDlgSmallInfo)
+        expect(saveText).to.be.equals(wrapper.vm.confDlgSaveTxt)
+        expect(onSave).to.be.equals(wrapper.vm.onConfirm)
     })
-
-    describe('confirm-dialog opening test assertions', () => {
-        const dummyState = ['Running', 'Stopped', 'Running']
-        ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) =>
-            it(`Should open confirm-dialog when ${prefix} button is clicked`, async () => {
-                // currState stub
-                wrapper = computedFactory({
-                    currState: () => dummyState[i],
-                })
-                await openConfirmDialog({
-                    wrapper,
-                    cssSelector: `.${prefix}-btn`,
-                })
-                const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-                expect(confirmDialog.vm.$attrs.value).to.be.true
-            })
-        )
-    })
-
-    describe('button disable test assertions', () => {
-        const dummyState = ['Stopped', 'Running']
-        const btnClassPrefixes = ['stop', 'start']
-        btnClassPrefixes.forEach((prefix, i) => {
-            let des = `Should disable ${prefix} btn when state is: ${dummyState[i]}`
-            it(des, async () => {
-                // currState stub
-                wrapper = computedFactory({
-                    currState: () => dummyState[i],
-                })
-                await triggerBtnClick(wrapper, '.gear-btn')
-                const btn = wrapper.find(`.${prefix}-btn`)
-                expect(btn.attributes().disabled).to.be.equals('disabled')
-            })
-        })
-    })
-
     describe('Monitor state update and monitor deletion test assertions', () => {
-        // dummy states that btn can be clicked
-        const dummyState = ['Running', 'Stopped', 'Running']
-        ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {
-            // currState stub
-            const wrapper = computedFactory({
-                currState: () => dummyState[i],
-            })
-            const cssSelector = `.${prefix}-btn`
-            const id = dummy_all_monitors[0].id
-            let httpMethod = 'PUT'
+        beforeEach(() => {
+            wrapper = computedFactory()
+        })
 
-            if (prefix === 'destroy') httpMethod = 'DELETE'
-            const des = `Should send ${httpMethod} request after confirming ${prefix} a monitor`
+        // dummy states that btn can be clicked
+        const dummyState = ['Running', 'Stopped', 'Running', 'Running', 'Running', 'Running']
+        ALL_OP_CLASS_NAMES.forEach(async (op, i) => {
+            // currState stub
+            const wrapper = computedFactory()
+            const cssSelector = `.${op}-op`
+            const id = dummy_all_monitors[0].id
+            let axiosStub,
+                httpMethod = 'POST'
+
+            switch (op) {
+                case 'destroy':
+                    httpMethod = 'DELETE'
+                    break
+                case 'stop':
+                case 'start':
+                    httpMethod = 'PUT'
+                    break
+            }
+
+            const des = `Should send ${httpMethod} request after confirming ${op} a monitor`
             it(des, async () => {
-                switch (prefix) {
+                // stub currentMonitor to make all mariadbmon operation clickable
+                await wrapper.setProps({
+                    currentMonitor: {
+                        ...wrapper.vm.$props.currentMonitor,
+                        attributes: {
+                            ...wrapper.vm.$props.currentMonitor.attributes,
+                            monitor_diagnostics: { primary: true },
+                            parameters: { auto_failover: false },
+                            module: 'mariadbmon',
+                            state: dummyState[i],
+                        },
+                    },
+                })
+                switch (op) {
                     case 'stop':
-                    case 'start':
+                    case 'start': {
+                        axiosStub = sinon
+                            .stub(wrapper.vm.$store.$http, 'put')
+                            .returns(Promise.resolve())
                         await assertSendingRequest({
                             wrapper,
                             cssSelector,
-                            axiosStub: axiosPutStub,
-                            axiosStubCalledWith: `/monitors/${id}/${prefix}`,
+                            axiosStub,
+                            axiosStubCalledWith: `/monitors/${id}/${op}`,
                         })
+
+                        axiosStub.restore()
                         break
-                    case 'destroy':
+                    }
+                    case 'destroy': {
+                        axiosStub = sinon
+                            .stub(wrapper.vm.$store.$http, 'delete')
+                            .returns(Promise.resolve())
                         await assertSendingRequest({
                             wrapper,
                             cssSelector,
-                            axiosStub: axiosDeleteStub,
+                            axiosStub,
                             axiosStubCalledWith: `/monitors/${id}?force=yes`,
                         })
+                        axiosStub.restore()
                         break
+                    }
+                    case 'async-reset-replication':
+                    case 'async-release-locks':
+                    case 'async-failover': {
+                        axiosStub = sinon
+                            .stub(wrapper.vm.$store.$http, 'post')
+                            .returns(Promise.resolve())
+                        await assertSendingRequest({
+                            wrapper,
+                            cssSelector,
+                            axiosStub,
+                            axiosStubCalledWith: `/maxscale/modules/mariadbmon/${op}?${id}`,
+                        })
+                        break
+                    }
                 }
+                axiosStub.restore()
             })
         })
     })
