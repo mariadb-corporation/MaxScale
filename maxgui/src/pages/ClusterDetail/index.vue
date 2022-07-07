@@ -215,8 +215,8 @@ export default {
             ).safeArray
             let joinableServers = serverInfo.filter(
                 s =>
-                    s.name !== this.masterNode.name &&
-                    this.masterNode.children.every(n => n.name !== s.name)
+                    s.name !== this.$typy(this.masterNode, 'name').safeString &&
+                    this.$typy(this.masterNode, 'children').safeArray.every(n => n.name !== s.name)
             )
             return joinableServers.map(server => ({
                 id: server.name,
@@ -291,7 +291,9 @@ export default {
                 this.draggingStates.droppableTargets = []
             } else {
                 //switchover or rejoin: dragging a slave to a master
-                this.draggingStates.droppableTargets = [this.masterNode.name]
+                this.draggingStates.droppableTargets = [
+                    this.$typy(this.masterNode, 'name').safeString,
+                ]
             }
         },
         /**
