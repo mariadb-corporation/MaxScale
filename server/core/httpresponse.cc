@@ -200,7 +200,7 @@ void HttpResponse::add_split_cookie(const std::string& public_name, const std::s
 
     if (mxs_admin_https_enabled())
     {
-        cookie_opts = "; Secure";
+        cookie_opts += "; Secure";
     }
 
     if (max_age)
