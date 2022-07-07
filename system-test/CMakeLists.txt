@@ -869,6 +869,9 @@ add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS 
 # MXS-3959: Transaction replay doesn't reset transaction on implicit commit
 add_test_executable(mxs3959_implicit_commit.cc mxs3959_implicit_commit mxs3959_implicit_commit LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4194: QC cache size keeps growing
+add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_cache_size LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
