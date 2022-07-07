@@ -66,7 +66,7 @@ then
   # DEB-based distro
   install_libdir=/usr/lib
   export DEBIAN_FRONTEND=noninteractive
-  sudo apt-get update && sudo apt-get upgrade
+  sudo apt-get update && sudo apt-get -y upgrade
 
   sudo dpkg-reconfigure libc6
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
