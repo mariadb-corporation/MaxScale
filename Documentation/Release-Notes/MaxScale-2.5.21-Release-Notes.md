@@ -18,6 +18,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4194](https://jira.mariadb.org/browse/MXS-4194) Reported size for query classifier cache keeps growing
 * [MXS-4181](https://jira.mariadb.org/browse/MXS-4181) MaxScale w/SSL doesn't work on FIPS RHEL7
 * [MXS-4166](https://jira.mariadb.org/browse/MXS-4166) Filter diagnostics are not shown in `maxctrl show filters`
 * [MXS-4165](https://jira.mariadb.org/browse/MXS-4165) Servers with priority=0 are selected as Master
