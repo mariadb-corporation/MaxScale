@@ -34,6 +34,7 @@ import FilterList from './FilterList'
 import RepTooltip from './RepTooltip'
 import RefreshRate from './RefreshRate'
 import SessionsTable from './SessionsTable'
+import MonitorPageHeader from './MonitorPageHeader'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -57,4 +58,5 @@ export default {
     'rep-tooltip': RepTooltip,
     'refresh-rate': RefreshRate,
     'sessions-table': SessionsTable,
+    'monitor-page-header': MonitorPageHeader,
 }

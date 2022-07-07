@@ -1,6 +1,19 @@
 <template>
     <page-wrapper fluid>
-        <page-header @on-choose-op="onChooseOp" @on-count-done="fetchCluster" />
+        <monitor-page-header
+            :targetMonitor="{
+                id: current_cluster.id,
+                attributes: $typy(current_cluster, 'monitorData').safeObjectOrEmpty,
+            }"
+            @on-count-done="fetchCluster"
+            @on-choose-op="onChooseOp({ op: $event, target: current_cluster })"
+        >
+            <template v-slot:page-title="{ pageId }">
+                <router-link :to="`/dashboard/monitors/${pageId}`" class="rsrc-link">
+                    {{ pageId }}
+                </router-link>
+            </template>
+        </monitor-page-header>
         <v-card
             ref="graphContainer"
             v-resize.quiet="setCtrDim"
@@ -94,13 +107,11 @@
  * Public License.
  */
 import { mapState, mapActions, mapGetters } from 'vuex'
-import PageHeader from './PageHeader.vue'
 import ServerNode from './ServerNode.vue'
 import JoinableServers from './JoinableServers'
 export default {
     name: 'cluster',
     components: {
-        'page-header': PageHeader,
         'server-node': ServerNode,
         'joinable-servers': JoinableServers,
     },
