@@ -911,6 +911,9 @@ add_test_executable(mxs3924_sescmd_retry.cc mxs3924_sescmd_retry mxs3924_sescmd_
 add_test_executable_ex(NAME idle_pool_max_conns SOURCE idle_pool_max_conns.cc CONFIG idle_pool_max_conns.cnf
         VMS repl_backend)
 
+# MXS-4194: QC cache size keeps growing
+add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_cache_size LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

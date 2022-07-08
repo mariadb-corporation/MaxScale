@@ -22,6 +22,7 @@ public:
             test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
         }
 
+        slave.query("STOP SLAVE;START SLAVE;");
         sync_all();
 
         // All servers should be at the same GTID

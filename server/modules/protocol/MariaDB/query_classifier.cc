@@ -442,6 +442,7 @@ public:
 
             if (pInfo)
             {
+                m_info_size_before = this_unit.classifier->qc_info_size(pInfo);
                 gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
