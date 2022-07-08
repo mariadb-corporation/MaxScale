@@ -156,9 +156,13 @@ export default {
          * @param {String} param.id - id of the monitor to be manipulated
          * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
          * @param {String|Object} param.opParams - operation params. For async call, it's an object
-         * @param {Function} param.callback callback function after successfully updated
+         * @param {Function} param.callback - callback function after successfully updated
+         * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
-        async manipulateMonitor({ dispatch, commit, rootState }, { id, type, opParams, callback }) {
+        async manipulateMonitor(
+            { dispatch, commit, rootState },
+            { id, type, opParams, callback, showSnackbar = true }
+        ) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
                     method = 'put',
@@ -210,14 +214,16 @@ export default {
                                 monitorModule: opParams.moduleType,
                                 monitorId: id,
                                 successCb: callback,
+                                showSnackbar,
                             })
                             break
                         default:
-                            commit(
-                                'SET_SNACK_BAR_MESSAGE',
-                                { text: message, type: 'success' },
-                                { root: true }
-                            )
+                            if (showSnackbar)
+                                commit(
+                                    'SET_SNACK_BAR_MESSAGE',
+                                    { text: message, type: 'success' },
+                                    { root: true }
+                                )
                             if (this.vue.$help.isFunction(callback)) await callback()
                             break
                     }
@@ -234,10 +240,11 @@ export default {
          * @param {String} param.monitorModule Monitor module
          * @param {String} param.monitorId Monitor id
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async checkAsyncCmdRes({ dispatch }, param) {
             try {
-                const { monitorModule, monitorId, successCb } = param
+                const { monitorModule, monitorId, successCb, showSnackbar } = param
                 const { status, data: { meta } = {} } = await this.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
                 )
@@ -247,7 +254,7 @@ export default {
                      * success response of a cs async command
                      */
                     if (`${meta}`.includes('completed successfully'))
-                        await dispatch('handleAsyncCmdDone', { meta, successCb })
+                        await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
                     else await dispatch('handleAsyncCmdPending', { ...param, meta })
                 }
             } catch (e) {
@@ -257,13 +264,15 @@ export default {
         /**
          * @param {String} param.meta - meta string message
          * @param {Function} param.successCb - callback function after successfully switchover
+         * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
-        async handleAsyncCmdDone({ commit }, { meta, successCb }) {
-            commit(
-                'SET_SNACK_BAR_MESSAGE',
-                { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
-                { root: true }
-            )
+        async handleAsyncCmdDone({ commit }, { meta, successCb, showSnackbar }) {
+            if (showSnackbar)
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
+                    { root: true }
+                )
             if (this.vue.$help.isFunction(successCb)) await successCb()
         },
 
@@ -274,31 +283,37 @@ export default {
          * @param {String} param.monitorModule Monitor module
          * @param {String} param.monitorId Monitor id
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async handleAsyncCmdPending({ commit, dispatch }, param) {
-            const { cmdName, meta } = param
+            const { cmdName, meta, showSnackbar } = param
             const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
             if (isRunning && !isCancelled) {
-                commit(
-                    'SET_SNACK_BAR_MESSAGE',
-                    // Remove `No manual commands are available`, shows only the latter part.
-                    {
-                        text: meta.errors.map(e =>
-                            this.vue.$help.capitalizeFirstLetter(
-                                e.detail.replace('No manual command results are available, ', '')
-                            )
-                        ),
-                        type: 'warning',
-                    },
-                    { root: true }
-                )
+                if (showSnackbar)
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        // Remove `No manual commands are available`, shows only the latter part.
+                        {
+                            text: meta.errors.map(e =>
+                                this.vue.$help.capitalizeFirstLetter(
+                                    e.detail.replace(
+                                        'No manual command results are available, ',
+                                        ''
+                                    )
+                                )
+                            ),
+                            type: 'warning',
+                        },
+                        { root: true }
+                    )
                 // loop fetch until receive success meta
                 await this.vue.$help
                     .delay(2500)
                     .then(async () => await dispatch('checkAsyncCmdRes', param))
             } else {
                 const errArr = meta.errors.map(error => error.detail)
-                commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
+                if (showSnackbar)
+                    commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
             }
         },
         //-----------------------------------------------Monitor relationship update---------------------------------
