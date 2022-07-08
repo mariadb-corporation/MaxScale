@@ -227,7 +227,80 @@ export default {
                 logger.error(e)
             }
         },
+        /**
+         * This function should be called right after an async cmd action is called
+         * in order to show async cmd status message on snackbar.
+         * @param {String} param.cmdName - async command name
+         * @param {String} param.monitorModule Monitor module
+         * @param {String} param.monitorId Monitor id
+         * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         */
+        async checkAsyncCmdRes({ dispatch }, param) {
+            try {
+                const { monitorModule, monitorId, successCb } = param
+                const { status, data: { meta } = {} } = await this.$http.get(
+                    `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
+                )
+                // response ok
+                if (status === 200) {
+                    /* TODO: Handle the case where meta is an object if it's for the
+                     * success response of a cs async command
+                     */
+                    if (`${meta}`.includes('completed successfully'))
+                        await dispatch('handleAsyncCmdDone', { meta, successCb })
+                    else await dispatch('handleAsyncCmdPending', { ...param, meta })
+                }
+            } catch (e) {
+                this.vue.$logger('store-monitor-checkAsyncCmdRes').error(e)
+            }
+        },
+        /**
+         * @param {String} param.meta - meta string message
+         * @param {Function} param.successCb - callback function after successfully switchover
+         */
+        async handleAsyncCmdDone({ commit }, { meta, successCb }) {
+            commit(
+                'SET_SNACK_BAR_MESSAGE',
+                { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
+                { root: true }
+            )
+            if (this.vue.$help.isFunction(successCb)) await successCb()
+        },
 
+        /**
+         * This handles calling checkAsyncCmdRes every 2500ms until receive success msg
+         * @param {Object} param.meta - meta error object
+         * @param {String} param.cmdName - async command name
+         * @param {String} param.monitorModule Monitor module
+         * @param {String} param.monitorId Monitor id
+         * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         */
+        async handleAsyncCmdPending({ commit, dispatch }, param) {
+            const { cmdName, meta } = param
+            const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
+            if (isRunning && !isCancelled) {
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    // Remove `No manual commands are available`, shows only the latter part.
+                    {
+                        text: meta.errors.map(e =>
+                            this.vue.$help.capitalizeFirstLetter(
+                                e.detail.replace('No manual command results are available, ', '')
+                            )
+                        ),
+                        type: 'warning',
+                    },
+                    { root: true }
+                )
+                // loop fetch until receive success meta
+                await this.vue.$help
+                    .delay(2500)
+                    .then(async () => await dispatch('checkAsyncCmdRes', param))
+            } else {
+                const errArr = meta.errors.map(error => error.detail)
+                commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
+            }
+        },
         //-----------------------------------------------Monitor relationship update---------------------------------
         /**
          * @param {Object} payload payload object
@@ -260,91 +333,6 @@ export default {
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
                 logger.error(e)
-            }
-        },
-        /**
-         * This function should be called right after an async cmd action is called
-         * in order to show async cmd status message on snackbar.
-         * @param {String} payload.cmdName - async command name
-         * @param {String} payload.monitorModule Monitor module
-         * @param {String} payload.monitorId Monitor id
-         * @param {Function} successCb - callback function after successfully performing an async cmd
-         */
-        async checkAsyncCmdRes({ dispatch }, { cmdName, monitorModule, monitorId, successCb }) {
-            try {
-                const { status, data: { meta } = {} } = await this.$http.get(
-                    `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
-                )
-                // response ok
-                if (status === 200) {
-                    if (`${meta}`.includes('completed successfully'))
-                        await dispatch('handleAsyncCmdDone', { meta, successCb })
-                    else
-                        await dispatch('handleAsyncCmdPending', {
-                            cmdName,
-                            meta,
-                            monitorModule,
-                            monitorId,
-                            successCb,
-                        })
-                }
-            } catch (e) {
-                this.vue.$logger('store-monitor-checkAsyncCmdRes').error(e)
-            }
-        },
-        /**
-         * @param {String} meta - meta string message
-         * @param {Function} successCb - callback function after successfully switchover
-         */
-        async handleAsyncCmdDone({ commit }, { meta, successCb }) {
-            commit(
-                'SET_SNACK_BAR_MESSAGE',
-                { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
-                { root: true }
-            )
-            if (this.vue.$help.isFunction(successCb)) await successCb()
-        },
-
-        /**
-         * This handles calling checkAsyncCmdRes every 2500ms until receive success msg
-         * @param {String} payload.cmdName - async command name
-         * @param {Object} payload.meta - meta error object
-         * @param {String} payload.monitorModule Monitor module
-         * @param {String} payload.monitorId Monitor id
-         * @param {Function} payload.successCb - callback function after successfully performing an async cmd
-         */
-        async handleAsyncCmdPending(
-            { commit, dispatch },
-            { cmdName, meta, monitorModule, monitorId, successCb }
-        ) {
-            const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
-            if (isRunning && !isCancelled) {
-                commit(
-                    'SET_SNACK_BAR_MESSAGE',
-                    // Remove `No manual commands are available`, shows only the latter part.
-                    {
-                        text: meta.errors.map(e =>
-                            this.vue.$help.capitalizeFirstLetter(
-                                e.detail.replace('No manual command results are available, ', '')
-                            )
-                        ),
-                        type: 'warning',
-                    },
-                    { root: true }
-                )
-                // loop fetch until receive success meta
-                await this.vue.$help.delay(2500).then(
-                    async () =>
-                        await dispatch('checkAsyncCmdRes', {
-                            cmdName,
-                            monitorModule,
-                            monitorId,
-                            successCb,
-                        })
-                )
-            } else {
-                const errArr = meta.errors.map(error => error.detail)
-                commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
             }
         },
     },
