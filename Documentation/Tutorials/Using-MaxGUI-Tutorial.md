@@ -225,10 +225,12 @@ A SQL editor tool to run queries and perform other SQL operations.
     to `Run selected statements`.
 19. Visualize query result button. Visualizing a query result into a line,
     scatter, vertical bar, and horizontal bar graph.
-20. Create a query snippet from the queries written in the
-    `SQL editor`. Alternatively, press `Ctrl/CMD+D`.
+20. Create a query snippet from the queries written in the `SQL editor`.
+    Alternatively, press `Ctrl/CMD+D`.
 21. Open Script button.
-22. Save Script button. This writes content into the opened file. This only works on Chrome or any browsers based on Chromium.
+22. Save Script button. This writes content into the opened file. This only
+    works on Chrome or any browsers based on Chromium served over a secure
+    connection (https)
 23. Save Script As button. Save the content as a new file.
 24. [sql_select_limit](https://mariadb.com/docs/reference/mdb/system-variables/sql_select_limit/)
     input. Changing the maximum number of rows to return from SELECT statements.
@@ -239,6 +241,7 @@ A SQL editor tool to run queries and perform other SQL operations.
     `Show confirmation before executing the statements` and
     `Show system schemas`.
 27. Maximize Query Editor window.
+
 # How to kill a session
 
 A session can be killed easily on the "Current Sessions" table which can be
