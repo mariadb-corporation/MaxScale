@@ -14,6 +14,7 @@
 #include "mariadbmon.hh"
 #include <memory>
 #include <set>
+#include <cinttypes>
 #include <mysql.h>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/format.hh>

@@ -906,6 +906,9 @@ add_test_executable_ex(NAME idle_pool_max_conns SOURCE idle_pool_max_conns.cc CO
 # Auto_tune
 add_test_executable(auto_tune.cpp auto_tune auto_tune LABELS REPL_BACKEND)
 
+# MXS-4194: QC cache size keeps growing
+add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_cache_size LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

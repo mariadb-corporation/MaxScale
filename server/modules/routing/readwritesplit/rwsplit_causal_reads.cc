@@ -66,16 +66,22 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
  */
 void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
 {
-    uint8_t header[3];
-    uint32_t offset = 0;
+    auto it = buffer->begin();
+    auto end = buffer->end();
+    mxb_assert_message(buffer->length() > MYSQL_HEADER_LEN, "Should never receive partial packets");
 
-    buffer->ensure_unique();
-    while (buffer->copy_data(offset, 3, header) == 3)
+    while (it < end)
     {
-        uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-        uint8_t* seq = buffer->data() + offset + MYSQL_SEQ_OFFSET;
-        *seq = m_next_seq++;
-        offset += packet_len;
+        mxb_assert(std::distance(it, end) > MYSQL_HEADER_LEN);
+        uint32_t len = mariadb::get_byte3(it);
+        it += 3;
+        *it++ = m_next_seq++;
+
+        // MXS-4172: If the buffer contains a partial packet, the `it < end` check will prevent it from going
+        // past the end. This means that if a bug ends up returning either a partial packet or malformed data,
+        // the iteration won't go past the end of the buffer.
+        mxb_assert(std::distance(it, end) >= len);
+        it += len;
     }
 }
 

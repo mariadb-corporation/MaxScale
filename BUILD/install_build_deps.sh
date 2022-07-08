@@ -72,6 +72,7 @@ then
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
+  ${apt_cmd} upgrade
   ${apt_cmd} install dpkg-dev git wget cmake \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool tcl tcl-dev uuid \

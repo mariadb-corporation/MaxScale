@@ -431,6 +431,7 @@ public:
 
             if (pInfo)
             {
+                m_info_size_before = this_unit.classifier->qc_info_size(pInfo);
                 m_pStmt->set_classifier_data(pInfo, info_object_close);
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
