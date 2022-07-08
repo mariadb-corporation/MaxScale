@@ -107,21 +107,6 @@ static inline void atomic_synchronize()
 }
 
 /**
- * @brief Atomic compare-and-swap of pointers
- *
- * @param variable  Pointer to the variable
- * @param old_value Pointer to the expected value of @variable
- * @param new_value Stored value if @c variable is equal to @c old_value
- *
- * @return True if @c variable and @c old_value were equal
- *
- * @note If GCC __atomic builtins are available, the contents of @c variable are
- * written to @c old_value if the two are not equal. Do not rely on this behavior
- * and always do a separate read before attempting a compare-and-swap.
- */
-bool atomic_cas_ptr(void** variable, void** old_value, void* new_value);
-
-/**
  * Atomic read-and-write. Writes new value into the given memory address and returns the old value.
  *
  * @param variable The variable which is overwritten

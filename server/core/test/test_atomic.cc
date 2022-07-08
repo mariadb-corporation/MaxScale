@@ -18,12 +18,36 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/atomic.h>
+#include <maxbase/stacktrace.hh>
 
 
 #define NTHR 10
 
 static int running = 0;
 static int expected = 0;
+
+void fatal_handler(int sig)
+{
+    mxb::dump_stacktrace();
+
+    if (mxb::have_gdb())
+    {
+        mxb::dump_gdb_stacktrace();
+    }
+
+    _exit(1);
+}
+
+void setup()
+{
+    struct sigaction sigact = {};
+    sigact.sa_handler = fatal_handler;
+
+    for (int sig : {SIGSEGV, SIGABRT})
+    {
+        sigaction(sig, &sigact, NULL);
+    }
+}
 
 void test_add(void* data)
 {
@@ -48,31 +72,6 @@ void test_load_store(void* data)
             mxb_assert(atomic_add(&expected, 1) % NTHR == id + 1);
         }
     }
-}
-
-static void* cas_dest = (void*)1;
-
-void test_cas(void* data)
-{
-    size_t id = (size_t)data - 1;
-    static int loops = 0;
-
-    while (atomic_load_int32(&running))
-    {
-        void* my_value;
-        void* my_expected;
-
-        do
-        {
-            my_value = (void*)((id + 1) % NTHR);
-            my_expected = (void*)id;
-        }
-        while (!atomic_cas_ptr(&cas_dest, &my_expected, my_value));
-
-        loops++;
-    }
-
-    mxb_assert(loops > 0);
 }
 
 int run_test(void (* func)(void*))
@@ -101,13 +100,12 @@ int run_test(void (* func)(void*))
 int main(int argc, char** argv)
 {
     int rval = 0;
+    setup();
 
     printf("test_load_store\n");
     run_test(test_load_store);
     printf("test_add\n");
     run_test(test_add);
-    printf("test_cas\n");
-    run_test(test_cas);
 
     return rval;
 }

@@ -55,7 +55,7 @@ target_link_libraries(test_users maxscale-common)
 target_link_libraries(test_utils maxscale-common)
 
 add_test(test_adminusers test_adminusers)
-add_test(test_atomic test_atomic)
+add_test(test_atomic /bin/bash -c "timeout --signal SIGSEGV 60s ${CMAKE_CURRENT_BINARY_DIR}/test_atomic")
 add_test(test_buffer test_buffer)
 add_test(test_config test_config)
 add_test(test_config2 test_config2)
