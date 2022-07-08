@@ -201,6 +201,7 @@ export const APP_CONFIG = Object.freeze({
         RELEASE_LOCKS: 'async-release-locks',
         FAILOVER: 'async-failover',
         REJOIN: 'async-rejoin',
+        CS_GET_STATUS: 'async-cs-get-status',
     }),
     USER_ROLES: Object.freeze({ ADMIN: 'admin', BASIC: 'basic' }),
     USER_ADMIN_ACTIONS: Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' }),

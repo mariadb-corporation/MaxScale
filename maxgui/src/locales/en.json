@@ -257,6 +257,7 @@
     "saveScript": "Save Script",
     "saveScriptAs": "Save Script As",
     "deleteSession": "Delete Session",
+    "csStatus": "ColumnStore status",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

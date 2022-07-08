@@ -18,13 +18,25 @@
                     />
                 </v-col>
                 <v-col cols="6">
-                    <relationship-table
-                        relationshipType="servers"
-                        :tableRows="serverStateTableRow"
-                        :getRelationshipData="fetchAllServers"
-                        :selectItems="unmonitoredServers"
-                        @on-relationship-update="dispatchRelationshipUpdate"
-                    />
+                    <v-row class="my-0 pa-0 ma-0">
+                        <v-col cols="12" class="pa-0 ma-0">
+                            <relationship-table
+                                relationshipType="servers"
+                                :tableRows="serverStateTableRow"
+                                :getRelationshipData="fetchAllServers"
+                                :selectItems="unmonitoredServers"
+                                @on-relationship-update="dispatchRelationshipUpdate"
+                            />
+                        </v-col>
+                        <v-col v-if="isColumnStoreCluster" cols="12" class="pa-0 mt-4">
+                            <details-readonly-table
+                                :title="`${$t('csStatus')}`"
+                                :tableData="curr_cs_status"
+                                isTree
+                                expandAll
+                            />
+                        </v-col>
+                    </v-row>
                 </v-col>
             </v-row>
         </v-sheet>
@@ -57,12 +69,14 @@ export default {
         return {
             serverStateTableRow: [],
             unmonitoredServers: [],
+            isLoadingColumnStoreStatus: false,
         }
     },
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
             current_monitor: state => state.monitor.current_monitor,
+            curr_cs_status: state => state.monitor.curr_cs_status,
             all_servers: state => state.server.all_servers,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
@@ -72,6 +86,12 @@ export default {
         },
         monitorModule() {
             return this.current_monitor.attributes.module
+        },
+        isColumnStoreCluster() {
+            return Boolean(
+                this.$typy(this.current_monitor, 'attributes.parameters.cs_admin_api_key')
+                    .safeString
+            )
         },
     },
     watch: {
@@ -106,6 +126,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+            SET_CURR_CS_STATUS: 'monitor/SET_CURR_CS_STATUS',
         }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
@@ -122,6 +143,8 @@ export default {
             const { attributes: { module: moduleName = null } = {} } = this.current_monitor
             if (moduleName) await this.fetchModuleParameters(moduleName)
             await this.serverTableRowProcessing()
+            if (this.isColumnStoreCluster && !this.isLoadingColumnStoreStatus)
+                await this.getColumnStoreStatus()
         },
 
         async fetchMonitor() {
@@ -146,7 +169,20 @@ export default {
             this.serverStateTableRow = arr
         },
 
-        // actions to vuex
+        async getColumnStoreStatus() {
+            this.isLoadingColumnStoreStatus = true
+            await this.manipulateMonitor({
+                id: this.monitorId,
+                type: this.MONITOR_OP_TYPES.CS_GET_STATUS,
+                showSnackbar: false,
+                callback: meta => {
+                    this.SET_CURR_CS_STATUS(meta)
+                    this.isLoadingColumnStoreStatus = false
+                },
+                opParams: { moduleType: this.monitorModule, params: '' },
+            })
+        },
+
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateMonitorRelationship({
                 id: this.current_monitor.id,

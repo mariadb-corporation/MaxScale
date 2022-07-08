@@ -34,6 +34,7 @@ export default {
         all_monitors: [],
         current_monitor: {},
         monitor_diagnostics: {},
+        curr_cs_status: {},
     },
     mutations: {
         SET_ALL_MONITORS(state, payload) {
@@ -44,6 +45,9 @@ export default {
         },
         SET_MONITOR_DIAGNOSTICS(state, payload) {
             state.monitor_diagnostics = payload
+        },
+        SET_CURR_CS_STATUS(state, payload) {
+            state.curr_cs_status = payload
         },
     },
     actions: {
@@ -176,6 +180,7 @@ export default {
                     RELEASE_LOCKS,
                     FAILOVER,
                     REJOIN,
+                    CS_GET_STATUS,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -193,7 +198,8 @@ export default {
                     case RESET_REP:
                     case RELEASE_LOCKS:
                     case FAILOVER:
-                    case REJOIN: {
+                    case REJOIN:
+                    case CS_GET_STATUS: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -209,6 +215,7 @@ export default {
                         case RELEASE_LOCKS:
                         case FAILOVER:
                         case REJOIN:
+                        case CS_GET_STATUS:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -250,12 +257,8 @@ export default {
                 )
                 // response ok
                 if (status === 200) {
-                    /* TODO: Handle the case where meta is an object if it's for the
-                     * success response of a cs async command
-                     */
-                    if (`${meta}`.includes('completed successfully'))
-                        await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
-                    else await dispatch('handleAsyncCmdPending', { ...param, meta })
+                    if (meta.errors) await dispatch('handleAsyncCmdPending', { ...param, meta })
+                    else await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
                 }
             } catch (e) {
                 this.vue.$logger('store-monitor-checkAsyncCmdRes').error(e)
@@ -273,7 +276,7 @@ export default {
                     { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
                     { root: true }
                 )
-            if (this.vue.$help.isFunction(successCb)) await successCb()
+            if (this.vue.$help.isFunction(successCb)) await successCb(meta)
         },
 
         /**
@@ -378,6 +381,7 @@ export default {
                 RELEASE_LOCKS,
                 FAILOVER,
                 REJOIN,
+                CS_GET_STATUS,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
@@ -442,6 +446,10 @@ export default {
                     text: scope.$t(`monitorOps.actions.${REJOIN}`),
                     type: REJOIN,
                     //TODO: Add rejoin icon
+                    disabled: false,
+                },
+                [CS_GET_STATUS]: {
+                    type: CS_GET_STATUS,
                     disabled: false,
                 },
             })
