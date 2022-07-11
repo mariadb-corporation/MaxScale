@@ -1073,6 +1073,11 @@ maxctrl call command mariadbmon async-rebuild-server MariaDB-Monitor MyServer3 M
 The operation does not launch if the target server is already replicating or if
 the source server is not a master or slave.
 
+Steps 5 and 6 can take a long time depending on the size of the database and if
+writes are ongoing. During these steps, the monitor will continue monitoring the
+cluster normally. After each monitor tick the monitor checks if the
+rebuild-operation can proceed.
+
 ### Settings
 
 #### `ssh_user`
@@ -1088,6 +1093,21 @@ run commands.
 
 Boolean, default: true. When logging in to backends, require that the server is
 already listed in the known_hosts-file of the user running MaxScale.
+
+#### `ssh_timeout`
+
+Time, default: 10s. The rebuild operation consists of multiple ssh
+commands. Most of the commands are assumed to complete quickly. If these
+commands take more than *ssh_timeout* to complete, the operation fails. Adjust
+this setting if rebuild fails due to ssh commands timing out. This setting does
+not affect steps 5 and 6, as these are assumed to take significant time.
+
+#### `rebuild_port`
+
+Numeric, default: 4444. The port which the source server listens on for a
+connection. The port must not be blocked by a firewall or listened on by any
+other program. If another process is listening on the port when rebuild is
+starting, MaxScale will attempt to kill the process.
 
 ## ColumnStore commands
 
