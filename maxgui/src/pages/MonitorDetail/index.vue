@@ -93,7 +93,10 @@ export default {
             return this.current_monitor.id
         },
         monitorModule() {
-            return this.current_monitor.attributes.module
+            return this.$typy(this.current_monitor, 'attributes.module').safeString
+        },
+        monitorState() {
+            return this.$typy(this.current_monitor, 'attributes.state').safeString
         },
         isColumnStoreCluster() {
             return Boolean(
@@ -152,7 +155,11 @@ export default {
             const { attributes: { module: moduleName = null } = {} } = this.current_monitor
             if (moduleName) await this.fetchModuleParameters(moduleName)
             await this.serverTableRowProcessing()
-            if (this.isColumnStoreCluster && !this.isLoadingCsStatus)
+            if (
+                this.isColumnStoreCluster &&
+                !this.isLoadingCsStatus &&
+                this.monitorState !== 'Stopped'
+            )
                 await this.getColumnStoreStatus()
         },
 
