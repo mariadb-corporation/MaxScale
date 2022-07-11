@@ -3,31 +3,29 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <condition_variable>
 
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 10; i++)
     {
         auto a = test.maxscale->rwsplit();
         auto b = test.maxscale->rwsplit();
         test.expect(a.connect() && b.connect(), "Connections should work");
+        std::mutex lock;
+        std::condition_variable cv;
 
         auto id = a.thread_id();
 
         std::thread thr(
             [&]() {
+            cv.notify_one();
+
             const char* query =
-                "BEGIN NOT ATOMIC "
-                "  DECLARE v1 INT DEFAULT 5; "
-                "  CREATE OR REPLACE TABLE test.t1(id INT); "
-                "  SET @a = NOW();"
-                "  WHILE TIME_TO_SEC(TIMEDIFF(NOW(), @a)) < 30 DO "
-                "    INSERT INTO test.t1 VALUES (1); "
-                "    SET v1 = (SELECT COUNT(*) FROM test.t1); "
-                "  END WHILE;"
-                "END";
+                "SET STATEMENT max_statement_time=31 FOR "
+                "SELECT seq FROM seq_0_to_1000000000000000000";
 
             // The query takes 30 seconds to complete and the KILL is required to interrupt it before that.
             auto start = std::chrono::steady_clock::now();
@@ -49,16 +47,14 @@ int main(int argc, char* argv[])
 
         // Wait for a few seconds to make sure the other thread has started executing
         // the query before killing it.
-        sleep(5);
+        std::unique_lock<std::mutex> guard(lock);
+        cv.wait(guard);
+        sleep(1);
         test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
 
         test.reset_timeout();
         thr.join();
     }
-
-    auto conn = test.maxscale->rwsplit();
-    conn.connect();
-    conn.query("DROP TABLE test.t1");
 
     return test.global_result;
 }

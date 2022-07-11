@@ -48,7 +48,7 @@ void thread_stress(TestConnections* pTest, int id)
 
     Connection c = pTest->maxscale->rwsplit();
 
-    c.connect();
+    pTest->expect(c.connect(), "Thread %d failed to connect: %s", id, c.error());
 
     string preamble("INSERT INTO sq VALUES (");
     preamble += std::to_string(id);
@@ -58,11 +58,11 @@ void thread_stress(TestConnections* pTest, int id)
     {
         string query = preamble + std::to_string(i) + ")";
 
-        c.query(query);
+        pTest->expect(c.query(query), "Thread %d failed to execute INSERT: %s", id, c.error());
 
         for (size_t i = 0; i < N_SELECTS; ++i)
         {
-            c.query("SELECT * FROM sq");
+            pTest->expect(c.query("SELECT * FROM sq"), "Thread %d failed to SELECT: %s", id, c.error());
         }
     }
 
@@ -90,7 +90,7 @@ void test_stress(TestConnections& test)
     }
 
     Connection c = test.maxscale->rwsplit();
-    c.connect();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
 
     test.repl->sync_slaves();
 

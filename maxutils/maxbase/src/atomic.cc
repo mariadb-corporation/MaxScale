@@ -41,14 +41,3 @@ void atomic_store_int32(int32_t* variable, int32_t value)
 {
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 }
-
-bool atomic_cas_ptr(void** variable, void** old_value, void* new_value)
-{
-    return __atomic_compare_exchange_n(variable,
-                                       old_value,
-                                       new_value,
-                                       false,
-                                       __ATOMIC_SEQ_CST,
-                                       __ATOMIC_SEQ_CST);
-}
-
