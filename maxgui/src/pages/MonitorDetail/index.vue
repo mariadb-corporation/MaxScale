@@ -41,6 +41,7 @@
                                 isTree
                                 expandAll
                                 :noDataText="csStatusNoDataText"
+                                :isLoadingData="isFirstFetch && isLoadingCsStatus"
                             />
                         </v-col>
                     </v-row>
@@ -74,7 +75,8 @@ export default {
         return {
             serverStateTableRow: [],
             unmonitoredServers: [],
-            isLoadingColumnStoreStatus: false,
+            isLoadingCsStatus: false,
+            isFirstFetch: true,
             csStatusNoDataText: this.$t('$vuetify.noDataText'),
         }
     },
@@ -127,6 +129,7 @@ export default {
 
     async created() {
         await this.initialFetch()
+        this.isFirstFetch = false
     },
 
     methods: {
@@ -149,7 +152,7 @@ export default {
             const { attributes: { module: moduleName = null } = {} } = this.current_monitor
             if (moduleName) await this.fetchModuleParameters(moduleName)
             await this.serverTableRowProcessing()
-            if (this.isColumnStoreCluster && !this.isLoadingColumnStoreStatus)
+            if (this.isColumnStoreCluster && !this.isLoadingCsStatus)
                 await this.getColumnStoreStatus()
         },
 
@@ -176,18 +179,18 @@ export default {
         },
 
         async getColumnStoreStatus() {
-            this.isLoadingColumnStoreStatus = true
+            this.isLoadingCsStatus = true
             await this.manipulateMonitor({
                 id: this.monitorId,
                 type: this.MONITOR_OP_TYPES.CS_GET_STATUS,
                 showSnackbar: false,
                 successCb: meta => {
                     this.SET_CURR_CS_STATUS(meta)
-                    this.isLoadingColumnStoreStatus = false
+                    this.isLoadingCsStatus = false
                 },
                 asyncCmdErrCb: meta => {
                     this.SET_CURR_CS_STATUS({})
-                    this.isLoadingColumnStoreStatus = false
+                    this.isLoadingCsStatus = false
                     this.csStatusNoDataText = meta.join(', ')
                 },
                 opParams: { moduleType: this.monitorModule, params: '' },

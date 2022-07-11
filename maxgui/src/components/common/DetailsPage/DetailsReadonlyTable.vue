@@ -59,6 +59,7 @@ export default {
         expandAll: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
         customTableHeaders: { type: Array },
+        isLoadingData: { type: Boolean, default: false },
     },
 
     data() {
@@ -80,8 +81,12 @@ export default {
         tableHeaders: function() {
             return this.customTableHeaders ? this.customTableHeaders : this.defaultTableHeaders
         },
-        isLoading: function() {
-            return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        isLoading() {
+            return (
+                this.isLoadingData ||
+                this.isMounting ||
+                this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+            )
         },
     },
     watch: {
