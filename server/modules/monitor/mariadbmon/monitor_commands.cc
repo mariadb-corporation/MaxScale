@@ -1271,8 +1271,8 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         std::vector<int> pids;
         // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
         // optional if users are not willing to give MaxScale sudo-privs.
-        auto port_pid_cmd = mxb::string_printf("sudo lsof -i:%i | tr -s ' ' | cut --fields=2 --delimiter=' ' "
-                                               "| tail -n+2", m_port);
+        auto port_pid_cmd = mxb::string_printf("sudo lsof -n -P -i TCP:%i -s TCP:LISTEN | tr -s ' ' "
+                                               "| cut --fields=2 --delimiter=' ' | tail -n+2", m_port);
         auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, m_ssh_timeout);
         if (port_res.type == RType::OK && port_res.rc == 0)
         {
@@ -1498,7 +1498,7 @@ bool RebuildServer::serve_backup()
 {
     auto& cs = m_source->conn_settings();
     // Start serving the backup stream. The source will wait for a new connection.
-    const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup "
+    const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
     string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1, m_port);
