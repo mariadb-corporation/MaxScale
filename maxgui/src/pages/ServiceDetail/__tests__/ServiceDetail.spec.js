@@ -17,48 +17,18 @@ import ServiceDetail from '@/pages/ServiceDetail'
 
 import {
     dummy_all_services,
+    dummy_all_sessions,
     testRelationshipUpdate,
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
-
-const dummy_sessions_by_service = [
-    {
-        attributes: {
-            connected: 'Thu Aug 27 15:05:28 2020',
-            idle: 8.9,
-            remote: '::ffff:127.0.0.1',
-            user: 'maxskysql',
-        },
-        id: '100002',
-        relationships: {
-            services: {
-                data: [
-                    {
-                        id: 'service_0',
-                        type: 'services',
-                    },
-                ],
-            },
-        },
-        type: 'sessions',
-    },
-]
-
-const sessionsTableRowStub = [
-    {
-        id: '100002',
-        user: 'maxskysql@::ffff:127.0.0.1',
-        connected: '15:05:28 08.27.2020',
-        idle: 8.9,
-    },
-]
 
 const EXPECT_SESSIONS_HEADER = [
     { text: 'ID', value: 'id' },
     { text: 'Client', value: 'user' },
     { text: 'Connected', value: 'connected' },
     { text: 'IDLE (s)', value: 'idle' },
+    { text: 'Memory', value: 'memory' },
 ]
 
 const routerDiagnosticsResStub = {
@@ -81,7 +51,20 @@ const defaultComputed = {
     current_service: () => dummy_all_services[0], // id: row_server_0
     service_connections_datasets: () => dummy_service_connection_datasets,
     serviceConnectionInfo: () => dummy_service_connection_info,
-    sessions_by_service: () => dummy_sessions_by_service,
+    sessions_by_service: () =>
+        dummy_all_sessions.map(s => ({
+            ...s,
+            relationships: {
+                services: {
+                    data: [
+                        {
+                            id: 'service_0',
+                            type: 'services',
+                        },
+                    ],
+                },
+            },
+        })),
     routerDiagnostics: () => routerDiagnosticsResStub,
 }
 const shallowMountOptions = {
@@ -239,7 +222,14 @@ describe('ServiceDetail index', () => {
         })
 
         it(`Should compute sessions for this service with accurate data format`, () => {
-            expect(wrapper.vm.sessionsTableRows).to.be.deep.equals(sessionsTableRowStub)
+            expect(wrapper.vm.sessionsTableRows[0]).to.include.all.keys(
+                'id',
+                'user',
+                'connected',
+                'idle',
+                'memory'
+            )
+            expect(wrapper.vm.sessionsTableRows[0].memory).to.be.an('object')
         })
 
         it(`Should pass necessary props to 'ROUTER DIAGNOSTICS' table`, async () => {

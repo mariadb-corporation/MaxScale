@@ -25,17 +25,8 @@ const expectedTableHeaders = [
     { text: 'Client', value: 'user' },
     { text: 'Connected', value: 'connected' },
     { text: 'IDLE (s)', value: 'idle' },
+    { text: 'Memory', value: 'memory' },
     { text: 'Service', value: 'serviceIds' },
-]
-
-const expectedTableRows = [
-    {
-        id: '1000002',
-        user: 'maxskysql@::ffff:127.0.0.1',
-        connected: '14:06:17 08.13.2020',
-        idle: 55.5,
-        serviceIds: ['RCR-Router'],
-    },
 ]
 
 describe('Dashboard Sessions tab', () => {
@@ -61,7 +52,16 @@ describe('Dashboard Sessions tab', () => {
     })
 
     it(`Should process table rows accurately`, () => {
-        expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
+        expect(wrapper.vm.tableRows[0]).to.include.all.keys(
+            'id',
+            'user',
+            'connected',
+            'idle',
+            'serviceIds',
+            'memory'
+        )
+        expect(wrapper.vm.tableRows[0].memory).to.be.an('object')
+        expect(wrapper.vm.tableRows[0].serviceIds).to.be.an('array')
     })
 
     it(`Should pass expected table headers to sessions-table`, () => {
@@ -84,7 +84,7 @@ describe('Dashboard Sessions tab', () => {
     })
 
     it(`Should get total number of unique service names accurately`, () => {
-        const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
+        const uniqueServiceNames = getUniqueResourceNamesStub(wrapper.vm.tableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 })

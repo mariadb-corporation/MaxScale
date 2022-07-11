@@ -13,7 +13,7 @@
 import store from 'store'
 import mount, { router } from '@tests/unit/setup'
 import ServerDetail from '@/pages/ServerDetail'
-import { dummy_all_servers, testRelationshipUpdate } from '@tests/unit/utils'
+import { dummy_all_servers, dummy_all_sessions, testRelationshipUpdate } from '@tests/unit/utils'
 
 const dummy_monitor_diagnostics = {
     attributes: {
@@ -74,46 +74,12 @@ const monitorDiagnosticsStub = {
     slave_connections: [],
 }
 
-const dummy_all_sessions = [
-    {
-        attributes: {
-            connected: 'Thu Aug 27 09:13:53 2020',
-            connections: [
-                {
-                    connection_id: 14,
-                    server: 'row_server_0',
-                },
-                {
-                    connection_id: 13,
-                    server: 'row_server_1',
-                },
-            ],
-            idle: 27.800000000000001,
-            log: [],
-            queries: [],
-            remote: '::ffff:127.0.0.1',
-            state: 'Session started',
-            user: 'maxskysql',
-        },
-        id: '1',
-        type: 'sessions',
-    },
-]
-
-const sessionsTableRowStub = [
-    {
-        id: '1',
-        user: 'maxskysql@::ffff:127.0.0.1',
-        connected: '09:13:53 08.27.2020',
-        idle: 27.8,
-    },
-]
-
 const EXPECT_SESSIONS_HEADER = [
     { text: 'ID', value: 'id' },
     { text: 'Client', value: 'user' },
     { text: 'Connected', value: 'connected' },
     { text: 'IDLE (s)', value: 'idle' },
+    { text: 'Memory', value: 'memory' },
 ]
 
 const toServerPage = async () => {
@@ -127,7 +93,23 @@ const mountOptions = {
     computed: {
         current_server: () => dummy_all_servers[0], // id: row_server_0
         monitor_diagnostics: () => dummy_monitor_diagnostics,
-        all_sessions: () => dummy_all_sessions,
+        all_sessions: () =>
+            dummy_all_sessions.map(s => ({
+                ...s,
+                attributes: {
+                    ...s.attributes,
+                    connections: [
+                        {
+                            connection_id: 14,
+                            server: 'row_server_0',
+                        },
+                        {
+                            connection_id: 13,
+                            server: 'row_server_1',
+                        },
+                    ],
+                },
+            })),
     },
     stubs: {
         'refresh-rate': "<div class='refresh-rate'></div>",
@@ -256,7 +238,14 @@ describe('ServerDetail index', () => {
     })
 
     it(`Should compute sessions for this server to accurate data format`, () => {
-        expect(wrapper.vm.sessionsTableRow).to.be.deep.equals(sessionsTableRowStub)
+        expect(wrapper.vm.sessionsTableRow[0]).to.include.all.keys(
+            'id',
+            'user',
+            'connected',
+            'idle',
+            'memory'
+        )
+        expect(wrapper.vm.sessionsTableRow[0].memory).to.be.an('object')
     })
 
     it(`Should pass necessary props value to 'MONITOR DIAGNOSTICS' table`, () => {

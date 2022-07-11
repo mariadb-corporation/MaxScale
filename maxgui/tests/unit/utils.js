@@ -599,6 +599,14 @@ export const dummy_all_sessions = [
             idle: 55.5,
             remote: '::ffff:127.0.0.1',
             user: 'maxskysql',
+            memory: {
+                connection_buffers: 67240,
+                exec_metadata: 0,
+                last_queries: 0,
+                sescmd_history: 0,
+                total: 67240,
+                variables: 0,
+            },
         },
         id: '1000002',
 
