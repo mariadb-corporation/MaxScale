@@ -1620,17 +1620,27 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
                 matched = true;
             }
         }
-        else
+        else if (!mxs::Config::get().skip_name_resolve.get())
         {
-            // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
+            // Need a reverse lookup on the client address. This is slow. Warn if the resolve takes
+            // too much time, as this blocks the entire routing thread. TODO: use a separate thread/cache
             string resolved_addr;
-            if (!mxs::Config::get().skip_name_resolve.get()
-                && mxb::reverse_name_lookup(addr, &resolved_addr))
+            mxb::StopWatch timer;
+            bool rnl_success = mxb::reverse_name_lookup(addr, &resolved_addr);
+            auto time_elapsed = timer.split();
+            if (time_elapsed > 1s)
             {
-                if (like(host_pattern, resolved_addr))
-                {
-                    matched = true;
-                }
+                auto seconds = mxb::to_secs(time_elapsed);
+                const char* extra = rnl_success ? "" : ", and failed";
+                MXB_WARNING("Reverse name resolution of address '%s' of incoming client '%s' took "
+                            "%.1f seconds%s. The resolution was performed to check against host pattern "
+                            "'%s', and can be prevented either by removing the user account or by "
+                            "enabling 'skip_name_resolve'.",
+                            addr.c_str(), entry.username.c_str(), seconds, extra, entry.host_pattern.c_str());
+            }
+            if (rnl_success && like(host_pattern, resolved_addr))
+            {
+                matched = true;
             }
         }
     }
