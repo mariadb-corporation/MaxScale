@@ -5,7 +5,7 @@
                 id: current_cluster.id,
                 attributes: $typy(current_cluster, 'monitorData').safeObjectOrEmpty,
             }"
-            :callback="monitorOpCallback"
+            :successCb="monitorOpCallback"
             @chosen-op-type="monitorOpType = $event"
             @on-count-done="fetchCluster"
         >
@@ -438,7 +438,7 @@ export default {
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
                 type: this.confDlg.opType,
-                callback: this.fetchCluster,
+                successCb: this.fetchCluster,
             }
             switch (this.confDlg.opType) {
                 case SWITCHOVER:
@@ -446,7 +446,7 @@ export default {
                     this.monitorOpType = this.confDlg.opType
                     await this.manipulateMonitor({
                         type: this.confDlg.opType,
-                        callback: this.monitorOpCallback,
+                        successCb: this.monitorOpCallback,
                         id: this.current_cluster.id,
                         opParams: {
                             moduleType: this.current_cluster.module,

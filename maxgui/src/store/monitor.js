@@ -160,12 +160,12 @@ export default {
          * @param {String} param.id - id of the monitor to be manipulated
          * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
          * @param {String|Object} param.opParams - operation params. For async call, it's an object
-         * @param {Function} param.callback - callback function after successfully updated
+         * @param {Function} param.successCb - callback function after successfully updated
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async manipulateMonitor(
             { dispatch, commit, rootState },
-            { id, type, opParams, callback, showSnackbar = true }
+            { id, type, opParams, successCb, showSnackbar = true }
         ) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
@@ -220,7 +220,7 @@ export default {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
                                 monitorId: id,
-                                successCb: callback,
+                                successCb,
                                 showSnackbar,
                             })
                             break
@@ -231,7 +231,7 @@ export default {
                                     { text: message, type: 'success' },
                                     { root: true }
                                 )
-                            if (this.vue.$help.isFunction(callback)) await callback()
+                            if (this.vue.$help.isFunction(successCb)) await successCb()
                             break
                     }
                 }

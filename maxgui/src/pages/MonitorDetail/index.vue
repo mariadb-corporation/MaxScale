@@ -3,7 +3,7 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
             <monitor-page-header
                 :targetMonitor="current_monitor"
-                :callback="initialFetch"
+                :successCb="initialFetch"
                 @on-count-done="initialFetch"
             >
                 <template v-slot:page-title="{ pageId }">
@@ -179,7 +179,7 @@ export default {
                 id: this.monitorId,
                 type: this.MONITOR_OP_TYPES.CS_GET_STATUS,
                 showSnackbar: false,
-                callback: meta => {
+                successCb: meta => {
                     this.SET_CURR_CS_STATUS(meta)
                     this.isLoadingColumnStoreStatus = false
                 },
@@ -197,16 +197,15 @@ export default {
         },
 
         async handleSwitchover(masterId) {
-            let payload = {
+            await this.manipulateMonitor({
                 id: this.monitorId,
                 type: this.MONITOR_OP_TYPES.SWITCHOVER,
                 opParams: {
                     moduleType: this.monitorModule,
                     params: `&${masterId}`,
                 },
-                callback: this.fetchMonitor,
-            }
-            await this.manipulateMonitor(payload)
+                successCb: this.fetchMonitor,
+            })
         },
     },
 }

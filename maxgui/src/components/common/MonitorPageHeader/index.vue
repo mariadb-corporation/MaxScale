@@ -107,7 +107,7 @@ export default {
     mixins: [refreshRate, goBack],
     props: {
         targetMonitor: { type: Object, required: true },
-        callback: { type: Function, required: true },
+        successCb: { type: Function, required: true },
     },
     data() {
         return {
@@ -203,7 +203,7 @@ export default {
             let payload = {
                 id: this.targetMonitor.id,
                 type: this.confDlg.opType,
-                callback: this.callback,
+                successCb: this.successCb,
             }
             switch (this.confDlg.opType) {
                 case RESET_REP:
@@ -220,7 +220,7 @@ export default {
                     await this.manipulateMonitor({ ...payload, opParams: this.confDlg.opParams })
                     break
                 case DESTROY:
-                    await this.manipulateMonitor({ ...payload, callback: this.goBack })
+                    await this.manipulateMonitor({ ...payload, successCb: this.goBack })
             }
         },
     },

@@ -161,7 +161,7 @@ describe('MonitorDetail index', () => {
                     moduleType: wrapper.vm.monitorModule,
                     params: `&${dummyMasterId}`,
                 },
-                callback: wrapper.vm.fetchMonitor,
+                successCb: wrapper.vm.fetchMonitor,
             })
         })
 
