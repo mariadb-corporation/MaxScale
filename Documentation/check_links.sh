@@ -23,7 +23,7 @@ function check_file() {
         if [ ! -f "$i" ]
         then
             # Bash regular expressions must be unquoted, otherwise they'll be a part of the pattern
-            if [[ "$i" =~ MaxScale-[12][.][0-4]*[.][0-9]*-Release-Notes[.]md ]]
+            if [[ "$i" =~ MaxScale-[12][.][0-5]*[.][0-9]*-Release-Notes[.]md ]]
             then
                 # Ignore old release notes, they've been removed from the repo
                 continue
