@@ -161,11 +161,12 @@ export default {
          * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
          * @param {String|Object} param.opParams - operation params. For async call, it's an object
          * @param {Function} param.successCb - callback function after successfully updated
+         * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async manipulateMonitor(
             { dispatch, commit, rootState },
-            { id, type, opParams, successCb, showSnackbar = true }
+            { id, type, opParams, successCb, asyncCmdErrCb, showSnackbar = true }
         ) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
@@ -221,6 +222,7 @@ export default {
                                 monitorModule: opParams.moduleType,
                                 monitorId: id,
                                 successCb,
+                                asyncCmdErrCb,
                                 showSnackbar,
                             })
                             break
@@ -247,6 +249,7 @@ export default {
          * @param {String} param.monitorModule Monitor module
          * @param {String} param.monitorId Monitor id
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async checkAsyncCmdRes({ dispatch }, param) {
@@ -266,7 +269,7 @@ export default {
         },
         /**
          * @param {String} param.meta - meta string message
-         * @param {Function} param.successCb - callback function after successfully switchover
+         * @param {Function} param.successCb - callback function after successfully performing an async cmd
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async handleAsyncCmdDone({ commit }, { meta, successCb, showSnackbar }) {
@@ -286,10 +289,11 @@ export default {
          * @param {String} param.monitorModule Monitor module
          * @param {String} param.monitorId Monitor id
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async handleAsyncCmdPending({ commit, dispatch }, param) {
-            const { cmdName, meta, showSnackbar } = param
+            const { cmdName, meta, showSnackbar, asyncCmdErrCb } = param
             const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
             if (isRunning && !isCancelled) {
                 if (showSnackbar)
@@ -317,6 +321,7 @@ export default {
                 const errArr = meta.errors.map(error => error.detail)
                 if (showSnackbar)
                     commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
+                if (this.vue.$help.isFunction(asyncCmdErrCb)) await asyncCmdErrCb(errArr)
             }
         },
         //-----------------------------------------------Monitor relationship update---------------------------------

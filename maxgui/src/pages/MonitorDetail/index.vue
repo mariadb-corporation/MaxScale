@@ -40,6 +40,7 @@
                                 :tableData="curr_cs_status"
                                 isTree
                                 expandAll
+                                :noDataText="csStatusNoDataText"
                             />
                         </v-col>
                     </v-row>
@@ -74,6 +75,7 @@ export default {
             serverStateTableRow: [],
             unmonitoredServers: [],
             isLoadingColumnStoreStatus: false,
+            csStatusNoDataText: this.$t('$vuetify.noDataText'),
         }
     },
     computed: {
@@ -182,6 +184,11 @@ export default {
                 successCb: meta => {
                     this.SET_CURR_CS_STATUS(meta)
                     this.isLoadingColumnStoreStatus = false
+                },
+                asyncCmdErrCb: meta => {
+                    this.SET_CURR_CS_STATUS({})
+                    this.isLoadingColumnStoreStatus = false
+                    this.csStatusNoDataText = meta.join(', ')
                 },
                 opParams: { moduleType: this.monitorModule, params: '' },
             })
