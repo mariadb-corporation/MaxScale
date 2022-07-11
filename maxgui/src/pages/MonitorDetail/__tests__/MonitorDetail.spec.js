@@ -46,6 +46,9 @@ const computedFactory = (computed = defaultComputed) =>
         shallow: false,
         component: MonitorDetail,
         computed,
+        stubs: {
+            'refresh-rate': "<div class='refresh-rate'></div>",
+        },
     })
 
 describe('MonitorDetail index', () => {

@@ -16,7 +16,7 @@
                         :disabled="op.disabled"
                         class="px-2"
                         :class="`${op.type}-op`"
-                        @click="$emit('on-choose-op', op)"
+                        @click="onChooseOp(op)"
                     >
                         <v-list-item-title
                             class="d-flex color text-text align-center op-item font-weight-regular"
@@ -68,6 +68,16 @@
                     <span class="resource-module">{{ monitorModule }}</span>
                 </span>
             </div>
+            <confirm-dialog
+                v-model="confDlg.isOpened"
+                :title="confDlg.title"
+                :type="confDlg.type"
+                :saveText="confDlgSaveTxt"
+                :item="confDlg.targetNode"
+                :smallInfo="confDlg.smallInfo"
+                :onSave="onConfirm"
+            >
+            </confirm-dialog>
         </template>
     </details-page-title>
 </template>
@@ -86,17 +96,33 @@
  * Public License.
  */
 /*
-@on-choose-op: op:Object. Operation chosen to dispatch update action
+@chosen-op-type: type:String. Operation chosen type to dispatch update action
 @on-count-done. Emit event after amount of time from <refresh-rate/>
 */
-import { mapState, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters } from 'vuex'
 import refreshRate from 'mixins/refreshRate'
+import goBack from 'mixins/goBack'
 export default {
     name: 'monitor-page-header',
-    mixins: [refreshRate],
+    mixins: [refreshRate, goBack],
     props: {
         targetMonitor: { type: Object, required: true },
+        callback: { type: Function, required: true },
     },
+    data() {
+        return {
+            // states for confirm-dialog
+            confDlg: {
+                opType: '',
+                isOpened: false,
+                title: '',
+                type: '',
+                targetNode: null,
+                smallInfo: '',
+            },
+        }
+    },
+
     computed: {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
@@ -104,6 +130,19 @@ export default {
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
+        confDlgSaveTxt() {
+            const { RESET_REP, RELEASE_LOCKS, FAILOVER } = this.MONITOR_OP_TYPES
+            switch (this.confDlg.type) {
+                case RESET_REP:
+                    return 'reset'
+                case RELEASE_LOCKS:
+                    return 'release'
+                case FAILOVER:
+                    return 'perform'
+                default:
+                    return this.confDlg.type
+            }
+        },
         state() {
             return this.$typy(this.targetMonitor, 'attributes.state').safeString
         },
@@ -134,8 +173,55 @@ export default {
                 if (!this.$typy(parameters, 'auto_failover').safeBoolean)
                     ops.push(this.allOps[FAILOVER])
             }
-            //TODO: Detect whether the monitor is monitoring a ColumnStore cluster and and its operation here
             return ops
+        },
+    },
+    methods: {
+        ...mapActions('monitor', ['manipulateMonitor']),
+        onChooseOp({ type, text, info, params }) {
+            this.confDlg = {
+                ...this.confDlg,
+                type,
+                opType: type,
+                title: text,
+                opParams: params,
+                targetNode: { id: this.targetMonitor.id },
+                smallInfo: info,
+                isOpened: true,
+            }
+            this.$emit('chosen-op-type', type)
+        },
+        async onConfirm() {
+            const {
+                STOP,
+                START,
+                DESTROY,
+                RESET_REP,
+                RELEASE_LOCKS,
+                FAILOVER,
+            } = this.MONITOR_OP_TYPES
+            let payload = {
+                id: this.targetMonitor.id,
+                type: this.confDlg.opType,
+                callback: this.callback,
+            }
+            switch (this.confDlg.opType) {
+                case RESET_REP:
+                case RELEASE_LOCKS:
+                case FAILOVER: {
+                    await this.manipulateMonitor({
+                        ...payload,
+                        opParams: { moduleType: this.monitorModule, params: '' },
+                    })
+                    break
+                }
+                case STOP:
+                case START:
+                    await this.manipulateMonitor({ ...payload, opParams: this.confDlg.opParams })
+                    break
+                case DESTROY:
+                    await this.manipulateMonitor({ ...payload, callback: this.goBack })
+            }
         },
     },
 }

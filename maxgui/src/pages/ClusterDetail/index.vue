@@ -5,8 +5,9 @@
                 id: current_cluster.id,
                 attributes: $typy(current_cluster, 'monitorData').safeObjectOrEmpty,
             }"
+            :callback="monitorOpCallback"
+            @chosen-op-type="monitorOpType = $event"
             @on-count-done="fetchCluster"
-            @on-choose-op="onChooseOp({ op: $event, target: current_cluster })"
         >
             <template v-slot:page-title="{ pageId }">
                 <router-link :to="`/dashboard/monitors/${pageId}`" class="rsrc-link">
@@ -70,6 +71,7 @@
                 @on-drag-end="onNodeDragEnd"
             />
         </v-card>
+        <!-- Dialog for drag/drop actions and server operations -->
         <confirm-dialog
             v-model="confDlg.isOpened"
             :title="confDlg.title"
@@ -150,6 +152,7 @@ export default {
                 forceClosing: false,
             },
             confDlg: {},
+            monitorOpType: '',
         }
     },
     computed: {
@@ -198,16 +201,10 @@ export default {
         },
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
-            const { RESET_REP, RELEASE_LOCKS, FAILOVER, REJOIN, SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { REJOIN, SWITCHOVER } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case SWITCHOVER:
                     return 'promote'
-                case RESET_REP:
-                    return 'reset'
-                case RELEASE_LOCKS:
-                    return 'release'
-                case FAILOVER:
-                    return 'perform'
                 case REJOIN:
                     return 'rejoin'
                 case MAINTAIN:
@@ -424,49 +421,20 @@ export default {
         triggerRerenderNodes() {
             this.uniqueKey = this.$help.uuidv1()
         },
-        //Reset states after confirming an action
-        async handleResetStates() {
+        //Reset graph after confirming an action
+        async handleResetGraph(opType) {
             const { SWITCHOVER, FAILOVER, REJOIN } = this.MONITOR_OP_TYPES
-            switch (this.confDlg.opType) {
+            switch (opType) {
                 case SWITCHOVER:
                 case REJOIN:
                 case FAILOVER:
                     this.triggerRerenderNodes()
-                    if (this.confDlg.opType !== FAILOVER) this.resetDraggingStates()
+                    if (opType !== FAILOVER) this.resetDraggingStates()
                     break
             }
-            this.resetConfDlgStates()
-        },
-        async handleCallAsyncCmd() {
-            const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
-            let payload = {
-                type: this.confDlg.opType,
-                callback: this.fetchCluster,
-                id: this.current_cluster.id,
-                opParams: {
-                    moduleType: this.current_cluster.module,
-                    params: '',
-                },
-            }
-            switch (this.confDlg.opType) {
-                case SWITCHOVER:
-                case REJOIN:
-                    payload.opParams.params = `&${this.draggingStates.draggingNodeId}`
-                    break
-                default:
-            }
-            await this.manipulateMonitor(payload)
         },
         async onConfirm() {
-            const {
-                SWITCHOVER,
-                STOP,
-                START,
-                RESET_REP,
-                RELEASE_LOCKS,
-                FAILOVER,
-                REJOIN,
-            } = this.MONITOR_OP_TYPES
+            const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
                 type: this.confDlg.opType,
@@ -474,18 +442,16 @@ export default {
             }
             switch (this.confDlg.opType) {
                 case SWITCHOVER:
-                case RESET_REP:
-                case RELEASE_LOCKS:
-                case FAILOVER:
                 case REJOIN:
-                    await this.handleCallAsyncCmd()
-                    break
-                case STOP:
-                case START:
+                    this.monitorOpType = this.confDlg.opType
                     await this.manipulateMonitor({
-                        ...payload,
+                        type: this.confDlg.opType,
+                        callback: this.monitorOpCallback,
                         id: this.current_cluster.id,
-                        opParams: this.confDlg.opParams,
+                        opParams: {
+                            moduleType: this.current_cluster.module,
+                            params: `&${this.draggingStates.draggingNodeId}`,
+                        },
                     })
                     break
                 case DRAIN:
@@ -499,7 +465,7 @@ export default {
                     })
                     break
             }
-            this.handleResetStates()
+            this.resetConfDlgStates()
         },
         onChooseOp({ op: { type, text, info, params }, target: { id } }) {
             this.confDlg = {
@@ -512,6 +478,10 @@ export default {
                 smallInfo: info,
                 isOpened: true,
             }
+        },
+        async monitorOpCallback() {
+            await this.fetchCluster()
+            this.handleResetGraph(this.monitorOpType)
         },
     },
 }

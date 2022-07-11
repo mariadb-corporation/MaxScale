@@ -1,11 +1,17 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
-            <page-header
-                :currentMonitor="current_monitor"
-                :onEditSucceeded="fetchMonitor"
+            <monitor-page-header
+                :targetMonitor="current_monitor"
+                :callback="initialFetch"
                 @on-count-done="initialFetch"
-            />
+            >
+                <template v-slot:page-title="{ pageId }">
+                    <router-link :to="`/visualization/clusters/${pageId}`" class="rsrc-link">
+                        {{ pageId }}
+                    </router-link>
+                </template>
+            </monitor-page-header>
             <overview-header :currentMonitor="current_monitor" @switch-over="handleSwitchover" />
             <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->
@@ -57,12 +63,10 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations } from 'vuex'
-import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
 export default {
     components: {
-        PageHeader,
         OverviewHeader,
     },
     data() {
