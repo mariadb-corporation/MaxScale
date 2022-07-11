@@ -69,20 +69,16 @@ bool GaleraCluster::start_replication()
     // Start the first node that also starts a new cluster
     ssh_node_f(0, true, "galera_new_cluster");
 
-    run_on_every_backend([&](int i){
-        bool ok = true;
-
-        if (i != 0 && start_node(i, "") != 0)
+    for (int i = 1; i < N; i++)
+    {
+        if (start_node(i, "") != 0)
         {
-            ok = false;
             cout << "Failed to start node" << i << endl;
             cout << "---------- BEGIN LOGS ----------" << endl;
             cout << ssh_output("sudo journalctl -u mariadb | tail -n 50", i, true).output;
             cout << "----------- END LOGS -----------" << endl;
         }
-
-        return ok;
-    });
+    }
 
     string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
     copy_to_node(0, str.c_str(), access_homedir(0));
