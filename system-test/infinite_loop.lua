@@ -8,10 +8,9 @@ function closeSession()
 end
 
 function routeQuery(sql)
-    print("LUA: routeQuery")
-    print(sql)
     if (string.find(sql, "LUA_INFINITE_LOOP"))
     then
+        print("Starting infinite loop")
         while (true)
         do
         end
@@ -19,7 +18,6 @@ function routeQuery(sql)
 end
 
 function clientReply()
-    print("LUA: clientReply")
 end
 
 function diagnostic()
