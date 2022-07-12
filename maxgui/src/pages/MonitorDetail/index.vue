@@ -3,8 +3,8 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
             <monitor-page-header
                 :targetMonitor="current_monitor"
-                :successCb="initialFetch"
-                @on-count-done="initialFetch"
+                :successCb="recurringFetch"
+                @on-count-done="recurringFetch"
             >
                 <template v-slot:page-title="{ pageId }">
                     <router-link :to="`/visualization/clusters/${pageId}`" class="rsrc-link">
@@ -151,17 +151,15 @@ export default {
         }),
 
         async initialFetch() {
-            await this.fetchMonitor()
+            await this.recurringFetch()
             const { attributes: { module: moduleName = null } = {} } = this.current_monitor
             if (moduleName) await this.fetchModuleParameters(moduleName)
+        },
+
+        async recurringFetch() {
+            await this.fetchMonitor()
             await this.serverTableRowProcessing()
-            if (
-                this.isAdmin &&
-                this.isColumnStoreCluster &&
-                !this.isLoadingCsStatus &&
-                this.monitorState !== 'Stopped'
-            )
-                await this.getColumnStoreStatus()
+            await this.handleGetCsStatus()
         },
 
         async fetchMonitor() {
@@ -205,6 +203,15 @@ export default {
             })
         },
 
+        async handleGetCsStatus() {
+            if (
+                this.isAdmin &&
+                this.isColumnStoreCluster &&
+                !this.isLoadingCsStatus &&
+                this.monitorState !== 'Stopped'
+            )
+                await this.getColumnStoreStatus()
+        },
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateMonitorRelationship({
                 id: this.current_monitor.id,
