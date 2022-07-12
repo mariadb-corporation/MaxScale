@@ -208,6 +208,13 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
     }
 }
 
+void emergency_stacktrace()
+{
+    void* addrs[128];
+    int count = backtrace(addrs, 128);
+    backtrace_symbols_fd(addrs, count, STDOUT_FILENO);
+}
+
 void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
 {
     dump_stacktrace([&](const char* symbol, const char* command) {
@@ -218,6 +225,11 @@ void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
 #else
 
 void dump_stacktrace(void (* handler)(const char*, const char*))
+{
+    // We can't dump stacktraces on non-GLIBC systems
+}
+
+void emergency_stacktrace(void (* handler)(const char*, const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
