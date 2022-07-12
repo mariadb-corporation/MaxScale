@@ -34,7 +34,7 @@
                                 @on-relationship-update="dispatchRelationshipUpdate"
                             />
                         </v-col>
-                        <v-col v-if="isColumnStoreCluster" cols="12" class="pa-0 mt-4">
+                        <v-col v-if="isColumnStoreCluster && isAdmin" cols="12" class="pa-0 mt-4">
                             <details-readonly-table
                                 :title="`${$t('csStatus')}`"
                                 :tableData="curr_cs_status"
@@ -64,7 +64,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapMutations } from 'vuex'
+import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 
 export default {
@@ -88,7 +88,7 @@ export default {
             all_servers: state => state.server.all_servers,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
-
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
         monitorId() {
             return this.current_monitor.id
         },
@@ -156,6 +156,7 @@ export default {
             if (moduleName) await this.fetchModuleParameters(moduleName)
             await this.serverTableRowProcessing()
             if (
+                this.isAdmin &&
                 this.isColumnStoreCluster &&
                 !this.isLoadingCsStatus &&
                 this.monitorState !== 'Stopped'
