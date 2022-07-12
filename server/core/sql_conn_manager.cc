@@ -166,7 +166,10 @@ void ConnectionManager::cleanup_thread_func()
 
 ConnectionManager::~ConnectionManager()
 {
-    mxb_assert(!m_cleanup_thread.joinable());
+    // There are cases where the call to HttpSQL::stop_cleanup() is not done before shutdown. This mostly
+    // happens when multiple termination signals are sent one after another and MaxScale is doing something
+    // that is blocking the shutdown temporarily (e.g. blocking TCP connection).
+    stop_cleanup_thread();
 }
 
 void ConnectionManager::start_cleanup_thread()
