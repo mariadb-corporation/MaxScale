@@ -40,8 +40,8 @@
                                 :tableData="curr_cs_status"
                                 isTree
                                 expandAll
-                                :noDataText="csStatusNoDataText"
-                                :isLoadingData="isFirstFetch && isLoadingCsStatus"
+                                :noDataText="cs_no_data_txt || $t('$vuetify.noDataText')"
+                                :isLoadingData="isFirstFetch && is_loading_cs_status"
                             />
                         </v-col>
                     </v-row>
@@ -75,9 +75,7 @@ export default {
         return {
             serverStateTableRow: [],
             unmonitoredServers: [],
-            isLoadingCsStatus: false,
             isFirstFetch: true,
-            csStatusNoDataText: this.$t('$vuetify.noDataText'),
         }
     },
     computed: {
@@ -85,6 +83,8 @@ export default {
             should_refresh_resource: 'should_refresh_resource',
             current_monitor: state => state.monitor.current_monitor,
             curr_cs_status: state => state.monitor.curr_cs_status,
+            is_loading_cs_status: state => state.monitor.is_loading_cs_status,
+            cs_no_data_txt: state => state.monitor.cs_no_data_txt,
             all_servers: state => state.server.all_servers,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
@@ -139,6 +139,7 @@ export default {
         ...mapMutations({
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
             SET_CURR_CS_STATUS: 'monitor/SET_CURR_CS_STATUS',
+            SET_IS_LOADING_CS_STATUS: 'monitor/SET_IS_LOADING_CS_STATUS',
         }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
@@ -147,6 +148,7 @@ export default {
             updateMonitorParameters: 'monitor/updateMonitorParameters',
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
             manipulateMonitor: 'monitor/manipulateMonitor',
+            handleFetchCsStatus: 'monitor/handleFetchCsStatus',
             fetchAllServers: 'server/fetchAllServers',
         }),
 
@@ -159,7 +161,12 @@ export default {
         async recurringFetch() {
             await this.fetchMonitor()
             await this.serverTableRowProcessing()
-            await this.handleGetCsStatus()
+            await this.handleFetchCsStatus({
+                monitorId: this.monitorId,
+                monitorModule: this.monitorModule,
+                isCsCluster: this.isColumnStoreCluster,
+                monitorState: this.monitorState,
+            })
         },
 
         async fetchMonitor() {
@@ -184,34 +191,6 @@ export default {
             this.serverStateTableRow = arr
         },
 
-        async getColumnStoreStatus() {
-            this.isLoadingCsStatus = true
-            await this.manipulateMonitor({
-                id: this.monitorId,
-                type: this.MONITOR_OP_TYPES.CS_GET_STATUS,
-                showSnackbar: false,
-                successCb: meta => {
-                    this.SET_CURR_CS_STATUS(meta)
-                    this.isLoadingCsStatus = false
-                },
-                asyncCmdErrCb: meta => {
-                    this.SET_CURR_CS_STATUS({})
-                    this.isLoadingCsStatus = false
-                    this.csStatusNoDataText = meta.join(', ')
-                },
-                opParams: { moduleType: this.monitorModule, params: '' },
-            })
-        },
-
-        async handleGetCsStatus() {
-            if (
-                this.isAdmin &&
-                this.isColumnStoreCluster &&
-                !this.isLoadingCsStatus &&
-                this.monitorState !== 'Stopped'
-            )
-                await this.getColumnStoreStatus()
-        },
         async dispatchRelationshipUpdate({ type, data }) {
             await this.updateMonitorRelationship({
                 id: this.current_monitor.id,

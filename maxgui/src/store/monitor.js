@@ -35,6 +35,8 @@ export default {
         current_monitor: {},
         monitor_diagnostics: {},
         curr_cs_status: {},
+        is_loading_cs_status: false,
+        cs_no_data_txt: '',
     },
     mutations: {
         SET_ALL_MONITORS(state, payload) {
@@ -48,6 +50,12 @@ export default {
         },
         SET_CURR_CS_STATUS(state, payload) {
             state.curr_cs_status = payload
+        },
+        SET_IS_LOADING_CS_STATUS(state, payload) {
+            state.is_loading_cs_status = payload
+        },
+        SET_CS_NO_DATA_TXT(state, payload) {
+            state.cs_no_data_txt = payload
         },
     },
     actions: {
@@ -322,6 +330,42 @@ export default {
                 if (showSnackbar)
                     commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
                 if (this.vue.$help.isFunction(asyncCmdErrCb)) await asyncCmdErrCb(errArr)
+            }
+        },
+
+        /**
+         * This handles calling manipulateMonitor action
+         * @param {String} param.monitorId Monitor id
+         * @param {String} param.monitorModule - monitor module type
+         * @param {Boolean} param.isCsCluster - Is a ColumnStore cluster or not
+         * @param {String} param.monitorState - monitor state
+         */
+        async handleFetchCsStatus(
+            { state, commit, dispatch, rootGetters, rootState },
+            { monitorId, monitorModule, isCsCluster, monitorState }
+        ) {
+            if (
+                rootGetters['user/isAdmin'] &&
+                isCsCluster &&
+                !state.is_loading_cs_status &&
+                monitorState !== 'Stopped'
+            ) {
+                const { CS_GET_STATUS } = rootState.app_config.MONITOR_OP_TYPES
+                commit('SET_IS_LOADING_CS_STATUS', true)
+                await dispatch('manipulateMonitor', {
+                    id: monitorId,
+                    type: CS_GET_STATUS,
+                    showSnackbar: false,
+                    successCb: meta => {
+                        commit('SET_CURR_CS_STATUS', meta)
+                    },
+                    asyncCmdErrCb: meta => {
+                        commit('SET_CURR_CS_STATUS', {})
+                        commit('SET_CS_NO_DATA_TXT', meta.join(', '))
+                    },
+                    opParams: { moduleType: monitorModule, params: '' },
+                })
+                commit('SET_IS_LOADING_CS_STATUS', false)
             }
         },
         //-----------------------------------------------Monitor relationship update---------------------------------
