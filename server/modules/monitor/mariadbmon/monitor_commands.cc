@@ -700,7 +700,7 @@ mon_op::Result MariaDBMonitor::manual_release_locks()
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
+    mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
     auto& error_out = rval.output;
@@ -746,12 +746,12 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
     string manual_cmd_name;
     mon_op::Result manual_cmd_result;
 
-    std::unique_lock<std::mutex> lock(m_manual_cmd.lock);
-    if (m_manual_cmd.result_info)
+    std::unique_lock<std::mutex> lock(m_op_info.lock);
+    if (m_op_info.result_info)
     {
         // Deep copy the json since ownership moves.
-        manual_cmd_result = m_manual_cmd.result_info->res.deep_copy();
-        manual_cmd_name = m_manual_cmd.result_info->cmd_name;
+        manual_cmd_result = m_op_info.result_info->res.deep_copy();
+        manual_cmd_name = m_op_info.result_info->cmd_name;
         manual_cmd_state = ExecState::DONE;
     }
     else
@@ -759,10 +759,10 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         // No results are available. If current operation is a manual one, then make an error message from
         // its info. If not, then a manual op must not have been ran yet as the results of manual op are
         // only removed when a new one is scheduled.
-        if (m_manual_cmd.current_op_is_manual)
+        if (m_op_info.current_op_is_manual)
         {
-            manual_cmd_name = m_manual_cmd.op_name;
-            manual_cmd_state = m_manual_cmd.exec_state;
+            manual_cmd_name = m_op_info.op_name;
+            manual_cmd_state = m_op_info.exec_state;
         }
     }
     lock.unlock();

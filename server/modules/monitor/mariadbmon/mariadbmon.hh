@@ -307,7 +307,7 @@ private:
         ServerOperation demotion;
         GeneralOpData   general;
 
-        SwitchoverParams(ServerOperation  promotion, ServerOperation  demotion,
+        SwitchoverParams(ServerOperation promotion, ServerOperation demotion,
                          const GeneralOpData& general);
     };
 
@@ -318,7 +318,7 @@ private:
         const MariaDBServer* const demotion_target;
         GeneralOpData              general;
 
-        FailoverParams(ServerOperation  promotion, const MariaDBServer* demotion_target,
+        FailoverParams(ServerOperation promotion, const MariaDBServer* demotion_target,
                        const GeneralOpData& general);
     };
 
@@ -350,8 +350,8 @@ private:
 
     const ServerArray& servers() const;     /* Hides base class function. */
 
-    mon_op::ScheduledOp m_manual_cmd;   /* Communicates manual commands and results */
-    mon_op::SOperation  m_running_cmd;  /* Currently running command */
+    mon_op::OperationInfo m_op_info;    /* Manual/automatic op info */
+    mon_op::SOperation    m_running_op; /* Currently running op */
 
     IdToServerMap m_servers_by_id;      /* Map from server id:s to MariaDBServer */
 
@@ -424,7 +424,7 @@ private:
 
         // Replication topology detection settings.
 
-        bool assume_unique_hostnames; /* Are server hostnames consistent between MaxScale and servers */
+        bool assume_unique_hostnames;   /* Are server hostnames consistent between MaxScale and servers */
 
         int64_t failcount;      /* Number of ticks master must be down before it's considered
                                  * totally down, allowing failover or master change. */
@@ -493,6 +493,7 @@ private:
                                  json_t** error_out);
     bool schedule_manual_command(mon_op::SOperation op, const std::string& cmd_name,
                                  json_t** error_out);
+    bool start_long_running_op(mon_op::SOperation op, const std::string& cmd_name);
     bool immediate_tick_required() override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);

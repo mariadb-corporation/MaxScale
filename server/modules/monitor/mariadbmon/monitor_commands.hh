@@ -71,14 +71,22 @@ struct ResultInfo
     std::string cmd_name;
 };
 
-struct ScheduledOp
+/**
+ * Stores info on the currently scheduled/running operation. Deals mostly with manual commands. Long-
+ * running automatic ops may modify some fields to prevent the user to schedule another op.
+ */
+struct OperationInfo
 {
-    std::mutex             lock;
-    SOperation             op;
-    std::string            op_name;
+    std::mutex lock;        /**< Most fields must be protected from concurrent access. */
+    SOperation scheduled_op;/**< Manually scheduled operation. */
+
+    /** State of manual op or long-running auto op. Both cannot be scheduled/running simultaneously. */
     std::atomic<ExecState> exec_state {ExecState::NONE};
 
-    bool                        current_op_is_manual {false};
+    std::string op_name;    /**< Either name of the scheduled op or name of current long-running auto op.*/
+
+    bool current_op_is_manual {false}; /** True if the currently scheduled/running op is manual. */
+
     std::condition_variable     result_ready_notifier;
     std::unique_ptr<ResultInfo> result_info;
 };

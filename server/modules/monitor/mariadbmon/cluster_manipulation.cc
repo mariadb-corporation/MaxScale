@@ -59,7 +59,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* cur
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
+    mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
     auto& output = rval.output;
@@ -98,7 +98,7 @@ mon_op::Result MariaDBMonitor::manual_failover()
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
+    mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
     auto& output = rval.output;
@@ -135,7 +135,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
+    mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
     auto& output = rval.output;
@@ -238,7 +238,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
 
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == this->id());
-    mxb_assert(m_manual_cmd.exec_state == mon_op::ExecState::RUNNING);
+    mxb_assert(m_op_info.exec_state == mon_op::ExecState::RUNNING);
 
     mon_op::Result rval;
     auto& error_out = rval.output;
