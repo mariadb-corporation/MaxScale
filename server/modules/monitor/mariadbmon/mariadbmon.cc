@@ -485,6 +485,7 @@ bool MariaDBMonitor::post_configure()
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
     reset_server_info();
+    // Operation data is cleared in post_run.
 
     if (m_settings.shared.replication_user.empty())
     {
@@ -642,11 +643,50 @@ void MariaDBMonitor::pre_loop()
     }
 
     m_locks_info.reset();
+    m_op_info.monitor_stopping = false;
 }
 
 void MariaDBMonitor::post_loop()
 {
     write_journal();
+    // The operation data needs to be cleared on stop. The monitor may be reconfigured, and the operation
+    // data may not be compatible with the new config. This will also cut any SSH connections used by
+    // server rebuild.
+    m_running_op = nullptr;
+    m_op_info.monitor_stopping = true;
+}
+
+std::tuple<bool, std::string> MariaDBMonitor::do_soft_stop()
+{
+    using ExecState = mon_op::ExecState;
+    mxb_assert(Monitor::is_main_worker());
+    mxb_assert(is_running());
+    mxb_assert(m_thread_running.load() == true);
+
+    bool stopping = false;
+    string errmsg;
+    std::unique_lock<std::mutex> lock(m_op_info.lock);
+    auto op_state = m_op_info.exec_state.load(mo_acquire);
+    if (op_state == ExecState::SCHEDULED || op_state == ExecState::RUNNING)
+    {
+        const char* state_str = (op_state == ExecState::SCHEDULED) ? "pending" : "running";
+        errmsg = mxb::string_printf("Command '%s' is %s.", m_op_info.op_name.c_str(), state_str);
+    }
+    else
+    {
+        stopping = true;
+        // Ensure that monitor cannot start another operation during shutdown.
+        m_op_info.monitor_stopping = true;
+    }
+    lock.unlock();
+
+    if (stopping)
+    {
+        Worker::shutdown();
+        Worker::join();
+        m_thread_running.store(false, std::memory_order_release);
+    }
+    return {stopping, errmsg};
 }
 
 void MariaDBMonitor::tick()
@@ -974,11 +1014,24 @@ bool MariaDBMonitor::schedule_manual_command(mon_op::SOperation op, const std::s
     }
     else
     {
-        string curr_op_name;
-        auto current_op_state = ExecState::NONE;
-        std::unique_lock<std::mutex> lock(m_op_info.lock);
-        current_op_state = m_op_info.exec_state.load(mo_acquire);
-        if (current_op_state == ExecState::NONE || current_op_state == ExecState::DONE)
+        const char prev_cmd[] = "Cannot run manual %s, previous %s is still %s.";
+        auto op_state = ExecState::NONE;
+        std::lock_guard<std::mutex> guard(m_op_info.lock);
+        op_state = m_op_info.exec_state.load(mo_acquire);
+        if (op_state == ExecState::SCHEDULED)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, prev_cmd, cmd_name.c_str(), m_op_info.op_name.c_str(), "pending");
+        }
+        else if (op_state == ExecState::RUNNING)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, prev_cmd, cmd_name.c_str(), m_op_info.op_name.c_str(), "running");
+        }
+        else if (m_op_info.monitor_stopping)
+        {
+            // Should be very rare, if not impossible to get.
+            PRINT_MXS_JSON_ERROR(error_out, "Cannot run manual %s, monitor is stopping.", cmd_name.c_str());
+        }
+        else
         {
             // Write the command. No need to notify monitor thread, as it checks for commands every tick.
             mxb_assert(!m_op_info.scheduled_op);
@@ -991,18 +1044,6 @@ bool MariaDBMonitor::schedule_manual_command(mon_op::SOperation op, const std::s
             m_op_info.result_info = nullptr;
             cmd_sent = true;
         }
-        else
-        {
-            curr_op_name = m_op_info.op_name;
-        }
-        lock.unlock();
-
-        if (!cmd_sent)
-        {
-            auto seen_state_str = (current_op_state == ExecState::SCHEDULED) ? "pending" : "running";
-            PRINT_MXS_JSON_ERROR(error_out, "Cannot run manual %s, previous %s is still %s.",
-                                 cmd_name.c_str(), curr_op_name.c_str(), seen_state_str);
-        }
     }
     return cmd_sent;
 }
@@ -1012,9 +1053,9 @@ bool MariaDBMonitor::start_long_running_op(mon_op::SOperation op, const std::str
     using ExecState = mon_op::ExecState;
     bool cmd_sent = false;
     std::lock_guard<std::mutex> lock(m_op_info.lock);
-    auto current_op_state = m_op_info.exec_state.load(mo_acquire);
+    auto op_state = m_op_info.exec_state.load(mo_acquire);
     // Can only start a long op if no op is scheduled or running.
-    if (current_op_state == ExecState::NONE || current_op_state == ExecState::DONE)
+    if (!m_op_info.monitor_stopping && (op_state == ExecState::NONE || op_state == ExecState::DONE))
     {
         mxb_assert(!m_op_info.scheduled_op && !m_running_op && m_op_info.op_name.empty());
         m_op_info.op_name = cmd_name;

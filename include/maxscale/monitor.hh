@@ -459,6 +459,13 @@ public:
      */
     void stop();
 
+    /**
+     * Stop a monitor if it's safe to do so.
+     *
+     * @return Boolean tells if monitor was stopped. If not, an error message is given.
+     */
+    std::tuple<bool, std::string> soft_stop();
+
     virtual void request_immediate_tick() = 0;
 
     /**
@@ -553,6 +560,13 @@ protected:
      * Stop the monitor. If the monitor uses a polling thread, the thread should be stopped.
      */
     virtual void do_stop() = 0;
+
+    /**
+     * Subclass-specific soft-stop.
+     *
+     * @return True if success. On fail, also return an error message.
+     */
+    virtual std::tuple<bool, std::string> do_soft_stop() = 0;
 
     /**
      * Check if the monitor user can execute a query. The query should be such that it only succeeds if
@@ -896,6 +910,8 @@ protected:
 
     void do_stop() override final;
 
+    std::tuple<bool, std::string> do_soft_stop() override;
+
     /**
      * @brief Check whether the monitor has sufficient rights
      *
@@ -954,14 +970,14 @@ protected:
      */
     virtual bool immediate_tick_required();
 
-    Worker::Callable m_callable; /**< Context for own dcalls */
+    Worker::Callable  m_callable;       /**< Context for own dcalls */
+    std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
 
 private:
-    std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
-    int32_t           m_shutdown;       /**< Non-zero if the monitor should shut down. */
-    bool              m_checked;        /**< Whether server access has been checked. */
-    mxb::Semaphore    m_semaphore;      /**< Semaphore for synchronizing with monitor thread. */
-    int64_t           m_loop_called;    /**< When was the loop called the last time. */
+    int32_t        m_shutdown;      /**< Non-zero if the monitor should shut down. */
+    bool           m_checked;       /**< Whether server access has been checked. */
+    mxb::Semaphore m_semaphore;     /**< Semaphore for synchronizing with monitor thread. */
+    int64_t        m_loop_called;   /**< When was the loop called the last time. */
 
     std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
 

@@ -281,12 +281,26 @@ private:
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
-    Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
+    string mon_name = request.uri_part(1);
+    Monitor* monitor = MonitorManager::find_monitor(mon_name.c_str());
     if (monitor)
     {
-        MonitorManager::stop_monitor(monitor);
+        auto [ok, errmsg] = MonitorManager::soft_stop_monitor(monitor);
+        if (ok)
+        {
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        }
+        else
+        {
+            json_t* error = mxs_json_error("Could not stop monitor '%s'. %s", mon_name.c_str(),
+                                           errmsg.c_str());
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, error);
+        }
     }
-    return HttpResponse(MHD_HTTP_NO_CONTENT);
+    else
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
 }
 
 HttpResponse cb_start_monitor(const HttpRequest& request)

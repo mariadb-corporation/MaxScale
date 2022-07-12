@@ -271,6 +271,8 @@ protected:
     void        flush_server_status() override;
     std::string annotate_state_change(mxs::MonitorServer* server) override final;
 
+    std::tuple<bool, std::string> do_soft_stop() override;
+
 private:
     using ServerFunction = std::function<void (MariaDBServer*)>;
 

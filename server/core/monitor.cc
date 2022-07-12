@@ -324,6 +324,20 @@ void Monitor::stop()
     }
 }
 
+std::tuple<bool, string> Monitor::soft_stop()
+{
+    auto [ok, errmsg] = do_soft_stop();
+    if (ok)
+    {
+        for (auto db : m_servers)
+        {
+            mysql_close(db->con);
+            db->con = nullptr;
+        }
+    }
+    return {ok, errmsg};
+}
+
 const char* Monitor::name() const
 {
     return m_name.c_str();
@@ -1872,6 +1886,12 @@ void MonitorWorker::do_stop()
     Worker::shutdown();
     Worker::join();
     m_thread_running.store(false, std::memory_order_release);
+}
+
+std::tuple<bool, std::string> MonitorWorker::do_soft_stop()
+{
+    MonitorWorker::do_stop();
+    return {true, ""};
 }
 
 json_t* MonitorWorker::diagnostics() const

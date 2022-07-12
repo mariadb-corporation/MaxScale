@@ -82,10 +82,12 @@ struct OperationInfo
 
     /** State of manual op or long-running auto op. Both cannot be scheduled/running simultaneously. */
     std::atomic<ExecState> exec_state {ExecState::NONE};
+    /**< True if monitor stop was requested. Prevents starting another operation. */
+    std::atomic_bool monitor_stopping {true};
 
     std::string op_name;    /**< Either name of the scheduled op or name of current long-running auto op.*/
 
-    bool current_op_is_manual {false}; /** True if the currently scheduled/running op is manual. */
+    bool current_op_is_manual {false};      /** True if the currently scheduled/running op is manual. */
 
     std::condition_variable     result_ready_notifier;
     std::unique_ptr<ResultInfo> result_info;

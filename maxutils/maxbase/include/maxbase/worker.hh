@@ -618,9 +618,9 @@ public:
     void join();
 
     /**
-     * Initate shutdown of worker.
+     * Initiate shutdown of worker.
      *
-     * @attention A call to this function will only initiate the shutdowm,
+     * @attention A call to this function will only initiate the shutdown,
      *            the worker will not have shut down when the function returns.
      *
      * @attention This function is signal safe.

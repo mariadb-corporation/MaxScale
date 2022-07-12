@@ -1733,8 +1733,17 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
                 {
                     if (mon->is_running())
                     {
-                        mon->stop();
-                        mon->start();
+                        auto [stopped, errmsg] = mon->soft_stop();
+                        if (stopped)
+                        {
+                            mon->start();
+                        }
+                        else
+                        {
+                            MXB_ERROR("Could not restart monitor '%s': %s Restart the monitor manually "
+                                      "to ensure server settings are taken into use.",
+                                      mon->name(), errmsg.c_str());
+                        }
                     }
                 }
             }

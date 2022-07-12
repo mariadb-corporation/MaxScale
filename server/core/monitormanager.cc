@@ -280,6 +280,17 @@ void MonitorManager::stop_monitor(Monitor* monitor)
     }
 }
 
+std::tuple<bool, std::string> MonitorManager::soft_stop_monitor(mxs::Monitor* monitor)
+{
+    mxb_assert(Monitor::is_main_worker());
+    std::tuple<bool, std::string> rval = {true, ""};
+    if (monitor->is_running())
+    {
+        rval = monitor->soft_stop();
+    }
+    return rval;
+}
+
 void MonitorManager::deactivate_monitor(Monitor* monitor)
 {
     mxb_assert(Monitor::is_main_worker());
@@ -347,36 +358,51 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, json_t* paramete
     mxb_assert(Monitor::is_main_worker());
     // Backup monitor parameters in case configure fails.
     auto orig = monitor->parameters();
+    bool success = false;
+    bool ok_to_configure = false;
     // Stop/start monitor if it's currently running. If monitor was stopped already, this is likely
     // managed by the caller.
-    bool stopstart = monitor->is_running();
-    if (stopstart)
+    bool was_running = monitor->is_running();
+    if (was_running)
     {
-        monitor->stop();
-    }
-
-    std::set<std::string> unknown;
-    bool success = false;
-    auto& base = monitor->base_configuration();
-    auto& mod = monitor->configuration();
-
-    if (base.specification().validate(parameters, &unknown) && mod.specification().validate(parameters))
-    {
-        if (base.configure(parameters, &unknown))
+        auto [stopped, errmsg] = monitor->soft_stop();
+        if (stopped)
         {
-            success = mod.configure(parameters);
+            ok_to_configure = true;
+        }
+        else
+        {
+            MXB_ERROR("Reconfiguration of monitor '%s' failed because monitor cannot be safely stopped. %s",
+                      monitor->name(), errmsg.c_str());
         }
     }
-
-
-
-    // TODO: If the reconfiguration fails, the old parameters are not restored. Previously the monitor was
-    // reconfigured with the old parameters if the new one failed to be processed. Either make sure the
-    // configuration succeeds or add a generic way to roll back a partial change.
-
-    if (stopstart && !monitor->start())
+    else
     {
-        MXB_ERROR("Reconfiguration of monitor '%s' failed because monitor did not start.", monitor->name());
+        ok_to_configure = true;
+    }
+
+    if (ok_to_configure)
+    {
+        std::set<std::string> unknown;
+        auto& base = monitor->base_configuration();
+        auto& mod = monitor->configuration();
+
+        if (base.specification().validate(parameters, &unknown) && mod.specification().validate(parameters))
+        {
+            if (base.configure(parameters, &unknown))
+            {
+                success = mod.configure(parameters);
+            }
+        }
+
+        // TODO: If the reconfiguration fails, the old parameters are not restored. Previously the monitor was
+        // reconfigured with the old parameters if the new one failed to be processed. Either make sure the
+        // configuration succeeds or add a generic way to roll back a partial change.
+        if (was_running && !monitor->start())
+        {
+            MXB_ERROR("Reconfiguration of monitor '%s' failed because monitor did not start.",
+                      monitor->name());
+        }
     }
     return success;
 }

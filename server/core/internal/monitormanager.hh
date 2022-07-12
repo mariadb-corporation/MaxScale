@@ -58,7 +58,8 @@ public:
      *
      * @param monitor The monitor to stop
      */
-    static void stop_monitor(mxs::Monitor* monitor);
+    static void                          stop_monitor(mxs::Monitor* monitor);
+    static std::tuple<bool, std::string> soft_stop_monitor(mxs::Monitor* monitor);
 
     static void stop_all_monitors();
     static void start_all_monitors();
