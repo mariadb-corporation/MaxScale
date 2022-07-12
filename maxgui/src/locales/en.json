@@ -295,6 +295,8 @@
         "async-release-locks": "Are you sure you want to release locks?",
         "async-failover": "Are you sure you want to perform master failover?",
         "async-rejoin": "Rejoin <b>{targetId}</b> to this cluster?",
+        "async-cs-stop-cluster": "Are you sure you want to stop all ColumnStore nodes?",
+        "async-cs-start-cluster": "Are you sure you want to start all ColumnStore nodes?",
         "killSession": "Are you sure you want to kill this session?",
         "openScript": "<b>{targetId}</b> tab has unsaved changes, would you like to save it before opening <b>{fileNameToBeOpened}</b>?",
         "deleteSession": "<b>{targetId}</b> tab has unsaved changes, would you like to save it before deleting the session?"
@@ -339,7 +341,9 @@
             "async-reset-replication": "Reset Replication",
             "async-release-locks": "Release ownership",
             "async-failover": "Master failover",
-            "async-rejoin": "Rejoin"
+            "async-rejoin": "Rejoin",
+            "async-cs-stop-cluster": "Stop ColumnStore cluster",
+            "async-cs-start-cluster": "Start ColumnStore cluster"
         },
         "info": {
             "async-switchover": "Promote as Master (Switchover)",

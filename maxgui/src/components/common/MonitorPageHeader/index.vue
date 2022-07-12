@@ -98,8 +98,9 @@
 /*
 @chosen-op-type: type:String. Operation chosen type to dispatch update action
 @on-count-done. Emit event after amount of time from <refresh-rate/>
+@is-calling-op: boolean. Emit before and after opening dialog for calling ColumnStore command
 */
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import refreshRate from 'mixins/refreshRate'
 import goBack from 'mixins/goBack'
 export default {
@@ -128,10 +129,18 @@ export default {
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
+            curr_cs_status: state => state.monitor.curr_cs_status,
+            is_loading_cs_status: state => state.monitor.is_loading_cs_status,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         confDlgSaveTxt() {
-            const { RESET_REP, RELEASE_LOCKS, FAILOVER } = this.MONITOR_OP_TYPES
+            const {
+                RESET_REP,
+                RELEASE_LOCKS,
+                FAILOVER,
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
+            } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case RESET_REP:
                     return 'reset'
@@ -139,6 +148,10 @@ export default {
                     return 'release'
                 case FAILOVER:
                     return 'perform'
+                case CS_STOP_CLUSTER:
+                    return 'stop'
+                case CS_START_CLUSTER:
+                    return 'start'
                 default:
                     return this.confDlg.type
             }
@@ -148,6 +161,11 @@ export default {
         },
         monitorModule() {
             return this.$typy(this.targetMonitor, 'attributes.module').safeString
+        },
+        isColumnStoreCluster() {
+            return Boolean(
+                this.$typy(this.targetMonitor, 'attributes.parameters.cs_admin_api_key').safeString
+            )
         },
         allOps() {
             return this.getMonitorOps({ currState: this.state, scope: this })
@@ -163,6 +181,8 @@ export default {
                 RESET_REP,
                 RELEASE_LOCKS,
                 FAILOVER,
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
             } = this.MONITOR_OP_TYPES
             let ops = [this.allOps[STOP], this.allOps[START], this.allOps[DESTROY]]
             if (this.monitorModule === 'mariadbmon') {
@@ -172,12 +192,51 @@ export default {
                 // only add the failover option when auto_failover is false
                 if (!this.$typy(parameters, 'auto_failover').safeBoolean)
                     ops.push(this.allOps[FAILOVER])
+                // Add ColumnStore operations
+                if (this.isColumnStoreCluster) {
+                    ops = [
+                        ...ops,
+                        { divider: true },
+                        {
+                            ...this.allOps[CS_STOP_CLUSTER],
+                            disabled: this.is_loading_cs_status || this.isClusterStopped,
+                        },
+                        {
+                            ...this.allOps[CS_START_CLUSTER],
+                            disabled: this.is_loading_cs_status || !this.isClusterStopped,
+                        },
+                    ]
+                }
             }
             return ops
         },
+        csNodes() {
+            let nodes = {}
+            Object.keys(this.curr_cs_status).forEach(key => {
+                const v = this.curr_cs_status[key]
+                if (this.$typy(v).isObject) nodes[key] = v
+            })
+            return nodes
+        },
+        isClusterStopped() {
+            return Object.values(this.csNodes).every(v => v.services.length === 0)
+        },
+    },
+    watch: {
+        'confDlg.isOpened'(v) {
+            if (v) this.$emit('is-calling-op', true)
+            else this.$emit('is-calling-op', false)
+        },
+    },
+    async created() {
+        await this.fetchCsStatus()
     },
     methods: {
-        ...mapActions('monitor', ['manipulateMonitor']),
+        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE' }),
+        ...mapActions({
+            manipulateMonitor: 'monitor/manipulateMonitor',
+            handleFetchCsStatus: 'monitor/handleFetchCsStatus',
+        }),
         onChooseOp({ type, text, info, params }) {
             this.confDlg = {
                 ...this.confDlg,
@@ -191,6 +250,17 @@ export default {
             }
             this.$emit('chosen-op-type', type)
         },
+        asyncCmdErrCb(errArr) {
+            this.SET_SNACK_BAR_MESSAGE({ text: errArr, type: 'error' })
+        },
+        async fetchCsStatus() {
+            await this.handleFetchCsStatus({
+                monitorId: this.targetMonitor.id,
+                monitorModule: this.monitorModule,
+                isCsCluster: this.isColumnStoreCluster,
+                monitorState: this.state,
+            })
+        },
         async onConfirm() {
             const {
                 STOP,
@@ -199,6 +269,8 @@ export default {
                 RESET_REP,
                 RELEASE_LOCKS,
                 FAILOVER,
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
             } = this.MONITOR_OP_TYPES
             let payload = {
                 id: this.targetMonitor.id,
@@ -209,19 +281,54 @@ export default {
                 case RESET_REP:
                 case RELEASE_LOCKS:
                 case FAILOVER: {
-                    await this.manipulateMonitor({
+                    payload = {
                         ...payload,
                         opParams: { moduleType: this.monitorModule, params: '' },
-                    })
+                    }
                     break
                 }
                 case STOP:
                 case START:
-                    await this.manipulateMonitor({ ...payload, opParams: this.confDlg.opParams })
+                    payload = { ...payload, opParams: this.confDlg.opParams }
                     break
                 case DESTROY:
-                    await this.manipulateMonitor({ ...payload, successCb: this.goBack })
+                    payload = { ...payload, successCb: this.goBack }
+                    break
+                case CS_STOP_CLUSTER:
+                case CS_START_CLUSTER: {
+                    const cmdType = this.confDlg.opType === CS_STOP_CLUSTER ? 'stop' : 'start'
+                    payload = {
+                        ...payload,
+                        showSnackbar: false,
+                        successCb: async () => {
+                            await this.fetchCsStatus()
+                            let msgs = [],
+                                msgType = 'success'
+                            if (
+                                (cmdType === 'stop' && this.isClusterStopped) ||
+                                (cmdType === 'start' && !this.isClusterStopped)
+                            ) {
+                                msgs = [
+                                    `${this.$help.capitalizeFirstLetter(
+                                        cmdType
+                                    )}  cluster successfully`,
+                                ]
+                            } else {
+                                msgs = [`Failed to ${cmdType} cluster`]
+                                msgType = 'error'
+                            }
+                            this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
+                            await this.successCb()
+                        },
+                        asyncCmdErrCb: this.asyncCmdErrCb,
+                        //TODO: create a timeout input in the confirm dialog
+                        opParams: { moduleType: this.monitorModule, params: '&1m' },
+                    }
+
+                    break
+                }
             }
+            await this.manipulateMonitor(payload)
         },
     },
 }

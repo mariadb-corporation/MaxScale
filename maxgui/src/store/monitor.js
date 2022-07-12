@@ -190,6 +190,8 @@ export default {
                     FAILOVER,
                     REJOIN,
                     CS_GET_STATUS,
+                    CS_STOP_CLUSTER,
+                    CS_START_CLUSTER,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -208,7 +210,9 @@ export default {
                     case RELEASE_LOCKS:
                     case FAILOVER:
                     case REJOIN:
-                    case CS_GET_STATUS: {
+                    case CS_GET_STATUS:
+                    case CS_STOP_CLUSTER:
+                    case CS_START_CLUSTER: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -225,6 +229,8 @@ export default {
                         case FAILOVER:
                         case REJOIN:
                         case CS_GET_STATUS:
+                        case CS_STOP_CLUSTER:
+                        case CS_START_CLUSTER:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -339,10 +345,11 @@ export default {
          * @param {String} param.monitorModule - monitor module type
          * @param {Boolean} param.isCsCluster - Is a ColumnStore cluster or not
          * @param {String} param.monitorState - monitor state
+         * @param {Function} param.successCb - callback function after successfully performing an async cmd
          */
         async handleFetchCsStatus(
             { state, commit, dispatch, rootGetters, rootState },
-            { monitorId, monitorModule, isCsCluster, monitorState }
+            { monitorId, monitorModule, isCsCluster, monitorState, successCb }
         ) {
             if (
                 rootGetters['user/isAdmin'] &&
@@ -356,8 +363,10 @@ export default {
                     id: monitorId,
                     type: CS_GET_STATUS,
                     showSnackbar: false,
-                    successCb: meta => {
+                    successCb: async meta => {
                         commit('SET_CURR_CS_STATUS', meta)
+                        commit('SET_CS_NO_DATA_TXT', '')
+                        if (this.vue.$help.isFunction(successCb)) await successCb(meta)
                     },
                     asyncCmdErrCb: meta => {
                         commit('SET_CURR_CS_STATUS', {})
@@ -431,13 +440,15 @@ export default {
                 FAILOVER,
                 REJOIN,
                 CS_GET_STATUS,
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
                 [STOP]: {
                     text: scope.$t('monitorOps.actions.stop'),
                     type: STOP,
-                    icon: ' $vuetify.icons.stopped',
+                    icon: '$vuetify.icons.stopped',
                     iconSize: 22,
                     color: 'primary',
                     params: 'stop',
@@ -497,8 +508,21 @@ export default {
                     //TODO: Add rejoin icon
                     disabled: false,
                 },
-                [CS_GET_STATUS]: {
-                    type: CS_GET_STATUS,
+                [CS_GET_STATUS]: { type: CS_GET_STATUS, disabled: false },
+                [CS_STOP_CLUSTER]: {
+                    text: scope.$t(`monitorOps.actions.${CS_STOP_CLUSTER}`),
+                    type: CS_STOP_CLUSTER,
+                    icon: '$vuetify.icons.stopped',
+                    iconSize: 22,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [CS_START_CLUSTER]: {
+                    text: scope.$t(`monitorOps.actions.${CS_START_CLUSTER}`),
+                    type: CS_START_CLUSTER,
+                    icon: '$vuetify.icons.running',
+                    iconSize: 22,
+                    color: 'primary',
                     disabled: false,
                 },
             })

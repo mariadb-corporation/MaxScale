@@ -3,8 +3,9 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
             <monitor-page-header
                 :targetMonitor="current_monitor"
-                :successCb="recurringFetch"
+                :successCb="successCb"
                 @on-count-done="recurringFetch"
+                @is-calling-op="isCallingOp = $event"
             >
                 <template v-slot:page-title="{ pageId }">
                     <router-link :to="`/visualization/clusters/${pageId}`" class="rsrc-link">
@@ -76,6 +77,7 @@ export default {
             serverStateTableRow: [],
             unmonitoredServers: [],
             isFirstFetch: true,
+            isCallingOp: false,
         }
     },
     computed: {
@@ -132,14 +134,11 @@ export default {
 
     async created() {
         await this.initialFetch()
-        this.isFirstFetch = false
     },
 
     methods: {
         ...mapMutations({
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
-            SET_CURR_CS_STATUS: 'monitor/SET_CURR_CS_STATUS',
-            SET_IS_LOADING_CS_STATUS: 'monitor/SET_IS_LOADING_CS_STATUS',
         }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
@@ -158,15 +157,22 @@ export default {
             if (moduleName) await this.fetchModuleParameters(moduleName)
         },
 
+        async successCb() {
+            await this.fetchMonitor()
+            await this.serverTableRowProcessing()
+        },
+
         async recurringFetch() {
             await this.fetchMonitor()
             await this.serverTableRowProcessing()
-            await this.handleFetchCsStatus({
-                monitorId: this.monitorId,
-                monitorModule: this.monitorModule,
-                isCsCluster: this.isColumnStoreCluster,
-                monitorState: this.monitorState,
-            })
+            if (!this.isCallingOp)
+                await this.handleFetchCsStatus({
+                    monitorId: this.monitorId,
+                    monitorModule: this.monitorModule,
+                    isCsCluster: this.isColumnStoreCluster,
+                    monitorState: this.monitorState,
+                    successCb: () => (this.isFirstFetch = false),
+                })
         },
 
         async fetchMonitor() {
