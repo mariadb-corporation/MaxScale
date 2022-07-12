@@ -184,13 +184,14 @@ export function strReplaceAt({ str, index, newChar }) {
  * @return {Array} An array of error string
  */
 export function getErrorsArr(error) {
-    let errorsArr = [error]
+    if (isUndefined(error.response) || isUndefined(error.response.data)) return [error]
 
-    if (!isUndefined(error.response) && !isUndefined(error.response.data.errors)) {
-        errorsArr = error.response.data.errors.map(ele => `${ele.detail}`)
-    }
+    if (!isUndefined(error.response.data.errors))
+        return error.response.data.errors.map(ele => `${ele.detail}`)
 
-    return errorsArr
+    // async cmd response has error messages inside meta object
+    if (!isUndefined(error.response.data.meta) && !isUndefined(error.response.data.meta.errors))
+        return error.response.data.meta.errors.map(ele => `${ele.detail}`)
 }
 
 /**
