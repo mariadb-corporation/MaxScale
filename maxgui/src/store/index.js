@@ -164,7 +164,7 @@ const store = new Vuex.Store({
             try {
                 let data = []
                 let res = await this.$http.get(
-                    `/maxscale/modules/${moduleId}?fields[module]=parameters`
+                    `/maxscale/modules/${moduleId}?fields[modules]=parameters`
                 )
                 if (res.data.data) {
                     const { attributes: { parameters = [] } = {} } = res.data.data
