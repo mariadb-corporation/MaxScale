@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-06-06
+ * Change Date: 2026-07-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -43,8 +43,6 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
 
     // Wait for one watchdog interval, systemd should have been notified in that time.
     staying_alive(test, watchdog_interval);
-
-    test.log_includes("systemd watchdog keep-alive ping");
 
     test.reset_timeout();
 

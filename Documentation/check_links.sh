@@ -5,7 +5,7 @@
 # Use of this software is governed by the Business Source License included
 # in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
-# Change Date: 2026-06-06
+# Change Date: 2026-07-11
 #
 # On the date above, in accordance with the Business Source License, use
 # of this software will be governed by version 2 or later of the General
@@ -23,7 +23,7 @@ function check_file() {
         if [ ! -f "$i" ]
         then
             # Bash regular expressions must be unquoted, otherwise they'll be a part of the pattern
-            if [[ "$i" =~ MaxScale-[12][.][0-4]*[.][0-9]*-Release-Notes[.]md ]]
+            if [[ "$i" =~ MaxScale-[12][.][0-5]*[.][0-9]*-Release-Notes[.]md ]]
             then
                 # Ignore old release notes, they've been removed from the repo
                 continue
