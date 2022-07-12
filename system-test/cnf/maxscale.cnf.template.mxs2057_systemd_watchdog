@@ -1,6 +1,5 @@
 [maxscale]
 threads = ###threads###
-log_debug=1
 
 [Monitor]
 type = monitor

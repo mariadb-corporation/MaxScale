@@ -44,8 +44,6 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     // Wait for one watchdog interval, systemd should have been notified in that time.
     staying_alive(test, watchdog_interval);
 
-    test.log_includes("systemd watchdog keep-alive ping");
-
     test.reset_timeout();
 
     // Make one thread in maxscale hang
