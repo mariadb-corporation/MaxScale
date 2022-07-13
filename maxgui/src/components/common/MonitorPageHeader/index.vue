@@ -257,6 +257,7 @@ export default {
                 monitorModule: this.monitorModule,
                 isCsCluster: this.isColumnStoreCluster,
                 monitorState: this.state,
+                pollingResInterval: 1000,
             })
         },
         async onConfirm() {

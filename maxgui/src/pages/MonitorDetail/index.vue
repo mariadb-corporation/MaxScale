@@ -172,6 +172,7 @@ export default {
                     isCsCluster: this.isColumnStoreCluster,
                     monitorState: this.monitorState,
                     successCb: () => (this.isFirstFetch = false),
+                    pollingResInterval: 1000,
                 })
         },
 

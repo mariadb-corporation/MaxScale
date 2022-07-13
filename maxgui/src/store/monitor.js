@@ -172,10 +172,20 @@ export default {
          * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Function} param.custAsyncCmdDone - callback function to replace handleAsyncCmdDone
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
+         * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async manipulateMonitor(
             { dispatch, commit, rootState },
-            { id, type, opParams, successCb, asyncCmdErrCb, showSnackbar = true, custAsyncCmdDone }
+            {
+                id,
+                type,
+                opParams,
+                successCb,
+                asyncCmdErrCb,
+                showSnackbar = true,
+                custAsyncCmdDone,
+                pollingResInterval = 2500,
+            }
         ) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
@@ -240,6 +250,7 @@ export default {
                                 asyncCmdErrCb,
                                 custAsyncCmdDone,
                                 showSnackbar,
+                                pollingResInterval,
                             })
                             break
                         default:
@@ -268,6 +279,7 @@ export default {
          * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Function} param.custAsyncCmdDone - callback function to replace handleAsyncCmdDone
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
+         * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async checkAsyncCmdRes({ dispatch }, param) {
             try {
@@ -316,9 +328,10 @@ export default {
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
          * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
+         * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async handleAsyncCmdPending({ commit, dispatch }, param) {
-            const { cmdName, meta, showSnackbar, asyncCmdErrCb } = param
+            const { cmdName, meta, showSnackbar, asyncCmdErrCb, pollingResInterval } = param
             const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
             if (isRunning && !isCancelled) {
                 if (showSnackbar)
@@ -340,7 +353,7 @@ export default {
                     )
                 // loop fetch until receive success meta
                 await this.vue.$help
-                    .delay(2500)
+                    .delay(pollingResInterval)
                     .then(async () => await dispatch('checkAsyncCmdRes', param))
             } else {
                 const errArr = meta.errors.map(error => error.detail)
@@ -357,10 +370,11 @@ export default {
          * @param {Boolean} param.isCsCluster - Is a ColumnStore cluster or not
          * @param {String} param.monitorState - monitor state
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
+         * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async handleFetchCsStatus(
             { state, commit, dispatch, rootGetters, rootState },
-            { monitorId, monitorModule, isCsCluster, monitorState, successCb }
+            { monitorId, monitorModule, isCsCluster, monitorState, successCb, pollingResInterval }
         ) {
             if (
                 rootGetters['user/isAdmin'] &&
@@ -384,6 +398,7 @@ export default {
                         commit('SET_CS_NO_DATA_TXT', meta.join(', '))
                     },
                     opParams: { moduleType: monitorModule, params: '' },
+                    pollingResInterval,
                 })
                 commit('SET_IS_LOADING_CS_STATUS', false)
             }
