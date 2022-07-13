@@ -109,6 +109,7 @@ export default {
     props: {
         targetMonitor: { type: Object, required: true },
         successCb: { type: Function, required: true },
+        shouldFetchCsStatus: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -229,7 +230,7 @@ export default {
         },
     },
     async created() {
-        await this.fetchCsStatus()
+        if (this.shouldFetchCsStatus) await this.fetchCsStatus()
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE' }),

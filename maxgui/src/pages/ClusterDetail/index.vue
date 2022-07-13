@@ -6,6 +6,7 @@
                 attributes: $typy(current_cluster, 'monitorData').safeObjectOrEmpty,
             }"
             :successCb="monitorOpCallback"
+            shouldFetchCsStatus
             @chosen-op-type="monitorOpType = $event"
             @on-count-done="fetchCluster"
         >
