@@ -84,6 +84,7 @@ export default {
             refreshCount: 10,
             chosenRefreshRate: 10,
             seconds: [5, 10, 20, 30, 60, 120, 300],
+            paused: false,
         }
     },
     computed: {
@@ -109,6 +110,14 @@ export default {
         refreshRate() {
             this.refreshCount = this.refreshRate
         },
+        async refreshCount(v) {
+            if (v === 0) {
+                // pause until finish the handler for asyncEmit event
+                this.paused = true
+                await this.asyncEmit('on-count-done')
+                this.paused = false
+            }
+        },
     },
     mounted() {
         this.refreshCount = this.refreshRate
@@ -121,18 +130,15 @@ export default {
         destroyTimer() {
             this.workerTimer && this.workerTimer.terminate()
         },
-        async updateCountTime() {
+        updateCountTime() {
             if (this.refreshCount > 0) this.refreshCount = this.refreshCount - 1
-            else if (this.refreshCount === 0) {
-                await this.asyncEmit('on-count-done')
-                this.refreshCount = this.refreshRate
-            }
+            else if (this.refreshCount === 0) this.refreshCount = this.refreshRate
         },
         workerInit() {
             this.workerTimer = new workerTimer()
             this.workerTimer.postMessage([{ name: 'Refresh rate timer', interval: 1000 }])
-            this.workerTimer.onmessage = async () => {
-                await this.updateCountTime()
+            this.workerTimer.onmessage = () => {
+                if (!this.paused) this.updateCountTime()
             }
         },
         onSelectRefreshRate(item) {
