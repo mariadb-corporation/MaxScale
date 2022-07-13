@@ -13,6 +13,7 @@
 
 #include <maxbase/log.h>
 #include <maxbase/log.hh>
+#include <maxbase/stacktrace.hh>
 
 #include <sys/time.h>
 #include <syslog.h>
@@ -753,6 +754,16 @@ int mxb_log_message(int priority,
                     ...)
 {
     int err = 0;
+
+    // The following will leave a stacktrace in the log in case something tries to log a message when it is
+    // not possible. Otherwise we'll just get a single line message about this particular assertion failing
+    // and nothing else.
+#ifdef SS_DEBUG
+    if (!this_unit.sLogger || !this_unit.sMessage_registry)
+    {
+        mxb::emergency_stacktrace();
+    }
+#endif
 
     assert(this_unit.sLogger && this_unit.sMessage_registry);
     assert((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0);

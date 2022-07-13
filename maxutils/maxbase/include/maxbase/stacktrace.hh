@@ -39,6 +39,13 @@ static inline void default_gdb_stacktrace_handler(const char* line)
 }
 
 /**
+ * Dumps a stacktrace to stdout
+ *
+ * Useful when something is seriously broken and we can't rely on the logging subsystem to work.
+ */
+void emergency_stacktrace();
+
+/**
  * Dump the stacktrace of the current thread
  *
  * @param handler A handler that is called once per stack frame with the function name and auxiliary
