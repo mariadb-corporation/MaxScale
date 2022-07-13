@@ -250,9 +250,6 @@ export default {
             }
             this.$emit('chosen-op-type', type)
         },
-        asyncCmdErrCb(errArr) {
-            this.SET_SNACK_BAR_MESSAGE({ text: errArr, type: 'error' })
-        },
         async fetchCsStatus() {
             await this.handleFetchCsStatus({
                 monitorId: this.targetMonitor.id,
@@ -299,8 +296,7 @@ export default {
                     const cmdType = this.confDlg.opType === CS_STOP_CLUSTER ? 'stop' : 'start'
                     payload = {
                         ...payload,
-                        showSnackbar: false,
-                        successCb: async () => {
+                        custAsyncCmdDone: async () => {
                             await this.fetchCsStatus()
                             let msgs = [],
                                 msgType = 'success'
@@ -320,7 +316,6 @@ export default {
                             this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
                             await this.successCb()
                         },
-                        asyncCmdErrCb: this.asyncCmdErrCb,
                         //TODO: create a timeout input in the confirm dialog
                         opParams: { moduleType: this.monitorModule, params: '&1m' },
                     }

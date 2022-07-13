@@ -170,11 +170,12 @@ export default {
          * @param {String|Object} param.opParams - operation params. For async call, it's an object
          * @param {Function} param.successCb - callback function after successfully updated
          * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
+         * @param {Function} param.custAsyncCmdDone - callback function to replace handleAsyncCmdDone
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async manipulateMonitor(
             { dispatch, commit, rootState },
-            { id, type, opParams, successCb, asyncCmdErrCb, showSnackbar = true }
+            { id, type, opParams, successCb, asyncCmdErrCb, showSnackbar = true, custAsyncCmdDone }
         ) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
@@ -237,6 +238,7 @@ export default {
                                 monitorId: id,
                                 successCb,
                                 asyncCmdErrCb,
+                                custAsyncCmdDone,
                                 showSnackbar,
                             })
                             break
@@ -264,17 +266,26 @@ export default {
          * @param {String} param.monitorId Monitor id
          * @param {Function} param.successCb - callback function after successfully performing an async cmd
          * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
+         * @param {Function} param.custAsyncCmdDone - callback function to replace handleAsyncCmdDone
          * @param {Boolean} param.showSnackbar - should show result message in the snackbar or not
          */
         async checkAsyncCmdRes({ dispatch }, param) {
             try {
-                const { monitorModule, monitorId, successCb, showSnackbar } = param
+                const {
+                    monitorModule,
+                    monitorId,
+                    successCb,
+                    showSnackbar,
+                    custAsyncCmdDone,
+                } = param
                 const { status, data: { meta } = {} } = await this.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
                 )
                 // response ok
                 if (status === 200) {
                     if (meta.errors) await dispatch('handleAsyncCmdPending', { ...param, meta })
+                    else if (this.vue.$help.isFunction(custAsyncCmdDone))
+                        await custAsyncCmdDone(meta)
                     else await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
                 }
             } catch (e) {
