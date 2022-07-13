@@ -1423,7 +1423,7 @@ bool RebuildServer::run()
             break;
 
         case State::CLEANUP:
-            // TODO
+            cleanup();
             command_complete = true;
             advance = false;
             break;
@@ -1552,17 +1552,27 @@ bool RebuildServer::serve_backup()
 
 bool RebuildServer::prepare_target()
 {
+    bool target_prepared = false;
     string clear_datadir = mxb::string_printf("sudo rm -rf %s/*", rebuild_datadir.c_str());
-    if (run_cmd_on_target("sudo systemctl stop mariadb", "stop MariaDB Server")
-        && run_cmd_on_target(clear_datadir, "empty data directory"))
+    // Check that the rm-command length is correct. A safeguard against later changes which could
+    // cause MaxScale to delete all files (sudo rm -rf *). Datadir may need to be configurable or read
+    // from server. rm must be run as sudo since the directory and files is owned by "mysql". Even group
+    // access would not suffice as server does not give write access to group members.
+    if (clear_datadir.length() == 28)
     {
-        MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.", m_target->name());
-        m_state = State::START_TRANSFER;
+        if (run_cmd_on_target("sudo systemctl stop mariadb", "stop MariaDB Server")
+            && run_cmd_on_target(clear_datadir, "empty data directory"))
+        {
+            MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.", m_target->name());
+            target_prepared = true;
+        }
     }
     else
     {
-        m_state = State::CLEANUP;
+        mxb_assert(!true);
+        PRINT_JSON_ERROR(m_result.output, "Invalid rm-command (this should not happen!)");
     }
+    m_state = target_prepared ? State::START_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -1789,11 +1799,22 @@ bool RebuildServer::wait_backup_prepare()
 bool RebuildServer::start_target()
 {
     bool server_started = false;
+    // chown must be ran sudo since changing user to something else than self.
     string chown_cmd = mxb::string_printf("sudo chown -R mysql:mysql %s/*", rebuild_datadir.c_str());
-    if (run_cmd_on_target(chown_cmd, "change ownership of datadir contents")
-        && run_cmd_on_target("sudo systemctl start mariadb", "start MariaDB Server"))
+    // Check that the chown-command length is correct. Mainly a safeguard against later changes which could
+    // cause MaxScale to change owner of every file on the system.
+    if (chown_cmd.length() == 42)
     {
-        server_started = true;
+        if (run_cmd_on_target(chown_cmd, "change ownership of datadir contents")
+            && run_cmd_on_target("sudo systemctl start mariadb", "start MariaDB Server"))
+        {
+            server_started = true;
+        }
+    }
+    else
+    {
+        mxb_assert(!true);
+        PRINT_JSON_ERROR(m_result.output, "Invalid chown command (this should not happen!)");
     }
 
     m_state = server_started ? State::START_REPLICATION : State::CLEANUP;
@@ -1812,8 +1833,8 @@ bool RebuildServer::start_replication()
     SlaveStatus::Settings slave_sett("", ep, m_target->name());
 
     bool replicating = false;
-    auto res = m_target->ping_or_connect();
-    if (Monitor::connection_is_ok(res))
+    m_target->update_server(false, false);
+    if (m_target->is_running())
     {
         GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
         if (m_target->create_start_slave(op, slave_sett))
@@ -1857,7 +1878,6 @@ bool RebuildServer::start_replication()
     else
     {
         PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", m_target->name());
-        m_target->log_connect_error(res);   // This only goes to log.
     }
 
     m_state = replicating ? State::DONE : State::CLEANUP;
