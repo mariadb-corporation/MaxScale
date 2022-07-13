@@ -34,6 +34,8 @@ then
     fi
 fi
 
-npm install --production
-npm install --production pkg@5
-node_modules/pkg/lib-es5/bin.js --options max_old_space_size=4096 $opts -t node10-linux .
+# Piping the output through `tee` works around a problem in npm where it always
+# prints verbose output: https://github.com/npm/cli/issues/3314
+npm install --production |& tee
+npm install --production pkg@5 |& tee
+node_modules/pkg/lib-es5/bin.js --options max_old_space_size=4096 $opts -t node10-linux . |& tee
