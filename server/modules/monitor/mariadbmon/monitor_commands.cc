@@ -1508,6 +1508,7 @@ bool RebuildServer::serve_backup()
     bool rval = false;
     if (cmd_handle)
     {
+        m_mon.m_cluster_modified = true;    // Starting mariabackup can affect server states.
         // Wait a bit, then check that command started successfully and is still running.
         sleep(1);
         auto status = cmd_handle->update_status();
@@ -1809,6 +1810,7 @@ bool RebuildServer::start_target()
             && run_cmd_on_target("sudo systemctl start mariadb", "start MariaDB Server"))
         {
             server_started = true;
+            m_mon.m_cluster_modified = true;
         }
     }
     else

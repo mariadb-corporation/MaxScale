@@ -797,37 +797,45 @@ void MariaDBMonitor::process_state_changes()
         }
     }
 
-    if (m_settings.auto_failover)
+    // Run automatic operations. Only start an op if no op is currently running and cluster is
+    // stable.
+    if (!m_running_op && can_perform_cluster_ops())
     {
-        handle_auto_failover();
-    }
+        if (m_settings.auto_failover)
+        {
+            handle_auto_failover();
+        }
 
-    // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-    // has been performed, as server states have not been updated yet. It will happen next iteration.
-    if (m_settings.auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
-    {
-        // Check if any servers should be autojoined to the cluster and try to join them.
-        handle_auto_rejoin();
-    }
+        // Lock status or "passive" cannot change between these functions, but operation delay or
+        // modification state can.
 
-    /* Check if the master has read-only on and turn it off if user so wishes. */
-    if (m_settings.enforce_writable_master && can_perform_cluster_ops())
-    {
-        enforce_writable_on_master();
-    }
+        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+        // has been performed, as server states have not been updated yet. It will happen next iteration.
+        if (m_settings.auto_rejoin && cluster_can_be_joined() && !cluster_operations_disabled_short())
+        {
+            // Check if any servers should be autojoined to the cluster and try to join them.
+            handle_auto_rejoin();
+        }
 
-    /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-     * perform this if cluster has been modified this loop since it may not be clear which server
-     * should be a slave. */
-    if (m_settings.enforce_read_only_slaves && can_perform_cluster_ops())
-    {
-        enforce_read_only_on_slaves();
-    }
+        /* Check if the master server is on low disk space and act on it. */
+        if (m_settings.switchover_on_low_disk_space && !cluster_operations_disabled_short())
+        {
+            handle_low_disk_space_master();
+        }
 
-    /* Check if the master server is on low disk space and act on it. */
-    if (m_settings.switchover_on_low_disk_space && can_perform_cluster_ops())
-    {
-        handle_low_disk_space_master();
+        /* Check if the master has read-only on and turn it off if user so wishes. */
+        if (m_settings.enforce_writable_master && !cluster_operations_disabled_short())
+        {
+            enforce_writable_on_master();
+        }
+
+        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+         * perform this if cluster has been modified this loop since it may not be clear which server
+         * should be a slave. */
+        if (m_settings.enforce_read_only_slaves && !cluster_operations_disabled_short())
+        {
+            enforce_read_only_on_slaves();
+        }
     }
 
     m_state = State::MONITOR;
@@ -1133,7 +1141,8 @@ bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
 bool MariaDBMonitor::cluster_ops_configured() const
 {
     return m_settings.auto_failover || m_settings.auto_rejoin
-           || m_settings.enforce_read_only_slaves || m_settings.switchover_on_low_disk_space;
+           || m_settings.enforce_read_only_slaves || m_settings.enforce_writable_master
+           || m_settings.switchover_on_low_disk_space;
 }
 
 namespace journal_fields

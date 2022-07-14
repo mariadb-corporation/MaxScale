@@ -1493,28 +1493,12 @@ void MariaDBMonitor::handle_auto_failover()
         return;
     }
 
-    if (cluster_operations_disabled_short())
-    {
-        // If cluster operations are temporarily disabled, try again next tick.
-        return;
-    }
-
     const int failcount = m_settings.failcount;
     const int master_down_count = m_master->mon_err_count;
-    const bool active = !mxs::Config::get().passive.get();
-    const bool locks_ok = lock_status_is_ok();
 
     if (m_warn_master_down)
     {
-        // Warn that master is down. If failover is not possible due to a likely persisting reason,
-        // explain it.
-        if (!active || !locks_ok)
-        {
-            string reason = !active ? "MaxScale is in passive mode." :
-                "monitor does not have exclusive locks on a majority of servers.";
-            MXB_WARNING("Master has failed, but failover is disabled because %s", reason.c_str());
-        }
-        else if (failcount > 1 && master_down_count < failcount)
+        if (failcount > 1 && master_down_count < failcount)
         {
             // Failover is not happening yet but likely soon will.
             int ticks_until = failcount - master_down_count;
@@ -1524,58 +1508,55 @@ void MariaDBMonitor::handle_auto_failover()
         m_warn_master_down = false;
     }
 
-    if (active && master_down_count >= failcount)
+    if (master_down_count >= failcount)
     {
         // Master has been down long enough.
-        if (locks_ok)
+        bool slave_verify_ok = true;
+        if (m_settings.verify_master_failure)
         {
-            bool slave_verify_ok = true;
-            if (m_settings.verify_master_failure)
+            Duration event_age;
+            Duration delay_time;
+            auto connected_slave = slave_receiving_events(m_master, &event_age, &delay_time);
+            if (connected_slave)
             {
-                Duration event_age;
-                Duration delay_time;
-                auto connected_slave = slave_receiving_events(m_master, &event_age, &delay_time);
-                if (connected_slave)
-                {
-                    slave_verify_ok = false;
-                    MXB_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat "
-                               "event %.1f seconds ago. Delaying failover for at least %.1f seconds.",
-                               connected_slave->name(), m_master->name(),
-                               mxb::to_secs(event_age), mxb::to_secs(delay_time));
-                }
+                slave_verify_ok = false;
+                MXB_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat "
+                           "event %.1f seconds ago. Delaying failover for at least %.1f seconds.",
+                           connected_slave->name(), m_master->name(),
+                           mxb::to_secs(event_age), mxb::to_secs(delay_time));
             }
+        }
 
-            if (slave_verify_ok)
+        if (slave_verify_ok)
+        {
+            // Failover is required, but first we should check if preconditions are met.
+            Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
+            mxb::Json dummy(mxb::Json::Type::UNDEFINED);
+            auto op = failover_prepare(log_mode, OpStart::AUTO, dummy);
+            if (op)
             {
-                // Failover is required, but first we should check if preconditions are met.
-                Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-                mxb::Json dummy(mxb::Json::Type::UNDEFINED);
-                auto op = failover_prepare(log_mode, OpStart::AUTO, dummy);
-                if (op)
+                m_warn_failover_precond = true;
+                MXB_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                           m_master->name());
+                if (failover_perform(*op))
                 {
-                    m_warn_failover_precond = true;
-                    MXB_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                               m_master->name());
-                    if (failover_perform(*op))
-                    {
-                        MXB_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
-                    }
-                    else
-                    {
-                        MXB_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
-                        delay_auto_cluster_ops();
-                    }
+                    MXB_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
                 }
                 else
                 {
-                    // Failover was not attempted because of errors, however these errors are not permanent.
-                    // Servers were not modified, so it's ok to try this again.
-                    if (m_warn_failover_precond)
-                    {
-                        MXB_WARNING("Not performing automatic failover. Will keep retrying with most "
-                                    "error messages suppressed.");
-                        m_warn_failover_precond = false;
-                    }
+                    MXB_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
+                    delay_auto_cluster_ops();
+                }
+            }
+            else
+            {
+                // Failover was not attempted because of errors, however these errors are not permanent.
+                // Servers were not modified, so it's ok to try this again.
+                if (m_warn_failover_precond)
+                {
+                    MXB_WARNING("Not performing automatic failover. Will keep retrying with most "
+                                "error messages suppressed.");
+                    m_warn_failover_precond = false;
                 }
             }
         }
