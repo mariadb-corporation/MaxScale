@@ -162,6 +162,8 @@ export default {
                 FAILOVER,
                 CS_STOP_CLUSTER,
                 CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
             } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case RESET_REP:
@@ -174,6 +176,9 @@ export default {
                     return 'stop'
                 case CS_START_CLUSTER:
                     return 'start'
+                case CS_SET_READWRITE:
+                case CS_SET_READONLY:
+                    return 'set'
                 default:
                     return this.confDlg.type
             }
@@ -190,10 +195,17 @@ export default {
             )
         },
         hasTimeout() {
-            const { CS_STOP_CLUSTER, CS_START_CLUSTER } = this.MONITOR_OP_TYPES
+            const {
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
+            } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case CS_STOP_CLUSTER:
                 case CS_START_CLUSTER:
+                case CS_SET_READWRITE:
+                case CS_SET_READONLY:
                     return true
                 default:
                     return false
@@ -215,6 +227,8 @@ export default {
                 FAILOVER,
                 CS_STOP_CLUSTER,
                 CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
             } = this.MONITOR_OP_TYPES
             let ops = [this.allOps[STOP], this.allOps[START], this.allOps[DESTROY]]
             if (this.monitorModule === 'mariadbmon') {
@@ -232,11 +246,19 @@ export default {
                         { subheader: this.$t('csOps') },
                         {
                             ...this.allOps[CS_STOP_CLUSTER],
-                            disabled: this.is_loading_cs_status || this.isClusterStopped,
+                            disabled: this.isClusterStopped,
                         },
                         {
                             ...this.allOps[CS_START_CLUSTER],
-                            disabled: this.is_loading_cs_status || !this.isClusterStopped,
+                            disabled: !this.isClusterStopped,
+                        },
+                        {
+                            ...this.allOps[CS_SET_READONLY],
+                            disabled: this.isClusterReadonly,
+                        },
+                        {
+                            ...this.allOps[CS_SET_READWRITE],
+                            disabled: !this.isClusterReadonly,
                         },
                     ]
                 }
@@ -252,7 +274,16 @@ export default {
             return nodes
         },
         isClusterStopped() {
-            return Object.values(this.csNodes).every(v => v.services.length === 0)
+            return (
+                this.is_loading_cs_status ||
+                Object.values(this.csNodes).every(v => v.services.length === 0)
+            )
+        },
+        isClusterReadonly() {
+            return (
+                this.is_loading_cs_status ||
+                Object.values(this.csNodes).every(v => v.cluster_mode === 'readonly')
+            )
         },
     },
     watch: {
@@ -313,6 +344,8 @@ export default {
                 FAILOVER,
                 CS_STOP_CLUSTER,
                 CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
             } = this.MONITOR_OP_TYPES
             let payload = {
                 id: this.targetMonitor.id,
@@ -366,7 +399,32 @@ export default {
                             params: `&${this.confDlg.timeout}`,
                         },
                     }
-
+                    break
+                }
+                case CS_SET_READWRITE:
+                case CS_SET_READONLY: {
+                    const mode = payload.type === CS_SET_READONLY ? 'readonly' : 'readwrite'
+                    payload = {
+                        ...payload,
+                        pollingResInterval: 1000,
+                        custAsyncCmdDone: async meta => {
+                            const action = this.$t(`monitorOps.actions.${payload.type}`)
+                            let msgs = [],
+                                msgType = 'success'
+                            if (meta['cluster-mode'] === mode) msgs = [`${action} successfully`]
+                            else {
+                                msgs = [`Failed to ${action}`]
+                                msgType = 'error'
+                            }
+                            this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
+                            await this.successCb()
+                            await this.fetchCsStatus()
+                        },
+                        opParams: {
+                            moduleType: this.monitorModule,
+                            params: `&${this.confDlg.timeout}`,
+                        },
+                    }
                     break
                 }
             }
@@ -380,6 +438,7 @@ export default {
 ::v-deep.op-item {
     &--disabled {
         .node-op-item__icon {
+            color: rgba(0, 0, 0, 0.26) !important;
             svg {
                 color: rgba(0, 0, 0, 0.26) !important;
             }

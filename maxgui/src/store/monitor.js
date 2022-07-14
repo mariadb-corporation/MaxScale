@@ -203,6 +203,8 @@ export default {
                     CS_GET_STATUS,
                     CS_STOP_CLUSTER,
                     CS_START_CLUSTER,
+                    CS_SET_READONLY,
+                    CS_SET_READWRITE,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -223,7 +225,9 @@ export default {
                     case REJOIN:
                     case CS_GET_STATUS:
                     case CS_STOP_CLUSTER:
-                    case CS_START_CLUSTER: {
+                    case CS_START_CLUSTER:
+                    case CS_SET_READONLY:
+                    case CS_SET_READWRITE: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -242,6 +246,8 @@ export default {
                         case CS_GET_STATUS:
                         case CS_STOP_CLUSTER:
                         case CS_START_CLUSTER:
+                        case CS_SET_READONLY:
+                        case CS_SET_READWRITE:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -468,6 +474,8 @@ export default {
                 CS_GET_STATUS,
                 CS_STOP_CLUSTER,
                 CS_START_CLUSTER,
+                CS_SET_READONLY,
+                CS_SET_READWRITE,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
@@ -548,6 +556,22 @@ export default {
                     type: CS_START_CLUSTER,
                     icon: '$vuetify.icons.running',
                     iconSize: 22,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [CS_SET_READONLY]: {
+                    type: CS_SET_READONLY,
+                    text: scope.$t(`monitorOps.actions.${CS_SET_READONLY}`),
+                    icon: 'mdi-database-eye-outline',
+                    iconSize: 24,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [CS_SET_READWRITE]: {
+                    type: CS_SET_READWRITE,
+                    text: scope.$t(`monitorOps.actions.${CS_SET_READWRITE}`),
+                    icon: 'mdi-database-edit-outline',
+                    iconSize: 24,
                     color: 'primary',
                     disabled: false,
                 },
