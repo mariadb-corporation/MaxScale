@@ -504,36 +504,6 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
                  qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
                  || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
     {
-        /**
-         * This is problematic query because it would be routed to all
-         * backends but since this is SELECT that is not possible:
-         * 1. response set is not handled correctly in clientReply and
-         * 2. multiple results can degrade performance.
-         *
-         * Prepared statements are an exception to this since they do not
-         * actually do anything but only prepare the statement to be used.
-         * They can be safely routed to all backends since the execution
-         * is done later.
-         *
-         * With prepared statement caching the task of routing
-         * the execution of the prepared statements to the right server would be
-         * an easy one. Currently this is not supported.
-         */
-        if (qc_query_is_type(qtype, QUERY_TYPE_READ))
-        {
-            if (m_log == Log::ALL)
-            {
-                MXB_WARNING("The query can't be routed to all "
-                            "backend servers because it includes SELECT and "
-                            "SQL variable modifications which is not supported. "
-                            "Set use_sql_variables_in=master or split the "
-                            "query to two, where SQL variable modifications "
-                            "are done in the first and the SELECT in the "
-                            "second one.");
-            }
-
-            target = TARGET_MASTER;
-        }
         target |= TARGET_ALL;
     }
     /**

@@ -160,32 +160,50 @@ replication state changes.
 - **Values**: `master`, `all`
 - **Default**: `all`
 
-**`use_sql_variables_in`** specifies where should queries, which read session
-variable, be routed. The syntax for `use_sql_variable_in` is:
+This parameter controls how `SELECT` statements that use SQL user variables are
+handled. Here is an example of such a query that uses it to return an increasing
+row number for a resultset:
 
-    use_sql_variables_in=[master|all]
-
-The default is to use SQL variables in all servers.
-
-When value `all` is used, queries reading session variables can be routed to any
-available slave (depending on selection criteria). Queries modifying session
-variables are routed to all backend servers by default, excluding write queries
-with embedded session variable modifications, such as:
-
-    INSERT INTO test.t1 VALUES (@myid:=@myid+1)
-
-In above-mentioned case the user-defined variable would only be updated in the
-master where the query would be routed to due to the `INSERT` statement.
-
+```sql
+SET @rownum := 0;
+SELECT @rownum := @rownum + 1 AS rownum, user, host FROM mysql.user;
 ```
-[Splitter-Service]
-type=service
-router=readwritesplit
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-password=96F99AA1315BDC3604B006F427DD9484
-disable_sescmd_history=true
-master_failure_mode=fail_on_write
+
+By default MaxScale will route both the `SET` and `SELECT` statements to all
+nodes. Any future reads of the user variables can also be performed on any node.
+
+The possible values for this parameter are:
+
+* `all` (default)
+
+  * Modifications to user variables inside `SELECT` statements as well as reads
+    of user variables are routed to all servers.
+
+    Versions before MaxScale 22.08 returned an error if a user variable was
+    modified inside of a `SELECT` statement when `use_sql_variables_in=all` was
+    used. MaxScale 22.08 will instead route the query to all servers and discard
+    the extra results.
+
+* `master`
+
+  * Modifications to user variables inside `SELECT` statements as well as reads
+    of user variables are routed to the master server. This forces more of the
+    traffic onto the master server but it reduces the amount of data that is
+    discarded for any `SELECT` statement that also modifies a user
+    variable. With this mode, the state of user variables is not deterministic
+    if they are modified inside of a `SELECT` statement. `SET` statements that
+    modify user variabels are still routed to all servers.
+
+DML statements, such as `INSERT`, `UPDATE` or `DELETE`, that modify SQL user
+variables are still treated as writes and are only routed to the master
+server. For example, after the following query the value of `@myid` is no longer
+the same on all servers and the `SELECT` statement can return different values
+depending where it ends up being executed:
+
+```sql
+SET @myid := 0;
+INSERT INTO test.t1 VALUES (@myid := @myid + 1);
+SELECT @myid; -- Might return 1 or 0
 ```
 
 ### `connection_keepalive`
