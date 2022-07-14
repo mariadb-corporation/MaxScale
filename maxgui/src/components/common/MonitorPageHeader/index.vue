@@ -8,6 +8,13 @@
             <v-list class="color bg-color-background py-0">
                 <template v-for="(op, i) in monitorOps">
                     <v-divider v-if="op.divider" :key="`divider-${i}`" />
+                    <v-subheader
+                        v-else-if="op.subheader"
+                        :key="op.subheader"
+                        class="pl-2 pr-4 font-weight-medium op-subheader"
+                    >
+                        {{ op.subheader }}
+                    </v-subheader>
                     <v-list-item
                         v-else
                         :key="op.text"
@@ -222,6 +229,7 @@ export default {
                     ops = [
                         ...ops,
                         { divider: true },
+                        { subheader: this.$t('csOps') },
                         {
                             ...this.allOps[CS_STOP_CLUSTER],
                             disabled: this.is_loading_cs_status || this.isClusterStopped,
@@ -380,5 +388,8 @@ export default {
             color: rgba(0, 0, 0, 0.26) !important;
         }
     }
+}
+.op-subheader {
+    height: 32px;
 }
 </style>
