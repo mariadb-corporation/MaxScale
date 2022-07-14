@@ -1016,7 +1016,7 @@ bool ServerEndpoint::connect()
     }
     else if (res.conn_limit_reached)
     {
-        if (m_session->pooling_time_ms() > 0)
+        if (m_session->pooling_time_ms() >= 0)
         {
             // Connection count limit exceeded, but pre-emptive pooling is on. Assume that a
             // connection will soon be available. Add an entry to the worker so that the endpoint can

@@ -385,14 +385,24 @@ void Session::set_can_pool_backends(bool value)
 {
     if (value)
     {
-        if (m_pooling_time_ms > 0)
+        if (m_pooling_time_ms >= 0)
         {
             // If pooling check was already scheduled, do nothing. This likely only happens when killing
             // an idle session.
             if (m_idle_pool_call_id == mxb::Worker::NO_CALL)
             {
-                m_idle_pool_call_id = m_worker->dcall(m_pooling_time_ms, &Session::pool_backends_cb,
-                                                      this);
+                if (m_pooling_time_ms > 0)
+                {
+                    m_idle_pool_call_id = m_worker->dcall(m_pooling_time_ms, &Session::pool_backends_cb,
+                                                          this);
+                }
+                else
+                {
+                    auto func = [this]() {
+                        pool_backends_cb(Worker::Call::action_t::EXECUTE);
+                    };
+                    m_worker->lcall(std::move(func));
+                }
             }
         }
     }
@@ -688,11 +698,7 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
 
     // Pooling time is pinned at session creation. Service config changes will not affect it.
     auto pooling_time = svc_config.idle_session_pooling_time.count();
-    if (pooling_time == 0)
-    {
-        m_pooling_time_ms = 1;      // Quickly check for idle sessions.
-    }
-    else if (pooling_time > 0)
+    if (pooling_time >= 0)
     {
         m_pooling_time_ms = pooling_time;
     }
@@ -1720,7 +1726,7 @@ bool Session::is_movable() const
     }
 
     // Do not move a session which may be waiting for a connection.
-    return m_pooling_time_ms == 0;
+    return m_pooling_time_ms < 0;
 }
 
 void Session::notify_userdata_change()
