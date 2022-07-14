@@ -77,6 +77,19 @@
                 :smallInfo="confDlg.smallInfo"
                 :onSave="onConfirm"
             >
+                <template v-slot:body-append>
+                    <template v-if="hasTimeout">
+                        <duration-dropdown
+                            :duration="confDlg.timeout"
+                            :label="$t('timeout')"
+                            :height="36"
+                            :validationHandler="validateTimeout"
+                            hide-details="auto"
+                            required
+                            @change="confDlg.timeout = $event"
+                        />
+                    </template>
+                </template>
             </confirm-dialog>
         </template>
     </details-page-title>
@@ -121,6 +134,7 @@ export default {
                 type: '',
                 targetNode: null,
                 smallInfo: '',
+                timeout: '1m',
             },
         }
     },
@@ -167,6 +181,16 @@ export default {
             return Boolean(
                 this.$typy(this.targetMonitor, 'attributes.parameters.cs_admin_api_key').safeString
             )
+        },
+        hasTimeout() {
+            const { CS_STOP_CLUSTER, CS_START_CLUSTER } = this.MONITOR_OP_TYPES
+            switch (this.confDlg.type) {
+                case CS_STOP_CLUSTER:
+                case CS_START_CLUSTER:
+                    return true
+                default:
+                    return false
+            }
         },
         allOps() {
             return this.getMonitorOps({ currState: this.state, scope: this })
@@ -226,7 +250,11 @@ export default {
     watch: {
         'confDlg.isOpened'(v) {
             if (v) this.$emit('is-calling-op', true)
-            else this.$emit('is-calling-op', false)
+            else {
+                this.$emit('is-calling-op', false)
+                // reset states to its initial state
+                this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+            }
         },
     },
     async created() {
@@ -250,6 +278,13 @@ export default {
                 isOpened: true,
             }
             this.$emit('chosen-op-type', type)
+        },
+        validateTimeout(v) {
+            if (this.$typy(v).isEmptyString)
+                return this.$t('errors.requiredInput', { inputName: this.$t('timeout') })
+            else if (v <= 0)
+                return this.$t('errors.largerThanZero', { inputName: this.$t('timeout') })
+            return true
         },
         async fetchCsStatus() {
             await this.handleFetchCsStatus({
@@ -318,8 +353,10 @@ export default {
                             this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
                             await this.successCb()
                         },
-                        //TODO: create a timeout input in the confirm dialog
-                        opParams: { moduleType: this.monitorModule, params: '&1m' },
+                        opParams: {
+                            moduleType: this.monitorModule,
+                            params: `&${this.confDlg.timeout}`,
+                        },
                     }
 
                     break
