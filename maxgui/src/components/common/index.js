@@ -35,6 +35,7 @@ import RepTooltip from './RepTooltip'
 import RefreshRate from './RefreshRate'
 import SessionsTable from './SessionsTable'
 import MonitorPageHeader from './MonitorPageHeader'
+import DurationDropdown from './DurationDropdown'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -59,4 +60,5 @@ export default {
     'refresh-rate': RefreshRate,
     'sessions-table': SessionsTable,
     'monitor-page-header': MonitorPageHeader,
+    'duration-dropdown': DurationDropdown,
 }

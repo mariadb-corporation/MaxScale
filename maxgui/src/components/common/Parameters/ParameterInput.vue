@@ -142,7 +142,7 @@
                     offsetY: true,
                 }"
                 :clearable="targetItem.type === 'size'"
-                :items="targetItem.type === 'duration' ? durationSuffixes : sizeSuffixes"
+                :items="targetItem.type === 'duration' ? DURATION_SUFFIXES : sizeSuffixes"
                 outlined
                 dense
                 :height="36"
@@ -213,6 +213,7 @@ This component accepts these optional props:
 Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
 */
+import { mapState } from 'vuex'
 export default {
     name: 'parameter-input',
     props: {
@@ -232,11 +233,15 @@ export default {
                 requiredFieldEither: [val => this.handleRequiredFieldEither(val)],
             },
             renderCount: 0,
-            durationSuffixes: ['ms', 's', 'm', 'h'],
             sizeSuffixes: ['Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'],
             chosenSuffix: null,
             isPwdVisible: false,
         }
+    },
+    computed: {
+        ...mapState({
+            DURATION_SUFFIXES: state => state.app_config.DURATION_SUFFIXES,
+        }),
     },
     watch: {
         'targetItem.value'() {
@@ -248,7 +253,7 @@ export default {
         },
         chosenSuffix: function(newSuffix, oldSuffix) {
             if (oldSuffix && this.targetItem.value !== null) {
-                if (this.durationSuffixes.includes(newSuffix)) {
+                if (this.DURATION_SUFFIXES.includes(newSuffix)) {
                     this.targetItem.value = this.durationSuffixSwapper(
                         newSuffix,
                         oldSuffix,
@@ -340,7 +345,7 @@ export default {
                     : parseInt(result.value)
             } else {
                 typeof result.value !== 'string' && (result.value = result.value.toString())
-                let suffixInfo = this.$help.getSuffixFromValue(param, this.durationSuffixes)
+                let suffixInfo = this.$help.getSuffixFromValue(param, this.DURATION_SUFFIXES)
                 if (suffixInfo.suffix) {
                     this.chosenSuffix = suffixInfo.suffix
                     result.value = result.value.slice(0, suffixInfo.indexOfSuffix)

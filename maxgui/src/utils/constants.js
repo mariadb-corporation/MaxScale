@@ -207,4 +207,5 @@ export const APP_CONFIG = Object.freeze({
     }),
     USER_ROLES: Object.freeze({ ADMIN: 'admin', BASIC: 'basic' }),
     USER_ADMIN_ACTIONS: Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' }),
+    DURATION_SUFFIXES: ['ms', 's', 'm', 'h'],
 })
