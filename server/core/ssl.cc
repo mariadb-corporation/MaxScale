@@ -214,19 +214,11 @@ bool SSLContext::init()
             return false;
         }
 
-        if (SSL_CTX_build_cert_chain(m_ctx, SSL_BUILD_CHAIN_FLAG_CHECK) != 1)
+        if (SSL_CTX_build_cert_chain(m_ctx, SSL_BUILD_CHAIN_FLAG_CHECK
+                                     | SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR
+                                     | SSL_BUILD_CHAIN_FLAG_CLEAR_ERROR) == 0)
         {
-            std::string err = get_ssl_errors();
-            std::string extra;
-
-            if (err.find("ssl_build_cert_chain:certificate verify failed") != std::string::npos)
-            {
-                extra = ". This is expected for certificates that do "
-                        "not contain the whole certificate chain.";
-            }
-
-            MXB_NOTICE("OpenSSL reported problems in the certificate chain: %s%s",
-                       err.c_str(), extra.c_str());
+            MXB_ERROR("Failed to build certificate chain: %s", get_ssl_errors());
         }
 
 #ifdef OPENSSL_1_1
