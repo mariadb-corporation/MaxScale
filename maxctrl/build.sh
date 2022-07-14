@@ -34,6 +34,6 @@ then
     fi
 fi
 
-npm install --production
-npm install --production pkg@5
-npx pkg --options max_old_space_size=4096 $opts -t node14-linux .
+npm install --production |& tee
+npm install --production pkg@5 |& tee
+npx pkg --options max_old_space_size=4096 $opts -t node14-linux . |& tee
