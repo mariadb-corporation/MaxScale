@@ -147,7 +147,7 @@ export default {
                     'editorSuggestWidget.background': '#ffffff',
                     'editorSuggestWidget.border': '#e7eef1',
                     'editorSuggestWidget.foreground': '#525a65',
-                    'editorSuggestWidget.selectedBackground': '#f2fcff',
+                    'editorSuggestWidget.selectedBackground': '#0e9bc0',
                     'editorSuggestWidget.highlightForeground': '#0e9bc0',
                     'editor.lineHighlightBackground': '#ffffff',
                 },
