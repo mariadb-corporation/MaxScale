@@ -157,10 +157,18 @@ void test_mxs3915(TestConnections& test)
     c.query("SET autocommit=0");
     c.query("COMMIT");
     c.query("SET autocommit=1");
-    auto id = c.field("SELECT @@server_id");
 
     test.repl->connect();
     auto master_id = test.repl->get_server_id_str(0);
+
+    auto id = c.field("SELECT @@server_id");
+
+    for (int i = 0; i < 10 && id == master_id; i++)
+    {
+        sleep(1);
+        id = c.field("SELECT @@server_id");
+    }
+
     test.expect(id != master_id, "SELECT was routed to master after re-enabling autocommit");
 }
 

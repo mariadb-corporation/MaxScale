@@ -16,7 +16,9 @@ fi
 
 cd $PWD/maxgui
 
+# Piping the output through `tee` works around a problem in npm where it always
+# prints verbose output: https://github.com/npm/cli/issues/3314
 export buildPath=$PWD
 export VUE_APP_GIT_COMMIT=$(cd $src && git rev-list --max-count=1 HEAD)
-npm ci --production
-npm run build
+npm ci --production |& tee
+npm run build |& tee
