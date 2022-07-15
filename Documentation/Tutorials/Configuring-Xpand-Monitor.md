@@ -1,8 +1,5 @@
 # Configuring the Xpand Monitor
 
-**NOTE** The Xpand monitor is intended for use with a native Xpand
-cluster, not with the Xpand storage engine.
-
 This document describes how to configure the Xpand monitor for use
 with a Xpand cluster.
 
