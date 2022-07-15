@@ -1,8 +1,5 @@
 # MaxScale and Xpand Tutorial
 
-**NOTE** The Xpand monitor is intended for use with a native Xpand
-cluster, not with the Xpand storage engine.
-
 Since version 2.4, MaxScale has built-in support for Xpand. This
 tutorial explains how to setup MaxScale in front of a Xpand
 cluster.

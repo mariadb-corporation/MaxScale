@@ -1,8 +1,5 @@
 # Xpand Monitor
 
-**NOTE** The Xpand monitor is intended for use with a native Xpand
-cluster, not with the Xpand storage engine.
-
 ## Overview
 
 The Xpand Monitor is a monitor that monitors a Xpand cluster. It is
