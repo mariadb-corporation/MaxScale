@@ -83,6 +83,7 @@
                 :item="confDlg.targetNode"
                 :smallInfo="confDlg.smallInfo"
                 :onSave="onConfirm"
+                minBodyWidth="500px"
             >
                 <template v-slot:body-append>
                     <template v-if="hasTimeout">
@@ -334,6 +335,52 @@ export default {
                 pollingResInterval: 1000,
             })
         },
+        /**
+         *
+         * @param {String} param.type - operation type. Check MONITOR_OP_TYPES
+         * @param {Object} param.meta - meta data.
+         */
+        validateRes({ type, meta }) {
+            const {
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
+            } = this.MONITOR_OP_TYPES
+            switch (type) {
+                case CS_STOP_CLUSTER:
+                case CS_START_CLUSTER:
+                    return (
+                        (type === CS_STOP_CLUSTER && this.isClusterStopped) ||
+                        (type === CS_START_CLUSTER && !this.isClusterStopped)
+                    )
+                case CS_SET_READWRITE:
+                case CS_SET_READONLY: {
+                    return (
+                        (type === CS_SET_READONLY && meta['cluster-mode'] === 'readonly') ||
+                        (type === CS_SET_READWRITE && meta['cluster-mode'] === 'readwrite')
+                    )
+                }
+            }
+        },
+        /**
+         * @param {String} opType - operation type. Check MONITOR_OP_TYPES
+         */
+        csOpParamsCreator(opType) {
+            const {
+                CS_STOP_CLUSTER,
+                CS_START_CLUSTER,
+                CS_SET_READWRITE,
+                CS_SET_READONLY,
+            } = this.MONITOR_OP_TYPES
+            switch (opType) {
+                case CS_STOP_CLUSTER:
+                case CS_START_CLUSTER:
+                case CS_SET_READWRITE:
+                case CS_SET_READONLY:
+                    return `&${this.confDlg.timeout}`
+            }
+        },
         async onConfirm() {
             const {
                 STOP,
@@ -347,12 +394,13 @@ export default {
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
             } = this.MONITOR_OP_TYPES
+            const type = this.confDlg.opType
             let payload = {
                 id: this.targetMonitor.id,
-                type: this.confDlg.opType,
+                type,
                 successCb: this.successCb,
             }
-            switch (this.confDlg.opType) {
+            switch (type) {
                 case RESET_REP:
                 case RELEASE_LOCKS:
                 case FAILOVER: {
@@ -370,63 +418,31 @@ export default {
                     payload = { ...payload, successCb: this.goBack }
                     break
                 case CS_STOP_CLUSTER:
-                case CS_START_CLUSTER: {
-                    const cmdType = this.confDlg.opType === CS_STOP_CLUSTER ? 'stop' : 'start'
-                    payload = {
-                        ...payload,
-                        custAsyncCmdDone: async () => {
-                            await this.fetchCsStatus()
-                            let msgs = [],
-                                msgType = 'success'
-                            if (
-                                (cmdType === 'stop' && this.isClusterStopped) ||
-                                (cmdType === 'start' && !this.isClusterStopped)
-                            ) {
-                                msgs = [
-                                    `${this.$help.capitalizeFirstLetter(
-                                        cmdType
-                                    )}  cluster successfully`,
-                                ]
-                            } else {
-                                msgs = [`Failed to ${cmdType} cluster`]
-                                msgType = 'error'
-                            }
-                            this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
-                            await this.successCb()
-                        },
-                        opParams: {
-                            moduleType: this.monitorModule,
-                            params: `&${this.confDlg.timeout}`,
-                        },
-                    }
-                    break
-                }
+                case CS_START_CLUSTER:
                 case CS_SET_READWRITE:
-                case CS_SET_READONLY: {
-                    const mode = payload.type === CS_SET_READONLY ? 'readonly' : 'readwrite'
+                case CS_SET_READONLY:
                     payload = {
                         ...payload,
                         pollingResInterval: 1000,
                         custAsyncCmdDone: async meta => {
                             const action = this.$t(`monitorOps.actions.${payload.type}`)
+                            await this.fetchCsStatus()
                             let msgs = [],
                                 msgType = 'success'
-                            if (meta['cluster-mode'] === mode) msgs = [`${action} successfully`]
+                            if (this.validateRes({ type, meta })) msgs = [`${action} successfully`]
                             else {
                                 msgs = [`Failed to ${action}`]
                                 msgType = 'error'
                             }
                             this.SET_SNACK_BAR_MESSAGE({ text: msgs, type: msgType })
                             await this.successCb()
-                            await this.fetchCsStatus()
                         },
                         opParams: {
                             moduleType: this.monitorModule,
-                            params: `&${this.confDlg.timeout}`,
+                            params: this.csOpParamsCreator(type),
                         },
                     }
                     break
-                }
             }
             await this.manipulateMonitor(payload)
         },
