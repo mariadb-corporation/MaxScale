@@ -2,6 +2,42 @@
 
 set -e
 
+# We need python3
+if ! command -v python3
+then
+    . /etc/os-release
+
+    function install_yum {
+        sudo yum install -y python3
+    }
+
+    function install_apt {
+        sudo apt-get update && sudo apt-get -y install python3
+    }
+
+    case $ID in
+        rhel)
+            install_yum
+            ;;
+        centos)
+            install_yum
+            ;;
+        rocky)
+            install_yum
+            ;;
+        debian)
+            install_apt
+            ;;
+        ubuntu)
+            install_apt
+            ;;
+        *)
+            echo "Don't know how to install Python3 for $ID"
+            exit 1
+            ;;
+    esac
+fi
+
 # Set up a virtual python environments: this allows packages to be installed
 # without a need for root access.
 python3 -m venv /tmp/venv
