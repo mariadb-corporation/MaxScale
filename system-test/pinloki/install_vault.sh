@@ -47,6 +47,8 @@ Description="Vault dev server"
 
 [Service]
 ExecStart=$(command -v vault) server -dev
+User=$(whoami)
+WorkingDirectory=$HOME
 
 [Install]
 WantedBy=default.target
