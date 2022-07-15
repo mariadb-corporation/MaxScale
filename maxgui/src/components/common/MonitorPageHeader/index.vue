@@ -296,9 +296,12 @@ export default {
                 this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
             }
         },
-    },
-    async created() {
-        if (this.shouldFetchCsStatus) await this.fetchCsStatus()
+        'targetMonitor.id': {
+            immediate: true,
+            async handler() {
+                if (this.shouldFetchCsStatus) await this.fetchCsStatus()
+            },
+        },
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE' }),
