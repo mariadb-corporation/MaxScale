@@ -15,15 +15,16 @@ export default {
     namespaced: true,
     state: {
         all_servers: [],
+        all_server_names: [],
         current_server: {},
         server_connections_datasets: [],
     },
     mutations: {
-        /**
-         * @param {Array} payload // List of server resources
-         */
         SET_ALL_SERVERS(state, payload) {
             state.all_servers = payload
+        },
+        SET_ALL_SERVER_NAMES(state, payload) {
+            state.all_server_names = payload
         },
         SET_CURRENT_SERVER(state, payload) {
             state.current_server = payload
@@ -36,13 +37,23 @@ export default {
         async fetchAllServers({ commit }) {
             try {
                 let res = await this.$http.get(`/servers`)
-                if (res.data.data) {
-                    let sorted = res.data.data
-                    commit('SET_ALL_SERVERS', sorted)
-                }
+                if (res.data.data) commit('SET_ALL_SERVERS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-server-fetchAllServers')
                 logger.error(e)
+            }
+        },
+
+        async fetchAllServerNames({ commit }) {
+            try {
+                let res = await this.$http.get(`/servers?fields[servers]=name`)
+                if (res.data.data)
+                    commit(
+                        'SET_ALL_SERVER_NAMES',
+                        res.data.data.map(o => o.attributes.name)
+                    )
+            } catch (e) {
+                this.vue.$logger('store-server-fetchAllServerNames').error(e)
             }
         },
 

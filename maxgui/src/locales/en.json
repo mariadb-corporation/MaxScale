@@ -43,6 +43,7 @@
     "update": "Update",
     "actions": "Actions",
     "delete": "Delete",
+    "remove": "Remove",
     "unlink": "Unlink",
     "drain": "Drain",
     "clear": "Clear",
@@ -259,6 +260,8 @@
     "deleteSession": "Delete Session",
     "csStatus": "ColumnStore status",
     "csOps": "ColumnStore operations",
+    "hostname/IP": "Hostname/IP",
+    "selectNodeOrEnterIp": "Select a node or enter the IP of the node",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -300,6 +303,8 @@
         "async-cs-start-cluster": "Are you sure you want to start this ColumnStore cluster?",
         "async-cs-set-readonly": "Are you sure you want to set this ColumnStore cluster Read-Only?",
         "async-cs-set-readwrite": "Are you sure you want to set this ColumnStore cluster Read-Write?",
+        "async-cs-add-node": "Are you sure you want to add the following node into this ColumnStore cluster?",
+        "async-cs-remove-node": "Are you sure you want to remove the following node from this ColumnStore cluster?",
         "killSession": "Are you sure you want to kill this session?",
         "openScript": "<b>{targetId}</b> tab has unsaved changes, would you like to save it before opening <b>{fileNameToBeOpened}</b>?",
         "deleteSession": "<b>{targetId}</b> tab has unsaved changes, would you like to save it before deleting the session?"
@@ -348,7 +353,9 @@
             "async-cs-stop-cluster": "Stop cluster",
             "async-cs-start-cluster": "Start cluster",
             "async-cs-set-readonly": "Set cluster Read-Only",
-            "async-cs-set-readwrite": "Set cluster Read-Write"
+            "async-cs-set-readwrite": "Set cluster Read-Write",
+            "async-cs-add-node": "Add node to cluster",
+            "async-cs-remove-node": "Remove node from cluster"
         },
         "info": {
             "async-switchover": "Promote as Master (Switchover)",

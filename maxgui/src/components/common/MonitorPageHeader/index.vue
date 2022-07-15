@@ -86,6 +86,40 @@
                 minBodyWidth="500px"
             >
                 <template v-slot:body-append>
+                    <template
+                        v-if="
+                            confDlg.type === MONITOR_OP_TYPES.CS_REMOVE_NODE ||
+                                confDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE
+                        "
+                    >
+                        <label class="field__label color text-small-text label-required">
+                            {{ $t('hostname/IP') }}
+                        </label>
+                        <v-combobox
+                            v-model="confDlg.targetClusterNode"
+                            :items="
+                                confDlg.type === MONITOR_OP_TYPES.CS_REMOVE_NODE
+                                    ? currCsNodeIds
+                                    : all_server_names.filter(id => !currCsNodeIds.includes(id))
+                            "
+                            outlined
+                            dense
+                            class="std mariadb-select-input error--text__bottom mb-3"
+                            :menu-props="{
+                                contentClass: 'mariadb-select-v-menu',
+                                bottom: true,
+                                offsetY: true,
+                            }"
+                            :placeholder="$t('selectNodeOrEnterIp')"
+                            :height="36"
+                            :rules="[
+                                v =>
+                                    !!v ||
+                                    $t('errors.requiredInput', { inputName: $t('hostname/IP') }),
+                            ]"
+                            hide-details="auto"
+                        />
+                    </template>
                     <template v-if="hasTimeout">
                         <duration-dropdown
                             :duration="confDlg.timeout"
@@ -143,6 +177,7 @@ export default {
                 targetNode: null,
                 smallInfo: '',
                 timeout: '1m',
+                targetClusterNode: null,
             },
         }
     },
@@ -154,6 +189,7 @@ export default {
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
             curr_cs_status: state => state.monitor.curr_cs_status,
             is_loading_cs_status: state => state.monitor.is_loading_cs_status,
+            all_server_names: state => state.server.all_server_names,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         confDlgSaveTxt() {
@@ -165,6 +201,8 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case RESET_REP:
@@ -180,6 +218,10 @@ export default {
                 case CS_SET_READWRITE:
                 case CS_SET_READONLY:
                     return 'set'
+                case CS_ADD_NODE:
+                    return 'add'
+                case CS_REMOVE_NODE:
+                    return 'remove'
                 default:
                     return this.confDlg.type
             }
@@ -201,12 +243,16 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case CS_STOP_CLUSTER:
                 case CS_START_CLUSTER:
                 case CS_SET_READWRITE:
                 case CS_SET_READONLY:
+                case CS_ADD_NODE:
+                case CS_REMOVE_NODE:
                     return true
                 default:
                     return false
@@ -230,6 +276,8 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             let ops = [this.allOps[STOP], this.allOps[START], this.allOps[DESTROY]]
             if (this.monitorModule === 'mariadbmon') {
@@ -261,12 +309,14 @@ export default {
                             ...this.allOps[CS_SET_READWRITE],
                             disabled: !this.isClusterReadonly,
                         },
+                        this.allOps[CS_ADD_NODE],
+                        this.allOps[CS_REMOVE_NODE],
                     ]
                 }
             }
             return ops
         },
-        csNodes() {
+        currCsNodesData() {
             let nodes = {}
             Object.keys(this.curr_cs_status).forEach(key => {
                 const v = this.curr_cs_status[key]
@@ -274,17 +324,14 @@ export default {
             })
             return nodes
         },
+        currCsNodeIds() {
+            return Object.keys(this.currCsNodesData)
+        },
         isClusterStopped() {
-            return (
-                this.is_loading_cs_status ||
-                Object.values(this.csNodes).every(v => v.services.length === 0)
-            )
+            return Object.values(this.currCsNodesData).every(v => v.services.length === 0)
         },
         isClusterReadonly() {
-            return (
-                this.is_loading_cs_status ||
-                Object.values(this.csNodes).every(v => v.cluster_mode === 'readonly')
-            )
+            return Object.values(this.currCsNodesData).every(v => v.cluster_mode === 'readonly')
         },
     },
     watch: {
@@ -308,8 +355,9 @@ export default {
         ...mapActions({
             manipulateMonitor: 'monitor/manipulateMonitor',
             handleFetchCsStatus: 'monitor/handleFetchCsStatus',
+            fetchAllServerNames: 'server/fetchAllServerNames',
         }),
-        onChooseOp({ type, text, info, params }) {
+        async onChooseOp({ type, text, info, params }) {
             this.confDlg = {
                 ...this.confDlg,
                 type,
@@ -320,7 +368,7 @@ export default {
                 smallInfo: info,
                 isOpened: true,
             }
-            this.$emit('chosen-op-type', type)
+            if (type === this.MONITOR_OP_TYPES.CS_ADD_NODE) await this.fetchAllServerNames()
         },
         validateTimeout(v) {
             if (this.$typy(v).isEmptyString)
@@ -349,8 +397,18 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             switch (type) {
+                case CS_ADD_NODE:
+                case CS_REMOVE_NODE:
+                    return (
+                        (type === CS_REMOVE_NODE &&
+                            !this.currCsNodesData[this.confDlg.targetClusterNode]) ||
+                        (type === CS_ADD_NODE &&
+                            this.currCsNodesData[this.confDlg.targetClusterNode])
+                    )
                 case CS_STOP_CLUSTER:
                 case CS_START_CLUSTER:
                     return (
@@ -373,10 +431,15 @@ export default {
             const {
                 CS_STOP_CLUSTER,
                 CS_START_CLUSTER,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
             } = this.MONITOR_OP_TYPES
             switch (opType) {
+                case CS_ADD_NODE:
+                case CS_REMOVE_NODE:
+                    return `&${this.confDlg.targetClusterNode}&${this.confDlg.timeout}`
                 case CS_STOP_CLUSTER:
                 case CS_START_CLUSTER:
                 case CS_SET_READWRITE:
@@ -396,6 +459,8 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READWRITE,
                 CS_SET_READONLY,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             const type = this.confDlg.opType
             let payload = {
@@ -424,6 +489,8 @@ export default {
                 case CS_START_CLUSTER:
                 case CS_SET_READWRITE:
                 case CS_SET_READONLY:
+                case CS_ADD_NODE:
+                case CS_REMOVE_NODE:
                     payload = {
                         ...payload,
                         pollingResInterval: 1000,

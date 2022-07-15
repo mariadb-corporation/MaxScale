@@ -206,6 +206,8 @@ export const APP_CONFIG = Object.freeze({
         CS_START_CLUSTER: 'async-cs-start-cluster',
         CS_SET_READONLY: 'async-cs-set-readonly',
         CS_SET_READWRITE: 'async-cs-set-readwrite',
+        CS_ADD_NODE: 'async-cs-add-node',
+        CS_REMOVE_NODE: 'async-cs-remove-node',
     }),
     USER_ROLES: Object.freeze({ ADMIN: 'admin', BASIC: 'basic' }),
     USER_ADMIN_ACTIONS: Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' }),

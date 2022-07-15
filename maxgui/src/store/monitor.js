@@ -205,6 +205,8 @@ export default {
                     CS_START_CLUSTER,
                     CS_SET_READONLY,
                     CS_SET_READWRITE,
+                    CS_ADD_NODE,
+                    CS_REMOVE_NODE,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -227,7 +229,9 @@ export default {
                     case CS_STOP_CLUSTER:
                     case CS_START_CLUSTER:
                     case CS_SET_READONLY:
-                    case CS_SET_READWRITE: {
+                    case CS_SET_READWRITE:
+                    case CS_ADD_NODE:
+                    case CS_REMOVE_NODE: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -248,6 +252,8 @@ export default {
                         case CS_START_CLUSTER:
                         case CS_SET_READONLY:
                         case CS_SET_READWRITE:
+                        case CS_ADD_NODE:
+                        case CS_REMOVE_NODE:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -476,6 +482,8 @@ export default {
                 CS_START_CLUSTER,
                 CS_SET_READONLY,
                 CS_SET_READWRITE,
+                CS_ADD_NODE,
+                CS_REMOVE_NODE,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
@@ -573,6 +581,22 @@ export default {
                     icon: 'mdi-database-edit-outline',
                     iconSize: 24,
                     color: 'primary',
+                    disabled: false,
+                },
+                [CS_ADD_NODE]: {
+                    type: CS_ADD_NODE,
+                    text: scope.$t(`monitorOps.actions.${CS_ADD_NODE}`),
+                    icon: 'mdi-plus',
+                    iconSize: 24,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [CS_REMOVE_NODE]: {
+                    type: CS_REMOVE_NODE,
+                    text: scope.$t(`monitorOps.actions.${CS_REMOVE_NODE}`),
+                    icon: '$vuetify.icons.delete',
+                    iconSize: 18,
+                    color: 'error',
                     disabled: false,
                 },
             })
