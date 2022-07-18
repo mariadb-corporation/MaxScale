@@ -65,7 +65,7 @@ describe('ListenerDetail index', () => {
             })
 
             await axiosStub.should.have.been.calledWith(
-                `/maxscale/modules/${protocol}?fields[module]=parameters`
+                `/maxscale/modules/${protocol}?fields[modules]=parameters`
             )
 
             axiosStub.should.have.callCount(3)

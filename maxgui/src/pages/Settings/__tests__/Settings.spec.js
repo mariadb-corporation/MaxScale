@@ -103,7 +103,7 @@ describe('Settings index', () => {
         })
         await axiosStub.should.have.been.calledWith('/maxscale?fields[maxscale]=parameters')
         await axiosStub.should.have.been.calledWith(
-            '/maxscale/modules/maxscale?fields[module]=parameters'
+            '/maxscale/modules/maxscale?fields[modules]=parameters'
         )
         axiosStub.should.have.callCount(2)
     })

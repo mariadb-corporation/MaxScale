@@ -146,7 +146,7 @@ describe('ServiceDetail index', () => {
         })
         const router = dummy_all_services[0].attributes.router
         await axiosGetStub.should.have.been.calledWith(
-            `/maxscale/modules/${router}?fields[module]=parameters`
+            `/maxscale/modules/${router}?fields[modules]=parameters`
         )
     })
 

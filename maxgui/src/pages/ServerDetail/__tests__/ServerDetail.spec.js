@@ -174,7 +174,7 @@ describe('ServerDetail index', () => {
             `/monitors/${monitorId}?fields[monitors]=monitor_diagnostics`
         )
         await axiosGetStub.should.have.been.calledWith(
-            `/maxscale/modules/servers?fields[module]=parameters`
+            `/maxscale/modules/servers?fields[modules]=parameters`
         )
     })
 

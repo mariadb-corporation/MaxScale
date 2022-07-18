@@ -65,7 +65,7 @@ describe('FilterDetail index', () => {
             })
 
             await axiosStub.should.have.been.calledWith(
-                `/maxscale/modules/${filterModule}?fields[module]=parameters`
+                `/maxscale/modules/${filterModule}?fields[modules]=parameters`
             )
             ++count
             axiosStub.should.have.callCount(count)

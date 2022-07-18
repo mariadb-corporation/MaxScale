@@ -85,7 +85,7 @@ describe('MonitorDetail index', () => {
 
             await axiosGetStub.should.have.been.calledWith(`/monitors/${id}`)
             await axiosGetStub.should.have.been.calledWith(
-                `/maxscale/modules/${moduleId}?fields[module]=parameters`
+                `/maxscale/modules/${moduleId}?fields[modules]=parameters`
             )
             let count = 2
             await serversData.forEach(async server => {
