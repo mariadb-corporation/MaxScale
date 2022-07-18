@@ -15,11 +15,10 @@
                             {{ $t('maxRows') }}
                         </label>
                         <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
-                        <max-rows-input
+                        <max-rows-ctr
                             :key="isOpened"
                             :height="36"
                             hide-details="auto"
-                            :hasFieldsetBorder="false"
                             class="std error--text__bottom mb-2 maxRows"
                             @change="config.maxRows = $event"
                         />
@@ -86,11 +85,11 @@
  * Emits
  * $emit('confirm-save', v:object): new cnf data
  */
-import MaxRowsInput from './MaxRowsInput.vue'
+import MaxRows from './MaxRows.container.vue'
 export default {
     name: 'query-cnf-dlg',
     components: {
-        'max-rows-input': MaxRowsInput,
+        'max-rows-ctr': MaxRows,
     },
     props: {
         value: { type: Boolean, required: true },

@@ -39,13 +39,13 @@ describe(`SessionToolbar`, () => {
             expect(onSave).to.be.equals(wrapper.vm.confDlg.onSave)
             expect(closeImmediate).to.be.true
         })
-        it(`Should render max-rows-input`, () => {
+        it(`Should render max-rows-ctr`, () => {
             wrapper = mountFactory({ shallow: true })
-            const input = wrapper.findComponent({ name: 'max-rows-input' })
+            const input = wrapper.findComponent({ name: 'max-rows-ctr' })
             expect(input.exists()).to.be.true
         })
         it(`Should call SET_QUERY_MAX_ROW when @change event is emitted
-        from max-rows-input`, () => {
+        from max-rows-ctr`, () => {
             let callCount = 0,
                 arg
             wrapper = mountFactory({
@@ -58,7 +58,7 @@ describe(`SessionToolbar`, () => {
                 },
             })
             const newVal = 123
-            wrapper.findComponent({ name: 'max-rows-input' }).vm.$emit('change', newVal)
+            wrapper.findComponent({ name: 'max-rows-ctr' }).vm.$emit('change', newVal)
             expect(callCount).to.be.equals(1)
             expect(arg).to.be.equals(newVal)
         })

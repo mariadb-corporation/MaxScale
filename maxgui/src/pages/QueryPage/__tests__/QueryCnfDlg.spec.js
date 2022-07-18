@@ -54,19 +54,18 @@ describe(`QueryCnfDlg - child component's data communication tests `, () => {
         expect(lazyValidation).to.be.false
         expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
     })
-    it(`Should pass accurate data to max-rows-input via props`, () => {
+    it(`Should pass accurate data to max-rows-ctr via attrs`, () => {
         let wrapper = mountFactory()
-        const input = wrapper.findComponent({ name: 'max-rows-input' })
-        const { height, hideDetails, hasFieldsetBorder } = input.vm.$props
+        const input = wrapper.findComponent({ name: 'max-rows-ctr' })
+        const { height, 'hide-details': hideDetails } = input.vm.$attrs
         expect(input.vm.$vnode.key).to.be.equals(wrapper.vm.isOpened)
         expect(height).to.be.equals(36)
         expect(hideDetails).to.be.equals('auto')
-        expect(hasFieldsetBorder).to.be.false
     })
-    it(`Should handle @change event emitted from max-rows-input`, () => {
+    it(`Should handle @change event emitted from max-rows-ctr`, () => {
         let wrapper = mountFactory()
         const newVal = wrapper.vm.$data.config.maxRows + 123
-        wrapper.findComponent({ name: 'max-rows-input' }).vm.$emit('change', newVal)
+        wrapper.findComponent({ name: 'max-rows-ctr' }).vm.$emit('change', newVal)
         expect(wrapper.vm.$data.config.maxRows).to.be.equals(newVal)
     })
 })

@@ -43,11 +43,10 @@
             <load-sql ref="loadSql" />
             <v-spacer />
             <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
-                <max-rows-input
+                <max-rows-ctr
                     :style="{ maxWidth: '180px' }"
                     :height="26"
                     hide-details="auto"
-                    :hasFieldsetBorder="false"
                     @change="SET_QUERY_MAX_ROW($event)"
                 >
                     <template v-slot:prepend-inner>
@@ -55,7 +54,7 @@
                             {{ $t('maxRows') }}
                         </label>
                     </template>
-                </max-rows-input>
+                </max-rows-ctr>
             </v-form>
         </template>
         <confirm-dialog
@@ -126,7 +125,7 @@
  */
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
-import MaxRowsInput from './MaxRowsInput.vue'
+import MaxRows from './MaxRows.container.vue'
 import SessionBtns from './SessionBtns'
 import QueryEditor from '@/components/QueryEditor'
 import LoadSql from './LoadSql'
@@ -134,7 +133,7 @@ import LoadSql from './LoadSql'
 export default {
     name: 'session-toolbar',
     components: {
-        'max-rows-input': MaxRowsInput,
+        'max-rows-ctr': MaxRows,
         'session-btns': SessionBtns,
         'readonly-query-editor': QueryEditor,
         'load-sql': LoadSql,
