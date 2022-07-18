@@ -55,4 +55,5 @@ WantedBy=default.target
 EOF
 
 sudo mv vault-dev.service /etc/systemd/system/
+sudo chcon system_u:object_r:systemd_unit_file_t:s0 /etc/systemd/system/vault-dev.service
 sudo systemctl daemon-reload

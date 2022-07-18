@@ -83,4 +83,5 @@ WantedBy=default.target
 EOF
 
 sudo mv pykmip.service /etc/systemd/system/
+sudo chcon system_u:object_r:systemd_unit_file_t:s0 /etc/systemd/system/pykmip.service
 sudo systemctl daemon-reload
