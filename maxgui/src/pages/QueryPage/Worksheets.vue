@@ -117,7 +117,7 @@
 
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
-import PageToolbar from './PageToolbar.vue'
+import PageToolbar from './PageToolbar.container.vue'
 
 export default {
     name: 'worksheets',

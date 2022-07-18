@@ -24,12 +24,6 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// stub active_sql_conn
-const dummy_active_sql_conn = { id: '1', name: 'server_0', type: 'servers' }
-async function clickAddBtnMock(wrapper) {
-    await wrapper.find('.add-wke-btn').trigger('click') // click + button
-}
-
 describe(`PageToolbar - mounted hook and child component's interaction tests`, () => {
     let wrapper
     beforeEach(() => {
@@ -44,50 +38,29 @@ describe(`PageToolbar - mounted hook and child component's interaction tests`, (
         const cnfDlg = wrapper.findComponent({ name: 'query-config-dialog' })
         expect(cnfDlg.vm.$props.value).to.be.equals(wrapper.vm.queryConfigDialog)
     })
-    it('Should pass accurate data to connection-manager', () => {
-        wrapper = mountFactory()
-        const cnnMan = wrapper.findComponent({ name: 'connection-manager' })
-        expect(cnnMan.vm.$props.disabled).to.be.equals(wrapper.vm.getIsConnBusy)
+    it(`Should emit on-fullscreen-click event`, () => {
+        let wrapper = mountFactory()
+        const btn = wrapper.find('.min-max-btn')
+        btn.trigger('click')
+        expect(wrapper.emitted()).to.have.property('on-fullscreen-click')
     })
-})
 
-describe('PageToolbar - Add new worksheet tests', () => {
-    it(`Should only allow to add new worksheet when a worksheet
-      is bound to a connection`, async () => {
-        let handleAddNewWkeCallCount = 0
-        let wrapper = mountFactory({
-            computed: {
-                sql_conns: () => ({ [dummy_active_sql_conn.id]: dummy_active_sql_conn }),
-            },
-            methods: {
-                // stubs vuex actions
-                addNewWs: () => handleAddNewWkeCallCount++,
-            },
-        })
-        await clickAddBtnMock(wrapper)
-        expect(handleAddNewWkeCallCount).to.be.equals(1)
-    })
-})
-
-describe('PageToolbar - maximize/minimize button tests', () => {
-    const is_fullscreen_values = [true, false]
-    is_fullscreen_values.forEach(v => {
-        it(`Should call SET_FULLSCREEN action to ${
-            v ? 'maximize' : 'minimize'
-        } page content`, () => {
-            let wrapper = mountFactory()
-            const btn = wrapper.find('.min-max-btn')
-            btn.trigger('click')
-            expect(wrapper.vm.is_fullscreen).to.be.equals(v)
-        })
-    })
-})
-
-describe('PageToolbar - query setting button tests', () => {
     it(`Should popup query setting dialog`, () => {
         let wrapper = mountFactory()
         expect(wrapper.vm.queryConfigDialog).to.be.false
         wrapper.find('.query-setting-btn').trigger('click')
         expect(wrapper.vm.queryConfigDialog).to.be.true
+    })
+
+    it(`Should emit on-add-wke event`, async () => {
+        let isEmitted = false
+        let wrapper = mountFactory({
+            propsData: { isAddWkeDisabled: false },
+            listeners: {
+                'on-add-wke': () => (isEmitted = true),
+            },
+        })
+        await wrapper.find('.add-wke-btn').trigger('click')
+        expect(isEmitted).to.be.true
     })
 })

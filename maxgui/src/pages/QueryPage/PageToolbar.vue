@@ -2,18 +2,18 @@
     <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2 fill-height">
             <v-btn
-                :disabled="!Object.keys(sql_conns).length"
+                :disabled="isAddWkeDisabled"
                 small
                 class="float-left add-wke-btn"
                 icon
-                @click="addWke"
+                @click="asyncEmit('on-add-wke')"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
         </div>
         <v-spacer />
         <div ref="rightBtns" class="d-flex align-center right-buttons pr-2 fill-height">
-            <connection-manager :disabled="getIsConnBusy" class="mx-2" />
+            <connection-manager class="mx-2" />
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -45,14 +45,14 @@
                         small
                         class="min-max-btn"
                         v-on="on"
-                        @click="SET_FULLSCREEN(!is_fullscreen)"
+                        @click="$emit('on-fullscreen-click')"
                     >
                         <v-icon size="22" color="accent-dark">
-                            mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
+                            mdi-fullscreen{{ isFullscreen ? '-exit' : '' }}
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
+                <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
             </v-tooltip>
         </div>
 
@@ -73,9 +73,15 @@
  * Public License.
  */
 
-import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
+/*
+ * Emits
+ * $emit('get-total-btn-width', v:number)
+ * asyncEmit('on-add-wke')
+ * $emit('on-fullscreen-click')
+ */
 import QueryConfigDialog from './QueryConfigDialog'
 import ConnectionManager from './ConnectionManager'
+import asyncEmit from 'mixins/asyncEmit'
 
 export default {
     name: 'page-toolbar',
@@ -83,18 +89,15 @@ export default {
         'query-config-dialog': QueryConfigDialog,
         ConnectionManager,
     },
+    mixins: [asyncEmit],
+    props: {
+        isFullscreen: { type: Boolean, required: true },
+        isAddWkeDisabled: { type: Boolean, required: true },
+    },
     data() {
         return {
             queryConfigDialog: false,
-            isConfDlgOpened: false,
         }
-    },
-    computed: {
-        ...mapState({
-            is_fullscreen: state => state.wke.is_fullscreen,
-            sql_conns: state => state.queryConn.sql_conns,
-        }),
-        ...mapGetters({ getIsConnBusy: 'queryConn/getIsConnBusy' }),
     },
     mounted() {
         this.$nextTick(() =>
@@ -103,13 +106,6 @@ export default {
                 this.$refs.rightBtns.clientWidth + this.$refs.leftBtns.clientWidth
             )
         )
-    },
-    methods: {
-        ...mapMutations({ SET_FULLSCREEN: 'wke/SET_FULLSCREEN' }),
-        ...mapActions({ addNewWs: 'wke/addNewWs' }),
-        async addWke() {
-            await this.addNewWs()
-        },
     },
 }
 </script>

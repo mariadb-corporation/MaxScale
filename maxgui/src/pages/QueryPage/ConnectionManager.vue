@@ -17,7 +17,7 @@
             return-object
             :placeholder="$t('selectConnection')"
             :no-data-text="$t('noConnAvail')"
-            :disabled="disabled"
+            :disabled="getIsConnBusy"
             @change="onChangeChosenConn"
         >
             <template v-slot:selection="{ item }">
@@ -119,9 +119,6 @@ export default {
         ConnectionDialog,
         ReconnDialog,
     },
-    props: {
-        disabled: { type: Boolean, required: true },
-    },
     data() {
         return {
             isConnDialogOpened: false,
@@ -144,6 +141,7 @@ export default {
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
         wkeConns() {
             return Object.values(this.sql_conns).filter(
