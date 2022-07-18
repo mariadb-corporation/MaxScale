@@ -1027,19 +1027,27 @@ The rebuild server-feature replaces the contents of a database server with the
 contents of another server. The source server is effectively cloned and all data
 on the target server is lost. This is useful when a slave server has diverged
 from the master server, or when adding a new server to the cluster. The
-MariaDB-server configuration files are not affected.
+MariaDB Server configuration files are not affected.
 
 MariaDB-Monitor can perform this operation by running
 [Mariabackup](#https://mariadb.com/kb/en/mariabackup/) on both the source and
 target servers. To do this, MaxScale needs to have ssh-access on the machines.
 Also, the following tools need to be installed on the source and target
 machines:
-1. *Mariabackup*. Backups and restores MariaDB-server contents. Installed e.g.
+1. *Mariabackup*. Backups and restores MariaDB Server contents. Installed e.g.
 with `yum install MariaDB-backup`.
 2. *pigz*. Compresses and decompresses the backup stream. Installed e.g. with
 `yum install pigz`.
 3. *socat*. Streams data from one machine to another. Is likely already
 installed. If not, can be installed e.g. with `yum install socat`.
+
+The *ssh_user* and *ssh_keyfile*-settings define the SSH credentials MaxScale
+uses to access the servers. MaxScale must be able to run commands with *sudo* on
+both the source and target servers. Mariabackup, on the other hand, needs to
+authenticate to the MariaDB Server being copied from. For this, MaxScale uses
+the monitor user. The monitor user may thus require additional privileges. See
+[Mariabackup documentation](#https://mariadb.com/kb/en/mariabackup-overview/#authentication-and-privileges)
+for more details.
 
 When launched, the rebuild operation proceeds as below. If any step fails, the
 operation is stopped and the target server will be left in an unspecified state.
@@ -1048,9 +1056,9 @@ present (e.g. `mariabackup -v` should succeed).
 2. Check that the port used for transferring the backup is free on the source
 server. If not, kill the process holding it. This requires running *lsof* and
  *kill*.
-3. Launch *Mariabackup* on the source machine, compress the stream and listen
+3. Launch Mariabackup on the source machine, compress the stream and listen
 for an incoming connection. This is performed with a command like
-`mariabackup --backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
+`mariabackup --backup --safe-slave-backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
 4. Stop MariaDB-server on the target machine and delete all contents of the data
 directory */var/lib/mysql*.
 5. On the target machine, connect to the source machine, read the backup stream,
@@ -1066,7 +1074,10 @@ the source server performed writes during data transfer.
 
 The rebuild-operation is a monitor module command and is best launched with
 MaxCtrl. The command takes three arguments: the monitor name, target server name
-and source server name.
+and source server name. The source server can be left out, in which case it is
+autoselected. When autoselecting, the monitor prefers to pick an up-to-date
+slave server. Due to the `--safe-slave-backup`-option, the slave will stop
+replicating until the backup data has been transferred.
 ```
 maxctrl call command mariadbmon async-rebuild-server MariaDB-Monitor MyServer3 MyServer2
 ```
@@ -1076,7 +1087,8 @@ the source server is not a master or slave.
 Steps 5 and 6 can take a long time depending on the size of the database and if
 writes are ongoing. During these steps, the monitor will continue monitoring the
 cluster normally. After each monitor tick the monitor checks if the
-rebuild-operation can proceed.
+rebuild-operation can proceed. No other monitor operations, either manual or
+automatic, can run until the rebuild completes.
 
 ### Settings
 
