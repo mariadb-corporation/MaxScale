@@ -369,6 +369,7 @@ export default {
                 isOpened: true,
             }
             if (type === this.MONITOR_OP_TYPES.CS_ADD_NODE) await this.fetchAllServerNames()
+            this.$emit('chosen-op-type', type)
         },
         validateTimeout(v) {
             if (this.$typy(v).isEmptyString)
