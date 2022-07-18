@@ -195,6 +195,15 @@ public:
     bool fetch_cmd_result(json_t** output);
 
     /**
+     * Cancel currently pending or running manual command.
+     *
+     * @param output Output
+     * @return True if an operation was pending or running. Even if true is returned, the operation may
+     * have managed to complete before cancelling.
+     */
+    bool cancel_cmd(json_t** output);
+
+    /**
      * Perform user-activated ColumnStore add node. Does not wait for results, which should be fetched
      * separately.
      *

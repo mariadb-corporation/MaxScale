@@ -1272,6 +1272,32 @@ cs_admin_api_key=somekey123
 
 String, default: */cmapi/0.4.0*. Base path sent with the REST-API request.
 
+## Other commands
+
+### `fetch-cmd-result`
+
+Fetches the result of the last manual command. Requires monitor name as
+parameter. Most commands only return a generic success message or an error
+description. ColumnStore commands may return more data. Scheduling another
+command clears a stored result.
+```
+maxctrl call command mariadbmon fetch-cmd-result MariaDB-Monitor
+"switchover completed successfully."
+```
+
+### `cancel-cmd`
+
+Cancels the latest operation, whether manual or automatic, if possible. Requires
+monitor name as parameter. A scheduled manual command is simply canceled
+before it can run. If a command is already running, it stops as soon as
+possible. The *cancel-cmd* itself does not wait for a running operation to stop.
+Use *fetch-cmd-result* or check the log to see if the operation has truly
+completed. Canceling is most useful for stopping a stalled rebuild operation.
+```
+maxctrl call command mariadbmon cancel-cmd MariaDB-Monitor
+OK
+```
+
 ## Troubleshooting
 
 ### Failover/switchover fails

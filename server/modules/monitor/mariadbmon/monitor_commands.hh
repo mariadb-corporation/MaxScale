@@ -52,14 +52,13 @@ public:
 
     virtual bool   run() = 0;
     virtual Result result() = 0;
-    virtual bool   cancel() = 0;
+    virtual void   cancel() = 0;
 };
 
 using SOperation = std::unique_ptr<Operation>;
 
 enum class ExecState
 {
-    NONE,
     SCHEDULED,
     RUNNING,
     DONE
@@ -81,11 +80,12 @@ struct OperationInfo
     SOperation scheduled_op;/**< Manually scheduled operation. */
 
     /** State of manual op or long-running auto op. Both cannot be scheduled/running simultaneously. */
-    std::atomic<ExecState> exec_state {ExecState::NONE};
+    std::atomic<ExecState> exec_state {ExecState::DONE};
     /**< True if monitor stop was requested. Prevents starting another operation. */
     std::atomic_bool monitor_stopping {true};
+    std::atomic_bool cancel_op {false};     /**< True if cancel has been requested for a running op */
 
-    std::string op_name;    /**< Either name of the scheduled op or name of current long-running auto op.*/
+    std::string op_name;    /**< Either name of the scheduled op or name of current long-running auto op. */
 
     bool current_op_is_manual {false};      /** True if the currently scheduled/running op is manual. */
 
@@ -105,7 +105,7 @@ public:
 
     bool   run() override;
     Result result() override;
-    bool   cancel() override;
+    void   cancel() override;
 
 private:
     CmdMethod m_func;
@@ -119,7 +119,7 @@ public:
 
     bool   run() override;
     Result result() override;
-    bool   cancel() override;
+    void   cancel() override;
 
 private:
     MariaDBMonitor& m_mon;

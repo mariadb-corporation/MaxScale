@@ -134,6 +134,14 @@ bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
     return true;    // result fetch always works, even if there is nothing to return
 }
 
+bool handle_cancel_cmd(const MODULECMD_ARG* args, json_t** output)
+{
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    Monitor* mon = args->argv[0].value.monitor;
+    auto mariamon = static_cast<MariaDBMonitor*>(mon);
+    return mariamon->cancel_cmd(output);
+}
+
 bool handle_async_cs_add_node(const MODULECMD_ARG* args, json_t** output)
 {
     bool rval = false;
@@ -543,6 +551,10 @@ void register_monitor_commands()
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Fetch result of the last scheduled command.");
 
+    modulecmd_register_command(MXB_MODULE_NAME, "cancel-cmd", MODULECMD_TYPE_ACTIVE, handle_cancel_cmd,
+                               MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
+                               "Cancel the last scheduled command.");
+
     const modulecmd_arg_type_t csmon_add_node_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
@@ -741,9 +753,11 @@ mon_op::Result MariaDBMonitor::manual_release_locks()
 
 bool MariaDBMonitor::fetch_cmd_result(json_t** output)
 {
+    mxb_assert(is_main_worker());
     using ExecState = mon_op::ExecState;
-    auto manual_cmd_state = ExecState::NONE;
+    auto manual_cmd_state = ExecState::DONE;
     string manual_cmd_name;
+    bool have_result = false;
     mon_op::Result manual_cmd_result;
 
     std::unique_lock<std::mutex> lock(m_op_info.lock);
@@ -752,7 +766,7 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         // Deep copy the json since ownership moves.
         manual_cmd_result = m_op_info.result_info->res.deep_copy();
         manual_cmd_name = m_op_info.result_info->cmd_name;
-        manual_cmd_state = ExecState::DONE;
+        have_result = true;
     }
     else
     {
@@ -771,11 +785,6 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
     const char cmd_running_fmt[] = "No manual command results are available, %s is still %s.";
     switch (manual_cmd_state)
     {
-    case ExecState::NONE:
-        // Command has not been ran.
-        *output = mxs_json_error_append(*output, "No manual command results are available.");
-        break;
-
     case ExecState::SCHEDULED:
         *output = mxs_json_error_append(*output, cmd_running_fmt, manual_cmd_name.c_str(), "pending");
         break;
@@ -785,23 +794,61 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         break;
 
     case ExecState::DONE:
-        // If command has its own output, return that. Otherwise, report success or error.
-        if (manual_cmd_result.output.object_size() > 0)
+        if (have_result)
         {
-            *output = manual_cmd_result.output.release();
-        }
-        else if (manual_cmd_result.success)
-        {
-            *output = json_sprintf("%s completed successfully.", manual_cmd_name.c_str());
+            // If command has its own output, return that. Otherwise, report success or error.
+            if (manual_cmd_result.output.object_size() > 0)
+            {
+                *output = manual_cmd_result.output.release();
+            }
+            else if (manual_cmd_result.success)
+            {
+                *output = json_sprintf("%s completed successfully.", manual_cmd_name.c_str());
+            }
+            else
+            {
+                // Command failed, but printed no results.
+                *output = json_sprintf("%s failed.", manual_cmd_name.c_str());
+            }
         }
         else
         {
-            // Command failed, but printed no results.
-            *output = json_sprintf("%s failed.", manual_cmd_name.c_str());
+            // Command has not been ran.
+            *output = mxs_json_error_append(*output, "No manual command results are available.");
         }
         break;
     }
     return true;
+}
+
+bool MariaDBMonitor::cancel_cmd(json_t** output)
+{
+    mxb_assert(is_main_worker());
+    using ExecState = mon_op::ExecState;
+
+    bool canceled = false;
+    std::lock_guard<std::mutex> guard(m_op_info.lock);
+    auto op_state = m_op_info.exec_state.load();
+    if (op_state == ExecState::SCHEDULED)
+    {
+        m_op_info.scheduled_op = nullptr;
+        MXB_NOTICE("Scheduled %s canceled.", m_op_info.op_name.c_str());
+        m_op_info.op_name.clear();
+        m_op_info.exec_state = ExecState::DONE;
+        m_op_info.current_op_is_manual = false;
+        canceled = true;
+    }
+    else if (op_state == ExecState::RUNNING)
+    {
+        // Cannot cancel a running operation from main thread. Set a flag instead.
+        m_op_info.cancel_op = true;
+        canceled = true;
+    }
+    else
+    {
+        *output = mxs_json_error_append(*output, "No manual command is scheduled or running.");
+    }
+    return canceled;
 }
 
 bool MariaDBMonitor::schedule_cs_add_node(const std::string& host, std::chrono::seconds timeout,
@@ -1356,10 +1403,10 @@ Result SimpleOp::result()
     return m_result;
 }
 
-bool SimpleOp::cancel()
+void SimpleOp::cancel()
 {
-    mxb_assert(!true);
-    return false;
+    // Can only end up here if the op is canceled right after it transitioned to running state but before
+    // any of it was ran. In any case, nothing to do.
 }
 
 RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master)
@@ -1436,9 +1483,22 @@ bool RebuildServer::run()
     return command_complete;
 }
 
-bool RebuildServer::cancel()
+void RebuildServer::cancel()
 {
-    return false;
+    switch (m_state)
+    {
+    case State::INIT:
+        // No need to do anything.
+        break;
+
+    case State::WAIT_TRANSFER:
+    case State::WAIT_BACKUP_PREPARE:
+        cleanup();
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
 }
 
 Result RebuildServer::result()
@@ -1884,7 +1944,14 @@ bool RebuildServer::start_replication()
 
 void RebuildServer::cleanup()
 {
-    // Only one thing to do: Ensure that the source server is no longer serving the backup.
+    // Target cmd may exist if rebuild is canceled while waiting for transfer/prepare.
+    if (m_target_cmd)
+    {
+        m_target_cmd->update_status();
+        m_target_cmd = nullptr;
+    }
+
+    // Ensure that the source server is no longer serving the backup.
     if (m_source_cmd)
     {
         m_source_cmd->update_status();
