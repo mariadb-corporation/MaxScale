@@ -56,7 +56,7 @@
             </v-tooltip>
         </div>
 
-        <query-config-dialog v-model="queryConfigDialog" />
+        <query-cnf-dlg-ctr v-model="queryConfigDialog" />
     </div>
 </template>
 <script>
@@ -79,14 +79,14 @@
  * asyncEmit('on-add-wke')
  * $emit('on-fullscreen-click')
  */
-import QueryConfigDialog from './QueryConfigDialog'
+import QueryCnfDlg from './QueryCnfDlg.container.vue'
 import ConnectionManager from './ConnectionManager'
 import asyncEmit from 'mixins/asyncEmit'
 
 export default {
     name: 'page-toolbar',
     components: {
-        'query-config-dialog': QueryConfigDialog,
+        'query-cnf-dlg-ctr': QueryCnfDlg,
         ConnectionManager,
     },
     mixins: [asyncEmit],

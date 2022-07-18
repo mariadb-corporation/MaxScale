@@ -1,6 +1,5 @@
 <template>
     <base-dialog
-        ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
         :title="$t('queryConfig')"
@@ -83,15 +82,34 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+/*
+ * Emits
+ * $emit('confirm-save', v:object): new cnf data
+ */
 import MaxRowsInput from './MaxRowsInput.vue'
 export default {
-    name: 'query-config-dialog',
+    name: 'query-cnf-dlg',
     components: {
         'max-rows-input': MaxRowsInput,
     },
     props: {
         value: { type: Boolean, required: true },
+        cnf: {
+            type: Object,
+            validator(obj) {
+                return (
+                    'query_max_rows' in obj &&
+                    typeof obj.query_max_rows === 'number' &&
+                    'query_confirm_flag' in obj &&
+                    typeof obj.query_confirm_flag === 'number' &&
+                    'query_history_expired_time' in obj &&
+                    typeof obj.query_history_expired_time === 'number' &&
+                    'query_show_sys_schemas_flag' in obj &&
+                    typeof obj.query_show_sys_schemas_flag === 'number'
+                )
+            },
+            required: true,
+        },
     },
     data() {
         return {
@@ -104,22 +122,10 @@ export default {
                         }),
                 ],
             },
-            curCnf: {},
-            config: {
-                maxRows: 10000,
-                showQueryConfirm: true,
-                queryHistoryRetentionPeriod: 0,
-                showSysSchemas: true,
-            },
+            config: {},
         }
     },
     computed: {
-        ...mapState({
-            query_max_rows: state => state.persisted.query_max_rows,
-            query_confirm_flag: state => state.persisted.query_confirm_flag,
-            query_history_expired_time: state => state.persisted.query_history_expired_time,
-            query_show_sys_schemas_flag: state => state.persisted.query_show_sys_schemas_flag,
-        }),
         isOpened: {
             get() {
                 return this.value
@@ -128,48 +134,45 @@ export default {
                 this.$emit('input', value)
             },
         },
+        defCnf() {
+            return {
+                maxRows: this.cnf.query_max_rows,
+                showQueryConfirm: Boolean(this.cnf.query_confirm_flag),
+                queryHistoryRetentionPeriod: this.$help.daysDiff(
+                    this.cnf.query_history_expired_time
+                ),
+                showSysSchemas: Boolean(this.cnf.query_show_sys_schemas_flag),
+            }
+        },
         hasChanged() {
-            return !this.$help.lodash.isEqual(this.curCnf, this.config)
+            return !this.$help.lodash.isEqual(this.defCnf, this.config)
         },
     },
     watch: {
         isOpened: {
             immediate: true,
             handler(v) {
-                if (v) {
-                    this.setCurCnf()
-                    this.config = this.$help.lodash.cloneDeep(this.curCnf)
-                }
+                if (v) this.config = this.$help.lodash.cloneDeep(this.defCnf)
             },
         },
     },
     methods: {
-        ...mapMutations({
-            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
-            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
-            SET_QUERY_HISTORY_EXPIRED_TIME: 'persisted/SET_QUERY_HISTORY_EXPIRED_TIME',
-            SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'persisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
-        }),
         validatePositiveNumber({ v, inputName }) {
             if (this.$typy(v).isEmptyString) return this.$t('errors.requiredInput', { inputName })
             if (v <= 0) return this.$t('errors.largerThanZero', { inputName })
             if (v > 0) return true
+            return false
         },
-        setCurCnf() {
-            this.curCnf = {
-                maxRows: this.query_max_rows,
-                showQueryConfirm: Boolean(this.query_confirm_flag),
-                queryHistoryRetentionPeriod: this.$help.daysDiff(this.query_history_expired_time),
-                showSysSchemas: Boolean(this.query_show_sys_schemas_flag),
-            }
-        },
+
         onSave() {
-            this.SET_QUERY_MAX_ROW(this.config.maxRows)
-            this.SET_QUERY_CONFIRM_FLAG(Number(this.config.showQueryConfirm))
-            this.SET_QUERY_HISTORY_EXPIRED_TIME(
-                this.$help.addDaysToNow(this.config.queryHistoryRetentionPeriod)
-            )
-            this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(Number(this.config.showSysSchemas))
+            this.$emit('confirm-save', {
+                query_max_rows: this.config.maxRows,
+                query_confirm_flag: Number(this.config.showQueryConfirm),
+                query_history_expired_time: this.$help.addDaysToNow(
+                    this.config.queryHistoryRetentionPeriod
+                ),
+                query_show_sys_schemas_flag: Number(this.config.showSysSchemas),
+            })
         },
     },
 }

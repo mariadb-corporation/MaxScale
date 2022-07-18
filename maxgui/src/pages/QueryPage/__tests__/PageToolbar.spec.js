@@ -34,9 +34,9 @@ describe(`PageToolbar - mounted hook and child component's interaction tests`, (
             expect(wrapper.emitted()).to.have.property('get-total-btn-width')
         })
     })
-    it('Should pass accurate data to query-config-dialog via props', () => {
-        const cnfDlg = wrapper.findComponent({ name: 'query-config-dialog' })
-        expect(cnfDlg.vm.$props.value).to.be.equals(wrapper.vm.queryConfigDialog)
+    it('Should pass accurate data to query-cnf-dlg-ctr via attrs', () => {
+        const cnfDlg = wrapper.findComponent({ name: 'query-cnf-dlg-ctr' })
+        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.queryConfigDialog)
     })
     it(`Should emit on-fullscreen-click event`, () => {
         let wrapper = mountFactory()
