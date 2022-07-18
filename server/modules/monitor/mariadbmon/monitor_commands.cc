@@ -1690,10 +1690,8 @@ bool RebuildServer::start_backup_prepare()
     // This step can fail if the previous step failed to write files. Just looking at the return value
     // of "mbstream" is not reliable.
     auto& cs = m_target->conn_settings();
-    const char prepare_fmt[] = "sudo mariabackup --user=%s --password=%s --use-memory=1G --prepare "
-                               "--target-dir=%s";
-    string prepare_cmd = mxb::string_printf(prepare_fmt, cs.username.c_str(), cs.password.c_str(),
-                                            rebuild_datadir.c_str());
+    const char prepare_fmt[] = "sudo mariabackup --use-memory=1G --prepare --target-dir=%s";
+    string prepare_cmd = mxb::string_printf(prepare_fmt, rebuild_datadir.c_str());
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, prepare_cmd);
 
     auto& error_out = m_result.output;
@@ -1729,10 +1727,8 @@ bool RebuildServer::start_backup_prepare()
             }
             else
             {
-                // Again, the command includes username & pw so mask those in the log message.
-                string masked_cmd = mxb::string_printf(prepare_fmt, mask, mask, rebuild_datadir.c_str());
                 PRINT_JSON_ERROR(error_out, "Failed to process backup data on %s. Command '%s' failed "
-                                            "with error %i: '%s'", m_target->name(), masked_cmd.c_str(),
+                                            "with error %i: '%s'", m_target->name(), prepare_cmd.c_str(),
                                  cmd_handle->rc(), cmd_handle->error_output().c_str());
             }
         }
