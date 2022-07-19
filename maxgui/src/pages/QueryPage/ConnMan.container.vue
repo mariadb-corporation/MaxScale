@@ -112,7 +112,7 @@ import ConnDlg from './ConnDlg.container.vue'
 import ReconnDlg from './ReconnDlg.container.vue'
 
 export default {
-    name: 'connection-manager',
+    name: 'conn-man-ctr',
     components: {
         'conn-dlg-ctr': ConnDlg,
         'reconn-dlg-ctr': ReconnDlg,

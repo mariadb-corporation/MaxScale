@@ -13,7 +13,7 @@
         </div>
         <v-spacer />
         <div ref="rightBtns" class="d-flex align-center right-buttons pr-2 fill-height">
-            <connection-manager class="mx-2" />
+            <conn-man-ctr class="mx-2" />
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -80,14 +80,14 @@
  * $emit('on-fullscreen-click')
  */
 import QueryCnfDlg from './QueryCnfDlg.container.vue'
-import ConnectionManager from './ConnectionManager'
+import ConnMan from './ConnMan.container.vue'
 import asyncEmit from 'mixins/asyncEmit'
 
 export default {
     name: 'page-toolbar',
     components: {
         'query-cnf-dlg-ctr': QueryCnfDlg,
-        ConnectionManager,
+        'conn-man-ctr': ConnMan,
     },
     mixins: [asyncEmit],
     props: {

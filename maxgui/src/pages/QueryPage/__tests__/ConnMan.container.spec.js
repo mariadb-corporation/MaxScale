@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
+import ConnMan from '@/pages/QueryPage/ConnMan.container.vue'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_sql_conns = {
@@ -23,7 +23,7 @@ const dummy_sql_conns = {
 const mountFactory = opts =>
     mount({
         shallow: true,
-        component: ConnectionManager,
+        component: ConnMan,
         ...opts,
     })
 
@@ -49,7 +49,7 @@ function mockNewConnData() {
         resourceType: 'servers',
     }
 }
-describe(`ConnectionManager - child component's data communication tests `, () => {
+describe(`ConnMan - child component's data communication tests `, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()
@@ -97,7 +97,7 @@ describe(`ConnectionManager - child component's data communication tests `, () =
     })
 })
 
-describe(`ConnectionManager - on created hook tests `, () => {
+describe(`ConnMan - on created hook tests `, () => {
     let wrapper
     it(`Should auto open conn-dlg-ctr if no connection has been found
     and no pre_select_conn_rsrc after validating connections`, () => {
@@ -109,7 +109,7 @@ describe(`ConnectionManager - on created hook tests `, () => {
         expect(wrapper.vm.isConnDlgOpened).to.be.true
     })
     it(`Should call handlePreSelectConnRsrc if pre_select_conn_rsrc has value`, () => {
-        const fnSpy = sinon.spy(ConnectionManager.methods, 'handlePreSelectConnRsrc')
+        const fnSpy = sinon.spy(ConnMan.methods, 'handlePreSelectConnRsrc')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
         fnSpy.should.have.been.calledOnce
@@ -118,7 +118,7 @@ describe(`ConnectionManager - on created hook tests `, () => {
     const fnCalls = ['initialFetch', 'assignActiveConn']
     fnCalls.forEach(fn => {
         it(`Should call ${fn} if there is an active connection bound to the worksheet`, () => {
-            const fnSpy = sinon.spy(ConnectionManager.methods, fn)
+            const fnSpy = sinon.spy(ConnMan.methods, fn)
             wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
             fnSpy.should.have.been.calledOnce
             fnSpy.restore()
@@ -126,11 +126,11 @@ describe(`ConnectionManager - on created hook tests `, () => {
     })
 })
 
-describe(`ConnectionManager - methods and computed properties tests `, () => {
+describe(`ConnMan - methods and computed properties tests `, () => {
     let wrapper
     it(`Should call onSelectConn if there is available connection has name
     equals to pre_select_conn_rsrc `, () => {
-        const fnSpy = sinon.spy(ConnectionManager.methods, 'onSelectConn')
+        const fnSpy = sinon.spy(ConnMan.methods, 'onSelectConn')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({
             computed: {
@@ -151,7 +151,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
     it(`Should call openConnDialog if there is no available connection has name
     equals to pre_select_conn_rsrc `, () => {
-        const fnSpy = sinon.spy(ConnectionManager.methods, 'openConnDialog')
+        const fnSpy = sinon.spy(ConnMan.methods, 'openConnDialog')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
         fnSpy.should.have.been.calledOnce
@@ -202,10 +202,10 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
 })
 
-describe(`ConnectionManager - connection list dropdown tests`, () => {
+describe(`ConnMan - connection list dropdown tests`, () => {
     let wrapper
     it(`Should call onSelectConn method when select new connection`, async () => {
-        const onSelectConnSpy = sinon.spy(ConnectionManager.methods, 'onSelectConn')
+        const onSelectConnSpy = sinon.spy(ConnMan.methods, 'onSelectConn')
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
@@ -237,7 +237,7 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
     })
 })
 
-describe(`ConnectionManager - other tests`, () => {
+describe(`ConnMan - other tests`, () => {
     let wrapper
     it(`Should open confirm dialog when unlinkConn method is called`, () => {
         wrapper = mountFactory({
@@ -251,7 +251,7 @@ describe(`ConnectionManager - other tests`, () => {
     it(`Should call disconnect action with accurate args when
       confirm deleting a connection`, () => {
         const connToBeDeleted = wrapper.vm.connOptions[0]
-        const disconnectSpy = sinon.spy(ConnectionManager.methods, 'disconnect')
+        const disconnectSpy = sinon.spy(ConnMan.methods, 'disconnect')
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
@@ -272,7 +272,7 @@ describe(`ConnectionManager - other tests`, () => {
     ]
     handleOpenConnCases.forEach(c => {
         it(`Should handle dispatch openConnect action accurately when ${c}`, () => {
-            const initialFetchSpy = sinon.spy(ConnectionManager.methods, 'initialFetch')
+            const initialFetchSpy = sinon.spy(ConnMan.methods, 'initialFetch')
             let openConnectArgs
             const hasConnectionAlready = c === 'worksheet is bound to a connection'
             wrapper = mountFactory({
