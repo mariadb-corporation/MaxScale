@@ -66,9 +66,20 @@ int main(int argc, char* argv[])
             test.check_maxctrl("alter server server" + std::to_string(i) + " ssl_version TLSv13");
         }
 
-        test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
-        res = conn.field(query);
-        test.expect(res == "TLSv1.3", "TLSv1.3 should be in use: %s", res.c_str());
+        auto rv = test.repl->ssh_output("openssl version");
+
+        // OpenSSL 1.0.2 only supports TLSv1.2 and a TLSv1.3 connection should fail.
+        if (rv.output.find("1.0.2") != std::string::npos)
+        {
+            test.expect(!conn.connect(),
+                        "Connection with TLSv1.3 should not work if the backend does not support it");
+        }
+        else
+        {
+            test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
+            res = conn.field(query);
+            test.expect(res == "TLSv1.3", "TLSv1.3 should be in use: %s", res.c_str());
+        }
     }
 
     for (int i = 1; i <= 4; i++)
