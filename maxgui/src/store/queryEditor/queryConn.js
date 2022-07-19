@@ -11,7 +11,6 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-import { findLast } from 'utils/helpers'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
 const memStates = queryHelper.memStateCreator('queryConn')
@@ -155,7 +154,7 @@ export default {
                     }
                     commit('ADD_SQL_CONN', sql_conn)
                     // sync the first session tab to persisted obj
-                    const defSession = activeWkeSessions.find(s => s.count === 1)
+                    const defSession = activeWkeSessions[0]
                     queryHelper.syncToPersistedObj({
                         scope: this,
                         data: { active_sql_conn: sql_conn },
@@ -254,21 +253,20 @@ export default {
          */
         async disconnect(
             { state, commit, dispatch, rootState },
-            { showSnackbar, id: wkeBoundCnnId }
+            { showSnackbar, id: targetConnId }
         ) {
             try {
-                if (state.sql_conns[wkeBoundCnnId]) {
-                    const sessionConnIds = Object.values(state.sql_conns)
+                if (state.sql_conns[targetConnId]) {
+                    const clonedConnIds = Object.values(state.sql_conns)
                         .filter(
                             c =>
-                                c.clone_of_conn_id === wkeBoundCnnId &&
+                                c.clone_of_conn_id === targetConnId &&
                                 c.binding_type ===
                                     rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
                         )
                         .map(c => c.id)
-                    const cnnIdsToBeDeleted = [wkeBoundCnnId, ...sessionConnIds]
-
-                    dispatch('wke/resetWkeStates', wkeBoundCnnId, { root: true })
+                    const cnnIdsToBeDeleted = [targetConnId, ...clonedConnIds]
+                    dispatch('wke/resetWkeStates', targetConnId, { root: true })
 
                     const allRes = await Promise.all(
                         cnnIdsToBeDeleted.map(id => {
@@ -385,12 +383,11 @@ export default {
                 state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
-        getWkeLastSessConnByWkeId: (state, getters, rootState) => {
+        getWkeFirstSessConnByWkeId: (state, getters, rootState) => {
             const query_sessions = rootState.querySession.query_sessions
             return wke_id => {
                 const def_session =
-                    findLast(
-                        query_sessions,
+                    query_sessions.find(
                         s =>
                             s.wke_id_fk === wke_id &&
                             s.active_sql_conn &&

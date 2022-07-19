@@ -72,7 +72,7 @@ describe('Worksheets', () => {
     it('Should show a tooltip when hovering a worksheet tab has a connection', () => {
         wrapper = mountFactory({
             computed: {
-                getWkeLastSessConnByWkeId: () => () => ({
+                getWkeFirstSessConnByWkeId: () => () => ({
                     id: '0',
                     name: 'server_0',
                     type: 'servers',
