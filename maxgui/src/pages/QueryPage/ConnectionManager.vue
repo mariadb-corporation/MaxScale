@@ -18,7 +18,7 @@
             :placeholder="$t('selectConnection')"
             :no-data-text="$t('noConnAvail')"
             :disabled="getIsConnBusy"
-            @change="onChangeChosenConn"
+            @change="onSelectConn"
         >
             <template v-slot:selection="{ item }">
                 <div class="d-flex align-center pl-1">
@@ -78,11 +78,9 @@
             </template>
         </v-select>
         <connection-dialog
-            v-model="isConnDialogOpened"
+            v-model="isConnDlgOpened"
             :connOptions="connOptions"
             :handleSave="handleOpenConn"
-            @on-cancel="assignActiveConn"
-            @on-close="assignActiveConn"
         />
         <confirm-dialog
             v-model="isConfDlgOpened"
@@ -121,7 +119,7 @@ export default {
     },
     data() {
         return {
-            isConnDialogOpened: false,
+            isConnDlgOpened: false,
             chosenConn: {},
             targetConn: {}, // target connection to be deleted,
             isConfDlgOpened: false,
@@ -133,7 +131,6 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             conn_err_state: state => state.queryConn.conn_err_state,
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
-            worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
             query_sessions: state => state.querySession.query_sessions,
@@ -143,9 +140,11 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
-        wkeConns() {
+        firstConnOfAllWkes() {
             return Object.values(this.sql_conns).filter(
-                conn => conn.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION
+                conn =>
+                    conn.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION &&
+                    !('clone_of_conn_id' in conn)
             )
         },
         /**
@@ -159,7 +158,7 @@ export default {
             }, [])
         },
         connOptions() {
-            return this.wkeConns.map(cnctRsrc =>
+            return this.firstConnOfAllWkes.map(cnctRsrc =>
                 this.active_sql_conn.id === cnctRsrc.id
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }
@@ -186,7 +185,7 @@ export default {
                  * is changed by changing worksheet, chosenConn needs to be updated by calling assignActiveConn
                  */
                 if (!this.$help.lodash.isEqual(v, this.chosenConn)) {
-                    this.assignActiveConn()
+                    this.assignActiveConn(v)
                     /**
                      * If the worksheet has an active connection but schema tree data which is stored
                      * in memory is an empty array, then call initialFetch to populate the data.
@@ -226,7 +225,7 @@ export default {
             )
             if (conn) {
                 this.chosenConn = conn
-                await this.onChangeChosenConn(conn)
+                await this.onSelectConn(conn)
             } else this.openConnDialog()
         },
         /**
@@ -238,9 +237,9 @@ export default {
             if (active_sql_conn.id) await this.initialFetch(active_sql_conn)
         },
         /**
-         * Function is called after chosenConn is updated
+         * Function is called after selecting a connection
          */
-        async onChangeChosenConn(chosenConn) {
+        async onSelectConn(chosenConn) {
             // update active_sql_conn module state
             this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.getActiveSessionId })
             // handle navigate to the corresponding nested route
@@ -248,12 +247,12 @@ export default {
             // populate data
             await this.handleDispatchInitialFetch(chosenConn)
         },
-        assignActiveConn() {
-            if (this.active_sql_conn) this.chosenConn = this.active_sql_conn
+        assignActiveConn(conn) {
+            if (conn) this.chosenConn = conn
             else this.chosenConn = {}
         },
         openConnDialog() {
-            this.isConnDialogOpened = true
+            this.isConnDlgOpened = true
         },
         unlinkConn(item) {
             this.isConfDlgOpened = true
@@ -275,11 +274,15 @@ export default {
                 await this.initialFetch(this.active_sql_conn)
         },
         async confirmDelConn() {
-            // store the id before deleting to check if there is a need to update route
-            const currCnctResourceId = this.active_sql_conn.id
+            /**
+             * Update route if the conn being deleted is bound to the current active worksheet.
+             * Using the `name` property to check because the cloned conns will always have
+             * the same name but with different id values
+             * e.g server_0
+             */
+            const shouldUpdateRoute = this.active_sql_conn.name === this.targetConn.name
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
-            // update route
-            if (currCnctResourceId === this.targetConn.id) this.updateRoute(this.active_wke_id)
+            if (shouldUpdateRoute) this.updateRoute(this.active_wke_id)
         },
     },
 }
