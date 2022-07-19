@@ -172,7 +172,8 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                 {
                     if (pParam->takes_parameters())
                     {
-                        parameters_with_params[mxb::lower_case_copy(value)] = pParam;
+                        std::string real_name = pParam->parameter_prefix(value);
+                        parameters_with_params[mxb::lower_case_copy(real_name)] = pParam;
                     }
                 }
                 else
@@ -309,7 +310,8 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
 
                         if (json_typeof(pValue) == JSON_STRING)
                         {
-                            parameters_with_params[json_string_value(pValue)] = pParam;
+                            std::string real_name = pParam->parameter_prefix(json_string_value(pValue));
+                            parameters_with_params[mxb::lower_case_copy(real_name)] = pParam;
                         }
                     }
                 }
@@ -536,6 +538,11 @@ bool Param::has_default_value() const
 bool Param::takes_parameters() const
 {
     return false;
+}
+
+std::string Param::parameter_prefix(const std::string& value) const
+{
+    return value;
 }
 
 bool Param::validate_parameters(const std::string& value,
@@ -1725,6 +1732,12 @@ std::string ParamModule::type() const
 bool ParamModule::takes_parameters() const
 {
     return true;
+}
+
+std::string ParamModule::parameter_prefix(const std::string& value) const
+{
+    const MXS_MODULE* pModule = get_module(value, m_module_type);
+    return pModule ? pModule->name : value;
 }
 
 bool ParamModule::validate_parameters(const std::string& value,

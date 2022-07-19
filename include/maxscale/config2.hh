@@ -357,6 +357,17 @@ public:
     virtual bool takes_parameters() const;
 
     /**
+     * Get parameter prefix from value
+     *
+     * For parameters with sub-parameters (i.e. takes_parameters() returns true), this returns the "real"
+     * prefix if there are aliases for the parameters. In practice this only converts module names to their
+     * canonical name.
+     *
+     * @return The prefix value to translate
+     */
+    virtual std::string parameter_prefix(const std::string& value) const;
+
+    /**
      * Validate parameters of a parameter. Only applicable to parameters that takes
      * parameters and whose @c takes_parameters() returns true.
      *
@@ -1692,6 +1703,8 @@ public:
     std::string type() const override;
 
     bool takes_parameters() const override;
+
+    std::string parameter_prefix(const std::string& value) const override;
 
     bool validate_parameters(const std::string& value,
                              const mxs::ConfigParameters& params,
