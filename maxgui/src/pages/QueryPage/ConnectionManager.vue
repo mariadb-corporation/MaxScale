@@ -77,7 +77,7 @@
                 </v-list-item>
             </template>
         </v-select>
-        <connection-dialog
+        <conn-dlg-ctr
             v-model="isConnDlgOpened"
             :connOptions="connOptions"
             :handleSave="handleOpenConn"
@@ -90,7 +90,7 @@
             :item="connToBeDel"
             :onSave="confirmDelConn"
         />
-        <reconn-dialog />
+        <reconn-dlg-ctr />
     </div>
 </template>
 
@@ -108,14 +108,14 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
-import ConnectionDialog from './ConnectionDialog'
-import ReconnDialog from './ReconnDialog.vue'
+import ConnDlg from './ConnDlg.container.vue'
+import ReconnDlg from './ReconnDlg.container.vue'
 
 export default {
     name: 'connection-manager',
     components: {
-        ConnectionDialog,
-        ReconnDialog,
+        'conn-dlg-ctr': ConnDlg,
+        'reconn-dlg-ctr': ReconnDlg,
     },
     data() {
         return {

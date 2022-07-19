@@ -183,7 +183,7 @@
 import { mapActions, mapMutations, mapState } from 'vuex'
 
 export default {
-    name: 'connection-dialog',
+    name: 'conn-dlg-ctr',
     props: {
         value: { type: Boolean, required: true },
         connOptions: { type: Array, required: true },

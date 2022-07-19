@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ReconnDialog from '@/pages/QueryPage/ReconnDialog'
+import ReconnDlg from '@/pages/QueryPage/ReconnDlg.container.vue'
 
 const dummy_conn_err_obj = {
     message: 'Lost connection to server during query',
@@ -21,14 +21,14 @@ const dummy_conn_err_obj = {
 const mountFactory = opts =>
     mount({
         shallow: true,
-        component: ReconnDialog,
+        component: ReconnDlg,
         ...opts,
     })
-describe('ReconnDialog', () => {
+describe('ReconnDlg', () => {
     let wrapper, deleteConnSpy
 
     beforeEach(() => {
-        deleteConnSpy = sinon.spy(ReconnDialog.methods, 'deleteConn')
+        deleteConnSpy = sinon.spy(ReconnDlg.methods, 'deleteConn')
         wrapper = mountFactory()
     })
     afterEach(() => {

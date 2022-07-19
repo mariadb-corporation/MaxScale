@@ -35,10 +35,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
 
+import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
 export default {
-    name: 'reconn-dialog',
+    name: 'reconn-dlg-ctr',
     computed: {
         ...mapState({
             active_wke_id: state => state.wke.active_wke_id,

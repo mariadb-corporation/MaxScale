@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnectionDialog from '@/pages/QueryPage/ConnectionDialog'
+import ConnDlg from '@/pages/QueryPage/ConnDlg.container.vue'
 import { merge } from 'utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
@@ -38,7 +38,7 @@ const mountFactory = opts =>
         merge(
             {
                 shallow: true,
-                component: ConnectionDialog,
+                component: ConnDlg,
                 propsData: {
                     value: true, // open dialog by default
                     connOptions: [],
@@ -58,7 +58,7 @@ async function mockChangingBody({ wrapper, key, value }) {
     })
 }
 
-describe(`ConnectionDialog - child component's data communication tests `, () => {
+describe(`ConnDlg - child component's data communication tests `, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory({
@@ -110,10 +110,10 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
         expect(errorMessages).to.be.equals(wrapper.vm.$data.errRsrcMsg)
     })
 })
-describe(`ConnectionDialog - dialog open/close side-effect tests`, () => {
+describe(`ConnDlg - dialog open/close side-effect tests`, () => {
     let wrapper, handleFetchRsrcsSpy
     beforeEach(() => {
-        handleFetchRsrcsSpy = sinon.spy(ConnectionDialog.methods, 'handleFetchRsrcs')
+        handleFetchRsrcsSpy = sinon.spy(ConnDlg.methods, 'handleFetchRsrcs')
         wrapper = mountFactory({
             methods: {
                 fetchRcTargetNames: () => null,
@@ -141,7 +141,7 @@ describe(`ConnectionDialog - dialog open/close side-effect tests`, () => {
         spy.should.have.been.calledOnceWith(null)
     })
 })
-describe(`ConnectionDialog - methods and computed properties tests `, () => {
+describe(`ConnDlg - methods and computed properties tests `, () => {
     let wrapper
     it(`Should return accurate value for hasSavingErr computed property`, () => {
         const errStates = [true, false]
@@ -245,7 +245,7 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
         })
     })
 })
-describe(`ConnectionDialog - form input tests`, () => {
+describe(`ConnDlg - form input tests`, () => {
     let wrapper
     it(`Should parse value as number for timeout field`, async () => {
         wrapper = mountFactory({ shallow: false })

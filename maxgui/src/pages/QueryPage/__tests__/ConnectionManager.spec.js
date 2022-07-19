@@ -54,12 +54,12 @@ describe(`ConnectionManager - child component's data communication tests `, () =
     beforeEach(() => {
         wrapper = mountFactory()
     })
-    it(`Should render reconn-dialog`, () => {
-        expect(wrapper.findComponent({ name: 'reconn-dialog' }).exists()).to.be.true
+    it(`Should render reconn-dlg-ctr`, () => {
+        expect(wrapper.findComponent({ name: 'reconn-dlg-ctr' }).exists()).to.be.true
     })
-    it(`Should pass accurate data to connection-dialog via props`, () => {
+    it(`Should pass accurate data to conn-dlg-ctr via props`, () => {
         const { value, connOptions, handleSave } = wrapper.findComponent({
-            name: 'connection-dialog',
+            name: 'conn-dlg-ctr',
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isConnDlgOpened)
         expect(connOptions).to.be.deep.equals(wrapper.vm.connOptions)
@@ -99,7 +99,7 @@ describe(`ConnectionManager - child component's data communication tests `, () =
 
 describe(`ConnectionManager - on created hook tests `, () => {
     let wrapper
-    it(`Should auto open connection-dialog if no connection has been found
+    it(`Should auto open conn-dlg-ctr if no connection has been found
     and no pre_select_conn_rsrc after validating connections`, () => {
         wrapper = mountFactory({
             computed: {
