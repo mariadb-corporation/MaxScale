@@ -84,4 +84,5 @@ EOF
 
 sudo mv pykmip.service /etc/systemd/system/
 sudo chcon system_u:object_r:systemd_unit_file_t:s0 /etc/systemd/system/pykmip.service
+sudo chcon -R -t bin_t /tmp/venv/
 sudo systemctl daemon-reload
