@@ -43,8 +43,12 @@ void test_main(TestConnections& test)
 
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
     const char uninstall_plugin[] = "UNINSTALL SONAME 'auth_pam';";
-    // Only works on Centos.
-    const char install_google_auth[] = "yum -y install google-authenticator";
+    const char install_google_auth[] =
+        "dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb;"
+        "yum -y install epel-release "
+        "|| (dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm) "
+        "|| (dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm);"
+        "yum -y install google-authenticator;";
 
     const char pam_user[] = "twofactor_user";
     const char pam_pw[] = "twofactor_pass";
