@@ -79,6 +79,7 @@ export default {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
                 const active_session_id = rootGetters['querySession/getActiveSessionId']
+                const active_session = rootGetters['querySession/getActiveSession']
                 const res = await this.$http.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
@@ -110,11 +111,15 @@ export default {
                     })
 
                     commit('SET_SQL_CONNS', validSqlConns)
+                    // get the connection of the active session
+                    const session_conn = this.vue.$typy(active_session, 'active_sql_conn')
+                        .safeObjectOrEmpty
+                    // get session_conn new value after validating
+                    const session_conn_updated = validSqlConns[session_conn.id] || {}
                     // update active_sql_conn attributes
-                    if (state.active_sql_conn.id) {
-                        const active_sql_conn = validSqlConns[state.active_sql_conn.id]
+                    if (session_conn_updated.id !== state.active_sql_conn.id) {
                         commit('SET_ACTIVE_SQL_CONN', {
-                            payload: active_sql_conn,
+                            payload: session_conn_updated,
                             id: active_session_id,
                         })
                     }
