@@ -13,6 +13,7 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   COMMAND npm install)
 add_custom_target(install_node_modules ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
+add_dependencies(install_node_modules copy_npm_files)
 
 # Copy test files to binary directory
 add_custom_command(
@@ -21,6 +22,7 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   COMMAND cp -R ${CMAKE_CURRENT_SOURCE_DIR}/test .)
 add_custom_target(copy_test_files ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/test)
+add_dependencies(copy_test_files install_node_modules)
 
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/compare
@@ -28,6 +30,7 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   COMMAND cp -R ${CMAKE_CURRENT_SOURCE_DIR}/compare .)
 add_custom_target(copy_compare_files ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/compare)
+add_dependencies(copy_compare_files copy_test_files)
 
 #
 # Tests
