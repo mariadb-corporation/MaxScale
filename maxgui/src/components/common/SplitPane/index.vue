@@ -6,8 +6,11 @@
         @mouseup="onMouseUp"
         @mousemove="onMouseMove"
     >
-        <pane isLeft :split="split" :style="leftPanelPos">
-            <slot name="pane-left" />
+        <pane :isLeft="!revertRender" :split="split" :style="leftPaneStyle">
+            <slot :name="`pane-${revertRender ? 'right' : 'left'}`" />
+        </pane>
+        <pane :isLeft="revertRender" :split="split" :style="rightPaneStyle">
+            <slot :name="`pane-${revertRender ? 'left' : 'right'}`" />
         </pane>
         <resizer
             :style="resizerStyle"
@@ -16,9 +19,6 @@
             :disable="disable"
             @mousedown.native="onMouseDown"
         />
-        <pane :split="split" :style="rightPanelPos">
-            <slot name="pane-right" />
-        </pane>
         <div v-if="active" class="resizing-mask" />
     </div>
 </template>
@@ -51,6 +51,7 @@ export default {
             required: true,
         },
         disable: { type: Boolean, default: false },
+        revertRender: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -82,6 +83,12 @@ export default {
         },
         cursor() {
             return this.active ? (this.split === 'vert' ? 'col-resize' : 'row-resize') : ''
+        },
+        leftPaneStyle() {
+            return this.revertRender ? this.rightPanelPos : this.leftPanelPos
+        },
+        rightPaneStyle() {
+            return this.revertRender ? this.leftPanelPos : this.rightPanelPos
         },
     },
     watch: {
