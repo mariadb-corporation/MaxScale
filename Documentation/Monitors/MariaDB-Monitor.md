@@ -1121,6 +1121,25 @@ connection. The port must not be blocked by a firewall or listened on by any
 other program. If another process is listening on the port when rebuild is
 starting, MaxScale will attempt to kill the process.
 
+### sudoers.d configuration
+
+If giving MaxScale general sudo-access is out of the question, MaxScale must be
+allowed to run the specific commands required by the rebuild-operation. This can
+be achieved by creating a file with the commands in the
+`/etc/sudoers.d`-directory. In the example below, the user *johnny* is given the
+power to run commands as root. The contents of the file may need to be tweaked
+due to changes in install locations.
+```
+johnny ALL= NOPASSWD: /bin/systemctl stop mariadb
+johnny ALL= NOPASSWD: /bin/systemctl start mariadb
+johnny ALL= NOPASSWD: /usr/sbin/lsof
+johnny ALL= NOPASSWD: /bin/kill
+johnny ALL= NOPASSWD: /usr/bin/mariabackup
+johnny ALL= NOPASSWD: /bin/mbstream
+johnny ALL= NOPASSWD: /bin/rm -rf /var/lib/mysql/*
+johnny ALL= NOPASSWD: /bin/chown -R mysql\:mysql /var/lib/mysql/*
+```
+
 ## ColumnStore commands
 
 Since MaxScale version 22.08, MariaDB Monitor can run ColumnStore administrative
