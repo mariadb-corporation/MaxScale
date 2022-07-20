@@ -1866,7 +1866,7 @@ void RoutingWorker::fail_timed_out_endpoints()
         while (it != ep_deq.end())
         {
             auto* ep = *it;
-            if (now - ep->conn_wait_start() >= 60s)
+            if (now - ep->conn_wait_start() > ep->session()->multiplex_timeout())
             {
                 ep->handle_timed_out_continue();
                 it = ep_deq.erase(it);

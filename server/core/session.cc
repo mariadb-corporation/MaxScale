@@ -701,6 +701,7 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     if (pooling_time >= 0)
     {
         m_pooling_time_ms = pooling_time;
+        m_multiplex_timeout = svc_config.multiplex_timeout;
     }
 }
 
@@ -1823,6 +1824,11 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
 int64_t Session::pooling_time_ms() const
 {
     return m_pooling_time_ms;
+}
+
+std::chrono::seconds Session::multiplex_timeout() const
+{
+    return m_multiplex_timeout;
 }
 
 MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)
