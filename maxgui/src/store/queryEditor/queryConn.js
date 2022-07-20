@@ -158,52 +158,77 @@ export default {
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
                     }
                     commit('ADD_SQL_CONN', sql_conn)
-                    // sync the first session tab to persisted obj
-                    const defSession = activeWkeSessions[0]
-                    queryHelper.syncToPersistedObj({
-                        scope: this,
-                        data: { active_sql_conn: sql_conn },
-                        id: defSession.id,
-                        persistedArrayPath: 'querySession.query_sessions',
-                    })
+
+                    // sync the created connection to the first session tab
+                    const fSess = activeWkeSessions[0]
+                    let activeSessConn = sql_conn
+                    dispatch('syncSqlConnToSess', { sess: fSess, sql_conn })
+
                     // check if there are other session tabs, clone it to other session tabs
-                    const otherSessions = activeWkeSessions.filter(s => s.id !== defSession.id)
-                    if (otherSessions.length) {
-                        // clone the connection and bind it to all other session tabs
-                        for (const s of otherSessions) {
-                            let cloneConnObj
-                            await dispatch('cloneConn', {
-                                conn_to_be_cloned: sql_conn,
-                                binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
-                                getCloneObjRes: obj => (cloneConnObj = obj),
-                            })
-                            // sync it
-                            if (s.id !== active_session_id)
-                                queryHelper.syncToPersistedObj({
-                                    scope: this,
-                                    data: { active_sql_conn: cloneConnObj },
-                                    id: s.id,
-                                    persistedArrayPath: 'querySession.query_sessions',
-                                })
-                            // bind the connection to the active session tab, this will also sync it
-                            else {
-                                commit('SET_ACTIVE_SQL_CONN', { payload: cloneConnObj, id: s.id })
-                                commit('PATCH_IS_CONN_BUSY_MAP', {
-                                    id: active_session_id,
-                                    payload: { value: false },
-                                })
-                            }
-                        }
-                    }
-                    // set active conn once sessions are bound to cloned connections to avoid concurrent query
-                    if (active_session_id === defSession.id)
-                        commit('SET_ACTIVE_SQL_CONN', { payload: sql_conn, id: defSession.id })
+                    const otherSessions = activeWkeSessions.filter(s => s.id !== fSess.id)
+                    if (otherSessions.length)
+                        await dispatch('cloneAndSyncConnToSessions', {
+                            sessions: otherSessions,
+                            conn_to_be_cloned: sql_conn,
+                            active_session_id,
+                            getActiveSessConn: sessConn => (activeSessConn = sessConn),
+                        })
+
+                    /* To avoid concurrent query, only set the connection as active to the active
+                     * session tab once cloned connections are bound to sessions
+                     */
+                    commit('SET_ACTIVE_SQL_CONN', {
+                        id: active_session_id,
+                        payload: activeSessConn,
+                    })
+
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
                 this.vue.$logger('store-queryConn-openConnect').error(e)
                 commit('SET_CONN_ERR_STATE', true)
+            }
+        },
+        /**
+         * Sync the conn to the session in the persisted query_sessions array
+         * @param {Object} param.sess - session object
+         * @param {Object} param.sql_conn - connection object
+         */
+        syncSqlConnToSess(_, { sess, sql_conn }) {
+            queryHelper.syncToPersistedObj({
+                scope: this,
+                data: { active_sql_conn: sql_conn },
+                id: sess.id,
+                persistedArrayPath: 'querySession.query_sessions',
+            })
+        },
+        /**
+         * This clones the provided connection and sync it to the session tab object
+         * in query_sessions persisted array. If the session id === active_session_id,
+         * it calls getActiveSessConn to get the clone connection to be bound to the
+         * active session
+         * @param {Array} param.sessions - sessions
+         * @param {Object} param.conn_to_be_cloned - connection object to be cloned
+         * @param {String} param.active_session_id - active_session_id
+         * @param {Function} param.getActiveSessConn - callback function
+         */
+        async cloneAndSyncConnToSessions(
+            { dispatch, rootState },
+            { sessions, conn_to_be_cloned, active_session_id, getActiveSessConn }
+        ) {
+            // clone the connection and bind it to all other session tabs
+            for (const s of sessions) {
+                let sessConn
+                await dispatch('cloneConn', {
+                    conn_to_be_cloned,
+                    binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                    getCloneObjRes: obj => (sessConn = obj),
+                })
+                // return the connection for the active session
+                if (s.id === active_session_id) getActiveSessConn(sessConn)
+                // just sync the conn to the session
+                else dispatch('syncSqlConnToSess', { sess: s, sql_conn: sessConn })
             }
         },
         /**
