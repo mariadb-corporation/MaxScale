@@ -169,6 +169,7 @@ export default {
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
             getDbTreeData: 'schemaSidebar/getDbTreeData',
+            getCurrDbTree: 'schemaSidebar/getCurrDbTree',
         }),
         searchSchema: {
             get() {
@@ -222,19 +223,20 @@ export default {
         /**
          * A watcher on active_sql_conn state that is triggered immediately
          * to behave like a created hook.
-         * When the value of the active_sql_conn is changed by changing
-         * worksheet tab, it checks if the worksheet has an active connection but
-         * schema tree data which is stored in memory is an empty array, it calls
-         * initialFetch to populate the data.
-         * TODO: Handle when getDbTreeData is not empty but it's for the current
-         * connection bound to worksheet, not the new connection being created or
-         * being chosen.
+         * It calls initialFetch to populate the data if the worksheet has an
+         * active connection but schema tree data is an empty array
+         * or when the new connection is being created, chosen or when changing
+         * the worksheet
          */
         watch_active_sql_conn() {
             this.unwatch_active_sql_conn = this.$watch(
                 'active_sql_conn',
                 async v => {
-                    if (this.getDbTreeData.length === 0) await this.initialFetch(v)
+                    if (
+                        this.getDbTreeData.length === 0 ||
+                        this.$typy(this.getCurrDbTree, 'data_of_conn').safeString !== v.name
+                    )
+                        await this.initialFetch(v)
                 },
                 { deep: true, immediate: true }
             )

@@ -345,6 +345,7 @@ export default {
         },
         async fetchSchemas({ commit, dispatch, state, rootState }) {
             const active_wke_id = rootState.wke.active_wke_id
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
 
             try {
@@ -377,6 +378,7 @@ export default {
                             loading_db_tree: false,
                             data: tree,
                             db_completion_list: completionList,
+                            data_of_conn: active_sql_conn.name,
                         },
                     })
                 }
