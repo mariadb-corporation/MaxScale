@@ -1564,6 +1564,11 @@ bool ParamModule::validate_parameters(const std::string& value,
     {
         // The module does not expect nested parameters.
         valid = true;
+
+        if (pUnrecognized)
+        {
+            *pUnrecognized = params;
+        }
     }
     else if (pSpecification)
     {
@@ -1589,6 +1594,16 @@ bool ParamModule::validate_parameters(const std::string& value,
     {
         // The module does not expect nested parameters.
         valid = true;
+
+        if (pUnrecognized)
+        {
+            const char* zKey;
+            json_t* pValue;
+            json_object_foreach(pParams, zKey, pValue)
+            {
+                pUnrecognized->insert(zKey);
+            }
+        }
     }
     else if (pSpecification)
     {

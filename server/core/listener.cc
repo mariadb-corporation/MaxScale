@@ -410,10 +410,11 @@ bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigPar
     }
 
     mxs::ConfigParameters params;
+    auto it = nested_params.find(protocol_name);
 
-    if (nested_params.size() == 1)
+    if (it != nested_params.end())
     {
-        params = nested_params.at(protocol_name);
+        params = it->second;
     }
 
     return m_listener->post_configure(params);
