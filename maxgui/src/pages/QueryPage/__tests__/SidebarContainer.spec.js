@@ -202,14 +202,17 @@ describe(`SidebarContainer - button tests (If there is no connection)`, () => {
         wrapper.find('.collapse-btn').trigger('click')
         expect(is_sidebar_collapsed).to.be.true
     })
-    it(`Should call reloadTreeNodes when reload button is clicked`, () => {
+    it(`Should call fetchSchemas when reload button is clicked`, async () => {
+        let callCount = 0
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockShowingDbListTree(), is_sidebar_collapsed: () => false },
+            methods: {
+                fetchSchemas: () => callCount++,
+            },
         })
-        const reloadTreeNodesSpy = sinon.spy(wrapper.vm, 'reloadTreeNodes')
-        wrapper.find('.reload-btn').trigger('click')
-        reloadTreeNodesSpy.should.have.been.calledOnce
+        await wrapper.find('.reload-btn').trigger('click')
+        expect(callCount).to.be.equals(1)
     })
 })
 describe(`SidebarContainer - methods tests`, () => {

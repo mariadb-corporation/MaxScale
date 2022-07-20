@@ -28,7 +28,7 @@
                                     :disabled="isConnecting"
                                     class="reload-btn"
                                     v-on="on"
-                                    @click="reloadSchema"
+                                    @click="fetchSchemas"
                                 >
                                     <v-icon size="12" :color="isConnecting ? '' : 'deep-ocean'">
                                         $vuetify.icons.reload
@@ -211,7 +211,7 @@ export default {
             fetchPrvw: 'queryResult/fetchPrvw',
             updateTreeNodes: 'schemaSidebar/updateTreeNodes',
             useDb: 'schemaSidebar/useDb',
-            reloadTreeNodes: 'schemaSidebar/reloadTreeNodes',
+            fetchSchemas: 'schemaSidebar/fetchSchemas',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             queryCharsetCollationMap: 'editor/queryCharsetCollationMap',
             queryEngines: 'editor/queryEngines',
@@ -238,9 +238,6 @@ export default {
                 },
                 { deep: true, immediate: true }
             )
-        },
-        async reloadSchema() {
-            await this.reloadTreeNodes()
         },
         async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()

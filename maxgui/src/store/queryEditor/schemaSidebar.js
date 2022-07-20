@@ -38,7 +38,7 @@ export default {
          */
         async initialFetch({ dispatch }, chosenConn) {
             if (chosenConn.id) {
-                await dispatch('reloadTreeNodes')
+                await dispatch('fetchSchemas')
                 await dispatch('updateActiveDb')
                 dispatch('changeWkeName', chosenConn.name)
             }
@@ -343,9 +343,10 @@ export default {
                 this.vue.$logger(`store-schemaSidebar-updateTreeNodes`).error(e)
             }
         },
-        async reloadTreeNodes({ commit, dispatch, state, rootState }) {
+        async fetchSchemas({ commit, dispatch, state, rootState }) {
             const active_wke_id = rootState.wke.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
+
             try {
                 commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
@@ -386,7 +387,7 @@ export default {
                         loading_db_tree: false,
                     },
                 })
-                this.vue.$logger(`store-schemaSidebar-reloadTreeNodes`).error(e)
+                this.vue.$logger(`store-schemaSidebar-fetchSchemas`).error(e)
             }
         },
         /**
