@@ -118,10 +118,10 @@ export default {
         },
     },
     activated() {
-        this.addGetActiveSessionIdWatcher()
+        this.watch_getActiveSessionId()
     },
     deactivated() {
-        this.rmGetActiveSessionIdWatcher()
+        this.$typy(this.unwatch_getActiveSessionId).safeFunction()
     },
     methods: {
         ...mapMutations({
@@ -132,8 +132,8 @@ export default {
             handleSyncSession: 'querySession/handleSyncSession',
             handleClearTheLastSession: 'querySession/handleClearTheLastSession',
         }),
-        addGetActiveSessionIdWatcher() {
-            this.rmGetActiveSessionIdWatcher = this.$watch(
+        watch_getActiveSessionId() {
+            this.unwatch_getActiveSessionId = this.$watch(
                 'getActiveSessionId',
                 v => {
                     if (v) this.handleSyncSession(this.getActiveSession)

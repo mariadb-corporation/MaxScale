@@ -80,8 +80,8 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <template v-for="(resSet, name) in resultData">
-                    <keep-alive :key="name">
+                <div v-for="(resSet, name) in resultData" :key="name">
+                    <keep-alive>
                         <template v-if="activeResSet === name">
                             <result-data-table
                                 v-if="$typy(resSet, 'data').isDefined"
@@ -100,7 +100,7 @@
                             </div>
                         </template>
                     </keep-alive>
-                </template>
+                </div>
             </template>
         </template>
     </div>
@@ -181,14 +181,14 @@ export default {
     },
     activated() {
         this.setHeaderHeight()
-        this.addResultDataWatcher()
+        this.watch_resultData()
     },
     deactivated() {
-        this.unwatchResultData()
+        this.$typy(this.unwatch_resultData).safeFunction()
     },
     methods: {
-        addResultDataWatcher() {
-            this.unwatchResultData = this.$watch('resultData', () => {
+        watch_resultData() {
+            this.unwatch_resultData = this.$watch('resultData', () => {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
             })
         },

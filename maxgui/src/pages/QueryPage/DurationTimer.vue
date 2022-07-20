@@ -72,7 +72,6 @@ export default {
     data() {
         return {
             duration: 0,
-            rmExecTimeWatcher: null,
         }
     },
     computed: {
@@ -86,15 +85,15 @@ export default {
     activated() {
         this.updateSecond()
         this.duration = this.totalDuration
-        this.addExeTimeWatcher()
+        this.watch_executionTime()
     },
     deactivated() {
-        this.rmExecTimeWatcher()
+        this.$typy(this.unwatch_executionTime).safeFunction()
     },
     methods: {
-        addExeTimeWatcher() {
-            // store watcher to rmExecTimeWatcher and use it for removing the watcher
-            this.rmExecTimeWatcher = this.$watch('executionTime', v => {
+        watch_executionTime() {
+            // store watcher to unwatch_executionTime and use it for removing the watcher
+            this.unwatch_executionTime = this.$watch('executionTime', v => {
                 if (v === -1) this.updateSecond()
             })
         },

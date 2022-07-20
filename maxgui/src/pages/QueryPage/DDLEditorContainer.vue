@@ -166,11 +166,11 @@ export default {
         },
     },
     activated() {
-        this.addInitialDataWatcher()
+        this.watch_initialData()
         this.activated = true
     },
     deactivated() {
-        this.rmInitialDataWatcher()
+        this.$typy(this.unwatch_initialData).safeFunction()
         this.activated = false
     },
     methods: {
@@ -183,8 +183,8 @@ export default {
             exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
         //Watcher to work with multiple worksheets which are kept alive
-        addInitialDataWatcher() {
-            this.rmInitialDataWatcher = this.$watch(
+        watch_initialData() {
+            this.unwatch_initialData = this.$watch(
                 'initialData',
                 v => {
                     if (v && !this.$help.lodash.isEqual(this.formData, v)) {

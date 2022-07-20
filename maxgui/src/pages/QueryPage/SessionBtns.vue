@@ -130,15 +130,15 @@ export default {
         },
     },
     deactivated() {
-        if (this.rmIsQueryKilledWatcher) this.rmIsQueryKilledWatcher()
+        this.$typy(this.unwatch_isQueryKilled).safeFunction()
     },
     activated() {
-        this.addIsQueryKilledWatcher()
+        this.watch_isQueryKilled()
     },
     methods: {
         ...mapActions({ disconnectClone: 'queryConn/disconnectClone' }),
-        addIsQueryKilledWatcher() {
-            this.rmIsQueryKilledWatcher = this.$watch('isQueryKilled', async (v, oV) => {
+        watch_isQueryKilled() {
+            this.unwatch_isQueryKilled = this.$watch('isQueryKilled', async (v, oV) => {
                 if (v !== oV && v) {
                     const bgConn = this.getCloneConn({
                         clone_of_conn_id: this.session.active_sql_conn.id,

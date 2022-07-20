@@ -325,21 +325,21 @@ export default {
         },
     },
     activated() {
-        this.addInitialDataFirstCellIdWatcher()
-        this.addWidthBreakpointWatcher()
+        this.watch_initialDataFirstCellId()
+        this.watch_width_breakpoint()
     },
     deactivated() {
-        this.rmInitialDataFirstCellIdWatcher()
-        this.rmWidthBreakpointWatcherr()
+        this.$typy(this.unwatch_initialDataFirstCellId).safeFunction()
+        this.$typy(this.unwatch_width_breakpoint).safeFunction()
     },
     methods: {
-        addInitialDataFirstCellIdWatcher() {
-            this.rmInitialDataFirstCellIdWatcher = this.$watch('initialDataFirstCellId', v => {
+        watch_initialDataFirstCellId() {
+            this.unwatch_initialDataFirstCellId = this.$watch('initialDataFirstCellId', v => {
                 if (v) this.handleShowColSpecs()
             })
         },
-        addWidthBreakpointWatcher() {
-            this.rmWidthBreakpointWatcherr = this.$watch('$vuetify.breakpoint.width', () =>
+        watch_width_breakpoint() {
+            this.unwatch_width_breakpoint = this.$watch('$vuetify.breakpoint.width', () =>
                 this.handleShowColSpecs()
             )
         },

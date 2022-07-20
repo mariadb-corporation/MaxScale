@@ -153,7 +153,6 @@ export default {
             scaleLabels: { x: '', y: '' }, // scaleLabels inputs
             axesType: { x: '', y: '' }, // axesType inputs
             showTrendline: false,
-            rmResultSetsWatcher: null,
         }
     },
     computed: {
@@ -244,15 +243,15 @@ export default {
         },
     },
     deactivated() {
-        if (this.rmResultSetsWatcher) this.rmResultSetsWatcher()
+        this.$typy(this.unwatch_resultSets).safeFunction()
     },
     activated() {
-        this.addResultSetsWatcher()
+        this.watch_resultSets()
     },
     methods: {
-        addResultSetsWatcher() {
-            // store watcher to rmResultSetsWatcher and use it for removing the watcher
-            this.rmResultSetsWatcher = this.$watch('resultSets', (v, oV) => {
+        watch_resultSets() {
+            // store watcher to unwatch_resultSets and use it for removing the watcher
+            this.unwatch_resultSets = this.$watch('resultSets', (v, oV) => {
                 if (!this.$help.lodash.isEqual(v, oV)) {
                     this.clearAxes()
                     this.resSet = null

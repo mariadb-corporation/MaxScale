@@ -115,15 +115,15 @@ export default {
         })
     },
     activated() {
-        this.addIsSidebarCollapsedsWatcher()
+        this.watch_is_sidebar_collapsed()
     },
     deactivated() {
-        this.rmIsSidebarCollapsedsWatcher()
+        this.$typy(this.unwatch_is_sidebar_collapsed).safeFunction()
     },
     methods: {
         //Watchers to work with multiple worksheets which are kept alive
-        addIsSidebarCollapsedsWatcher() {
-            this.rmIsSidebarCollapsedsWatcher = this.$watch('is_sidebar_collapsed', () =>
+        watch_is_sidebar_collapsed() {
+            this.unwatch_is_sidebar_collapsed = this.$watch('is_sidebar_collapsed', () =>
                 this.handleSetSidebarPct()
             )
         },

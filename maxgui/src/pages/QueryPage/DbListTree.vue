@@ -251,10 +251,10 @@ export default {
     },
     activated() {
         this.expandedNodes = this.expanded_nodes
-        this.addExpandedNodesWatcher()
+        this.watch_expandedNodes()
     },
     deactivated() {
-        this.rmExpandedNodesWatcher()
+        this.$typy(this.unwatch_expandedNodes).safeFunction()
     },
     methods: {
         ...mapMutations({
@@ -270,8 +270,8 @@ export default {
         showCtxBtn(item) {
             return Boolean(this.activeCtxItem && item.id === this.activeCtxItem.id)
         },
-        addExpandedNodesWatcher() {
-            this.rmExpandedNodesWatcher = this.$watch(
+        watch_expandedNodes() {
+            this.unwatch_expandedNodes = this.$watch(
                 'expandedNodes',
                 (v, oV) => {
                     const oldNodeIds = oV.map(node => node.id)
