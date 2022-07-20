@@ -80,6 +80,70 @@ void mxs3251(TestConnections& test)
     for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
 }
 
+void mxs4209(TestConnections& test)
+{
+    for (int i = 1; i <= 4; i++)
+    {
+        test.check_maxctrl("alter server server" + std::to_string(i) + " persistpoolmax 10");
+        test.check_maxctrl("alter server server" + std::to_string(i) + " persistmaxtime 300s");
+    }
+
+    // Make sure there's connections in the pool
+    std::vector<Connection> conns;
+
+    for (int i = 0; i < 10; i++)
+    {
+        auto conn = test.maxscale->rwsplit();
+        conn.connect();
+        conn.query("SELECT 1");
+        conns.push_back(std::move(conn));
+    }
+
+    conns.clear();
+
+    test.check_maxctrl("enable log-priority info");
+
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
+    test.expect(conn, "First connection failed");
+    auto other = test.maxscale->rwsplit();
+    other.set_timeout(10);
+    test.expect(other.connect(), "Second connection failed: %s", other.error());
+
+    int id = mysql_thread_id(conn);
+    const std::string kill = "KILL QUERY " + std::to_string(id);
+
+    for (int i = 0; i < 10 && test.ok(); i++)
+    {
+        const std::string query = "SELECT SLEEP(30)";
+        auto start = std::chrono::steady_clock::now();
+
+        test.expect(mysql_send_query(conn, query.c_str(), query.size()) == 0,
+                    "Query write failed for '%s': %s", query.c_str(), mysql_error(conn));
+        sleep(1);
+
+        test.expect(other.query(kill), "KILL failed: %s", other.error());
+
+        mysql_read_query_result(conn);
+        mysql_free_result(mysql_store_result(conn));
+
+        auto end = std::chrono::steady_clock::now();
+        auto diff = std::chrono::duration_cast<std::chrono::duration<float>>(end - start);
+
+        test.expect(diff < 10s, "Query took %f seconds when it should take less than 10 seconds",
+                    diff.count());
+    }
+
+    mysql_close(conn);
+
+    test.check_maxctrl("disable log-priority info");
+
+    for (int i = 1; i <= 4; i++)
+    {
+        test.check_maxctrl("alter server server" + std::to_string(i) + " persistpoolmax 0");
+        test.check_maxctrl("alter server server" + std::to_string(i) + " persistmaxtime 0s");
+    }
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -88,6 +152,8 @@ int main(int argc, char* argv[])
     mxs1985(test);
     test.log_printf("mxs3251");
     mxs3251(test);
+    test.log_printf("mxs4209");
+    mxs4209(test);
 
     return test.global_result;
 }
