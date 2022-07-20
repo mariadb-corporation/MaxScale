@@ -37,9 +37,11 @@ export default {
          * @param {Object} chosenConn  Chosen connection
          */
         async initialFetch({ dispatch }, chosenConn) {
-            await dispatch('reloadTreeNodes')
-            await dispatch('updateActiveDb')
-            dispatch('changeWkeName', chosenConn.name)
+            if (chosenConn.id) {
+                await dispatch('reloadTreeNodes')
+                await dispatch('updateActiveDb')
+                dispatch('changeWkeName', chosenConn.name)
+            }
         },
         changeWkeName({ commit, rootState, rootGetters }, name) {
             let newWke = this.vue.$help.lodash.cloneDeep(rootGetters['wke/getActiveWke'])

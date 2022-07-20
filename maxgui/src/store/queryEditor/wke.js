@@ -78,7 +78,8 @@ export default {
                         w => w.id === this.vue.$typy(targetSession, 'wke_id_fk').safeString
                     )
                     if (targetWke) {
-                        commit('SET_ACTIVE_WKE_ID', targetWke.id)
+                        if (state.active_wke_id !== targetWke.id)
+                            commit('SET_ACTIVE_WKE_ID', targetWke.id)
                         commit(
                             'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
                             {

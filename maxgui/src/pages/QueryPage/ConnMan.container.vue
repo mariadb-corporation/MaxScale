@@ -190,7 +190,7 @@ export default {
                      * If the worksheet has an active connection but schema tree data which is stored
                      * in memory is an empty array, then call initialFetch to populate the data.
                      */
-                    if (this.getDbTreeData.length === 0) await this.handleDispatchInitialFetch(v)
+                    if (this.getDbTreeData.length === 0) await this.initialFetch(v)
                 }
             },
         },
@@ -229,14 +229,6 @@ export default {
             } else this.openConnDialog()
         },
         /**
-         * Dispatching initalFetch when connection is valid, active_sql_conn
-         * state is defined
-         * @param {Object} active_sql_conn  active_sql_conn
-         */
-        async handleDispatchInitialFetch(active_sql_conn) {
-            if (active_sql_conn.id) await this.initialFetch(active_sql_conn)
-        },
-        /**
          * Function is called after selecting a connection
          */
         async onSelectConn(chosenConn) {
@@ -245,7 +237,7 @@ export default {
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
             // populate data
-            await this.handleDispatchInitialFetch(chosenConn)
+            await this.initialFetch(chosenConn)
         },
         assignActiveConn(conn) {
             if (conn) this.chosenConn = conn
@@ -264,7 +256,7 @@ export default {
              *  a connection already, after successful connecting, dispatch initialFetch
              *  to reload schemas tree and other related components. Otherwise,
              *  after creating a connection, active_sql_conn watcher will handle
-             *  calling handleDispatchInitialFetch
+             *  calling initialFetch
              */
             const hasConnectionAlready = Boolean(this.active_sql_conn.id)
             await this.openConnect(opts)
