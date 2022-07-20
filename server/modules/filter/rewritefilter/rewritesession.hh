@@ -38,6 +38,6 @@ private:
     RewriteFilterSession& operator=(const RewriteFilterSession&);
 
 private:
-    void log_replacement(const std::string& from, const std::string& to);
+    void log_replacement(const std::string& from, const std::string& to, bool what_if);
     std::shared_ptr<const Settings> m_sSettings;
 };

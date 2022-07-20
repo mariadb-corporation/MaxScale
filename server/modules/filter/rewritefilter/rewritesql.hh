@@ -51,11 +51,13 @@ public:
     const std::string& regex_str() const;
     const std::string& replace_template() const;
     size_t             num_replacements() const;
+    const TemplateDef& template_def() const;
 
 private:
     std::string make_ordinals();
     std::regex  make_regex(const TemplateDef& def);
 
+    const TemplateDef m_template_def;
     const std::string m_regex_template;
     const std::string m_replace_template;
     std::string       m_error_str;  // human readable error string, after construction
@@ -106,4 +108,9 @@ inline const std::string& RewriteSql::replace_template() const
 inline size_t RewriteSql::num_replacements() const
 {
     return m_nreplacements;
+}
+
+inline const TemplateDef& RewriteSql::template_def() const
+{
+    return m_template_def;
 }

@@ -42,6 +42,12 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
                 def.case_sensitive = case_sensitive;
             }
 
+            bool what_if;
+            if (t.try_get_bool("what_if", &what_if))
+            {
+                def.what_if = what_if;
+            }
+
             def.match_template = t.get_string("match_template");
             if (t.ok())
             {

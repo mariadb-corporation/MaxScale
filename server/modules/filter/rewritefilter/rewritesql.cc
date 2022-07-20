@@ -33,8 +33,9 @@ void write_regex_char(std::string* str, char ch)
 }
 
 RewriteSql::RewriteSql(const TemplateDef& template_def)
-    : m_regex_template(template_def.match_template)
-    , m_replace_template(template_def.replace_template)
+    : m_template_def(template_def)
+    , m_regex_template(m_template_def.match_template)
+    , m_replace_template(m_template_def.replace_template)
     , m_replacer(m_replace_template)
 {
     std::ostringstream error_stream;
@@ -113,7 +114,7 @@ RewriteSql::RewriteSql(const TemplateDef& template_def)
     {
         try
         {
-            m_regex = make_regex(template_def);
+            m_regex = make_regex(m_template_def);
         }
         catch (const std::exception& ex)
         {

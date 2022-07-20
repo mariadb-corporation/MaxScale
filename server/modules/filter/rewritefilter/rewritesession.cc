@@ -25,9 +25,21 @@ RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
 {
 }
 
-void RewriteFilterSession::log_replacement(const std::string& from, const std::string& to)
+void RewriteFilterSession::log_replacement(const std::string& from,
+                                           const std::string& to,
+                                           bool what_if)
 {
-    MXB_SNOTICE("Replace \"" << from << "\" with \"" << to << '"');
+    std::ostringstream os;
+    if (what_if)
+    {
+        os << "what_if is set. Would r";
+    }
+    else
+    {
+        os << 'R';
+    }
+    os << "eplace \"" << from << "\" with \"" << to << '"';
+    MXB_NOTICE("%s", os.str().c_str());
 }
 
 RewriteFilterSession::~RewriteFilterSession()
@@ -52,12 +64,16 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
         std::string new_sql;
         if (r.replace(sql, &new_sql))
         {
-            if (settings.log_replacement)
+            if (settings.log_replacement || r.template_def().what_if)
             {
-                log_replacement(sql, new_sql);
+                log_replacement(sql, new_sql, r.template_def().what_if);
             }
-            gwbuf_free(pBuffer);
-            pBuffer = modutil_create_query(new_sql.c_str());
+
+            if (!r.template_def().what_if)
+            {
+                gwbuf_free(pBuffer);
+                pBuffer = modutil_create_query(new_sql.c_str());
+            }
             break;
         }
     }

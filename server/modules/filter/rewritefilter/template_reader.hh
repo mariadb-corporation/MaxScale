@@ -18,6 +18,7 @@
 struct TemplateDef
 {
     bool        case_sensitive = true;
+    bool        what_if = false;
     std::string match_template;
     std::string replace_template;
 };
