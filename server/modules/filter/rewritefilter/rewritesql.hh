@@ -17,7 +17,6 @@
 #include "template_reader.hh"
 
 #include <string>
-#include <regex>
 #include <memory>
 
 class Replacer;

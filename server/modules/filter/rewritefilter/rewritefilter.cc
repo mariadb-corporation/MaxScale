@@ -38,6 +38,21 @@ cfg::ParamPath template_file(
 
 cfg::ParamBool log_replacement(
     &specification, "log_replacement", "Log replacements at INFO level", false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnum<RegexGrammar> regex_grammar(
+    &specification, "regex_grammar", "Regex grammar, or Native for the Rewrite filter native syntax",
+        {
+            {RegexGrammar::Native, "Native"},
+            {RegexGrammar::ECMAScript, "ECMAScript"},
+            {RegexGrammar::Posix, "Posix"},
+            {RegexGrammar::EPosix, "Extended_posix"},
+            {RegexGrammar::Awk, "Awk"},
+            {RegexGrammar::Grep, "Grep"},
+            {RegexGrammar::EGrep, "EGrep"},
+        },
+    RegexGrammar::Native,
+    cfg::Param::AT_RUNTIME
+    );
 }
 }
 
@@ -46,7 +61,6 @@ static uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT;
 //
 // Global symbols of the Module
 //
-
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
@@ -83,13 +97,14 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
     add_native(&Config::m_settings, &Settings::case_sensitive, &rewritefilter::case_sensitive);
     add_native(&Config::m_settings, &Settings::log_replacement, &rewritefilter::log_replacement);
     add_native(&Config::m_settings, &Settings::template_file, &rewritefilter::template_file);
+    add_native(&Config::m_settings, &Settings::regex_grammar, &rewritefilter::regex_grammar);
 }
 
 bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale::ConfigParameters>&)
 {
     bool ok = true;
 
-    TemplateDef default_template {m_settings.case_sensitive};
+    TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
 
     if (!m_settings.template_file.empty())
     {

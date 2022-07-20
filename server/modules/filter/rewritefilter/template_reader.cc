@@ -15,6 +15,42 @@
 #include <maxbase/json.hh>
 #include <maxbase/log.hh>
 
+std::regex_constants::syntax_option_type to_regex_grammar_flag(RegexGrammar type)
+{
+    namespace rx = std::regex_constants;
+    rx::syntax_option_type flag;
+
+    switch (type)
+    {
+    case RegexGrammar::Native:
+    case RegexGrammar::ECMAScript:
+        flag = rx::ECMAScript;
+        break;
+
+    case RegexGrammar::Posix:
+        flag = rx::basic;
+        break;
+
+    case RegexGrammar::EPosix:
+        flag = rx::extended;
+        break;
+
+    case RegexGrammar::Awk:
+        flag = rx::awk;
+        break;
+
+    case RegexGrammar::Grep:
+        flag = rx::grep;
+        break;
+
+    case RegexGrammar::EGrep:
+        flag = rx::egrep;
+        break;
+    }
+
+    return flag;
+}
+
 using mxb::Json;
 
 TemplateReader::TemplateReader(const std::string& template_file, const TemplateDef& dfault)
@@ -40,6 +76,12 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
             if (t.try_get_bool("case_sensitive", &case_sensitive))
             {
                 def.case_sensitive = case_sensitive;
+            }
+
+            int64_t regex_grammar;
+            if (t.try_get_int("regex_grammar", &regex_grammar))
+            {
+                def.regex_grammar = static_cast<RegexGrammar>(regex_grammar);
             }
 
             bool what_if;

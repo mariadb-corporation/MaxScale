@@ -189,7 +189,8 @@ std::regex RewriteSql::make_regex(const TemplateDef& def)
 {
     namespace rx = std::regex_constants;
 
-    auto flags = rx::ECMAScript | rx::optimize;
+    auto grammar = to_regex_grammar_flag(def.regex_grammar);
+    auto flags = grammar | rx::optimize;
 
     if (def.case_sensitive == false)
     {

@@ -29,6 +29,7 @@ struct Settings
     bool                     reload = false;
     bool                     case_sensitive = true;
     bool                     log_replacement = false;
+    RegexGrammar             regex_grammar;
     std::string              template_file;
     std::vector<TemplateDef> templates;
     std::vector<RewriteSql>  rewriters;
