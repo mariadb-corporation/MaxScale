@@ -5,6 +5,7 @@
         :minPercent="minSidebarPct"
         split="vert"
         :disable="is_sidebar_collapsed"
+        revertRender
     >
         <template slot="pane-left">
             <sidebar-container
@@ -79,15 +80,10 @@ export default {
     computed: {
         ...mapState({
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
-            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
-            getDbCmplList: 'schemaSidebar/getDbCmplList',
             getCurrEditorMode: 'editor/getCurrEditorMode',
-            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         isTxtEditor() {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
