@@ -115,14 +115,13 @@ describe(`ConnMan - on created hook tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    const fnCalls = ['initialFetch', 'assignActiveConn']
-    fnCalls.forEach(fn => {
-        it(`Should call ${fn} if there is an active connection bound to the worksheet`, () => {
-            const fnSpy = sinon.spy(ConnMan.methods, fn)
-            wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-            fnSpy.should.have.been.calledOnce
-            fnSpy.restore()
-        })
+
+    it(`Should call assignActiveConn if there is an active connection bound
+    to the worksheet`, () => {
+        const fnSpy = sinon.spy(ConnMan.methods, 'assignActiveConn')
+        wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
+        fnSpy.should.have.been.calledOnce
+        fnSpy.restore()
     })
 })
 
@@ -141,7 +140,6 @@ describe(`ConnMan - methods and computed properties tests `, () => {
             methods: {
                 SET_ACTIVE_SQL_CONN: () => null,
                 updateRoute: () => null,
-                handleDispatchInitialFetch: () => null,
             },
         })
         fnSpy.should.have.been.calledOnceWith(
@@ -217,13 +215,12 @@ describe(`ConnMan - connection list dropdown tests`, () => {
     })
     it(`Should call SET_ACTIVE_SQL_CONN and updateRoute with accurate arguments
       when onSelectConn is called`, () => {
-        let updateRouteArgs, setCurrCnctResourceArgs, handleDispatchInitialFetchArgs
+        let updateRouteArgs, setCurrCnctResourceArgs
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
             methods: {
                 SET_ACTIVE_SQL_CONN: v => (setCurrCnctResourceArgs = v),
                 updateRoute: v => (updateRouteArgs = v),
-                handleDispatchInitialFetch: v => (handleDispatchInitialFetchArgs = v),
             },
         })
         const selectConn = wrapper.vm.connOptions[1]
@@ -233,7 +230,6 @@ describe(`ConnMan - connection list dropdown tests`, () => {
             payload: selectConn,
             id: wrapper.vm.getActiveSessionId,
         })
-        expect(handleDispatchInitialFetchArgs).to.be.deep.equals(selectConn)
     })
 })
 
@@ -272,19 +268,12 @@ describe(`ConnMan - other tests`, () => {
     ]
     handleOpenConnCases.forEach(c => {
         it(`Should handle dispatch openConnect action accurately when ${c}`, () => {
-            const initialFetchSpy = sinon.spy(ConnMan.methods, 'initialFetch')
             let openConnectArgs
-            const hasConnectionAlready = c === 'worksheet is bound to a connection'
             wrapper = mountFactory({
-                computed: { ...(hasConnectionAlready ? mockActiveConnState() : {}) },
                 methods: { openConnect: args => (openConnectArgs = args) },
             })
             wrapper.vm.handleOpenConn(mockNewConnData())
             expect(openConnectArgs).to.be.deep.equals(mockNewConnData())
-            hasConnectionAlready
-                ? initialFetchSpy.should.have.been.calledOnce
-                : initialFetchSpy.should.have.not.been.called
-            initialFetchSpy.restore()
         })
     })
 })

@@ -129,14 +129,12 @@ export default {
         ...mapState({
             sql_conns: state => state.queryConn.sql_conns,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            conn_err_state: state => state.queryConn.conn_err_state,
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
             active_wke_id: state => state.wke.active_wke_id,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
             query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
-            getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActiveSessionId: 'querySession/getActiveSessionId',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
@@ -173,8 +171,7 @@ export default {
     },
     watch: {
         /**
-         * Watcher to handle multi-worksheets or after creating a connection.
-         * It's set to trigger immediately after creating so it works also as a created hook
+         * Watcher to handle multi-worksheets
          */
         active_sql_conn: {
             deep: true,
@@ -184,14 +181,7 @@ export default {
                  * chosenConn is component'state, so when active_sql_conn query's module state
                  * is changed by changing worksheet, chosenConn needs to be updated by calling assignActiveConn
                  */
-                if (!this.$help.lodash.isEqual(v, this.chosenConn)) {
-                    this.assignActiveConn(v)
-                    /**
-                     * If the worksheet has an active connection but schema tree data which is stored
-                     * in memory is an empty array, then call initialFetch to populate the data.
-                     */
-                    if (this.getDbTreeData.length === 0) await this.initialFetch(v)
-                }
+                if (!this.$help.lodash.isEqual(v, this.chosenConn)) this.assignActiveConn(v)
             },
         },
         pre_select_conn_rsrc: {
@@ -209,12 +199,9 @@ export default {
         ...mapActions({
             openConnect: 'queryConn/openConnect',
             disconnect: 'queryConn/disconnect',
-            initialFetch: 'schemaSidebar/initialFetch',
             updateRoute: 'wke/updateRoute',
         }),
-        ...mapMutations({
-            SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',
-        }),
+        ...mapMutations({ SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN' }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
          * bind it to the current worksheet. otherwise open dialog
@@ -236,8 +223,6 @@ export default {
             this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.getActiveSessionId })
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
-            // populate data
-            await this.initialFetch(chosenConn)
         },
         assignActiveConn(conn) {
             if (conn) this.chosenConn = conn
@@ -251,19 +236,9 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
-            /**
-             *  When creating new connection, if current worksheet has been bound to
-             *  a connection already, after successful connecting, dispatch initialFetch
-             *  to reload schemas tree and other related components. Otherwise,
-             *  after creating a connection, active_sql_conn watcher will handle
-             *  calling initialFetch
-             */
-            const hasConnectionAlready = Boolean(this.active_sql_conn.id)
             await this.openConnect(opts)
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
-            if (hasConnectionAlready && !this.conn_err_state)
-                await this.initialFetch(this.active_sql_conn)
         },
         async confirmDelConn() {
             /**

@@ -168,6 +168,7 @@ export default {
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getDbTreeData: 'schemaSidebar/getDbTreeData',
         }),
         searchSchema: {
             get() {
@@ -192,6 +193,12 @@ export default {
             return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
     },
+    deactivated() {
+        this.$typy(this.unwatch_active_sql_conn).safeFunction()
+    },
+    activated() {
+        this.watch_active_sql_conn()
+    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
@@ -210,7 +217,28 @@ export default {
             queryEngines: 'editor/queryEngines',
             queryDefDbCharsetMap: 'editor/queryDefDbCharsetMap',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
+            initialFetch: 'schemaSidebar/initialFetch',
         }),
+        /**
+         * A watcher on active_sql_conn state that is triggered immediately
+         * to behave like a created hook.
+         * When the value of the active_sql_conn is changed by changing
+         * worksheet tab, it checks if the worksheet has an active connection but
+         * schema tree data which is stored in memory is an empty array, it calls
+         * initialFetch to populate the data.
+         * TODO: Handle when getDbTreeData is not empty but it's for the current
+         * connection bound to worksheet, not the new connection being created or
+         * being chosen.
+         */
+        watch_active_sql_conn() {
+            this.unwatch_active_sql_conn = this.$watch(
+                'active_sql_conn',
+                async v => {
+                    if (this.getDbTreeData.length === 0) await this.initialFetch(v)
+                },
+                { deep: true, immediate: true }
+            )
+        },
         async reloadSchema() {
             await this.reloadTreeNodes()
         },
