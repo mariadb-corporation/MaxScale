@@ -117,6 +117,8 @@ private:
     SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
     void          add_local_client(LocalClient* client);
     bool          have_local_clients();
+    void          kill_complete(bool send_ok, LocalClient* client);
+    void          maybe_send_kill_response(bool send_ok);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
