@@ -1,0 +1,12 @@
+[Read-Write-Service]
+type=service
+router=readwritesplit
+user=myuser
+password=mypwd
+
+[Read-Write-Listener]
+type=listener
+service=Read-Write-Service
+protocol=mariadbclient
+port=4006
+mariadbclient.something=else
