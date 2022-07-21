@@ -62,14 +62,14 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
     for (const auto& r : session_data.rewriters)
     {
         std::string new_sql;
-        if (r.replace(sql, &new_sql))
+        if (r->replace(sql, &new_sql))
         {
-            if (session_data.settings.log_replacement || r.template_def().what_if)
+            if (session_data.settings.log_replacement || r->template_def().what_if)
             {
-                log_replacement(sql, new_sql, r.template_def().what_if);
+                log_replacement(sql, new_sql, r->template_def().what_if);
             }
 
-            if (!r.template_def().what_if)
+            if (!r->template_def().what_if)
             {
                 gwbuf_free(pBuffer);
                 pBuffer = modutil_create_query(new_sql.c_str());

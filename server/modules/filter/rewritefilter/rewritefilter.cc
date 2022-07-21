@@ -105,7 +105,7 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     bool ok = true;
 
     TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
-    std::vector<RewriteSql> rewriters;
+    std::vector<std::unique_ptr<RewriteSql>> rewriters;
 
     if (!m_settings.template_file.empty())
     {
@@ -113,7 +113,7 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
         std::tie(ok, m_settings.templates) = reader.templates();
         if (ok)
         {
-            std::tie(ok, rewriters) = create_rewriters();
+            ok = create_rewriters(&rewriters);
         }
     }
 
@@ -132,22 +132,30 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     return ok;
 }
 
-std::pair<bool, std::vector<RewriteSql>> RewriteFilter::Config::create_rewriters()
+bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<RewriteSql>>* rewriters)
 {
-    std::vector<RewriteSql> rewriters;
     bool ok = true;
 
-    for (auto& template_def : m_settings.templates)
+    for (auto& def : m_settings.templates)
     {
-        RewriteSql rewriter(template_def);
-        if (ok = rewriter.is_valid(); !ok)
+        std::unique_ptr<RewriteSql> sRewriter;
+        if (def.regex_grammar == RegexGrammar::Native)
+        {
+            sRewriter.reset(new RewriteSql(def));
+        }
+        else
+        {
+            assert("Not implemented yet" == nullptr);
+        }
+        if (ok = sRewriter->is_valid(); !ok)
         {
             break;
         }
-        rewriters.emplace_back(std::move(rewriter));
+
+        rewriters->push_back(std::move(sRewriter));
     }
 
-    return {ok, rewriters};
+    return ok;
 }
 
 RewriteFilter::RewriteFilter(const std::string& name)

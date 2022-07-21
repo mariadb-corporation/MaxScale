@@ -36,14 +36,14 @@ struct Settings
 
 struct SessionData
 {
-    SessionData(const Settings& settings, std::vector<RewriteSql>&& rewriters)
+    SessionData(const Settings& settings, std::vector<std::unique_ptr<RewriteSql>>&& rewriters)
         : settings(settings)
         , rewriters(std::move(rewriters))
     {
     }
 
-    Settings                settings;
-    std::vector<RewriteSql> rewriters;
+    Settings                                 settings;
+    std::vector<std::unique_ptr<RewriteSql>> rewriters;
 };
 
 class RewriteFilter : public mxs::Filter
@@ -78,7 +78,7 @@ private:
         // Calls RewriteFilter::set_settings()
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>&) override final;
 
-        std::pair<bool, std::vector<RewriteSql>> create_rewriters();
+        bool create_rewriters(std::vector<std::unique_ptr<RewriteSql>>* rewriters);
 
         RewriteFilter& m_filter;
         Settings       m_settings;
