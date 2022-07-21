@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include "ssh_utils.hh"
+#include "server_utils.hh"
 
 class SERVER;
 class MariaDBServer;
@@ -129,6 +130,9 @@ private:
     MariaDBServer* m_target {nullptr};
     MariaDBServer* m_source {nullptr};
     MariaDBServer* m_repl_master {nullptr};
+
+    SlaveStatusArray m_source_slaves_old;
+    bool             m_source_slaves_stopped {false};
 
     int                  m_port {0};
     std::chrono::seconds m_ssh_timeout {0};

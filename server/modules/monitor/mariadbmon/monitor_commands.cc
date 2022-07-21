@@ -1544,6 +1544,8 @@ bool RebuildServer::init()
                 {
                     m_target_ses = move(target_ses);
                     m_source_ses = move(source_ses);
+
+                    m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
                     init_ok = true;
                 }
             }
@@ -1569,6 +1571,8 @@ bool RebuildServer::serve_backup()
     if (cmd_handle)
     {
         m_mon.m_cluster_modified = true;    // Starting mariabackup can affect server states.
+        m_source_slaves_stopped = true;
+
         // Wait a bit, then check that command started successfully and is still running.
         sleep(1);
         auto status = cmd_handle->update_status();
@@ -1961,6 +1965,38 @@ void RebuildServer::cleanup()
     if (m_source_ses)
     {
         check_free_listen_port(*m_source_ses, m_source);
+    }
+
+    if (m_source_slaves_stopped && !m_source_slaves_old.empty())
+    {
+        // Source server replication was stopped when starting Mariabackup. Mariabackup does not restart the
+        // connections if it quits in error or is killed. Check that any slave connections are running as
+        // before.
+        m_source->update_server(false, false);
+        if (m_source->is_running())
+        {
+            const auto& new_slaves = m_source->m_slave_status;
+            if (new_slaves.size() == m_source_slaves_old.size())
+            {
+                for (size_t i = 0; i < new_slaves.size(); i++)
+                {
+                    const auto& old_slave = m_source_slaves_old[i];
+                    const auto& new_slave = new_slaves[i];
+                    bool was_running = (old_slave.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+                        && old_slave.slave_sql_running;
+                    bool is_running = (new_slave.slave_io_running != SlaveStatus::SLAVE_IO_NO)
+                        && new_slave.slave_sql_running;
+                    if (was_running && !is_running)
+                    {
+                        auto& slave_name = old_slave.settings.name;
+                        MXB_NOTICE("Slave connection '%s' is not running on %s, starting it.",
+                                   slave_name.c_str(), m_source->name());
+                        string start_slave = mxb::string_printf("START SLAVE '%s';", slave_name.c_str());
+                        m_source->execute_cmd(start_slave);
+                    }
+                }
+            }
+        }
     }
 }
 
