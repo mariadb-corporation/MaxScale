@@ -317,7 +317,7 @@ config::ParamBool Config::s_syslog(
     &Config::s_specification,
     CN_SYSLOG,
     "Log to syslog.",
-    true,
+    false,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_maxlog(

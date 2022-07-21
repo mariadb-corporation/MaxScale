@@ -598,10 +598,16 @@ skip_permission_checks=true
 ### `syslog`
 
 - **Type**: [boolean](#booleans)
-- **Default**: true
+- **Default**: false
 - **Dynamic**: Yes
 
-Log messages to *syslog*.
+Log messages to the system journal. This logs messages using the native SystemD
+journal interface. The logs can be viewed with `journalctl`.
+
+MaxScale 22.08 changed the default value of `syslog` from `true` to
+`false`. This was done to remove the redundant logging that it caused as both
+`syslog` and `maxlog` were enabled by default. This caused each message to be
+logged twice: once into the system journal and once into MaxScale's own logfile.
 
 ### `maxlog`
 
@@ -609,7 +615,8 @@ Log messages to *syslog*.
 - **Default**: true
 - **Dynamic**: Yes
 
-Log messages to MariaDB MaxScale's log file.
+Log messages to MariaDB MaxScale's log file. The name of the log file is
+`maxscale.log` and it is located in the directory pointed by [logdir](#logdir).
 
 ### `log_warning`
 

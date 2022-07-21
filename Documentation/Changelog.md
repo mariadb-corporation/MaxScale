@@ -2,13 +2,19 @@
 
 ## MariaDB MaxScale 22.8
 
-For more details, please refer to:
-* [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)
+* MaxScale no longer logs to both the SystemD journal and MaxScale log by
+  default: the default value of `syslog` was changed from `true` to `false` to
+  reduce the amount of redundant log messages that are logged. To retain the old
+  behavior of logging to both MaxScale's own files and to the SystemD journal,
+  add `syslog=true` under the `[maxscale]` section.
 * MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
   `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
   have been removed. The first two were ineffective, the latter three are
   replaced by `master_conditions` and `slave_conditions`.
 * The `dbfwfilter` module that was deprecated in version 6 has now been removed.
+
+For more details, please refer to:
+* [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)
 
 ## MariaDB MaxScale 6.4
 
