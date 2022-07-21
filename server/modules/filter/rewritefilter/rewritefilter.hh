@@ -15,7 +15,7 @@
 #include <maxbase/ccdefs.hh>
 #include "rewritesession.hh"
 #include "template_reader.hh"
-#include "rewritesql.hh"
+#include "sql_rewriter.hh"
 
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
@@ -36,14 +36,14 @@ struct Settings
 
 struct SessionData
 {
-    SessionData(const Settings& settings, std::vector<std::unique_ptr<RewriteSql>>&& rewriters)
+    SessionData(const Settings& settings, std::vector<std::unique_ptr<SqlRewriter>>&& rewriters)
         : settings(settings)
         , rewriters(std::move(rewriters))
     {
     }
 
-    Settings                                 settings;
-    std::vector<std::unique_ptr<RewriteSql>> rewriters;
+    Settings                                  settings;
+    std::vector<std::unique_ptr<SqlRewriter>> rewriters;
 };
 
 class RewriteFilter : public mxs::Filter
@@ -78,7 +78,7 @@ private:
         // Calls RewriteFilter::set_settings()
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>&) override final;
 
-        bool create_rewriters(std::vector<std::unique_ptr<RewriteSql>>* rewriters);
+        bool create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters);
 
         RewriteFilter& m_filter;
         Settings       m_settings;

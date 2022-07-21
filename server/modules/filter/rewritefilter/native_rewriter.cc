@@ -32,7 +32,7 @@ void write_regex_char(std::string* str, char ch)
 }
 
 NativeRewriter::NativeRewriter(const TemplateDef& def)
-    : RewriteSql(def)
+    : SqlRewriter(def)
     , m_replacer(def.replace_template)
 {
     std::ostringstream error_stream;

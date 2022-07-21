@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "replacer.hh"
+#include "native_replacer.hh"
 #include <sstream>
 #include <iostream>
 

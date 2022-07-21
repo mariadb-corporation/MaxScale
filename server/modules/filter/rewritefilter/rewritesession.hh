@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 
-class SessionData;
+struct SessionData;
 
 class RewriteFilterSession : public maxscale::FilterSession
 {

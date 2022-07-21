@@ -13,8 +13,8 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
-#include "rewritesql.hh"
-#include "replacer.hh"
+#include "sql_rewriter.hh"
+#include "native_replacer.hh"
 
 #include <string>
 #include <memory>
@@ -33,7 +33,7 @@ class Replacer;
  *       the distinction between an indentifier and a number will be needed:
  *       @{1:s} and @{1:d}. Or 'i' and 'n' if that is clearer to users.
  */
-class NativeRewriter : public RewriteSql
+class NativeRewriter : public SqlRewriter
 {
 public:
     NativeRewriter(const TemplateDef& template_def);

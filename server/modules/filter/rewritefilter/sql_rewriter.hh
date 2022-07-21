@@ -24,10 +24,10 @@ class Replacer;
  *        there are exactly two; one for the Native replacer and one for
  *        regex match and replace.
  */
-class RewriteSql
+class SqlRewriter
 {
 public:
-    RewriteSql(const TemplateDef& template_def);
+    SqlRewriter(const TemplateDef& template_def);
 
     // Did parsing of the templates succeed?
     bool        is_valid() const;
@@ -57,32 +57,32 @@ private:
     std::string       m_error_str;  // human readable error string, after construction
 };
 
-inline const std::string& RewriteSql::match_template() const
+inline const std::string& SqlRewriter::match_template() const
 {
     return m_regex_template;
 }
 
-inline const std::string& RewriteSql::replace_template() const
+inline const std::string& SqlRewriter::replace_template() const
 {
     return m_replace_template;
 }
 
-inline const TemplateDef& RewriteSql::template_def() const
+inline const TemplateDef& SqlRewriter::template_def() const
 {
     return m_template_def;
 }
 
-inline void RewriteSql::set_error_string(const std::string& err_msg)
+inline void SqlRewriter::set_error_string(const std::string& err_msg)
 {
     m_error_str = err_msg;
 }
 
-inline bool RewriteSql::is_valid() const
+inline bool SqlRewriter::is_valid() const
 {
     return m_error_str.empty();
 }
 
-inline std::string RewriteSql::error_str() const
+inline std::string SqlRewriter::error_str() const
 {
     return m_error_str;
 }

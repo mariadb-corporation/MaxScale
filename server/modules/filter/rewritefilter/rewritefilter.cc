@@ -106,7 +106,7 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     bool ok = true;
 
     TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
-    std::vector<std::unique_ptr<RewriteSql>> rewriters;
+    std::vector<std::unique_ptr<SqlRewriter>> rewriters;
 
     if (!m_settings.template_file.empty())
     {
@@ -133,13 +133,13 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     return ok;
 }
 
-bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<RewriteSql>>* rewriters)
+bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters)
 {
     bool ok = true;
 
     for (auto& def : m_settings.templates)
     {
-        std::unique_ptr<RewriteSql> sRewriter;
+        std::unique_ptr<SqlRewriter> sRewriter;
         if (def.regex_grammar == RegexGrammar::Native)
         {
             sRewriter.reset(new NativeRewriter(def));
