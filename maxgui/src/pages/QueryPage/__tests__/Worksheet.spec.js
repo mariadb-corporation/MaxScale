@@ -46,12 +46,12 @@ describe(`Worksheet - created hook and child component's data communication test
         dropTxtToEditor: 'on-dragend',
     }
     Object.keys(fnEvtMap).forEach(key => {
-        it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-container`, () => {
+        it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
             wrapper = mountFactory({
                 computed: { isTxtEditor: () => true },
             })
             const spyFn = sinon.spy(wrapper.vm.$refs.txtEditor, key)
-            const sidebar = wrapper.findComponent({ name: 'sidebar-container' })
+            const sidebar = wrapper.findComponent({ name: 'sidebar-ctr' })
             let param
             switch (key) {
                 case 'placeToEditor':

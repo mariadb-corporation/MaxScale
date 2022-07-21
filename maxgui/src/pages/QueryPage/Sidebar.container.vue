@@ -1,123 +1,45 @@
 <template>
-    <div
-        class="fill-height"
-        :class="{
-            'not-allowed': getIsConnBusy && !getLoadingDbTree,
-        }"
-    >
-        <div class="db-tb-list" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
-            <div class="visible-when-expand fill-height">
-                <div class="schema-list-tools">
-                    <div class="d-flex align-center justify-end">
-                        <span
-                            v-if="!is_sidebar_collapsed"
-                            class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
-                        >
-                            {{ $t('schemas') }}
-                        </span>
-                        <v-tooltip
-                            v-if="!is_sidebar_collapsed"
-                            top
-                            transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation py-1 px-4"
-                        >
-                            <template v-slot:activator="{ on }">
-                                <v-btn
-                                    icon
-                                    small
-                                    :disabled="isConnecting"
-                                    class="reload-btn"
-                                    v-on="on"
-                                    @click="fetchSchemas"
-                                >
-                                    <v-icon size="12" :color="isConnecting ? '' : 'deep-ocean'">
-                                        $vuetify.icons.reload
-                                    </v-icon>
-                                </v-btn>
-                            </template>
-                            <span>{{ $t('reload') }}</span>
-                        </v-tooltip>
-                        <v-tooltip
-                            top
-                            transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation py-1 px-4"
-                        >
-                            <template v-slot:activator="{ on }">
-                                <v-btn
-                                    icon
-                                    small
-                                    class="collapse-btn"
-                                    v-on="on"
-                                    @click="
-                                        SET_IS_SIDEBAR_COLLAPSED({
-                                            payload: !is_sidebar_collapsed,
-                                            id: active_wke_id,
-                                        })
-                                    "
-                                >
-                                    <v-icon
-                                        size="22"
-                                        color="deep-ocean"
-                                        class="collapse-icon"
-                                        :class="[
-                                            is_sidebar_collapsed ? 'rotate-right' : 'rotate-left',
-                                        ]"
-                                    >
-                                        mdi-chevron-double-down
-                                    </v-icon>
-                                </v-btn>
-                            </template>
-                            <span>{{ is_sidebar_collapsed ? $t('expand') : $t('collapse') }}</span>
-                        </v-tooltip>
-                    </div>
-                    <v-text-field
-                        v-if="!is_sidebar_collapsed"
-                        v-model="searchSchema"
-                        name="searchSchema"
-                        dense
-                        outlined
-                        height="28"
-                        class="std filter-objects"
-                        :placeholder="$t('filterSchemaObjects')"
-                        :disabled="isConnecting"
-                    />
-                </div>
-                <keep-alive>
-                    <db-list-tree
-                        v-if="!isConnecting"
-                        v-show="!is_sidebar_collapsed"
-                        class="schema-list-wrapper"
-                        @get-node-data="handleGetNodeData"
-                        @load-children="handleLoadChildren"
-                        @use-db="useDb"
-                        @alter-tbl="onAlterTable"
-                        @drop-action="onDropAction"
-                        @truncate-tbl="onTruncateTbl"
-                        v-on="$listeners"
-                    />
-                </keep-alive>
-                <execute-sql-dialog
-                    v-model="isExeDlgOpened"
-                    :title="
-                        isExeStatementsFailed
-                            ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
-                            : $tc('confirmations.exeStatements', stmtI18nPluralization)
-                    "
-                    :smallInfo="
-                        isExeStatementsFailed
-                            ? ''
-                            : $tc('info.exeStatementsInfo', stmtI18nPluralization)
-                    "
-                    :hasSavingErr="isExeStatementsFailed"
-                    :errMsgObj="stmtErrMsgObj"
-                    :sqlTobeExecuted.sync="sql"
-                    :editorHeight="200"
-                    :onSave="confirmExeStatements"
-                    @after-close="clearExeStatementsResult"
-                    @after-cancel="clearExeStatementsResult"
-                />
-            </div>
-        </div>
+    <div class="fill-height">
+        <sidebar
+            :disabled="isSidebarDisabled"
+            :isCollapsed="is_sidebar_collapsed"
+            :hasConn="hasConn"
+            :isLoading="getLoadingDbTree"
+            :searchSchema="search_schema"
+            @set-search-schema="SET_SEARCH_SCHEMA({ payload: $event, id: active_wke_id })"
+            @reload-schemas="fetchSchemas"
+            @toggle-sidebar="
+                SET_IS_SIDEBAR_COLLAPSED({
+                    payload: !is_sidebar_collapsed,
+                    id: active_wke_id,
+                })
+            "
+            @get-node-data="handleGetNodeData"
+            @load-children="handleLoadChildren"
+            @use-db="useDb"
+            @alter-tbl="onAlterTable"
+            @drop-action="onDropAction"
+            @truncate-tbl="onTruncateTbl"
+            v-on="$listeners"
+        />
+        <execute-sql-dialog
+            v-model="isExeDlgOpened"
+            :title="
+                isExeStatementsFailed
+                    ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
+                    : $tc('confirmations.exeStatements', stmtI18nPluralization)
+            "
+            :smallInfo="
+                isExeStatementsFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
+            "
+            :hasSavingErr="isExeStatementsFailed"
+            :errMsgObj="stmtErrMsgObj"
+            :sqlTobeExecuted.sync="sql"
+            :editorHeight="200"
+            :onSave="confirmExeStatements"
+            @after-close="clearExeStatementsResult"
+            @after-cancel="clearExeStatementsResult"
+        />
     </div>
 </template>
 
@@ -134,13 +56,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
-import DbListTree from './DbListTree'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
+import Sidebar from './Sidebar.vue'
 export default {
-    name: 'sidebar-container',
+    name: 'sidebar-ctr',
     components: {
-        DbListTree,
+        Sidebar,
         'execute-sql-dialog': ExecuteSqlDialog,
     },
     data() {
@@ -171,16 +94,11 @@ export default {
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getCurrDbTree: 'schemaSidebar/getCurrDbTree',
         }),
-        searchSchema: {
-            get() {
-                return this.search_schema
-            },
-            set(value) {
-                this.SET_SEARCH_SCHEMA({ payload: value, id: this.active_wke_id })
-            },
+        isSidebarDisabled() {
+            return this.getIsConnBusy && !this.getLoadingDbTree
         },
-        isConnecting() {
-            return !this.$typy(this.active_sql_conn, 'id').safeString || this.getLoadingDbTree
+        hasConn() {
+            return Boolean(this.$typy(this.active_sql_conn, 'id').safeString)
         },
         stmtI18nPluralization() {
             const statementCounts = (this.sql.match(/;/g) || []).length
@@ -202,17 +120,17 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
             SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
+            SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
         }),
         ...mapActions({
+            fetchSchemas: 'schemaSidebar/fetchSchemas',
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
             updateTreeNodes: 'schemaSidebar/updateTreeNodes',
             useDb: 'schemaSidebar/useDb',
-            fetchSchemas: 'schemaSidebar/fetchSchemas',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             queryCharsetCollationMap: 'editor/queryCharsetCollationMap',
             queryEngines: 'editor/queryEngines',
@@ -308,30 +226,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.db-tb-list {
-    border-top: 1px solid $table-border;
-    width: 100%;
-    height: 100%;
-    .db-tb-list__title {
-        font-size: 12px;
-        margin-right: auto;
-    }
-    ::v-deep .std.filter-objects {
-        input {
-            font-size: 12px;
-        }
-    }
-    $tools-height: 60px;
-    .schema-list-tools {
-        height: $tools-height;
-    }
-    .schema-list-wrapper {
-        font-size: 12px;
-        max-height: calc(100% - #{$tools-height});
-        overflow-y: auto;
-        z-index: 1;
-    }
-}
-</style>

@@ -8,7 +8,7 @@
         revertRender
     >
         <template slot="pane-left">
-            <sidebar-container
+            <sidebar-ctr
                 @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
                 @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
                 @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
@@ -50,8 +50,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import SidebarContainer from './SidebarContainer'
 import { mapGetters, mapState } from 'vuex'
+import Sidebar from './Sidebar.container.vue'
 import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
 import SessionTabs from './SessionTabs'
@@ -60,7 +60,7 @@ import SessionToolbar from './SessionToolbar'
 export default {
     name: 'worksheet',
     components: {
-        SidebarContainer,
+        'sidebar-ctr': Sidebar,
         'txt-editor-container': TxtEditorContainer,
         'ddl-editor-container': DDLEditorContainer,
         'session-tabs': SessionTabs,
