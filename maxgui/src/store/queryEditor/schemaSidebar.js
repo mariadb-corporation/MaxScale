@@ -70,6 +70,7 @@ export default {
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.persisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
+                sql += ' ORDER BY SCHEMA_NAME;'
                 const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
@@ -146,15 +147,16 @@ export default {
                         grandChildNodeType = TABLE
                         rowName = 'TABLE_NAME'
                         // eslint-disable-next-line vue/max-len
-                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
+                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}'`
                         break
                     case SPS:
                         grandChildNodeType = SP
                         rowName = 'ROUTINE_NAME'
                         // eslint-disable-next-line vue/max-len
-                        query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
+                        query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
                         break
                 }
+                query += ` ORDER BY ${rowName};`
                 const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
@@ -203,7 +205,6 @@ export default {
                         ]
                     }
                     gch.push(grandChildNode)
-
                     cmpList.push({
                         label: row[rowName],
                         detail: grandChildNodeType.toUpperCase(),
@@ -235,15 +236,16 @@ export default {
                         grandChildNodeType = TRIGGER
                         rowName = 'TRIGGER_NAME'
                         // eslint-disable-next-line vue/max-len
-                        query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
+                        query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
                         break
                     case COLS:
                         grandChildNodeType = COL
                         rowName = 'COLUMN_NAME'
                         // eslint-disable-next-line vue/max-len
-                        query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
+                        query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
                         break
                 }
+                query += ` ORDER BY ${rowName};`
                 const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
