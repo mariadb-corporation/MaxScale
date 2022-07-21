@@ -285,7 +285,19 @@ function syncStateCreator(namespace) {
                 blob_file: {},
             }
         case 'queryConn':
-            return { active_sql_conn: {} }
+            return {
+                /**
+                 * holds these properties:
+                 * id?: string. sql connection id.
+                 * attributes?: object. connection attributes.
+                 * name?: string. Connection name. e.g. server_0
+                 * type?: string. listeners, servers or services
+                 * clone_of_conn_id?: string. The connection id that was used to make this clone connection.
+                 * binding_type?: string. QUERY_CONN_BINDING_TYPES
+                 * If it doesn't have clone_of_conn_id, it's a default connection
+                 */
+                active_sql_conn: {},
+            }
         case 'queryResult':
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
         case 'schemaSidebar':

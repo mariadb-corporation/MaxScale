@@ -141,10 +141,16 @@ export default {
                 )
             }
         },
+        /**
+         * If the session is bound to the default connection, only session object(tab) will be deleted.
+         * The default connection should always be disconnected by action in the `conn-man-ctr` component
+         * @param {Object} session - A session object
+         */
         async handleDeleteSession({ commit, dispatch }, session) {
-            const { id: conn_id } = session.active_sql_conn || {}
-            // also send request to delete the bound connection and release memory
-            if (conn_id) {
+            const { id: conn_id, clone_of_conn_id = null } = session.active_sql_conn || {}
+            if (!clone_of_conn_id) dispatch('releaseQueryModulesMem', session.id)
+            //  Send request to delete the clone connection bound to this session and release memory
+            else if (conn_id) {
                 await dispatch('queryConn/disconnectClone', { id: conn_id }, { root: true })
                 dispatch('resetSessionStates', { conn_id })
             }

@@ -140,7 +140,7 @@ export default {
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
-        firstConnOfAllWkes() {
+        defConnOfAllWkes() {
             return Object.values(this.sql_conns).filter(
                 conn =>
                     conn.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION &&
@@ -158,7 +158,7 @@ export default {
             }, [])
         },
         connOptions() {
-            return this.firstConnOfAllWkes.map(cnctRsrc =>
+            return this.defConnOfAllWkes.map(cnctRsrc =>
                 this.active_sql_conn.id === cnctRsrc.id
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }
