@@ -105,6 +105,7 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     bool ok = true;
 
     TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
+    std::vector<RewriteSql> rewriters;
 
     if (!m_settings.template_file.empty())
     {
@@ -112,19 +113,18 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
         std::tie(ok, m_settings.templates) = reader.templates();
         if (ok)
         {
-            std::tie(ok, m_settings.rewriters) = create_rewriters();
+            std::tie(ok, rewriters) = create_rewriters();
         }
     }
 
     if (ok)
     {
-        m_filter.set_settings(std::make_unique<const Settings>(m_settings));
+        m_filter.set_session_data(std::make_unique<SessionData>(m_settings, std::move(rewriters)));
     }
     else if (m_warn_bad_config)
     {
         MXB_SERROR("Invalid config. Keeping current config unchanged.");
     }
-
 
     m_warn_bad_config = true;
     m_settings.reload = false;
@@ -155,16 +155,16 @@ RewriteFilter::RewriteFilter(const std::string& name)
 {
 }
 
-void RewriteFilter::set_settings(std::unique_ptr<const Settings> settings)
+void RewriteFilter::set_session_data(std::unique_ptr<const SessionData> s)
 {
     std::lock_guard<std::mutex> guard(m_settings_mutex);
-    m_sSettings = std::move(settings);
+    m_sSession_data = std::move(s);
 }
 
-std::shared_ptr<const Settings> RewriteFilter::get_settings() const
+std::shared_ptr<const SessionData> RewriteFilter::get_session_data() const
 {
     std::lock_guard<std::mutex> guard(m_settings_mutex);
-    return m_sSettings;
+    return m_sSession_data;
 }
 
 // static
@@ -175,7 +175,7 @@ RewriteFilter* RewriteFilter::create(const char* zName)
 
 RewriteFilterSession* RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return RewriteFilterSession::create(pSession, pService, get_settings());
+    return RewriteFilterSession::create(pSession, pService, get_session_data());
 }
 
 // static

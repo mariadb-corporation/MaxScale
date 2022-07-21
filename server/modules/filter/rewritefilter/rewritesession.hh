@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 
-class Settings;
+class SessionData;
 
 class RewriteFilterSession : public maxscale::FilterSession
 {
@@ -24,7 +24,7 @@ public:
 
     static RewriteFilterSession* create(MXS_SESSION* pSession,
                                         SERVICE* pService,
-                                        const std::shared_ptr<const Settings>& sSettings
+                                        const std::shared_ptr<const SessionData>& sSettings
                                         );
 
     bool routeQuery(GWBUF* pBuffer) override final;
@@ -32,12 +32,12 @@ public:
 private:
     RewriteFilterSession(MXS_SESSION* pSession,
                          SERVICE* pService,
-                         const std::shared_ptr<const Settings>& sSettings);
+                         const std::shared_ptr<const SessionData>& sSettings);
 
     RewriteFilterSession(const RewriteFilterSession&);
     RewriteFilterSession& operator=(const RewriteFilterSession&);
 
 private:
     void log_replacement(const std::string& from, const std::string& to, bool what_if);
-    std::shared_ptr<const Settings> m_sSettings;
+    std::shared_ptr<const SessionData> m_sSession_data;
 };

@@ -32,7 +32,18 @@ struct Settings
     RegexGrammar             regex_grammar;
     std::string              template_file;
     std::vector<TemplateDef> templates;
-    std::vector<RewriteSql>  rewriters;
+};
+
+struct SessionData
+{
+    SessionData(const Settings& settings, std::vector<RewriteSql>&& rewriters)
+        : settings(settings)
+        , rewriters(std::move(rewriters))
+    {
+    }
+
+    Settings                settings;
+    std::vector<RewriteSql> rewriters;
 };
 
 class RewriteFilter : public mxs::Filter
@@ -76,12 +87,11 @@ private:
         bool m_warn_bad_config = false;
     };
 
-    // Thread-safe set and get of current settings.
-    void                            set_settings(std::unique_ptr<const Settings> settings);
-    std::shared_ptr<const Settings> get_settings() const;
+    // Thread-safe set and get of session data.
+    void                               set_session_data(std::unique_ptr<const SessionData> s);
+    std::shared_ptr<const SessionData> get_session_data() const;
 
-    Config                          m_config;
-    mutable std::mutex              m_settings_mutex;
-    std::shared_ptr<const Settings> m_sSettings;
-    bool                            m_warn_bad_config = false;
+    Config                             m_config;
+    mutable std::mutex                 m_settings_mutex;
+    std::shared_ptr<const SessionData> m_sSession_data;
 };

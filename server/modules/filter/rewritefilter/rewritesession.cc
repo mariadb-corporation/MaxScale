@@ -19,9 +19,9 @@
 
 RewriteFilterSession::RewriteFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,
-                                           const std::shared_ptr<const Settings>& sSettings)
+                                           const std::shared_ptr<const SessionData>& sSettings)
     : maxscale::FilterSession(pSession, pService)
-    , m_sSettings(sSettings)
+    , m_sSession_data(sSettings)
 {
 }
 
@@ -49,22 +49,22 @@ RewriteFilterSession::~RewriteFilterSession()
 // static
 RewriteFilterSession* RewriteFilterSession::create(MXS_SESSION* pSession,
                                                    SERVICE* pService,
-                                                   const std::shared_ptr<const Settings>& sSettings)
+                                                   const std::shared_ptr<const SessionData>& sSettings)
 {
     return new RewriteFilterSession(pSession, pService, sSettings);
 }
 
 bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
 {
-    auto& settings = *m_sSettings.get();
+    auto& session_data = *m_sSession_data.get();
     const auto& sql = pBuffer->get_sql();
 
-    for (const auto& r : settings.rewriters)
+    for (const auto& r : session_data.rewriters)
     {
         std::string new_sql;
         if (r.replace(sql, &new_sql))
         {
-            if (settings.log_replacement || r.template_def().what_if)
+            if (session_data.settings.log_replacement || r.template_def().what_if)
             {
                 log_replacement(sql, new_sql, r.template_def().what_if);
             }
