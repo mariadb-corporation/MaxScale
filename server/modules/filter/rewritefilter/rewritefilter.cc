@@ -13,6 +13,7 @@
 
 #define MXB_MODULE_NAME "rewritefilter"
 #include "rewritefilter.hh"
+#include "native_rewriter.hh"
 #include <string>
 
 using std::string;
@@ -141,7 +142,7 @@ bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<Rewrite
         std::unique_ptr<RewriteSql> sRewriter;
         if (def.regex_grammar == RegexGrammar::Native)
         {
-            sRewriter.reset(new RewriteSql(def));
+            sRewriter.reset(new NativeRewriter(def));
         }
         else
         {
