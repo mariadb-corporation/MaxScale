@@ -136,6 +136,8 @@ export default {
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveSession: 'querySession/getActiveSession',
+            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
         firstConnOfAllWkes() {
@@ -198,6 +200,8 @@ export default {
     methods: {
         ...mapActions({
             openConnect: 'queryConn/openConnect',
+            syncSqlConnToSess: 'queryConn/syncSqlConnToSess',
+            cloneAndSyncConnToSessions: 'queryConn/cloneAndSyncConnToSessions',
             disconnect: 'queryConn/disconnect',
             updateRoute: 'wke/updateRoute',
         }),
@@ -219,8 +223,43 @@ export default {
          * Function is called after selecting a connection
          */
         async onSelectConn(chosenConn) {
-            // update active_sql_conn module state
-            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.getActiveSessionId })
+            let activeSessConn = chosenConn
+            const active_session_id = this.getActiveSessionId
+            const fSess = this.getSessionsOfActiveWke[0]
+            // sync the chosen connection to the first session tab
+            this.syncSqlConnToSess({ sess: fSess, sql_conn: chosenConn })
+
+            // Change the connection of other session tabs
+            const otherSessTabs = this.getSessionsOfActiveWke.filter(s => s.id !== fSess.id)
+            if (otherSessTabs.length) {
+                const clonesOfChosenConn = Object.values(this.sql_conns).filter(
+                    c =>
+                        c.clone_of_conn_id === chosenConn.id &&
+                        c.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION
+                )
+                const bondableSessTabs = otherSessTabs.slice(0, clonesOfChosenConn.length)
+                const leftoverSessTabs = otherSessTabs.slice(clonesOfChosenConn.length)
+
+                // Bind the existing cloned connections of the chosenConn to bondable session tabs
+                for (const [i, s] of bondableSessTabs.entries()) {
+                    this.syncSqlConnToSess({ sess: s, sql_conn: clonesOfChosenConn[i] })
+                    if (active_session_id === s.id) activeSessConn = clonesOfChosenConn[i]
+                }
+                /**
+                 * If there are more session tabs than the existing cloned connections, clone
+                 * the chosenConn and bind it to those session tabs.
+                 */
+                if (leftoverSessTabs.length)
+                    await this.cloneAndSyncConnToSessions({
+                        sessions: leftoverSessTabs,
+                        conn_to_be_cloned: chosenConn,
+                        active_session_id,
+                        getActiveSessConn: sessConn => (activeSessConn = sessConn),
+                    })
+            }
+
+            // set active conn once sessions are bound to cloned connections to avoid concurrent query
+            this.SET_ACTIVE_SQL_CONN({ payload: activeSessConn, id: active_session_id })
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
         },

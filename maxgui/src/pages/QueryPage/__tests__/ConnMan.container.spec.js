@@ -214,17 +214,19 @@ describe(`ConnMan - connection list dropdown tests`, () => {
         onSelectConnSpy.restore()
     })
     it(`Should call SET_ACTIVE_SQL_CONN and updateRoute with accurate arguments
-      when onSelectConn is called`, () => {
+      when onSelectConn is called`, async () => {
         let updateRouteArgs, setCurrCnctResourceArgs
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
             methods: {
+                syncSqlConnToSess: () => null,
+                cloneAndSyncConnToSessions: () => null,
                 SET_ACTIVE_SQL_CONN: v => (setCurrCnctResourceArgs = v),
                 updateRoute: v => (updateRouteArgs = v),
             },
         })
         const selectConn = wrapper.vm.connOptions[1]
-        wrapper.vm.onSelectConn(selectConn)
+        await wrapper.vm.onSelectConn(selectConn)
         expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
         expect(setCurrCnctResourceArgs).to.be.deep.equals({
             payload: selectConn,
