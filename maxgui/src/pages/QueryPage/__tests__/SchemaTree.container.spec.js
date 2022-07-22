@@ -477,20 +477,6 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             }
         })
     })
-    it(`Should clear altered active node when handleEmitQueryOpt is called`, () => {
-        wrapper = mountFactory({
-            computed: {
-                getAlteredActiveNode: () => ({ id: 'mock_altered_active_node' }),
-                getActiveSessionId: () => ({ id: 'SESSION_123_45' }),
-            },
-        })
-        let fnSpy = sinon.spy(wrapper.vm, 'PATCH_TBL_CREATION_INFO_MAP')
-        wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt: mockQueryOpts[0] })
-        fnSpy.should.have.been.calledWithExactly({
-            id: wrapper.vm.getActiveSessionId,
-            payload: { altered_active_node: null },
-        })
-    })
     const mockTxtOptStrs = ['Qualified Name (Quoted)', 'Qualified Name', 'Name (Quoted)', 'Name']
 
     mockTxtOptStrs.forEach(text => {

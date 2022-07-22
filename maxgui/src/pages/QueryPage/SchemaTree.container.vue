@@ -126,7 +126,6 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
             SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
@@ -261,7 +260,6 @@ export default {
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
             PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
-            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
         }),
         filter(item, search, textKey) {
@@ -342,18 +340,6 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleEmitQueryOpt({ item, opt }) {
-            /**
-             * If altered_active_node exists, clear it first so that
-             * activeNodes can be updated
-             */
-            if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
-                // Clear altered active node
-                this.PATCH_TBL_CREATION_INFO_MAP({
-                    id: this.getActiveSessionId,
-                    payload: {
-                        altered_active_node: null,
-                    },
-                })
             this.updateActiveNode(item)
             switch (opt.text) {
                 case this.$t('previewData'):
@@ -412,28 +398,7 @@ export default {
         handleEmitDD_opt({ item, opt }) {
             switch (opt.text) {
                 case this.$t('alterTbl'):
-                    {
-                        const alterActiveNode = {
-                            id: item.id,
-                            type: item.type,
-                            level: item.level,
-                        }
-                        this.PATCH_TBL_CREATION_INFO_MAP({
-                            id: this.getActiveSessionId,
-                            payload: {
-                                altered_active_node: alterActiveNode,
-                            },
-                        })
-                        this.PATCH_CURR_EDITOR_MODE_MAP({
-                            id: this.getActiveSessionId,
-                            payload: { value: this.SQL_EDITOR_MODES.DDL_EDITOR },
-                        })
-                        this.SET_CURR_DDL_ALTER_SPEC({
-                            payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
-                            id: this.getActiveSessionId,
-                        })
-                        this.$emit('alter-tbl', alterActiveNode)
-                    }
+                    this.$emit('alter-tbl', { id: item.id, type: item.type, level: item.level })
                     break
                 case this.$t('dropTbl'):
                 case this.$t('dropSchema'):

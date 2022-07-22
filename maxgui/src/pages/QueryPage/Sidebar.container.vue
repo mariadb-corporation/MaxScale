@@ -78,6 +78,8 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
+            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
@@ -124,6 +126,9 @@ export default {
             SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
+            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
+            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
+            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
         }),
         ...mapActions({
             fetchSchemas: 'schemaSidebar/fetchSchemas',
@@ -176,7 +181,21 @@ export default {
             await this.updateTreeNodes(node)
         },
         async onAlterTable(node) {
-            //Query once only as the data won't be changed
+            this.PATCH_TBL_CREATION_INFO_MAP({
+                id: this.getActiveSessionId,
+                payload: {
+                    altered_active_node: node,
+                },
+            })
+            this.PATCH_CURR_EDITOR_MODE_MAP({
+                id: this.getActiveSessionId,
+                payload: { value: this.SQL_EDITOR_MODES.DDL_EDITOR },
+            })
+            this.SET_CURR_DDL_ALTER_SPEC({
+                payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
+                id: this.getActiveSessionId,
+            })
+            //Query once as the data won't be changed
             if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
             if (this.$typy(this.charset_collation_map).isEmptyObject)
                 await this.queryCharsetCollationMap()
