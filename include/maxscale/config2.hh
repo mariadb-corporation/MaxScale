@@ -1467,9 +1467,30 @@ public:
     }
 
     /**
+     * @return Const iterator to first parameter.
+     */
+    const_iterator begin() const
+    {
+        return m_values.cbegin();
+    }
+
+    /**
+     * @return Const iterator to one past last parameter.
+     */
+    const_iterator end() const
+    {
+        return m_values.cend();
+    }
+
+    /**
      * @return Return the configuration as a json array.
      */
     json_t* to_json() const;
+
+    /**
+     * @return The configuration as mxs::ConfigParameters
+     */
+    mxs::ConfigParameters to_params() const;
 
 protected:
     /**

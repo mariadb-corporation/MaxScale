@@ -322,6 +322,7 @@ public:
     PoolStats& pool_stats();
     bool       is_mxs_service() const override;
 
+    mxs::ConfigParameters to_params() const override;
 private:
     bool create_server_config(const char* filename) const;
 

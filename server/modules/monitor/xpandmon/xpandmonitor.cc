@@ -612,6 +612,14 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
     if (refreshed)
     {
+        mxs::ConfigParameters extra;
+
+        for (auto srv : servers())
+        {
+            // TODO: Don't assume all servers have the same parameters
+            extra.set_multiple(srv->server->to_params());
+        }
+
         const char ZQUERY[] =
             "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
             "FROM system.nodeinfo AS ni "
@@ -694,7 +702,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             else
                             {
                                 // It was a new node, so the corresponding server must be created.
-                                if (runtime_create_volatile_server(server_name, ip, mysql_port))
+                                if (runtime_create_volatile_server(server_name, ip, mysql_port, extra))
                                 {
                                     pServer = SERVER::find_by_unique_name(server_name);
 
