@@ -422,8 +422,8 @@ export default {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: {
                             $set: this.$typy(
-                                this.charset_collation_map.get(charset),
-                                'defCollation'
+                                this.charset_collation_map,
+                                `[${charset}].defCollation`
                             ).safeString,
                         },
                     },

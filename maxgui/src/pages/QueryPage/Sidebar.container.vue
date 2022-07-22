@@ -178,8 +178,9 @@ export default {
         async onAlterTable(node) {
             //Query once only as the data won't be changed
             if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
-            if (this.charset_collation_map.size === 0) await this.queryCharsetCollationMap()
-            if (this.def_db_charset_map.size === 0) await this.queryDefDbCharsetMap()
+            if (this.$typy(this.charset_collation_map).isEmptyObject)
+                await this.queryCharsetCollationMap()
+            if (this.$typy(this.def_db_charset_map).isEmptyObject) await this.queryDefDbCharsetMap()
             await this.queryTblCreationInfo(node)
         },
         /**

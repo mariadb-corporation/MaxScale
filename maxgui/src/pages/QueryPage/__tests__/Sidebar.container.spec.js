@@ -232,8 +232,8 @@ describe('sidebar-ctr', () => {
             wrapper = mountFactory({
                 computed: {
                     engines: () => [],
-                    charset_collation_map: () => new Map(),
-                    def_db_charset_map: () => new Map(),
+                    charset_collation_map: () => ({}),
+                    def_db_charset_map: () => ({}),
                 },
                 methods: {
                     queryTblCreationInfo: param => (queryTblCreationInfoParam = param),

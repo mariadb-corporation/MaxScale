@@ -150,12 +150,12 @@ export default {
         },
         defCollation() {
             return this.$typy(
-                this.charset_collation_map.get(this.tableOptsData.table_charset),
-                'defCollation'
+                this.charset_collation_map,
+                `[${this.tableOptsData.table_charset}].defCollation`
             ).safeString
         },
         defDbCharset() {
-            return this.$typy(this.def_db_charset_map.get(this.tableOptsData.dbName)).safeString
+            return this.$typy(this.def_db_charset_map, `${this.tableOptsData.dbName}`).safeString
         },
     },
     watch: {

@@ -63,7 +63,7 @@ export default {
             },
         },
         charsets() {
-            return [...this.charset_collation_map.keys()]
+            return Object.keys(this.charset_collation_map)
         },
     },
 }

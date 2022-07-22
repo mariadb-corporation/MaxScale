@@ -19,8 +19,8 @@ export default {
     namespaced: true,
     state: {
         selected_query_txt: '',
-        charset_collation_map: new Map(),
-        def_db_charset_map: new Map(),
+        charset_collation_map: {},
+        def_db_charset_map: {},
         engines: [],
         ...memStates,
         ...statesToBeSynced,
@@ -54,18 +54,18 @@ export default {
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
-                let charsetCollationMap = new Map()
+                let charsetCollationMap = {}
                 const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
                 data.forEach(row => {
                     const charset = row[0]
                     const collation = row[1]
                     const isDefCollation = row[2] === 'Yes'
-                    let charsetObj = charsetCollationMap.get(charset) || {
+                    let charsetObj = charsetCollationMap[`${charset}`] || {
                         collations: [],
                     }
                     if (isDefCollation) charsetObj.defCollation = collation
                     charsetObj.collations.push(collation)
-                    charsetCollationMap.set(charset, charsetObj)
+                    charsetCollationMap[charset] = charsetObj
                 })
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             } catch (e) {
@@ -81,12 +81,12 @@ export default {
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
-                let defDbCharsetMap = new Map()
+                let defDbCharsetMap = {}
                 const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
                 data.forEach(row => {
                     const schema_name = row[0]
                     const default_character_set_name = row[1]
-                    defDbCharsetMap.set(schema_name, default_character_set_name)
+                    defDbCharsetMap[schema_name] = default_character_set_name
                 })
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             } catch (e) {

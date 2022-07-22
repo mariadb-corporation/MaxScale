@@ -64,7 +64,7 @@ export default {
             },
         },
         collations() {
-            return this.$typy(this.charset_collation_map.get(this.charset), 'collations').safeArray
+            return this.$typy(this.charset_collation_map, `[${this.charset}].collations`).safeArray
         },
     },
 }
