@@ -259,7 +259,7 @@ export default {
         ...mapMutations({
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
-            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
+            SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
         }),
         filter(item, search, textKey) {
@@ -424,9 +424,9 @@ export default {
             const {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
-            this.PATCH_CURR_EDITOR_MODE_MAP({
+            this.SET_CURR_EDITOR_MODE({
                 id: this.getActiveSessionId,
-                payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
+                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
             })
             switch (opt.type) {
                 case QUERY:

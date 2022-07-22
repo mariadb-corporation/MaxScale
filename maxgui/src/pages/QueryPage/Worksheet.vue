@@ -25,7 +25,7 @@
                 </div>
                 <keep-alive>
                     <txt-editor-container
-                        v-if="isTxtEditor"
+                        v-if="getIsTxtEditor"
                         ref="txtEditor"
                         :dim="txtEditorDim"
                         v-on="$listeners"
@@ -81,13 +81,9 @@ export default {
         ...mapState({
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            curr_editor_mode: state => state.editor.curr_editor_mode,
         }),
-        ...mapGetters({
-            getCurrEditorMode: 'editor/getCurrEditorMode',
-        }),
-        isTxtEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
-        },
+        ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -104,7 +100,7 @@ export default {
                 if (oV.height) this.$nextTick(() => this.handleRecalPanesDim())
             },
         },
-        getCurrEditorMode() {
+        curr_editor_mode() {
             this.$nextTick(() => this.handleRecalPanesDim())
         },
     },
@@ -145,7 +141,7 @@ export default {
             }
         },
         handleRecalPanesDim() {
-            switch (this.getCurrEditorMode) {
+            switch (this.curr_editor_mode) {
                 case this.SQL_EDITOR_MODES.TXT_EDITOR:
                     this.setTxtEditorPaneDim()
                     break

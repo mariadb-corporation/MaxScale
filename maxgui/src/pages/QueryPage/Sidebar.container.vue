@@ -124,10 +124,10 @@ export default {
         ...mapMutations({
             SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
             SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
-            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
+            SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
             SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
         }),
         ...mapActions({
@@ -192,9 +192,9 @@ export default {
                     altered_active_node: node,
                 },
             })
-            this.PATCH_CURR_EDITOR_MODE_MAP({
+            this.SET_CURR_EDITOR_MODE({
                 id: this.getActiveSessionId,
-                payload: { value: this.SQL_EDITOR_MODES.DDL_EDITOR },
+                payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
             })
             this.SET_CURR_DDL_ALTER_SPEC({
                 payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,

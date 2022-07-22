@@ -2,7 +2,7 @@
     <div class="session-toolbar d-flex align-center">
         <div
             v-for="session in query_sessions"
-            v-show="session.id === getActiveSessionId && isTxtEditor"
+            v-show="session.id === getActiveSessionId && getIsTxtEditor"
             :key="`${session.id}`"
         >
             <session-btns
@@ -17,8 +17,8 @@
                 "
             />
         </div>
-        <portal-target v-if="isDDLEditor" name="alter-table-btns" class="fill-height" />
-        <template v-if="isTxtEditor">
+        <portal-target v-if="getIsDDLEditor" name="alter-table-btns" class="fill-height" />
+        <template v-if="getIsTxtEditor">
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -158,20 +158,20 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            query_confirm_flag: state => state.persisted.query_confirm_flag,
+            query_snippets: state => state.persisted.query_snippets,
             query_sessions: state => state.querySession.query_sessions,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            query_confirm_flag: state => state.persisted.query_confirm_flag,
+            is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             query_txt: state => state.editor.query_txt,
             selected_query_txt: state => state.editor.selected_query_txt,
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            query_snippets: state => state.persisted.query_snippets,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
-            getCurrEditorMode: 'editor/getCurrEditorMode',
+            getIsTxtEditor: 'editor/getIsTxtEditor',
+            getIsDDLEditor: 'editor/getIsDDLEditor',
         }),
         isMaxRowsValid: {
             get() {
@@ -180,12 +180,6 @@ export default {
             set(v) {
                 if (v) this.SET_IS_MAX_ROWS_VALID(v)
             },
-        },
-        isTxtEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
-        },
-        isDDLEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
     },
     methods: {

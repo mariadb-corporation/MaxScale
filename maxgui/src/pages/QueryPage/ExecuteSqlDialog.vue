@@ -29,7 +29,7 @@
                 class="mb-4 pt-2 pl-2 color border-all-table-border"
                 :style="{ height: `${editorHeight}px` }"
             >
-                <!-- Workaround: assign true to skipRegCompleters props when getCurrEditorMode is TXT_EDITOR
+                <!-- Workaround: assign true to skipRegCompleters props when getIsTxtEditor is TXT_EDITOR
                in order to not call regCompleters. In other words, when multiple editors are visible
                on the same page, they all re-call registerCompletionItemProvider which causes duplicated
                completion items
@@ -45,7 +45,7 @@
                         contextmenu: false,
                         wordWrap: 'on',
                     }"
-                    :skipRegCompleters="isTxtEditor"
+                    :skipRegCompleters="getIsTxtEditor"
                 />
             </div>
         </template>
@@ -68,7 +68,7 @@
  * Events
  * update:sqlTobeExecuted?: (string)
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import QueryEditor from '@/components/QueryEditor'
 export default {
     name: 'execute-sql-dialog',
@@ -86,16 +86,10 @@ export default {
         onSave: { type: Function, required: true },
     },
     computed: {
-        ...mapState({
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-        }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
-            getCurrEditorMode: 'editor/getCurrEditorMode',
+            getIsTxtEditor: 'editor/getIsTxtEditor',
         }),
-        isTxtEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
-        },
         isConfDlgOpened: {
             get() {
                 return this.value

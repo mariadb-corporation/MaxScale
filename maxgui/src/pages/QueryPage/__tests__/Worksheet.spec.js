@@ -98,16 +98,6 @@ editorModes.forEach(mode => {
 })
 describe(`Worksheet - computed, method and other tests`, () => {
     let wrapper
-    it(`Should return accurate value for isTxtEditor`, () => {
-        wrapper = mountFactory({
-            computed: { getCurrEditorMode: () => 'TXT_EDITOR' },
-        })
-        expect(wrapper.vm.isTxtEditor).to.be.true
-        wrapper = mountFactory({
-            computed: { getCurrEditorMode: () => 'DDL_EDITOR' },
-        })
-        expect(wrapper.vm.isTxtEditor).to.be.false
-    })
     const is_sidebar_collapsed_values = [false, true]
     is_sidebar_collapsed_values.forEach(v => {
         describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {

@@ -160,11 +160,10 @@ export default {
     },
     getters: {
         //editor mode getter
-        getCurrEditorMode: (state, getters, rootState, rootGetters) => {
-            const { value = 'TXT_EDITOR' } =
-                state.curr_editor_mode_map[rootGetters['querySession/getActiveSessionId']] || {}
-            return value
-        },
+        getIsTxtEditor: (state, getters, rootState) =>
+            state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.TXT_EDITOR,
+        getIsDDLEditor: (state, getters, rootState) =>
+            state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info_map getters
         getTblCreationInfo: (state, getters, rootState, rootGetters) =>
             state.tbl_creation_info_map[rootGetters['querySession/getActiveSessionId']] || {},

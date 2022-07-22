@@ -283,6 +283,7 @@ function syncStateCreator(namespace) {
                  * file_handle?: FileSystemFileHandle. File handle.
                  */
                 blob_file: {},
+                curr_editor_mode: APP_CONFIG.SQL_EDITOR_MODES.TXT_EDITOR,
             }
         case 'queryConn':
             return {
@@ -367,11 +368,6 @@ function memStateCreator(namespace) {
     switch (namespace) {
         case 'editor':
             return {
-                /**
-                 * each key holds these properties:
-                 * value?: string. Check SQL_EDITOR_MODES
-                 */
-                curr_editor_mode_map: {},
                 /**
                  * each key holds these properties:
                  * altered_active_node?: object

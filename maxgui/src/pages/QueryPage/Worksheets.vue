@@ -2,7 +2,7 @@
     <div
         v-shortkey="QUERY_SHORTCUT_KEYS"
         class="d-flex flex-column fill-height worksheet-wrapper"
-        @shortkey="isTxtEditor ? wkeShortKeyHandler($event) : null"
+        @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
         <div class="d-flex flex-row">
             <v-tabs
@@ -137,7 +137,6 @@ export default {
     computed: {
         ...mapState({
             QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
@@ -146,7 +145,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getWkeFirstSessConnByWkeId: 'queryConn/getWkeFirstSessConnByWkeId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
-            getCurrEditorMode: 'editor/getCurrEditorMode',
+            getIsTxtEditor: 'editor/getIsTxtEditor',
         }),
         activeWkeID: {
             get() {
@@ -155,9 +154,6 @@ export default {
             set(v) {
                 if (v) this.SET_ACTIVE_WKE_ID(v)
             },
-        },
-        isTxtEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
         },
     },
     methods: {
