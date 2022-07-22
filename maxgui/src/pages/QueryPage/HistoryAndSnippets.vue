@@ -339,6 +339,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
+            SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
             SET_QUERY_SNIPPETS: 'persisted/SET_QUERY_SNIPPETS',
         }),
         setHeaderHeight() {
