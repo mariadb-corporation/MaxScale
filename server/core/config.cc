@@ -527,10 +527,11 @@ config::ParamString Config::s_admin_pam_ro_service(
     "PAM service for read-only users.",
     "");
 
-config::ParamString Config::s_admin_ssl_key(
+config::ParamPath Config::s_admin_ssl_key(
     &Config::s_specification,
     CN_ADMIN_SSL_KEY,
     "Admin SSL key",
+    config::ParamPath::R,
     "");
 
 config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
@@ -545,16 +546,18 @@ config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
         {mxb::ssl_version::TLS13, "TLSv13"}
     }, mxb::ssl_version::SSL_TLS_MAX);
 
-config::ParamString Config::s_admin_ssl_cert(
+config::ParamPath Config::s_admin_ssl_cert(
     &Config::s_specification,
     CN_ADMIN_SSL_CERT,
     "Admin SSL cert",
+    config::ParamPath::R,
     "");
 
-config::ParamString Config::s_admin_ssl_ca(
+config::ParamPath Config::s_admin_ssl_ca(
     &Config::s_specification,
     CN_ADMIN_SSL_CA,
     "Admin SSL CA cert",
+    config::ParamPath::R,
     "");
 
 // Alias admin_ssl_ca_cert -> admin_ssl_ca.
