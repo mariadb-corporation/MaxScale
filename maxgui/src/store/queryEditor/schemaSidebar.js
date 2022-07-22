@@ -40,20 +40,8 @@ export default {
             if (chosenConn.id) {
                 await dispatch('fetchSchemas')
                 await dispatch('updateActiveDb')
-                dispatch('changeWkeName', chosenConn.name)
+                dispatch('wke/changeWkeName', chosenConn.name, { root: true })
             }
-        },
-        changeWkeName({ commit, rootState, rootGetters }, name) {
-            let newWke = this.vue.$help.lodash.cloneDeep(rootGetters['wke/getActiveWke'])
-            newWke.name = name
-            commit(
-                'wke/UPDATE_WKE',
-                {
-                    idx: rootState.wke.worksheets_arr.indexOf(rootGetters['wke/getActiveWke']),
-                    wke: newWke,
-                },
-                { root: true }
-            )
         },
         /**
          *

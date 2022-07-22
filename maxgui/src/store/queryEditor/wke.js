@@ -272,6 +272,14 @@ export default {
                 dispatch('handleSyncWke', freshWke)
             }
         },
+        changeWkeName({ commit, rootState, getters }, name) {
+            let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
+            newWke.name = name
+            commit('UPDATE_WKE', {
+                idx: rootState.wke.worksheets_arr.indexOf(getters.getActiveWke),
+                wke: newWke,
+            })
+        },
     },
     getters: {
         getActiveWke: state => {
