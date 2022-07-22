@@ -240,10 +240,12 @@ describe('sidebar-ctr', () => {
                     queryEngines: () => null,
                     queryCharsetCollationMap: () => null,
                     queryDefDbCharsetMap: () => null,
+                    handleAddNewSession: () => null,
                 },
             })
             const mockNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
             const fnsToBeSpied = [
+                'handleAddNewSession',
                 'queryEngines',
                 'queryCharsetCollationMap',
                 'queryDefDbCharsetMap',
@@ -255,13 +257,10 @@ describe('sidebar-ctr', () => {
             await wrapper.vm.onAlterTable(mockNode) // trigger the method
 
             expect(queryTblCreationInfoParam).to.be.deep.equals(mockNode)
-            wrapper.vm.queryEngines.should.have.been.calledOnce
-            wrapper.vm.queryCharsetCollationMap.should.have.been.calledOnce
-            wrapper.vm.queryDefDbCharsetMap.should.have.been.calledOnce
-            // restore
-            wrapper.vm.queryEngines.restore()
-            wrapper.vm.queryCharsetCollationMap.restore()
-            wrapper.vm.queryDefDbCharsetMap.restore()
+            fnsToBeSpied.forEach(fn => {
+                wrapper.vm[fn].should.have.been.calledOnce
+                wrapper.vm[fn].restore()
+            })
         })
         it(`Should process onDropAction method as expected`, () => {
             wrapper = mountFactory()

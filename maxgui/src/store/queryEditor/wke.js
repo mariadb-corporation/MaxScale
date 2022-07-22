@@ -150,9 +150,11 @@ export default {
                 commit('ADD_NEW_WKE')
                 const new_active_wke_id = state.worksheets_arr[state.worksheets_arr.length - 1].id
                 commit('SET_ACTIVE_WKE_ID', new_active_wke_id)
-                await dispatch('querySession/handleAddNewSession', new_active_wke_id, {
-                    root: true,
-                })
+                await dispatch(
+                    'querySession/handleAddNewSession',
+                    { wke_id: new_active_wke_id },
+                    { root: true }
+                )
             } catch (e) {
                 this.vue.$logger('store-wke-addNewWs').error(e)
                 commit(

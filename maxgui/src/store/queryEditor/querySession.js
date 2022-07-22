@@ -22,7 +22,7 @@ export default {
         active_session_by_wke_id_map: {}, // persisted
     },
     mutations: {
-        ADD_NEW_SESSION(state, wke_id) {
+        ADD_NEW_SESSION(state, { wke_id, name: custName }) {
             let name = 'Query Tab 1',
                 count = 1
             const sessions_in_wke = state.query_sessions.filter(s => s.wke_id_fk === wke_id)
@@ -31,7 +31,7 @@ export default {
                 count = lastSession.count + 1
                 name = `Query Tab ${count}`
             }
-            const newSession = { ...defSessionState(wke_id), name, count }
+            const newSession = { ...defSessionState(wke_id), name: custName || name, count }
             state.query_sessions.push(newSession)
         },
         DELETE_SESSION(state, id) {
@@ -96,8 +96,12 @@ export default {
          * add a new session, set it as the active session and finally set the clone connection as
          * the active connection.
          * @param {String} param.wke_id - worksheet id
+         * @param {String} param.name - session name. If not provided, it'll be auto generated
          */
-        async handleAddNewSession({ commit, state, dispatch, rootState, rootGetters }, wke_id) {
+        async handleAddNewSession(
+            { commit, state, dispatch, rootState, rootGetters },
+            { wke_id, name }
+        ) {
             try {
                 const conn_to_be_cloned = rootGetters['queryConn/getWkeFirstSessConnByWkeId'](
                     wke_id
@@ -121,7 +125,7 @@ export default {
                         })
                 }
 
-                commit('ADD_NEW_SESSION', wke_id)
+                commit('ADD_NEW_SESSION', { wke_id, name })
                 const newSessionId = state.query_sessions[state.query_sessions.length - 1].id
                 commit('SET_ACTIVE_SESSION_BY_WKE_ID_MAP', {
                     id: wke_id,

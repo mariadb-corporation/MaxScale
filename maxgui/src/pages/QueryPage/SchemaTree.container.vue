@@ -398,7 +398,12 @@ export default {
         handleEmitDD_opt({ item, opt }) {
             switch (opt.text) {
                 case this.$t('alterTbl'):
-                    this.$emit('alter-tbl', { id: item.id, type: item.type, level: item.level })
+                    this.$emit('alter-tbl', {
+                        id: item.id,
+                        type: item.type,
+                        level: item.level,
+                        name: item.name,
+                    })
                     break
                 case this.$t('dropTbl'):
                 case this.$t('dropSchema'):

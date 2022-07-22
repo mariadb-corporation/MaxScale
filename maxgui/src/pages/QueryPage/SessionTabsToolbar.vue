@@ -6,7 +6,7 @@
                 small
                 class="float-left add-wke-btn"
                 icon
-                @click="addSession"
+                @click="handleAddNewSession({ wke_id: active_wke_id })"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
@@ -37,17 +37,11 @@ export default {
             active_wke_id: state => state.wke.active_wke_id,
         }),
     },
-
     mounted() {
         this.$nextTick(() => this.$emit('get-total-btn-width', this.$refs.leftBtns.clientWidth))
     },
     methods: {
-        ...mapActions({
-            handleAddNewSession: 'querySession/handleAddNewSession',
-        }),
-        async addSession() {
-            await this.handleAddNewSession(this.active_wke_id)
-        },
+        ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
     },
 }
 </script>

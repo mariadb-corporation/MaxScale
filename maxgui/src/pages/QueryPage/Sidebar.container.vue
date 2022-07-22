@@ -142,6 +142,7 @@ export default {
             queryDefDbCharsetMap: 'editor/queryDefDbCharsetMap',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
             initialFetch: 'schemaSidebar/initialFetch',
+            handleAddNewSession: 'querySession/handleAddNewSession',
         }),
         /**
          * A watcher on active_sql_conn state that is triggered immediately
@@ -181,6 +182,10 @@ export default {
             await this.updateTreeNodes(node)
         },
         async onAlterTable(node) {
+            await this.handleAddNewSession({
+                wke_id: this.active_wke_id,
+                name: `ALTER ${node.name}`,
+            })
             this.PATCH_TBL_CREATION_INFO_MAP({
                 id: this.getActiveSessionId,
                 payload: {
