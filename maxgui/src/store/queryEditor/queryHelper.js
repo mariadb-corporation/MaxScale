@@ -284,6 +284,13 @@ function syncStateCreator(namespace) {
                  */
                 blob_file: {},
                 curr_editor_mode: APP_CONFIG.SQL_EDITOR_MODES.TXT_EDITOR,
+                /**
+                 * properties:
+                 * altered_active_node?: object
+                 * loading_tbl_creation_info?: boolean
+                 * data:{ table_opts_data?: object, cols_opts_data?: object }
+                 */
+                tbl_creation_info: {},
             }
         case 'queryConn':
             return {
@@ -367,15 +374,7 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
 function memStateCreator(namespace) {
     switch (namespace) {
         case 'editor':
-            return {
-                /**
-                 * each key holds these properties:
-                 * altered_active_node?: object
-                 * loading_tbl_creation_info?: boolean
-                 * data:{ table_opts_data?: object, cols_opts_data?: object }
-                 */
-                tbl_creation_info_map: {},
-            }
+            return {}
         case 'queryConn':
             return {
                 /**

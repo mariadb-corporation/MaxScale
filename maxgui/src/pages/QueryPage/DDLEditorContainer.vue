@@ -82,10 +82,12 @@ export default {
         }
     },
     computed: {
-        ...mapState({ active_wke_id: state => state.wke.active_wke_id }),
+        ...mapState({
+            active_wke_id: state => state.wke.active_wke_id,
+            tbl_creation_info: state => state.editor.tbl_creation_info,
+        }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
-            getTblCreationInfo: 'editor/getTblCreationInfo',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
@@ -97,7 +99,7 @@ export default {
             return Boolean(this.getLoadingTblCreationInfo && !this.initialData)
         },
         initialData() {
-            return this.$typy(this.getTblCreationInfo, 'data').safeObject
+            return this.$typy(this.tbl_creation_info, 'data').safeObject
         },
         hasChanged() {
             return !this.$help.lodash.isEqual(
@@ -158,7 +160,7 @@ export default {
     methods: {
         ...mapMutations({
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
-            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
+            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
         ...mapActions({ exeStmtAction: 'schemaSidebar/exeStmtAction' }),
         //Watcher to work with multiple worksheets which are kept alive
@@ -170,7 +172,7 @@ export default {
                         this.formData = this.$help.lodash.cloneDeep(v)
                     }
                 },
-                { deep: true }
+                { deep: true, immediate: true }
             )
         },
         revertChanges() {
@@ -447,9 +449,10 @@ export default {
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
             if (!this.isAlterFailed)
-                this.PATCH_TBL_CREATION_INFO_MAP({
+                this.SET_TBL_CREATION_INFO({
                     id: this.getActiveSessionId,
                     payload: {
+                        ...this.tbl_creation_info,
                         data: this.$help.lodash.cloneDeep(this.formData),
                     },
                 })

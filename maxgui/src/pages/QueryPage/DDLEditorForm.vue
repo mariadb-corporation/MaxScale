@@ -81,13 +81,13 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
+            tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         ...mapGetters({
-            getTblCreationInfo: 'editor/getTblCreationInfo',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         initialData() {
-            return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
+            return this.$typy(this.tbl_creation_info, 'data').safeObjectOrEmpty
         },
         tableOptsData: {
             get() {

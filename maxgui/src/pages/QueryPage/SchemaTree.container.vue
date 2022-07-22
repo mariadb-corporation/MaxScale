@@ -133,6 +133,7 @@ export default {
             active_wke_id: state => state.wke.active_wke_id,
             active_db: state => state.schemaSidebar.active_db,
             search_schema: state => state.schemaSidebar.search_schema,
+            tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
@@ -226,9 +227,10 @@ export default {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
                     if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
-                        this.PATCH_TBL_CREATION_INFO_MAP({
+                        this.SET_TBL_CREATION_INFO({
                             id: this.getActiveSessionId,
                             payload: {
+                                ...this.tbl_creation_info,
                                 altered_active_node: activeNodes[0],
                             },
                         })
@@ -260,7 +262,7 @@ export default {
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
             SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
-            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
+            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
         filter(item, search, textKey) {
             return item[textKey].indexOf(search) > -1

@@ -119,7 +119,7 @@
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
-import { mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 export default {
     name: 'column-input',
     components: {
@@ -139,12 +139,12 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            getTblCreationInfo: 'editor/getTblCreationInfo',
+        ...mapState({
+            tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         initialCellData() {
             return this.$typy(
-                this.getTblCreationInfo,
+                this.tbl_creation_info,
                 `data.cols_opts_data.data['${this.data.rowIdx}']`
             ).safeArray
         },

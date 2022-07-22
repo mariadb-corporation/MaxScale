@@ -104,13 +104,14 @@ export default {
                 this.vue.$logger('store-editor-queryEngines').error(e)
             }
         },
-        async queryTblCreationInfo({ commit, rootState, rootGetters }, node) {
+        async queryTblCreationInfo({ commit, state, rootState, rootGetters }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
-                commit('PATCH_TBL_CREATION_INFO_MAP', {
+                commit('SET_TBL_CREATION_INFO', {
                     id: active_session_id,
                     payload: {
+                        ...state.tbl_creation_info,
                         loading_tbl_creation_info: true,
                         altered_active_node: node,
                     },
@@ -128,9 +129,10 @@ export default {
                     nodeId: node.id,
                     $queryHttp: this.$queryHttp,
                 })
-                commit(`PATCH_TBL_CREATION_INFO_MAP`, {
+                commit(`SET_TBL_CREATION_INFO`, {
                     id: active_session_id,
                     payload: {
+                        ...state.tbl_creation_info,
                         data: {
                             table_opts_data: { dbName: db, ...tblOptsData },
                             cols_opts_data: colsOptsData,
@@ -139,11 +141,9 @@ export default {
                     },
                 })
             } catch (e) {
-                commit('PATCH_TBL_CREATION_INFO_MAP', {
+                commit('SET_TBL_CREATION_INFO', {
                     id: active_session_id,
-                    payload: {
-                        loading_tbl_creation_info: false,
-                    },
+                    payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
                 })
                 commit(
                     'SET_SNACK_BAR_MESSAGE',
@@ -164,15 +164,13 @@ export default {
             state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.TXT_EDITOR,
         getIsDDLEditor: (state, getters, rootState) =>
             state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.DDL_EDITOR,
-        // tbl_creation_info_map getters
-        getTblCreationInfo: (state, getters, rootState, rootGetters) =>
-            state.tbl_creation_info_map[rootGetters['querySession/getActiveSessionId']] || {},
-        getLoadingTblCreationInfo: (state, getters) => {
-            const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
+        // tbl_creation_info getters
+        getLoadingTblCreationInfo: state => {
+            const { loading_tbl_creation_info = true } = state.tbl_creation_info
             return loading_tbl_creation_info
         },
-        getAlteredActiveNode: (state, getters) => {
-            const { altered_active_node = {} } = getters.getTblCreationInfo
+        getAlteredActiveNode: state => {
+            const { altered_active_node = {} } = state.tbl_creation_info
             return altered_active_node
         },
         getIsFileUnsaved: state => {

@@ -86,6 +86,7 @@ export default {
             engines: state => state.editor.engines,
             charset_collation_map: state => state.editor.charset_collation_map,
             def_db_charset_map: state => state.editor.def_db_charset_map,
+            tbl_creation_info: state => state.editor.tbl_creation_info,
             active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
@@ -126,7 +127,7 @@ export default {
             SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
+            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
             SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
             SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
         }),
@@ -186,11 +187,9 @@ export default {
                 wke_id: this.active_wke_id,
                 name: `ALTER ${node.name}`,
             })
-            this.PATCH_TBL_CREATION_INFO_MAP({
+            this.SET_TBL_CREATION_INFO({
                 id: this.getActiveSessionId,
-                payload: {
-                    altered_active_node: node,
-                },
+                payload: { ...this.tbl_creation_info, altered_active_node: node },
             })
             this.SET_CURR_EDITOR_MODE({
                 id: this.getActiveSessionId,
