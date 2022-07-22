@@ -12,19 +12,19 @@
  */
 
 import mount from '@tests/unit/setup'
-import SessionToolbar from '@/pages/QueryPage/SessionToolbar'
+import TxtEditorSessToolbar from '@/pages/QueryPage/TxtEditorSessToolbar'
 
 const mountFactory = opts =>
     mount({
         shallow: false,
-        component: SessionToolbar,
+        component: TxtEditorSessToolbar,
         stubs: {
             'readonly-query-editor': "<div class='stub'></div>",
         },
         ...opts,
     })
 const dummy_session_id = 'SESSION_123_45'
-describe(`SessionToolbar`, () => {
+describe(`txt-editor-sess-toolbar`, () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to confirm-dialog`, () => {
@@ -118,7 +118,7 @@ describe(`SessionToolbar`, () => {
             spy.should.have.been.calledOnceWithExactly('all')
         })
         it(`Should call stopQuery action`, () => {
-            const spy = sinon.spy(SessionToolbar.methods, 'stopQuery')
+            const spy = sinon.spy(TxtEditorSessToolbar.methods, 'stopQuery')
             wrapper = mountFactory()
             wrapper.findComponent({ name: 'session-btns' }).vm.$emit('on-stop-query')
             spy.should.have.been.calledOnce

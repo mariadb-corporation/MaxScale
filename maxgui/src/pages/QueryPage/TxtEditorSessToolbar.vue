@@ -2,7 +2,7 @@
     <div class="session-toolbar d-flex align-center">
         <div
             v-for="session in query_sessions"
-            v-show="session.id === getActiveSessionId && getIsTxtEditor"
+            v-show="session.id === getActiveSessionId"
             :key="`${session.id}`"
         >
             <session-btns
@@ -17,46 +17,43 @@
                 "
             />
         </div>
-        <portal-target v-if="getIsDDLEditor" name="alter-table-btns" class="fill-height" />
-        <template v-if="getIsTxtEditor">
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        class="create-snippet-btn session-toolbar-square-btn"
-                        text
-                        color="accent-dark"
-                        :disabled="!query_txt"
-                        v-on="on"
-                        @click="openSnippetDlg"
-                    >
-                        <v-icon size="19"> mdi-star-plus-outline </v-icon>
-                    </v-btn>
-                </template>
-                <span style="white-space: pre;" class="d-inline-block text-center">
-                    {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
-                </span>
-            </v-tooltip>
-            <load-sql ref="loadSql" />
-            <v-spacer />
-            <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
-                <max-rows-ctr
-                    :style="{ maxWidth: '180px' }"
-                    :height="26"
-                    hide-details="auto"
-                    @change="SET_QUERY_MAX_ROW($event)"
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    class="create-snippet-btn session-toolbar-square-btn"
+                    text
+                    color="accent-dark"
+                    :disabled="!query_txt"
+                    v-on="on"
+                    @click="openSnippetDlg"
                 >
-                    <template v-slot:prepend-inner>
-                        <label class="field__label color text-small-text">
-                            {{ $t('maxRows') }}
-                        </label>
-                    </template>
-                </max-rows-ctr>
-            </v-form>
-        </template>
+                    <v-icon size="19"> mdi-star-plus-outline </v-icon>
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
+            </span>
+        </v-tooltip>
+        <load-sql ref="loadSql" />
+        <v-spacer />
+        <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
+            <max-rows-ctr
+                :style="{ maxWidth: '180px' }"
+                :height="26"
+                hide-details="auto"
+                @change="SET_QUERY_MAX_ROW($event)"
+            >
+                <template v-slot:prepend-inner>
+                    <label class="field__label color text-small-text">
+                        {{ $t('maxRows') }}
+                    </label>
+                </template>
+            </max-rows-ctr>
+        </v-form>
         <confirm-dialog
             v-model="confDlg.isOpened"
             :title="confDlg.title"
@@ -131,7 +128,7 @@ import QueryEditor from '@/components/QueryEditor'
 import LoadSql from './LoadSql'
 
 export default {
-    name: 'session-toolbar',
+    name: 'txt-editor-sess-toolbar',
     components: {
         'max-rows-ctr': MaxRows,
         'session-btns': SessionBtns,
@@ -170,8 +167,6 @@ export default {
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
-            getIsTxtEditor: 'editor/getIsTxtEditor',
-            getIsDDLEditor: 'editor/getIsDDLEditor',
         }),
         isMaxRowsValid: {
             get() {

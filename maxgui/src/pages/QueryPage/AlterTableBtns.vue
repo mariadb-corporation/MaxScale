@@ -1,5 +1,5 @@
 <template>
-    <div class="d-inline-flex justify-center align-center icon-group">
+    <div class="d-inline-flex align-center icon-group">
         <v-tooltip
             top
             transition="slide-y-transition"

@@ -1,47 +1,46 @@
 <template>
     <div class="fill-height">
         <v-card
-            v-if="isLoading"
             class="fill-height color border-left-table-border border-right-table-border "
             :loading="isLoading"
-        />
-        <!-- Use v-show to always render it so that multiple worksheets would be kept alive -->
-        <div
-            v-show="!isLoading"
-            class="relative fill-height color border-left-table-border border-right-table-border"
         >
-            <!-- Only render the portal when component is activated otherwise it has function reference issue -->
-            <portal v-if="activated" to="alter-table-btns">
+            <div
+                v-show="!isLoading"
+                class="relative fill-height color border-left-table-border border-right-table-border"
+            >
                 <alter-table-btns
+                    class="color border-left-table-border border-bottom-table-border"
+                    :style="{ width: '100%', height: '28px' }"
                     :disableRevert="!hasChanged"
                     :disableApply="!hasValidChanges"
                     @on-revert="revertChanges"
                     @on-apply="applyChanges"
                 />
-            </portal>
-            <ddl-editor-form
-                v-model="formData"
-                :dim="formDim"
-                @is-form-valid="isFormValid = $event"
-            />
-            <execute-sql-dialog
-                v-model="isConfDlgOpened"
-                :title="
-                    isAlterFailed
-                        ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
-                        : $tc('confirmations.exeStatements', stmtI18nPluralization)
-                "
-                :smallInfo="
-                    isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
-                "
-                :hasSavingErr="isAlterFailed"
-                :errMsgObj="stmtErrMsgObj"
-                :sqlTobeExecuted.sync="sql"
-                :onSave="confirmAlter"
-                @after-close="clearAlterResult"
-                @after-cancel="clearAlterResult"
-            />
-        </div>
+
+                <ddl-editor-form
+                    v-model="formData"
+                    :dim="formDim"
+                    @is-form-valid="isFormValid = $event"
+                />
+                <execute-sql-dialog
+                    v-model="isConfDlgOpened"
+                    :title="
+                        isAlterFailed
+                            ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
+                            : $tc('confirmations.exeStatements', stmtI18nPluralization)
+                    "
+                    :smallInfo="
+                        isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
+                    "
+                    :hasSavingErr="isAlterFailed"
+                    :errMsgObj="stmtErrMsgObj"
+                    :sqlTobeExecuted.sync="sql"
+                    :onSave="confirmAlter"
+                    @after-close="clearAlterResult"
+                    @after-cancel="clearAlterResult"
+                />
+            </div>
+        </v-card>
     </div>
 </template>
 
@@ -77,7 +76,6 @@ export default {
             formData: {},
             isFormValid: true,
             sql: '',
-            activated: true,
             isConfDlgOpened: false,
         }
     },
@@ -151,11 +149,9 @@ export default {
     },
     activated() {
         this.watch_initialData()
-        this.activated = true
     },
     deactivated() {
         this.$typy(this.unwatch_initialData).safeFunction()
-        this.activated = false
     },
     methods: {
         ...mapMutations({

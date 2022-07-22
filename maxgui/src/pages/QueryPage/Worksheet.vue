@@ -21,7 +21,7 @@
                         :sessionToolbarRef="$typy($refs, 'sessionToolbar').safeObjectOrEmpty"
                     />
                     <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
-                    <session-toolbar ref="sessionToolbar" />
+                    <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
                 </div>
                 <keep-alive>
                     <txt-editor-container
@@ -55,7 +55,7 @@ import Sidebar from './Sidebar.container.vue'
 import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
 import SessionTabs from './SessionTabs'
-import SessionToolbar from './SessionToolbar'
+import TxtEditorSessToolbar from './TxtEditorSessToolbar'
 
 export default {
     name: 'worksheet',
@@ -64,7 +64,7 @@ export default {
         'txt-editor-container': TxtEditorContainer,
         'ddl-editor-container': DDLEditorContainer,
         'session-tabs': SessionTabs,
-        'session-toolbar': SessionToolbar,
+        'txt-editor-sess-toolbar': TxtEditorSessToolbar,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -83,7 +83,10 @@ export default {
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             curr_editor_mode: state => state.editor.curr_editor_mode,
         }),
-        ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
+        ...mapGetters({
+            getIsTxtEditor: 'editor/getIsTxtEditor',
+            getActiveSessionId: 'querySession/getActiveSessionId',
+        }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
