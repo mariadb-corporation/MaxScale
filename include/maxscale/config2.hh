@@ -2501,7 +2501,7 @@ void ParamEnumMask<T>::populate(MXS_MODULE_PARAM& param) const
 }
 
 
-template<class ParamType, class NativeParamType = Native<ParamType> >
+template<class ParamType, class NativeParamType>
 void Configuration::add_native(typename ParamType::value_type* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)

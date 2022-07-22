@@ -32,6 +32,7 @@
 #include <set>
 #include <vector>
 #include <unordered_set>
+#include <utility>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
