@@ -61,6 +61,27 @@ export default {
         },
     },
     actions: {
+        /**
+         * This calls action to populate schema-tree and change the wke name to
+         * the connection name.
+         */
+        async handleInitialFetch({ dispatch, rootState, rootGetters }) {
+            try {
+                const { id: conn_id, name: conn_name } = rootState.queryConn.active_sql_conn || {}
+                const hasConnId = conn_id
+                const isSchemaTreeEmpty = rootGetters['schemaSidebar/getDbTreeData'].length === 0
+                const hasSchemaTreeAlready =
+                    this.vue.$typy(rootGetters['schemaSidebar/getCurrDbTree'], 'data_of_conn')
+                        .safeString === conn_name
+
+                if (hasConnId && (isSchemaTreeEmpty || !hasSchemaTreeAlready)) {
+                    await dispatch('schemaSidebar/initialFetch', {}, { root: true })
+                    dispatch('changeWkeName', conn_name)
+                }
+            } catch (e) {
+                this.vue.$logger('store-wke-handleInitialFetch').error(e)
+            }
+        },
         async chooseActiveWke({ state, commit, dispatch, rootState }) {
             const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {

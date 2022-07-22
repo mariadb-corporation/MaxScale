@@ -94,8 +94,6 @@ export default {
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
-            getDbTreeData: 'schemaSidebar/getDbTreeData',
-            getCurrDbTree: 'schemaSidebar/getCurrDbTree',
         }),
         isSidebarDisabled() {
             return this.getIsConnBusy && !this.getLoadingDbTree
@@ -114,12 +112,6 @@ export default {
         stmtErrMsgObj() {
             return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
-    },
-    deactivated() {
-        this.$typy(this.unwatch_active_sql_conn).safeFunction()
-    },
-    activated() {
-        this.watch_active_sql_conn()
     },
     methods: {
         ...mapMutations({
@@ -142,30 +134,9 @@ export default {
             queryEngines: 'editor/queryEngines',
             queryDefDbCharsetMap: 'editor/queryDefDbCharsetMap',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
-            initialFetch: 'schemaSidebar/initialFetch',
             handleAddNewSession: 'querySession/handleAddNewSession',
         }),
-        /**
-         * A watcher on active_sql_conn state that is triggered immediately
-         * to behave like a created hook.
-         * It calls initialFetch to populate the data if the worksheet has an
-         * active connection but schema tree data is an empty array
-         * or when the new connection is being created, chosen or when changing
-         * the worksheet
-         */
-        watch_active_sql_conn() {
-            this.unwatch_active_sql_conn = this.$watch(
-                'active_sql_conn',
-                async v => {
-                    if (
-                        this.getDbTreeData.length === 0 ||
-                        this.$typy(this.getCurrDbTree, 'data_of_conn').safeString !== v.name
-                    )
-                        await this.initialFetch(v)
-                },
-                { deep: true, immediate: true }
-            )
-        },
+
         async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
             this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.getActiveSessionId })

@@ -33,15 +33,9 @@ export default {
         }),
     },
     actions: {
-        /**
-         * @param {Object} chosenConn  Chosen connection
-         */
-        async initialFetch({ dispatch }, chosenConn) {
-            if (chosenConn.id) {
-                await dispatch('fetchSchemas')
-                await dispatch('updateActiveDb')
-                dispatch('wke/changeWkeName', chosenConn.name, { root: true })
-            }
+        async initialFetch({ dispatch }) {
+            await dispatch('fetchSchemas')
+            await dispatch('updateActiveDb')
         },
         /**
          *

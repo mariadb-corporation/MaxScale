@@ -50,7 +50,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 import Sidebar from './Sidebar.container.vue'
 import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
@@ -82,11 +82,9 @@ export default {
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             curr_editor_mode: state => state.editor.curr_editor_mode,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
-        ...mapGetters({
-            getIsTxtEditor: 'editor/getIsTxtEditor',
-            getActiveSessionId: 'querySession/getActiveSessionId',
-        }),
+        ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -115,15 +113,31 @@ export default {
     },
     activated() {
         this.watch_is_sidebar_collapsed()
+        this.watch_active_sql_conn()
     },
     deactivated() {
         this.$typy(this.unwatch_is_sidebar_collapsed).safeFunction()
+        this.$typy(this.unwatch_active_sql_conn).safeFunction()
     },
     methods: {
+        ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
         //Watchers to work with multiple worksheets which are kept alive
         watch_is_sidebar_collapsed() {
             this.unwatch_is_sidebar_collapsed = this.$watch('is_sidebar_collapsed', () =>
                 this.handleSetSidebarPct()
+            )
+        },
+        /**
+         * A watcher on active_sql_conn state that is triggered immediately
+         * to behave like a created hook. The watcher is watched/unwatched based on
+         * activated/deactivated hook to prevent it from being triggered while changing
+         * the value of active_sql_conn in another worksheet.
+         */
+        watch_active_sql_conn() {
+            this.unwatch_active_sql_conn = this.$watch(
+                'active_sql_conn',
+                async () => await this.handleInitialFetch(),
+                { deep: true, immediate: true }
             )
         },
         // panes dimension/percentages calculation functions
