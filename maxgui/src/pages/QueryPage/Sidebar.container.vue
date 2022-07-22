@@ -83,9 +83,6 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
-            engines: state => state.editor.engines,
-            charset_collation_map: state => state.editor.charset_collation_map,
-            def_db_charset_map: state => state.editor.def_db_charset_map,
             tbl_creation_info: state => state.editor.tbl_creation_info,
             active_wke_id: state => state.wke.active_wke_id,
         }),
@@ -129,10 +126,8 @@ export default {
             fetchPrvw: 'queryResult/fetchPrvw',
             updateTreeNodes: 'schemaSidebar/updateTreeNodes',
             useDb: 'schemaSidebar/useDb',
+            queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
-            queryCharsetCollationMap: 'editor/queryCharsetCollationMap',
-            queryEngines: 'editor/queryEngines',
-            queryDefDbCharsetMap: 'editor/queryDefDbCharsetMap',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
             handleAddNewSession: 'querySession/handleAddNewSession',
         }),
@@ -170,11 +165,7 @@ export default {
                 payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
                 id: this.getActiveSessionId,
             })
-            //Query once as the data won't be changed
-            if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
-            if (this.$typy(this.charset_collation_map).isEmptyObject)
-                await this.queryCharsetCollationMap()
-            if (this.$typy(this.def_db_charset_map).isEmptyObject) await this.queryDefDbCharsetMap()
+            await this.queryAlterTblSuppData()
             await this.queryTblCreationInfo(node)
         },
         /**

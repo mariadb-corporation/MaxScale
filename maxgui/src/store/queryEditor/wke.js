@@ -73,10 +73,13 @@ export default {
                 const hasSchemaTreeAlready =
                     this.vue.$typy(rootGetters['schemaSidebar/getCurrDbTree'], 'data_of_conn')
                         .safeString === conn_name
-
-                if (hasConnId && (isSchemaTreeEmpty || !hasSchemaTreeAlready)) {
-                    await dispatch('schemaSidebar/initialFetch', {}, { root: true })
-                    dispatch('changeWkeName', conn_name)
+                if (hasConnId) {
+                    if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
+                        await dispatch('schemaSidebar/initialFetch', {}, { root: true })
+                        dispatch('changeWkeName', conn_name)
+                    }
+                    if (rootGetters['editor/getIsDDLEditor'])
+                        await dispatch('editor/queryAlterTblSuppData', {}, { root: true })
                 }
             } catch (e) {
                 this.vue.$logger('store-wke-handleInitialFetch').error(e)

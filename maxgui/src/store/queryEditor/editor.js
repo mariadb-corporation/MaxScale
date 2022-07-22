@@ -104,6 +104,13 @@ export default {
                 this.vue.$logger('store-editor-queryEngines').error(e)
             }
         },
+        async queryAlterTblSuppData({ state, dispatch }) {
+            if (this.vue.$typy(state.engines).isEmptyArray) await dispatch('queryEngines')
+            if (this.vue.$typy(state.charset_collation_map).isEmptyObject)
+                await dispatch('queryCharsetCollationMap')
+            if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
+                await dispatch('queryDefDbCharsetMap')
+        },
         async queryTblCreationInfo({ commit, state, rootState, rootGetters }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
