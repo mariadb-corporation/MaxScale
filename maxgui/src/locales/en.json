@@ -193,7 +193,6 @@
     "slaveRepStatus": "Slave replication status",
     "alterTbl": "Alter Table",
     "engine": "Engine",
-    "closeDDLEditor": "Close DDL editor",
     "charset": "Character set",
     "collation": "Collation",
     "defCollation": "default collation",

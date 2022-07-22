@@ -2,13 +2,13 @@
     <div class="fill-height">
         <v-card
             v-if="isLoading"
-            class="fill-height color border-right-table-border border-bottom-table-border"
+            class="fill-height color border-left-table-border border-right-table-border "
             :loading="isLoading"
         />
         <!-- Use v-show to always render it so that multiple worksheets would be kept alive -->
         <div
             v-show="!isLoading"
-            class="relative fill-height color border-right-table-border border-bottom-table-border"
+            class="relative fill-height color border-left-table-border border-right-table-border"
         >
             <!-- Only render the portal when component is activated otherwise it has function reference issue -->
             <portal v-if="activated" to="alter-table-btns">
@@ -19,20 +19,6 @@
                     @on-apply="applyChanges"
                 />
             </portal>
-
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn icon small class=" ddl-editor-close" v-on="on" @click="closeDDLEditor">
-                        <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
-                    </v-btn>
-                </template>
-                <span>{{ $t('closeDDLEditor') }}</span>
-            </v-tooltip>
-
             <ddl-editor-form
                 v-model="formData"
                 :dim="formDim"
@@ -96,15 +82,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            active_wke_id: state => state.wke.active_wke_id,
-        }),
+        ...mapState({ active_wke_id: state => state.wke.active_wke_id }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
             getTblCreationInfo: 'editor/getTblCreationInfo',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
-            getDbCmplList: 'schemaSidebar/getDbCmplList',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         formDim() {
@@ -177,11 +159,8 @@ export default {
         ...mapMutations({
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
-            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
         }),
-        ...mapActions({
-            exeStmtAction: 'schemaSidebar/exeStmtAction',
-        }),
+        ...mapActions({ exeStmtAction: 'schemaSidebar/exeStmtAction' }),
         //Watcher to work with multiple worksheets which are kept alive
         watch_initialData() {
             this.unwatch_initialData = this.$watch(
@@ -191,23 +170,8 @@ export default {
                         this.formData = this.$help.lodash.cloneDeep(v)
                     }
                 },
-                {
-                    deep: true,
-                }
+                { deep: true }
             )
-        },
-        closeDDLEditor() {
-            // Clear altered active node
-            this.PATCH_TBL_CREATION_INFO_MAP({
-                id: this.getActiveSessionId,
-                payload: {
-                    altered_active_node: null,
-                },
-            })
-            this.PATCH_CURR_EDITOR_MODE_MAP({
-                id: this.getActiveSessionId,
-                payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
-            })
         },
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
