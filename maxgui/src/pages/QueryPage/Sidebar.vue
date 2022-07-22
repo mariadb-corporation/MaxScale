@@ -72,7 +72,7 @@
             />
         </div>
         <keep-alive>
-            <db-list-tree v-show="!isCollapsed" class="schema-list-ctr" v-on="$listeners" />
+            <schema-tree-ctr v-show="!isCollapsed" class="schema-list-ctr" v-on="$listeners" />
         </keep-alive>
     </div>
 </template>
@@ -97,10 +97,10 @@
  * $emit('toggle-sidebar')
  * $emit('set-search-schema', v?: string)
  */
-import DbListTree from './DbListTree'
+import SchemaTree from './SchemaTree.container.vue'
 export default {
     name: 'sidebar',
-    components: { DbListTree },
+    components: { 'schema-tree-ctr': SchemaTree },
     props: {
         disabled: { type: Boolean, required: true },
         isCollapsed: { type: Boolean, required: true },

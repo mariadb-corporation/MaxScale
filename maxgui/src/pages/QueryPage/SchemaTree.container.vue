@@ -113,7 +113,7 @@ import { mapGetters, mapMutations, mapState } from 'vuex'
 import customDragEvt from 'mixins/customDragEvt'
 import asyncEmit from 'mixins/asyncEmit'
 export default {
-    name: 'db-list-tree',
+    name: 'schema-tree-ctr',
     mixins: [customDragEvt, asyncEmit],
     data() {
         return {

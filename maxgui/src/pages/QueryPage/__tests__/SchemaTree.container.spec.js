@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import DbListTree from '@/pages/QueryPage/DbListTree'
+import SchemaTree from '@/pages/QueryPage/SchemaTree.container.vue'
 import { merge } from 'utils/helpers'
 
 const mountFactory = opts =>
@@ -20,7 +20,7 @@ const mountFactory = opts =>
         merge(
             {
                 shallow: true,
-                component: DbListTree,
+                component: SchemaTree,
                 computed: { getDbTreeData: () => dummy_db_tree_data },
             },
             opts
@@ -102,7 +102,7 @@ const dummy_db_tree_data = [
         ],
     },
 ]
-describe(`DbListTree - m-treeview tests`, () => {
+describe(`schema-tree-ctr - m-treeview tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should not render m-treeview component if there is no data`, () => {
@@ -140,7 +140,7 @@ describe(`DbListTree - m-treeview tests`, () => {
     Object.keys(fnEvtMap).forEach(fn => {
         it(`Should call ${fn} when ${fnEvtMap[fn]} event is emitted
           from m-treeview component`, () => {
-            let fnSpy = sinon.spy(DbListTree.methods, fn)
+            let fnSpy = sinon.spy(SchemaTree.methods, fn)
             wrapper = mountFactory({ methods: { handleOpenCtxMenu: () => null } })
             let param = dummy_db_tree_data[0]
             if (fnEvtMap[fn] === 'item:contextmenu')
@@ -165,7 +165,7 @@ describe(`DbListTree - m-treeview tests`, () => {
         expect(schemaNodeNameEle.classes()).to.include.members(['font-weight-bold'])
     })
 })
-describe(`DbListTree - node tooltip tests`, () => {
+describe(`schema-tree-ctr - node tooltip tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should pass accurate data to v-tooltip via props`, () => {
@@ -198,7 +198,7 @@ describe(`DbListTree - node tooltip tests`, () => {
         expect(wrapper.vm.$data.hoveredItem).to.be.deep.equals(dummy_db_tree_data[0])
     })
 })
-describe(`DbListTree - draggable node tests`, () => {
+describe(`schema-tree-ctr - draggable node tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should call onNodeDragStart when mousedown event is emitted`, () => {
@@ -216,7 +216,7 @@ describe(`DbListTree - draggable node tests`, () => {
         wrapper.vm.onNodeDragStart.should.have.been.calledOnceWith(evtParam)
     })
 })
-describe(`DbListTree - context menu tests`, () => {
+describe(`schema-tree-ctr - context menu tests`, () => {
     let wrapper
     const activeCtxItem = dummy_db_tree_data[0]
     /**
@@ -314,7 +314,7 @@ describe(`DbListTree - context menu tests`, () => {
         })
     })
 })
-describe(`DbListTree - computed and other method tests`, () => {
+describe(`schema-tree-ctr - computed and other method tests`, () => {
     let wrapper
     it(`Should return accurate value for nodesHaveCtxMenu computed property`, () => {
         wrapper = mountFactory()
