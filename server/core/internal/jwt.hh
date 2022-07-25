@@ -23,6 +23,16 @@ namespace jwt
 {
 
 /**
+ * Initialize JWT singing keys
+ *
+ * This function must be called after the global configuration has been read and before any of the other
+ * functions are used.
+ *
+ * @return True if initialization was successful.
+ */
+bool init();
+
+/**
  * Create a JSON Web Token
  *
  * The JSON Web Token standardizes a handful of values from which the audience ("aud") is the most suitable

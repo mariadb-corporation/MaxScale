@@ -21,6 +21,40 @@
 
 namespace maxscale
 {
+
+// JSON Web Token signature algorithms
+enum class JwtAlgo
+{
+    // HMAC with SHA-2
+    // https://datatracker.ietf.org/doc/html/rfc7518#section-3.2
+    HS256,
+    HS384,
+    HS512,
+
+    // Digital Signature with RSASSA-PKCS1-v1_5
+    // https://datatracker.ietf.org/doc/html/rfc7518#section-3.3
+    RS256,
+    RS384,
+    RS512,
+
+    // Digital Signature with ECDSA
+    // https://datatracker.ietf.org/doc/html/rfc7518#section-3.4
+    ES256,
+    ES384,
+    ES512,
+
+    // Digital Signature with RSASSA-PSS
+    // https://datatracker.ietf.org/doc/html/rfc7518#section-3.5
+    PS256,
+    PS384,
+    PS512,
+
+    // Edwards-curve Digital Signature Algorithm (EdDSA)
+    // https://www.rfc-editor.org/rfc/rfc8037#section-3
+    ED25519,
+    ED448,
+};
+
 /**
  * The gateway global configuration data
  */
@@ -247,10 +281,11 @@ public:
     std::string   admin_pam_rw_service;         /**< PAM service for read-write users */
     std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
 
-    std::string               admin_ssl_key;    /**< Admin SSL key */
-    std::string               admin_ssl_cert;   /**< Admin SSL cert */
-    std::string               admin_ssl_ca;     /**< Admin SSL CA cert */
-    mxb::ssl_version::Version admin_ssl_version;/**< Admin allowed SSL versions */
+    std::string               admin_ssl_key;        /**< Admin SSL key */
+    std::string               admin_ssl_cert;       /**< Admin SSL cert */
+    std::string               admin_ssl_ca;         /**< Admin SSL CA cert */
+    mxb::ssl_version::Version admin_ssl_version;    /**< Admin allowed SSL versions */
+    mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature algorithm */
 
     std::string  local_address;                 /**< Local address to use when connecting */
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
@@ -355,6 +390,7 @@ private:
     static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;
     static config::ParamPath                            s_admin_ssl_ca;
     static config::ParamDeprecated<config::ParamAlias>  s_admin_ssl_ca_cert;// -> s_admin_ca
+    static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamBool                            s_persist_runtime_changes;

@@ -185,6 +185,27 @@ bool Config::Specification::validate(const ConfigParameters& params,
         }
     }
 
+    auto algo = s_admin_jwt_algorithm.get(params);
+
+    switch (algo)
+    {
+    case mxs::JwtAlgo::HS256:
+    case mxs::JwtAlgo::HS384:
+    case mxs::JwtAlgo::HS512:
+        // No need for private keys
+        break;
+
+    default:
+        if (s_admin_ssl_key.get(params).empty() || s_admin_ssl_cert.get(params).empty())
+        {
+            MXB_ERROR("Both '%s' and '%s' must be defined when '%s=%s' is used.",
+                      s_admin_ssl_key.name().c_str(), s_admin_ssl_cert.name().c_str(),
+                      s_admin_jwt_algorithm.name().c_str(), s_admin_jwt_algorithm.to_string(algo).c_str());
+            validated = false;
+        }
+        break;
+    }
+
     return validated;
 }
 
@@ -566,6 +587,28 @@ config::ParamDeprecated<config::ParamAlias> Config::s_admin_ssl_ca_cert(
     CN_ADMIN_SSL_CA_CERT,
     &Config::s_admin_ssl_ca);
 
+config::ParamEnum<mxs::JwtAlgo> Config::s_admin_jwt_algorithm(
+    &Config::s_specification,
+    "admin_jwt_algorithm",
+    "JWT signature algorithm",
+    {
+        {mxs::JwtAlgo::HS256, "HS256"},
+        {mxs::JwtAlgo::HS384, "HS384"},
+        {mxs::JwtAlgo::HS512, "HS512"},
+        {mxs::JwtAlgo::RS256, "RS256"},
+        {mxs::JwtAlgo::RS384, "RS384"},
+        {mxs::JwtAlgo::RS512, "RS512"},
+        {mxs::JwtAlgo::ES256, "ES256"},
+        {mxs::JwtAlgo::ES384, "ES384"},
+        {mxs::JwtAlgo::ES512, "ES512"},
+        {mxs::JwtAlgo::PS256, "PS256"},
+        {mxs::JwtAlgo::PS384, "PS384"},
+        {mxs::JwtAlgo::PS512, "PS512"},
+        {mxs::JwtAlgo::ED25519, "ED25519"},
+        {mxs::JwtAlgo::ED448, "ED448"},
+    },
+    mxs::JwtAlgo::HS256);
+
 config::ParamString Config::s_local_address(
     &Config::s_specification,
     CN_LOCAL_ADDRESS,
@@ -825,6 +868,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_cert, &s_admin_ssl_cert);
     add_native(&Config::admin_ssl_ca, &s_admin_ssl_ca);
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
+    add_native(&Config::admin_jwt_algorithm, &s_admin_jwt_algorithm);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
     add_native(&Config::persist_runtime_changes, &s_persist_runtime_changes);

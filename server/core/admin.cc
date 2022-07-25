@@ -1065,6 +1065,10 @@ bool mxs_admin_init()
     {
         MXB_ERROR("Failed to load REST API TLS certificates.");
     }
+    else if (!mxs::jwt::init())
+    {
+        MXB_ERROR("Failed to initialize JWT signature keys for the REST API.");
+    }
     else if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
         int options = MHD_USE_EPOLL_INTERNAL_THREAD | MHD_USE_DEBUG | MHD_ALLOW_UPGRADE;
