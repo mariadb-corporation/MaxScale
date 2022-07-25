@@ -19,8 +19,12 @@
 
 #include <openssl/evp.h>
 
+#include <maxbase/exception.hh>
+
 namespace maxbase
 {
+
+DEFINE_EXCEPTION(KeySizeException);
 
 /**
  * Get latest OpenSSL errors
@@ -54,6 +58,8 @@ public:
      *
      * @param mode The AES cipher mode to use
      * @param bits How many bits to use for keys. Must be one of 128, 192 or 256.
+     *
+     * @throws KeySizeException if an invalid key size is given
      */
     Cipher(AesMode mode, size_t bits);
 

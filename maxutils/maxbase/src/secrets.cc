@@ -75,6 +75,11 @@ static_assert(get_cipher_fn(mxb::Cipher::AES_CCM, 128) == EVP_aes_128_ccm);
 
 const EVP_CIPHER* get_cipher(mxb::Cipher::AesMode mode, size_t bits)
 {
+    if (bits != 128 && bits != 192 && bits != 256)
+    {
+        MXB_THROW(mxb::KeySizeException, "Invalid key size: " << bits << " bits");
+    }
+
     auto fn = get_cipher_fn(mode, bits);
     mxb_assert_message(fn, "Unknown cipher");
     MXB_ABORT_IF_NULL(fn);

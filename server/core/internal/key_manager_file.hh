@@ -85,15 +85,9 @@ private:
 
     static bool is_hex_key(const std::string& key)
     {
-        switch (key.size())
-        {
-        case 16 * 2:
-        case 24 * 2:
-        case 32 * 2:
-            return true;
-        }
-
-        return false;
+        // Accept hex keys of 16 bytes or more that are a power of two.
+        size_t s = key.size();
+        return s > 32 && (s & (s - 1)) == 0;
     }
 
     static std::map<std::string, std::vector<uint8_t>> load_key_file(const Config& config)
@@ -124,7 +118,7 @@ private:
                     }
                     else if (!is_hex_key(tok[1]))
                     {
-                        MXB_ERROR("Encryption key is not 128, 192 or 256 bits.");
+                        MXB_ERROR("Invalid key size for encryption key '%s'.", tok[0].c_str());
                         error = true;
                     }
                     else if (auto key = mxs::from_hex(tok[1]); key.empty())
