@@ -200,6 +200,7 @@ export default {
         tdBorderLeft: { type: Boolean, default: false },
         // For editable feature
         editableCell: { type: Boolean, default: false },
+        pauseCompute: { type: Boolean, default: false },
         // For table wants to keep primitive value, eg:if it is false, null/undefined won't be displayed
         keepPrimitiveValue: { type: Boolean, default: false },
         // For draggable feature
@@ -228,29 +229,16 @@ export default {
             nodeActiveIds: [],
             // this is needed when using custom activator in v-menu.
             componentId: this.$help.lodash.uniqueId('component_v-menu_'),
+            processedData: [],
         }
     },
     computed: {
-        // first processing data from data props to whether keepPrimitiveValue or not
-        processingData: function() {
-            let result = this.data
-            if (!this.keepPrimitiveValue) {
-                result = this.$help.lodash.cloneDeep(this.data)
-                for (let i = 0; i < result.length; ++i) {
-                    let obj = result[i]
-                    Object.keys(obj).forEach(key => (obj[key] = this.$help.convertType(obj[key])))
-                }
-            }
-
-            return result
-        },
-
-        tableRows: function() {
+        tableRows() {
             if (this.isTree) {
                 let newArr = []
-                this.levelRecursive(this.processingData, newArr, this.nodeActiveIds)
+                this.levelRecursive(this.processedData, newArr, this.nodeActiveIds)
                 return newArr
-            } else return this.processingData
+            } else return this.processedData
         },
     },
 
@@ -265,13 +253,31 @@ export default {
             if (val && this.expandAll) this.expandAllNodes(this.tableRows)
         },
         data: {
-            handler(newV, oV) {
-                if (this.isTree && this.hasValidChild && this.expandAll) {
-                    // keep all nodes expanding when data props changes
-                    if (!this.$help.lodash.isEqual(newV, oV)) this.expandAllNodes(this.tableRows)
+            handler(v) {
+                // processing data from data props to whether keepPrimitiveValue or not
+                let data = this.$help.lodash.cloneDeep(v)
+                if (!this.keepPrimitiveValue) {
+                    data = data.map(obj => {
+                        Object.keys(obj).forEach(
+                            key => (obj[key] = this.$help.convertType(obj[key]))
+                        )
+                        return obj
+                    })
                 }
+                if (!this.pauseCompute) this.processedData = data
             },
             deep: true,
+            immediate: true,
+        },
+        processedData: {
+            handler(newV, oV) {
+                if (this.isTree && this.hasValidChild && this.expandAll)
+                    if (!this.$help.lodash.isEqual(newV, oV))
+                        // keep all nodes expanding when data props changes
+                        this.expandAllNodes(this.tableRows)
+            },
+            deep: true,
+            immediate: true,
         },
     },
 

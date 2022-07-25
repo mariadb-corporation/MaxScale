@@ -124,30 +124,24 @@ describe('DataTable.vue', () => {
         wrapper = mountPropsFactory()
     })
 
-    it(`Should process data as expected when keepPrimitiveValue
-      props is true or false`, async () => {
+    it(`Should convert null/undefined to string`, async () => {
         /*
-            by default keepPrimitiveValue is set to false which means
-            null, undefined become a string i.e. 'null', 'undefined' respectively.
-            This allows null or undefined value to be shown on the table and can be searched using global-search
-            component
-        */
+                by default keepPrimitiveValue is set to false which means
+                null, undefined become a string i.e. 'null', 'undefined' respectively.
+                This allows null or undefined value to be shown on the table and can be searched using global-search
+                component
+            */
         expect(wrapper.vm.$props.keepPrimitiveValue).to.equal(false)
-        let processedData = wrapper.vm.processingData
-
-        expect(processedData[0].value).to.equal('null')
-        expect(processedData[1].value).to.equal('undefined')
+        let processedData = wrapper.vm.$data.processedData
         expect(processedData[0].value).to.be.a('string')
         expect(processedData[1].value).to.be.a('string')
+    })
 
-        // this keep original value
-        await wrapper.setProps({
-            keepPrimitiveValue: true,
-        })
-        expect(wrapper.vm.$props.keepPrimitiveValue).to.equal(true)
-        let oriData = wrapper.vm.processingData
-        expect(oriData[0].value).to.be.a('null')
-        expect(oriData[1].value).to.be.an('undefined')
+    it(`Should process data as expected when keepPrimitiveValue props is true`, async () => {
+        wrapper = mountPropsFactory({ ...defaultProps, keepPrimitiveValue: true })
+        let unprocessedData = wrapper.vm.$data.processedData
+        expect(unprocessedData[0].value).to.be.equals(null)
+        expect(unprocessedData[1].value).to.be.equals(undefined)
     })
 })
 
