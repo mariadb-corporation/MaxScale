@@ -24,13 +24,13 @@
                     <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
                 </div>
                 <keep-alive>
-                    <txt-editor-container
+                    <txt-editor-ctr
                         v-if="getIsTxtEditor"
                         ref="txtEditor"
                         :dim="txtEditorDim"
                         v-on="$listeners"
                     />
-                    <ddl-editor-container v-else ref="ddlEditor" :dim="ddlEditorDim" />
+                    <ddl-editor-ctr v-else ref="ddlEditor" :dim="ddlEditorDim" />
                 </keep-alive>
             </div>
         </template>
@@ -52,8 +52,8 @@
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
 import Sidebar from './Sidebar.container.vue'
-import DDLEditorContainer from './DDLEditorContainer.vue'
-import TxtEditorContainer from './TxtEditorContainer.vue'
+import DDLEditor from './DDLEditor.container.vue'
+import TxtEditor from './TxtEditor.container.vue'
 import SessionTabs from './SessionTabs'
 import TxtEditorSessToolbar from './TxtEditorSessToolbar'
 
@@ -61,8 +61,8 @@ export default {
     name: 'worksheet',
     components: {
         'sidebar-ctr': Sidebar,
-        'txt-editor-container': TxtEditorContainer,
-        'ddl-editor-container': DDLEditorContainer,
+        'txt-editor-ctr': TxtEditor,
+        'ddl-editor-ctr': DDLEditor,
         'session-tabs': SessionTabs,
         'txt-editor-sess-toolbar': TxtEditorSessToolbar,
     },

@@ -62,7 +62,7 @@ import DDLEditorForm from './DDLEditorForm.vue'
 import AlterTableBtns from './AlterTableBtns.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 export default {
-    name: 'ddl-editor-container',
+    name: 'ddl-editor-ctr',
     components: {
         'ddl-editor-form': DDLEditorForm,
         'alter-table-btns': AlterTableBtns,

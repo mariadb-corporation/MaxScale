@@ -17,105 +17,104 @@ import Worksheet from '@/pages/QueryPage/Worksheet'
 const dummyCtrDim = { width: 1280, height: 800 }
 const mountFactory = opts =>
     mount({
-        shallow: false,
+        shallow: true,
         component: Worksheet,
         propsData: {
             ctrDim: dummyCtrDim,
         },
         stubs: {
             'query-editor': "<div class='stub'></div>",
-            'session-toolbar': "<div class='stub'></div>",
+            'txt-editor-sess-toolbar': "<div class='stub'></div>",
         },
         ...opts,
     })
-describe(`Worksheet - created hook and child component's data communication tests`, () => {
-    let wrapper
-    it(`Should pass accurate data to split-pane via props`, () => {
-        wrapper = mountFactory()
-        const { value, minPercent, split, disable } = wrapper.findComponent({
-            name: 'split-pane',
-        }).vm.$props
-        expect(value).to.be.equals(wrapper.vm.$data.sidebarPct)
-        expect(minPercent).to.be.equals(wrapper.vm.minSidebarPct)
-        expect(split).to.be.equals('vert')
-        expect(disable).to.be.equals(wrapper.vm.is_sidebar_collapsed)
-    })
-    const fnEvtMap = {
-        placeToEditor: 'place-to-editor',
-        draggingTxt: 'on-dragging',
-        dropTxtToEditor: 'on-dragend',
-    }
-    Object.keys(fnEvtMap).forEach(key => {
-        it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
-            wrapper = mountFactory({
-                computed: { isTxtEditor: () => true },
-            })
-            const spyFn = sinon.spy(wrapper.vm.$refs.txtEditor, key)
-            const sidebar = wrapper.findComponent({ name: 'sidebar-ctr' })
-            let param
-            switch (key) {
-                case 'placeToEditor':
-                    param = '`test`'
-                    break
-                case 'draggingTxt':
-                case 'dropTxtToEditor':
-                    param = 'event'
-                    break
-            }
-            sidebar.vm.$emit(fnEvtMap[key], param)
-            spyFn.should.have.been.calledOnceWith(param)
-            spyFn.restore()
+describe('Worksheet', () => {
+    describe(`Created hook and child component's data communication tests`, () => {
+        let wrapper
+        it(`Should pass accurate data to split-pane via props`, () => {
+            wrapper = mountFactory()
+            const { value, minPercent, split, disable } = wrapper.findComponent({
+                name: 'split-pane',
+            }).vm.$props
+            expect(value).to.be.equals(wrapper.vm.$data.sidebarPct)
+            expect(minPercent).to.be.equals(wrapper.vm.minSidebarPct)
+            expect(split).to.be.equals('vert')
+            expect(disable).to.be.equals(wrapper.vm.is_sidebar_collapsed)
         })
-    })
-})
-
-const editorModes = ['TXT_EDITOR', 'DDL_EDITOR']
-editorModes.forEach(mode => {
-    let wrapper
-    describe(`Worksheet - ${mode} mode: child component's data communication tests`, () => {
-        beforeEach(() => {
-            wrapper = mountFactory({
-                computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
+        const fnEvtMap = {
+            placeToEditor: 'place-to-editor',
+            draggingTxt: 'on-dragging',
+            dropTxtToEditor: 'on-dragend',
+        }
+        Object.keys(fnEvtMap).forEach(key => {
+            it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
+                wrapper = mountFactory({ shallow: false, computed: { getIsTxtEditor: () => true } })
+                const spyFn = sinon.spy(wrapper.vm.$refs.txtEditor, key)
+                const sidebar = wrapper.findComponent({ name: 'sidebar-ctr' })
+                let param
+                switch (key) {
+                    case 'placeToEditor':
+                        param = '`test`'
+                        break
+                    case 'draggingTxt':
+                    case 'dropTxtToEditor':
+                        param = 'event'
+                        break
+                }
+                sidebar.vm.$emit(fnEvtMap[key], param)
+                spyFn.should.have.been.calledOnceWith(param)
+                spyFn.restore()
             })
         })
-        const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-container' : 'ddl-editor-container'
-        const hiddenCom = mode === 'TXT_EDITOR' ? 'ddl-editor-container' : 'txt-editor-container'
-        it(`Should render ${renCom}`, () => {
-            const editor = wrapper.findComponent({ name: renCom })
-            expect(editor.exists()).to.be.true
-        })
-        it(`Should pass accurate data to ${renCom} via props`, () => {
-            const { dim } = wrapper.findComponent({ name: renCom }).vm.$props
-            expect(dim).to.be.deep.equals(
-                wrapper.vm.$data[mode === '' ? 'txtEditorPaneDim' : 'ddlEditorDim']
-            )
-        })
-        it(`Should not render ${hiddenCom}`, () => {
-            const editor = wrapper.findComponent({ name: hiddenCom })
-            expect(editor.exists()).to.be.false
+    })
+    const editorModes = ['TXT_EDITOR', 'DDL_EDITOR']
+    editorModes.forEach(mode => {
+        let wrapper
+        describe(`${mode} mode: child component's data communication tests`, () => {
+            beforeEach(() => {
+                wrapper = mountFactory({
+                    computed: { getIsTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
+                })
+            })
+            const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'ddl-editor-ctr'
+            const hiddenCom = mode === 'TXT_EDITOR' ? 'ddl-editor-ctr' : 'txt-editor-ctr'
+            it(`Should render ${renCom}`, () => {
+                const editor = wrapper.findComponent({ name: renCom })
+                expect(editor.exists()).to.be.true
+            })
+            it(`Should pass accurate data to ${renCom} via props`, () => {
+                const { dim } = wrapper.findComponent({ name: renCom }).vm.$props
+                expect(dim).to.be.deep.equals(
+                    wrapper.vm.$data[mode === '' ? 'txtEditorPaneDim' : 'ddlEditorDim']
+                )
+            })
+            it(`Should not render ${hiddenCom}`, () => {
+                const editor = wrapper.findComponent({ name: hiddenCom })
+                expect(editor.exists()).to.be.false
+            })
         })
     })
-})
-describe(`Worksheet - computed, method and other tests`, () => {
-    let wrapper
-    const is_sidebar_collapsed_values = [false, true]
-    is_sidebar_collapsed_values.forEach(v => {
-        describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {
-            it(`Should return accurate value for minSidebarPct`, () => {
-                wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
-                const minValueInPx = v ? 40 : 200
-                const minPct = (minValueInPx / dummyCtrDim.width) * 100
-                expect(wrapper.vm.minSidebarPct).to.be.equals(minPct)
-            })
-            it(`Should assign accurate value for sidebarPct`, () => {
-                wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
-                const defValue = 240
-                wrapper.vm.handleSetSidebarPct()
-                // if is_sidebar_collapsed is true, use minSidebarPct value
-                const sidebarPct = v
-                    ? wrapper.vm.minSidebarPct
-                    : (defValue / dummyCtrDim.width) * 100
-                expect(wrapper.vm.sidebarPct).to.be.equals(sidebarPct)
+    describe(`Computed, method and other tests`, () => {
+        let wrapper
+        const is_sidebar_collapsed_values = [false, true]
+        is_sidebar_collapsed_values.forEach(v => {
+            describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {
+                it(`Should return accurate value for minSidebarPct`, () => {
+                    wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
+                    const minValueInPx = v ? 40 : 200
+                    const minPct = (minValueInPx / dummyCtrDim.width) * 100
+                    expect(wrapper.vm.minSidebarPct).to.be.equals(minPct)
+                })
+                it(`Should assign accurate value for sidebarPct`, () => {
+                    wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
+                    const defValue = 240
+                    wrapper.vm.handleSetSidebarPct()
+                    // if is_sidebar_collapsed is true, use minSidebarPct value
+                    const sidebarPct = v
+                        ? wrapper.vm.minSidebarPct
+                        : (defValue / dummyCtrDim.width) * 100
+                    expect(wrapper.vm.sidebarPct).to.be.equals(sidebarPct)
+                })
             })
         })
     })

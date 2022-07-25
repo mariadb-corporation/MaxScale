@@ -236,19 +236,16 @@ describe('sidebar-ctr', () => {
                     def_db_charset_map: () => ({}),
                 },
                 methods: {
-                    queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
-                    queryEngines: () => null,
-                    queryCharsetCollationMap: () => null,
-                    queryDefDbCharsetMap: () => null,
                     handleAddNewSession: () => null,
+                    queryAlterTblSuppData: () => null,
+                    queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
                 },
             })
             const mockNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
             const fnsToBeSpied = [
                 'handleAddNewSession',
-                'queryEngines',
-                'queryCharsetCollationMap',
-                'queryDefDbCharsetMap',
+                'queryAlterTblSuppData',
+                'queryTblCreationInfo',
             ]
             fnsToBeSpied.forEach(fn => {
                 sinon.spy(wrapper.vm, fn)

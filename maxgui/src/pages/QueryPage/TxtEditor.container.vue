@@ -83,7 +83,7 @@ import { mapGetters, mapMutations, mapState } from 'vuex'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
 export default {
-    name: 'txt-editor-container',
+    name: 'txt-editor-ctr',
     components: {
         'query-editor': QueryEditor,
         QueryResult,
