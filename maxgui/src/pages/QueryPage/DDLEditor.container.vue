@@ -16,28 +16,10 @@
                     @on-revert="revertChanges"
                     @on-apply="applyChanges"
                 />
-
                 <ddl-editor-form
                     v-model="formData"
                     :dim="formDim"
                     @is-form-valid="isFormValid = $event"
-                />
-                <execute-sql-dialog
-                    v-model="isConfDlgOpened"
-                    :title="
-                        isAlterFailed
-                            ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
-                            : $tc('confirmations.exeStatements', stmtI18nPluralization)
-                    "
-                    :smallInfo="
-                        isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
-                    "
-                    :hasSavingErr="isAlterFailed"
-                    :errMsgObj="stmtErrMsgObj"
-                    :sqlTobeExecuted.sync="sql"
-                    :onSave="confirmAlter"
-                    @after-close="clearAlterResult"
-                    @after-cancel="clearAlterResult"
                 />
             </div>
         </v-card>
@@ -57,26 +39,30 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+ * Events
+ * 2-way data binding to execSqlDlg prop
+ * update:execSqlDlg?: (object)
+ */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import DDLEditorForm from './DDLEditorForm.vue'
 import AlterTableBtns from './AlterTableBtns.vue'
-import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
+
 export default {
     name: 'ddl-editor-ctr',
     components: {
         'ddl-editor-form': DDLEditorForm,
         'alter-table-btns': AlterTableBtns,
-        'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {
         dim: { type: Object, required: true },
+        execSqlDlg: { type: Object, required: true },
     },
     data() {
         return {
             formData: {},
             isFormValid: true,
-            sql: '',
-            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -142,9 +128,20 @@ export default {
         initialPkCols() {
             return this.getPKCols(this.initialColsData)
         },
-        stmtI18nPluralization() {
-            const statementCounts = (this.sql.match(/;/g) || []).length
-            return statementCounts > 1 ? 2 : 1
+    },
+    watch: {
+        isAlterFailed: {
+            immediate: true,
+            handler(v) {
+                this.$emit('update:execSqlDlg', { ...this.execSqlDlg, isExecFailed: v })
+            },
+        },
+        stmtErrMsgObj: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                this.$emit('update:execSqlDlg', { ...this.execSqlDlg, stmtErrMsgObj: v })
+            },
         },
     },
     activated() {
@@ -434,14 +431,20 @@ export default {
                 if (tblOptSql) sql += this.handleAddComma()
                 sql += colsAlterSql
             }
-            this.sql = formatSQL(`${sql};`)
-            this.isConfDlgOpened = true
+            this.$emit('update:execSqlDlg', {
+                ...this.execSqlDlg,
+                isOpened: true,
+                sql: formatSQL(`${sql};`),
+                onExec: this.confirmAlter,
+                onAfterClose: this.clearAlterResult,
+                onAfterCancel: this.clearAlterResult,
+            })
         },
         async confirmAlter() {
             const { escapeIdentifiers: escape } = this.$help
             const { dbName, table_name } = this.formData.table_opts_data
             await this.exeStmtAction({
-                sql: this.sql,
+                sql: this.execSqlDlg.sql,
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
             if (!this.isAlterFailed)

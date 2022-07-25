@@ -1,40 +1,64 @@
 <template>
-    <split-pane
-        v-model="sidebarPct"
-        class="query-view__content"
-        :minPercent="minSidebarPct"
-        split="vert"
-        :disable="is_sidebar_collapsed"
-        revertRender
-    >
-        <template slot="pane-left">
-            <sidebar-ctr
-                @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
-                @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
-                @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
-            />
-        </template>
-        <template slot="pane-right">
-            <div class="d-flex flex-column fill-height">
-                <div class="d-flex flex-column">
-                    <session-tabs
-                        :sessionToolbarRef="$typy($refs, 'sessionToolbar').safeObjectOrEmpty"
-                    />
-                    <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
-                    <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
+    <div class="fill-height">
+        <split-pane
+            v-model="sidebarPct"
+            class="query-view__content"
+            :minPercent="minSidebarPct"
+            split="vert"
+            :disable="is_sidebar_collapsed"
+            revertRender
+        >
+            <template slot="pane-left">
+                <sidebar-ctr
+                    @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
+                    @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
+                    @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
+                />
+            </template>
+            <template slot="pane-right">
+                <div class="d-flex flex-column fill-height">
+                    <div class="d-flex flex-column">
+                        <session-tabs
+                            :sessionToolbarRef="$typy($refs, 'sessionToolbar').safeObjectOrEmpty"
+                        />
+                        <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
+                        <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
+                    </div>
+                    <keep-alive>
+                        <txt-editor-ctr
+                            v-if="getIsTxtEditor"
+                            ref="txtEditor"
+                            :dim="txtEditorDim"
+                            v-on="$listeners"
+                        />
+                        <ddl-editor-ctr
+                            v-else
+                            ref="ddlEditor"
+                            :dim="ddlEditorDim"
+                            :execSqlDlg.sync="execSqlDlg"
+                        />
+                    </keep-alive>
                 </div>
-                <keep-alive>
-                    <txt-editor-ctr
-                        v-if="getIsTxtEditor"
-                        ref="txtEditor"
-                        :dim="txtEditorDim"
-                        v-on="$listeners"
-                    />
-                    <ddl-editor-ctr v-else ref="ddlEditor" :dim="ddlEditorDim" />
-                </keep-alive>
-            </div>
-        </template>
-    </split-pane>
+            </template>
+        </split-pane>
+        <execute-sql-dialog
+            v-model="execSqlDlg.isOpened"
+            :title="
+                execSqlDlg.isExecFailed
+                    ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
+                    : $tc('confirmations.exeStatements', stmtI18nPluralization)
+            "
+            :smallInfo="
+                execSqlDlg.isExecFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
+            "
+            :hasSavingErr="execSqlDlg.isExecFailed"
+            :errMsgObj="execSqlDlg.stmtErrMsgObj"
+            :sqlTobeExecuted.sync="execSqlDlg.sql"
+            :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
+            @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
+            @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
+        />
+    </div>
 </template>
 
 <script>
@@ -56,6 +80,7 @@ import DDLEditor from './DDLEditor.container.vue'
 import TxtEditor from './TxtEditor.container.vue'
 import SessionTabs from './SessionTabs'
 import TxtEditorSessToolbar from './TxtEditorSessToolbar'
+import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 
 export default {
     name: 'worksheet',
@@ -65,6 +90,7 @@ export default {
         'ddl-editor-ctr': DDLEditor,
         'session-tabs': SessionTabs,
         'txt-editor-sess-toolbar': TxtEditorSessToolbar,
+        'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -75,6 +101,15 @@ export default {
             txtEditorDim: { width: 0, height: 0 },
             ddlEditorDim: { height: 0, width: 0 },
             sidebarPct: 0,
+            execSqlDlg: {
+                isOpened: false,
+                sql: '',
+                isExecFailed: false,
+                stmtErrMsgObj: {},
+                onExec: () => null,
+                onAfterClose: () => null,
+                onAfterCancel: () => null,
+            },
         }
     },
     computed: {
@@ -89,6 +124,10 @@ export default {
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
             else return this.$help.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+        },
+        stmtI18nPluralization() {
+            const statementCounts = (this.execSqlDlg.sql.match(/;/g) || []).length
+            return statementCounts > 1 ? 2 : 1
         },
     },
     watch: {
