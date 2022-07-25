@@ -206,6 +206,14 @@ public:
     virtual bool can_pool_backends() const = 0;
     virtual void set_can_pool_backends(bool value) = 0;
 
+    /**
+     * Is pre-emptive pooling/multiplexing enabled for this session in general. For the current status, check
+     * can_pool_backends().
+     *
+     * @return True if idle_session_pool_time >= 0
+     */
+    virtual bool idle_pooling_enabled() const = 0;
+
     bool normal_quit() const
     {
         return m_normal_quit;
