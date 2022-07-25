@@ -26,7 +26,8 @@ enum class RegexGrammar : int64_t
     EPosix,      // extended Posix http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04
     Awk,         // awk http://pubs.opengroup.org/onlinepubs/9699919799/utilities/awk.html#tag_20_06_13_04
     Grep,        // same as Posix with the addition of newline '\n' as an alternation separator.
-    EGrep        // same as EPosix with the addition of newline '\n' as an alternation separator in addition to '|'.
+    EGrep,       // same as EPosix with the addition of newline '\n' as an alternation separator in addition to '|'.
+    END
 };
 // *uncrustify-on*
 

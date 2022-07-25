@@ -14,11 +14,51 @@
 #include "template_reader.hh"
 #include <maxbase/json.hh>
 #include <maxbase/log.hh>
+#include <maxbase/assert.hh>
+
+constexpr std::pair<RegexGrammar, const char* const> grammar_strs[]
+{
+    {RegexGrammar::Native, "Native"},
+    {RegexGrammar::ECMAScript, "ECMAScript"},
+    {RegexGrammar::Posix, "Posix"},
+    {RegexGrammar::EPosix, "EPosix"},
+    {RegexGrammar::Awk, "Awk"},
+    {RegexGrammar::Grep, "Grep"},
+    {RegexGrammar::EGrep, "EGrep"}
+};
+
+std::string valid_grammar_values()
+{
+    std::ostringstream os;
+    bool first = true;
+    for (auto ite = begin(grammar_strs); ite != end(grammar_strs); ++ite)
+    {
+        if (ite != begin(grammar_strs))
+        {
+            os << ", ";
+        }
+        os << '\'' << ite->second << '\'';
+    }
+
+    return os.str();
+}
+
+static_assert(end(grammar_strs) - begin(grammar_strs) == size_t(RegexGrammar::END));
+
+RegexGrammar grammar_from_string(const std::string& str)
+{
+    auto ite = std::find_if(begin(grammar_strs), end(grammar_strs),
+                            [&str](const auto& element) {
+        return element.second == str;
+    });
+
+    return ite != end(grammar_strs) ? ite->first : RegexGrammar::END;
+}
 
 std::regex_constants::syntax_option_type to_regex_grammar_flag(RegexGrammar type)
 {
     namespace rx = std::regex_constants;
-    rx::syntax_option_type flag;
+    rx::syntax_option_type flag{};
 
     switch (type)
     {
@@ -45,6 +85,10 @@ std::regex_constants::syntax_option_type to_regex_grammar_flag(RegexGrammar type
 
     case RegexGrammar::EGrep:
         flag = rx::egrep;
+        break;
+
+    case RegexGrammar::END:
+        mxb_assert(false);
         break;
     }
 
@@ -78,10 +122,24 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
                 def.case_sensitive = case_sensitive;
             }
 
-            int64_t regex_grammar;
-            if (t.try_get_int("regex_grammar", &regex_grammar))
+            std::string regex_grammar_str;
+            if (t.try_get_string("regex_grammar", &regex_grammar_str))
             {
-                def.regex_grammar = static_cast<RegexGrammar>(regex_grammar);
+                auto grammar = grammar_from_string(regex_grammar_str);
+                ok = grammar != RegexGrammar::END;
+                if (ok)
+                {
+                    def.regex_grammar = grammar;
+                }
+                else
+                {
+
+                    MXB_SERROR("Invalid regex_grammar value `"
+                               << regex_grammar_str
+                               << "` in rewritefilter template file. "
+                               << "Valid values are " << valid_grammar_values()
+                               << '\'');
+                }
             }
 
             bool what_if;
