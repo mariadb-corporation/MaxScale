@@ -130,6 +130,9 @@ public:
              * session must be idle before backend connections can be pooled. */
             std::chrono::milliseconds idle_session_pooling_time;
 
+            /** How long an endpoint can wait for a connection to become available */
+            std::chrono::seconds multiplex_timeout;
+
             /** User accounts file settings. Given to user account manager. **/
             std::string                             user_accounts_file_path;
             mxs::UserAccountManager::UsersFileUsage user_accounts_file_usage;

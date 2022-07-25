@@ -2123,9 +2123,8 @@ share backend connections.
 
 *idle_session_pool_time* defines the amount of time a session must be idle
 before its backend connections may be pooled. It defaults to -1 seconds
-(disabled). All negative values disable this feature. The value is by default
-given in seconds, but can also be given in milliseconds. A value of zero is
-interpreted as 1 millisecond.
+(disabled). All negative values disable this feature. The value can be given in
+seconds or milliseconds.
 
 This feature has a significant drawback: when a backend connection is reused, it
 needs to be restored to the correct state. This means reauthenticating and
@@ -2144,13 +2143,14 @@ works when the following server settings are also set in MaxScale configuration:
 Since reusing a backend connection is an expensive operation, MaxScale only
 pools connections when another session requires them. *idle_session_pool_time*
 then effectively limits the frequency at which a connection can be moved from
-one session to another.
-
-See below for more information on configuring connection sharing.
+one session to another. Setting `idle_session_pool_time=0ms` causes MaxScale to
+move connections as soon as possible.
 
 ```
 idle_session_pool_time=900ms
 ```
+
+See below for more information on configuring connection sharing.
 
 #### Details, limitations and suggestions for connection sharing
 
@@ -2175,13 +2175,14 @@ using connection sharing. This means that the following should not be used:
 
 Several settings affect connection sharing and its effectiveness. Reusing a
 connection is an expensive operation so its frequency should be minimized. The
-important configuration settings in addition to
-*idle_session_pool_time* are MaxScale server settings
+important configuration settings in addition to *idle_session_pool_time* are
+MaxScale server settings
 [persistpoolmax](#persistpoolmax),
 [persistmaxtime](#persistmaxtime) and
 [max_routing_connections](#max_routing_connections).
-The service settings [max_sescmd_history](#max_sescmd_history) and
-[prune_sescmd_history](#prune_sescmd_history) also have an effect. These
+The service settings [max_sescmd_history](#max_sescmd_history),
+[prune_sescmd_history](#prune_sescmd_history) and
+[multiplex_timeout](#multiplex_timeout) also have an effect. These
 settings should be tuned according to the current use case.
 
 *persistpoolmax* limits how many connections can be kept in a pool for a given
@@ -2214,11 +2215,11 @@ pruning means that old session commands will not be replayed when a pooled
 connection is reused. If the pruned commands are important
 (e.g. statement preparations), the session may fail later on.
 
-If the number of clients is greater than *max_routing_connections*, query
-throughput will suffer as clients will need to take turns. In this situation,
-it's imperative to minimize the number of backend connections a single session
-uses. The settings to achieve this depend on the router. For ReadWriteSplit
-the following should be used:
+If the number of clients actively running queries is greater than
+*max_routing_connections*, query throughput will suffer as clients will need to
+take turns. In this situation, it's imperative to minimize the number of
+backend connections a single session uses. The settings to achieve this depend
+on the router. For ReadWriteSplit the following should be used:
 ```
 max_slave_connections=1
 lazy_connect=1
@@ -2235,7 +2236,7 @@ configurations for connection sharing with ReadWriteSplit.
 [server1]
 type=server
 max_routing_connections=1000 #this should be based on MariaDB Server capacity
-persistpoolmax=1000
+persistpoolmax=1000 #same as above
 persistmaxtime=10
 #other server settings...
 
@@ -2247,6 +2248,19 @@ idle_session_pool_time=500ms
 lazy_connect=1
 #other service settings...
 ```
+
+### `multiplex_timeout`
+
+Time, default: 60s. When connection sharing (as described above) is on, clients
+may have to wait for their turn to use a backend connection. If too much time
+passes without a connection becoming available, MaxScale returns an error to
+the client, usually also ending the session. *multiplex_timeout* sets this
+timeout. Increase it if queries are failing with "Timed out when waiting for a
+connection". Decrease it if failing early is preferable to stalling.
+```
+multiplex_timeout=33s
+```
+
 ## Server
 
 Server sections define the backend database servers MaxScale uses. A server is

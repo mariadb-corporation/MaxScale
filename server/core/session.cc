@@ -452,13 +452,23 @@ void Session::set_can_pool_backends(bool value)
 {
     if (value)
     {
-        if (m_pooling_time > 0ms)
+        if (m_pooling_time >= 0ms)
         {
             // If pooling check was already scheduled, do nothing. This likely only happens when killing
             // an idle session.
             if (m_idle_pool_call_id == mxb::Worker::NO_CALL)
             {
-                m_idle_pool_call_id = dcall(m_pooling_time, &Session::pool_backends_cb, this);
+                if (m_pooling_time > 0ms)
+                {
+                    m_idle_pool_call_id = dcall(m_pooling_time, &Session::pool_backends_cb, this);
+                }
+                else
+                {
+                    auto func = [this]() {
+                        pool_backends_cb(Worker::Callable::Action::EXECUTE);
+                    };
+                    m_worker->lcall(std::move(func));
+                }
             }
         }
     }
@@ -679,13 +689,10 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
 
     // Pooling time is pinned at session creation. Service config changes will not affect it.
     auto pooling_time = svc_config.idle_session_pooling_time;
-    if (pooling_time == 0ms)
-    {
-        m_pooling_time = 1ms;      // Quickly check for idle sessions.
-    }
-    else if (pooling_time > 0ms)
+    if (pooling_time >= 0ms)
     {
         m_pooling_time = pooling_time;
+        m_multiplex_timeout = svc_config.multiplex_timeout;
     }
 }
 
@@ -1722,7 +1729,7 @@ bool Session::is_movable() const
     }
 
     // Do not move a session which may be waiting for a connection.
-    return m_pooling_time == 0ms;
+    return m_pooling_time < 0ms;
 }
 
 void Session::notify_userdata_change()
@@ -1819,6 +1826,11 @@ bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
 int64_t Session::pooling_time_ms() const
 {
     return m_pooling_time.count();
+}
+
+std::chrono::seconds Session::multiplex_timeout() const
+{
+    return m_multiplex_timeout;
 }
 
 MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)

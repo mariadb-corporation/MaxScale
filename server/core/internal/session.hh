@@ -296,6 +296,8 @@ public:
     void    set_can_pool_backends(bool value) override;
     int64_t pooling_time_ms() const;
 
+    std::chrono::seconds multiplex_timeout() const;
+
     mxb::Json get_memory_statistics() const;
 
 protected:
@@ -359,7 +361,11 @@ private:
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 
-    std::chrono::milliseconds m_pooling_time {0};  /**< Pre-emptive pooling time. Set at session begin. */
+    /**< Pre-emptive pooling time from service. Locked at session begin. */
+    std::chrono::milliseconds m_pooling_time {-1};
+
+    /**< Multiplex timeout from service. Locked at session begin. */
+    std::chrono::seconds m_multiplex_timeout;
 
     /**
      * Delayed call id for idle connection pooling. Needs to be cancelled on dtor or session move.
