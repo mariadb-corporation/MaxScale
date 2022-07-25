@@ -17,6 +17,7 @@
 #include "simd256.hh"
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
+#include <array>
 #include <functional>
 #include <algorithm>
 #include <limits>

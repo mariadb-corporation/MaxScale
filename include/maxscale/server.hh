@@ -355,4 +355,11 @@ public:
      * This should be used to decide which server is chosen as a master. Currently only galeramon uses it.
      */
     virtual int64_t priority() const = 0;
+
+    /**
+     * Convert the configuration into parameters
+     *
+     * @return The server configuration
+     */
+    virtual mxs::ConfigParameters to_params() const = 0;
 };

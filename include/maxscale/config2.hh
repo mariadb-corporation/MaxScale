@@ -1745,9 +1745,9 @@ public:
     // several servers, to a single value to be used in MaxScale.
     enum Approach
     {
-        AVG, // The average of all values.
-        MIN, // The minium value.
-        MAX  // The maximum value.
+        AVG,    // The average of all values.
+        MIN,    // The minium value.
+        MAX     // The maximum value.
     };
 
     /**
@@ -1930,8 +1930,8 @@ public:
         std::string rv;
         std::vector<int> numbers;
         std::transform(values.begin(), values.end(), std::back_inserter(numbers), [](const std::string& s) {
-                return strtol(s.c_str(), nullptr, 0);
-            });
+            return strtol(s.c_str(), nullptr, 0);
+        });
 
         if (numbers.size() != 0)
         {
@@ -2134,6 +2134,11 @@ public:
     {
         return m_was_modified;
     }
+
+    /**
+     * @return The configuration as mxs::ConfigParameters
+     */
+    mxs::ConfigParameters to_params() const;
 
 protected:
     /**
@@ -3132,7 +3137,7 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
 
     if (valid)
     {
-        if constexpr (std::is_same_v<T, std::chrono::seconds>)
+        if constexpr (std::is_same_v<T, std::chrono::seconds> )
         {
             if (unit == mxs::config::DURATION_IN_MILLISECONDS)
             {
@@ -3249,8 +3254,8 @@ std::string ParamEnum<T>::to_string(value_type value) const
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
                            [value](const std::pair<T, const char*>& entry) {
-                               return entry.first == value;
-                           });
+        return entry.first == value;
+    });
 
     return it != m_enumeration.end() ? it->second : "unknown";
 }
@@ -3262,8 +3267,8 @@ bool ParamEnum<T>::from_string(const std::string& value_as_string,
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
                            [value_as_string](const std::pair<T, const char*>& elem) {
-                               return value_as_string == elem.second;
-                           });
+        return value_as_string == elem.second;
+    });
 
     if (it != m_enumeration.end())
     {
@@ -3303,8 +3308,8 @@ json_t* ParamEnum<T>::to_json(value_type value) const
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
                            [value](const std::pair<T, const char*>& entry) {
-                               return entry.first == value;
-                           });
+        return entry.first == value;
+    });
 
     return it != m_enumeration.end() ? json_string(it->second) : nullptr;
 }
@@ -3400,8 +3405,8 @@ bool ParamEnumMask<T>::from_string(const std::string& value_as_string,
 
         auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
                                [enum_value](const std::pair<T, const char*>& elem) {
-                                   return enum_value == elem.second;
-                               });
+            return enum_value == elem.second;
+        });
 
         if (it != m_enumeration.end())
         {
@@ -3475,9 +3480,7 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-template<class ParamType,
-         class ConcreteConfiguration,
-         class NativeParamType = Native<ParamType, ConcreteConfiguration>>
+template<class ParamType, class ConcreteConfiguration, class NativeParamType>
 void Configuration::add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)

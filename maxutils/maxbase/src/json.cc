@@ -15,6 +15,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 #include <jansson.h>
+#include <utility>
 
 using std::string;
 

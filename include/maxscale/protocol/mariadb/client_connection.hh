@@ -176,6 +176,8 @@ private:
 
     void add_local_client(LocalClient* client);
     bool have_local_clients();
+    void kill_complete(bool send_ok, LocalClient* client);
+    void maybe_send_kill_response(bool send_ok);
 
     // These versions automatically send an OK packet to the client once the KILL command has completed. Use
     // mxs_mysql_execute_kill if you don't want that.

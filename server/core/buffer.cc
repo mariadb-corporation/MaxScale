@@ -15,6 +15,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <utility>
 
 #include <maxbase/assert.hh>
 #include <maxscale/config.hh>

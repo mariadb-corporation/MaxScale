@@ -14,6 +14,7 @@
 #include <maxsimd/canonical.hh>
 #include <maxbase/assert.hh>
 
+#include <array>
 #include <string>
 #include <functional>
 #include <algorithm>

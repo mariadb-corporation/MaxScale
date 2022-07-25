@@ -285,3 +285,8 @@ bool Server::is_mxs_service() const
 
     return rval;
 }
+
+mxs::ConfigParameters Server::to_params() const
+{
+    return m_settings.to_params();
+}

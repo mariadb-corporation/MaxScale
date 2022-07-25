@@ -49,9 +49,12 @@ void config_runtime_add_error(const std::string& error);
  * @param name          Server name
  * @param address       Network address
  * @param port          Network port
+ * @param extra         Extra parameters to pass to the server
+ *
  * @return True on success, false if an error occurred
  */
-bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port);
+bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port,
+                                    const mxs::ConfigParameters& extra);
 
 /**
  * @brief Destroy a server

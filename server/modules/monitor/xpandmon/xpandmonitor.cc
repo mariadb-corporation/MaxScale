@@ -1206,8 +1206,8 @@ void XpandMonitor::update_server_statuses()
 }
 
 SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
-                                          const std::string& ip,
-                                          int port)
+                                             const std::string& ip,
+                                             int port)
 {
     SERVER* pServer = nullptr;
 
@@ -1215,10 +1215,21 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
 
     string who = name();
 
+    mxs::ConfigParameters extra;
+
+    for (auto srv : servers())
+    {
+        // TODO: Don't assume all servers have the same parameters
+        for (auto [key, val] : srv->server->to_params())
+        {
+            extra.set(key, val);
+        }
+    }
+
     if (Worker::get_current() == pMain)
     {
         // Running in the main worker, we can call directly.
-        if (runtime_create_volatile_server(server_name, ip, port))
+        if (runtime_create_volatile_server(server_name, ip, port, extra))
         {
             pServer = SERVER::find_by_unique_name(server_name);
 
@@ -1238,8 +1249,8 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
     else
     {
         // Not running in the main worker, we need to send the execution there.
-        auto f = [who, server_name, ip, port](){
-            if (!runtime_create_volatile_server(server_name, ip, port))
+        auto f = [who, server_name, ip, port, extra](){
+            if (!runtime_create_volatile_server(server_name, ip, port, extra))
             {
                 MXB_ERROR("%s: Could not create server %s at %s:%d.",
                           who.c_str(), server_name.c_str(), ip.c_str(), port);

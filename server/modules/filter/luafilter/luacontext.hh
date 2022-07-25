@@ -14,6 +14,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 
 #include <maxscale/session.hh>
 #include <maxscale/buffer.hh>

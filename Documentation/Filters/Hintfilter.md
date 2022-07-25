@@ -13,9 +13,14 @@ This filter adds routing hints to a service. The filter has no parameters.
 ## Comments and comment types
 
 The client connection will need to have comments enabled. For example the
-`mysql` command line client has comments disabled by default and they need to be
-enabled by passing the `-c` option. Most, if not all, connectors keep all
-comments intact in executed queries.
+`mariadb` and `mysql` command line clients have comments disabled by default and
+they need to be enabled by passing the `--comments` or `-c` option to it. Most,
+if not all, connectors keep all comments intact in executed queries.
+
+```
+# The --comments flag is needed for the command line client
+mariadb --comments -u my-user -psecret -e "SELECT @@hostname -- maxscale route to server db1"
+```
 
 For comment types, use either `-- ` (notice the whitespace after the double
 hyphen) or `#` after the semicolon or `/* ... */` before the semicolon.

@@ -19,6 +19,7 @@
 
 #include <maxbase/secrets.hh>
 #include <maxbase/exception.hh>
+#include <memory>
 
 namespace maxsql
 {
