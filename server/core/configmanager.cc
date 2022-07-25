@@ -1297,8 +1297,9 @@ void ConfigManager::try_update_status(const std::string& msg)
     m_status_msg = msg;
 
     // It doesn't really matter if this command fails as it is attempted again during the sync. We aren't
-    // expecting it to fail so any errors might still be of interest.
-    if (!m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
+    // expecting it to fail so any errors might still be of interest. Nevertheless, don't try it if we know
+    // it'll fail.
+    if (m_conn.is_open() && !m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
     {
         MXS_WARNING("Failed to update node state to '%s' for hostname '%s': %s",
                     msg.c_str(), hostname().c_str(), m_conn.error());
