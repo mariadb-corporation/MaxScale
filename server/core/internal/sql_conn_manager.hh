@@ -72,7 +72,7 @@ public:
      * @param id Connection id
      * @return Pointer to connection when id found and connection is not busy, null otherwise.
      */
-    Connection* get_connection(int64_t id);
+    Connection* get_connection(const std::string& id);
 
     /**
      * Add a connection to the map.
@@ -80,7 +80,7 @@ public:
      * @param conn Existing Connector-C connection
      * @return Id of added connection
      */
-    int64_t add(mxq::MariaDB&& conn, const ConnectionConfig& cnf);
+    std::string add(mxq::MariaDB&& conn, const ConnectionConfig& cnf);
 
     /**
      * Erase a connection from the map.
@@ -88,14 +88,14 @@ public:
      * @param id Id of connection to erase
      * @return True if erased. False if id not found or was busy.
      */
-    bool erase(int64_t id);
+    bool erase(const std::string& id);
 
-    bool is_query(int64_t conn_id, int64_t query_id) const;
-    bool is_connection(int64_t conn_id) const;
+    bool is_query(const std::string& conn_id, int64_t query_id) const;
+    bool is_connection(const std::string& conn_id) const;
 
-    std::vector<int64_t> get_connections();
+    std::vector<std::string> get_connections();
 
-    json_t* connection_to_json(int64_t conn_id);
+    json_t* connection_to_json(const std::string& conn_id);
 
     void start_cleanup_thread();
     void stop_cleanup_thread();
@@ -103,8 +103,7 @@ public:
 private:
     mutable std::mutex m_connection_lock;   /**< Protects access to connections map and next id */
 
-    std::map<int64_t, std::unique_ptr<Connection>> m_connections;   /**< Connections by id */
-    int64_t                                        m_next_id {1};   /**< Id of next connection */
+    std::map<std::string, std::unique_ptr<Connection>> m_connections;   /**< Connections by id */
 
     // Fields for controlling the cleanup thread.
     std::atomic_bool        m_keep_running {true};

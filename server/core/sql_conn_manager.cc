@@ -13,6 +13,7 @@
 
 #include "internal/sql_conn_manager.hh"
 #include <maxbase/assert.hh>
+#include <uuid/uuid.h>
 
 using std::move;
 using LockGuard = std::lock_guard<std::mutex>;
@@ -20,7 +21,7 @@ using LockGuard = std::lock_guard<std::mutex>;
 namespace HttpSql
 {
 
-ConnectionManager::Connection* ConnectionManager::get_connection(int64_t id)
+ConnectionManager::Connection* ConnectionManager::get_connection(const std::string& id)
 {
     Connection* rval = nullptr;
     LockGuard guard(m_connection_lock);
@@ -37,17 +38,22 @@ ConnectionManager::Connection* ConnectionManager::get_connection(int64_t id)
     return rval;
 }
 
-int64_t ConnectionManager::add(mxq::MariaDB&& conn, const ConnectionConfig& cnf)
+std::string ConnectionManager::add(mxq::MariaDB&& conn, const ConnectionConfig& cnf)
 {
     auto elem = std::make_unique<Connection>(move(conn), cnf);
 
     LockGuard guard(m_connection_lock);
-    int64_t id = m_next_id++;
-    m_connections.emplace(id, move(elem));
-    return id;
+
+    uuid_t uuid;
+    char uuid_str[37];      // 36 characters plus terminating null byte
+    uuid_generate(uuid);
+    uuid_unparse(uuid, uuid_str);
+
+    m_connections.emplace(uuid_str, move(elem));
+    return uuid_str;
 }
 
-bool ConnectionManager::erase(int64_t id)
+bool ConnectionManager::erase(const std::string& id)
 {
     bool rval = false;
     LockGuard guard(m_connection_lock);
@@ -63,7 +69,7 @@ bool ConnectionManager::erase(int64_t id)
     return rval;
 }
 
-bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
+bool ConnectionManager::is_query(const std::string& conn_id, int64_t query_id) const
 {
     bool rval = false;
     LockGuard guard(m_connection_lock);
@@ -77,15 +83,15 @@ bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
     return rval;
 }
 
-bool ConnectionManager::is_connection(int64_t conn_id) const
+bool ConnectionManager::is_connection(const std::string& conn_id) const
 {
     LockGuard guard(m_connection_lock);
     return m_connections.find(conn_id) != m_connections.end();
 }
 
-std::vector<int64_t> ConnectionManager::get_connections()
+std::vector<std::string> ConnectionManager::get_connections()
 {
-    std::vector<int64_t> conns;
+    std::vector<std::string> conns;
 
     LockGuard guard(m_connection_lock);
 
@@ -98,7 +104,7 @@ std::vector<int64_t> ConnectionManager::get_connections()
     return conns;
 }
 
-json_t* ConnectionManager::connection_to_json(int64_t conn_id)
+json_t* ConnectionManager::connection_to_json(const std::string& conn_id)
 {
     LockGuard guard(m_connection_lock);
     auto it = m_connections.find(conn_id);
@@ -116,7 +122,7 @@ void ConnectionManager::cleanup_thread_func()
         return !m_keep_running.load(std::memory_order_acquire);
     };
 
-    std::vector<int64_t> suspect_idle_ids;
+    std::vector<std::string> suspect_idle_ids;
 
     while (m_keep_running)
     {

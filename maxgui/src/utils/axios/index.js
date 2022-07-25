@@ -144,7 +144,7 @@ function analyzeRes({ res, store, sql_conn_id }) {
     }
 }
 function getSqlConnId(url) {
-    const matched = /\/sql\/(\d*?)\//g.exec(url)
+    const matched = /\/sql\/([a-zA-z0-9-]*?)\//g.exec(url)
     return matched.length > 1 ? matched[1] : null
 }
 /**

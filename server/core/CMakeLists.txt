@@ -81,6 +81,7 @@ target_link_libraries(maxscale-common
   ${LIBATOMIC_LIBRARIES}
   mariadbprotocol
   mariadbauth
+  uuid
 )
 
 if(WITH_ASAN AND ASAN_FOUND)

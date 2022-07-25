@@ -44,7 +44,7 @@ void stop_cleanup();
 // The functions that implement the connection creation and query execution
 //
 
-std::vector<int64_t> get_connections();
+std::vector<std::string> get_connections();
 
-int64_t create_connection(const ConnectionConfig& config, std::string* err);
+std::string create_connection(const ConnectionConfig& config, std::string* err);
 }

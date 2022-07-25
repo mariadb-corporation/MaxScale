@@ -62,10 +62,11 @@ void set_conn_id_cookie(HttpResponse* response, const std::string& id,
     response->add_split_cookie(body, sig, token, max_age);
 }
 
-std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, const std::string& requested_id)
+std::pair<std::string, std::string> get_connection_id(const HttpRequest& request,
+                                                      const std::string& requested_id)
 {
     bool ok = false;
-    int64_t id = 0;
+    std::string id;
     std::string aud;
     std::string err;
     std::string token = request.get_option("token");
@@ -94,7 +95,7 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
         {
             if (!aud.empty())
             {
-                id = strtol(aud.c_str(), nullptr, 10);
+                id = aud;
             }
         }
         else
@@ -292,30 +293,29 @@ struct ThisUnit
 };
 ThisUnit this_unit;
 
-json_t* connection_json_data(const std::string& host, int64_t id)
+json_t* connection_json_data(const std::string& host, const std::string& id)
 {
-    std::string id_str = std::to_string(id);
     json_t* data = json_object();
-    json_t* self = mxs_json_self_link(host.c_str(), COLLECTION_NAME.c_str(), id_str.c_str());
+    json_t* self = mxs_json_self_link(host.c_str(), COLLECTION_NAME.c_str(), id.c_str());
     std::string self_link = json_string_value(json_object_get(self, "self"));
     std::string query_link = self_link + "queries/";
     json_object_set_new(self, "related", json_string(query_link.c_str()));
 
     json_object_set_new(data, CN_TYPE, json_string(COLLECTION_NAME.c_str()));
-    json_object_set_new(data, CN_ID, json_string(id_str.c_str()));
+    json_object_set_new(data, CN_ID, json_string(id.c_str()));
     json_object_set_new(data, CN_LINKS, self);
     json_object_set_new(data, CN_ATTRIBUTES, this_unit.manager.connection_to_json(id));
 
     return data;
 }
 
-json_t* one_connection_to_json(const std::string& host, int64_t id)
+json_t* one_connection_to_json(const std::string& host, const std::string& id)
 {
-    std::string self = COLLECTION_NAME + "/" + std::to_string(id);
+    std::string self = COLLECTION_NAME + "/" + id;
     return mxs_json_resource(host.c_str(), self.c_str(), connection_json_data(host, id));
 }
 
-json_t* all_connections_to_json(const std::string& host, const std::vector<int64_t>& connections)
+json_t* all_connections_to_json(const std::string& host, const std::vector<std::string>& connections)
 {
     json_t* arr = json_array();
 
@@ -327,19 +327,18 @@ json_t* all_connections_to_json(const std::string& host, const std::vector<int64
     return mxs_json_resource(host.c_str(), COLLECTION_NAME.c_str(), arr);
 }
 
-HttpResponse create_connect_response(const std::string& host, int64_t id, bool persist, int age)
+HttpResponse create_connect_response(const std::string& host, const std::string& id, bool persist, int age)
 {
     int max_age = age > 0 ? age : 28800;
-    std::string id_str = std::to_string(id);
-    auto token = mxs::jwt::create(TOKEN_ISSUER, id_str, max_age);
+    auto token = mxs::jwt::create(TOKEN_ISSUER, id, max_age);
 
     json_t* data = one_connection_to_json(host, id);
     HttpResponse response(MHD_HTTP_CREATED, data);
-    response.add_header(MHD_HTTP_HEADER_LOCATION, host + COLLECTION_NAME + "/" + id_str);
+    response.add_header(MHD_HTTP_HEADER_LOCATION, host + COLLECTION_NAME + "/" + id);
 
     if (persist)
     {
-        set_conn_id_cookie(&response, id_str, token, max_age);
+        set_conn_id_cookie(&response, id, token, max_age);
     }
     else
     {
@@ -445,8 +444,8 @@ HttpResponse connect(const HttpRequest& request)
     return HttpResponse(
         [config, persist, host, max_age]() {
         std::string err;
-        int64_t new_id = create_connection(config, &err);
-        if (new_id > 0)
+        std::string new_id = create_connection(config, &err);
+        if (!new_id.empty())
         {
             return create_connect_response(host, new_id, persist, max_age);
         }
@@ -460,10 +459,10 @@ HttpResponse connect(const HttpRequest& request)
 HttpResponse reconnect(const HttpRequest& request)
 {
     string err;
-    int64_t id;
+    string id;
     std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
-    if (!id)
+    if (id.empty())
     {
         return create_error(err);
     }
@@ -486,7 +485,7 @@ HttpResponse reconnect(const HttpRequest& request)
         }
         else
         {
-            response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
+            response = create_error(mxb::string_printf("ID %s not found or is busy.", id.c_str()),
                                     MHD_HTTP_SERVICE_UNAVAILABLE);
         }
 
@@ -498,9 +497,11 @@ HttpResponse reconnect(const HttpRequest& request)
 
 HttpResponse clone(const HttpRequest& request)
 {
-    auto [id, err] = get_connection_id(request, request.uri_part(1));
+    string err;
+    string id;
+    std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
-    if (!id)
+    if (id.empty())
     {
         return create_error(err);
     }
@@ -514,8 +515,8 @@ HttpResponse clone(const HttpRequest& request)
         if (auto managed_conn = this_unit.manager.get_connection(id))
         {
             std::string err;
-            int64_t new_id = create_connection(managed_conn->config, &err);
-            if (new_id > 0)
+            std::string new_id = create_connection(managed_conn->config, &err);
+            if (!new_id.empty())
             {
                 response = create_connect_response(host, new_id, persist, max_age);
             }
@@ -528,7 +529,7 @@ HttpResponse clone(const HttpRequest& request)
         }
         else
         {
-            response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
+            response = create_error(mxb::string_printf("ID %s not found or is busy.", id.c_str()),
                                     MHD_HTTP_SERVICE_UNAVAILABLE);
         }
 
@@ -541,8 +542,7 @@ HttpResponse clone(const HttpRequest& request)
 // static
 HttpResponse show_connection(const HttpRequest& request)
 {
-    int64_t id = std::stol(request.uri_part(1));    // Validated to be an integer before this call
-    return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), id));
+    return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), request.uri_part(1)));
 }
 
 // static
@@ -557,10 +557,10 @@ HttpResponse query(const HttpRequest& request)
     mxb::Json json(request.get_json());
     string sql;
     string err;
-    int64_t id;
+    string id;
     std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
-    if (!id)
+    if (id.empty())
     {
         return create_error(err);
     }
@@ -604,7 +604,7 @@ HttpResponse query(const HttpRequest& request)
             managed_conn->release();
             // 'managed_conn' is now effectively back in storage and should not be used.
 
-            string id_str = mxb::string_printf("%li-%li", id, query_id);
+            string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
             string self_id = self;
             self_id.append("/").append(id_str);
             HttpResponse response = construct_result_response(result_data,
@@ -620,7 +620,7 @@ HttpResponse query(const HttpRequest& request)
         }
         else
         {
-            string errmsg = mxb::string_printf("ID %li not found or is busy.", id);
+            string errmsg = mxb::string_printf("ID %s not found or is busy.", id.c_str());
             return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
         }
     };
@@ -631,10 +631,10 @@ HttpResponse query(const HttpRequest& request)
 HttpResponse disconnect(const HttpRequest& request)
 {
     std::string err;
-    int64_t id;
+    std::string id;
     std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
-    if (!id)
+    if (id.empty())
     {
         return create_error(err);
     }
@@ -644,13 +644,12 @@ HttpResponse disconnect(const HttpRequest& request)
         if (this_unit.manager.erase(id))
         {
             HttpResponse response(MHD_HTTP_NO_CONTENT);
-            std::string id_str = std::to_string(id);
-            response.remove_split_cookie(CONN_ID_BODY + id_str, CONN_ID_SIG + id_str);
+            response.remove_split_cookie(CONN_ID_BODY + id, CONN_ID_SIG + id);
             return response;
         }
         else
         {
-            string error_msg = mxb::string_printf("Connection %li not found or is busy.", id);
+            string error_msg = mxb::string_printf("Connection %s not found or is busy.", id.c_str());
             return create_error(error_msg, MHD_HTTP_NOT_FOUND);
         }
     });
@@ -664,11 +663,11 @@ HttpResponse disconnect(const HttpRequest& request)
 bool is_query(const std::string& id)
 {
     bool rval = false;
-    auto pos = id.find('-');
+    auto pos = id.find('.');
 
     if (pos != std::string::npos)
     {
-        int64_t conn_id = strtol(id.substr(0, pos).c_str(), nullptr, 10);
+        std::string conn_id = id.substr(0, pos);
         int64_t query_id = strtol(id.substr(pos + 1).c_str(), nullptr, 10);
         rval = this_unit.manager.is_query(conn_id, query_id);
     }
@@ -679,19 +678,19 @@ bool is_query(const std::string& id)
 // static
 bool is_connection(const std::string& id)
 {
-    return this_unit.manager.is_connection(strtol(id.c_str(), nullptr, 10));
+    return this_unit.manager.is_connection(id);
 }
 
 // static
-std::vector<int64_t> get_connections()
+std::vector<std::string> get_connections()
 {
     return this_unit.manager.get_connections();
 }
 
 // static
-int64_t create_connection(const ConnectionConfig& config, std::string* err)
+std::string create_connection(const ConnectionConfig& config, std::string* err)
 {
-    int64_t id = -1;
+    std::string id;
     mxq::MariaDB conn;
     auto& sett = conn.connection_settings();
     sett.user = config.user;
