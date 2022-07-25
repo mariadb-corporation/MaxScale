@@ -56,6 +56,7 @@ export mdbci_config_name=`echo ${mdbci_config_name} | sed "s/?//g"`
 
 export provider=`mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
+export xpand_box=${xpand_box:-"centos_7_"$provider}
 export maxscale_product=${maxscale_product:-"maxscale_ci"}
 
 mdbci destroy --force ${mdbci_config_name}
