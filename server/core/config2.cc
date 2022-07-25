@@ -957,6 +957,18 @@ json_t* Configuration::to_json() const
     return pConfiguration;
 }
 
+mxs::ConfigParameters Configuration::to_params() const
+{
+    mxs::ConfigParameters params;
+
+    for (const auto& kv : m_values)
+    {
+        params.set(kv.first, kv.second->to_string());
+    }
+
+    return params;
+}
+
 /**
  * class Type
  */

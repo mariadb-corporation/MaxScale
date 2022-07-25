@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <sstream>
+#include <utility>
 
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>

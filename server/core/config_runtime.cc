@@ -1676,13 +1676,14 @@ json_t* runtime_get_json_error()
     return obj;
 }
 
-bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port)
+bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port,
+                                    const mxs::ConfigParameters& extra)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)
     {
-        mxs::ConfigParameters parameters;
+        mxs::ConfigParameters parameters = extra;
         if (!address.empty())
         {
             auto param_name = address[0] == '/' ? CN_SOCKET : CN_ADDRESS;

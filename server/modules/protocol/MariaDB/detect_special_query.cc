@@ -12,6 +12,7 @@
  */
 #include <maxbase/assert.h>
 #include <maxbase/string.hh>
+#include <array>
 #include <cstring>
 #include <functional>
 #include <limits>

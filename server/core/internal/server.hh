@@ -319,6 +319,7 @@ public:
         return true;    // TODO make configurable before first release
     }
 
+    mxs::ConfigParameters to_params() const override;
 private:
     bool create_server_config(const char* filename) const;
 

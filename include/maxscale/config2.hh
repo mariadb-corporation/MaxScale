@@ -1741,6 +1741,11 @@ public:
      */
     json_t* to_json() const;
 
+    /**
+     * @return The configuration as mxs::ConfigParameters
+     */
+    mxs::ConfigParameters to_params() const;
+
 protected:
     /**
      * Called when configuration has initially been configured, to allow a Configuration to configure
@@ -3109,9 +3114,7 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-template<class ParamType,
-         class ConcreteConfiguration,
-         class NativeParamType = Native<ParamType, ConcreteConfiguration>>
+template<class ParamType, class ConcreteConfiguration, class NativeParamType>
 void Configuration::add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)

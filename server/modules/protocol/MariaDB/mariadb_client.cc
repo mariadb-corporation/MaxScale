@@ -1822,84 +1822,69 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
     auto origin = mxs::RoutingWorker::get_current();
 
     auto func = [this, info, ref, origin, send_ok]() {
-            // First, gather the list of servers where the KILL should be sent
-            mxs::RoutingWorker::execute_concurrently(
-                [info, ref]() {
-                    dcb_foreach_local(info->cb, info.get());
-                });
+        // First, gather the list of servers where the KILL should be sent
+        mxs::RoutingWorker::execute_concurrently(
+            [info, ref]() {
+            dcb_foreach_local(info->cb, info.get());
+        });
 
-            // TODO: This doesn't handle the case where a session is moved from one worker to another while
-            // this was being executed on the MainWorker.
+        // TODO: This doesn't handle the case where a session is moved from one worker to another while
+        // this was being executed on the MainWorker.
 
-            // Then move execution back to the original worker to keep all connections on the same thread
-            origin->call(
-                [this, info, ref, origin, send_ok]() {
-                    for (const auto& a : info->targets)
+        // Then move execution back to the original worker to keep all connections on the same thread
+        origin->call(
+            [this, info, ref, origin, send_ok]() {
+            for (const auto& a : info->targets)
+            {
+                std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
+
+                if (client)
+                {
+                    if (client->connect())
                     {
-                        std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
+                        auto ok_cb = [this, send_ok, cl = client.get()](
+                            GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&){
+                            kill_complete(send_ok, cl);
+                        };
+                        auto err_cb = [this, send_ok, cl = client.get()](
+                            GWBUF*, mxs::Target*, const mxs::Reply&) {
+                            kill_complete(send_ok, cl);
+                        };
 
-                        if (client)
+                        client->set_notify(std::move(ok_cb), std::move(err_cb));
+
+                        // TODO: There can be multiple connections to the same server. Currently only
+                        // one connection per server is killed.
+                        MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
+
+                        if (!client->queue_query(modutil_create_query(a.second.c_str())))
                         {
-                            if (client->connect())
-                            {
-                                // TODO: There can be multiple connections to the same server. Currently only
-                                // one connection per server is killed.
-                                MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
-
-                                if (!client->queue_query(modutil_create_query(a.second.c_str()))
-                                    || !client->queue_query(mysql_create_com_quit(NULL, 0)))
-                                {
-                                    MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
-                                }
-                                else
-                                {
-                                    mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
-                                    add_local_client(client.release());
-                                }
-                            }
-                            else
-                            {
-                                MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
-                            }
+                            MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
                         }
                         else
                         {
-                            MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
+                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
+                            add_local_client(client.release());
                         }
                     }
+                    else
+                    {
+                        MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
+                    }
+                }
+                else
+                {
+                    MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
+                }
+            }
 
-                    // Now wait for the COM_QUIT to close the connections.
-                    auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Call::action_t action){
-                            bool rv = true;
+            // If we ended up not sending any KILL commands, the OK packet can be generated immediately.
+            maybe_send_kill_response(send_ok);
 
-                            if (action == mxb::Worker::Call::CANCEL || !this->have_local_clients())
-                            {
-                                // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
-                                // already closed when this callback is called and an error about a write to a
-                                // closed DCB would be logged.
-                                if (m_dcb->is_open() && send_ok)
-                                {
-                                    this->write_ok_packet(1);
-                                }
-                                else
-                                {
-                                    MXB_INFO("Not sending OK packet. Client is %s connected.",
-                                             m_dcb->is_open() ? "still" : "not");
-                                }
-
-                                session_put_ref(ref);
-                                MXS_INFO("All KILL commands finished");
-                                rv = false;
-                            }
-
-                            return rv;
-                        };
-
-                    // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
-                    // better as it would close the connection as soon as possible.
-                    origin->dcall(100, wait_for_conns);
-                }, mxs::RoutingWorker::EXECUTE_AUTO);
-        };
+            // The reference can now be freed as the execution is back on the worker that owns it
+            session_put_ref(ref);
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
+    };
 
     mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
@@ -2966,13 +2951,44 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
 void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
-    auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
-                                 return !client->is_open();
-                             });
-
-    m_local_clients.erase(it, m_local_clients.end());
+    m_local_clients.erase(
+        std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
+        return !client->is_open();
+    }), m_local_clients.end());
 
     m_local_clients.emplace_back(client);
+}
+
+void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
+{
+    // This needs to be executed once we return from the clientReply or the handleError callback of the
+    // LocalClient. In 6.4 this can be changed to use Worker::lcall to make it execute right after the
+    // function returns into epoll.
+    auto fn = [=]() {
+        m_local_clients.erase(
+            std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
+            return c.get() == client;
+        }), m_local_clients.end());
+        maybe_send_kill_response(send_ok);
+    };
+
+    m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED);
+}
+
+void MariaDBClientConnection::maybe_send_kill_response(bool send_ok)
+{
+    if (!have_local_clients())
+    {
+        // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
+        // already closed when this callback is called and an error about a write to a
+        // closed DCB would be logged.
+        if (m_dcb->is_open() && send_ok)
+        {
+            write_ok_packet(1);
+        }
+
+        MXS_INFO("All KILL commands finished");
+    }
 }
 
 bool MariaDBClientConnection::have_local_clients()

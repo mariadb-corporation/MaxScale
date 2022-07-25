@@ -15,6 +15,8 @@
 
 #include "maria_rpl_event.hh"
 #include <cstring>
+#include <array>
+#include <memory>
 
 namespace maxsql
 {

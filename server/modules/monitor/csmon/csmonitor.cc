@@ -1613,7 +1613,15 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
 
                 if (!pServer)
                 {
-                    if (runtime_create_volatile_server(server_name, host, 3306))
+                    mxs::ConfigParameters extra;
+
+                    for (auto srv : servers())
+                    {
+                        // TODO: Don't assume all servers have the same parameters
+                        extra.set_multiple(srv->server->to_params());
+                    }
+
+                    if (runtime_create_volatile_server(server_name, host, 3306, extra))
                     {
                         pServer = SERVER::find_by_unique_name(server_name);
 
