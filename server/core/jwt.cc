@@ -115,6 +115,14 @@ bool is_pubkey_alg(mxs::JwtAlgo algo)
     }
 }
 
+void check_key(const std::string& key, size_t bits)
+{
+    if (!key.empty() && key.size() * 8 < bits)
+    {
+        throw std::runtime_error(MAKE_STR("Key is too small, need at least a" << bits << "-bit key."));
+    }
+}
+
 struct ThisUnit
 {
     std::unique_ptr<Jwt> jwt;
@@ -149,21 +157,39 @@ bool init()
             return false;
         }
     }
+    else if (!cnf.admin_jwt_key.empty())
+    {
+        auto km = mxs::key_manager();
+        mxb_assert(km);
+
+        if (auto [ok, vers, binkey] = km->get_key(cnf.admin_jwt_key); ok)
+        {
+            key.assign(binkey.begin(), binkey.end());
+        }
+        else
+        {
+            MXB_ERROR("Could not load JWT signature key '%s'", cnf.admin_jwt_key.c_str());
+            return false;
+        }
+    }
 
     try
     {
         switch (cnf.admin_jwt_algorithm)
         {
         case mxs::JwtAlgo::HS256:
-            jwt = make_jwt(::jwt::algorithm::hs256 {rand_key(256)});
+            check_key(key, 256);
+            jwt = make_jwt(::jwt::algorithm::hs256 {key.empty() ? rand_key(256) : key});
             break;
 
         case mxs::JwtAlgo::HS384:
-            jwt = make_jwt(::jwt::algorithm::hs384 {rand_key(384)});
+            check_key(key, 384);
+            jwt = make_jwt(::jwt::algorithm::hs384 {key.empty() ? rand_key(384) : key});
             break;
 
         case mxs::JwtAlgo::HS512:
-            jwt = make_jwt(::jwt::algorithm::hs512 {rand_key(512)});
+            check_key(key, 512);
+            jwt = make_jwt(::jwt::algorithm::hs512 {key.empty() ? rand_key(512) : key});
             break;
 
         case mxs::JwtAlgo::RS256:

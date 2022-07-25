@@ -285,7 +285,8 @@ public:
     std::string               admin_ssl_cert;       /**< Admin SSL cert */
     std::string               admin_ssl_ca;         /**< Admin SSL CA cert */
     mxb::ssl_version::Version admin_ssl_version;    /**< Admin allowed SSL versions */
-    mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature algorithm */
+    mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
+    std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
 
     std::string  local_address;                 /**< Local address to use when connecting */
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
@@ -391,6 +392,7 @@ private:
     static config::ParamPath                            s_admin_ssl_ca;
     static config::ParamDeprecated<config::ParamAlias>  s_admin_ssl_ca_cert;// -> s_admin_ca
     static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;
+    static config::ParamString                          s_admin_jwt_key;
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamBool                            s_persist_runtime_changes;
