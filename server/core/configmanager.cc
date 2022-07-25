@@ -1155,9 +1155,20 @@ json_t* ConfigManager::remove_local_parameters(json_t* json)
     json_t* params = mxb::json_ptr(json, "/data/attributes/parameters");
     mxb_assert(params);
 
+    // These parameter can be modified at runtime but they should not be included in the updates
     json_object_del(params, CN_CONFIG_SYNC_CLUSTER);
     json_object_del(params, CN_CONFIG_SYNC_USER);
     json_object_del(params, CN_CONFIG_SYNC_PASSWORD);
+
+    // All static parameters must also be removed as they can have different values on different nodes
+    // (file paths, REST API port etc.)
+    for (auto p : mxs::Config::get().specification())
+    {
+        if (!p.second->is_modifiable_at_runtime())
+        {
+            json_object_del(params, p.first.c_str());
+        }
+    }
 
     return json;
 }
