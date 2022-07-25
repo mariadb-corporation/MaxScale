@@ -2995,12 +2995,14 @@ json_t* mxs::Config::maxscale_to_json(const char* host)
     if (key_manager != mxs::KeyManager::Type::NONE)
     {
         auto prefix = s_key_manager.to_string(key_manager);
+        json_t* opts = json_object();
 
         for (const auto& [k, v] : key_manager_options)
         {
-            auto name = prefix + "." + k;
-            json_object_set_new(param, name.c_str(), json_string(v.c_str()));
+            json_object_set_new(opts, k.c_str(), json_string(v.c_str()));
         }
+
+        json_object_set_new(param, prefix.c_str(), opts);
     }
 
     json_t* attr = json_object();
