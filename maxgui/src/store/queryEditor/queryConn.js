@@ -377,10 +377,12 @@ export default {
         },
 
         // Reset all when there is no active connections
-        resetAllStates({ rootState, commit }) {
+        resetAllStates({ rootState, rootGetters, commit }) {
             for (const targetWke of rootState.wke.worksheets_arr) {
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
-                commit('querySession/REFRESH_SESSIONS_OF_A_WKE', targetWke, { root: true })
+                const sessions = rootGetters['querySession/getSessionsByWkeId'](targetWke.id)
+                for (const s of sessions)
+                    commit('querySession/REFRESH_SESSION_OF_A_WKE', s, { root: true })
             }
         },
     },

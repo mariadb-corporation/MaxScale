@@ -51,27 +51,6 @@ export default {
                 }
         },
         /**
-         * This mutation resets all sessions of the provided targetWke object
-         * to its initial states except states that stores editor data
-         * @param {Object} targetWke - target wke
-         */
-        REFRESH_SESSIONS_OF_A_WKE(state, targetWke) {
-            const sessionIdxs = state.query_sessions.reduce((arr, s, idx) => {
-                if (s.wke_id_fk === targetWke.id) arr.push(idx)
-                return arr
-            }, [])
-            sessionIdxs.forEach(i => {
-                const session = {
-                    ...state.query_sessions[i],
-                    ...queryHelper.syncStateCreator('queryConn'),
-                    ...queryHelper.syncStateCreator('queryResult'),
-                }
-                state.query_sessions = this.vue.$help.immutableUpdate(state.query_sessions, {
-                    [i]: { $set: session },
-                })
-            })
-        },
-        /**
          * This mutation resets all properties of the provided targetSession object
          * to its initial states except states that stores editor data
          * @param {Object} session - session to be reset
