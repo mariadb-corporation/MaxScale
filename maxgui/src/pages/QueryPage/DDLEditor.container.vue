@@ -58,6 +58,7 @@ export default {
     props: {
         dim: { type: Object, required: true },
         execSqlDlg: { type: Object, required: true },
+        isExecFailed: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -72,7 +73,6 @@ export default {
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
-            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         formDim() {
@@ -106,16 +106,6 @@ export default {
                 this.$typy(this.formData, 'cols_opts_data.data').safeArray
             )
         },
-        notAlteredYet() {
-            return Boolean(this.$typy(this.getExeStmtResultMap).isEmptyObject)
-        },
-        isAlterFailed() {
-            if (this.notAlteredYet) return false
-            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
-        },
-        stmtErrMsgObj() {
-            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
-        },
         currColsData() {
             return this.$typy(this.formData, 'cols_opts_data.data').safeArray
         },
@@ -127,21 +117,6 @@ export default {
         },
         initialPkCols() {
             return this.getPKCols(this.initialColsData)
-        },
-    },
-    watch: {
-        isAlterFailed: {
-            immediate: true,
-            handler(v) {
-                this.$emit('update:execSqlDlg', { ...this.execSqlDlg, isExecFailed: v })
-            },
-        },
-        stmtErrMsgObj: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                this.$emit('update:execSqlDlg', { ...this.execSqlDlg, stmtErrMsgObj: v })
-            },
         },
     },
     activated() {
@@ -447,7 +422,7 @@ export default {
                 sql: this.execSqlDlg.sql,
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
-            if (!this.isAlterFailed)
+            if (!this.isExecFailed)
                 this.SET_TBL_CREATION_INFO({
                     id: this.getActiveSessionId,
                     payload: {

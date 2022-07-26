@@ -1,46 +1,26 @@
 <template>
-    <div class="fill-height">
-        <sidebar
-            :disabled="isSidebarDisabled"
-            :isCollapsed="is_sidebar_collapsed"
-            :hasConn="hasConn"
-            :isLoading="getLoadingDbTree"
-            :searchSchema="search_schema"
-            @set-search-schema="SET_SEARCH_SCHEMA({ payload: $event, id: active_wke_id })"
-            @reload-schemas="fetchSchemas"
-            @toggle-sidebar="
-                SET_IS_SIDEBAR_COLLAPSED({
-                    payload: !is_sidebar_collapsed,
-                    id: active_wke_id,
-                })
-            "
-            @get-node-data="handleGetNodeData"
-            @load-children="handleLoadChildren"
-            @use-db="useDb"
-            @alter-tbl="onAlterTable"
-            @drop-action="onDropAction"
-            @truncate-tbl="onTruncateTbl"
-            v-on="$listeners"
-        />
-        <execute-sql-dialog
-            v-model="isExeDlgOpened"
-            :title="
-                isExeStatementsFailed
-                    ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
-                    : $tc('confirmations.exeStatements', stmtI18nPluralization)
-            "
-            :smallInfo="
-                isExeStatementsFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
-            "
-            :hasSavingErr="isExeStatementsFailed"
-            :errMsgObj="stmtErrMsgObj"
-            :sqlTobeExecuted.sync="sql"
-            :editorHeight="200"
-            :onSave="confirmExeStatements"
-            @after-close="clearExeStatementsResult"
-            @after-cancel="clearExeStatementsResult"
-        />
-    </div>
+    <sidebar
+        :disabled="isSidebarDisabled"
+        :isCollapsed="is_sidebar_collapsed"
+        :hasConn="hasConn"
+        :isLoading="getLoadingDbTree"
+        :searchSchema="search_schema"
+        @set-search-schema="SET_SEARCH_SCHEMA({ payload: $event, id: active_wke_id })"
+        @reload-schemas="fetchSchemas"
+        @toggle-sidebar="
+            SET_IS_SIDEBAR_COLLAPSED({
+                payload: !is_sidebar_collapsed,
+                id: active_wke_id,
+            })
+        "
+        @get-node-data="handleGetNodeData"
+        @load-children="handleLoadChildren"
+        @use-db="useDb"
+        @alter-tbl="onAlterTable"
+        @drop-action="onDropAction"
+        @truncate-tbl="onTruncateTbl"
+        v-on="$listeners"
+    />
 </template>
 
 <script>
@@ -57,20 +37,21 @@
  * Public License.
  */
 
+/*
+ * Events
+ * 2-way data binding to execSqlDlg prop
+ * update:execSqlDlg?: (object)
+ */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
-import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 import Sidebar from './Sidebar.vue'
 export default {
     name: 'sidebar-ctr',
-    components: {
-        Sidebar,
-        'execute-sql-dialog': ExecuteSqlDialog,
+    components: { Sidebar },
+    props: {
+        execSqlDlg: { type: Object, required: true },
     },
     data() {
         return {
-            // execute-sql-dialog states
-            isExeDlgOpened: false,
-            sql: '',
             actionName: '',
         }
     },
@@ -89,7 +70,6 @@ export default {
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConn/getIsConnBusy',
-            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         isSidebarDisabled() {
@@ -97,17 +77,6 @@ export default {
         },
         hasConn() {
             return Boolean(this.$typy(this.active_sql_conn, 'id').safeString)
-        },
-        stmtI18nPluralization() {
-            const statementCounts = (this.sql.match(/;/g) || []).length
-            return statementCounts > 1 ? 2 : 1
-        },
-        isExeStatementsFailed() {
-            if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
-            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
-        },
-        stmtErrMsgObj() {
-            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
     },
     methods: {
@@ -190,21 +159,32 @@ export default {
                     sql += ' TRIGGER'
                     break
             }
-            this.sql = `${sql} ${escape(id)};`
-            this.actionName = this.sql.slice(0, -1)
-            this.isExeDlgOpened = true
+            sql = `${sql} ${escape(id)};`
+            this.handleOpenExecSqlDlg(sql)
         },
+
         /**
          * @param {String} id - identifier
          */
         onTruncateTbl(id) {
             const { escapeIdentifiers: escape } = this.$help
-            this.sql = `truncate ${escape(id)};`
-            this.actionName = this.sql.slice(0, -1)
-            this.isExeDlgOpened = true
+            const sql = `truncate ${escape(id)};`
+            this.handleOpenExecSqlDlg(sql)
+        },
+        handleOpenExecSqlDlg(sql) {
+            this.$emit('update:execSqlDlg', {
+                ...this.execSqlDlg,
+                isOpened: true,
+                editorHeight: 200,
+                sql,
+                onExec: this.confirmExeStatements,
+                onAfterClose: this.clearExeStatementsResult,
+                onAfterCancel: this.clearExeStatementsResult,
+            })
+            this.actionName = sql.slice(0, -1)
         },
         async confirmExeStatements() {
-            await this.exeStmtAction({ sql: this.sql, action: this.actionName })
+            await this.exeStmtAction({ sql: this.execSqlDlg.sql, action: this.actionName })
         },
         clearExeStatementsResult() {
             this.PATCH_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })

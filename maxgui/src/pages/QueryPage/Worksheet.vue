@@ -10,6 +10,7 @@
         >
             <template slot="pane-left">
                 <sidebar-ctr
+                    :execSqlDlg.sync="execSqlDlg"
                     @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
                     @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
                     @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
@@ -36,6 +37,7 @@
                             ref="ddlEditor"
                             :dim="ddlEditorDim"
                             :execSqlDlg.sync="execSqlDlg"
+                            :isExecFailed="isExecFailed"
                         />
                     </keep-alive>
                 </div>
@@ -44,16 +46,15 @@
         <execute-sql-dialog
             v-model="execSqlDlg.isOpened"
             :title="
-                execSqlDlg.isExecFailed
+                isExecFailed
                     ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
                     : $tc('confirmations.exeStatements', stmtI18nPluralization)
             "
-            :smallInfo="
-                execSqlDlg.isExecFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
-            "
-            :hasSavingErr="execSqlDlg.isExecFailed"
-            :errMsgObj="execSqlDlg.stmtErrMsgObj"
+            :smallInfo="isExecFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)"
+            :hasSavingErr="isExecFailed"
+            :errMsgObj="stmtErrMsgObj"
             :sqlTobeExecuted.sync="execSqlDlg.sql"
+            :editorHeight="execSqlDlg.editorHeight"
             :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
             @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
@@ -103,9 +104,8 @@ export default {
             sidebarPct: 0,
             execSqlDlg: {
                 isOpened: false,
+                editorHeight: 250,
                 sql: '',
-                isExecFailed: false,
-                stmtErrMsgObj: {},
                 onExec: () => null,
                 onAfterClose: () => null,
                 onAfterCancel: () => null,
@@ -119,7 +119,10 @@ export default {
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
-        ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
+        ...mapGetters({
+            getIsTxtEditor: 'editor/getIsTxtEditor',
+            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
+        }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -128,6 +131,13 @@ export default {
         stmtI18nPluralization() {
             const statementCounts = (this.execSqlDlg.sql.match(/;/g) || []).length
             return statementCounts > 1 ? 2 : 1
+        },
+        stmtErrMsgObj() {
+            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
+        },
+        isExecFailed() {
+            if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
+            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
     },
     watch: {

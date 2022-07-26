@@ -31,13 +31,6 @@ function mockShowingDbListTree() {
     }
 }
 
-const dummy_exe_stmt_result = {
-    stmt_err_msg_obj: {
-        errno: 1064,
-        message: 'dummy message',
-        sqlstate: '42000',
-    },
-}
 describe('sidebar-ctr', () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
@@ -87,34 +80,8 @@ describe('sidebar-ctr', () => {
         })
     })
 
-    it(`Should pass accurate data to execute-sql-dialog via props`, () => {
-        wrapper = mountFactory({ isExeStatementsFailed: () => false })
-        const {
-            value,
-            title,
-            smallInfo,
-            hasSavingErr,
-            errMsgObj,
-            sqlTobeExecuted,
-            onSave,
-        } = wrapper.findComponent({
-            name: 'execute-sql-dialog',
-        }).vm.$props
-        expect(value).to.be.equals(wrapper.vm.$data.isExeDlgOpened)
-        expect(title).to.be.equals(
-            wrapper.vm.$tc('confirmations.exeStatements', wrapper.vm.stmtI18nPluralization)
-        )
-        expect(smallInfo).to.be.equals(
-            wrapper.vm.$tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
-        )
-        expect(hasSavingErr).to.be.equals(wrapper.vm.isExeStatementsFailed)
-        expect(errMsgObj).to.be.deep.equals(wrapper.vm.stmtErrMsgObj)
-        expect(sqlTobeExecuted).to.be.equals(wrapper.vm.$data.sql)
-        expect(onSave).to.be.equals(wrapper.vm.confirmExeStatements)
-    })
-
     it(`Should pass accurate data to sidebar via props`, () => {
-        wrapper = mountFactory({ isExeStatementsFailed: () => false })
+        wrapper = mountFactory()
         const { disabled, isCollapsed, hasConn, isLoading, searchSchema } = wrapper.findComponent({
             name: 'sidebar',
         }).vm.$props
@@ -123,22 +90,6 @@ describe('sidebar-ctr', () => {
         expect(hasConn).to.be.equals(wrapper.vm.hasConn)
         expect(isLoading).to.be.equals(wrapper.vm.getLoadingDbTree)
         expect(searchSchema).to.be.deep.equals(wrapper.vm.search_schema)
-    })
-
-    const evts = ['after-close', 'after-cancel']
-    evts.forEach(evt => {
-        it(`Should call clearExeStatementsResult when ${evt} is emitted
-        from execute-sql-dialog`, () => {
-            const clearExeStatementsResultSpy = sinon.spy(
-                Sidebar.methods,
-                'clearExeStatementsResult'
-            )
-            wrapper = mountFactory()
-            const dlg = wrapper.findComponent({ name: 'execute-sql-dialog' })
-            dlg.vm.$emit(evt)
-            clearExeStatementsResultSpy.should.have.been.calledOnce
-            clearExeStatementsResultSpy.restore()
-        })
     })
 
     describe(`computed properties tests`, () => {
@@ -152,36 +103,6 @@ describe('sidebar-ctr', () => {
                 computed: { ...mockShowingDbListTree() },
             })
             expect(wrapper.vm.hasConn).to.be.true
-        })
-        it(`Should return accurate value for stmtI18nPluralization`, () => {
-            // when sql is empty or has only a statement
-            wrapper = mountFactory()
-            expect(wrapper.vm.stmtI18nPluralization).to.be.equals(1)
-            // when sql has more than one statement
-            wrapper = mountFactory({ data: () => ({ sql: 'SELET 1; SELLET 2; SELECT 3;' }) })
-            expect(wrapper.vm.stmtI18nPluralization).to.be.equals(2)
-        })
-        it(`Should return accurate value for isExeStatementsFailed`, () => {
-            // When there is no statement has been executed yet
-            wrapper = mountFactory()
-            expect(wrapper.vm.isExeStatementsFailed).to.be.false
-            // When there is an error message
-            wrapper = mountFactory({
-                computed: { getExeStmtResultMap: () => dummy_exe_stmt_result },
-            })
-            expect(wrapper.vm.isExeStatementsFailed).to.be.true
-        })
-        it(`Should return accurate value for stmtErrMsgObj`, () => {
-            // When there is no statement has been executed yet
-            wrapper = mountFactory()
-            expect(wrapper.vm.stmtErrMsgObj).to.be.an('object').and.be.empty
-            // When there is an error message
-            wrapper = mountFactory({
-                computed: { getExeStmtResultMap: () => dummy_exe_stmt_result },
-            })
-            expect(wrapper.vm.stmtErrMsgObj).to.be.deep.equals(
-                dummy_exe_stmt_result.stmt_err_msg_obj
-            )
         })
     })
 
@@ -261,23 +182,28 @@ describe('sidebar-ctr', () => {
         })
         it(`Should process onDropAction method as expected`, () => {
             wrapper = mountFactory()
+            const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
             const mockNode = { type: 'Table', id: 'test.t1' }
             wrapper.vm.onDropAction(mockNode) // trigger the method
-            expect(wrapper.vm.sql).to.be.equals('DROP TABLE `test`.`t1`;')
+            spy.should.have.been.calledOnceWith('DROP TABLE `test`.`t1`;')
             expect(wrapper.vm.actionName).to.be.equals('DROP TABLE `test`.`t1`')
-            expect(wrapper.vm.isExeDlgOpened).to.be.true
+            spy.restore()
         })
         it(`Should process onTruncateTbl method as expected`, () => {
             wrapper = mountFactory()
+            const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
             wrapper.vm.onTruncateTbl('test.t1') // trigger the method
-            expect(wrapper.vm.sql).to.be.equals('truncate `test`.`t1`;')
+            spy.should.have.been.calledOnceWith('truncate `test`.`t1`;')
             expect(wrapper.vm.actionName).to.be.equals('truncate `test`.`t1`')
-            expect(wrapper.vm.isExeDlgOpened).to.be.true
+            spy.restore()
         })
         it(`Should call exeStmtAction method when confirmExeStatements is called`, () => {
             const mockSql = 'truncate `test`.`t1`;'
             const mockActionName = 'truncate `test`.`t1`'
-            wrapper = mountFactory({ data: () => ({ sql: mockSql, actionName: mockActionName }) })
+            wrapper = mountFactory({
+                propsData: { execSqlDlg: { sql: mockSql } },
+                data: () => ({ actionName: mockActionName }),
+            })
             sinon.spy(wrapper.vm, 'exeStmtAction')
             wrapper.vm.confirmExeStatements() // trigger the method
             wrapper.vm.exeStmtAction.should.have.been.calledOnceWith({
