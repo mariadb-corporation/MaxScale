@@ -1182,9 +1182,20 @@ json_t* ConfigManager::remove_local_parameters(json_t* json)
     json_t* params = mxb::json_ptr(json, "/data/attributes/parameters");
     mxb_assert(params);
 
+    // These parameter can be modified at runtime but they should not be included in the updates
     json_object_del(params, CN_CONFIG_SYNC_CLUSTER);
     json_object_del(params, CN_CONFIG_SYNC_USER);
     json_object_del(params, CN_CONFIG_SYNC_PASSWORD);
+
+    // All static parameters must also be removed as they can have different values on different nodes
+    // (file paths, REST API port etc.)
+    for (auto p : mxs::Config::get().specification())
+    {
+        if (!p.second->is_modifiable_at_runtime())
+        {
+            json_object_del(params, p.first.c_str());
+        }
+    }
 
     return json;
 }
@@ -1325,8 +1336,9 @@ void ConfigManager::try_update_status(const std::string& msg)
     m_status_msg = msg;
 
     // It doesn't really matter if this command fails as it is attempted again during the sync. We aren't
-    // expecting it to fail so any errors might still be of interest.
-    if (!m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
+    // expecting it to fail so any errors might still be of interest. Nevertheless, don't try it if we know
+    // it'll fail.
+    if (m_conn.is_open() && !m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
     {
         MXB_WARNING("Failed to update node state to '%s' for hostname '%s': %s",
                     msg.c_str(), hostname().c_str(), m_conn.error());
