@@ -51,7 +51,7 @@ does not create new connections after the initial connections are created.
 
 ### `exporter`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: Yes
 - **Dynamic**: Yes
 - **Values**: `log`, `file`, `kafka`
@@ -115,7 +115,7 @@ This is a mandatory parameter when configured with `exporter=kafka`.
 
 ### `on_error`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Default**: `ignore`
 - **Mandatory**: No
 - **Dynamic**: Yes
@@ -137,7 +137,7 @@ failing backends.
 
 ### `report`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Default**: `always`
 - **Mandatory**: No
 - **Dynamic**: Yes

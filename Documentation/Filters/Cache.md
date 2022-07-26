@@ -318,6 +318,12 @@ rules=/path/to/rules-file
 
 #### `cached_data`
 
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `shared`, `thread_specific`
+- **Default**: `thread_specific`
+
 An enumeration option specifying how data is shared between threads. The
 allowed values are:
 
@@ -337,6 +343,12 @@ Default is `thread_specific`. See `max_count` and `max_size` what implication
 changing this setting to `shared` has.
 
 #### `selects`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `assume_cacheable`, `verify_cacheable`
+- **Default**: `assume_cacheable`
 
 An enumeration option specifying what approach the cache should take with
 respect to `SELECT` statements. The allowed values are:
@@ -376,6 +388,12 @@ Note that parsing all `SELECT` statements carries a performance
 cost. Please read [performance](#performance) for more details.
 
 #### `cache_in_transactions`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `never`, `read_only_transactions`, `all_transactions`
+- **Default**: `all_transactions`
 
 An enumeration option specifying how the cache should behave when there
 are active transactions:
@@ -436,6 +454,12 @@ for details.
 
 #### `invalidate`
 
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `never`, `current`
+- **Default**: `never`
+
 An enumeration option specifying how the cache should invalidate
 cache entries.
 
@@ -476,6 +500,12 @@ the cache, if an UPDATE/INSERT/DELETE cannot be parsed and the statement
 affects entries in the cache.
 
 #### `users`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `mixed`, `isolated`
+- **Default**: `mixed`
 
 An enumeration option specifying how the cache should cache data for
 different users.

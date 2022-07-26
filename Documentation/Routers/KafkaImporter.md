@@ -77,7 +77,7 @@ will be read again if a reconnection to either Kafka or MariaDB occurs.
 
 ### `kafka_sasl_mechanism`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Default**: `PLAIN`
 - **Mandatory**: No
 - **Dynamic**: Yes
@@ -147,7 +147,7 @@ SSL private key file in PEM format. If this parameter is defined,
 
 ### `table_name_in`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Default**: `topic`
 - **Mandatory**: No
 - **Dynamic**: Yes

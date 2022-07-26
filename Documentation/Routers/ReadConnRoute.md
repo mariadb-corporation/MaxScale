@@ -19,6 +19,12 @@ For more details about the standard service parameters, refer to the
 
 ### `router_options`
 
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `master`, `slave`, `synced`, `running`
+- **Default**: `running`
+
 **`router_options`** can contain a comma separated list of valid server
 roles. These roles are used as the valid types of servers the router will
 form connections to when new sessions are created.
@@ -49,6 +55,11 @@ listed first in the _servers_ parameter for the service is chosen.
 
 ### `master_accept_reads`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: true
+
 This option can be used to prevent queries from being sent to the current master.
 If `router_options` does not contain "master", the readconnroute instance is
 usually meant for reading. Setting `master_accept_reads=false` excludes the master
@@ -59,6 +70,11 @@ If `router_options` contains "master", the setting of `master_accept_reads` has 
 By default `master_accept_reads=true`.
 
 ### `max_replication_lag`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 0s
 
 The maximum acceptable replication lag. The value is in seconds and is specified
 as documented [here](../Getting-Started/Configuration-Guide.md#durations). This

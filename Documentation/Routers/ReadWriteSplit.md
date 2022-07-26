@@ -154,7 +154,7 @@ replication state changes.
 
 ### `use_sql_variables_in`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `master`, `all`
@@ -251,7 +251,7 @@ read-only mode (described in detail in the
 
 ### `slave_selection_criteria`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `LEAST_CURRENT_OPERATIONS`, `ADAPTIVE_ROUTING`, `LEAST_BEHIND_MASTER`, `LEAST_ROUTER_CONNECTIONS`, `LEAST_GLOBAL_CONNECTIONS`
@@ -415,7 +415,7 @@ All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 
 ### `master_failure_mode`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `fail_instantly`, `fail_on_write`, `error_on_write`
@@ -651,7 +651,7 @@ reached (`delayed_retry_timeout`, `transaction_replay_timeout` or
 
 ### `transaction_replay_checksum`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `full`, `result_only`, `no_insert_id`
@@ -720,7 +720,7 @@ All limitations that apply to `transaction_replay` also apply to
 
 ### `causal_reads`
 
-- **Type**: enum
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `none`, `local`, `global`, `fast`, `universal`

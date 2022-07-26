@@ -656,7 +656,7 @@ MaxScale.
 
 ## `on_unknown_command`
 
-- **Type**: enumeration
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Values**: `return_error`, `return_empty`
 - **Default**: `return_error`
@@ -712,7 +712,7 @@ Specifies the length of the id column in tables that are automatically created.
 
 ## `ordered_insert_behavior`
 
-- **Type**: enumeration
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Values**: `atomic`, `default`
 - **Default**: `default`
@@ -743,7 +743,7 @@ automatically closed.
 
 ## `debug`
 
-- **Type**: enumeration (multiple values separated by `,` can be specified)
+- **Type**: [enum_mask](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Values**: `none`, `in`, `out`, `back`
 - **Default**: `none`
