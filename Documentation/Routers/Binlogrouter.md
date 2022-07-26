@@ -47,8 +47,6 @@ The major differences between the new and old binlog router are:
 
  * Semi-sync support is not implemented.
 
- * Binlog encryption is not implemented.
-
  * _Secondary masters_ are not supported, but the functionality provided by
    `select_master` is roughly equivalent.
 
@@ -328,6 +326,58 @@ database. As only the DDL events are stored, it becomes very easy to set up an
 empty server with no data in it by simply pointing it at a binlogrouter instance
 that has `ddl_only` enabled.
 
+### `encryption_key_id`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+Encryption key ID used to encrypt the binary logs. If configured, an [Encryption
+Key Manager](../Getting-Started/Configuration-Guide.md#encryption-key-managers)
+must also be configured and it must contain the key with the given ID. If the
+encryption key manager supports versioning, new binary logs will be encrypted
+using the latest encryption key. Old binlogs will remain encrypted with older
+key versions and remain readable as long as the key versions used to encrypt
+them are available.
+
+Once binary log encryption has been enabled, the encryption key ID cannot be
+changed and the key must remain available to MaxScale in order for replication
+to work. If an encryption key is not available or the key manager fails to
+retrieve it, the replication from the currently selected master server will
+stop. If the replication is restarted manually, the encryption key retrieval is
+attempted again.
+
+Re-encryption of binlogs using another encryption key is not possible. However,
+this is possible if the data is replicated to a second MaxScale server that uses
+a different encryption key. The same approach can also be used to decrypt
+binlogs.
+
+### `encryption_cipher`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `AES_CBC`, `AES_CTR`, `AES_GCM`
+- **Default**: `AES_GCM`
+
+The encryption cipher to use. The encryption key size also affects which mode is
+used: only 128, 192 and 256 bit encryption keys are currently supported.
+
+Possible values are:
+
+* `AES_GCM` (default)
+
+  * [AES in Galois/Counter Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Galois/counter_(GCM)).
+
+* `AES_CBC`
+
+  * [AES in Cipher Block Chaining Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_block_chaining_(CBC)).
+
+* `AES_CTR`
+
+  * [AES in Counter Mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)).
+
 ## New installation
 
  1. Configure and start MaxScale.
@@ -492,3 +542,5 @@ port=3306
   from.
 
 * Only replication from MariaDB servers (including Galera) is supported.
+
+* Old encrypted binary logs are not re-encrypted with newer key versions ([MXS-4140](https://jira.mariadb.org/browse/MXS-4140))
