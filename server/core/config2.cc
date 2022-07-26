@@ -786,7 +786,6 @@ void prune_aliases(json_t* pJson, const Specification& specification)
         }
     }
 }
-
 }
 
 bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)

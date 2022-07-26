@@ -28,29 +28,22 @@ const char* bad_configs[] =
     "no_use_of_reserved_names",
     "no_spaces_in_section_names",
     "no_unknown_auth_options",
+    "mxs4211_unknown_nested_parameter",
     NULL
 };
 
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections* test = new TestConnections(argc, argv);
+    TestConnections test(argc, argv);
     int rval = 0;
 
     for (int i = 0; bad_configs[i]; i++)
     {
         string config_file_path = string(mxt::SOURCE_DIR) + "/cnf/maxscale.cnf.template." + bad_configs[i];
         printf("Testing %s...\n", config_file_path.c_str());
-        if (test->test_bad_config(config_file_path))
-        {
-            printf("FAILED\n");
-            rval++;
-        }
-        else
-        {
-            printf("SUCCESS\n");
-        }
+        test.expect(!test.test_bad_config(config_file_path), "Bad config not detected");
     }
 
-    return rval;
+    return test.global_result;
 }
