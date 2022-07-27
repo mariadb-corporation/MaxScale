@@ -20,5 +20,5 @@ cd $PWD/maxgui
 # prints verbose output: https://github.com/npm/cli/issues/3314
 export buildPath=$PWD
 export VUE_APP_GIT_COMMIT=$(cd $src && git rev-list --max-count=1 HEAD)
-npm ci --production --omit=optional |& tee
+npm ci --production --no-optional |& tee
 npm run build |& tee
