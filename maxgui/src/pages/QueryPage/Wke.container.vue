@@ -84,7 +84,7 @@ import TxtEditorSessToolbar from './TxtEditorSessToolbar'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 
 export default {
-    name: 'worksheet',
+    name: 'wke-ctr',
     components: {
         'sidebar-ctr': Sidebar,
         'txt-editor-ctr': TxtEditor,

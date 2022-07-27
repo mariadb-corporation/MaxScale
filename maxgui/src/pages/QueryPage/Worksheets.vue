@@ -86,7 +86,7 @@
             <page-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
         </div>
         <keep-alive>
-            <worksheet
+            <wke-ctr
                 v-if="activeWkeID"
                 ref="wke"
                 :key="activeWkeID"
@@ -116,13 +116,13 @@
  */
 
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
-import Worksheet from './Worksheet'
+import Wke from './Wke.container.vue'
 import PageToolbar from './PageToolbar.container.vue'
 
 export default {
     name: 'worksheets',
     components: {
-        Worksheet,
+        'wke-ctr': Wke,
         PageToolbar,
     },
     props: {

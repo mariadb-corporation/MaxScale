@@ -12,13 +12,13 @@
  */
 
 import mount from '@tests/unit/setup'
-import Worksheet from '@/pages/QueryPage/Worksheet'
+import Wke from '@/pages/QueryPage/Wke.container.vue'
 
 const dummyCtrDim = { width: 1280, height: 800 }
 const mountFactory = opts =>
     mount({
         shallow: true,
-        component: Worksheet,
+        component: Wke,
         propsData: {
             ctrDim: dummyCtrDim,
         },
@@ -28,7 +28,7 @@ const mountFactory = opts =>
         },
         ...opts,
     })
-describe('Worksheet', () => {
+describe('wke-ctr', () => {
     describe(`Created hook and child component's data communication tests`, () => {
         let wrapper
         it(`Should pass accurate data to split-pane via props`, () => {

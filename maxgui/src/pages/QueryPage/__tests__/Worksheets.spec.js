@@ -35,13 +35,13 @@ describe('Worksheets', () => {
         wrapper = mountFactory()
     })
 
-    it('Should pass accurate data to worksheet component via props', () => {
+    it('Should pass accurate data to wke-ctr component via props', () => {
         wrapper = mountFactory({
             computed: {
                 active_wke_id: () => wrapper.vm.worksheets_arr[0].id,
             },
         })
-        const wke = wrapper.findComponent({ name: 'worksheet' })
+        const wke = wrapper.findComponent({ name: 'wke-ctr' })
         expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.$props.ctrDim)
     })
 
@@ -92,7 +92,7 @@ describe('Should assign corresponding handler for worksheet shortcut keys accura
             },
         })
         sessionToolbar = wrapper.vm.$refs.wke.$refs.sessionToolbar
-        wke = wrapper.findComponent({ name: 'worksheet' })
+        wke = wrapper.findComponent({ name: 'wke-ctr' })
         handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
         openSnippetDlgSpy = sinon.spy(sessionToolbar, 'openSnippetDlg')
         handleFileOpenSpy = sinon.spy(sessionToolbar.$refs.loadSql, 'handleFileOpen')
