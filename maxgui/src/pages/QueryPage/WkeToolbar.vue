@@ -1,5 +1,5 @@
 <template>
-    <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
+    <div class="wke-toolbar d-flex align-center flex-grow-1">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2 fill-height">
             <v-btn
                 :disabled="isAddWkeDisabled"
@@ -84,7 +84,7 @@ import ConnMan from './ConnMan.container.vue'
 import asyncEmit from 'mixins/asyncEmit'
 
 export default {
-    name: 'page-toolbar',
+    name: 'wke-toolbar',
     components: {
         'query-cnf-dlg-ctr': QueryCnfDlg,
         'conn-man-ctr': ConnMan,

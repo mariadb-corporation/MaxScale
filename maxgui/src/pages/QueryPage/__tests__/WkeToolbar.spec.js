@@ -12,19 +12,19 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageToolbar from '@/pages/QueryPage/PageToolbar'
+import WkeToolbar from '@/pages/QueryPage/WkeToolbar'
 
 const mountFactory = opts =>
     mount({
         shallow: false,
-        component: PageToolbar,
+        component: WkeToolbar,
         stubs: {
             'readonly-query-editor': "<div class='stub'></div>",
         },
         ...opts,
     })
 
-describe(`PageToolbar - mounted hook and child component's interaction tests`, () => {
+describe(`wke-toolbar - mounted hook and child component's interaction tests`, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()

@@ -1,5 +1,5 @@
 <template>
-    <page-toolbar
+    <wke-toolbar
         :isFullscreen="is_fullscreen"
         :isAddWkeDisabled="!Object.keys(sql_conns).length"
         @on-add-wke="addNewWs"
@@ -22,12 +22,12 @@
  */
 
 import { mapActions, mapMutations, mapState } from 'vuex'
-import PageToolbar from './PageToolbar'
+import WkeToolbar from './WkeToolbar'
 
 export default {
-    name: 'page-toolbar-container',
+    name: 'wke-toolbar-ctr',
     components: {
-        'page-toolbar': PageToolbar,
+        'wke-toolbar': WkeToolbar,
     },
     computed: {
         ...mapState({

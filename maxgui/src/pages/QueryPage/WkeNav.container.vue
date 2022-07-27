@@ -76,7 +76,7 @@
                 </v-tooltip>
             </v-tab>
         </v-tabs>
-        <page-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
+        <wke-toolbar-ctr @get-total-btn-width="pageToolbarBtnWidth = $event" />
     </div>
 </template>
 <script>
@@ -94,11 +94,11 @@
  */
 
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
-import PageToolbar from './PageToolbar.container.vue'
+import WkeToolbar from './WkeToolbar.container.vue'
 
 export default {
     name: 'wke-nav-ctr',
-    components: { PageToolbar },
+    components: { 'wke-toolbar-ctr': WkeToolbar },
     data() {
         return {
             pageToolbarBtnWidth: 128,
