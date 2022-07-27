@@ -25,6 +25,10 @@ namespace maxscale
 // JSON Web Token signature algorithms
 enum class JwtAlgo
 {
+    // Auto-selects a suitable algorithm. If public keys are used, uses them to generate the signatures. If
+    // none are specified, uses a random symmetric key.
+    AUTO,
+
     // HMAC with SHA-2
     // https://datatracker.ietf.org/doc/html/rfc7518#section-3.2
     HS256,

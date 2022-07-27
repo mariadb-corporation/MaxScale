@@ -192,6 +192,7 @@ bool Config::Specification::validate(const ConfigParameters& params,
     case mxs::JwtAlgo::HS256:
     case mxs::JwtAlgo::HS384:
     case mxs::JwtAlgo::HS512:
+    case mxs::JwtAlgo::AUTO:
         // No need for private keys
         break;
 
@@ -592,6 +593,7 @@ config::ParamEnum<mxs::JwtAlgo> Config::s_admin_jwt_algorithm(
     "admin_jwt_algorithm",
     "JWT signature algorithm",
     {
+        {mxs::JwtAlgo::AUTO, "auto"},
         {mxs::JwtAlgo::HS256, "HS256"},
         {mxs::JwtAlgo::HS384, "HS384"},
         {mxs::JwtAlgo::HS512, "HS512"},
@@ -607,7 +609,7 @@ config::ParamEnum<mxs::JwtAlgo> Config::s_admin_jwt_algorithm(
         {mxs::JwtAlgo::ED25519, "ED25519"},
         {mxs::JwtAlgo::ED448, "ED448"},
     },
-    mxs::JwtAlgo::HS256);
+    mxs::JwtAlgo::AUTO);
 
 config::ParamString Config::s_admin_jwt_key(
     &Config::s_specification,

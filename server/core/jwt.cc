@@ -16,6 +16,10 @@
 #include <jwt-cpp/jwt.h>
 #include <random>
 #include <openssl/rand.h>
+#include <openssl/pem.h>
+#include <openssl/bio.h>
+#include <openssl/ec.h>
+#include <openssl/obj_mac.h>
 
 #include <maxbase/assert.hh>
 #include <maxbase/filesystem.hh>
@@ -123,6 +127,92 @@ void check_key(const std::string& key, size_t bits)
     }
 }
 
+mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& key)
+{
+    mxs::JwtAlgo algo = mxs::JwtAlgo::HS256;
+
+    if (key.empty())
+    {
+        MXB_NOTICE("Using HS256 for JWT signatures");
+        return algo;
+    }
+
+    BIO* b = BIO_new_mem_buf(key.data(), key.size());
+
+    if (EVP_PKEY* pk = PEM_read_bio_PrivateKey(b, nullptr, nullptr, nullptr))
+    {
+        switch (EVP_PKEY_id(pk))
+        {
+        case EVP_PKEY_RSA:
+        case EVP_PKEY_RSA2:
+#ifdef OPENSSL_1_1
+        case EVP_PKEY_RSA_PSS:
+#endif
+            MXB_NOTICE("Using PS256 for JWT signatures");
+            algo = mxs::JwtAlgo::PS256;
+            break;
+
+        case EVP_PKEY_EC:
+            if (EC_KEY* ec = EVP_PKEY_get1_EC_KEY(pk))
+            {
+                if (const EC_GROUP* grp = EC_KEY_get0_group(ec))
+                {
+                    int nid = EC_GROUP_get_curve_name(grp);
+
+                    switch (nid)
+                    {
+                    case NID_X9_62_prime256v1:
+                        MXB_NOTICE("Using ES256 for JWT signatures");
+                        algo = mxs::JwtAlgo::ES256;
+                        break;
+
+                    case NID_secp384r1:
+                        MXB_NOTICE("Using ES384 for JWT signatures");
+                        algo = mxs::JwtAlgo::ES384;
+                        break;
+
+                    case NID_secp521r1:
+                        MXB_NOTICE("Using ES512 for JWT signatures");
+                        algo = mxs::JwtAlgo::ES512;
+                        break;
+
+                    default:
+                        MXB_INFO("Cannot auto-detect EC curve, unknown NID: %d", nid);
+                        break;
+                    }
+                }
+
+                EC_KEY_free(ec);
+            }
+            break;
+
+#ifdef OPENSSL_1_1
+        case EVP_PKEY_ED25519:
+            MXB_NOTICE("Using ED25519 for JWT signatures");
+            algo = mxs::JwtAlgo::ED25519;
+            break;
+
+        case EVP_PKEY_ED448:
+            MXB_NOTICE("Using ED448 for JWT signatures");
+            algo = mxs::JwtAlgo::ED448;
+            break;
+
+#endif
+        default:
+            break;
+        }
+    }
+
+    BIO_free(b);
+
+    if (algo == mxs::JwtAlgo::HS256)
+    {
+        MXB_NOTICE("Could not auto-detect JWT signature algorithm, using HS256 for JWT signatures.");
+    }
+
+    return algo;
+}
+
 struct ThisUnit
 {
     std::unique_ptr<Jwt> jwt;
@@ -144,20 +234,29 @@ bool init()
     std::string cert;
     std::string err;
 
-    if (is_pubkey_alg(cnf.admin_jwt_algorithm))
+    if (!cnf.admin_ssl_key.empty())
     {
         if (std::tie(key, err) = mxb::load_file<std::string>(cnf.admin_ssl_key); !err.empty())
         {
             MXB_ERROR("Failed to load REST API private key: %s", err.c_str());
             return false;
         }
-        else if (std::tie(cert, err) = mxb::load_file<std::string>(cnf.admin_ssl_cert); !err.empty())
+
+        if (std::tie(cert, err) = mxb::load_file<std::string>(cnf.admin_ssl_cert); !err.empty())
         {
             MXB_ERROR("Failed to load REST API public certificate: %s", err.c_str());
             return false;
         }
     }
-    else if (!cnf.admin_jwt_key.empty())
+
+    mxs::JwtAlgo algo = cnf.admin_jwt_algorithm;
+
+    if (algo == mxs::JwtAlgo::AUTO)
+    {
+        algo = auto_detect_algorithm(cnf, key);
+    }
+
+    if (!is_pubkey_alg(algo) && !cnf.admin_jwt_key.empty())
     {
         auto km = mxs::key_manager();
         mxb_assert(km);
@@ -175,7 +274,7 @@ bool init()
 
     try
     {
-        switch (cnf.admin_jwt_algorithm)
+        switch (algo)
         {
         case mxs::JwtAlgo::HS256:
             check_key(key, 256);

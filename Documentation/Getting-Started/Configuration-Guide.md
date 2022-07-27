@@ -1382,8 +1382,8 @@ the requested operation. Leave or set both empty to disable PAM for REST-API.
 - **Type**: [enum](#enumerations)
 - **Mandatory**: No
 - **Dynamic**: No
-- **Values**: `HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`, `ED25519`, `ED448`
-- **Default**: `HS256`
+- **Values**: `auto`, `HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`, `ED25519`, `ED448`
+- **Default**: `auto`
 
 The signature algorithm used by the MaxScale REST API when generating JSON Web
 Tokens.
@@ -1410,6 +1410,14 @@ multiple MaxScale instaces as the shared secret can be stored in a key
 management system.
 
 The possible values for this parameter are:
+
+* `auto`
+
+  * MaxScale will attempt to detect the best algorithm to use for
+    signatures. The algorithm used depends on the private key type: RSA keys use
+    `PS256`, EC keys use the `ES256`, `ES384` or `ES512` depending on the curve,
+    Ed25519 keys use `ED25519` and Ed448 keys uses `ED448`. If MaxScale cannot
+    auto-detect the key type, it falls back to `HS256` as the default algorithm.
 
 * `HS256`, `HS384` or `HS512`
 
