@@ -4,7 +4,7 @@
         "hostname" : "node000",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "REPL_BACKEND"
         ],
@@ -23,7 +23,7 @@
         "hostname" : "node001",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "REPL_BACKEND"
         ],
@@ -41,7 +41,7 @@
         "hostname" : "node002",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "REPL_BACKEND"
         ],
@@ -59,7 +59,7 @@
         "hostname" : "node003",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "REPL_BACKEND"
         ],
@@ -77,7 +77,7 @@
         "hostname" : "node004",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -95,7 +95,7 @@
         "hostname" : "node005",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -113,7 +113,7 @@
         "hostname" : "node006",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -131,7 +131,7 @@
         "hostname" : "node007",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -148,9 +148,8 @@
   {
         "hostname" : "node008",
         "box" : "${backend_box}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -168,7 +167,7 @@
         "hostname" : "node009",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -186,7 +185,7 @@
         "hostname" : "node010",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -204,7 +203,7 @@
         "hostname" : "node011",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -222,7 +221,7 @@
         "hostname" : "node012",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -240,7 +239,7 @@
         "hostname" : "node013",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -258,7 +257,7 @@
         "hostname" : "node013",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "BIG_REPL_BACKEND"
         ],
@@ -276,7 +275,7 @@
         "hostname" : "galera000",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "GALERA_BACKEND"
         ],
@@ -299,7 +298,7 @@
         "hostname" : "galera001",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "GALERA_BACKEND"
         ],
@@ -322,7 +321,7 @@
         "hostname" : "galera002",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "GALERA_BACKEND"
         ],
@@ -345,7 +344,7 @@
         "hostname" : "galera003",
         "box" : "${backend_box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "2",
         "labels" : [
                 "GALERA_BACKEND"
         ],
@@ -368,7 +367,7 @@
         "hostname" : "maxscale",
         "box" : "${box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "4",
         "labels" : [
                 "MAXSCALE"
         ],
@@ -385,7 +384,7 @@
         "hostname" : "maxscale2",
         "box" : "${box}",
         "memory_size" : "${vm_memory}",
-        "cpu_count" : "8",
+        "cpu_count" : "4",
         "labels" : [
                 "SECOND_MAXSCALE"
         ],
