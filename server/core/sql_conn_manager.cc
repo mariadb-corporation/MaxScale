@@ -38,6 +38,19 @@ ConnectionManager::Connection* ConnectionManager::get_connection(const std::stri
     return rval;
 }
 
+std::optional<ConnectionConfig> ConnectionManager::get_configuration(const std::string& id)
+{
+    std::optional<ConnectionConfig> rval;
+    LockGuard guard(m_connection_lock);
+
+    if (auto it = m_connections.find(id); it != m_connections.end())
+    {
+        rval = it->second->config;
+    }
+
+    return rval;
+}
+
 std::string ConnectionManager::add(mxq::MariaDB&& conn, const ConnectionConfig& cnf)
 {
     auto elem = std::make_unique<Connection>(move(conn), cnf);

@@ -20,6 +20,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <optional>
 
 #include <maxbase/jansson.hh>
 #include <maxbase/stopwatch.hh>
@@ -73,6 +74,13 @@ public:
      * @return Pointer to connection when id found and connection is not busy, null otherwise.
      */
     Connection* get_connection(const std::string& id);
+
+    /**
+     * Get the configuration of a connection
+     *
+     * @return The configuration of the given connection if one with the given ID exists
+     */
+    std::optional<ConnectionConfig> get_configuration(const std::string& id);
 
     /**
      * Add a connection to the map.

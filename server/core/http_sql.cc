@@ -512,10 +512,10 @@ HttpResponse clone(const HttpRequest& request)
     auto cb = [id, host = string(request.host()), persist, max_age]() {
         HttpResponse response;
 
-        if (auto managed_conn = this_unit.manager.get_connection(id))
+        if (auto config = this_unit.manager.get_configuration(id))
         {
             std::string err;
-            std::string new_id = create_connection(managed_conn->config, &err);
+            std::string new_id = create_connection(config.value(), &err);
             if (!new_id.empty())
             {
                 response = create_connect_response(host, new_id, persist, max_age);
@@ -524,12 +524,10 @@ HttpResponse clone(const HttpRequest& request)
             {
                 response = HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
             }
-
-            managed_conn->release();
         }
         else
         {
-            response = create_error(mxb::string_printf("ID %s not found or is busy.", id.c_str()),
+            response = create_error(mxb::string_printf("ID %s not found.", id.c_str()),
                                     MHD_HTTP_SERVICE_UNAVAILABLE);
         }
 
