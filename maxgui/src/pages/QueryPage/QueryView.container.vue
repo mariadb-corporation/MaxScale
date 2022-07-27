@@ -1,26 +1,38 @@
 <template>
-    <div
-        v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="d-flex flex-column fill-height worksheet-wrapper"
-        @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
-    >
-        <wke-nav-ctr />
-        <keep-alive>
-            <wke-ctr
-                v-if="active_wke_id"
-                ref="wke"
-                :key="active_wke_id"
-                :ctrDim="ctrDim"
-                @onCtrlEnter="onCtrlEnter"
-                @onCtrlShiftEnter="onCtrlShiftEnter"
-                @onCtrlD="onCtrlD"
-                @onCtrlO="onCtrlO"
-                @onCtrlS="onCtrlS"
-                @onCtrlShiftS="onCtrlShiftS"
-            />
-        </keep-alive>
+    <div v-resize.quiet="setCtrDim" class="fill-height query-view-wrapper">
+        <div
+            ref="paneContainer"
+            class="query-view d-flex flex-column fill-height"
+            :class="{ 'query-view--fullscreen': is_fullscreen }"
+        >
+            <v-card
+                v-shortkey="QUERY_SHORTCUT_KEYS"
+                class="fill-height d-flex flex-column fill-height worksheet-wrapper"
+                :loading="is_validating_conn"
+                @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
+            >
+                <div class="d-flex flex-column fill-height worksheet-wrapper">
+                    <wke-nav-ctr />
+                    <keep-alive>
+                        <wke-ctr
+                            v-if="active_wke_id"
+                            ref="wke"
+                            :key="active_wke_id"
+                            :ctrDim="ctrDim"
+                            @onCtrlEnter="onCtrlEnter"
+                            @onCtrlShiftEnter="onCtrlShiftEnter"
+                            @onCtrlD="onCtrlD"
+                            @onCtrlO="onCtrlO"
+                            @onCtrlS="onCtrlS"
+                            @onCtrlShiftS="onCtrlShiftS"
+                        />
+                    </keep-alive>
+                </div>
+            </v-card>
+        </div>
     </div>
 </template>
+
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -28,34 +40,50 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-07-11
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 import { mapGetters, mapState } from 'vuex'
 import Wke from './Wke.container.vue'
 import WkeNav from './WkeNav.container.vue'
 
 export default {
-    name: 'worksheets',
+    name: 'query-view-ctr',
     components: {
         'wke-ctr': Wke,
         'wke-nav-ctr': WkeNav,
     },
-    props: {
-        ctrDim: { type: Object, required: true },
+    data() {
+        return {
+            ctrDim: {},
+        }
     },
     computed: {
         ...mapState({
+            is_fullscreen: state => state.wke.is_fullscreen,
+            is_validating_conn: state => state.queryConn.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
             active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
     },
+    watch: {
+        is_fullscreen() {
+            this.$help.doubleRAF(() => this.setCtrDim())
+        },
+    },
+    created() {
+        this.$help.doubleRAF(() => this.setCtrDim())
+    },
+
     methods: {
+        setCtrDim() {
+            const { width, height } = this.$refs.paneContainer.getBoundingClientRect()
+            this.ctrDim = { width, height }
+        },
         async wkeShortKeyHandler(e) {
             switch (e.srcKey) {
                 case 'win-ctrl-d':
@@ -116,3 +144,28 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+$header-height: 50px;
+$app-sidebar-width: 50px;
+.query-view-wrapper {
+    // ignore root padding
+    margin-left: -36px;
+    margin-top: -24px;
+    width: calc(100% + 72px);
+    height: calc(100% + 48px);
+    .query-view {
+        background: #ffffff;
+        &--fullscreen {
+            padding: 0px !important;
+            width: 100%;
+            height: calc(100% + #{$header-height});
+            margin-left: -#{$app-sidebar-width};
+            margin-top: -#{$header-height};
+            z-index: 7;
+            position: fixed;
+            overflow: hidden;
+        }
+    }
+}
+</style>

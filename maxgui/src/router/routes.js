@@ -28,7 +28,8 @@ const Clusters = () => import(/* webpackChunkName: "vis-clusters" */ 'pages/Visu
 
 //Query editor views
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
-const QueryView = () => import(/* webpackChunkName: "query-view" */ 'pages/QueryPage/QueryView')
+const QueryView = () =>
+    import(/* webpackChunkName: "query-view" */ 'pages/QueryPage/QueryView.container')
 
 // Other views
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
