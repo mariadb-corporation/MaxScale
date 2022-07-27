@@ -908,7 +908,7 @@ void test_admin_users(TestConnections& test)
     test.tprintf("Delete user on first MaxScale, login should fail on both");
     test.check_maxctrl("destroy user bob");
     expect_sync(test, ++version, 2);
-    expect_equal(test, "users/inet", "/data");
+    expect_equal(test, "users/inet/bob", "");
     login_ok("admin", "mariadb");
     login_err("bob", "bob4");
     login_err("bob", "bob3");
