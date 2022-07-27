@@ -38,59 +38,18 @@ describe('Worksheets', () => {
     it('Should pass accurate data to wke-ctr component via props', () => {
         wrapper = mountFactory({
             computed: {
-                active_wke_id: () => wrapper.vm.worksheets_arr[0].id,
+                active_wke_id: () => 'WORKSHEET_123',
             },
         })
         const wke = wrapper.findComponent({ name: 'wke-ctr' })
         expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.$props.ctrDim)
-    })
-
-    it('Should not show delete worksheet button when worksheets_arr length <= 1', () => {
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(1)
-        expect(wrapper.find('.del-wke-btn').exists()).to.be.equal(false)
-    })
-
-    it('Should show delete worksheet button when worksheets_arr length > 1', () => {
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(1)
-        // stubs worksheets_arr
-        wrapper = mountFactory({
-            computed: {
-                worksheets_arr: () => [
-                    ...wrapper.vm.worksheets_arr,
-                    { ...wrapper.vm.worksheets_arr[0], id: 'dummy_1234' },
-                ],
-            },
-        })
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(2)
-        expect(wrapper.find('.del-wke-btn').exists()).to.be.equal(true)
-    })
-
-    it('Should not show a tooltip when hovering a worksheet tab has no connection', () => {
-        expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.true
-    })
-
-    it('Should show a tooltip when hovering a worksheet tab has a connection', () => {
-        wrapper = mountFactory({
-            computed: {
-                getWkeFirstSessConnByWkeId: () => () => ({
-                    id: '0',
-                    name: 'server_0',
-                    type: 'servers',
-                }),
-            },
-        })
-        expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.false
     })
 })
 
 describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
     let wrapper, sessionToolbar, wke, handleRunSpy, openSnippetDlgSpy, handleFileOpenSpy
     beforeEach(() => {
-        wrapper = mountFactory({
-            computed: {
-                supportFs: () => false,
-            },
-        })
+        wrapper = mountFactory()
         sessionToolbar = wrapper.vm.$refs.wke.$refs.sessionToolbar
         wke = wrapper.findComponent({ name: 'wke-ctr' })
         handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
