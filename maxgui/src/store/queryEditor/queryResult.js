@@ -108,6 +108,7 @@ export default {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
                     payload: {
+                        data: {},
                         request_sent_time,
                         total_duration: 0,
                         loading_query_result: true,
