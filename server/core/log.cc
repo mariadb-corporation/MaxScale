@@ -19,6 +19,7 @@
 #include <atomic>
 #include <cinttypes>
 #include <fstream>
+#include <deque>
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-journal.h>
@@ -41,6 +42,7 @@ namespace
 struct ThisUnit
 {
     std::atomic<int> rotation_count {0};
+    mxb::Regex       date{"^([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?)"};
 };
 ThisUnit this_unit;
 
@@ -278,9 +280,8 @@ json_t* line_to_json(std::string line, int id, const std::set<std::string>& prio
 {
     // The timestamp is always the same size followed by three empty spaces. If high precision logging
     // is enabled, the timestamp string is four characters longer.
-    mxb::Regex date("^([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?)");
-    mxb_assert(date.valid());
-    auto captures = date.substr(line);
+    mxb_assert(this_unit.date.valid());
+    auto captures = this_unit.date.substr(line);
 
     if (captures.empty())
     {
@@ -380,6 +381,24 @@ json_t* line_to_json(std::string line, int id, const std::set<std::string>& prio
     return obj;
 }
 
+std::string next_maxlog_line(std::ifstream& file)
+{
+    for (std::string line; std::getline(file, line);)
+    {
+        auto captures = this_unit.date.substr(line);
+
+        if (!captures.empty())
+        {
+            if (line.find_first_of(':', captures[0].size()) != std::string::npos)
+            {
+                return line;
+            }
+        }
+    }
+
+    return "";
+}
+
 std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows,
                                             const std::set<std::string>& priorities)
 {
@@ -389,28 +408,66 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows,
 
     if (file.good())
     {
-        int end = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
-        file.seekg(std::ios_base::beg);
-        int n = cursor.empty() ? std::max(end - rows, 0) : atoi(cursor.c_str());
+        std::deque<std::string> lines;
+        int n = 0;
 
-        for (int i = 0; i < n; i++)
+        if (!cursor.empty())
         {
-            file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        }
+            int skip = atoi(cursor.c_str());
 
-        int num_lines = 0;
-
-        for (std::string line; std::getline(file, line) && num_lines < rows; ++num_lines)
-        {
-            if (json_t* obj = line_to_json(line, n + num_lines, priorities))
+            for (int i = 0; i < skip; i++)
             {
-                json_array_append_new(arr, obj);
+                if (auto line = next_maxlog_line(file); !line.empty())
+                {
+                    ++n;
+                }
+            }
+
+            for (int i = 0; i < rows; i++)
+            {
+                if (auto line = next_maxlog_line(file); !line.empty())
+                {
+                    lines.emplace_back(std::move(line));
+                    ++n;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            auto line = next_maxlog_line(file);
+
+            while (!line.empty())
+            {
+                lines.emplace_back(std::move(line));
+                ++n;
+
+                line = next_maxlog_line(file);
+
+                if ((int)lines.size() > rows)
+                {
+                    lines.pop_front();
+                }
             }
         }
 
-        if (n > 0)
+        int row = n - lines.size();
+        mxb_assert(row >= 0);
+
+        if (row > 0)
         {
-            cursors.prev = std::to_string(std::max(n - rows, 0));
+            cursors.prev = std::to_string(std::max(row - rows, 0));
+        }
+
+        for (const auto& line : lines)
+        {
+            if (json_t* obj = line_to_json(line, row++, priorities))
+            {
+                json_array_append_new(arr, obj);
+            }
         }
 
         cursors.current = std::to_string(n);

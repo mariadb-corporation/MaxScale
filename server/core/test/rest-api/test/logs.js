@@ -80,6 +80,15 @@ describe("Logs", function () {
       res.data.attributes.log.length.should.equal(50);
     });
 
+    it("returns sequential rows", async function () {
+      var res = await request.get(base_url + "/maxscale/logs/data");
+      var log = res.data.attributes.log
+
+      for (var i = 0; i < 50; i++) {
+        expect(Number(log[i].id)).to.equal(Number(log[0].id) + i);
+      }
+    });
+
     it("paginates logs", async function () {
       var page = await request.get(base_url + "/maxscale/logs/data?page[size]=1");
       page.data.attributes.log.length.should.equal(1);
