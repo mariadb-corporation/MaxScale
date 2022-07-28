@@ -13,21 +13,31 @@
 
 import mount from '@tests/unit/setup'
 import Wke from '@/pages/QueryPage/Wke.container.vue'
+import { merge } from 'utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }
+const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
 const mountFactory = opts =>
-    mount({
-        shallow: true,
-        component: Wke,
-        propsData: {
-            ctrDim: dummyCtrDim,
-        },
-        stubs: {
-            'query-editor': "<div class='stub'></div>",
-            'txt-editor-sess-toolbar': "<div class='stub'></div>",
-        },
-        ...opts,
-    })
+    mount(
+        merge(
+            {
+                shallow: true,
+                component: Wke,
+                propsData: {
+                    ctrDim: dummyCtrDim,
+                },
+                computed: {
+                    query_sessions: () => dummy_query_sessions,
+                    getActiveSessionId: () => dummy_query_sessions[0].id,
+                },
+                stubs: {
+                    'query-editor': "<div class='stub'></div>",
+                    'txt-editor-sess-toolbar': "<div class='stub'></div>",
+                },
+            },
+            opts
+        )
+    )
 describe('wke-ctr', () => {
     describe(`Created hook and child component's data communication tests`, () => {
         let wrapper
@@ -76,7 +86,10 @@ describe('wke-ctr', () => {
         Object.keys(fnEvtMap).forEach(key => {
             it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
                 wrapper = mountFactory({ shallow: false, computed: { getIsTxtEditor: () => true } })
-                const spyFn = sinon.spy(wrapper.vm.$refs.txtEditor, key)
+                const spyFn = sinon.spy(
+                    wrapper.vm.$typy(wrapper.vm.$refs, 'txtEditor[0]').safeObject,
+                    key
+                )
                 const sidebar = wrapper.findComponent({ name: 'sidebar-ctr' })
                 let param
                 switch (key) {
@@ -106,18 +119,17 @@ describe('wke-ctr', () => {
             const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'ddl-editor-ctr'
             const hiddenCom = mode === 'TXT_EDITOR' ? 'ddl-editor-ctr' : 'txt-editor-ctr'
             it(`Should render ${renCom}`, () => {
-                const editor = wrapper.findComponent({ name: renCom })
+                const editor = wrapper.findAllComponents({ name: renCom }).at(0)
                 expect(editor.exists()).to.be.true
             })
             it(`Should pass accurate data to ${renCom} via props`, () => {
-                const { dim } = wrapper.findComponent({ name: renCom }).vm.$props
+                const { dim } = wrapper.findAllComponents({ name: renCom }).at(0).vm.$props
                 expect(dim).to.be.deep.equals(
                     wrapper.vm.$data[mode === '' ? 'txtEditorPaneDim' : 'ddlEditorDim']
                 )
             })
             it(`Should not render ${hiddenCom}`, () => {
-                const editor = wrapper.findComponent({ name: hiddenCom })
-                expect(editor.exists()).to.be.false
+                expect(wrapper.findAllComponents({ name: hiddenCom }).length).to.be.equals(0)
             })
         })
     })

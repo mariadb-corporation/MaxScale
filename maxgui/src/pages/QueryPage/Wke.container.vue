@@ -11,9 +11,11 @@
             <template slot="pane-left">
                 <sidebar-ctr
                     :execSqlDlg.sync="execSqlDlg"
-                    @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
-                    @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
-                    @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
+                    @place-to-editor="
+                        $typy($refs, 'txtEditor[0].placeToEditor').safeFunction($event)
+                    "
+                    @on-dragging="$typy($refs, 'txtEditor[0].draggingTxt').safeFunction($event)"
+                    @on-dragend="$typy($refs, 'txtEditor[0].dropTxtToEditor').safeFunction($event)"
                 />
             </template>
             <template slot="pane-right">
@@ -25,20 +27,22 @@
                         <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
                         <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
                     </div>
-                    <keep-alive>
-                        <txt-editor-ctr
-                            v-if="getIsTxtEditor"
-                            ref="txtEditor"
-                            :dim="txtEditorDim"
-                            v-on="$listeners"
-                        />
-                        <ddl-editor-ctr
-                            v-else
-                            ref="ddlEditor"
-                            :dim="ddlEditorDim"
-                            :execSqlDlg.sync="execSqlDlg"
-                            :isExecFailed="isExecFailed"
-                        />
+                    <keep-alive v-for="s in query_sessions" :key="s.id" :max="20">
+                        <template v-if="getActiveSessionId === s.id">
+                            <txt-editor-ctr
+                                v-if="getIsTxtEditor"
+                                ref="txtEditor"
+                                :dim="txtEditorDim"
+                                v-on="$listeners"
+                            />
+                            <ddl-editor-ctr
+                                v-else
+                                ref="ddlEditor"
+                                :dim="ddlEditorDim"
+                                :execSqlDlg.sync="execSqlDlg"
+                                :isExecFailed="isExecFailed"
+                            />
+                        </template>
                     </keep-alive>
                 </div>
             </template>
@@ -118,10 +122,12 @@ export default {
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
+            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
             getIsTxtEditor: 'editor/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
@@ -195,14 +201,16 @@ export default {
             else this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
         setTxtEditorPaneDim() {
-            if (this.$refs.txtEditor.$el) {
-                const { width, height } = this.$refs.txtEditor.$el.getBoundingClientRect()
+            const txtEditor = this.$typy(this.$refs, 'txtEditor[0]').safeObjectOrEmpty
+            if (txtEditor.$el) {
+                const { width, height } = txtEditor.$el.getBoundingClientRect()
                 if (width !== 0 || height !== 0) this.txtEditorDim = { width, height }
             }
         },
         setDdlDim() {
-            if (this.$refs.ddlEditor) {
-                const { width, height } = this.$refs.ddlEditor.$el.getBoundingClientRect()
+            const ddlEditor = this.$typy(this.$refs, 'ddlEditor[0]').safeObjectOrEmpty
+            if (ddlEditor.$el) {
+                const { width, height } = ddlEditor.$el.getBoundingClientRect()
                 if (width !== 0 || height !== 0) this.ddlEditorDim = { width, height }
             }
         },

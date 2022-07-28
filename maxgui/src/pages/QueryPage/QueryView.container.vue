@@ -13,11 +13,10 @@
             >
                 <div class="d-flex flex-column fill-height worksheet-wrapper">
                     <wke-nav-ctr />
-                    <keep-alive>
+                    <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
                         <wke-ctr
-                            v-if="active_wke_id"
+                            v-if="active_wke_id === wke.id"
                             ref="wke"
-                            :key="active_wke_id"
                             :ctrDim="ctrDim"
                             @onCtrlEnter="onCtrlEnter"
                             @onCtrlShiftEnter="onCtrlShiftEnter"
@@ -67,6 +66,7 @@ export default {
             is_validating_conn: state => state.queryConn.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
             active_wke_id: state => state.wke.active_wke_id,
+            worksheets_arr: state => state.wke.worksheets_arr,
         }),
         ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
     },
@@ -113,7 +113,7 @@ export default {
             }
         },
         getSessionToolbar() {
-            return this.$typy(this.$refs, `wke.$refs.sessionToolbar`).safeObject
+            return this.$typy(this.$refs, `wke[0].$refs.sessionToolbar`).safeObject
         },
         getLoadSql() {
             return this.getSessionToolbar().$refs.loadSql

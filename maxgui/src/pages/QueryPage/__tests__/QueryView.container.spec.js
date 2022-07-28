@@ -26,6 +26,8 @@ const mountFactory = opts =>
                 },
                 computed: {
                     is_validating_conn: () => false,
+                    worksheets_arr: () => [{ id: 'WORKSHEET_123' }],
+                    active_wke_id: () => 'WORKSHEET_123',
                 },
                 stubs: {
                     'query-editor': "<div class='stub'></div>",
@@ -40,12 +42,8 @@ describe('query-view-ctr', () => {
     let wrapper
 
     it('Should pass accurate data to wke-ctr component via props', () => {
-        wrapper = mountFactory({
-            computed: {
-                active_wke_id: () => 'WORKSHEET_123',
-            },
-        })
-        const wke = wrapper.findComponent({ name: 'wke-ctr' })
+        wrapper = mountFactory()
+        const wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
         expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.$data.ctrDim)
     })
 
@@ -53,8 +51,8 @@ describe('query-view-ctr', () => {
         let wrapper, sessionToolbar, wke, handleRunSpy, openSnippetDlgSpy, handleFileOpenSpy
         beforeEach(() => {
             wrapper = mountFactory()
-            sessionToolbar = wrapper.vm.$refs.wke.$refs.sessionToolbar
-            wke = wrapper.findComponent({ name: 'wke-ctr' })
+            sessionToolbar = wrapper.vm.$refs.wke[0].$refs.sessionToolbar
+            wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
             handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
             openSnippetDlgSpy = sinon.spy(sessionToolbar, 'openSnippetDlg')
             handleFileOpenSpy = sinon.spy(sessionToolbar.$refs.loadSql, 'handleFileOpen')
