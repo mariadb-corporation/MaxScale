@@ -35,13 +35,12 @@ namespace
 // These must match the labels recognized by MDBCI.
 const string label_repl_be = "REPL_BACKEND";
 const string label_galera_be = "GALERA_BACKEND";
-const string label_big_be = "BIG_REPL_BACKEND";
 const string label_2nd_mxs = "SECOND_MAXSCALE";
 const string label_cs_be = "COLUMNSTORE_BACKEND";
 const string label_clx_be = "XPAND_BACKEND";
 
 const StringSet recognized_mdbci_labels =
-{label_repl_be, label_big_be, label_galera_be, label_2nd_mxs, label_cs_be, label_clx_be};
+{label_repl_be, label_galera_be, label_2nd_mxs, label_cs_be, label_clx_be};
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
@@ -1916,8 +1915,7 @@ bool TestConnections::initialize_nodes()
     bool use_repl = m_required_mdbci_labels.count(label_repl_be) > 0;
     if (use_repl)
     {
-        bool big_repl = m_required_mdbci_labels.count(label_big_be) > 0;
-        int n_min_expected = big_repl ? 15 : 4;
+        int n_min_expected = 4;
         repl = new mxt::ReplicationCluster(&m_shared);
         initialize_cluster(repl, n_min_expected, m_use_ipv6, backend_ssl);
     }
