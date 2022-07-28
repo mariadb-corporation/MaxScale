@@ -190,6 +190,7 @@ export function getErrorsArr(error) {
     // async cmd response has error messages inside meta object
     if (!isUndefined(error.response.data.meta) && !isUndefined(error.response.data.meta.errors))
         return error.response.data.meta.errors.map(ele => `${ele.detail}`)
+    return []
 }
 
 /**
