@@ -5,6 +5,7 @@
         :colsHasRowSpan="2"
         :search="search_keyword"
         sortBy="groupId"
+        :itemsPerPage="-1"
     >
         <template v-slot:header-append-groupId>
             <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
