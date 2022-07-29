@@ -2,51 +2,29 @@
 
 ## Developer settings for development env
 
-#### Use webpack dev-server with https
+#### Config local build path and API
 
-When admin_secure_gui=true under the [maxscale] section of the MaxScale
-configuration file, jwt token will be sent over https only. Note: MaxScale also
-needs to be set up to use TLS/SSL. Check the
-[Configuration Guide](../Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
-
-By default, when compiles and hot-reloads for development, maxgui is configured
-to be hosted without using https.
-
-To use https in development for testing purpose, create `dev-certs` directory
-with local ssl certificates. The certificates can be created using
-[mkcert](https://github.com/FiloSottile/mkcert). Then add the following
-properties to `devServer` in `vue.config.js`:
+Create `.env.development` file and add the following lines
 
 ```
-https: {
-    key: fs.readFileSync('./dev-certs/dev-cert-key.pem'),
-    cert: fs.readFileSync('./dev-certs/dev-cert.pem'),
-},
-public: 'https://localhost:8000/',
+buildPath=/home/user/maxscale-dev/share/maxscale
+httpsKey=/home/user/cert/localhost-key.pem
+httpsCert=/home/user/cert/localhost.pem
+VUE_APP_API=https://127.0.0.1:8989
 ```
 
-#### Disable CORS when sending request to MaxScale REST API
+`buildPath`: Indicate your maxscale's Data directory absolute path.
 
-CORS is bypassed by using proxy in webpack devServer. Check `vue.config.js`
-file, `devServer` section for more configuration
+`httpsKey, httpsCert`: When admin_secure_gui=true under the [maxscale] section of the MaxScale configuration file, jwt token will be sent over https only. Note: MaxScale also
+needs to be set up to use TLS/SSL. Check the [Configuration Guide](../Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key). Local certificates can be created using [mkcert](https://github.com/FiloSottile/mkcert).
 
-#### Config build path
+`VUE_APP_API`: MaxScale REST API address
 
-Add .env.local file that contains `buildPath=dataDir`
-
-`dataDir` indicates your maxscale's Data directory absolute path. e.g.
-`/home/user/maxscale/share/maxscale/`
-
-After compiling and minifying for production, the GUI can be accessed via
-http://`admin_host`:`admin_port`
-
-The default is: [http://127.0.0.1:8989](http://127.0.0.1:8989)
-
-If maxscale is running, you need to shut it down and then start it again
+After compiling, the GUI can be accessed via https://localhost:8000
 
 ## Project setup
 
-#### Install dependencies packages to node_modules
+#### Install dependencies
 
 ```
 npm ci
@@ -60,7 +38,7 @@ npm run serve
 
 #### Compiles and minifies for production
 
-Check [Config build path](#config-build-path) before building
+Check [Config local build path and API](#config-local-build-path-and-api) to config build path before building
 
 ```
 npm run build
@@ -110,6 +88,9 @@ mutations can be as follows:
 -   SET\_
 -   ADD\_
 -   REMOVE\_
+-   PATCH\_
+-   UPDATE\_
+-   DELETE\_
 
 ### Actions
 

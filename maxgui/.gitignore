@@ -8,9 +8,9 @@ selenium-debug.log
 chromedriver.log
 geckodriver.log
 report.*
-# local env files
-.env.local
-.env.*.local
+# dev env files
+.env.development
+.env.*.development
 
 # Log files
 npm-debug.log*
