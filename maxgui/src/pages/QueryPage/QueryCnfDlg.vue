@@ -12,20 +12,20 @@
                 <v-row class="my-0 mx-n1">
                     <v-col cols="12" class="pa-1">
                         <label class="field__label color text-small-text label-required">
-                            {{ $t('maxRows') }}
+                            {{ $t('rowLimit') }}
                         </label>
                         <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
-                        <max-rows-ctr
+                        <row-limit-ctr
                             :key="isOpened"
                             :height="36"
                             hide-details="auto"
-                            class="std error--text__bottom mb-2 maxRows"
-                            @change="config.maxRows = $event"
+                            class="std error--text__bottom mb-2 rowLimit"
+                            @change="config.rowLimit = $event"
                         />
                         <v-icon size="16" color="warning" class="mr-2">
                             $vuetify.icons.alertWarning
                         </v-icon>
-                        <small v-html="$t('info.maxRows')" />
+                        <small v-html="$t('info.rowLimit')" />
                     </v-col>
                     <v-col cols="12" class="pa-1 mb-3">
                         <label class="field__label color text-small-text label-required">
@@ -85,11 +85,11 @@
  * Emits
  * $emit('confirm-save', v:object): new cnf data
  */
-import MaxRows from './MaxRows.container.vue'
+import RowLimit from './RowLimit.container.vue'
 export default {
     name: 'query-cnf-dlg',
     components: {
-        'max-rows-ctr': MaxRows,
+        'row-limit-ctr': RowLimit,
     },
     props: {
         value: { type: Boolean, required: true },
@@ -97,8 +97,8 @@ export default {
             type: Object,
             validator(obj) {
                 return (
-                    'query_max_rows' in obj &&
-                    typeof obj.query_max_rows === 'number' &&
+                    'query_row_limit' in obj &&
+                    typeof obj.query_row_limit === 'number' &&
                     'query_confirm_flag' in obj &&
                     typeof obj.query_confirm_flag === 'number' &&
                     'query_history_expired_time' in obj &&
@@ -135,7 +135,7 @@ export default {
         },
         defCnf() {
             return {
-                maxRows: this.cnf.query_max_rows,
+                rowLimit: this.cnf.query_row_limit,
                 showQueryConfirm: Boolean(this.cnf.query_confirm_flag),
                 queryHistoryRetentionPeriod: this.$help.daysDiff(
                     this.cnf.query_history_expired_time
@@ -165,7 +165,7 @@ export default {
 
         onSave() {
             this.$emit('confirm-save', {
-                query_max_rows: this.config.maxRows,
+                query_row_limit: this.config.rowLimit,
                 query_confirm_flag: Number(this.config.showQueryConfirm),
                 query_history_expired_time: this.$help.addDaysToNow(
                     this.config.queryHistoryRetentionPeriod

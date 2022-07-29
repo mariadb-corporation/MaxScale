@@ -63,7 +63,7 @@ export default {
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
-                    max_rows: rootState.persisted.query_max_rows,
+                    max_rows: rootState.persisted.query_row_limit,
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
@@ -132,7 +132,7 @@ export default {
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
-                    max_rows: rootState.persisted.query_max_rows,
+                    max_rows: rootState.persisted.query_row_limit,
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)

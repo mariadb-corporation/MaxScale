@@ -17,7 +17,7 @@ import { getErrMsgEle, inputChangeMock } from '@tests/unit/utils'
 import { addDaysToNow } from 'utils/helpers'
 
 const defCnf = {
-    query_max_rows: 10000,
+    query_row_limit: 10000,
     query_confirm_flag: 1,
     query_history_expired_time: addDaysToNow(30),
     query_show_sys_schemas_flag: 1,
@@ -54,19 +54,19 @@ describe(`QueryCnfDlg - child component's data communication tests `, () => {
         expect(lazyValidation).to.be.false
         expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
     })
-    it(`Should pass accurate data to max-rows-ctr via attrs`, () => {
+    it(`Should pass accurate data to row-limit-ctr via attrs`, () => {
         let wrapper = mountFactory()
-        const input = wrapper.findComponent({ name: 'max-rows-ctr' })
+        const input = wrapper.findComponent({ name: 'row-limit-ctr' })
         const { height, 'hide-details': hideDetails } = input.vm.$attrs
         expect(input.vm.$vnode.key).to.be.equals(wrapper.vm.isOpened)
         expect(height).to.be.equals(36)
         expect(hideDetails).to.be.equals('auto')
     })
-    it(`Should handle @change event emitted from max-rows-ctr`, () => {
+    it(`Should handle @change event emitted from row-limit-ctr`, () => {
         let wrapper = mountFactory()
-        const newVal = wrapper.vm.$data.config.maxRows + 123
-        wrapper.findComponent({ name: 'max-rows-ctr' }).vm.$emit('change', newVal)
-        expect(wrapper.vm.$data.config.maxRows).to.be.equals(newVal)
+        const newVal = wrapper.vm.$data.config.rowLimit + 123
+        wrapper.findComponent({ name: 'row-limit-ctr' }).vm.$emit('change', newVal)
+        expect(wrapper.vm.$data.config.rowLimit).to.be.equals(newVal)
     })
 })
 
@@ -81,7 +81,7 @@ describe(`QueryCnfDlg - tests after dialog is opened `, () => {
     it(`Should return accurate value for hasChanged`, async () => {
         await wrapper.setProps({ value: true }) // open dialog
         expect(wrapper.vm.hasChanged).to.be.false // no changes to form yet
-        await mockChangingConfig({ wrapper, key: 'maxRows', value: 1 })
+        await mockChangingConfig({ wrapper, key: 'rowLimit', value: 1 })
         expect(wrapper.vm.hasChanged).to.be.true
     })
 })
@@ -137,7 +137,7 @@ describe(`QueryCnfDlg - form input tests`, () => {
         expect(wrapper.emitted()).to.have.property('confirm-save')
         const arg = wrapper.emitted()['confirm-save'][0][0]
         const keys = [
-            'query_max_rows',
+            'query_row_limit',
             'query_confirm_flag',
             'query_history_expired_time',
             'query_show_sys_schemas_flag',

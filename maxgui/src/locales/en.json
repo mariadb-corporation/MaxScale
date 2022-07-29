@@ -154,7 +154,7 @@
     "hide": "Hide",
     "show": "Show",
     "visualizedConfig": "{action} visualized configuration",
-    "maxRows": "Max rows",
+    "rowLimit": "Row limit",
     "showQueryConfirm": "Show confirmation before executing the statements",
     "showSysSchemas": "Show system schemas",
     "exportChart": "Export chart",
@@ -311,7 +311,7 @@
     "info": {
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
-        "maxRows": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
+        "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
         "disconnectAll": "You have opened connections, uncheck the box below to keep them open.",
         "notFoundConn": "Connection is not found, please reconnect",
         "connSuccessfully": "Connected successfully",

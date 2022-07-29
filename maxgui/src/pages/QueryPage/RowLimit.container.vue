@@ -1,7 +1,7 @@
 <template>
-    <max-rows
+    <row-limit
         v-model="value"
-        :items="SQL_DEF_MAX_ROWS_OPTS"
+        :items="SQL_DEF_ROW_LIMIT_OPTS"
         v-bind="{ ...$attrs }"
         v-on="$listeners"
     />
@@ -26,19 +26,19 @@
  * $emit('change', v:number): new value
  */
 import { mapState } from 'vuex'
-import MaxRows from './MaxRows.vue'
+import RowLimit from './RowLimit.vue'
 export default {
-    name: 'max-rows-ctr',
-    components: { MaxRows },
+    name: 'row-limit-ctr',
+    components: { RowLimit },
     inheritAttrs: false,
     computed: {
         ...mapState({
-            SQL_DEF_MAX_ROWS_OPTS: state => state.app_config.SQL_DEF_MAX_ROWS_OPTS,
-            query_max_rows: state => state.persisted.query_max_rows,
+            SQL_DEF_ROW_LIMIT_OPTS: state => state.app_config.SQL_DEF_ROW_LIMIT_OPTS,
+            query_row_limit: state => state.persisted.query_row_limit,
         }),
         value: {
             get() {
-                return this.query_max_rows
+                return this.query_row_limit
             },
             set(value) {
                 this.$emit('change', value)

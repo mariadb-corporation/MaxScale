@@ -48,26 +48,26 @@ describe(`txt-editor-sess-toolbar`, () => {
             expect(onSave).to.be.equals(wrapper.vm.confDlg.onSave)
             expect(closeImmediate).to.be.true
         })
-        it(`Should render max-rows-ctr`, () => {
+        it(`Should render row-limit-ctr`, () => {
             wrapper = mountFactory({ shallow: true })
-            const input = wrapper.findComponent({ name: 'max-rows-ctr' })
+            const input = wrapper.findComponent({ name: 'row-limit-ctr' })
             expect(input.exists()).to.be.true
         })
-        it(`Should call SET_QUERY_MAX_ROW when @change event is emitted
-        from max-rows-ctr`, () => {
+        it(`Should call SET_QUERY_ROW_LIMIT when @change event is emitted
+        from row-limit-ctr`, () => {
             let callCount = 0,
                 arg
             wrapper = mountFactory({
                 shallow: true,
                 methods: {
-                    SET_QUERY_MAX_ROW: val => {
+                    SET_QUERY_ROW_LIMIT: val => {
                         callCount++
                         arg = val
                     },
                 },
             })
             const newVal = 123
-            wrapper.findComponent({ name: 'max-rows-ctr' }).vm.$emit('change', newVal)
+            wrapper.findComponent({ name: 'row-limit-ctr' }).vm.$emit('change', newVal)
             expect(callCount).to.be.equals(1)
             expect(arg).to.be.equals(newVal)
         })

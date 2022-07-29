@@ -454,7 +454,7 @@ export default {
                 let stmt_err_msg_obj = {}
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
-                    max_rows: rootState.persisted.query_max_rows,
+                    max_rows: rootState.persisted.query_row_limit,
                 })
                 const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
                 const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)

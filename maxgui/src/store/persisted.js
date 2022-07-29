@@ -18,7 +18,7 @@ export default {
     state: {
         refresh_rate_by_route_group: APP_CONFIG.DEF_REFRESH_RATE_BY_GROUP,
         // QUery toolbar's states
-        query_max_rows: 10000,
+        query_row_limit: 10000,
         query_confirm_flag: 1,
         query_history: [],
         query_snippets: [], //aka query snippets
@@ -29,8 +29,8 @@ export default {
         UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
             state.refresh_rate_by_route_group[group] = payload
         },
-        SET_QUERY_MAX_ROW(state, payload) {
-            state.query_max_rows = payload
+        SET_QUERY_ROW_LIMIT(state, payload) {
+            state.query_row_limit = payload
         },
         SET_QUERY_CONFIRM_FLAG(state, payload) {
             state.query_confirm_flag = payload // payload is either 0 or 1

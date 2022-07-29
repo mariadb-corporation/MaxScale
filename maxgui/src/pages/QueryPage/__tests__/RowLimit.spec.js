@@ -12,30 +12,30 @@
  */
 
 import mount from '@tests/unit/setup'
-import MaxRows from '@/pages/QueryPage/MaxRows'
+import RowLimit from '@/pages/QueryPage/RowLimit'
 import { getErrMsgEle } from '@tests/unit/utils'
 
 const mountFactory = opts =>
     mount({
         shallow: false,
-        component: MaxRows,
+        component: RowLimit,
         ...opts,
     })
 
-describe(`MaxRows - created hook and data communication tests`, () => {
+describe(`row-limit - created hook and data communication tests`, () => {
     let wrapper
     it(`Should pass accurate data to v-combobox via props`, () => {
-        const SQL_DEF_MAX_ROWS_OPTS = [10, 50, 100]
+        const SQL_DEF_ROW_LIMIT_OPTS = [10, 50, 100]
         const mockvalue = 1000
         wrapper = mountFactory({
             shallow: true,
             propsData: { value: mockvalue },
-            attrs: { items: SQL_DEF_MAX_ROWS_OPTS },
+            attrs: { items: SQL_DEF_ROW_LIMIT_OPTS },
         })
         const dropdown = wrapper.findComponent({ name: 'v-combobox' })
         const { value, items } = dropdown.vm.$props
         expect(value).to.be.equals(mockvalue)
-        expect(items).to.be.deep.equals(SQL_DEF_MAX_ROWS_OPTS)
+        expect(items).to.be.deep.equals(SQL_DEF_ROW_LIMIT_OPTS)
     })
     describe(`Input validation tests`, () => {
         let wrapper, dropdown
@@ -47,7 +47,7 @@ describe(`MaxRows - created hook and data communication tests`, () => {
             await wrapper.vm.onInput({ srcElement: { value: '' } })
             wrapper.vm.$nextTick(() => {
                 expect(getErrMsgEle(dropdown).text()).to.be.equals(
-                    wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('maxRows') })
+                    wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('rowLimit') })
                 )
             })
         })

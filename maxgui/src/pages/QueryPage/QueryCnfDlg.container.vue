@@ -2,7 +2,7 @@
     <query-cnf-dlg
         v-bind="{ ...$attrs }"
         :cnf="{
-            query_max_rows,
+            query_row_limit,
             query_confirm_flag,
             query_history_expired_time,
             query_show_sys_schemas_flag,
@@ -35,7 +35,7 @@ export default {
     inheritAttrs: false,
     computed: {
         ...mapState({
-            query_max_rows: state => state.persisted.query_max_rows,
+            query_row_limit: state => state.persisted.query_row_limit,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             query_history_expired_time: state => state.persisted.query_history_expired_time,
             query_show_sys_schemas_flag: state => state.persisted.query_show_sys_schemas_flag,
@@ -43,13 +43,13 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
+            SET_QUERY_ROW_LIMIT: 'persisted/SET_QUERY_ROW_LIMIT',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'persisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
             SET_QUERY_HISTORY_EXPIRED_TIME: 'persisted/SET_QUERY_HISTORY_EXPIRED_TIME',
         }),
         save(cnf) {
-            this.SET_QUERY_MAX_ROW(cnf.query_max_rows)
+            this.SET_QUERY_ROW_LIMIT(cnf.query_row_limit)
             this.SET_QUERY_CONFIRM_FLAG(cnf.query_confirm_flag)
             this.SET_QUERY_HISTORY_EXPIRED_TIME(cnf.query_history_expired_time)
             this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(cnf.query_show_sys_schemas_flag)

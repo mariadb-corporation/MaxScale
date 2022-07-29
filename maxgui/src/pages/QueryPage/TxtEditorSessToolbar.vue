@@ -37,19 +37,20 @@
         </v-tooltip>
         <load-sql ref="loadSql" />
         <v-spacer />
-        <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
-            <max-rows-ctr
-                :style="{ maxWidth: '180px' }"
+        <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
+            <row-limit-ctr
+                :style="{ maxWidth: '190px' }"
                 :height="26"
                 hide-details="auto"
-                @change="SET_QUERY_MAX_ROW($event)"
+                :prefix="$t('rowLimit')"
+                @change="SET_QUERY_ROW_LIMIT($event)"
             >
                 <template v-slot:prepend-inner>
                     <label class="field__label color text-small-text">
-                        {{ $t('maxRows') }}
+                        {{ $t('rowLimit') }}
                     </label>
                 </template>
-            </max-rows-ctr>
+            </row-limit-ctr>
         </v-form>
         <confirm-dialog
             v-model="confDlg.isOpened"
@@ -119,7 +120,7 @@
  */
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
-import MaxRows from './MaxRows.container.vue'
+import RowLimit from './RowLimit.container.vue'
 import SessionBtns from './SessionBtns'
 import QueryEditor from '@/components/QueryEditor'
 import LoadSql from './LoadSql'
@@ -127,7 +128,7 @@ import LoadSql from './LoadSql'
 export default {
     name: 'txt-editor-sess-toolbar',
     components: {
-        'max-rows-ctr': MaxRows,
+        'row-limit-ctr': RowLimit,
         'session-btns': SessionBtns,
         'readonly-query-editor': QueryEditor,
         'load-sql': LoadSql,
@@ -165,7 +166,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
         }),
-        isMaxRowsValid: {
+        isRowLimitValid: {
             get() {
                 return this.is_max_rows_valid
             },
@@ -183,7 +184,7 @@ export default {
             pushToQuerySnippets: 'persisted/pushToQuerySnippets',
         }),
         ...mapMutations({
-            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
+            SET_QUERY_ROW_LIMIT: 'persisted/SET_QUERY_ROW_LIMIT',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
