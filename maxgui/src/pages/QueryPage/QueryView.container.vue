@@ -112,23 +112,24 @@ export default {
                     break
             }
         },
-        getSessionToolbar() {
-            return this.$typy(this.$refs, `wke[0].$refs.sessionToolbar`).safeObject
+        getTxtEditorToolbar() {
+            return this.$typy(this.$refs, `wke[0].$refs.txtEditor[0].$refs.txtEditorToolbar`)
+                .safeObject
         },
         getLoadSql() {
-            return this.getSessionToolbar().$refs.loadSql
+            return this.getTxtEditorToolbar().$refs.loadSql
         },
         async onCtrlEnter() {
-            await this.getSessionToolbar().handleRun('selected')
+            await this.getTxtEditorToolbar().handleRun('selected')
         },
         async onCtrlShiftEnter() {
-            await this.getSessionToolbar().handleRun('all')
+            await this.getTxtEditorToolbar().handleRun('all')
         },
         onCtrlD() {
-            this.getSessionToolbar().openSnippetDlg()
+            this.getTxtEditorToolbar().openSnippetDlg()
         },
         onCtrlO() {
-            this.getSessionToolbar().$refs.loadSql.handleFileOpen()
+            this.getTxtEditorToolbar().$refs.loadSql.handleFileOpen()
         },
         async onCtrlS() {
             const loadSql = this.getLoadSql()

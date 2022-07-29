@@ -1,67 +1,71 @@
 <template>
-    <!-- Main panel contains editor pane and visualize-sidebar pane -->
-    <split-pane
-        v-model="mainPanePct"
-        class="main-pane__content"
-        :minPercent="minMainPanePct"
-        split="vert"
-        disable
-    >
-        <template slot="pane-left">
-            <!-- Editor pane contains editor and result pane -->
-            <split-pane
-                ref="editorResultPane"
-                v-model="editorPct"
-                split="horiz"
-                :minPercent="minEditorPct"
-            >
-                <template slot="pane-left">
-                    <split-pane
-                        v-model="queryPanePct"
-                        class="editor__content"
-                        :minPercent="minQueryPanePct"
-                        split="vert"
-                        :disable="isChartMaximized || !showVisChart"
-                    >
-                        <!-- Editor pane contains editor and chart pane -->
-                        <template slot="pane-left">
-                            <query-editor
-                                ref="queryEditor"
-                                v-model="allQueryTxt"
-                                class="editor pt-2 pl-2"
-                                :cmplList="cmplList"
-                                isKeptAlive
-                                @on-selection="SET_SELECTED_QUERY_TXT($event)"
-                                v-on="$listeners"
-                            />
-                        </template>
-                        <template slot="pane-right">
-                            <chart-container
-                                v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
-                                v-model="chartOpt"
-                                :containerHeight="chartContainerHeight"
-                                class="chart-pane"
-                                @close-chart="setDefChartOptState"
-                            />
-                        </template>
-                    </split-pane>
-                </template>
-                <template slot="pane-right">
-                    <query-result
-                        ref="queryResultPane"
-                        :dynDim="resultPaneDim"
-                        class="query-result"
-                        @place-to-editor="placeToEditor"
-                        @on-dragging="draggingTxt"
-                        @on-dragend="dropTxtToEditor"
-                    />
-                </template>
-            </split-pane>
-        </template>
-        <template slot="pane-right">
-            <visualize-sidebar v-model="chartOpt" class="visualize-sidebar" />
-        </template>
-    </split-pane>
+    <div class="fill-height">
+        <!-- ref is needed here so that its parent can call method in it  -->
+        <txt-editor-toolbar-ctr ref="txtEditorToolbar" />
+        <!-- Main panel contains editor pane and visualize-sidebar pane -->
+        <split-pane
+            v-model="mainPanePct"
+            class="main-pane__content"
+            :minPercent="minMainPanePct"
+            split="vert"
+            disable
+        >
+            <template slot="pane-left">
+                <!-- Editor pane contains editor and result pane -->
+                <split-pane
+                    ref="editorResultPane"
+                    v-model="editorPct"
+                    split="horiz"
+                    :minPercent="minEditorPct"
+                >
+                    <template slot="pane-left">
+                        <split-pane
+                            v-model="queryPanePct"
+                            class="editor__content"
+                            :minPercent="minQueryPanePct"
+                            split="vert"
+                            :disable="isChartMaximized || !showVisChart"
+                        >
+                            <!-- Editor pane contains editor and chart pane -->
+                            <template slot="pane-left">
+                                <query-editor
+                                    ref="queryEditor"
+                                    v-model="allQueryTxt"
+                                    class="editor pt-2 pl-2"
+                                    :cmplList="cmplList"
+                                    isKeptAlive
+                                    @on-selection="SET_SELECTED_QUERY_TXT($event)"
+                                    v-on="$listeners"
+                                />
+                            </template>
+                            <template slot="pane-right">
+                                <chart-container
+                                    v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
+                                    v-model="chartOpt"
+                                    :containerHeight="chartContainerHeight"
+                                    class="chart-pane"
+                                    @close-chart="setDefChartOptState"
+                                />
+                            </template>
+                        </split-pane>
+                    </template>
+                    <template slot="pane-right">
+                        <query-result
+                            ref="queryResultPane"
+                            :dynDim="resultPaneDim"
+                            class="query-result"
+                            @place-to-editor="placeToEditor"
+                            @on-dragging="draggingTxt"
+                            @on-dragend="dropTxtToEditor"
+                        />
+                    </template>
+                </split-pane>
+            </template>
+            <template slot="pane-right">
+                <visualize-sidebar v-model="chartOpt" class="visualize-sidebar" />
+            </template>
+        </split-pane>
+    </div>
 </template>
 
 <script>
@@ -77,14 +81,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters, mapMutations, mapState } from 'vuex'
+import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
 import QueryEditor from '@/components/QueryEditor'
 import QueryResult from './QueryResult'
-import { mapGetters, mapMutations, mapState } from 'vuex'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
+
 export default {
     name: 'txt-editor-ctr',
     components: {
+        'txt-editor-toolbar-ctr': TxtEditorToolbar,
         'query-editor': QueryEditor,
         QueryResult,
         'visualize-sidebar': VisualizeSideBar,

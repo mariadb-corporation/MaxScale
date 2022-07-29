@@ -126,7 +126,7 @@ import QueryEditor from '@/components/QueryEditor'
 import LoadSql from './LoadSql'
 
 export default {
-    name: 'txt-editor-sess-toolbar',
+    name: 'txt-editor-toolbar-ctr',
     components: {
         'row-limit-ctr': RowLimit,
         'session-btns': SessionBtns,

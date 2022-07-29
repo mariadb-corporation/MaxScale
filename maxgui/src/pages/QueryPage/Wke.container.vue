@@ -19,32 +19,28 @@
                 />
             </template>
             <template slot="pane-right">
-                <div class="d-flex flex-column fill-height">
-                    <div class="d-flex flex-column">
-                        <session-tabs
-                            :sessionToolbarRef="$typy($refs, 'sessionToolbar').safeObjectOrEmpty"
+                <session-tabs
+                    :txtEditorToolbarRef="
+                        $typy($refs, 'txtEditor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
+                    "
+                />
+                <keep-alive v-for="s in query_sessions" :key="s.id" :max="20">
+                    <template v-if="getActiveSessionId === s.id">
+                        <txt-editor-ctr
+                            v-if="getIsTxtEditor"
+                            ref="txtEditor"
+                            :dim="txtEditorDim"
+                            v-on="$listeners"
                         />
-                        <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
-                        <txt-editor-sess-toolbar v-if="getIsTxtEditor" ref="sessionToolbar" />
-                    </div>
-                    <keep-alive v-for="s in query_sessions" :key="s.id" :max="20">
-                        <template v-if="getActiveSessionId === s.id">
-                            <txt-editor-ctr
-                                v-if="getIsTxtEditor"
-                                ref="txtEditor"
-                                :dim="txtEditorDim"
-                                v-on="$listeners"
-                            />
-                            <ddl-editor-ctr
-                                v-else
-                                ref="ddlEditor"
-                                :dim="ddlEditorDim"
-                                :execSqlDlg.sync="execSqlDlg"
-                                :isExecFailed="isExecFailed"
-                            />
-                        </template>
-                    </keep-alive>
-                </div>
+                        <ddl-editor-ctr
+                            v-else
+                            ref="ddlEditor"
+                            :dim="ddlEditorDim"
+                            :execSqlDlg.sync="execSqlDlg"
+                            :isExecFailed="isExecFailed"
+                        />
+                    </template>
+                </keep-alive>
             </template>
         </split-pane>
         <execute-sql-dialog
@@ -84,7 +80,6 @@ import Sidebar from './Sidebar.container.vue'
 import DDLEditor from './DDLEditor.container.vue'
 import TxtEditor from './TxtEditor.container.vue'
 import SessionTabs from './SessionTabs'
-import TxtEditorSessToolbar from './TxtEditorSessToolbar'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 
 export default {
@@ -94,7 +89,6 @@ export default {
         'txt-editor-ctr': TxtEditor,
         'ddl-editor-ctr': DDLEditor,
         'session-tabs': SessionTabs,
-        'txt-editor-sess-toolbar': TxtEditorSessToolbar,
         'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {

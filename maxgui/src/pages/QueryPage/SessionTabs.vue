@@ -85,7 +85,7 @@ export default {
     name: 'session-tabs',
     components: { 'session-tabs-toolbar': SessionTabsToolbar },
     props: {
-        sessionToolbarRef: { type: Object, required: true },
+        txtEditorToolbarRef: { type: Object, required: true },
     },
     data() {
         return {
@@ -145,7 +145,7 @@ export default {
          * @param {Object} session - session object
          */
         openConfDlg(session) {
-            const loadSql = this.$typy(this.sessionToolbarRef, '$refs.loadSql').safeObject
+            const loadSql = this.$typy(this.txtEditorToolbarRef, '$refs.loadSql').safeObject
             loadSql.confDlg = {
                 ...loadSql.confDlg,
                 isOpened: true,

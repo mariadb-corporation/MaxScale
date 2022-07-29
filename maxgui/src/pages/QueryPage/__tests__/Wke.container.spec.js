@@ -32,7 +32,7 @@ const mountFactory = opts =>
                 },
                 stubs: {
                     'query-editor': "<div class='stub'></div>",
-                    'txt-editor-sess-toolbar': "<div class='stub'></div>",
+                    'txt-editor-toolbar-ctr': "<div class='stub'></div>",
                 },
             },
             opts

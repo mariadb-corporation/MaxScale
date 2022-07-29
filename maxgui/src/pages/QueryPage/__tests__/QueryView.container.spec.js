@@ -48,14 +48,17 @@ describe('query-view-ctr', () => {
     })
 
     describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
-        let wrapper, sessionToolbar, wke, handleRunSpy, openSnippetDlgSpy, handleFileOpenSpy
+        let wrapper, txtEditorToolbar, wke, handleRunSpy, openSnippetDlgSpy, handleFileOpenSpy
         beforeEach(() => {
             wrapper = mountFactory()
-            sessionToolbar = wrapper.vm.$refs.wke[0].$refs.sessionToolbar
+            txtEditorToolbar = wrapper.vm.$typy(
+                wrapper.vm.$refs,
+                `wke[0].$refs.txtEditor[0].$refs.txtEditorToolbar`
+            ).safeObject
             wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
-            handleRunSpy = sinon.spy(sessionToolbar, 'handleRun')
-            openSnippetDlgSpy = sinon.spy(sessionToolbar, 'openSnippetDlg')
-            handleFileOpenSpy = sinon.spy(sessionToolbar.$refs.loadSql, 'handleFileOpen')
+            handleRunSpy = sinon.spy(txtEditorToolbar, 'handleRun')
+            openSnippetDlgSpy = sinon.spy(txtEditorToolbar, 'openSnippetDlg')
+            handleFileOpenSpy = sinon.spy(txtEditorToolbar.$refs.loadSql, 'handleFileOpen')
         })
 
         afterEach(() => {

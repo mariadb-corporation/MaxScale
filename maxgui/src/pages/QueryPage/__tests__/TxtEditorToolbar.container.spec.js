@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TxtEditorSessToolbar from '@/pages/QueryPage/TxtEditorSessToolbar'
+import TxtEditorToolbar from '@/pages/QueryPage/TxtEditorToolbar.container.vue'
 import { merge } from 'utils/helpers'
 
 const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
@@ -21,7 +21,7 @@ const mountFactory = opts =>
         merge(
             {
                 shallow: false,
-                component: TxtEditorSessToolbar,
+                component: TxtEditorToolbar,
                 stubs: {
                     'readonly-query-editor': "<div class='stub'></div>",
                 },
@@ -33,7 +33,7 @@ const mountFactory = opts =>
         )
     )
 const dummy_session_id = dummy_query_sessions[0].id
-describe(`txt-editor-sess-toolbar`, () => {
+describe(`txt-editor-toolbar-ctr`, () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to confirm-dialog`, () => {
@@ -109,7 +109,7 @@ describe(`txt-editor-sess-toolbar`, () => {
         }
         Object.keys(evtMap).forEach(e => {
             it(`Should call ${evtMap[e]}`, () => {
-                let spy = sinon.spy(TxtEditorSessToolbar.methods, evtMap[e])
+                let spy = sinon.spy(TxtEditorToolbar.methods, evtMap[e])
                 wrapper = mountFactory({
                     computed: { getActiveSessionId: () => dummy_session_id },
                 })
