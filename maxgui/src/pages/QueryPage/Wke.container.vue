@@ -24,11 +24,12 @@
                         $typy($refs, 'txtEditor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
                     "
                 />
-                <keep-alive v-for="s in query_sessions" :key="s.id" :max="20">
-                    <template v-if="getActiveSessionId === s.id">
+                <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
+                    <template v-if="getActiveSessionId === session.id">
                         <txt-editor-ctr
                             v-if="getIsTxtEditor"
                             ref="txtEditor"
+                            :session="session"
                             :dim="txtEditorDim"
                             v-on="$listeners"
                         />

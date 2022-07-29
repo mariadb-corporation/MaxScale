@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height">
         <!-- ref is needed here so that its parent can call method in it  -->
-        <txt-editor-toolbar-ctr ref="txtEditorToolbar" />
+        <txt-editor-toolbar-ctr ref="txtEditorToolbar" :session="session" />
         <!-- Main panel contains editor pane and visualize-sidebar pane -->
         <split-pane
             v-model="mainPanePct"
@@ -99,6 +99,7 @@ export default {
     },
     props: {
         dim: { type: Object, required: true },
+        session: { type: Object, required: true },
     },
     data() {
         return {

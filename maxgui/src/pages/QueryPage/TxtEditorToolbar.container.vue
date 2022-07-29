@@ -1,19 +1,13 @@
 <template>
     <div class="session-toolbar d-flex align-center">
-        <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
-            <session-btns
-                v-if="getActiveSessionId === session.id"
-                :session="session"
-                @on-stop-query="stopQuery"
-                @on-run="handleRun(selected_query_txt ? 'selected' : 'all')"
-                @on-visualize="
-                    SET_SHOW_VIS_SIDEBAR({
-                        payload: !show_vis_sidebar,
-                        id: getActiveSessionId,
-                    })
-                "
-            />
-        </keep-alive>
+        <session-btns
+            :session="session"
+            @on-stop-query="stopQuery"
+            @on-run="handleRun(selected_query_txt ? 'selected' : 'all')"
+            @on-visualize="
+                SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
+            "
+        />
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -133,6 +127,9 @@ export default {
         'readonly-query-editor': QueryEditor,
         'load-sql': LoadSql,
     },
+    props: {
+        session: { type: Object, required: true },
+    },
     data() {
         return {
             dontShowConfirm: false,
@@ -156,7 +153,6 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             query_snippets: state => state.persisted.query_snippets,
-            query_sessions: state => state.querySession.query_sessions,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             query_txt: state => state.editor.query_txt,

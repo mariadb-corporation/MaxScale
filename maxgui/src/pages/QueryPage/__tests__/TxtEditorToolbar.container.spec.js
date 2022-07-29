@@ -15,7 +15,7 @@ import mount from '@tests/unit/setup'
 import TxtEditorToolbar from '@/pages/QueryPage/TxtEditorToolbar.container.vue'
 import { merge } from 'utils/helpers'
 
-const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
+const dummy_session = { id: 'SESSION_123_45' }
 const mountFactory = opts =>
     mount(
         merge(
@@ -25,14 +25,16 @@ const mountFactory = opts =>
                 stubs: {
                     'readonly-query-editor': "<div class='stub'></div>",
                 },
+                propsData: {
+                    session: dummy_session,
+                },
                 computed: {
-                    query_sessions: () => dummy_query_sessions,
+                    getActiveSessionId: () => dummy_session.id,
                 },
             },
             opts
         )
     )
-const dummy_session_id = dummy_query_sessions[0].id
 describe(`txt-editor-toolbar-ctr`, () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
@@ -110,17 +112,15 @@ describe(`txt-editor-toolbar-ctr`, () => {
         Object.keys(evtMap).forEach(e => {
             it(`Should call ${evtMap[e]}`, () => {
                 let spy = sinon.spy(TxtEditorToolbar.methods, evtMap[e])
-                wrapper = mountFactory({
-                    computed: { getActiveSessionId: () => dummy_session_id },
-                })
-                const sessionBtns = wrapper.findAllComponents({ name: 'session-btns' }).at(0)
+                wrapper = mountFactory()
+                const sessionBtns = wrapper.findComponent({ name: 'session-btns' })
                 const show_vis_sidebar = wrapper.vm.show_vis_sidebar
                 sessionBtns.vm.$emit(e)
                 switch (e) {
                     case 'on-visualize':
                         spy.should.have.been.calledOnceWithExactly({
                             payload: !show_vis_sidebar,
-                            id: dummy_session_id,
+                            id: dummy_session.id,
                         })
                         break
                     case 'on-run':
@@ -141,8 +141,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 computed: {
                     query_txt: () => 'SELECT 1',
                     query_confirm_flag: () => 1,
-                    getActiveSessionId: () => dummy_session_id,
-                    getShouldDisableExecuteMap: () => ({ [dummy_session_id]: false }),
+                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
                 },
             })
             sinon.stub(wrapper.vm, 'onRun')
@@ -156,7 +155,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
             let setQueryConfirmFlagCallCount = 0
             wrapper = mountFactory({
                 computed: {
-                    getShouldDisableExecuteMap: () => ({ [dummy_session_id]: false }),
+                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
                     query_confirm_flag: () => 1,
                 },
                 methods: {
