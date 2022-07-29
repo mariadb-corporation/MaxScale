@@ -182,7 +182,7 @@ export default {
                         payload: activeSessConn,
                     })
 
-                    if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
+                    if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
@@ -373,6 +373,67 @@ export default {
                 commit('DELETE_SQL_CONN', active_sql_conn)
             } catch (e) {
                 this.vue.$logger('store-queryConn-clearConn').error(e)
+            }
+        },
+
+        async updateActiveDb({ state, commit, rootGetters }) {
+            const { active_sql_conn, active_db } = state
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            try {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                    sql: 'SELECT DATABASE()',
+                })
+                const resActiveDb = this.vue
+                    .$typy(res, 'data.data.attributes.results[0].data')
+                    .safeArray.flat()[0]
+                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', id: active_session_id })
+                else if (active_db !== resActiveDb)
+                    commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_session_id })
+            } catch (e) {
+                this.vue.$logger('store-queryConn-updateActiveDb').error(e)
+            }
+        },
+
+        /**
+         * @param {String} db - database name
+         */
+        async useDb({ commit, dispatch, state, rootState, rootGetters }, db) {
+            const active_sql_conn = state.active_sql_conn
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            try {
+                const now = new Date().valueOf()
+                const escapedDb = this.vue.$help.escapeIdentifiers(db)
+                const sql = `USE ${escapedDb};`
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                    sql,
+                })
+                let queryName = `Change default database to ${escapedDb}`
+                if (res.data.data.attributes.results[0].errno) {
+                    const errObj = res.data.data.attributes.results[0]
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                    queryName = `Failed to change default database to ${escapedDb}`
+                } else commit('SET_ACTIVE_DB', { payload: db, id: active_session_id })
+                dispatch(
+                    'persisted/pushQueryLog',
+                    {
+                        startTime: now,
+                        name: queryName,
+                        sql,
+                        res,
+                        connection_name: active_sql_conn.name,
+                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
+                    },
+                    { root: true }
+                )
+            } catch (e) {
+                this.vue.$logger('store-queryConn-useDb').error(e)
             }
         },
 

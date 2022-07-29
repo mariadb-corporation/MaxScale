@@ -148,7 +148,7 @@ export default {
 
                 const USE_REG = /(use|drop database)\s/i
                 if (query.match(USE_REG))
-                    await dispatch('schemaSidebar/updateActiveDb', {}, { root: true })
+                    await dispatch('queryConn/updateActiveDb', {}, { root: true })
                 dispatch(
                     'persisted/pushQueryLog',
                     {

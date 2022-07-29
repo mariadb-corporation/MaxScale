@@ -94,7 +94,7 @@ export default {
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
             updateTreeNodes: 'schemaSidebar/updateTreeNodes',
-            useDb: 'schemaSidebar/useDb',
+            useDb: 'queryConn/useDb',
             queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',

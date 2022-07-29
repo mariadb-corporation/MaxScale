@@ -131,7 +131,7 @@ export default {
             SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
-            active_db: state => state.schemaSidebar.active_db,
+            active_db: state => state.queryConn.active_db,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
         }),

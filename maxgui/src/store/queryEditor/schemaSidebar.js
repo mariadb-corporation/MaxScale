@@ -35,7 +35,7 @@ export default {
     actions: {
         async initialFetch({ dispatch }) {
             await dispatch('fetchSchemas')
-            await dispatch('updateActiveDb')
+            await dispatch('queryConn/updateActiveDb', {}, { root: true })
         },
         /**
          *
@@ -376,66 +376,7 @@ export default {
                 this.vue.$logger(`store-schemaSidebar-fetchSchemas`).error(e)
             }
         },
-        /**
-         * @param {String} db - database name
-         */
-        async useDb({ commit, dispatch, rootState }, db) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.wke.active_wke_id
-            try {
-                const now = new Date().valueOf()
-                const escapedDb = this.vue.$help.escapeIdentifiers(db)
-                const sql = `USE ${escapedDb};`
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                })
-                let queryName = `Change default database to ${escapedDb}`
-                if (res.data.data.attributes.results[0].errno) {
-                    const errObj = res.data.data.attributes.results[0]
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
-                    queryName = `Failed to change default database to ${escapedDb}`
-                } else commit('SET_ACTIVE_DB', { payload: db, id: active_wke_id })
-                dispatch(
-                    'persisted/pushQueryLog',
-                    {
-                        startTime: now,
-                        name: queryName,
-                        sql,
-                        res,
-                        connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
-                    },
-                    { root: true }
-                )
-            } catch (e) {
-                this.vue.$logger('store-schemaSidebar-useDb').error(e)
-            }
-        },
-        async updateActiveDb({ state, commit, rootState }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_db = state.active_db
-            const active_wke_id = rootState.wke.active_wke_id
-            try {
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: 'SELECT DATABASE()',
-                })
-                const resActiveDb = this.vue
-                    .$typy(res, 'data.data.attributes.results[0].data')
-                    .safeArray.flat()[0]
-                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', id: active_wke_id })
-                else if (active_db !== resActiveDb)
-                    commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_wke_id })
-            } catch (e) {
-                this.vue.$logger('store-schemaSidebar-updateActiveDb').error(e)
-            }
-        },
+
         /**
          * This action is used to execute statement or statements.
          * Since users are allowed to modify the auto-generated SQL statement,

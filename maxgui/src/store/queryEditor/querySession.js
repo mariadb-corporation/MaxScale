@@ -92,7 +92,6 @@ export default {
                 const conn_to_be_cloned = rootGetters['queryConn/getWkeFirstSessConnByWkeId'](
                     wke_id
                 )
-                const active_db = rootState.schemaSidebar.active_db
                 let sessionConn
                 if (conn_to_be_cloned.id) {
                     await dispatch(
@@ -104,11 +103,6 @@ export default {
                         },
                         { root: true }
                     )
-                    // also set the active db for the new session
-                    if (active_db)
-                        await this.$queryHttp.post(`/sql/${sessionConn.id}/queries`, {
-                            sql: `USE ${this.vue.$help.escapeIdentifiers(active_db)};`,
-                        })
                 }
 
                 commit('ADD_NEW_SESSION', { wke_id, name })

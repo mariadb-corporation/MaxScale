@@ -268,6 +268,8 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
  * is changed in persisted array then causes other properties also
  * have to recompute. A better method would be to create relational
  * keys between modules, but for now, stick with the old approach.
+ * Module states to be synced to query_sessions: editor, queryConn, queryResult
+ * Module states to be synced to worksheets_arr: schemaSidebar
  * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @returns {Object} - return flat state for the provided namespace module
  */
@@ -305,6 +307,7 @@ function syncStateCreator(namespace) {
                  * If it doesn't have clone_of_conn_id, it's a default connection
                  */
                 active_sql_conn: {},
+                active_db: '',
             }
         case 'queryResult':
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
@@ -312,7 +315,6 @@ function syncStateCreator(namespace) {
             return {
                 is_sidebar_collapsed: false,
                 search_schema: '',
-                active_db: '',
                 expanded_nodes: [],
             }
         default:
