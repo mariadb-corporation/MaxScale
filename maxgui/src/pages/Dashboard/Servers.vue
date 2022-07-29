@@ -1,173 +1,172 @@
 <template>
-    <div>
-        <data-table
-            :headers="tableHeaders"
-            :data="tableRows"
-            :colsHasRowSpan="2"
-            :search="search_keyword"
-            sortBy="groupId"
-        >
-            <template v-slot:header-append-groupId>
-                <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
-            </template>
-            <template v-slot:header-append-id>
-                <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
-            </template>
-            <template v-slot:header-append-serviceIds>
-                <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
-            </template>
+    <data-table
+        :headers="tableHeaders"
+        :data="tableRows"
+        :colsHasRowSpan="2"
+        :search="search_keyword"
+        sortBy="groupId"
+        :itemsPerPage="-1"
+    >
+        <template v-slot:header-append-groupId>
+            <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
+        </template>
+        <template v-slot:header-append-id>
+            <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
+        </template>
+        <template v-slot:header-append-serviceIds>
+            <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
+        </template>
 
-            <template v-slot:groupId="{ data: { item: { groupId } } }">
-                <router-link
-                    v-if="groupId !== $t('not', { action: 'monitored' })"
-                    :to="`/dashboard/monitors/${groupId}`"
-                    class="rsrc-link"
+        <template v-slot:groupId="{ data: { item: { groupId } } }">
+            <router-link
+                v-if="groupId !== $t('not', { action: 'monitored' })"
+                :to="`/dashboard/monitors/${groupId}`"
+                class="rsrc-link"
+            >
+                <span class="font-weight-bold">{{ groupId }} </span>
+            </router-link>
+            <span v-else>{{ groupId }} </span>
+        </template>
+        <template v-slot:groupId-append="{ data: { item: { groupId } } }">
+            <span
+                v-if="isCooperative(groupId)"
+                class="ml-1 color text-success cooperative-indicator"
+            >
+                Primary
+            </span>
+        </template>
+        <template v-slot:monitorState="{ data: { item: { monitorState } } }">
+            <div class="d-flex align-center">
+                <icon-sprite-sheet
+                    v-if="monitorState"
+                    size="16"
+                    class="monitor-state-icon mr-1"
+                    :frame="$help.monitorStateIcon(monitorState)"
                 >
-                    <span class="font-weight-bold">{{ groupId }} </span>
-                </router-link>
-                <span v-else>{{ groupId }} </span>
-            </template>
-            <template v-slot:groupId-append="{ data: { item: { groupId } } }">
-                <span
-                    v-if="isCooperative(groupId)"
-                    class="ml-1 color text-success cooperative-indicator"
-                >
-                    Primary
-                </span>
-            </template>
-            <template v-slot:monitorState="{ data: { item: { monitorState } } }">
-                <div class="d-flex align-center">
-                    <icon-sprite-sheet
-                        v-if="monitorState"
-                        size="16"
-                        class="monitor-state-icon mr-1"
-                        :frame="$help.monitorStateIcon(monitorState)"
-                    >
-                        monitors
-                    </icon-sprite-sheet>
-                    <span>{{ monitorState }} </span>
-                </div>
-            </template>
+                    monitors
+                </icon-sprite-sheet>
+                <span>{{ monitorState }} </span>
+            </div>
+        </template>
 
-            <template
-                v-slot:id="{
+        <template
+            v-slot:id="{
                     data: {
                         item: { id, isSlave, isMaster,  serverInfo = [] },
                     },
                 }"
+        >
+            <rep-tooltip
+                v-if="isSlave || isMaster"
+                :disabled="!(isSlave || isMaster)"
+                :serverInfo="serverInfo"
+                :isMaster="isMaster"
+                :open-delay="400"
+                :top="true"
             >
-                <rep-tooltip
-                    v-if="isSlave || isMaster"
-                    :disabled="!(isSlave || isMaster)"
-                    :serverInfo="serverInfo"
-                    :isMaster="isMaster"
-                    :open-delay="400"
-                    :top="true"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            class="override-td--padding disable-auto-truncate"
-                            :class="{
-                                pointer: isSlave || isMaster,
-                            }"
-                            v-on="on"
-                        >
-                            <div class="text-truncate">
-                                <router-link :to="`/dashboard/servers/${id}`" class="rsrc-link">
-                                    {{ id }}
-                                </router-link>
-                            </div>
+                <template v-slot:activator="{ on }">
+                    <div
+                        class="override-td--padding disable-auto-truncate"
+                        :class="{
+                            pointer: isSlave || isMaster,
+                        }"
+                        v-on="on"
+                    >
+                        <div class="text-truncate">
+                            <router-link :to="`/dashboard/servers/${id}`" class="rsrc-link">
+                                {{ id }}
+                            </router-link>
                         </div>
-                    </template>
-                </rep-tooltip>
-                <router-link v-else :to="`/dashboard/servers/${id}`" class="rsrc-link">
-                    {{ id }}
-                </router-link>
-            </template>
+                    </div>
+                </template>
+            </rep-tooltip>
+            <router-link v-else :to="`/dashboard/servers/${id}`" class="rsrc-link">
+                {{ id }}
+            </router-link>
+        </template>
 
-            <template
-                v-slot:serverState="{
+        <template
+            v-slot:serverState="{
                     data: {
                         item: {  serverState, isSlave, isMaster, serverInfo = [] },
                     },
                 }"
+        >
+            <rep-tooltip
+                v-if="serverState"
+                :disabled="!(isSlave || isMaster)"
+                :serverInfo="serverInfo"
+                :isMaster="isMaster"
+                :top="true"
             >
-                <rep-tooltip
-                    v-if="serverState"
-                    :disabled="!(isSlave || isMaster)"
-                    :serverInfo="serverInfo"
-                    :isMaster="isMaster"
-                    :top="true"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            class="override-td--padding"
-                            :class="{
-                                pointer: isSlave || isMaster,
-                            }"
-                            v-on="on"
+                <template v-slot:activator="{ on }">
+                    <div
+                        class="override-td--padding"
+                        :class="{
+                            pointer: isSlave || isMaster,
+                        }"
+                        v-on="on"
+                    >
+                        <icon-sprite-sheet
+                            size="16"
+                            class="mr-1 server-state-icon"
+                            :frame="$help.serverStateIcon(serverState)"
                         >
-                            <icon-sprite-sheet
-                                size="16"
-                                class="mr-1 server-state-icon"
-                                :frame="$help.serverStateIcon(serverState)"
-                            >
-                                servers
-                            </icon-sprite-sheet>
-                            {{ serverState }}
-                        </div>
-                    </template>
-                </rep-tooltip>
+                            servers
+                        </icon-sprite-sheet>
+                        {{ serverState }}
+                    </div>
+                </template>
+            </rep-tooltip>
+        </template>
+
+        <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
+            <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
+
+            <template v-else-if="serviceIds.length < 2">
+                <router-link
+                    v-for="(serviceId, i) in serviceIds"
+                    :key="i"
+                    :to="`/dashboard/services/${serviceId}`"
+                    class="rsrc-link"
+                >
+                    <span>{{ serviceId }} </span>
+                </router-link>
             </template>
 
-            <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-                <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
+            <v-menu
+                v-else
+                top
+                offset-y
+                transition="slide-y-transition"
+                :close-on-content-click="false"
+                open-on-hover
+                allow-overflow
+                content-class="shadow-drop"
+            >
+                <template v-slot:activator="{ on }">
+                    <div
+                        class="pointer color text-links override-td--padding disable-auto-truncate"
+                        v-on="on"
+                    >
+                        {{ serviceIds.length }}
+                        {{ $tc('services', 2).toLowerCase() }}
+                    </div>
+                </template>
 
-                <template v-else-if="serviceIds.length < 2">
+                <v-sheet class="pa-4">
                     <router-link
                         v-for="(serviceId, i) in serviceIds"
                         :key="i"
                         :to="`/dashboard/services/${serviceId}`"
-                        class="rsrc-link"
+                        class="text-body-2 d-block rsrc-link"
                     >
                         <span>{{ serviceId }} </span>
                     </router-link>
-                </template>
-
-                <v-menu
-                    v-else
-                    top
-                    offset-y
-                    transition="slide-y-transition"
-                    :close-on-content-click="false"
-                    open-on-hover
-                    allow-overflow
-                    content-class="shadow-drop"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            class="pointer color text-links override-td--padding disable-auto-truncate"
-                            v-on="on"
-                        >
-                            {{ serviceIds.length }}
-                            {{ $tc('services', 2).toLowerCase() }}
-                        </div>
-                    </template>
-
-                    <v-sheet class="pa-4">
-                        <router-link
-                            v-for="(serviceId, i) in serviceIds"
-                            :key="i"
-                            :to="`/dashboard/services/${serviceId}`"
-                            class="text-body-2 d-block rsrc-link"
-                        >
-                            <span>{{ serviceId }} </span>
-                        </router-link>
-                    </v-sheet>
-                </v-menu>
-            </template>
-        </data-table>
-    </div>
+                </v-sheet>
+            </v-menu>
+        </template>
+    </data-table>
 </template>
 
 <script>

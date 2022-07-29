@@ -5,6 +5,7 @@
         :data="tableRows"
         :sortDesc="false"
         sortBy="id"
+        :itemsPerPage="-1"
     >
         <template v-slot:id="{ data: { item: { id } } }">
             <router-link :key="id" :to="`/dashboard/filters/${id}`" class="rsrc-link">
