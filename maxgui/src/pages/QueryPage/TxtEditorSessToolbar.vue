@@ -1,11 +1,8 @@
 <template>
     <div class="session-toolbar d-flex align-center">
-        <div
-            v-for="session in query_sessions"
-            v-show="session.id === getActiveSessionId"
-            :key="`${session.id}`"
-        >
+        <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
             <session-btns
+                v-if="getActiveSessionId === session.id"
                 :session="session"
                 @on-stop-query="stopQuery"
                 @on-run="handleRun(selected_query_txt ? 'selected' : 'all')"
@@ -16,7 +13,7 @@
                     })
                 "
             />
-        </div>
+        </keep-alive>
         <v-tooltip
             top
             transition="slide-y-transition"

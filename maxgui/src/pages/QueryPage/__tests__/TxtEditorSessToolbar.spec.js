@@ -13,17 +13,26 @@
 
 import mount from '@tests/unit/setup'
 import TxtEditorSessToolbar from '@/pages/QueryPage/TxtEditorSessToolbar'
+import { merge } from 'utils/helpers'
 
+const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
 const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: TxtEditorSessToolbar,
-        stubs: {
-            'readonly-query-editor': "<div class='stub'></div>",
-        },
-        ...opts,
-    })
-const dummy_session_id = 'SESSION_123_45'
+    mount(
+        merge(
+            {
+                shallow: false,
+                component: TxtEditorSessToolbar,
+                stubs: {
+                    'readonly-query-editor': "<div class='stub'></div>",
+                },
+                computed: {
+                    query_sessions: () => dummy_query_sessions,
+                },
+            },
+            opts
+        )
+    )
+const dummy_session_id = dummy_query_sessions[0].id
 describe(`txt-editor-sess-toolbar`, () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
@@ -64,9 +73,9 @@ describe(`txt-editor-sess-toolbar`, () => {
         })
     })
     describe('Save to snippets tests', () => {
-        let wrapper
+        wrapper
         it(`Should disable save to snippets button if query_txt is empty `, () => {
-            wrapper = mountFactory({ computed: { isTxtEditor: () => true } })
+            wrapper = mountFactory()
             const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
             expect(saveToSnippetsBtn.element.disabled).to.be.true
         })
@@ -86,42 +95,43 @@ describe(`txt-editor-sess-toolbar`, () => {
             wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.snippet.name).to.be.equals('')
         })
-        it(`Should call addSnippet`, async () => {
-            wrapper = mountFactory({
-                computed: { query_txt: () => 'SELECT 1', isTxtEditor: () => true },
-            })
-            const addToSnippetsSpy = sinon.spy(wrapper.vm, 'addSnippet')
+        it(`Should assign addSnippet as the save handler for confDlg`, () => {
+            wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
             wrapper.vm.openSnippetDlg()
-            await wrapper
-                .findComponent({ name: 'confirm-dialog' })
-                .find('.save')
-                .trigger('click')
-            await wrapper.vm.$help.delay(300)
-            addToSnippetsSpy.should.have.been.calledOnce
+            expect(wrapper.vm.$data.confDlg.onSave).to.be.equals(wrapper.vm.addSnippet)
         })
     })
     describe('session-btns event handlers', () => {
-        let sessionBtns
-        beforeEach(() => {
-            wrapper = mountFactory({ computed: { getActiveSessionId: () => dummy_session_id } })
-            sessionBtns = wrapper.findComponent({ name: 'session-btns' })
-        })
-        it(`Should call SET_SHOW_VIS_SIDEBAR action`, () => {
-            const payload = !wrapper.vm.show_vis_sidebar
-            const spy = sinon.spy(wrapper.vm, 'SET_SHOW_VIS_SIDEBAR')
-            sessionBtns.vm.$emit('on-visualize')
-            spy.should.have.been.calledOnceWithExactly({ payload, id: dummy_session_id })
-        })
-        it(`Should call handleRun method`, () => {
-            const spy = sinon.spy(wrapper.vm, 'handleRun')
-            sessionBtns.vm.$emit('on-run')
-            spy.should.have.been.calledOnceWithExactly('all')
-        })
-        it(`Should call stopQuery action`, () => {
-            const spy = sinon.spy(TxtEditorSessToolbar.methods, 'stopQuery')
-            wrapper = mountFactory()
-            wrapper.findComponent({ name: 'session-btns' }).vm.$emit('on-stop-query')
-            spy.should.have.been.calledOnce
+        const evtMap = {
+            'on-visualize': 'SET_SHOW_VIS_SIDEBAR',
+            'on-run': 'handleRun',
+            'on-stop-query': 'stopQuery',
+        }
+        Object.keys(evtMap).forEach(e => {
+            it(`Should call ${evtMap[e]}`, () => {
+                let spy = sinon.spy(TxtEditorSessToolbar.methods, evtMap[e])
+                wrapper = mountFactory({
+                    computed: { getActiveSessionId: () => dummy_session_id },
+                })
+                const sessionBtns = wrapper.findAllComponents({ name: 'session-btns' }).at(0)
+                const show_vis_sidebar = wrapper.vm.show_vis_sidebar
+                sessionBtns.vm.$emit(e)
+                switch (e) {
+                    case 'on-visualize':
+                        spy.should.have.been.calledOnceWithExactly({
+                            payload: !show_vis_sidebar,
+                            id: dummy_session_id,
+                        })
+                        break
+                    case 'on-run':
+                        spy.should.have.been.calledOnceWithExactly('all')
+                        break
+                    case 'on-stop-query':
+                        spy.should.have.been.calledOnce
+                        break
+                }
+                spy.restore()
+            })
         })
     })
     describe('session-btns - Run query tests', () => {
