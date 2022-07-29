@@ -1,29 +1,27 @@
 <template>
-    <div class="fill-height">
-        <v-card
-            class="fill-height color border-left-table-border border-right-table-border "
-            :loading="isLoading"
+    <v-card
+        class="fill-height color border-left-table-border border-right-table-border "
+        :loading="isLoading"
+    >
+        <div
+            v-show="!isLoading"
+            class="relative fill-height color border-left-table-border border-right-table-border"
         >
-            <div
-                v-show="!isLoading"
-                class="relative fill-height color border-left-table-border border-right-table-border"
-            >
-                <alter-table-btns
-                    class="color border-left-table-border border-bottom-table-border"
-                    :style="{ width: '100%', height: '28px' }"
-                    :disableRevert="!hasChanged"
-                    :disableApply="!hasValidChanges"
-                    @on-revert="revertChanges"
-                    @on-apply="applyChanges"
-                />
-                <ddl-editor-form
-                    v-model="formData"
-                    :dim="formDim"
-                    @is-form-valid="isFormValid = $event"
-                />
-            </div>
-        </v-card>
-    </div>
+            <alter-table-btns
+                class="color border-left-table-border border-bottom-table-border"
+                :style="{ width: '100%', height: '28px' }"
+                :disableRevert="!hasChanged"
+                :disableApply="!hasValidChanges"
+                @on-revert="revertChanges"
+                @on-apply="applyChanges"
+            />
+            <ddl-editor-form
+                v-model="formData"
+                :dim="formDim"
+                @is-form-valid="isFormValid = $event"
+            />
+        </div>
+    </v-card>
 </template>
 
 <script>
@@ -62,6 +60,10 @@ export default {
     },
     data() {
         return {
+            /**
+             * TODO: move formData to syncStateCreator so that the changes can be kept
+             * after page refresh, changing session or worksheet.
+             */
             formData: {},
             isFormValid: true,
         }
