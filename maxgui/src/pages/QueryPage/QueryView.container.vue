@@ -113,7 +113,7 @@ export default {
             }
         },
         getTxtEditorToolbar() {
-            return this.$typy(this.$refs, `wke[0].$refs.txtEditor[0].$refs.txtEditorToolbar`)
+            return this.$typy(this.$refs, `wke[0].$refs.editor[0].$refs.txtEditorToolbar`)
                 .safeObject
         },
         getLoadSql() {

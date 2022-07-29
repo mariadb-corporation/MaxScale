@@ -53,7 +53,7 @@ describe('query-view-ctr', () => {
             wrapper = mountFactory()
             txtEditorToolbar = wrapper.vm.$typy(
                 wrapper.vm.$refs,
-                `wke[0].$refs.txtEditor[0].$refs.txtEditorToolbar`
+                `wke[0].$refs.editor[0].$refs.txtEditorToolbar`
             ).safeObject
             wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
             handleRunSpy = sinon.spy(txtEditorToolbar, 'handleRun')

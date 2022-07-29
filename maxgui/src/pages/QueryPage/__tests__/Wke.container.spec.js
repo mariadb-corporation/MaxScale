@@ -87,7 +87,7 @@ describe('wke-ctr', () => {
             it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
                 wrapper = mountFactory({ shallow: false, computed: { getIsTxtEditor: () => true } })
                 const spyFn = sinon.spy(
-                    wrapper.vm.$typy(wrapper.vm.$refs, 'txtEditor[0]').safeObject,
+                    wrapper.vm.$typy(wrapper.vm.$refs, 'editor[0]').safeObject,
                     key
                 )
                 const sidebar = wrapper.findComponent({ name: 'sidebar-ctr' })
@@ -124,9 +124,7 @@ describe('wke-ctr', () => {
             })
             it(`Should pass accurate data to ${renCom} via props`, () => {
                 const { dim } = wrapper.findAllComponents({ name: renCom }).at(0).vm.$props
-                expect(dim).to.be.deep.equals(
-                    wrapper.vm.$data[mode === '' ? 'txtEditorPaneDim' : 'ddlEditorDim']
-                )
+                expect(dim).to.be.deep.equals(wrapper.vm.$data.editorDim)
             })
             it(`Should not render ${hiddenCom}`, () => {
                 expect(wrapper.findAllComponents({ name: hiddenCom }).length).to.be.equals(0)

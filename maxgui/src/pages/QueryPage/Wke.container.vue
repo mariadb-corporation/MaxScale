@@ -11,32 +11,30 @@
             <template slot="pane-left">
                 <sidebar-ctr
                     :execSqlDlg.sync="execSqlDlg"
-                    @place-to-editor="
-                        $typy($refs, 'txtEditor[0].placeToEditor').safeFunction($event)
-                    "
-                    @on-dragging="$typy($refs, 'txtEditor[0].draggingTxt').safeFunction($event)"
-                    @on-dragend="$typy($refs, 'txtEditor[0].dropTxtToEditor').safeFunction($event)"
+                    @place-to-editor="$typy($refs, 'editor[0].placeToEditor').safeFunction($event)"
+                    @on-dragging="$typy($refs, 'editor[0].draggingTxt').safeFunction($event)"
+                    @on-dragend="$typy($refs, 'editor[0].dropTxtToEditor').safeFunction($event)"
                 />
             </template>
             <template slot="pane-right">
                 <session-tabs
                     :txtEditorToolbarRef="
-                        $typy($refs, 'txtEditor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
+                        $typy($refs, 'editor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
                     "
                 />
                 <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
                     <template v-if="getActiveSessionId === session.id">
                         <txt-editor-ctr
                             v-if="getIsTxtEditor"
-                            ref="txtEditor"
+                            ref="editor"
                             :session="session"
-                            :dim="txtEditorDim"
+                            :dim="editorDim"
                             v-on="$listeners"
                         />
                         <ddl-editor-ctr
                             v-else
-                            ref="ddlEditor"
-                            :dim="ddlEditorDim"
+                            ref="editor"
+                            :dim="editorDim"
                             :execSqlDlg.sync="execSqlDlg"
                             :isExecFailed="isExecFailed"
                         />
@@ -97,10 +95,8 @@ export default {
     },
     data() {
         return {
-            // split-pane states
-            txtEditorDim: { width: 0, height: 0 },
-            ddlEditorDim: { height: 0, width: 0 },
-            sidebarPct: 0,
+            sidebarPct: 0, // split-pane states
+            editorDim: { width: 0, height: 0 },
             execSqlDlg: {
                 isOpened: false,
                 editorHeight: 250,
@@ -113,7 +109,6 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -143,16 +138,16 @@ export default {
     },
     watch: {
         sidebarPct(v) {
-            if (v) this.$nextTick(() => this.handleRecalPanesDim())
+            if (v) this.$nextTick(() => this.setEditorDim())
         },
         ctrDim: {
             deep: true,
             handler(v, oV) {
-                if (oV.height) this.$nextTick(() => this.handleRecalPanesDim())
+                if (oV.height) this.$nextTick(() => this.setEditorDim())
             },
         },
         curr_editor_mode() {
-            this.$nextTick(() => this.handleRecalPanesDim())
+            this.$nextTick(() => this.setEditorDim())
         },
     },
     created() {
@@ -195,28 +190,11 @@ export default {
             if (this.is_sidebar_collapsed) this.sidebarPct = this.minSidebarPct
             else this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
-        setTxtEditorPaneDim() {
-            const txtEditor = this.$typy(this.$refs, 'txtEditor[0]').safeObjectOrEmpty
-            if (txtEditor.$el) {
-                const { width, height } = txtEditor.$el.getBoundingClientRect()
-                if (width !== 0 || height !== 0) this.txtEditorDim = { width, height }
-            }
-        },
-        setDdlDim() {
-            const ddlEditor = this.$typy(this.$refs, 'ddlEditor[0]').safeObjectOrEmpty
-            if (ddlEditor.$el) {
-                const { width, height } = ddlEditor.$el.getBoundingClientRect()
-                if (width !== 0 || height !== 0) this.ddlEditorDim = { width, height }
-            }
-        },
-        handleRecalPanesDim() {
-            switch (this.curr_editor_mode) {
-                case this.SQL_EDITOR_MODES.TXT_EDITOR:
-                    this.setTxtEditorPaneDim()
-                    break
-                case this.SQL_EDITOR_MODES.DDL_EDITOR:
-                    this.setDdlDim()
-                    break
+        setEditorDim() {
+            const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
+            if (editor.$el) {
+                const { width, height } = editor.$el.getBoundingClientRect()
+                if (width !== 0 || height !== 0) this.editorDim = { width, height }
             }
         },
     },
