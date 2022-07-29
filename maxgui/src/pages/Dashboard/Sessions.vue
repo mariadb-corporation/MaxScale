@@ -5,6 +5,7 @@
         :data="tableRows"
         :sortDesc="true"
         sortBy="connected"
+        :itemsPerPage="-1"
     >
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
