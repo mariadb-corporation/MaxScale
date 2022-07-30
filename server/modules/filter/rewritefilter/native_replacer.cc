@@ -48,7 +48,7 @@ Replacer::Replacer(const std::string& replace_template)
                 ++m_nreplacements;
                 auto ite_before = ite - 1;      // for error output
 
-                size_t n{};
+                int n{};
                 ite = read_placeholder(ite, last, &n);
 
                 if (n == 0)
@@ -89,9 +89,9 @@ std::string Replacer::replace(const std::vector<std::string>& replacements) cons
     std::string sql;
     for (auto part : m_parts)
     {
-        if (std::holds_alternative<size_t>(part))
+        if (std::holds_alternative<int>(part))
         {
-            sql += replacements[std::get<size_t>(part)];
+            sql += replacements[std::get<int>(part)];
         }
         else
         {

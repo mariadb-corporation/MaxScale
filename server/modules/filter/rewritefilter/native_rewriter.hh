@@ -47,12 +47,12 @@ private:
     std::regex  m_regex;
     size_t      m_nreplacements = 0;
 
-    size_t m_max_ordinal = 0;
+    int m_max_ordinal = 0;
 
     // An ordinal is the position (ordinal) of the placeholders as they appear
     // in the match template: so @{2}, @{1}, @{2} would lead to m_ordinals
     // containing {1, 0, 1}.
-    std::vector<size_t> m_ordinals;
+    std::vector<int> m_ordinals;
 
     // A mapping from an (implied) index to its respective index in m_ordinals.
     // To continue the example above, m_map_ordinals would contain {1, 0},
@@ -60,13 +60,13 @@ private:
     // of @{1} will be in second regex match group (or actually the third,
     // because the first match group is the entire sql, but that's an
     // implementation detail).
-    std::vector<size_t> m_map_ordinals;
+    std::vector<int> m_map_ordinals;
 
     // Pairs in m_ordinals with the same ordinal (forward reference)
     // Again with the example above, m_match_pairs would have a single
     // element {0,2} reflecting that @{2} appears in the first
     // and third position. For a match those groups have to be the same.
-    std::vector<std::pair<size_t, size_t>> m_match_pairs;
+    std::vector<std::pair<int, int>> m_match_pairs;
 
     Replacer m_replacer;
 };

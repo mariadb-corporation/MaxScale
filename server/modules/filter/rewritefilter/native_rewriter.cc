@@ -66,7 +66,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                     ++m_nreplacements;
                     auto ite_before = ite - 1;      // for error output
 
-                    size_t n{};
+                    int n{};
                     ite = read_placeholder(ite, last, &n);
 
                     if (n == 0)
@@ -151,7 +151,7 @@ std::string NativeRewriter::make_ordinals()
 
     ords.erase(std::unique(begin(ords), end(ords)), end(ords));
     const auto& unique_ordinals = ords;
-    std::vector<size_t> monotonical(unique_ordinals.size());
+    std::vector<int> monotonical(unique_ordinals.size());
     std::iota(begin(monotonical), end(monotonical), 0);
     if (monotonical != unique_ordinals)
     {

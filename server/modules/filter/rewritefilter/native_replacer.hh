@@ -38,7 +38,7 @@ public:
     std::string error_str() const;
 
     size_t num_replacements() const;
-    size_t max_placeholder_ordinal() const;
+    int    max_placeholder_ordinal() const;
 
     /**
      * @brief  replace
@@ -52,7 +52,7 @@ public:
     std::string replace(const std::vector<std::string>& replacements) const;
 private:
     std::string m_replace_template;
-    using StringOrOrdinal = std::variant<std::string, size_t>;
+    using StringOrOrdinal = std::variant<std::string, int>;
     /* If the replacement template is "select @{1} from @{2}"
      * then the vector of StringOrOrdinals is:
      * {"select ", 0, " from ", 1} (0-based, 1-based in the match_template).
@@ -60,7 +60,7 @@ private:
     std::vector<StringOrOrdinal> m_parts;
     std::string                  m_error_str;
     size_t                       m_nreplacements = 0;
-    size_t                       m_max_placeholder_ordinal = 0;
+    int                          m_max_placeholder_ordinal = 0;
 };
 
 inline bool Replacer::is_valid() const
@@ -78,7 +78,7 @@ inline size_t Replacer::num_replacements() const
     return m_nreplacements;
 }
 
-inline size_t Replacer::max_placeholder_ordinal() const
+inline int Replacer::max_placeholder_ordinal() const
 {
     return m_max_placeholder_ordinal;
 }
@@ -87,7 +87,7 @@ inline size_t Replacer::max_placeholder_ordinal() const
  *  one past the parsed string.
  *  If the input could not be parsed *res=0 and cfirst is returned.
  */
-inline auto read_placeholder = [](const auto cfirst, const auto last, auto* res){
+inline auto read_placeholder = [](const auto cfirst, const auto last, int* res){
     mxb_assert(cfirst != last && *cfirst == PLACEHOLDER_CHAR);
 
     *res = 0;

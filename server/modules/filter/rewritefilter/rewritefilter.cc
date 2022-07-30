@@ -150,6 +150,7 @@ bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewr
         }
         if (ok = sRewriter->is_valid(); !ok)
         {
+            MXB_SERROR(sRewriter->error_str());
             break;
         }
 
