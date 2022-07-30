@@ -79,7 +79,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                     m_max_ordinal = std::max(m_max_ordinal, n);
                     m_ordinals.push_back(n - 1);
 
-                    const std::string group = "(.*)";
+                    const std::string group = "(.*?)";
                     m_regex_str += group;
 
                     if (ite != last)
@@ -191,12 +191,12 @@ std::string NativeRewriter::make_ordinals()
 bool NativeRewriter::replace(const std::string& sql, std::string* pSql) const
 {
     std::smatch match;
-    bool matched = std::regex_search(sql, match, m_regex);
+    bool matched = std::regex_match(sql, match, m_regex);
 
     if (matched && match.size() == m_nreplacements + 1)
     {
         // Check forward references if any
-        for (auto p : m_match_pairs)
+        for (const auto& p : m_match_pairs)
         {
             if (match[p.first + 1] != match[p.second + 1])
             {
