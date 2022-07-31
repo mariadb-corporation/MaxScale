@@ -14,6 +14,7 @@
 #define MXB_MODULE_NAME "rewritefilter"
 #include "rewritefilter.hh"
 #include "native_rewriter.hh"
+#include "regex_rewriter.hh"
 #include <string>
 
 using std::string;
@@ -146,7 +147,7 @@ bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewr
         }
         else
         {
-            assert("Not implemented yet" == nullptr);
+            sRewriter.reset(new RegexRewriter(def));
         }
         if (ok = sRewriter->is_valid(); !ok)
         {
