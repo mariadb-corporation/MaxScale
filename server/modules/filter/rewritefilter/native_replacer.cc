@@ -46,15 +46,23 @@ Replacer::Replacer(const std::string& replace_template)
         case PLACEHOLDER_CHAR:
             {
                 ++m_nreplacements;
-                auto ite_before = ite - 1;      // for error output
 
                 int n{};
                 ite = read_placeholder(ite, last, &n);
 
-                if (n == 0)
+                if (n <= 0)
                 {
-                    error_stream << "Invalid number at: " << std::string(ite_before, last);
-                    ite = last;
+                    if (n < 0)
+                    {
+                        auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
+                        auto new_last = ite + into_placeholder;
+                        error_stream << "Invalid placeholder \""
+                                     << std::string(begin(m_replace_template), new_last)
+                                     << "...\"";
+                        ite = last;
+                        break;
+                    }
+                    current_sql_part += *ite++;
                     continue;
                 }
 

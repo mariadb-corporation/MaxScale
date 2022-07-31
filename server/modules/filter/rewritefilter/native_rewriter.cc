@@ -64,18 +64,25 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
             case PLACEHOLDER_CHAR:
                 {
                     ++m_nreplacements;
-                    auto ite_before = ite - 1;      // for error output
 
                     int n{};
                     ite = read_placeholder(ite, last, &n);
 
-                    if (n == 0)
+                    if (n <= 0)
                     {
-                        error_stream << "Invalid placeholder at: " << std::string(ite_before, last);
-                        ite = last;
+                        if (n < 0)
+                        {
+                            auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
+                            auto new_last = ite + into_placeholder;
+                            error_stream << "Invalid placeholder \""
+                                         << std::string(begin(match_template()), new_last)
+                                         << "...\"";
+                            ite = last;
+                            break;
+                        }
+                        write_regex_char(&m_regex_str, *ite++);
                         continue;
                     }
-
                     m_max_ordinal = std::max(m_max_ordinal, n);
                     m_ordinals.push_back(n - 1);
 

@@ -83,21 +83,30 @@ inline int Replacer::max_placeholder_ordinal() const
     return m_max_placeholder_ordinal;
 }
 
-/** Parse "@{<integer>}", set *res=integer and return ptr to
- *  one past the parsed string.
- *  If the input could not be parsed *res=0 and cfirst is returned.
+/**
+ * @brief read_placeholder - read a placeholder of the form @{n} where n is an integer.
+ * @param cfirst   - beginning of input
+ * @param last     - end of input
+ * @param *ordinal - n on success.
+ *                   0 not a placeholder, does not start with "@{".
+ *                   <=0 invalid placeholder
+ * @return iterator to one passed the placeholder on success else cfirst
  */
-inline auto read_placeholder = [](const auto cfirst, const auto last, int* res){
+template<typename Iterator>
+Iterator read_placeholder(const Iterator cfirst, const Iterator last, int* pOrdinal)
+{
     mxb_assert(cfirst != last && *cfirst == PLACEHOLDER_CHAR);
 
-    *res = 0;
-
     auto first = cfirst;
-    if (first == last || ++first == last || *first != '{' || ++first == last)
+
+    // Should start with with "@{"
+    if (*first != '@' || ++first == last || *first != '{' || ++first == last)
     {
+        *pOrdinal = 0;      // not a placeholder
         return cfirst;
     }
 
+    // Read the placeholder ordinal
     std::string nstr;
     for (; first != last; ++first)
     {
@@ -113,19 +122,22 @@ inline auto read_placeholder = [](const auto cfirst, const auto last, int* res){
 
     if (nstr.empty())
     {
+        *pOrdinal = -1;
         return cfirst;
     }
 
+    *pOrdinal = std::atoi(nstr.c_str());
+    if (*pOrdinal <= 0)
+    {
+        return cfirst;
+    }
+
+    // Should close with a '}'
     if (first == last || *first != '}')
     {
+        *pOrdinal = -1;
         return cfirst;
     }
 
-    int mult = 1;
-    for (auto ite = rbegin(nstr); ite != rend(nstr); ++ite, mult *= 10)
-    {
-        *res += mult * (*ite - '0');
-    }
-
-    return *res ? ++first : cfirst;
-};
+    return ++first;
+}
