@@ -23,7 +23,8 @@ namespace
 {
 void write_regex_char(std::string* str, char ch)
 {
-    if (ch == '(' || ch == ')')
+    const std::string special_chars = "().?+{}\\";
+    if (special_chars.find(ch) != std::string::npos)
     {
         *str += '\\';
     }
@@ -66,7 +67,8 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                     ++m_nreplacements;
 
                     int n{};
-                    ite = read_placeholder(ite, last, &n);
+                    std::string regex;
+                    ite = read_placeholder(ite, last, &n, &regex);
 
                     if (n <= 0)
                     {
@@ -86,7 +88,16 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                     m_max_ordinal = std::max(m_max_ordinal, n);
                     m_ordinals.push_back(n - 1);
 
-                    const std::string group = "(.*?)";
+                    std::string group;
+                    if (regex.empty())
+                    {
+                        group = "(.*?)"s;
+                    }
+                    else
+                    {
+                        group = "("s + regex + ")";
+                    }
+
                     m_regex_str += group;
 
                     if (ite != last)

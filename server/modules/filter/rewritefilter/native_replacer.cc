@@ -48,7 +48,14 @@ Replacer::Replacer(const std::string& replace_template)
                 ++m_nreplacements;
 
                 int n{};
-                ite = read_placeholder(ite, last, &n);
+                std::string regex;
+                ite = read_placeholder(ite, last, &n, &regex);
+
+                if (!regex.empty())
+                {
+                    error_stream << "Cannot define placeholders with a regex in the replacement template"
+                                 << ": " << m_replace_template;
+                }
 
                 if (n <= 0)
                 {

@@ -17,7 +17,6 @@
 #include <string>
 #include <vector>
 #include <variant>
-#include <assert.h>
 
 const char PLACEHOLDER_CHAR = '@';
 
@@ -83,20 +82,25 @@ inline int Replacer::max_placeholder_ordinal() const
     return m_max_placeholder_ordinal;
 }
 
+
+
 /**
- * @brief read_placeholder - read a placeholder of the form @{n} where n is an integer.
+ * @brief read_placeholder - read a placeholder of the form @{n[:regex]} where n is an integer.
  * @param cfirst   - beginning of input
  * @param last     - end of input
  * @param *ordinal - n on success.
  *                   0 not a placeholder, does not start with "@{".
  *                   <=0 invalid placeholder
+ * @param regex    - regex if a regex was specified and the ordinal was read successfully
  * @return iterator to one passed the placeholder on success else cfirst
  */
 template<typename Iterator>
-Iterator read_placeholder(const Iterator cfirst, const Iterator last, int* pOrdinal)
+Iterator read_placeholder(const Iterator cfirst, const Iterator last,
+                          int* pOrdinal, std::string* pRegex)
 {
     mxb_assert(cfirst != last && *cfirst == PLACEHOLDER_CHAR);
 
+    pRegex->clear();
     auto first = cfirst;
 
     // Should start with with "@{"
@@ -130,6 +134,35 @@ Iterator read_placeholder(const Iterator cfirst, const Iterator last, int* pOrdi
     if (*pOrdinal <= 0)
     {
         return cfirst;
+    }
+
+    // Read the regex, if any.
+    if (*first == ':')
+    {
+        while (++first != last)
+        {
+            if (*first == '\\')
+            {
+                if (++first != last)
+                {
+                    *pRegex += *first;
+                }
+            }
+            else if (*first == '}')
+            {
+                break;
+            }
+            else
+            {
+                *pRegex += *first;
+            }
+        }
+
+        if (pRegex->empty())
+        {
+            *pOrdinal = -1;
+            return cfirst;
+        }
     }
 
     // Should close with a '}'
