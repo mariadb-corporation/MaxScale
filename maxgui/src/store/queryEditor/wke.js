@@ -88,7 +88,10 @@ export default {
         async chooseActiveWke({ state, commit, dispatch, rootState }) {
             const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {
-                if (type !== 'blank_wke') {
+                if (type === 'blank_wke') {
+                    const wke = state.worksheets_arr.find(wke => wke.id === paramId)
+                    if (wke) commit('SET_ACTIVE_WKE_ID', wke.id)
+                } else {
                     /**
                      * Check if there is a worksheet connected to the provided resource id (paramId)
                      * then if it's not the current active worksheet, change current worksheet tab to targetWke.
@@ -145,7 +148,6 @@ export default {
                 // set the first wke as active if route param id is not specified
                 const activeWkeId = state.worksheets_arr[0].id
                 commit('SET_ACTIVE_WKE_ID', activeWkeId)
-                dispatch('updateRoute', activeWkeId)
             }
         },
         /**
