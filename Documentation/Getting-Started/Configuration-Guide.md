@@ -1904,6 +1904,11 @@ versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
+This parameter only takes effect in top-level services. A top-level service is
+the service where the listener that the client connected to points (i.e. the
+value of `service` in the listener). If a service defines other services in its
+`targets` parameter, the `connection_timeout` for those is not used.
+
 The value of `connection_timeout` should be lower than the lowest `wait_timeout`
 value on the backend servers. This way idle clients are disconnected by MaxScale
 before the backend servers have to close them. Any client-side idle timeouts
