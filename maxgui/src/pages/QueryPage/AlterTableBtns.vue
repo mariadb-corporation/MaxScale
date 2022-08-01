@@ -1,5 +1,5 @@
 <template>
-    <div class="d-flex align-center icon-group" :style="{ height: `${height}px` }">
+    <div class="d-flex align-center" :style="{ height: `${height}px` }">
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -7,6 +7,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
+                    class="toolbar-square-btn"
                     text
                     color="accent-dark"
                     :disabled="disableRevert"
@@ -29,6 +30,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
+                    class="toolbar-square-btn"
                     text
                     color="accent-dark"
                     :disabled="disableApply"
@@ -71,18 +73,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.icon-group {
-    ::v-deep .v-btn {
-        min-width: unset !important;
-        padding: 0px !important;
-        width: 28px;
-        height: 28px;
-        border-radius: 0px !important;
-        &:hover {
-            border-radius: 0px !important;
-        }
-    }
-}
 ::v-deep.apply-btn {
     .v-progress-circular {
         height: 16px !important;

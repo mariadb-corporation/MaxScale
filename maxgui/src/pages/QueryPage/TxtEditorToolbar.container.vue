@@ -15,7 +15,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
-                    class="create-snippet-btn session-toolbar-square-btn"
+                    class="create-snippet-btn toolbar-square-btn"
                     text
                     color="accent-dark"
                     :disabled="!query_txt"

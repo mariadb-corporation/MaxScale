@@ -24,7 +24,7 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     text
-                    class="load-sql-btn session-toolbar-square-btn"
+                    class="load-sql-btn toolbar-square-btn"
                     type="file"
                     v-on="on"
                     @click="handleFileOpen"
@@ -48,7 +48,7 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     text
-                    class="save-sql-btn session-toolbar-square-btn"
+                    class="save-sql-btn toolbar-square-btn"
                     type="file"
                     :disabled="!getIsFileUnsaved || !hasFileHandle"
                     v-on="on"
@@ -71,7 +71,7 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     text
-                    class="save-sql-btn session-toolbar-square-btn"
+                    class="save-sql-btn toolbar-square-btn"
                     type="file"
                     :disabled="!getIsFileUnsaved"
                     v-on="on"

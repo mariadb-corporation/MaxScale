@@ -10,7 +10,7 @@
             <template v-slot:activator="{ on }">
                 <!-- disable button Prevent parallel querying of the same connection -->
                 <v-btn
-                    class="session-toolbar-square-btn"
+                    class="toolbar-square-btn"
                     :class="[getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn']"
                     text
                     color="accent-dark"
@@ -56,7 +56,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
-                    class="session-toolbar-square-btn visualize-btn"
+                    class="toolbar-square-btn visualize-btn"
                     :depressed="show_vis_sidebar"
                     :text="!show_vis_sidebar"
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
