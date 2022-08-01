@@ -18,6 +18,7 @@
                 :showActionsOnHover="!readOnly"
                 :draggable="relationshipType === 'filters'"
                 :hasOrderNumber="relationshipType === 'filters'"
+                showAll
                 @on-drag-end="filterDragReorder"
             >
                 <template v-slot:id="{ data: { item: { id } } }">
