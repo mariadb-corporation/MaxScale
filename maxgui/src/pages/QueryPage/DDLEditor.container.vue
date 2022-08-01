@@ -7,8 +7,7 @@
             v-show="!isLoading"
             class="relative fill-height color border-left-table-border border-right-table-border"
         >
-            <!-- TODO: rename  alter-table-btns to ddl-editor-toolbar -->
-            <alter-table-btns
+            <ddl-editor-toolbar
                 class="color border-left-table-border border-bottom-table-border"
                 :height="ddlEditorToolbarHeight"
                 :disableRevert="!hasChanged"
@@ -46,13 +45,13 @@
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import DDLEditorForm from './DDLEditorForm.vue'
-import AlterTableBtns from './AlterTableBtns.vue'
+import DDLEditorToolbar from './DDLEditorToolbar.vue'
 
 export default {
     name: 'ddl-editor-ctr',
     components: {
         'ddl-editor-form': DDLEditorForm,
-        'alter-table-btns': AlterTableBtns,
+        'ddl-editor-toolbar': DDLEditorToolbar,
     },
     props: {
         dim: { type: Object, required: true },

@@ -63,7 +63,7 @@
  * Public License.
  */
 export default {
-    name: 'alter-table-btns',
+    name: 'ddl-editor-toolbar',
     props: {
         disableApply: { type: Boolean, required: true },
         disableRevert: { type: Boolean, required: true },
