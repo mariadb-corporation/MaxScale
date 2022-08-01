@@ -17,8 +17,6 @@
 
 #include <string>
 
-class Replacer;
-
 /**
  * @brief RewriteSql is the base class for concrete rewriters, of which
  *        there are exactly two; one for the Native replacer and one for

@@ -16,15 +16,14 @@
 #include <iostream>
 
 
-Replacer::Replacer(const std::string& replace_template)
-    : m_replace_template(replace_template)
+void NativeReplacer::set_replace_template(const std::string& replace_template)
 {
     // This does almost the same thing as RewriteSql::RewriteSql() but instead of
     // creating a regex string and regex, it creates a vector of
     // sql parts and placeholders ordinals.
     std::ostringstream error_stream;
-    auto last = end(m_replace_template);
-    auto ite = begin(m_replace_template);
+    auto last = end(replace_template);
+    auto ite = begin(replace_template);
 
     std::string current_sql_part;
 
@@ -54,7 +53,7 @@ Replacer::Replacer(const std::string& replace_template)
                 if (!regex.empty())
                 {
                     error_stream << "Cannot define placeholders with a regex in the replacement template"
-                                 << ": " << m_replace_template;
+                                 << ": " << replace_template;
                 }
 
                 if (n <= 0)
@@ -64,7 +63,7 @@ Replacer::Replacer(const std::string& replace_template)
                         auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
                         auto new_last = ite + into_placeholder;
                         error_stream << "Invalid placeholder \""
-                                     << std::string(begin(m_replace_template), new_last)
+                                     << std::string(begin(replace_template), new_last)
                                      << "...\"";
                         ite = last;
                         break;
@@ -99,7 +98,7 @@ Replacer::Replacer(const std::string& replace_template)
     m_error_str = error_stream.str();
 }
 
-std::string Replacer::replace(const std::vector<std::string>& replacements) const
+std::string NativeReplacer::replace(const std::vector<std::string>& replacements) const
 {
     std::string sql;
     for (auto part : m_parts)

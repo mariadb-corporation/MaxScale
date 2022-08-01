@@ -38,84 +38,83 @@ void write_regex_char(std::string* str, char ch)
 
 NativeRewriter::NativeRewriter(const TemplateDef& def)
     : SqlRewriter(def)
-    , m_replacer(def.replace_template)
 {
+    m_replacer.set_replace_template(def.replace_template);
+    if (!m_replacer.is_valid())
+    {
+        set_error_string(m_replacer.error_str());
+        return;
+    }
+
     std::ostringstream error_stream;
     std::string error_str;
 
-    if (!m_replacer.is_valid())
-    {
-        error_stream << m_replacer.error_str();
-    }
-    else
-    {
-        auto last = end(match_template());
-        auto ite = begin(match_template());
+    auto last = end(match_template());
+    auto ite = begin(match_template());
 
-        while (ite != last)
+    while (ite != last)
+    {
+        switch (*ite)
         {
-            switch (*ite)
+        case '\\':
             {
-            case '\\':
+                m_regex_str += *ite;
+                if (ite + 1 != last)
                 {
-                    m_regex_str += *ite;
-                    if (ite + 1 != last)
-                    {
-                        m_regex_str += *++ite;
-                    }
+                    m_regex_str += *++ite;
                 }
-                break;
+            }
+            break;
 
-            case PLACEHOLDER_CHAR:
+        case PLACEHOLDER_CHAR:
+            {
+                ++m_nreplacements;
+
+                int n{};
+                std::string regex;
+                ite = read_placeholder(ite, last, &n, &regex);
+
+                if (n <= 0)
                 {
-                    ++m_nreplacements;
-
-                    int n{};
-                    std::string regex;
-                    ite = read_placeholder(ite, last, &n, &regex);
-
-                    if (n <= 0)
+                    if (n < 0)
                     {
-                        if (n < 0)
-                        {
-                            auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
-                            auto new_last = ite + into_placeholder;
-                            error_stream << "Invalid placeholder \""
-                                         << std::string(begin(match_template()), new_last)
-                                         << "...\"";
-                            ite = last;
-                            break;
-                        }
-                        write_regex_char(&m_regex_str, *ite++);
-                        continue;
+                        auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
+                        auto new_last = ite + into_placeholder;
+                        error_stream << "Invalid placeholder \""
+                                     << std::string(begin(match_template()), new_last)
+                                     << "...\"";
+                        ite = last;
+                        break;
                     }
-                    m_max_ordinal = std::max(m_max_ordinal, n);
-                    m_ordinals.push_back(n - 1);
-
-                    std::string group;
-                    if (regex.empty())
-                    {
-                        group = "(.*?)"s;
-                    }
-                    else
-                    {
-                        group = "("s + regex + ")";
-                    }
-
-                    m_regex_str += group;
+                    write_regex_char(&m_regex_str, *ite++);
                     continue;
                 }
-                break;
+                m_max_ordinal = std::max(m_max_ordinal, n);
+                m_ordinals.push_back(n - 1);
 
-            default:
-                write_regex_char(&m_regex_str, *ite);
-                break;
-            }
+                std::string group;
+                if (regex.empty())
+                {
+                    group = "(.*?)"s;
+                }
+                else
+                {
+                    group = "("s + regex + ")";
+                }
 
-            if (ite != last)
-            {
-                ++ite;
+                m_regex_str += group;
+                continue;
             }
+            break;
+
+        default:
+            write_regex_char(&m_regex_str, *ite);
+            break;
+        }
+
+        if (ite != last)
+        {
+            ++ite;
         }
     }
 

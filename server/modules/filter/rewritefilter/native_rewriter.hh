@@ -19,7 +19,7 @@
 #include <string>
 #include <memory>
 
-class Replacer;
+class NativeReplacer;
 
 /**
  * @brief NativeRewriter takes a "match template" where there are placeholders
@@ -68,5 +68,5 @@ private:
     // and third position. For a match those groups have to be the same.
     std::vector<std::pair<int, int>> m_match_pairs;
 
-    Replacer m_replacer;
+    NativeReplacer m_replacer;
 };

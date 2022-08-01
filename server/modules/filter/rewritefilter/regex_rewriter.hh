@@ -18,7 +18,7 @@
 #include <string>
 #include <memory>
 
-class Replacer;
+class NativeReplacer;
 
 /**
  * @brief RegexRewriter uses the match_template for a std::regex
@@ -27,6 +27,11 @@ class Replacer;
  *        C++ regular expressions do not support extended replacement syntax
  *        (essentially placeholders) like pcre2 and boost. Instead, the
  *        matched parts are replaced with a literal replacement.
+ *
+ *        TODO: Add a class Pcre2Rewriter, if needed. The Native rewriter
+ *              can probably handle everything, so this can wait for a
+ *              feature request if a problem really cannot be solved
+ *              with the NativeRewriter.
  *
  *        TODO: add an option to only replace the first occurance.
  */

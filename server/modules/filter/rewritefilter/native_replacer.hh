@@ -23,14 +23,16 @@ const char PLACEHOLDER_CHAR = '@';
 /**
  * @brief The Replacer does the actual replacement of sql-parts.
  */
-class Replacer
+class NativeReplacer
 {
 public:
+    NativeReplacer() = default;
+
     /**
-     * @brief Replacer. Builds an internal structure from the replace_template
-     * @param replace_template @see RewriteSql
+     * @brief set_replace_template - Builds an internal structure from the replace_template
+     * @param replace_template     - @see RewriteSql
      */
-    Replacer(const std::string& replace_template);
+    void set_replace_template(const std::string& replace_template);
 
     /* Is the replace_template valid */
     bool        is_valid() const;
@@ -50,7 +52,6 @@ public:
      */
     std::string replace(const std::vector<std::string>& replacements) const;
 private:
-    std::string m_replace_template;
     using StringOrOrdinal = std::variant<std::string, int>;
     /* If the replacement template is "select @{1} from @{2}"
      * then the vector of StringOrOrdinals is:
@@ -62,27 +63,25 @@ private:
     int                          m_max_placeholder_ordinal = 0;
 };
 
-inline bool Replacer::is_valid() const
+inline bool NativeReplacer::is_valid() const
 {
     return m_error_str.empty();
 }
 
-inline std::string Replacer::error_str() const
+inline std::string NativeReplacer::error_str() const
 {
     return m_error_str;
 }
 
-inline size_t Replacer::num_replacements() const
+inline size_t NativeReplacer::num_replacements() const
 {
     return m_nreplacements;
 }
 
-inline int Replacer::max_placeholder_ordinal() const
+inline int NativeReplacer::max_placeholder_ordinal() const
 {
     return m_max_placeholder_ordinal;
 }
-
-
 
 /**
  * @brief read_placeholder - read a placeholder of the form @{n[:regex]} where n is an integer.
