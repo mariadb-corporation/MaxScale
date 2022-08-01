@@ -1,35 +1,28 @@
 <template>
-    <div v-resize.quiet="setDim" class="fill-height query-view-wrapper">
-        <div
-            ref="queryViewCtr"
-            class="query-view d-flex flex-column fill-height"
-            :class="{ 'query-view--fullscreen': is_fullscreen }"
-        >
-            <v-card
-                v-shortkey="QUERY_SHORTCUT_KEYS"
-                class="fill-height d-flex flex-column fill-height worksheet-wrapper"
-                :loading="is_validating_conn"
-                @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
-            >
-                <div class="d-flex flex-column fill-height worksheet-wrapper">
-                    <wke-nav-ctr :height="wkeNavCtrHeight" />
-                    <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
-                        <wke-ctr
-                            v-if="active_wke_id === wke.id && ctrDim.height"
-                            ref="wke"
-                            :ctrDim="ctrDim"
-                            @onCtrlEnter="onCtrlEnter"
-                            @onCtrlShiftEnter="onCtrlShiftEnter"
-                            @onCtrlD="onCtrlD"
-                            @onCtrlO="onCtrlO"
-                            @onCtrlS="onCtrlS"
-                            @onCtrlShiftS="onCtrlShiftS"
-                        />
-                    </keep-alive>
-                </div>
-            </v-card>
-        </div>
-    </div>
+    <v-card
+        ref="queryViewCtr"
+        v-resize.quiet="setDim"
+        v-shortkey="QUERY_SHORTCUT_KEYS"
+        class="query-view fill-height d-flex flex-column worksheet-wrapper"
+        :class="{ 'query-view--fullscreen': is_fullscreen }"
+        :loading="is_validating_conn"
+        @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
+    >
+        <wke-nav-ctr :height="wkeNavCtrHeight" />
+        <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
+            <wke-ctr
+                v-if="active_wke_id === wke.id && ctrDim.height"
+                ref="wke"
+                :ctrDim="ctrDim"
+                @onCtrlEnter="onCtrlEnter"
+                @onCtrlShiftEnter="onCtrlShiftEnter"
+                @onCtrlD="onCtrlD"
+                @onCtrlO="onCtrlO"
+                @onCtrlS="onCtrlS"
+                @onCtrlShiftS="onCtrlShiftS"
+            />
+        </keep-alive>
+    </v-card>
 </template>
 
 <script>
@@ -90,7 +83,7 @@ export default {
 
     methods: {
         setDim() {
-            const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
+            const { width, height } = this.$refs.queryViewCtr.$el.getBoundingClientRect()
             this.dim = { width, height }
         },
         async wkeShortKeyHandler(e) {
@@ -156,26 +149,18 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$header-height: 50px;
-$app-sidebar-width: 50px;
-.query-view-wrapper {
-    // ignore root padding
-    margin-left: -36px;
-    margin-top: -24px;
-    width: calc(100% + 72px);
-    height: calc(100% + 48px);
-    .query-view {
-        background: #ffffff;
-        &--fullscreen {
-            padding: 0px !important;
-            width: 100%;
-            height: calc(100% + #{$header-height});
-            margin-left: -#{$app-sidebar-width};
-            margin-top: -#{$header-height};
-            z-index: 7;
-            position: fixed;
-            overflow: hidden;
-        }
+.query-view {
+    background: #ffffff;
+    &--fullscreen {
+        z-index: 7;
+        position: fixed;
+        top: 0px;
+        right: 0px;
+        bottom: 0px;
+        left: 0px;
+    }
+    .worksheet-wrapper {
+        border-radius: 0px;
     }
 }
 </style>

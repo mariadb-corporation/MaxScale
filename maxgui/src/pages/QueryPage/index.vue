@@ -1,5 +1,5 @@
 <template>
-    <div class="fill-height">
+    <div class="query-editor-page">
         <router-view />
         <confirm-dialog
             v-model="isConfDlgOpened"
@@ -131,3 +131,12 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.query-editor-page {
+    // ignore root padding
+    margin-left: -36px;
+    margin-top: -24px;
+    width: calc(100% + 72px);
+    height: calc(100% + 48px);
+}
+</style>
