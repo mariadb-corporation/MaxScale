@@ -59,6 +59,17 @@ private:
     std::string       m_error_str;  // human readable error string, after construction
 };
 
+/**
+ * @brief ignore_whitespace_in_regex
+ * @param regex
+ * @return regex with all stretches of whitespace replaced
+ *         with the equivalent of extended regex "[[:space:]]+"
+ */
+std::string ignore_whitespace_in_regex(RegexGrammar type, const std::string& regex);
+
+
+// IMPL
+
 inline const std::string& SqlRewriter::match_template() const
 {
     return m_regex_template;

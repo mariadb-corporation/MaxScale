@@ -72,6 +72,12 @@ std::pair<bool, std::vector<TemplateDef>> read_templates_from_json(const std::st
                 def.continue_if_matched = continue_if_matched;
             }
 
+            bool ignore_whitespace;
+            if (t.try_get_bool("ignore_whitespace", &ignore_whitespace))
+            {
+                def.ignore_whitespace = ignore_whitespace;
+            }
+
             def.match_template = t.get_string("match_template");
             if (t.ok())
             {

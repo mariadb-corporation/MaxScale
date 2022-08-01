@@ -42,6 +42,7 @@ struct TemplateDef
     RegexGrammar regex_grammar = RegexGrammar::Native;
     bool         what_if = false;
     bool         continue_if_matched = false;
+    bool         ignore_whitespace = true;
     std::string  match_template;
     std::string  replace_template;
 };

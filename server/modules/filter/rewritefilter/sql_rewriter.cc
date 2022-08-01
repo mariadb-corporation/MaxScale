@@ -34,3 +34,40 @@ std::regex SqlRewriter::make_regex(const TemplateDef& def, const std::string& re
 
     return std::regex{regex_str, flags};
 }
+
+std::string ignore_whitespace_in_regex(RegexGrammar type, const std::string& regex)
+{
+    std::string new_regex;
+    auto ite = begin(regex);
+    const auto last = end(regex);
+
+    while (ite != last)
+    {
+        if (std::isspace(*ite))
+        {
+            while (++ite != last && std::isspace(*ite))
+            {
+                // pass
+            }
+
+            if (ite != last)
+            {
+                new_regex += "[[:space:]]";
+                if (type == RegexGrammar::Posix || type == RegexGrammar::Grep)
+                {
+                    new_regex += "[[:space:]]*";
+                }
+                else
+                {
+                    new_regex += '+';
+                }
+            }
+        }
+        else
+        {
+            new_regex += *ite++;
+        }
+    }
+
+    return new_regex;
+}
