@@ -4,7 +4,7 @@
             v-model="activeWkeID"
             show-arrows
             hide-slider
-            :height="32"
+            :height="height"
             class="tab-navigation--btn-style wke-navigation flex-grow-0"
             :style="{
                 maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)`,
@@ -99,6 +99,9 @@ import WkeToolbar from './WkeToolbar.container.vue'
 export default {
     name: 'wke-nav-ctr',
     components: { 'wke-toolbar-ctr': WkeToolbar },
+    props: {
+        height: { type: Number, required: true },
+    },
     data() {
         return {
             pageToolbarBtnWidth: 128,

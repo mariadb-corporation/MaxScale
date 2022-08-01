@@ -17,29 +17,32 @@
                 />
             </template>
             <template slot="pane-right">
-                <session-tabs
-                    :txtEditorToolbarRef="
-                        $typy($refs, 'editor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
-                    "
-                />
-                <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
-                    <template v-if="getActiveSessionId === session.id">
-                        <txt-editor-ctr
-                            v-if="getIsTxtEditor"
-                            ref="editor"
-                            :session="session"
-                            :dim="editorDim"
-                            v-on="$listeners"
-                        />
-                        <ddl-editor-ctr
-                            v-else
-                            ref="editor"
-                            :dim="editorDim"
-                            :execSqlDlg.sync="execSqlDlg"
-                            :isExecFailed="isExecFailed"
-                        />
-                    </template>
-                </keep-alive>
+                <div class="d-flex flex-column fill-height">
+                    <session-tabs
+                        :height="sessTabCtrHeight"
+                        :txtEditorToolbarRef="
+                            $typy($refs, 'editor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
+                        "
+                    />
+                    <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
+                        <template v-if="getActiveSessionId === session.id">
+                            <txt-editor-ctr
+                                v-if="getIsTxtEditor"
+                                ref="editor"
+                                :session="session"
+                                :dim="editorDim"
+                                v-on="$listeners"
+                            />
+                            <ddl-editor-ctr
+                                v-else
+                                ref="editor"
+                                :dim="editorDim"
+                                :execSqlDlg.sync="execSqlDlg"
+                                :isExecFailed="isExecFailed"
+                            />
+                        </template>
+                    </keep-alive>
+                </div>
             </template>
         </split-pane>
         <execute-sql-dialog
@@ -96,7 +99,7 @@ export default {
     data() {
         return {
             sidebarPct: 0, // split-pane states
-            editorDim: { width: 0, height: 0 },
+            sessTabCtrHeight: 30,
             execSqlDlg: {
                 isOpened: false,
                 editorHeight: 250,
@@ -135,26 +138,23 @@ export default {
             if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
             return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
+        sidebarWidth() {
+            return (this.ctrDim.width * this.sidebarPct) / 100
+        },
+        editorDim() {
+            return {
+                width: this.ctrDim.width - this.sidebarWidth,
+                height: this.ctrDim.height - this.sessTabCtrHeight,
+            }
+        },
     },
     watch: {
-        sidebarPct(v) {
-            if (v) this.$nextTick(() => this.setEditorDim())
-        },
-        ctrDim: {
-            deep: true,
-            handler(v, oV) {
-                if (oV.height) this.$nextTick(() => this.setEditorDim())
-            },
-        },
-        curr_editor_mode() {
-            this.$nextTick(() => this.setEditorDim())
+        'ctrDim.width'() {
+            this.handleSetSidebarPct()
         },
     },
-    created() {
-        // handleSetSidebarPct should be called in doubleRAF to ensure all components are completely rendered
-        this.$help.doubleRAF(() => {
-            this.handleSetSidebarPct()
-        })
+    mounted() {
+        this.$nextTick(() => this.handleSetSidebarPct())
     },
     activated() {
         this.watch_is_sidebar_collapsed()

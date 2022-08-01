@@ -1,7 +1,7 @@
 <template>
-    <div v-resize.quiet="setCtrDim" class="fill-height query-view-wrapper">
+    <div v-resize.quiet="setDim" class="fill-height query-view-wrapper">
         <div
-            ref="paneContainer"
+            ref="queryViewCtr"
             class="query-view d-flex flex-column fill-height"
             :class="{ 'query-view--fullscreen': is_fullscreen }"
         >
@@ -12,10 +12,10 @@
                 @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
             >
                 <div class="d-flex flex-column fill-height worksheet-wrapper">
-                    <wke-nav-ctr />
+                    <wke-nav-ctr :height="wkeNavCtrHeight" />
                     <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
                         <wke-ctr
-                            v-if="active_wke_id === wke.id"
+                            v-if="active_wke_id === wke.id && ctrDim.height"
                             ref="wke"
                             :ctrDim="ctrDim"
                             @onCtrlEnter="onCtrlEnter"
@@ -57,7 +57,8 @@ export default {
     },
     data() {
         return {
-            ctrDim: {},
+            wkeNavCtrHeight: 32,
+            dim: {},
         }
     },
     computed: {
@@ -69,20 +70,28 @@ export default {
             worksheets_arr: state => state.wke.worksheets_arr,
         }),
         ...mapGetters({ getIsTxtEditor: 'editor/getIsTxtEditor' }),
-    },
-    watch: {
-        is_fullscreen() {
-            this.$help.doubleRAF(() => this.setCtrDim())
+        ctrDim() {
+            return { width: this.dim.width, height: this.dim.height - this.wkeNavCtrHeight }
         },
     },
-    created() {
-        this.$help.doubleRAF(() => this.setCtrDim())
+    watch: {
+        is_fullscreen(v) {
+            if (v)
+                this.dim = {
+                    width: document.body.clientWidth,
+                    height: document.body.clientHeight,
+                }
+            else this.$help.doubleRAF(() => this.setDim())
+        },
+    },
+    mounted() {
+        this.$nextTick(() => this.setDim())
     },
 
     methods: {
-        setCtrDim() {
-            const { width, height } = this.$refs.paneContainer.getBoundingClientRect()
-            this.ctrDim = { width, height }
+        setDim() {
+            const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
+            this.dim = { width, height }
         },
         async wkeShortKeyHandler(e) {
             switch (e.srcKey) {

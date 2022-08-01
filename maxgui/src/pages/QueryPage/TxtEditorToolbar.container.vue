@@ -1,5 +1,5 @@
 <template>
-    <div class="session-toolbar d-flex align-center">
+    <div class="txt-editor-toolbar d-flex align-center" :style="{ height: `${height}px` }">
         <session-btns
             :session="session"
             @on-stop-query="stopQuery"
@@ -129,6 +129,7 @@ export default {
     },
     props: {
         session: { type: Object, required: true },
+        height: { type: Number, required: true },
     },
     data() {
         return {
@@ -270,10 +271,9 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.session-toolbar {
+.txt-editor-toolbar {
     border-left: 1px solid $table-border;
     border-bottom: 1px solid $table-border;
     width: 100%;
-    height: 28px;
 }
 </style>

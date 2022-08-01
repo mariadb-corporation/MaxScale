@@ -4,7 +4,7 @@
             v-model="activeSessionId"
             show-arrows
             hide-slider
-            :height="30"
+            :height="height"
             class="tab-navigation--btn-style session-navigation flex-grow-0"
             :style="{ maxWidth: `calc(100% - ${sessionToolbarWidth + 1}px)` }"
         >
@@ -86,6 +86,7 @@ export default {
     components: { 'session-tabs-toolbar': SessionTabsToolbar },
     props: {
         txtEditorToolbarRef: { type: Object, required: true },
+        height: { type: Number, required: true },
     },
     data() {
         return {

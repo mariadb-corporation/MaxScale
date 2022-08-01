@@ -1,5 +1,5 @@
 <template>
-    <div class="d-inline-flex align-center icon-group">
+    <div class="d-flex align-center icon-group" :style="{ height: `${height}px` }">
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -65,13 +65,13 @@ export default {
     props: {
         disableApply: { type: Boolean, required: true },
         disableRevert: { type: Boolean, required: true },
+        height: { type: Number, required: true },
     },
 }
 </script>
 
 <style lang="scss" scoped>
 .icon-group {
-    height: 28px;
     ::v-deep .v-btn {
         min-width: unset !important;
         padding: 0px !important;

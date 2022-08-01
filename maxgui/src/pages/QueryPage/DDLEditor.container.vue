@@ -7,9 +7,10 @@
             v-show="!isLoading"
             class="relative fill-height color border-left-table-border border-right-table-border"
         >
+            <!-- TODO: rename  alter-table-btns to ddl-editor-toolbar -->
             <alter-table-btns
                 class="color border-left-table-border border-bottom-table-border"
-                :style="{ width: '100%', height: '28px' }"
+                :height="ddlEditorToolbarHeight"
                 :disableRevert="!hasChanged"
                 :disableApply="!hasValidChanges"
                 @on-revert="revertChanges"
@@ -60,6 +61,7 @@ export default {
     },
     data() {
         return {
+            ddlEditorToolbarHeight: 28,
             /**
              * TODO: move formData to syncStateCreator so that the changes can be kept
              * after page refresh, changing session or worksheet.
@@ -78,8 +80,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         formDim() {
-            // title height: 36, border thickness: 2
-            return { ...this.dim, height: this.dim.height - 36 - 2 }
+            return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
         },
         isLoading() {
             return Boolean(this.getLoadingTblCreationInfo && !this.initialData)

@@ -1,11 +1,16 @@
 <template>
-    <div class="fill-height">
+    <div class="d-flex flex-column fill-height">
         <!-- ref is needed here so that its parent can call method in it  -->
-        <txt-editor-toolbar-ctr ref="txtEditorToolbar" :session="session" />
+        <txt-editor-toolbar-ctr
+            ref="txtEditorToolbar"
+            class="d-flex"
+            :height="txtEditorToolbarHeight"
+            :session="session"
+        />
         <!-- Main panel contains editor pane and visualize-sidebar pane -->
         <split-pane
             v-model="mainPanePct"
-            class="main-pane__content"
+            class="main-pane__content d-flex"
             :minPercent="minMainPanePct"
             split="vert"
             disable
@@ -113,6 +118,7 @@ export default {
             mouseDropDOM: null, // mouse drop DOM node
             mouseDropWidget: null, // mouse drop widget while dragging to editor
             maxVisSidebarPx: 250,
+            txtEditorToolbarHeight: 28,
             // visualize-sidebar and chart-container state
             defChartOpt: {
                 type: '',
@@ -154,13 +160,16 @@ export default {
         isChartMaximized() {
             return this.$typy(this.chartOpt, 'isMaximized').safeBoolean
         },
+        panesDim() {
+            return { width: this.dim.width, height: this.dim.height - this.txtEditorToolbarHeight }
+        },
         chartContainerHeight() {
-            return (this.dim.height * this.editorPct) / 100
+            return (this.panesDim.height * this.editorPct) / 100
         },
         maxVisSidebarPct() {
             return this.$help.pxToPct({
                 px: this.maxVisSidebarPx,
-                containerPx: this.dim.width,
+                containerPx: this.panesDim.width,
             })
         },
         allQueryTxt: {
@@ -174,8 +183,8 @@ export default {
         resultPaneDim() {
             const visSideBarWidth = this.show_vis_sidebar ? this.maxVisSidebarPx : 0
             return {
-                width: this.dim.width - visSideBarWidth,
-                height: (this.dim.height * (100 - this.editorPct)) / 100,
+                width: this.panesDim.width - visSideBarWidth,
+                height: (this.panesDim.height * (100 - this.editorPct)) / 100,
             }
         },
     },
@@ -189,14 +198,14 @@ export default {
                 this.queryPanePct = 50
                 this.minQueryPanePct = this.$help.pxToPct({
                     px: 32,
-                    containerPx: this.dim.width,
+                    containerPx: this.panesDim.width,
                 })
             } else this.queryPanePct = 100
         },
-        'dim.height'(v) {
+        'panesDim.height'(v) {
             if (v) this.handleSetMinEditorPct()
         },
-        'dim.width'() {
+        'panesDim.width'() {
             this.handleSetVisSidebar(this.show_vis_sidebar)
         },
         show_vis_sidebar(v) {
@@ -215,7 +224,10 @@ export default {
             this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)
         },
         handleSetMinEditorPct() {
-            this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: this.dim.height })
+            this.minEditorPct = this.$help.pxToPct({
+                px: 26,
+                containerPx: this.panesDim.height,
+            })
         },
         handleSetVisSidebar(showVisSidebar) {
             if (!showVisSidebar) this.mainPanePct = 100
