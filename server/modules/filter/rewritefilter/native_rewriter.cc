@@ -41,10 +41,12 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
 {
     try
     {
+        const std::string normal_group{"(.*?)"s};
+        bool starts_with_placeholder = false;
+        bool ends_with_placeholder = false;
 
-        m_replacer.set_replace_template(def.replace_template);
-
-        auto last = end(match_template());
+        auto const first = begin(match_template());
+        auto const last = end(match_template());
         auto ite = begin(match_template());
 
         while (ite != last)
@@ -64,6 +66,11 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
             case PLACEHOLDER_CHAR:
                 {
                     ++m_nreplacements;
+
+                    if (ite == first)
+                    {
+                        starts_with_placeholder = true;
+                    }
 
                     int n{};
                     std::string regex;
@@ -90,14 +97,18 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                     std::string group;
                     if (regex.empty())
                     {
-                        group = "(.*?)"s;
+                        group = normal_group;
                     }
                     else
                     {
                         group = "("s + regex + ")";
                     }
-
                     m_regex_str += group;
+
+                    if (ite == last)
+                    {
+                        ends_with_placeholder = true;
+                    }
                     continue;
                 }
                 break;
@@ -113,12 +124,37 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
             }
         }
 
+        std::string replacement_str = def.replace_template;
+
+        if (!starts_with_placeholder)
+        {
+            m_ordinals.push_front(m_max_ordinal);
+            ++m_nreplacements;
+            ++m_max_ordinal;
+            m_regex_str = normal_group + m_regex_str;
+            replacement_str = "@{" + std::to_string(m_max_ordinal) + '}' + replacement_str;
+        }
+
+        if (!ends_with_placeholder)
+        {
+            m_ordinals.push_back(m_max_ordinal);
+            ++m_nreplacements;
+            ++m_max_ordinal;
+            m_regex_str += normal_group;
+            replacement_str += "@{" + std::to_string(m_max_ordinal) + '}';
+        }
+
         if (def.ignore_whitespace)
         {
             m_regex_str = ignore_whitespace_in_regex(def.regex_grammar, m_regex_str);
         }
 
         MXB_SINFO("Native regex: " << m_regex_str);
+        m_replacer.set_replace_template(replacement_str);
+        if (!starts_with_placeholder || !ends_with_placeholder)
+        {
+            MXB_SINFO("Modified replacement: " << replacement_str);
+        }
 
         make_ordinals();
 
@@ -163,7 +199,7 @@ void NativeRewriter::make_ordinals()
 
     ords.erase(std::unique(begin(ords), end(ords)), end(ords));
     const auto& unique_ordinals = ords;
-    std::vector<int> monotonical(unique_ordinals.size());
+    std::deque<int> monotonical(unique_ordinals.size());
     std::iota(begin(monotonical), end(monotonical), 0);
     if (monotonical != unique_ordinals)
     {
@@ -237,6 +273,10 @@ bool NativeRewriter::replace(const std::string& sql, std::string* pSql) const
 
             *pSql = m_replacer.replace(replacements);
         }
+    }
+    else
+    {
+        matched = false;
     }
 
     return matched;

@@ -18,6 +18,7 @@
 
 #include <string>
 #include <memory>
+#include <queue>
 
 class NativeReplacer;
 
@@ -52,7 +53,7 @@ private:
     // An ordinal is the position (ordinal) of the placeholders as they appear
     // in the match template: so @{2}, @{1}, @{2} would lead to m_ordinals
     // containing {1, 0, 1}.
-    std::vector<int> m_ordinals;
+    std::deque<int> m_ordinals;
 
     // A mapping from an (implied) index to its respective index in m_ordinals.
     // To continue the example above, m_map_ordinals would contain {1, 0},
