@@ -208,8 +208,18 @@ std::string NativeRewriter::make_ordinals()
 
 bool NativeRewriter::replace(const std::string& sql, std::string* pSql) const
 {
+    auto first = begin(sql);
+    auto last = end(sql);
+
+    // Skip trailing semicolon
+    size_t semicolon = sql.find_last_not_of(" \t\r\n\v\f");
+    if (semicolon != std::string::npos && sql[semicolon] == ';')
+    {
+        last = first + semicolon;
+    }
+
     std::smatch match;
-    bool matched = std::regex_match(sql, match, m_regex);
+    bool matched = std::regex_match(first, last, match, m_regex);
 
     if (matched && match.size() == m_nreplacements + 1)
     {
