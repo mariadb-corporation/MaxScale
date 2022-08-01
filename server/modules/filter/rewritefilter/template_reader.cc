@@ -12,6 +12,7 @@
  */
 
 #include "template_reader.hh"
+#include "json_reader.hh"
 #include <maxbase/json.hh>
 #include <maxbase/log.hh>
 #include <maxbase/assert.hh>
@@ -105,82 +106,19 @@ TemplateReader::TemplateReader(const std::string& template_file, const TemplateD
 
 std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
 {
-    std::vector<TemplateDef> ret;
-    bool ok = true;
-    Json json;
-
-    if (json.load(m_path))
+    auto extension_pos = m_path.find_last_of('.');
+    if (extension_pos == std::string::npos)
     {
-        auto arr = json.get_array_elems("templates");
-        for (auto& t : arr)
-        {
-            TemplateDef def {m_default_template};
-
-            bool case_sensitive;
-            if (t.try_get_bool("case_sensitive", &case_sensitive))
-            {
-                def.case_sensitive = case_sensitive;
-            }
-
-            std::string regex_grammar_str;
-            if (t.try_get_string("regex_grammar", &regex_grammar_str))
-            {
-                auto grammar = grammar_from_string(regex_grammar_str);
-                ok = grammar != RegexGrammar::END;
-                if (ok)
-                {
-                    def.regex_grammar = grammar;
-                }
-                else
-                {
-
-                    MXB_SERROR("Invalid regex_grammar value `"
-                               << regex_grammar_str
-                               << "` in rewritefilter template file. "
-                               << "Valid values are " << valid_grammar_values()
-                               << '\'');
-                }
-            }
-
-            bool what_if;
-            if (t.try_get_bool("what_if", &what_if))
-            {
-                def.what_if = what_if;
-            }
-
-            bool continue_if_matched;
-            if (t.try_get_bool("continue_if_matched", &continue_if_matched))
-            {
-                def.continue_if_matched = continue_if_matched;
-            }
-
-            def.match_template = t.get_string("match_template");
-            if (t.ok())
-            {
-                def.replace_template = t.get_string("replace_template");
-            }
-
-            if (!t.ok())
-            {
-                MXB_SERROR("Failed to read rewrite template file: "
-                           << m_path
-                           << " error: "
-                           << t.error_msg().c_str());
-                ok = false;
-                break;
-            }
-
-            ret.push_back(std::move(def));
-        }
-    }
-    else
-    {
-        MXB_SERROR("Failed to load rewrite template file: "
-                   << m_path
-                   << " error: "
-                   << json.error_msg().c_str());
-        ok = false;
+        MXB_SERROR("No extension in: " << m_path);
+        return {false, std::vector<TemplateDef> {}};
     }
 
-    return {ok, ret};
+    auto extension = m_path.substr(extension_pos + 1);
+    if (extension == "json")
+    {
+        return read_templates_from_json(m_path, m_default_template);
+    }
+
+    MXB_SERROR("Unknown extension in: " << m_path << ". Valid extensions are json");
+    return {false, std::vector<TemplateDef> {}};
 }

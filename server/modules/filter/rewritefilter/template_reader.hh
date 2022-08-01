@@ -33,6 +33,9 @@ enum class RegexGrammar : int64_t
 
 std::regex_constants::syntax_option_type to_regex_grammar_flag(RegexGrammar type);
 
+std::string  valid_grammar_values();
+RegexGrammar grammar_from_string(const std::string& str);
+
 struct TemplateDef
 {
     bool         case_sensitive = true;

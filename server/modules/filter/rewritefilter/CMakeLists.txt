@@ -6,6 +6,7 @@ add_library(rewritefilter SHARED
   native_rewriter.cc
   native_replacer.cc
   regex_rewriter.cc
+  json_reader.cc
   )
 target_link_libraries(rewritefilter maxscale-common)
 set_target_properties(rewritefilter PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
