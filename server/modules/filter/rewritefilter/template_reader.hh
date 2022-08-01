@@ -13,8 +13,11 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/exception.hh>
 #include <vector>
 #include <regex>
+
+DEFINE_EXCEPTION(RewriteError);
 
 // Make the std::regex_constants that select a regex grammar an enum
 // *uncrustify-off*

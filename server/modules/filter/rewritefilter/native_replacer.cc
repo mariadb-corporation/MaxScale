@@ -12,6 +12,7 @@
  */
 
 #include "native_replacer.hh"
+#include "template_reader.hh"
 #include <sstream>
 #include <iostream>
 
@@ -21,7 +22,6 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
     // This does almost the same thing as RewriteSql::RewriteSql() but instead of
     // creating a regex string and regex, it creates a vector of
     // sql parts and placeholders ordinals.
-    std::ostringstream error_stream;
     auto last = end(replace_template);
     auto ite = begin(replace_template);
 
@@ -52,8 +52,9 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
 
                 if (!regex.empty())
                 {
-                    error_stream << "Cannot define placeholders with a regex in the replacement template"
-                                 << ": " << replace_template;
+                    MXB_THROW(RewriteError,
+                              "Cannot define placeholders with a regex in the replacement template"
+                              << ": " << replace_template);
                 }
 
                 if (n <= 0)
@@ -62,9 +63,9 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
                     {
                         auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
                         auto new_last = ite + into_placeholder;
-                        error_stream << "Invalid placeholder \""
-                                     << std::string(begin(replace_template), new_last)
-                                     << "...\"";
+                        MXB_THROW(RewriteError, "Invalid placeholder \""
+                                  << std::string(begin(replace_template), new_last)
+                                  << "...\"");
                         ite = last;
                         break;
                     }
@@ -94,8 +95,6 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
     {
         m_parts.push_back(current_sql_part);
     }
-
-    m_error_str = error_stream.str();
 }
 
 std::string NativeReplacer::replace(const std::vector<std::string>& replacements) const

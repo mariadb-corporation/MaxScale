@@ -41,7 +41,7 @@ public:
     bool replace(const std::string& sql, std::string* pSql) const override final;
 
 private:
-    std::string make_ordinals();
+    void make_ordinals();
 
     std::string m_regex_str;
     std::regex  m_regex;

@@ -39,122 +39,110 @@ void write_regex_char(std::string* str, char ch)
 NativeRewriter::NativeRewriter(const TemplateDef& def)
     : SqlRewriter(def)
 {
-    m_replacer.set_replace_template(def.replace_template);
-    if (!m_replacer.is_valid())
+    try
     {
-        set_error_string(m_replacer.error_str());
-        return;
-    }
 
-    std::ostringstream error_stream;
-    std::string error_str;
+        m_replacer.set_replace_template(def.replace_template);
 
-    auto last = end(match_template());
-    auto ite = begin(match_template());
+        auto last = end(match_template());
+        auto ite = begin(match_template());
 
-    while (ite != last)
-    {
-        switch (*ite)
+        while (ite != last)
         {
-        case '\\':
+            switch (*ite)
             {
-                m_regex_str += *ite;
-                if (ite + 1 != last)
+            case '\\':
                 {
-                    m_regex_str += *++ite;
-                }
-            }
-            break;
-
-        case PLACEHOLDER_CHAR:
-            {
-                ++m_nreplacements;
-
-                int n{};
-                std::string regex;
-                ite = read_placeholder(ite, last, &n, &regex);
-
-                if (n <= 0)
-                {
-                    if (n < 0)
+                    m_regex_str += *ite;
+                    if (ite + 1 != last)
                     {
-                        auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
-                        auto new_last = ite + into_placeholder;
-                        error_stream << "Invalid placeholder \""
-                                     << std::string(begin(match_template()), new_last)
-                                     << "...\"";
-                        ite = last;
-                        break;
+                        m_regex_str += *++ite;
                     }
-                    write_regex_char(&m_regex_str, *ite++);
+                }
+                break;
+
+            case PLACEHOLDER_CHAR:
+                {
+                    ++m_nreplacements;
+
+                    int n{};
+                    std::string regex;
+                    ite = read_placeholder(ite, last, &n, &regex);
+
+                    if (n <= 0)
+                    {
+                        if (n < 0)
+                        {
+                            auto into_placeholder = (last - ite >= 5) ? 5 : (last - ite);
+                            auto new_last = ite + into_placeholder;
+                            MXB_THROW(RewriteError, "Invalid placeholder \""
+                                      << std::string(begin(match_template()), new_last)
+                                      << "...\"");
+                            ite = last;
+                            break;
+                        }
+                        write_regex_char(&m_regex_str, *ite++);
+                        continue;
+                    }
+                    m_max_ordinal = std::max(m_max_ordinal, n);
+                    m_ordinals.push_back(n - 1);
+
+                    std::string group;
+                    if (regex.empty())
+                    {
+                        group = "(.*?)"s;
+                    }
+                    else
+                    {
+                        group = "("s + regex + ")";
+                    }
+
+                    m_regex_str += group;
                     continue;
                 }
-                m_max_ordinal = std::max(m_max_ordinal, n);
-                m_ordinals.push_back(n - 1);
+                break;
 
-                std::string group;
-                if (regex.empty())
-                {
-                    group = "(.*?)"s;
-                }
-                else
-                {
-                    group = "("s + regex + ")";
-                }
-
-                m_regex_str += group;
-                continue;
+            default:
+                write_regex_char(&m_regex_str, *ite);
+                break;
             }
-            break;
 
-        default:
-            write_regex_char(&m_regex_str, *ite);
-            break;
+            if (ite != last)
+            {
+                ++ite;
+            }
         }
 
-        if (ite != last)
+        if (def.ignore_whitespace)
         {
-            ++ite;
+            m_regex_str = ignore_whitespace_in_regex(def.regex_grammar, m_regex_str);
         }
-    }
 
-    if (def.ignore_whitespace)
-    {
-        m_regex_str = ignore_whitespace_in_regex(def.regex_grammar, m_regex_str);
-    }
+        MXB_SINFO("Native regex: " << m_regex_str);
 
-    MXB_SINFO("Native regex: " << m_regex_str);
+        make_ordinals();
 
-    error_str = error_stream.str();
-
-    if (error_str.empty())
-    {
-        error_str = make_ordinals();
-    }
-
-    if (error_str.empty())
-    {
         try
         {
             m_regex = make_regex(template_def(), m_regex_str);
         }
         catch (const std::exception& ex)
         {
-            error_str = ex.what();
+            MXB_THROW(RewriteError, ex.what());
         }
     }
-
-    if (!error_str.empty())
+    catch (const std::exception& ex)
     {
-        set_error_string(error_str);
+        set_error_string(ex.what());
     }
 }
 
-std::string NativeRewriter::make_ordinals()
+void NativeRewriter::make_ordinals()
 {
     if (m_replacer.max_placeholder_ordinal() > m_max_ordinal)
     {
-        return "The replacement template has larger placeholder numbers than the match template";
+        MXB_THROW(RewriteError,
+                  "The replacement template has larger placeholder numbers than the match template");
     }
 
     auto ords = m_ordinals;
@@ -179,7 +167,8 @@ std::string NativeRewriter::make_ordinals()
     std::iota(begin(monotonical), end(monotonical), 0);
     if (monotonical != unique_ordinals)
     {
-        return "The placeholder numbers (not positions) must be strictly ordered (1,2,3,...)";
+        MXB_THROW(RewriteError,
+                  "The placeholder numbers (not positions) must be strictly ordered (1,2,3,...)");
     }
 
     // Make m_map_ordinals
@@ -208,8 +197,6 @@ std::string NativeRewriter::make_ordinals()
             ite = ite2;
         }
     }
-
-    return "";
 }
 
 bool NativeRewriter::replace(const std::string& sql, std::string* pSql) const

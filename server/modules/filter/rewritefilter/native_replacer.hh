@@ -34,10 +34,6 @@ public:
      */
     void set_replace_template(const std::string& replace_template);
 
-    /* Is the replace_template valid */
-    bool        is_valid() const;
-    std::string error_str() const;
-
     size_t num_replacements() const;
     int    max_placeholder_ordinal() const;
 
@@ -58,20 +54,9 @@ private:
      * {"select ", 0, " from ", 1} (0-based, 1-based in the match_template).
      */
     std::vector<StringOrOrdinal> m_parts;
-    std::string                  m_error_str;
     size_t                       m_nreplacements = 0;
     int                          m_max_placeholder_ordinal = 0;
 };
-
-inline bool NativeReplacer::is_valid() const
-{
-    return m_error_str.empty();
-}
-
-inline std::string NativeReplacer::error_str() const
-{
-    return m_error_str;
-}
 
 inline size_t NativeReplacer::num_replacements() const
 {
