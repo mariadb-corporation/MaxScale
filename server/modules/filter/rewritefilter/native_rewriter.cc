@@ -125,6 +125,8 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
         }
 
         std::string replacement_str = def.replace_template;
+        int start_auto = -1;
+        int end_auto = -1;
 
         if (!starts_with_placeholder)
         {
@@ -133,6 +135,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
             ++m_max_ordinal;
             m_regex_str = normal_group + m_regex_str;
             replacement_str = "@{" + std::to_string(m_max_ordinal) + '}' + replacement_str;
+            start_auto = m_max_ordinal;
         }
 
         if (!ends_with_placeholder)
@@ -142,6 +145,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
             ++m_max_ordinal;
             m_regex_str += normal_group;
             replacement_str += "@{" + std::to_string(m_max_ordinal) + '}';
+            end_auto = m_max_ordinal;
         }
 
         if (def.ignore_whitespace)
@@ -150,7 +154,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
         }
 
         MXB_SINFO("Native regex: " << m_regex_str);
-        m_replacer.set_replace_template(replacement_str);
+        m_replacer.set_replace_template(replacement_str, start_auto, end_auto);
         if (!starts_with_placeholder || !ends_with_placeholder)
         {
             MXB_SINFO("Modified replacement: " << replacement_str);
@@ -175,12 +179,6 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
 
 void NativeRewriter::make_ordinals()
 {
-    if (m_replacer.max_placeholder_ordinal() > m_max_ordinal)
-    {
-        MXB_THROW(RewriteError,
-                  "The replacement template has larger placeholder numbers than the match template");
-    }
-
     auto ords = m_ordinals;
     std::sort(begin(ords), end(ords));
 

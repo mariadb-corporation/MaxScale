@@ -29,13 +29,19 @@ public:
     NativeReplacer() = default;
 
     /**
-     * @brief set_replace_template - Builds an internal structure from the replace_template
+     * @brief set_replace_template - Builds an internal structure from the replace_template.
+     *                               start_auto and end_auto are for generating an error
+     *                               if the user part of the replace_template uses auto
+     *                               generated placeholders.
      * @param replace_template     - @see RewriteSql
+     * @param start_auto           - Ordinal of auto start placeholder or -1 if not auto
+     * @param end_auto             - Ordinal of auto end placeholder or -1 if not auto
      */
-    void set_replace_template(const std::string& replace_template);
+    void set_replace_template(const std::string& replace_template,
+                              int start_auto,
+                              int end_auto);
 
     size_t num_replacements() const;
-    int    max_placeholder_ordinal() const;
 
     /**
      * @brief  replace
@@ -55,17 +61,11 @@ private:
      */
     std::vector<StringOrOrdinal> m_parts;
     size_t                       m_nreplacements = 0;
-    int                          m_max_placeholder_ordinal = 0;
 };
 
 inline size_t NativeReplacer::num_replacements() const
 {
     return m_nreplacements;
-}
-
-inline int NativeReplacer::max_placeholder_ordinal() const
-{
-    return m_max_placeholder_ordinal;
 }
 
 /**

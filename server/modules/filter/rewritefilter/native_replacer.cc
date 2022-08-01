@@ -17,7 +17,11 @@
 #include <iostream>
 
 
-void NativeReplacer::set_replace_template(const std::string& replace_template)
+
+void NativeReplacer::set_replace_template(const std::string& replace_template,
+                                          int start_auto,
+                                          int end_auto)
+
 {
     // This does almost the same thing as RewriteSql::RewriteSql() but instead of
     // creating a regex string and regex, it creates a vector of
@@ -26,6 +30,7 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
     auto ite = begin(replace_template);
 
     std::string current_sql_part;
+    std::vector<int> ordinals;      // for error checking against start_auto and end_auto
 
     while (ite != last)
     {
@@ -73,7 +78,7 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
                     continue;
                 }
 
-                m_max_placeholder_ordinal = std::max(m_max_placeholder_ordinal, n);
+                ordinals.push_back(n);
 
                 if (!current_sql_part.empty())
                 {
@@ -94,6 +99,14 @@ void NativeReplacer::set_replace_template(const std::string& replace_template)
     if (!current_sql_part.empty())
     {
         m_parts.push_back(current_sql_part);
+    }
+
+    if (std::count(begin(ordinals), end(ordinals), start_auto) > 1
+        || std::count(begin(ordinals), end(ordinals), end_auto) > 1)
+    {
+        MXB_THROW(RewriteError,
+                  "The replacement template has larger placeholder"
+                  "numbers than the match template");
     }
 }
 
