@@ -148,6 +148,12 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
                 def.what_if = what_if;
             }
 
+            bool continue_if_matched;
+            if (t.try_get_bool("continue_if_matched", &continue_if_matched))
+            {
+                def.continue_if_matched = continue_if_matched;
+            }
+
             def.match_template = t.get_string("match_template");
             if (t.ok())
             {

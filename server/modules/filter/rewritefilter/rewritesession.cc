@@ -58,15 +58,26 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
 {
     auto& session_data = *m_sSession_data.get();
     const auto& sql = pBuffer->get_sql();
+    const auto* pSql_to_match = &sql;
+
+    std::string new_sql;
+    std::string sql_before;     // for logging
+    bool continued = false;     // also for logging. Avoid a copy unless match-and-continue happened
 
     for (const auto& r : session_data.rewriters)
     {
-        std::string new_sql;
-        if (r->replace(sql, &new_sql))
+        bool do_logging = session_data.settings.log_replacement || r->template_def().what_if;
+        if (do_logging && continued)
         {
-            if (session_data.settings.log_replacement || r->template_def().what_if)
+            sql_before = *pSql_to_match;
+        }
+
+        if (r->replace(*pSql_to_match, &new_sql))
+        {
+            if (do_logging)
             {
-                log_replacement(sql, new_sql, r->template_def().what_if);
+                const auto& from = continued ? sql_before : sql;
+                log_replacement(from, new_sql, r->template_def().what_if);
             }
 
             if (!r->template_def().what_if)
@@ -74,7 +85,16 @@ bool RewriteFilterSession::routeQuery(GWBUF* pBuffer)
                 gwbuf_free(pBuffer);
                 pBuffer = modutil_create_query(new_sql.c_str());
             }
-            break;
+
+            if (r->template_def().continue_if_matched)
+            {
+                continued = true;
+                pSql_to_match = &new_sql;
+            }
+            else
+            {
+                break;
+            }
         }
     }
 

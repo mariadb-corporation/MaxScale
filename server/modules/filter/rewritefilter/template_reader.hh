@@ -38,6 +38,7 @@ struct TemplateDef
     bool         case_sensitive = true;
     RegexGrammar regex_grammar = RegexGrammar::Native;
     bool         what_if = false;
+    bool         continue_if_matched = false;
     std::string  match_template;
     std::string  replace_template;
 };

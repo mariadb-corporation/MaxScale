@@ -38,6 +38,8 @@ public:
      * @param  sql - to be examined
      * @param  pSql - replacement is placed here
      * @return true if replacement was done (regex match)
+     *
+     * NOTE: replace() may be called with pSql pointing to sql.
      */
     virtual bool replace(const std::string& sql, std::string* pSql) const = 0;
 
