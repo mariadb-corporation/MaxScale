@@ -1,3 +1,4 @@
 [maxscale]
 threads=###threads###
 maxlog=false
+syslog=true
