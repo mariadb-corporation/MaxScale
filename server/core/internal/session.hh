@@ -292,9 +292,9 @@ public:
 
     void notify_userdata_change() override;
 
-    bool    can_pool_backends() const override;
-    void    set_can_pool_backends(bool value) override;
-    int64_t pooling_time_ms() const;
+    bool can_pool_backends() const override;
+    void set_can_pool_backends(bool value) override;
+    bool idle_pooling_enabled() const override;
 
     std::chrono::seconds multiplex_timeout() const;
 
@@ -362,8 +362,7 @@ private:
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 
     /**< Pre-emptive pooling time from service. Locked at session begin. */
-    std::chrono::milliseconds m_pooling_time {-1};
-
+    std::chrono::milliseconds m_pooling_time;
     /**< Multiplex timeout from service. Locked at session begin. */
     std::chrono::seconds m_multiplex_timeout;
 

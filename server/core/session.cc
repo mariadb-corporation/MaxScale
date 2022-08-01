@@ -687,13 +687,10 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
         m_retain_last_statements = this_unit.retain_last_statements;
     }
 
-    // Pooling time is pinned at session creation. Service config changes will not affect it.
-    auto pooling_time = svc_config.idle_session_pooling_time;
-    if (pooling_time >= 0ms)
-    {
-        m_pooling_time = pooling_time;
-        m_multiplex_timeout = svc_config.multiplex_timeout;
-    }
+    // Connection sharing related settings are pinned at session creation. Service config changes only affect
+    // new sessions.
+    m_pooling_time = svc_config.idle_session_pool_time;
+    m_multiplex_timeout = svc_config.multiplex_timeout;
 }
 
 Session::~Session()
@@ -1729,7 +1726,7 @@ bool Session::is_movable() const
     }
 
     // Do not move a session which may be waiting for a connection.
-    return m_pooling_time < 0ms;
+    return !idle_pooling_enabled();
 }
 
 void Session::notify_userdata_change()
@@ -1804,7 +1801,7 @@ bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
             // Need to remove this manually as cancel-mode is not called.
             m_idle_pool_call_id = mxb::Worker::NO_CALL;
         }
-        else if (m_pooling_time < 1000ms)
+        else if (m_pooling_time < 1s)
         {
             // Returning true means the delayed call will run again after 'm_pooling_time'.
             // This is ok if the time is several seconds, as some connections may not yet have
@@ -1823,9 +1820,9 @@ bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
     return call_again;
 }
 
-int64_t Session::pooling_time_ms() const
+bool Session::idle_pooling_enabled() const
 {
-    return m_pooling_time.count();
+    return m_pooling_time >= 0ms;
 }
 
 std::chrono::seconds Session::multiplex_timeout() const

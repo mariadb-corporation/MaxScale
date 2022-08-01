@@ -128,7 +128,7 @@ public:
             /**
              * Can backend connections be pooled while session is still running? This is the time a
              * session must be idle before backend connections can be pooled. */
-            std::chrono::milliseconds idle_session_pooling_time;
+            std::chrono::milliseconds idle_session_pool_time;
 
             /** How long an endpoint can wait for a connection to become available */
             std::chrono::seconds multiplex_timeout;

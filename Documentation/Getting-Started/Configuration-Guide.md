@@ -2232,24 +2232,25 @@ user_accounts_file_usage=file_only_always
 
 ### `idle_session_pool_time`
 
-Normally, MaxScale only pools backend connections when a session is closed
-(controlled by server settings *persistpoolmax* and *persistmaxtime*).
-Connections in the pool can then be attached to new sessions instead of creating
-new connections to backends. *idle_session_pool_time* allows MaxScale to pool
-backend connections also for running sessions, and only re-attach the connection
-when the session is doing a query. This effectively allows multiple sessions to
-share backend connections.
+Time, default: -1s. Normally, MaxScale only pools backend connections when
+a session is closed (controlled by server settings *persistpoolmax* and
+*persistmaxtime*). Other sessions can use the pooled connections
+instead of creating new connections to backends. If connection sharing is enabled,
+MaxScale can pool backend connections also from running sessions, and
+re-attach a pooled connection when a session is doing a query. This effectively
+allows multiple sessions to share backend connections.
 
 *idle_session_pool_time* defines the amount of time a session must be idle
-before its backend connections may be pooled. It defaults to -1 seconds
-(disabled). All negative values disable this feature. The value can be given in
+before its backend connections may be pooled. To enable connection sharing, set
+*idle_session_pool_time* to zero or greater. The value can be given in
 seconds or milliseconds.
 
 This feature has a significant drawback: when a backend connection is reused, it
 needs to be restored to the correct state. This means reauthenticating and
 replaying session commands. This can add a significant delay before the
 connection is actually ready for a query. If the session command history size
-exceeds the value of *max_sescmd_history*, pooling is disabled for the session.
+exceeds the value of *max_sescmd_history*, connection sharing is disabled for
+the session.
 
 This feature should only be used when limiting the backend connection count is
 a priority, even at the cost of query delay and throughput. This feature only
@@ -2261,14 +2262,13 @@ works when the following server settings are also set in MaxScale configuration:
 
 Since reusing a backend connection is an expensive operation, MaxScale only
 pools connections when another session requires them. *idle_session_pool_time*
-then effectively limits the frequency at which a connection can be moved from
+thus effectively limits the frequency at which a connection can be moved from
 one session to another. Setting `idle_session_pool_time=0ms` causes MaxScale to
 move connections as soon as possible.
 
 ```
 idle_session_pool_time=900ms
 ```
-
 See below for more information on configuring connection sharing.
 
 #### Details, limitations and suggestions for connection sharing
@@ -2302,12 +2302,12 @@ MaxScale server settings
 The service settings [max_sescmd_history](#max_sescmd_history),
 [prune_sescmd_history](#prune_sescmd_history) and
 [multiplex_timeout](#multiplex_timeout) also have an effect. These
-settings should be tuned according to the current use case.
+settings should be tuned according to the use case.
 
 *persistpoolmax* limits how many connections can be kept in a pool for a given
 server. If the pool is full, no more connections are detached from sessions even
-if they are idle and required. The pool size should be enough to contain any
-connections being transferred between sessions, but not be greater than
+if they are idle and required. The pool size should be large enough to contain
+any connections being transferred between sessions, but not be greater than
 *max_routing_connections*. Using the value of *max_routing_connections* is a
 reasonable starting point.
 
@@ -2495,9 +2495,8 @@ backend. The client can still connect to MaxScale, but queries will fail.
 
 If connection sharing is on, sessions exceeding the limit will be put on hold
 until a connection is available. Such sessions will appear unresponsive, as
-queries will hang, possibly for a long time. This feature is best used in a
-situation where most sessions are idle, so that backend connections are usually
-available from the pool.
+queries will hang, possibly for a long time. The timeout is controlled by
+[multiplex_timeout](#multiplex_timeout).
 
 ```
 max_routing_connections=1234

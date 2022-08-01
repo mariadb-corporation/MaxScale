@@ -228,7 +228,7 @@ cfg::ParamMilliseconds s_idle_session_pool_time(
 
 cfg::ParamSeconds s_multiplex_timeout(
     &s_spec, "multiplex_timeout", "How long a session can wait for a connection to become available",
-    std::chrono::seconds(60), cfg::ParamSeconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(60), cfg::ParamSeconds::DurationType::UNSIGNED, cfg::Param::AT_RUNTIME);
 
 cfg::ParamPath s_user_accounts_file(
     &s_spec, "user_accounts_file", "Load additional users from a file",
@@ -540,7 +540,7 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::prune_sescmd_history, &s_prune_sescmd_history);
     add_native(&Config::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
     add_native(&Config::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
-    add_native(&Config::m_v, &Values::idle_session_pooling_time, &s_idle_session_pool_time);
+    add_native(&Config::m_v, &Values::idle_session_pool_time, &s_idle_session_pool_time);
     add_native(&Config::m_v, &Values::multiplex_timeout, &s_multiplex_timeout);
     add_native(&Config::m_v, &Values::user_accounts_file_path, &s_user_accounts_file);
     add_native(&Config::m_v, &Values::user_accounts_file_usage, &s_user_accounts_file_usage);
