@@ -78,7 +78,7 @@ import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
 import HistoryAndSnippets from './HistoryAndSnippets'
 export default {
-    name: 'query-result',
+    name: 'query-result-ctr',
     components: {
         PreviewDataTab,
         ResultTab,
@@ -95,7 +95,7 @@ export default {
     },
     data() {
         return {
-            tabItemClass: 'pt-2 px-5 query-result-fontStyle color text-small-text',
+            tabItemClass: 'pt-2 px-5 query-result-ctr-fontStyle color text-small-text',
         }
     },
     computed: {
@@ -142,7 +142,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.query-result-fontStyle {
+.query-result-ctr-fontStyle {
     font-size: 14px;
 }
 </style>

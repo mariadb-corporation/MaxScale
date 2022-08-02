@@ -56,10 +56,10 @@
                         </split-pane>
                     </template>
                     <template slot="pane-right">
-                        <query-result
+                        <query-result-ctr
                             ref="queryResultPane"
                             :dynDim="resultPaneDim"
-                            class="query-result"
+                            class="query-result-ctr"
                             @place-to-editor="placeToEditor"
                             @on-dragging="draggingTxt"
                             @on-dragend="dropTxtToEditor"
@@ -97,7 +97,7 @@
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
 import SqlEditor from '@/components/SqlEditor'
-import QueryResult from './QueryResult'
+import QueryResult from './QueryResult.container.vue'
 import ChartConfig from './ChartConfig'
 import ChartPane from './ChartPane'
 
@@ -106,7 +106,7 @@ export default {
     components: {
         'txt-editor-toolbar-ctr': TxtEditorToolbar,
         'sql-editor': SqlEditor,
-        QueryResult,
+        'query-result-ctr': QueryResult,
         'chart-config': ChartConfig,
         'chart-pane': ChartPane,
     },
@@ -321,7 +321,7 @@ export default {
 <style lang="scss" scoped>
 .editor,
 .chart-config,
-.query-result,
+.query-result-ctr,
 .chart-pane {
     width: 100%;
     height: 100%;
@@ -331,7 +331,7 @@ export default {
 }
 .chart-config,
 .chart-pane,
-.query-result,
+.query-result-ctr,
 .editor {
     border-left: 1px solid $table-border;
 }
