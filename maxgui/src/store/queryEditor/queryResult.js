@@ -299,16 +299,29 @@ export default {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
         },
-        getShouldDisableExecuteMap: (state, getters, rootState, rootGetters) => {
-            return rootState.querySession.query_sessions.reduce((acc, s) => {
-                acc[s.id] =
-                    !rootState.editor.query_txt ||
-                    !rootState.queryConn.active_sql_conn.id ||
-                    (rootGetters['queryConn/getIsConnBusyBySessionId'](s.id) &&
-                        getters.getLoadingQueryResultBySessionId(s.id)) ||
+        getIsRunBtnDisabledBySessionId: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const session = rootState.querySession.query_sessions.find(s => s.id === id)
+                if (!session) return true
+                return (
+                    !session.query_txt ||
+                    !session.active_sql_conn.id ||
+                    (rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) &&
+                        getters.getLoadingQueryResultBySessionId(session.id)) ||
                     !state.is_max_rows_valid
-                return acc
-            }, {})
+                )
+            }
+        },
+        getIsVisBtnDisabledBySessionId: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const session = rootState.querySession.query_sessions.find(s => s.id === id)
+                if (!session) return true
+                return (
+                    !session.active_sql_conn.id ||
+                    (rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) &&
+                        getters.getLoadingQueryResultBySessionId(session.id))
+                )
+            }
         },
     },
 }

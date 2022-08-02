@@ -20,7 +20,7 @@
                     :disabled="
                         getLoadingQueryResultBySessionId(session.id)
                             ? false
-                            : getShouldDisableExecuteMap[session.id]
+                            : getIsRunBtnDisabledBySessionId(session.id)
                     "
                     v-on="on"
                     @click="
@@ -63,7 +63,7 @@
                     :depressed="show_vis_sidebar"
                     :text="!show_vis_sidebar"
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="getShouldDisableExecuteMap[session.id]"
+                    :disabled="getIsVisBtnDisabledBySessionId(session.id)"
                     v-on="on"
                     @click="
                         SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
@@ -239,7 +239,8 @@ export default {
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
             getCloneConn: 'queryConn/getCloneConn',
-            getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
+            getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
+            getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
         isQueryKilled() {
             return (
@@ -297,7 +298,7 @@ export default {
             )
         },
         async handleRun(mode) {
-            if (!this.getShouldDisableExecuteMap[this.getActiveSessionId])
+            if (!this.getIsRunBtnDisabledBySessionId[this.getActiveSessionId])
                 if (!this.query_confirm_flag) await this.onRun(mode)
                 else if (this.shouldOpenDialog(mode)) {
                     this.activeRunMode = mode

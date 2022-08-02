@@ -116,7 +116,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 wrapper = mountFactory({
                     computed: {
                         getLoadingQueryResultBySessionId: () => () => true,
-                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: true }),
+                        getIsRunBtnDisabledBySessionId: () => () => true,
+                        getIsVisBtnDisabledBySessionId: () => () => true,
                     },
                 })
                 if (btn === 'run-btn') {
@@ -130,7 +131,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 wrapper = mountFactory({
                     computed: {
                         getLoadingQueryResultBySessionId: () => () => false,
-                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                        getIsRunBtnDisabledBySessionId: () => () => false,
+                        getIsVisBtnDisabledBySessionId: () => () => false,
                     },
                 })
                 const btnComponent = wrapper.find(`.${btn}`)
@@ -142,7 +144,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 wrapper = mountFactory({
                     computed: {
                         getLoadingQueryResultBySessionId: () => () => false,
-                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                        getIsRunBtnDisabledBySessionId: () => () => false,
+                        getIsVisBtnDisabledBySessionId: () => () => false,
                     },
                 })
                 const spy = sinon.spy(wrapper.vm, handler)
@@ -170,7 +173,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 computed: {
                     query_txt: () => 'SELECT 1',
                     query_confirm_flag: () => 1,
-                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                    getIsRunBtnDisabledBySessionId: () => () => false,
                 },
             })
             sinon.stub(wrapper.vm, 'onRun')
@@ -184,7 +187,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
             let setQueryConfirmFlagCallCount = 0
             wrapper = mountFactory({
                 computed: {
-                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                    getIsRunBtnDisabledBySessionId: () => () => false,
                     query_confirm_flag: () => 1,
                 },
                 methods: {
@@ -207,7 +210,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
             wrapper = mountFactory({
                 computed: {
                     getLoadingQueryResultBySessionId: () => () => true,
-                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                    getIsRunBtnDisabledBySessionId: () => () => false,
                 },
             })
             expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)
