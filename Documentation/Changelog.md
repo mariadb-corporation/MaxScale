@@ -12,6 +12,11 @@
   have been removed. The first two were ineffective, the latter three are
   replaced by `master_conditions` and `slave_conditions`.
 * The `dbfwfilter` module that was deprecated in version 6 has now been removed.
+* MaxGUI Query Editor has changed the type of browser storage from local storage
+  to IndexedDB. As the result, query history, favorite, and configuration are reset.
+  Apart from that, query favorite was renamed to query snippets allowing to quickly
+  insert the query to the editor by typing its prefix. See MaxGUI tutorial
+  [Using-MaxGUI-Tutorial](Tutorials/Using-MaxGUI-Tutorial.md)
 
 For more details, please refer to:
 * [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)
