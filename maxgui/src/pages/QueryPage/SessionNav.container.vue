@@ -6,7 +6,7 @@
             hide-slider
             :height="height"
             class="tab-navigation--btn-style session-navigation flex-grow-0"
-            :style="{ maxWidth: `calc(100% - ${sessionToolbarWidth + 1}px)` }"
+            :style="{ maxWidth: `calc(100% - ${sessionNavToolbarWidth + 1}px)` }"
         >
             <v-tab
                 v-for="session in getSessionsOfActiveWke"
@@ -62,7 +62,7 @@
                 </div>
             </v-tab>
         </v-tabs>
-        <session-tabs-toolbar @get-total-btn-width="sessionToolbarWidth = $event" />
+        <session-nav-toolbar-ctr @get-total-btn-width="sessionNavToolbarWidth = $event" />
     </div>
 </template>
 
@@ -80,17 +80,17 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
-import SessionTabsToolbar from './SessionTabsToolbar.vue'
+import SessionNavToolbar from './SessionNavToolbar.container.vue'
 export default {
-    name: 'session-tabs',
-    components: { 'session-tabs-toolbar': SessionTabsToolbar },
+    name: 'session-nav-ctr',
+    components: { 'session-nav-toolbar-ctr': SessionNavToolbar },
     props: {
         txtEditorToolbarRef: { type: Object, required: true },
         height: { type: Number, required: true },
     },
     data() {
         return {
-            sessionToolbarWidth: 0,
+            sessionNavToolbarWidth: 0,
         }
     },
     computed: {

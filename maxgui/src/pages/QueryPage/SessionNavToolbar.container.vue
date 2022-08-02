@@ -1,10 +1,12 @@
 <template>
-    <div class="session-tabs-toolbar d-flex align-center flex-grow-1">
-        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
+    <div
+        class="session-nav-toolbar-ctr color border-top-table-border border-bottom-table-border border-right-table-border d-flex align-center flex-grow-1"
+    >
+        <div ref="buttonWrapper" class="d-flex align-center pl-2">
             <v-btn
-                v-show="!$typy(active_sql_conn).isEmptyObject"
+                :disabled="$typy(active_sql_conn).isEmptyObject"
                 small
-                class="float-left add-wke-btn"
+                class="float-left add-sess-btn"
                 icon
                 @click="handleAddNewSession({ wke_id: active_wke_id })"
             >
@@ -30,7 +32,7 @@
 import { mapActions, mapState } from 'vuex'
 
 export default {
-    name: 'session-tabs-toolbar',
+    name: 'session-nav-toolbar-ctr',
     computed: {
         ...mapState({
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -38,17 +40,12 @@ export default {
         }),
     },
     mounted() {
-        this.$nextTick(() => this.$emit('get-total-btn-width', this.$refs.leftBtns.clientWidth))
+        this.$nextTick(() =>
+            this.$emit('get-total-btn-width', this.$refs.buttonWrapper.clientWidth)
+        )
     },
     methods: {
         ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
     },
 }
 </script>
-<style lang="scss" scoped>
-.session-tabs-toolbar {
-    border-top: 1px solid $table-border;
-    border-bottom: 1px solid $table-border;
-    border-right: 1px solid $table-border;
-}
-</style>

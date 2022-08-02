@@ -18,7 +18,7 @@
             </template>
             <template slot="pane-right">
                 <div class="d-flex flex-column fill-height">
-                    <session-tabs
+                    <session-nav-ctr
                         :height="sessTabCtrHeight"
                         :txtEditorToolbarRef="
                             $typy($refs, 'editor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
@@ -81,7 +81,7 @@ import { mapActions, mapGetters, mapState } from 'vuex'
 import Sidebar from './Sidebar.container.vue'
 import DDLEditor from './DDLEditor.container.vue'
 import TxtEditor from './TxtEditor.container.vue'
-import SessionTabs from './SessionTabs'
+import SessionNav from './SessionNav.container.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 
 export default {
@@ -90,7 +90,7 @@ export default {
         'sidebar-ctr': Sidebar,
         'txt-editor-ctr': TxtEditor,
         'ddl-editor-ctr': DDLEditor,
-        'session-tabs': SessionTabs,
+        'session-nav-ctr': SessionNav,
         'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {
