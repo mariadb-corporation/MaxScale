@@ -134,14 +134,10 @@ export default {
             },
         },
         isLoadingUserQueryRes() {
-            return this.$typy(this.getUserQueryRes, 'loading_query_result').safeBoolean
+            return this.$typy(this.getUserQueryRes, 'is_loading').safeBoolean
         },
         isLoadingPrvwData() {
-            return (
-                this.getPrvwData(this.curr_query_mode)[
-                    `loading_${this.curr_query_mode.toLowerCase()}`
-                ] || false
-            )
+            return this.getPrvwData(this.curr_query_mode).is_loading || false
         },
         queryData() {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.SQL_QUERY_MODES

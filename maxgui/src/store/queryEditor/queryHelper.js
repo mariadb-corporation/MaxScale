@@ -396,25 +396,11 @@ function memStateCreator(namespace) {
                  * each key holds these properties:
                  * request_sent_time?: number
                  * total_duration?: number
-                 * loading_prvw_data?: boolean,
+                 * is_loading?: boolean,
                  * data? object
                  */
                 prvw_data_map: {},
-                /**
-                 * each key holds these properties:
-                 * request_sent_time?: number
-                 * total_duration?: number
-                 * loading_prvw_data_details?: boolean,
-                 * data? object
-                 */
                 prvw_data_details_map: {},
-                /**
-                 * each key holds these properties:
-                 * request_sent_time?: number
-                 * total_duration?: number
-                 * loading_query_result?: boolean,
-                 * data? object.
-                 */
                 query_results_map: {},
                 /**
                  * each key holds these properties:

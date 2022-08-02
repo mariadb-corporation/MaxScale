@@ -45,7 +45,7 @@ export default {
                     payload: {
                         request_sent_time,
                         total_duration: 0,
-                        [`loading_${prvwMode.toLowerCase()}`]: true,
+                        is_loading: true,
                     },
                 })
                 let sql, queryName
@@ -72,7 +72,7 @@ export default {
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
+                        is_loading: false,
                     },
                 })
                 dispatch(
@@ -90,9 +90,7 @@ export default {
             } catch (e) {
                 commit(`PATCH_${prvwMode}_MAP`, {
                     id: active_session_id,
-                    payload: {
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
-                    },
+                    payload: { is_loading: false },
                 })
                 this.vue.$logger(`store-queryResult-fetchPrvw`).error(e)
             }
@@ -111,7 +109,7 @@ export default {
                         data: {},
                         request_sent_time,
                         total_duration: 0,
-                        loading_query_result: true,
+                        is_loading: true,
                     },
                 })
 
@@ -142,7 +140,7 @@ export default {
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
-                        loading_query_result: false,
+                        is_loading: false,
                     },
                 })
 
@@ -163,7 +161,7 @@ export default {
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
-                    payload: { loading_query_result: false },
+                    payload: { is_loading: false },
                 })
                 this.vue.$logger(`store-queryResult-fetchQueryResult`).error(e)
             }
@@ -221,8 +219,8 @@ export default {
             state.query_results_map[rootGetters['querySession/getActiveSessionId']] || {},
         getLoadingQueryResultBySessionId: state => {
             return session_id => {
-                const { loading_query_result = false } = state.query_results_map[session_id] || {}
-                return loading_query_result
+                const { is_loading = false } = state.query_results_map[session_id] || {}
+                return is_loading
             }
         },
         isWkeLoadingQueryResult: (state, getters, rootState, rootGetters) => {
@@ -233,8 +231,8 @@ export default {
                 let isLoading = false
                 for (const key of Object.keys(state.query_results_map)) {
                     if (sessionIds.includes(key)) {
-                        const { loading_query_result = false } = state.query_results_map[key] || {}
-                        if (loading_query_result) {
+                        const { is_loading = false } = state.query_results_map[key] || {}
+                        if (is_loading) {
                             isLoading = true
                             break
                         }
