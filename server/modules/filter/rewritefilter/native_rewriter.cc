@@ -150,7 +150,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
 
         if (def.ignore_whitespace)
         {
-            m_regex_str = ignore_whitespace_in_regex(def.regex_grammar, m_regex_str);
+            m_regex_str = ignore_whitespace_in_regex(m_regex_str);
         }
 
         MXB_SINFO("Native regex: " << m_regex_str);

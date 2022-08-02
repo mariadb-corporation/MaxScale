@@ -57,7 +57,7 @@ private:
  * @return regex with all stretches of whitespace replaced
  *         with the equivalent of extended regex "[[:space:]]+"
  */
-std::string ignore_whitespace_in_regex(RegexGrammar type, const std::string& regex);
+std::string ignore_whitespace_in_regex(const std::string& regex);
 
 
 // IMPL

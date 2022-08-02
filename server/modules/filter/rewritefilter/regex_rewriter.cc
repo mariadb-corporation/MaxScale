@@ -25,7 +25,7 @@ RegexRewriter::RegexRewriter(const TemplateDef& def)
         auto regex_str = template_def().match_template;
         if (def.ignore_whitespace)
         {
-            regex_str = ignore_whitespace_in_regex(def.regex_grammar, regex_str);
+            regex_str = ignore_whitespace_in_regex(regex_str);
         }
 
         MXB_SINFO("Regular regex: " << regex_str);
