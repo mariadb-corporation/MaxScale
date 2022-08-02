@@ -78,7 +78,7 @@ private:
         // Calls RewriteFilter::set_settings()
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>&) override final;
 
-        bool create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters);
+        void create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters);
 
         RewriteFilter& m_filter;
         Settings       m_settings;

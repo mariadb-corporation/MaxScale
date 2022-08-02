@@ -15,6 +15,5 @@
 #include <maxbase/ccdefs.hh>
 #include "template_reader.hh"
 
-std::pair<bool, std::vector<TemplateDef>>
-read_templates_from_json(const std::string& path,
-                         const TemplateDef& default_def);
+std::vector<TemplateDef> read_templates_from_json(const std::string& path,
+                                                  const TemplateDef& default_def);

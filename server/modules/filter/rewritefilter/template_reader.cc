@@ -44,7 +44,8 @@ std::string valid_grammar_values()
     return os.str();
 }
 
-static_assert(end(grammar_strs) - begin(grammar_strs) == size_t(RegexGrammar::END));
+static_assert(end(grammar_strs) - begin(grammar_strs) == size_t(RegexGrammar::END),
+              "check grammar_strs[]");
 
 RegexGrammar grammar_from_string(const std::string& str)
 {
@@ -104,13 +105,12 @@ TemplateReader::TemplateReader(const std::string& template_file, const TemplateD
 {
 }
 
-std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
+std::vector<TemplateDef> TemplateReader::templates() const
 {
     auto extension_pos = m_path.find_last_of('.');
     if (extension_pos == std::string::npos)
     {
-        MXB_SERROR("No extension in: " << m_path);
-        return {false, std::vector<TemplateDef> {}};
+        MXB_THROW(RewriteError, "No extension in: " << m_path);
     }
 
     auto extension = m_path.substr(extension_pos + 1);
@@ -119,6 +119,6 @@ std::pair<bool, std::vector<TemplateDef>> TemplateReader::templates() const
         return read_templates_from_json(m_path, m_default_template);
     }
 
-    MXB_SERROR("Unknown extension in: " << m_path << ". Valid extensions are json");
-    return {false, std::vector<TemplateDef> {}};
+    MXB_THROW(RewriteError,
+              "Unknown extension '" << extension << "' " << m_path << ". Valid extensions are json");
 }

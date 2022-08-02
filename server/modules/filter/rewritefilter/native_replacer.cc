@@ -70,7 +70,7 @@ void NativeReplacer::set_replace_template(const std::string& replace_template,
                         auto new_last = ite + into_placeholder;
                         MXB_THROW(RewriteError, "Invalid placeholder \""
                                   << std::string(begin(replace_template), new_last)
-                                  << "...\"");
+                                  << "...\" " << "Expected ']'");
                         ite = last;
                         break;
                     }

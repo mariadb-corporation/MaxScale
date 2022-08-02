@@ -27,10 +27,6 @@ class SqlRewriter
 public:
     SqlRewriter(const TemplateDef& template_def);
 
-    // Did parsing of the templates succeed?
-    bool        is_valid() const;
-    std::string error_str() const;
-
     /**
      * @brief  replace
      * @param  sql - to be examined
@@ -46,7 +42,6 @@ public:
     const TemplateDef& template_def() const;
 
 protected:
-    void set_error_string(const std::string& err_msg);
     // throws on error
     std::regex make_regex(const TemplateDef& def, const std::string& regex_str);
 
@@ -54,7 +49,6 @@ private:
     const TemplateDef m_template_def;
     const std::string m_regex_template;
     const std::string m_replace_template;
-    std::string       m_error_str;  // human readable error string, after construction
 };
 
 /**
@@ -81,19 +75,4 @@ inline const std::string& SqlRewriter::replace_template() const
 inline const TemplateDef& SqlRewriter::template_def() const
 {
     return m_template_def;
-}
-
-inline void SqlRewriter::set_error_string(const std::string& err_msg)
-{
-    m_error_str = err_msg;
-}
-
-inline bool SqlRewriter::is_valid() const
-{
-    return m_error_str.empty();
-}
-
-inline std::string SqlRewriter::error_str() const
-{
-    return m_error_str;
 }

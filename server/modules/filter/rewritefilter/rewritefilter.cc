@@ -105,39 +105,38 @@ RewriteFilter::RewriteFilter::Config::Config(const std::string& name, RewriteFil
 bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale::ConfigParameters>&)
 {
     bool ok = true;
-
-    TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
-    std::vector<std::unique_ptr<SqlRewriter>> rewriters;
-
-    if (!m_settings.template_file.empty())
+    try
     {
-        TemplateReader reader(m_settings.template_file, default_template);
-        std::tie(ok, m_settings.templates) = reader.templates();
-        if (ok)
+        TemplateDef default_template {m_settings.case_sensitive, m_settings.regex_grammar};
+        std::vector<std::unique_ptr<SqlRewriter>> rewriters;
+
+        if (!m_settings.template_file.empty())
         {
-            ok = create_rewriters(&rewriters);
+            TemplateReader reader(m_settings.template_file, default_template);
+            m_settings.templates = reader.templates();
+            create_rewriters(&rewriters);
         }
-    }
 
-    if (ok)
-    {
         m_filter.set_session_data(std::make_unique<SessionData>(m_settings, std::move(rewriters)));
     }
-    else if (m_warn_bad_config)
+    catch (const std::exception& ex)
     {
-        MXB_SERROR("Invalid config. Keeping current config unchanged.");
-    }
+        MXB_SERROR(ex.what());
+        if (m_warn_bad_config)
+        {
+            MXB_SERROR("Invalid config. Keeping current config unchanged.");
+        }
 
-    m_warn_bad_config = true;
-    m_settings.reload = false;
+        m_warn_bad_config = true;
+        m_settings.reload = false;
+        ok = false;
+    }
 
     return ok;
 }
 
-bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters)
+void RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters)
 {
-    bool ok = true;
-
     for (auto& def : m_settings.templates)
     {
         std::unique_ptr<SqlRewriter> sRewriter;
@@ -149,16 +148,9 @@ bool RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewr
         {
             sRewriter.reset(new RegexRewriter(def));
         }
-        if (ok = sRewriter->is_valid(); !ok)
-        {
-            MXB_SERROR(sRewriter->error_str());
-            break;
-        }
 
         rewriters->push_back(std::move(sRewriter));
     }
-
-    return ok;
 }
 
 RewriteFilter::RewriteFilter(const std::string& name)

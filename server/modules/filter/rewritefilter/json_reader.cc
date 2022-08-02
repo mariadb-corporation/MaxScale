@@ -20,11 +20,10 @@
 using mxb::Json;
 
 
-std::pair<bool, std::vector<TemplateDef>> read_templates_from_json(const std::string& path,
-                                                                   const TemplateDef& default_def)
+std::vector<TemplateDef> read_templates_from_json(const std::string& path,
+                                                  const TemplateDef& default_def)
 {
     std::vector<TemplateDef> ret;
-    bool ok = true;
     Json json;
 
     if (json.load(path))
@@ -44,19 +43,17 @@ std::pair<bool, std::vector<TemplateDef>> read_templates_from_json(const std::st
             if (t.try_get_string("regex_grammar", &regex_grammar_str))
             {
                 auto grammar = grammar_from_string(regex_grammar_str);
-                ok = grammar != RegexGrammar::END;
-                if (ok)
+                if (grammar != RegexGrammar::END)
                 {
                     def.regex_grammar = grammar;
                 }
                 else
                 {
-
-                    MXB_SERROR("Invalid regex_grammar value `"
-                               << regex_grammar_str
-                               << "` in rewritefilter template file. "
-                               << "Valid values are " << valid_grammar_values()
-                               << '\'');
+                    MXB_THROW(RewriteError, "Invalid regex_grammar value `"
+                              << regex_grammar_str
+                              << "` in rewritefilter template file. "
+                              << "Valid values are " << valid_grammar_values()
+                              << '\'');
                 }
             }
 
@@ -86,11 +83,10 @@ std::pair<bool, std::vector<TemplateDef>> read_templates_from_json(const std::st
 
             if (!t.ok())
             {
-                MXB_SERROR("Failed to read rewrite template file: "
-                           << path
-                           << " error: "
-                           << t.error_msg().c_str());
-                ok = false;
+                MXB_THROW(RewriteError, "Failed to read rewrite template file: "
+                          << path
+                          << " error: "
+                          << t.error_msg().c_str());
                 break;
             }
 
@@ -99,12 +95,11 @@ std::pair<bool, std::vector<TemplateDef>> read_templates_from_json(const std::st
     }
     else
     {
-        MXB_SERROR("Failed to load rewrite template file: "
-                   << path
-                   << " error: "
-                   << json.error_msg().c_str());
-        ok = false;
+        MXB_THROW(RewriteError, "Failed to load rewrite template file: "
+                  << path
+                  << " error: "
+                  << json.error_msg().c_str());
     }
 
-    return {ok, ret};
+    return ret;
 }

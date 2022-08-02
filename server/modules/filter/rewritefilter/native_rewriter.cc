@@ -84,7 +84,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
                             auto new_last = ite + into_placeholder;
                             MXB_THROW(RewriteError, "Invalid placeholder \""
                                       << std::string(begin(match_template()), new_last)
-                                      << "...\"");
+                                      << "...\" " << "Expected ']' or ':'");
                             ite = last;
                             break;
                         }
@@ -173,7 +173,7 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
     }
     catch (const std::exception& ex)
     {
-        set_error_string(ex.what());
+        MXB_THROW(RewriteError, ex.what());
     }
 }
 

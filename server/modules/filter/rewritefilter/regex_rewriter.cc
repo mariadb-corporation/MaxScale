@@ -33,7 +33,7 @@ RegexRewriter::RegexRewriter(const TemplateDef& def)
     }
     catch (const std::exception& ex)
     {
-        set_error_string(ex.what());
+        MXB_THROW(RewriteError, ex.what());
     }
 }
 
