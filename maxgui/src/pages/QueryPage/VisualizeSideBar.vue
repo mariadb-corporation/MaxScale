@@ -177,7 +177,7 @@ export default {
         resultSets() {
             let resSets = []
 
-            let resSetArr = this.cloneRes(
+            let resSetArr = this.$help.stringifyClone(
                 this.$typy(this.getResults, 'attributes.results').safeArray
             )
             let resSetCount = 0
@@ -189,7 +189,7 @@ export default {
                 }
             }
 
-            let prvwData = this.cloneRes(
+            let prvwData = this.$help.stringifyClone(
                 this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA)).safeObject
             )
             if (!this.$typy(prvwData).isEmptyObject) {
@@ -197,7 +197,7 @@ export default {
                 resSets.push(prvwData)
             }
 
-            let prvwDataDetails = this.cloneRes(
+            let prvwDataDetails = this.$help.stringifyClone(
                 this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)).safeObject
             )
 
@@ -258,9 +258,6 @@ export default {
                     this.genChartData()
                 }
             })
-        },
-        cloneRes(res) {
-            return JSON.parse(JSON.stringify(res))
         },
         clearAxes() {
             this.scaleLabels = { x: '', y: '' }

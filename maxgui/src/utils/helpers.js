@@ -854,6 +854,17 @@ export function getAddress(parameters) {
     const { socket, address, port } = parameters
     return `${socket ? socket : `${address}:${port}`}`
 }
+
+/**
+ * This is faster than lodash cloneDeep.
+ * But it comes with pitfalls, so it's only suitable for json data
+ * @param {Object} data - json data
+ * @returns {Object}
+ */
+export function stringifyClone(data) {
+    return JSON.parse(JSON.stringify(data))
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -915,6 +926,7 @@ Object.defineProperties(Vue.prototype, {
                 getRepStats,
                 filterSlaveConn,
                 getAddress,
+                stringifyClone,
             }
         },
     },

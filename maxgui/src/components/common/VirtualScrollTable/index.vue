@@ -308,10 +308,7 @@ export default {
             return this.currRows.length
         },
         tableRows() {
-            /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
-             * Though it comes with pitfalls and should be used for ajax data
-             */
-            let rows = JSON.parse(JSON.stringify(this.rows))
+            let rows = this.$help.stringifyClone(this.rows)
             if (this.idxOfSortingCol !== -1) this.handleSort(rows)
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
