@@ -35,7 +35,7 @@
                completion items
                https://github.com/microsoft/monaco-editor/issues/1957
                 -->
-                <query-editor
+                <sql-editor
                     v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
@@ -69,11 +69,11 @@
  * update:sqlTobeExecuted?: (string)
  */
 import { mapGetters } from 'vuex'
-import QueryEditor from '@/components/QueryEditor'
+import SqlEditor from '@/components/SqlEditor'
 export default {
     name: 'execute-sql-dialog',
     components: {
-        'query-editor': QueryEditor,
+        'sql-editor': SqlEditor,
     },
     props: {
         value: { type: Boolean, required: true },

@@ -19,7 +19,7 @@ const mountFactory = opts =>
         shallow: true,
         component: Sidebar,
         stubs: {
-            'query-editor': "<div class='stub'></div>",
+            'sql-editor': "<div class='stub'></div>",
         },
         ...opts,
     })

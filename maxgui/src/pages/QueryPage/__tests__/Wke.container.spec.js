@@ -31,7 +31,7 @@ const mountFactory = opts =>
                     getActiveSessionId: () => dummy_query_sessions[0].id,
                 },
                 stubs: {
-                    'query-editor': "<div class='stub'></div>",
+                    'sql-editor': "<div class='stub'></div>",
                     'txt-editor-toolbar-ctr': "<div class='stub'></div>",
                 },
             },
@@ -124,7 +124,7 @@ describe('wke-ctr', () => {
             })
             it(`Should pass accurate data to ${renCom} via props`, () => {
                 const { dim } = wrapper.findAllComponents({ name: renCom }).at(0).vm.$props
-                expect(dim).to.be.deep.equals(wrapper.vm.$data.editorDim)
+                expect(dim).to.be.deep.equals(wrapper.vm.editorDim)
             })
             it(`Should not render ${hiddenCom}`, () => {
                 expect(wrapper.findAllComponents({ name: hiddenCom }).length).to.be.equals(0)

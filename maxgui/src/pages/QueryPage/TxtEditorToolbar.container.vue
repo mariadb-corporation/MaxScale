@@ -132,7 +132,7 @@
         >
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                    <readonly-query-editor
+                    <readonly-sql-editor
                         :value="confDlg.sqlTxt"
                         class="readonly-editor fill-height"
                         readOnly
@@ -190,14 +190,14 @@
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimit from './RowLimit.container.vue'
-import QueryEditor from '@/components/QueryEditor'
+import SqlEditor from '@/components/SqlEditor'
 import LoadSql from './LoadSql'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
     components: {
         'row-limit-ctr': RowLimit,
-        'readonly-query-editor': QueryEditor,
+        'readonly-sql-editor': SqlEditor,
         'load-sql': LoadSql,
     },
     props: {

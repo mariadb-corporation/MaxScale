@@ -23,7 +23,7 @@ const mountFactory = opts =>
                 shallow: false,
                 component: TxtEditorToolbar,
                 stubs: {
-                    'readonly-query-editor': "<div class='stub'></div>",
+                    'readonly-sql-editor': "<div class='stub'></div>",
                 },
                 propsData: {
                     session: dummy_session,

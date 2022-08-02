@@ -21,17 +21,16 @@ const mountFactory = opts =>
             {
                 shallow: false,
                 component: QueryView,
-                data: {
-                    ctrDim: { width: 1280, height: 800 },
-                },
+
                 computed: {
                     is_validating_conn: () => false,
                     worksheets_arr: () => [{ id: 'WORKSHEET_123' }],
                     active_wke_id: () => 'WORKSHEET_123',
+                    ctrDim: () => ({ width: 1280, height: 800 }),
                 },
                 stubs: {
-                    'query-editor': "<div class='stub'></div>",
-                    'readonly-query-editor': "<div class='stub'></div>",
+                    'sql-editor': "<div class='stub'></div>",
+                    'readonly-sql-editor': "<div class='stub'></div>",
                 },
             },
             opts
@@ -44,7 +43,7 @@ describe('query-view-ctr', () => {
     it('Should pass accurate data to wke-ctr component via props', () => {
         wrapper = mountFactory()
         const wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
-        expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.$data.ctrDim)
+        expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.ctrDim)
     })
 
     describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {

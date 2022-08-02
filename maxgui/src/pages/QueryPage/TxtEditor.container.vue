@@ -33,8 +33,8 @@
                         >
                             <!-- Editor pane contains editor and chart pane -->
                             <template slot="pane-left">
-                                <query-editor
-                                    ref="queryEditor"
+                                <sql-editor
+                                    ref="sqlEditor"
                                     v-model="allQueryTxt"
                                     class="editor pt-2 pl-2"
                                     :cmplList="cmplList"
@@ -88,7 +88,7 @@
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
-import QueryEditor from '@/components/QueryEditor'
+import SqlEditor from '@/components/SqlEditor'
 import QueryResult from './QueryResult'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
@@ -97,7 +97,7 @@ export default {
     name: 'txt-editor-ctr',
     components: {
         'txt-editor-toolbar-ctr': TxtEditorToolbar,
-        'query-editor': QueryEditor,
+        'sql-editor': SqlEditor,
         QueryResult,
         'visualize-sidebar': VisualizeSideBar,
         ChartContainer,
@@ -235,7 +235,7 @@ export default {
         },
         // editor related functions
         placeToEditor(text) {
-            this.$refs.queryEditor.insertAtCursor({ text })
+            this.$refs.sqlEditor.insertAtCursor({ text })
         },
         handleGenMouseDropWidget(dropTarget) {
             /**
@@ -247,7 +247,7 @@ export default {
                 if (dropTarget) document.body.className = 'cursor--all-text'
                 else document.body.className = 'cursor--all-grabbing'
             } else {
-                const { editor, monaco } = this.$refs.queryEditor
+                const { editor, monaco } = this.$refs.sqlEditor
                 document.body.className = 'cursor--all-grabbing'
                 if (dropTarget) {
                     const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
@@ -273,14 +273,14 @@ export default {
             }
         },
         draggingTxt(e) {
-            const { editor } = this.$refs.queryEditor
+            const { editor } = this.$refs.sqlEditor
             // build mouseDropWidget
             const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
             this.handleGenMouseDropWidget(dropTarget)
         },
         dropTxtToEditor(e) {
             if (e.target.textContent) {
-                const { editor, monaco, insertAtCursor } = this.$refs.queryEditor
+                const { editor, monaco, insertAtCursor } = this.$refs.sqlEditor
                 const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
 
                 if (dropTarget) {

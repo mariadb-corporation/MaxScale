@@ -1,7 +1,7 @@
 //https://github.com/zeroturnaround/sql-formatter/blob/master/src/languages/MariaDbFormatter.jsu
 import Formatter from 'sql-formatter/lib/core/Formatter'
 import Tokenizer from 'sql-formatter/lib/core/Tokenizer'
-import reservedWords from 'components/QueryEditor/reservedWords'
+import reservedWords from 'components/SqlEditor/reservedWords'
 
 const reservedTopLevelWords = [
     'ALTER COLUMN',

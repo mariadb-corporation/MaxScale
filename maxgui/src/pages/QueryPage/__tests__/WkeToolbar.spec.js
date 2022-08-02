@@ -19,7 +19,7 @@ const mountFactory = opts =>
         shallow: false,
         component: WkeToolbar,
         stubs: {
-            'readonly-query-editor': "<div class='stub'></div>",
+            'readonly-sql-editor': "<div class='stub'></div>",
         },
         ...opts,
     })

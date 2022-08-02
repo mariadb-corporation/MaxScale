@@ -14,7 +14,7 @@ import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.css'
 import { mapState } from 'vuex'
 export default {
-    name: 'query-editor',
+    name: 'sql-editor',
     props: {
         value: { type: String, required: true },
         cmplList: { type: Array, default: () => [] },
