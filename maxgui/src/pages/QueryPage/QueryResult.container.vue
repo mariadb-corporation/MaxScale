@@ -2,14 +2,14 @@
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab
-                :disabled="getIsConnBusy && !isLoadingUserQueryRes"
+                :disabled="getIsConnBusy && isLoading"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
             >
                 <span> {{ $t('results') }} </span>
             </v-tab>
             <v-tab
-                :disabled="getIsConnBusy && !isLoadingPrvwData"
+                :disabled="getIsConnBusy && isLoading"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
             >
@@ -28,8 +28,11 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
-                    :isLoading="isLoadingUserQueryRes"
+                    :isLoading="isLoading"
                     :data="queryData"
+                    :requestSentTime="requestSentTime"
+                    :execTime="execTime"
+                    :totalDuration="totalDuration"
                     v-on="$listeners"
                 />
                 <preview-data-tab
@@ -42,8 +45,11 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
-                    :isLoading="isLoadingPrvwData"
+                    :isLoading="isLoading"
                     :data="queryData"
+                    :requestSentTime="requestSentTime"
+                    :execTime="execTime"
+                    :totalDuration="totalDuration"
                     v-on="$listeners"
                 />
                 <history-and-snippets
@@ -133,11 +139,8 @@ export default {
                 this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
         },
-        isLoadingUserQueryRes() {
-            return this.$typy(this.getUserQueryRes, 'is_loading').safeBoolean
-        },
-        isLoadingPrvwData() {
-            return this.getPrvwData(this.curr_query_mode).is_loading || false
+        isLoading() {
+            return this.$typy(this.queryData, 'is_loading').safeBoolean
         },
         queryData() {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.SQL_QUERY_MODES
@@ -150,6 +153,19 @@ export default {
                 default:
                     return {}
             }
+        },
+        requestSentTime() {
+            return this.$typy(this.queryData, 'request_sent_time').safeNumber
+        },
+        execTime() {
+            if (this.isLoading) return -1
+            const execution_time = this.$typy(this.queryData, 'data.attributes.execution_time')
+                .safeNumber
+            if (execution_time) return parseFloat(execution_time.toFixed(4))
+            return 0
+        },
+        totalDuration() {
+            return this.$typy(this.queryData, 'total_duration').safeNumber
         },
     },
 

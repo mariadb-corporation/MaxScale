@@ -44,10 +44,10 @@
             <v-spacer />
             <keep-alive>
                 <duration-timer
-                    v-if="queryRequestSentTime"
-                    :startTime="queryRequestSentTime"
-                    :executionTime="queryExeTime"
-                    :totalDuration="queryTotalDuration"
+                    v-if="requestSentTime"
+                    :startTime="requestSentTime"
+                    :executionTime="execTime"
+                    :totalDuration="totalDuration"
                 />
             </keep-alive>
 
@@ -132,6 +132,9 @@ export default {
         },
         isLoading: { type: Boolean, required: true },
         data: { type: Object, required: true },
+        requestSentTime: { type: Number, required: true },
+        execTime: { type: Number, required: true },
+        totalDuration: { type: Number, required: true },
     },
     data() {
         return {
@@ -141,20 +144,8 @@ export default {
         }
     },
     computed: {
-        queryTotalDuration() {
-            return this.$typy(this.data, 'total_duration').safeNumber
-        },
-        queryExeTime() {
-            if (this.isLoading) return -1
-            const { attributes } = this.$typy(this.data, 'data').safeObject
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
         queryTxt() {
             return this.$typy(this.data, 'data.attributes.sql').safeObject
-        },
-        queryRequestSentTime() {
-            return this.$typy(this.data, 'request_sent_time').safeNumber
         },
         resultData() {
             if (this.$typy(this.data, 'data.attributes.results').isDefined) {

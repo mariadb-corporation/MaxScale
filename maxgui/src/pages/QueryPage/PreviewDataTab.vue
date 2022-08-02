@@ -38,9 +38,9 @@
                     <duration-timer
                         v-if="activeView"
                         :key="activeView"
-                        :startTime="prvwSentTime"
-                        :executionTime="prvwExeTime"
-                        :totalDuration="prvwTotalDuration"
+                        :startTime="requestSentTime"
+                        :executionTime="execTime"
+                        :totalDuration="totalDuration"
                     />
                 </keep-alive>
                 <v-tooltip
@@ -126,6 +126,9 @@ export default {
         },
         isLoading: { type: Boolean, required: true },
         data: { type: Object, required: true },
+        requestSentTime: { type: Number, required: true },
+        execTime: { type: Number, required: true },
+        totalDuration: { type: Number, required: true },
     },
     data() {
         return {
@@ -144,18 +147,6 @@ export default {
         }),
         resultData() {
             return this.$typy(this.data, 'data.attributes.results[0]').safeObjectOrEmpty
-        },
-        prvwSentTime() {
-            return this.$typy(this.data, 'request_sent_time').safeNumber
-        },
-        prvwExeTime() {
-            if (this.isLoading) return -1
-            const { attributes } = this.$typy(this.data, 'data').safeObject
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
-        prvwTotalDuration() {
-            return this.$typy(this.data, 'total_duration').safeNumber
         },
         validConn() {
             return Boolean(this.getActiveTreeNode.id && this.active_sql_conn.id)
