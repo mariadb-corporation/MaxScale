@@ -249,33 +249,10 @@ export default {
                 return value
             }
         },
-        // preview data getters
         getPrvwData: (state, getters, rootState, rootGetters) => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
             if (map) return map[rootGetters['querySession/getActiveSessionId']] || {}
             return {}
-        },
-        getLoadingPrvw: (state, getters) => mode => {
-            return getters.getPrvwData(mode)[`loading_${mode.toLowerCase()}`] || false
-        },
-        getPrvwDataRes: (state, getters) => mode => {
-            const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)
-            if (results.length) return results[0]
-            return {}
-        },
-        getPrvwExeTime: (state, getters) => mode => {
-            if (state[`loading_${mode.toLowerCase()}`]) return -1
-            const { data: { attributes } = {} } = getters.getPrvwData(mode)
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
-        getPrvwSentTime: (state, getters) => mode => {
-            const { request_sent_time = 0 } = getters.getPrvwData(mode)
-            return request_sent_time
-        },
-        getPrvwTotalDuration: (state, getters) => mode => {
-            const { total_duration = 0 } = getters.getPrvwData(mode)
-            return total_duration
         },
         getIsRunBtnDisabledBySessionId: (state, getters, rootState, rootGetters) => {
             return id => {
@@ -318,7 +295,10 @@ export default {
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.app_config.SQL_QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
             for (const mode of prvwModes) {
-                const data = scope.$help.stringifyClone(getters.getPrvwDataRes(mode))
+                const data = scope.$help.stringifyClone(
+                    scope.$typy(getters.getPrvwData(mode), 'data.attributes.results[0]')
+                        .safeObjectOrEmpty
+                )
                 if (!scope.$typy(data).isEmptyObject) {
                     let resName = ''
                     switch (mode) {

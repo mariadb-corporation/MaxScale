@@ -38,9 +38,9 @@
                     <duration-timer
                         v-if="activeView"
                         :key="activeView"
-                        :startTime="getPrvwSentTime(activeView)"
-                        :executionTime="getPrvwExeTime(activeView)"
-                        :totalDuration="getPrvwTotalDuration(activeView)"
+                        :startTime="prvwSentTime"
+                        :executionTime="prvwExeTime"
+                        :totalDuration="prvwTotalDuration"
                     />
                 </keep-alive>
                 <v-tooltip
@@ -50,11 +50,7 @@
                     content-class="shadow-drop color text-navigation py-1 px-4"
                 >
                     <template v-slot:activator="{ on }">
-                        <div
-                            v-if="!getPrvwDataRes(SQL_QUERY_MODES.PRVW_DATA).complete"
-                            class="ml-4 d-flex align-center"
-                            v-on="on"
-                        >
+                        <div v-if="!resultData.complete" class="ml-4 d-flex align-center" v-on="on">
                             <v-icon size="16" color="error" class="mr-2">
                                 $vuetify.icons.alertWarning
                             </v-icon>
@@ -68,8 +64,8 @@
         </div>
         <template v-if="validConn">
             <v-skeleton-loader
-                v-if="isPrwDataLoading"
-                :loading="isPrwDataLoading"
+                v-if="isLoading"
+                :loading="isLoading"
                 type="table: table-thead, table-tbody"
                 :height="dynDim.height - headerHeight"
             />
@@ -84,11 +80,11 @@
                         :height="dynDim.height - headerHeight"
                         :width="dynDim.width"
                         :headers="
-                            $typy(getPrvwDataRes(activeView), 'fields').safeArray.map(field => ({
+                            $typy(resultData, 'fields').safeArray.map(field => ({
                                 text: field,
                             }))
                         "
-                        :rows="$typy(getPrvwDataRes(activeView), 'data').safeArray"
+                        :rows="$typy(resultData, 'data').safeArray"
                         showGroupBy
                         v-on="$listeners"
                     />
@@ -128,6 +124,8 @@ export default {
             },
             required: true,
         },
+        isLoading: { type: Boolean, required: true },
+        data: { type: Object, required: true },
     },
     data() {
         return {
@@ -141,22 +139,26 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({
-            getPrvwDataRes: 'queryResult/getPrvwDataRes',
-            getPrvwSentTime: 'queryResult/getPrvwSentTime',
-            getPrvwExeTime: 'queryResult/getPrvwExeTime',
-            getPrvwTotalDuration: 'queryResult/getPrvwTotalDuration',
-            getLoadingPrvw: 'queryResult/getLoadingPrvw',
             getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
+        resultData() {
+            return this.$typy(this.data, 'data.attributes.results[0]').safeObjectOrEmpty
+        },
+        prvwSentTime() {
+            return this.$typy(this.data, 'request_sent_time').safeNumber
+        },
+        prvwExeTime() {
+            if (this.isLoading) return -1
+            const { attributes } = this.$typy(this.data, 'data').safeObject
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
+            return 0
+        },
+        prvwTotalDuration() {
+            return this.$typy(this.data, 'total_duration').safeNumber
+        },
         validConn() {
             return Boolean(this.getActiveTreeNode.id && this.active_sql_conn.id)
-        },
-        isPrwDataLoading() {
-            return (
-                this.getLoadingPrvw(this.SQL_QUERY_MODES.PRVW_DATA) ||
-                this.getLoadingPrvw(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)
-            )
         },
         activeView: {
             get() {
@@ -174,7 +176,7 @@ export default {
     watch: {
         activeView: async function(activeView) {
             // Wait until data is fetched
-            if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(activeView)
+            if (!this.isLoading && this.validConn) await this.handleFetch(activeView)
         },
     },
     activated() {
@@ -202,7 +204,7 @@ export default {
             switch (SQL_QUERY_MODE) {
                 case this.SQL_QUERY_MODES.PRVW_DATA:
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    if (!this.getPrvwDataRes(SQL_QUERY_MODE).fields) {
+                    if (!this.resultData.fields) {
                         await this.fetchActiveNodeData(SQL_QUERY_MODE)
                     }
                     break

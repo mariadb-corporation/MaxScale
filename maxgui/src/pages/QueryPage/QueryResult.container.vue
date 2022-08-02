@@ -9,11 +9,7 @@
                 <span> {{ $t('results') }} </span>
             </v-tab>
             <v-tab
-                :disabled="
-                    getIsConnBusy &&
-                        !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA) &&
-                        !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA_DETAILS)
-                "
+                :disabled="getIsConnBusy && !isLoadingPrvwData"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
             >
@@ -33,7 +29,7 @@
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
                     :isLoading="isLoadingUserQueryRes"
-                    :data="getUserQueryRes"
+                    :data="queryData"
                     v-on="$listeners"
                 />
                 <preview-data-tab
@@ -46,6 +42,8 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    :isLoading="isLoadingPrvwData"
+                    :data="queryData"
                     v-on="$listeners"
                 />
                 <history-and-snippets
@@ -108,7 +106,7 @@ export default {
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getUserQueryRes: 'queryResult/getUserQueryRes',
-            getLoadingPrvw: 'queryResult/getLoadingPrvw',
+            getPrvwData: 'queryResult/getPrvwData',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         componentDynDim() {
@@ -137,6 +135,25 @@ export default {
         },
         isLoadingUserQueryRes() {
             return this.$typy(this.getUserQueryRes, 'loading_query_result').safeBoolean
+        },
+        isLoadingPrvwData() {
+            return (
+                this.getPrvwData(this.curr_query_mode)[
+                    `loading_${this.curr_query_mode.toLowerCase()}`
+                ] || false
+            )
+        },
+        queryData() {
+            const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.SQL_QUERY_MODES
+            switch (this.curr_query_mode) {
+                case QUERY_VIEW:
+                    return this.getUserQueryRes
+                case PRVW_DATA:
+                case PRVW_DATA_DETAILS:
+                    return this.getPrvwData(this.curr_query_mode)
+                default:
+                    return {}
+            }
         },
     },
 
