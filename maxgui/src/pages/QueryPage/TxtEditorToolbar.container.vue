@@ -1,13 +1,86 @@
 <template>
-    <div class="txt-editor-toolbar d-flex align-center" :style="{ height: `${height}px` }">
-        <session-btns
-            :session="session"
-            @on-stop-query="stopQuery"
-            @on-run="handleRun(selected_query_txt ? 'selected' : 'all')"
-            @on-visualize="
-                SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
-            "
-        />
+    <div
+        class="txt-editor-toolbar color border-bottom-table-border border-left-table-border d-flex align-center"
+        :style="{ height: `${height}px` }"
+    >
+        <!-- Run/Stop buttons-->
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+            :disabled="getLoadingQueryResultBySessionId(session.id)"
+        >
+            <template v-slot:activator="{ on }">
+                <!-- disable button Prevent parallel querying of the same connection -->
+                <v-btn
+                    class="toolbar-square-btn"
+                    :class="[getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn']"
+                    text
+                    color="accent-dark"
+                    :disabled="
+                        getLoadingQueryResultBySessionId(session.id)
+                            ? false
+                            : getShouldDisableExecuteMap[session.id]
+                    "
+                    v-on="on"
+                    @click="
+                        () =>
+                            getLoadingQueryResultBySessionId(session.id)
+                                ? stopQuery()
+                                : handleRun(selected_query_txt ? 'selected' : 'all')
+                    "
+                >
+                    <v-icon size="16">
+                        {{
+                            `$vuetify.icons.${
+                                getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
+                            }`
+                        }}
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{
+                    selected_query_txt
+                        ? `${$t('runStatements', {
+                              quantity: $t('selected'),
+                          })}\nCmd/Ctrl + Enter`
+                        : `${$t('runStatements', {
+                              quantity: $t('all'),
+                          })}\nCmd/Ctrl + Shift + Enter`
+                }}
+            </span>
+        </v-tooltip>
+        <!-- Visualize button-->
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    class="toolbar-square-btn visualize-btn"
+                    :depressed="show_vis_sidebar"
+                    :text="!show_vis_sidebar"
+                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+                    :disabled="getShouldDisableExecuteMap[session.id]"
+                    v-on="on"
+                    @click="
+                        SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
+                    "
+                >
+                    <v-icon size="16"> $vuetify.icons.reports </v-icon>
+                </v-btn>
+            </template>
+            <span class="text-capitalize">
+                {{
+                    $t('visualizedConfig', {
+                        action: show_vis_sidebar ? $t('hide') : $t('show'),
+                    })
+                }}
+            </span>
+        </v-tooltip>
+        <!-- Create snippet button-->
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -31,6 +104,7 @@
         </v-tooltip>
         <load-sql ref="loadSql" />
         <v-spacer />
+        <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
             <row-limit-ctr
                 :style="{ maxWidth: '190px' }"
@@ -46,6 +120,7 @@
                 </template>
             </row-limit-ctr>
         </v-form>
+
         <confirm-dialog
             v-model="confDlg.isOpened"
             :title="confDlg.title"
@@ -115,7 +190,6 @@
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimit from './RowLimit.container.vue'
-import SessionBtns from './SessionBtns'
 import QueryEditor from '@/components/QueryEditor'
 import LoadSql from './LoadSql'
 
@@ -123,7 +197,6 @@ export default {
     name: 'txt-editor-toolbar-ctr',
     components: {
         'row-limit-ctr': RowLimit,
-        'session-btns': SessionBtns,
         'readonly-query-editor': QueryEditor,
         'load-sql': LoadSql,
     },
@@ -154,15 +227,26 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             query_snippets: state => state.persisted.query_snippets,
-            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             query_txt: state => state.editor.query_txt,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
+            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             selected_query_txt: state => state.editor.selected_query_txt,
+            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
+            getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
+            getCloneConn: 'queryConn/getCloneConn',
             getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
         }),
+        isQueryKilled() {
+            return (
+                !this.getLoadingQueryResultBySessionId(this.session.id) &&
+                !this.getIsStoppingQueryBySessionId(this.session.id)
+            )
+        },
         isRowLimitValid: {
             get() {
                 return this.is_max_rows_valid
@@ -172,13 +256,18 @@ export default {
             },
         },
     },
+    activated() {
+        this.watch_isQueryKilled()
+    },
+    deactivated() {
+        this.$typy(this.unwatch_isQueryKilled).safeFunction()
+    },
     methods: {
-        ...mapActions({
-            stopQuery: 'queryResult/stopQuery',
-        }),
         ...mapActions({
             fetchQueryResult: 'queryResult/fetchQueryResult',
             pushToQuerySnippets: 'persisted/pushToQuerySnippets',
+            stopQuery: 'queryResult/stopQuery',
+            disconnectClone: 'queryConn/disconnectClone',
         }),
         ...mapMutations({
             SET_QUERY_ROW_LIMIT: 'persisted/SET_QUERY_ROW_LIMIT',
@@ -187,6 +276,17 @@ export default {
             SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
             SET_IS_MAX_ROWS_VALID: 'queryResult/SET_IS_MAX_ROWS_VALID',
         }),
+        watch_isQueryKilled() {
+            this.unwatch_isQueryKilled = this.$watch('isQueryKilled', async (v, oV) => {
+                if (v !== oV && v) {
+                    const bgConn = this.getCloneConn({
+                        clone_of_conn_id: this.session.active_sql_conn.id,
+                        binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                    })
+                    if (bgConn.id) await this.disconnectClone({ id: bgConn.id })
+                }
+            })
+        },
         /**
          * Only open dialog when its corresponding query text exists
          */
@@ -270,10 +370,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.txt-editor-toolbar {
-    border-left: 1px solid $table-border;
-    border-bottom: 1px solid $table-border;
-    width: 100%;
-}
-</style>

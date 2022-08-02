@@ -103,38 +103,67 @@ describe(`txt-editor-toolbar-ctr`, () => {
             expect(wrapper.vm.$data.confDlg.onSave).to.be.equals(wrapper.vm.addSnippet)
         })
     })
-    describe('session-btns event handlers', () => {
-        const evtMap = {
-            'on-visualize': 'SET_SHOW_VIS_SIDEBAR',
-            'on-run': 'handleRun',
-            'on-stop-query': 'stopQuery',
-        }
-        Object.keys(evtMap).forEach(e => {
-            it(`Should call ${evtMap[e]}`, () => {
-                let spy = sinon.spy(TxtEditorToolbar.methods, evtMap[e])
-                wrapper = mountFactory()
-                const sessionBtns = wrapper.findComponent({ name: 'session-btns' })
+    describe('Run button and visualize button tests', () => {
+        const btns = ['run-btn', 'visualize-btn']
+        btns.forEach(btn => {
+            let des = `Should disable ${btn} if there is a running query`,
+                btnClassName = `.${btn}`
+            if (btn === 'run-btn') {
+                des = `Should render 'stop-btn' if there is a running query`
+                btnClassName = '.stop-btn'
+            }
+            it(des, () => {
+                wrapper = mountFactory({
+                    computed: {
+                        getLoadingQueryResultBySessionId: () => () => true,
+                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: true }),
+                    },
+                })
+                if (btn === 'run-btn') {
+                    expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)
+                } else {
+                    const btnComponent = wrapper.find(btnClassName)
+                    expect(btnComponent.element.disabled).to.be.true
+                }
+            })
+            it(`${btn} should be clickable if it matches certain conditions`, () => {
+                wrapper = mountFactory({
+                    computed: {
+                        getLoadingQueryResultBySessionId: () => () => false,
+                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                    },
+                })
+                const btnComponent = wrapper.find(`.${btn}`)
+                expect(btnComponent.element.disabled).to.be.false
+            })
+            let handler = 'SET_SHOW_VIS_SIDEBAR'
+            if (btn === 'run-btn') handler = 'handleRun'
+            it(`Should call ${handler}`, () => {
+                wrapper = mountFactory({
+                    computed: {
+                        getLoadingQueryResultBySessionId: () => () => false,
+                        getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                    },
+                })
+                const spy = sinon.spy(wrapper.vm, handler)
                 const show_vis_sidebar = wrapper.vm.show_vis_sidebar
-                sessionBtns.vm.$emit(e)
-                switch (e) {
-                    case 'on-visualize':
+                wrapper.find(`.${btn}`).trigger('click')
+                switch (btn) {
+                    case 'visualize-btn':
                         spy.should.have.been.calledOnceWithExactly({
                             payload: !show_vis_sidebar,
                             id: dummy_session.id,
                         })
                         break
-                    case 'on-run':
+                    case 'run-btn':
                         spy.should.have.been.calledOnceWithExactly('all')
-                        break
-                    case 'on-stop-query':
-                        spy.should.have.been.calledOnce
                         break
                 }
                 spy.restore()
             })
         })
     })
-    describe('session-btns - Run query tests', () => {
+    describe('Run query tests', () => {
         it(`Should popup query confirmation dialog with accurate data
       when query_confirm_flag = 1`, async () => {
             wrapper = mountFactory({
@@ -171,6 +200,17 @@ describe(`txt-editor-toolbar-ctr`, () => {
             })
             await wrapper.vm.confirmRunning()
             expect(setQueryConfirmFlagCallCount).to.be.equals(1)
+        })
+    })
+    describe('Stop button tests', () => {
+        it(`Should render stop-btn if query result is loading`, () => {
+            wrapper = mountFactory({
+                computed: {
+                    getLoadingQueryResultBySessionId: () => () => true,
+                    getShouldDisableExecuteMap: () => ({ [dummy_session.id]: false }),
+                },
+            })
+            expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)
         })
     })
 })
