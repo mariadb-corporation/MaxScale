@@ -441,8 +441,8 @@ export default {
         // sidebar getters
         getCurrDbTree: (state, getters, rootState) =>
             state.db_tree_map[rootState.wke.active_wke_id] || {},
-        getActiveTreeNode: (state, getters) => {
-            return getters.getCurrDbTree.active_tree_node || {}
+        getActivePrvwTblNode: (state, getters) => {
+            return getters.getCurrDbTree.active_prvw_tbl_node || {}
         },
         getDbTreeData: (state, getters) => {
             return getters.getCurrDbTree.data || []

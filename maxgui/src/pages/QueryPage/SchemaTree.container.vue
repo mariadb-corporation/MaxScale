@@ -137,7 +137,7 @@ export default {
         }),
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
-            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
+            getActivePrvwTblNode: 'schemaSidebar/getActivePrvwTblNode',
             getAlteredActiveNode: 'editor/getAlteredActiveNode',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
@@ -213,14 +213,14 @@ export default {
                 [TRIGGER]: [{ text: this.$t('dropTrigger'), type: DD }],
             }
         },
-        // Use either getActiveTreeNode or getAlteredActiveNode
+        // Use either getActivePrvwTblNode or getAlteredActiveNode
         activeNodes: {
             get() {
                 let nodes = []
                 if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
                     nodes = [...nodes, this.getAlteredActiveNode]
-                else if (this.$typy(this.getActiveTreeNode, 'id').safeString)
-                    nodes = [...nodes, this.getActiveTreeNode]
+                else if (this.$typy(this.getActivePrvwTblNode, 'id').safeString)
+                    nodes = [...nodes, this.getActivePrvwTblNode]
                 return nodes
             },
             set(v) {
@@ -238,7 +238,7 @@ export default {
                         this.PATCH_DB_TREE_MAP({
                             id: this.active_wke_id,
                             payload: {
-                                active_tree_node: activeNodes[0],
+                                active_prvw_tbl_node: activeNodes[0],
                             },
                         })
                 }

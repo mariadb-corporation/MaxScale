@@ -308,7 +308,7 @@ export default {
                             break
                     }
                     resSets.push({
-                        id: `${resName} of ${rootGetters['schemaSidebar/getActiveTreeNode'].id}`,
+                        id: `${resName} of ${rootGetters['schemaSidebar/getActivePrvwTblNode'].id}`,
                         ...data,
                     })
                 }

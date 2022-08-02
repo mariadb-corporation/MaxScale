@@ -415,7 +415,8 @@ function memStateCreator(namespace) {
                  * loading_db_tree?: boolean
                  * db_completion_list?: array,
                  * data? array. Contains schemas array
-                 * active_tree_node? object. Contains active node in the schemas array
+                 * //TODO: Make active_prvw_tbl_node an object hash with session id as key
+                 * active_prvw_tbl_node? object. Contains active node in the schemas array
                  * data_of_conn?: string. Name of the connection using to fetch data
                  */
                 db_tree_map: {},

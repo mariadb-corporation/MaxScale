@@ -7,7 +7,7 @@
                     <truncate-string
                         :maxWidth="260"
                         :nudgeLeft="16"
-                        :text="$typy(getActiveTreeNode, 'id').safeObject"
+                        :text="$typy(getActivePrvwTblNode, 'id').safeObject"
                     />
                 </div>
                 <v-tabs
@@ -126,14 +126,14 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({
-            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
+            getActivePrvwTblNode: 'schemaSidebar/getActivePrvwTblNode',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         resultData() {
             return this.$typy(this.data, 'data.attributes.results[0]').safeObjectOrEmpty
         },
         validConn() {
-            return Boolean(this.getActiveTreeNode.id && this.active_sql_conn.id)
+            return Boolean(this.getActivePrvwTblNode.id && this.active_sql_conn.id)
         },
         activeView: {
             get() {
@@ -190,7 +190,7 @@ export default {
          */
         async fetchActiveNodeData(SQL_QUERY_MODE) {
             await this.fetchPrvw({
-                tblId: this.$typy(this.getActiveTreeNode, 'id').safeObject,
+                tblId: this.$typy(this.getActivePrvwTblNode, 'id').safeObject,
                 prvwMode: SQL_QUERY_MODE,
             })
         },
