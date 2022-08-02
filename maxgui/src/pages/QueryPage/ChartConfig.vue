@@ -4,7 +4,7 @@
         <label class="field__label color text-small-text label-required"> {{ $t('graph') }}</label>
         <v-select
             v-model="chartOpt.type"
-            :items="Object.values(SQL_CHART_TYPES)"
+            :items="Object.values(chartTypes)"
             outlined
             class="std mariadb-select-input error--text__bottom"
             :menu-props="{
@@ -73,7 +73,7 @@
                             </label>
                             <v-select
                                 v-model="axesType[axisId]"
-                                :items="Object.values(SQL_CHART_AXIS_TYPES)"
+                                :items="Object.values(axisTypes)"
                                 outlined
                                 class="std mariadb-select-input error--text__bottom"
                                 :menu-props="{
@@ -143,10 +143,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
 export default {
-    name: 'visualize-sidebar',
-    props: { value: { type: Object, required: true } },
+    name: 'chart-config',
+    props: {
+        value: { type: Object, required: true },
+        chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
+        axisTypes: { type: Object, required: true }, // SQL_CHART_AXIS_TYPES object
+        sqlQueryModes: { type: Object, required: true }, // SQL_QUERY_MODES object
+        resultSets: { type: Array, required: true },
+    },
     data() {
         return {
             resSet: null,
@@ -156,16 +161,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
-            SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
-        }),
-        ...mapGetters({
-            getPrvwDataRes: 'queryResult/getPrvwDataRes',
-            getResults: 'queryResult/getResults',
-            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
-        }),
         chartOpt: {
             get() {
                 return this.value
@@ -174,45 +169,12 @@ export default {
                 this.$emit('input', value)
             },
         },
-        resultSets() {
-            let resSets = []
-
-            let resSetArr = this.$help.stringifyClone(
-                this.$typy(this.getResults, 'attributes.results').safeArray
-            )
-            let resSetCount = 0
-            for (const res of resSetArr) {
-                if (res.data) {
-                    ++resSetCount
-                    res.id = `RESULT SET ${resSetCount}`
-                    resSets.push(res)
-                }
-            }
-
-            let prvwData = this.$help.stringifyClone(
-                this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA)).safeObject
-            )
-            if (!this.$typy(prvwData).isEmptyObject) {
-                prvwData.id = `${this.$t('previewData')} for ${this.getActiveTreeNode.id}`
-                resSets.push(prvwData)
-            }
-
-            let prvwDataDetails = this.$help.stringifyClone(
-                this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)).safeObject
-            )
-
-            if (!this.$typy(prvwDataDetails).isEmptyObject) {
-                prvwDataDetails.id = `${this.$t('viewDetails')} for ${this.getActiveTreeNode.id}`
-                resSets.push(prvwDataDetails)
-            }
-            return resSets
-        },
         axisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             return this.resSet.fields
         },
         supportTrendLine() {
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(this.chartOpt.type)
         },
     },
@@ -264,7 +226,7 @@ export default {
             this.axesType = { x: '', y: '' }
         },
         labelingAxisType(axisType) {
-            const { LINEAR, CATEGORY } = this.SQL_CHART_AXIS_TYPES
+            const { LINEAR, CATEGORY } = this.axisTypes
             switch (axisType) {
                 case LINEAR:
                     return `${axisType} (Numerical data)`
@@ -285,7 +247,7 @@ export default {
                 index: indexOfOpacity,
                 newChar: '0.2',
             })
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             switch (this.chartOpt.type) {
                 case LINE:
                     {
@@ -347,7 +309,7 @@ export default {
          * @param {String} axisType - LINEAR or TIME axis
          */
         sortingChartData({ data, axisId, axisType }) {
-            const { LINEAR, TIME } = this.SQL_CHART_AXIS_TYPES
+            const { LINEAR, TIME } = this.axisTypes
             switch (axisType) {
                 case LINEAR:
                     data.xLabels.sort((a, b) => a - b)
@@ -395,7 +357,7 @@ export default {
                 const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
                 data.datasets = [dataset]
                 // handle sorting chart data for LINEAR or TIME axis
-                const { BAR_HORIZ } = this.SQL_CHART_TYPES
+                const { BAR_HORIZ } = this.chartTypes
                 let axisIdToBeSorted = 'x'
                 // For vertical graphs, sort only the X axis, but for horizontal, sort the Y axis
                 switch (this.chartOpt.type) {

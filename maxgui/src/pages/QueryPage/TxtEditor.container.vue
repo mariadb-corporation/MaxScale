@@ -7,7 +7,7 @@
             :height="txtEditorToolbarHeight"
             :session="session"
         />
-        <!-- Main panel contains editor pane and visualize-sidebar pane -->
+        <!-- Main panel contains editor pane and chart-config -->
         <split-pane
             v-model="mainPanePct"
             class="main-pane__content d-flex"
@@ -68,7 +68,14 @@
                 </split-pane>
             </template>
             <template slot="pane-right">
-                <visualize-sidebar v-model="chartOpt" class="visualize-sidebar" />
+                <chart-config
+                    v-model="chartOpt"
+                    :chartTypes="SQL_CHART_TYPES"
+                    :axisTypes="SQL_CHART_AXIS_TYPES"
+                    :sqlQueryModes="SQL_QUERY_MODES"
+                    :resultSets="resultSets"
+                    class="chart-config"
+                />
             </template>
         </split-pane>
     </div>
@@ -91,7 +98,7 @@ import { mapGetters, mapMutations, mapState } from 'vuex'
 import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
 import SqlEditor from '@/components/SqlEditor'
 import QueryResult from './QueryResult'
-import VisualizeSideBar from './VisualizeSideBar'
+import ChartConfig from './ChartConfig'
 import ChartPane from './ChartPane'
 
 export default {
@@ -100,7 +107,7 @@ export default {
         'txt-editor-toolbar-ctr': TxtEditorToolbar,
         'sql-editor': SqlEditor,
         QueryResult,
-        'visualize-sidebar': VisualizeSideBar,
+        'chart-config': ChartConfig,
         'chart-pane': ChartPane,
     },
     props: {
@@ -120,7 +127,7 @@ export default {
             mouseDropWidget: null, // mouse drop widget while dragging to editor
             maxVisSidebarPx: 250,
             txtEditorToolbarHeight: 28,
-            // visualize-sidebar and chart-pane state
+            // chart-config and chart-pane state
             defChartOpt: {
                 type: '',
                 data: {},
@@ -140,11 +147,16 @@ export default {
             CMPL_SNIPPET_KIND: state => state.app_config.CMPL_SNIPPET_KIND,
             SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
             SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getChartResultSets: 'queryResult/getChartResultSets',
         }),
+        resultSets() {
+            return this.getChartResultSets({ scope: this })
+        },
         snippetList() {
             return this.query_snippets.map(q => ({
                 label: q.name,
@@ -308,7 +320,7 @@ export default {
 
 <style lang="scss" scoped>
 .editor,
-.visualize-sidebar,
+.chart-config,
 .query-result,
 .chart-pane {
     width: 100%;
@@ -317,7 +329,7 @@ export default {
 .editor {
     border-bottom: 1px solid $table-border;
 }
-.visualize-sidebar,
+.chart-config,
 .chart-pane,
 .query-result,
 .editor {

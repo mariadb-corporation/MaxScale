@@ -323,5 +323,41 @@ export default {
                 )
             }
         },
+        getChartResultSets: (state, getters, rootState, rootGetters) => ({ scope }) => {
+            let resSets = []
+            // user query result data
+            const userQueryResults = scope.$help.stringifyClone(
+                scope.$typy(getters.getResults, 'attributes.results').safeArray
+            )
+            let resSetCount = 0
+            for (const res of userQueryResults) {
+                if (res.data) {
+                    ++resSetCount
+                    resSets.push({ id: `RESULT SET ${resSetCount}`, ...res })
+                }
+            }
+            // preview data
+            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.app_config.SQL_QUERY_MODES
+            const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
+            for (const mode of prvwModes) {
+                const data = scope.$help.stringifyClone(getters.getPrvwDataRes(mode))
+                if (!scope.$typy(data).isEmptyObject) {
+                    let resName = ''
+                    switch (mode) {
+                        case PRVW_DATA:
+                            resName = scope.$t('previewData')
+                            break
+                        case PRVW_DATA_DETAILS:
+                            resName = scope.$t('viewDetails')
+                            break
+                    }
+                    resSets.push({
+                        id: `${resName} of ${rootGetters['schemaSidebar/getActiveTreeNode'].id}`,
+                        ...data,
+                    })
+                }
+            }
+            return resSets
+        },
     },
 }
