@@ -31,7 +31,6 @@
                             split="vert"
                             :disable="isChartMaximized || !showVisChart"
                         >
-                            <!-- Editor pane contains editor and chart pane -->
                             <template slot="pane-left">
                                 <sql-editor
                                     ref="sqlEditor"
@@ -44,10 +43,12 @@
                                 />
                             </template>
                             <template slot="pane-right">
-                                <chart-container
+                                <chart-pane
                                     v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
                                     v-model="chartOpt"
                                     :containerHeight="chartContainerHeight"
+                                    :chartTypes="SQL_CHART_TYPES"
+                                    :axisTypes="SQL_CHART_AXIS_TYPES"
                                     class="chart-pane"
                                     @close-chart="setDefChartOptState"
                                 />
@@ -91,7 +92,7 @@ import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
 import SqlEditor from '@/components/SqlEditor'
 import QueryResult from './QueryResult'
 import VisualizeSideBar from './VisualizeSideBar'
-import ChartContainer from './ChartContainer'
+import ChartPane from './ChartPane'
 
 export default {
     name: 'txt-editor-ctr',
@@ -100,7 +101,7 @@ export default {
         'sql-editor': SqlEditor,
         QueryResult,
         'visualize-sidebar': VisualizeSideBar,
-        ChartContainer,
+        'chart-pane': ChartPane,
     },
     props: {
         dim: { type: Object, required: true },
@@ -119,7 +120,7 @@ export default {
             mouseDropWidget: null, // mouse drop widget while dragging to editor
             maxVisSidebarPx: 250,
             txtEditorToolbarHeight: 28,
-            // visualize-sidebar and chart-container state
+            // visualize-sidebar and chart-pane state
             defChartOpt: {
                 type: '',
                 data: {},
@@ -137,6 +138,8 @@ export default {
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             query_snippets: state => state.persisted.query_snippets,
             CMPL_SNIPPET_KIND: state => state.app_config.CMPL_SNIPPET_KIND,
+            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
+            SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',

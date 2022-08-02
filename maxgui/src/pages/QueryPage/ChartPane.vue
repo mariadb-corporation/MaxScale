@@ -1,5 +1,5 @@
 <template>
-    <div class="chart-container fill-height">
+    <div class="chart-pane fill-height">
         <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
             <v-tooltip
@@ -60,7 +60,7 @@
 
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
             <line-chart
-                v-if="type === SQL_CHART_TYPES.LINE"
+                v-if="type === chartTypes.LINE"
                 id="query-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
@@ -71,7 +71,7 @@
                 :options="chartOptions"
             />
             <scatter-chart
-                v-else-if="type === SQL_CHART_TYPES.SCATTER"
+                v-else-if="type === chartTypes.SCATTER"
                 id="query-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
@@ -81,7 +81,7 @@
                 :options="chartOptions"
             />
             <vert-bar-chart
-                v-else-if="type === SQL_CHART_TYPES.BAR_VERT"
+                v-else-if="type === chartTypes.BAR_VERT"
                 id="query-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
@@ -91,7 +91,7 @@
                 :options="chartOptions"
             />
             <horiz-bar-chart
-                v-else-if="type === SQL_CHART_TYPES.BAR_HORIZ"
+                v-else-if="type === chartTypes.BAR_HORIZ"
                 id="query-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
@@ -120,13 +120,14 @@
 /*
 @close-chart. Emit when close-chart button is clicked
 */
-import { mapState } from 'vuex'
 import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
 export default {
-    name: 'chart-container',
+    name: 'chart-pane',
     props: {
         value: { type: Object, required: true },
         containerHeight: { type: Number, default: 0 },
+        chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
+        axisTypes: { type: Object, required: true }, // SQL_CHART_AXIS_TYPES object
     },
     data() {
         return {
@@ -136,10 +137,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
-            SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
-        }),
         chartOpt: {
             get() {
                 return this.value
@@ -161,7 +158,7 @@ export default {
             return this.chartOpt.type
         },
         minWidth() {
-            if (this.autoSkipTick(this.axesType.x) || this.type === this.SQL_CHART_TYPES.BAR_HORIZ)
+            if (this.autoSkipTick(this.axesType.x) || this.type === this.chartTypes.BAR_HORIZ)
                 return 'unset'
             if (this.$typy(this.chartData, 'xLabels').isDefined)
                 return `${Math.min(this.chartData.xLabels.length * 15, 15000)}px`
@@ -286,7 +283,7 @@ export default {
          * @returns {Boolean} - should autoSkip the tick
          */
         autoSkipTick(axisType) {
-            const { LINEAR, TIME } = this.SQL_CHART_AXIS_TYPES
+            const { LINEAR, TIME } = this.axisTypes
             return axisType === LINEAR || axisType === TIME
         },
         /**
@@ -296,8 +293,8 @@ export default {
          * @returns {Object} - ticks object
          */
         getAxisTicks({ axisId, axisType }) {
-            const { CATEGORY } = this.SQL_CHART_AXIS_TYPES
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            const { CATEGORY } = this.axisTypes
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.chartTypes
             const autoSkip = this.autoSkipTick(this.axesType[axisType])
             let ticks = { autoSkip, callback: this.truncateLabel, beginAtZero: true }
             if (autoSkip) {
@@ -366,7 +363,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.chart-container {
+.chart-pane {
     overflow: auto;
     .chart-wrapper {
         width: 100%;
