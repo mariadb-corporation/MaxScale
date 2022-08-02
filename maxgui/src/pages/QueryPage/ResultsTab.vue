@@ -44,10 +44,10 @@
             <v-spacer />
             <keep-alive>
                 <duration-timer
-                    v-if="getQueryRequestSentTime"
-                    :startTime="getQueryRequestSentTime"
-                    :executionTime="getQueryExeTime"
-                    :totalDuration="getQueryTotalDuration"
+                    v-if="queryRequestSentTime"
+                    :startTime="queryRequestSentTime"
+                    :executionTime="queryExeTime"
+                    :totalDuration="queryTotalDuration"
                 />
             </keep-alive>
 
@@ -71,37 +71,32 @@
                 <span> {{ $t('info.queryIncomplete') }}</span>
             </v-tooltip>
         </div>
-
-        <template>
-            <v-skeleton-loader
-                v-if="getLoadingQueryResult"
-                :loading="getLoadingQueryResult"
-                type="table: table-thead, table-tbody"
-                :height="dynDim.height - headerHeight"
-            />
-            <template v-else>
-                <div v-for="(resSet, name) in resultData" :key="name">
-                    <keep-alive>
-                        <template v-if="activeResSet === name">
-                            <result-data-table
-                                v-if="$typy(resSet, 'data').isDefined"
-                                :height="dynDim.height - headerHeight"
-                                :width="dynDim.width"
-                                :headers="resSet.fields.map(field => ({ text: field }))"
-                                :rows="resSet.data"
-                                showGroupBy
-                                v-on="$listeners"
-                            />
-                            <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
-                                <div v-for="(v, key) in resSet" :key="key">
-                                    <b>{{ key }}:</b>
-                                    <span class="d-inline-block ml-4">{{ v }}</span>
-                                </div>
-                            </div>
-                        </template>
-                    </keep-alive>
-                </div>
-            </template>
+        <v-skeleton-loader
+            v-if="isLoading"
+            :loading="isLoading"
+            type="table: table-thead, table-tbody"
+            :height="dynDim.height - headerHeight"
+        />
+        <template v-else>
+            <keep-alive v-for="(resSet, name) in resultData" :key="name">
+                <template v-if="activeResSet === name">
+                    <result-data-table
+                        v-if="$typy(resSet, 'data').isDefined"
+                        :height="dynDim.height - headerHeight"
+                        :width="dynDim.width"
+                        :headers="resSet.fields.map(field => ({ text: field }))"
+                        :rows="resSet.data"
+                        showGroupBy
+                        v-on="$listeners"
+                    />
+                    <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
+                        <div v-for="(v, key) in resSet" :key="key">
+                            <b>{{ key }}:</b>
+                            <span class="d-inline-block ml-4">{{ v }}</span>
+                        </div>
+                    </div>
+                </template>
+            </keep-alive>
         </template>
     </div>
 </template>
@@ -119,11 +114,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
 export default {
-    name: 'result-tab',
+    name: 'results-tab',
     components: {
         ResultDataTable,
         DurationTimer,
@@ -136,35 +130,38 @@ export default {
             },
             required: true,
         },
+        isLoading: { type: Boolean, required: true },
+        data: { type: Object, required: true },
     },
     data() {
         return {
             headerHeight: 0,
-            isLoading: true,
             activeResSet: '',
             runSeconds: 0,
         }
     },
     computed: {
-        ...mapState({
-            active_wke_id: state => state.wke.active_wke_id,
-        }),
-        ...mapGetters({
-            getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
-            getResults: 'queryResult/getResults',
-            getQueryRequestSentTime: 'queryResult/getQueryRequestSentTime',
-            getQueryExeTime: 'queryResult/getQueryExeTime',
-            getQueryTotalDuration: 'queryResult/getQueryTotalDuration',
-        }),
+        queryTotalDuration() {
+            return this.$typy(this.data, 'total_duration').safeNumber
+        },
+        queryExeTime() {
+            if (this.isLoading) return -1
+            const { attributes } = this.$typy(this.data, 'data').safeObject
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
+            return 0
+        },
         queryTxt() {
-            return this.$typy(this.getResults, 'attributes.sql').safeObject
+            return this.$typy(this.data, 'data.attributes.sql').safeObject
+        },
+        queryRequestSentTime() {
+            return this.$typy(this.data, 'request_sent_time').safeNumber
         },
         resultData() {
-            if (this.$typy(this.getResults, 'attributes.results').isDefined) {
+            if (this.$typy(this.data, 'data.attributes.results').isDefined) {
                 let resultData = {}
                 let resSetCount = 0
                 let resCount = 0
-                for (const res of this.getResults.attributes.results) {
+                for (const res of this.data.data.attributes.results) {
                     if (this.$typy(res, 'data').isDefined) {
                         ++resSetCount
                         resultData[`Result set ${resSetCount}`] = res

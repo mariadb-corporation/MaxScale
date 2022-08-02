@@ -217,12 +217,8 @@ export default {
         },
     },
     getters: {
-        getQueryResult: (state, getters, rootState, rootGetters) =>
+        getUserQueryRes: (state, getters, rootState, rootGetters) =>
             state.query_results_map[rootGetters['querySession/getActiveSessionId']] || {},
-        getLoadingQueryResult: (state, getters) => {
-            const { loading_query_result = false } = getters.getQueryResult
-            return loading_query_result
-        },
         getLoadingQueryResultBySessionId: state => {
             return session_id => {
                 const { loading_query_result = false } = state.query_results_map[session_id] || {}
@@ -246,24 +242,6 @@ export default {
                 }
                 return isLoading
             }
-        },
-        getResults: (state, getters) => {
-            const { data = {} } = getters.getQueryResult
-            return data
-        },
-        getQueryRequestSentTime: (state, getters) => {
-            const { request_sent_time = 0 } = getters.getQueryResult
-            return request_sent_time
-        },
-        getQueryExeTime: (state, getters) => {
-            if (getters.getLoadingQueryResult) return -1
-            const { attributes } = getters.getResults
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
-        getQueryTotalDuration: (state, getters) => {
-            const { total_duration = 0 } = getters.getQueryResult
-            return total_duration
         },
         getIsStoppingQueryBySessionId: state => {
             return session_id => {
@@ -327,7 +305,7 @@ export default {
             let resSets = []
             // user query result data
             const userQueryResults = scope.$help.stringifyClone(
-                scope.$typy(getters.getResults, 'attributes.results').safeArray
+                scope.$typy(getters.getUserQueryRes, 'data.attributes.results').safeArray
             )
             let resSetCount = 0
             for (const res of userQueryResults) {

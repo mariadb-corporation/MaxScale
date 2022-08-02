@@ -2,7 +2,7 @@
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab
-                :disabled="getIsConnBusy && !getLoadingQueryResult"
+                :disabled="getIsConnBusy && !isLoadingUserQueryRes"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
             >
@@ -25,13 +25,15 @@
         </v-tabs>
         <v-slide-x-transition>
             <keep-alive>
-                <result-tab
+                <results-tab
                     v-if="activeTab === SQL_QUERY_MODES.QUERY_VIEW"
                     :style="{
                         height: `calc(100% - 24px)`,
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    :isLoading="isLoadingUserQueryRes"
+                    :data="getUserQueryRes"
                     v-on="$listeners"
                 />
                 <preview-data-tab
@@ -75,13 +77,13 @@
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
-import ResultTab from './ResultTab'
+import ResultsTab from './ResultsTab'
 import HistoryAndSnippets from './HistoryAndSnippets'
 export default {
     name: 'query-result-ctr',
     components: {
         PreviewDataTab,
-        ResultTab,
+        ResultsTab,
         HistoryAndSnippets,
     },
     props: {
@@ -105,7 +107,7 @@ export default {
         }),
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',
-            getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
+            getUserQueryRes: 'queryResult/getUserQueryRes',
             getLoadingPrvw: 'queryResult/getLoadingPrvw',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
@@ -132,6 +134,9 @@ export default {
             set(value) {
                 this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
+        },
+        isLoadingUserQueryRes() {
+            return this.$typy(this.getUserQueryRes, 'loading_query_result').safeBoolean
         },
     },
 
