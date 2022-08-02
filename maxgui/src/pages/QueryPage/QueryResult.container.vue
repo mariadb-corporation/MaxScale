@@ -35,7 +35,7 @@
                     :totalDuration="totalDuration"
                     v-on="$listeners"
                 />
-                <preview-data-tab
+                <data-prvw
                     v-else-if="
                         activeTab === SQL_QUERY_MODES.PRVW_DATA ||
                             activeTab === SQL_QUERY_MODES.PRVW_DATA_DETAILS
@@ -45,6 +45,8 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    :currQueryMode="curr_query_mode"
+                    :activePrvwTblNodeId="activePrvwTblNodeId"
                     :isLoading="isLoading"
                     :data="queryData"
                     :requestSentTime="requestSentTime"
@@ -80,13 +82,13 @@
  * Public License.
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
-import PreviewDataTab from './PreviewDataTab'
+import DataPrvw from './DataPrvw'
 import ResultsTab from './ResultsTab'
 import HistoryAndSnippets from './HistoryAndSnippets'
 export default {
     name: 'query-result-ctr',
     components: {
-        PreviewDataTab,
+        DataPrvw,
         ResultsTab,
         HistoryAndSnippets,
     },
@@ -114,6 +116,7 @@ export default {
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getActivePrvwTblNode: 'schemaSidebar/getActivePrvwTblNode',
         }),
         componentDynDim() {
             /*
@@ -166,6 +169,9 @@ export default {
         },
         totalDuration() {
             return this.$typy(this.queryData, 'total_duration').safeNumber
+        },
+        activePrvwTblNodeId() {
+            return this.$typy(this.getActivePrvwTblNode, 'id').safeString
         },
     },
 
