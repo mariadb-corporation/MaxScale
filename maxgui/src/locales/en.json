@@ -310,7 +310,7 @@
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",
-        "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
+        "queryIncomplete": "Return fewer rows or increase query row limit",
         "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
         "disconnectAll": "You have opened connections, uncheck the box below to keep them open.",
         "notFoundConn": "Connection is not found, please reconnect",

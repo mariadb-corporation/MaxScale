@@ -43,22 +43,6 @@
                         :totalDuration="totalDuration"
                     />
                 </keep-alive>
-                <v-tooltip
-                    v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div v-if="!resultData.complete" class="ml-4 d-flex align-center" v-on="on">
-                            <v-icon size="16" color="error" class="mr-2">
-                                $vuetify.icons.alertWarning
-                            </v-icon>
-                            {{ $t('incomplete') }}
-                        </div>
-                    </template>
-                    <span> {{ $t('info.queryIncomplete') }}</span>
-                </v-tooltip>
             </template>
             <span v-else v-html="$t('prvwTabGuide')" />
         </div>
