@@ -60,3 +60,6 @@ private:
     std::string m_path;
     TemplateDef m_default_template;
 };
+
+// Throws if TemplateDef is not complete
+void check_template_def(const TemplateDef& def);

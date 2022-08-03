@@ -13,6 +13,7 @@
 
 #include "template_reader.hh"
 #include "json_reader.hh"
+#include "rf_reader.hh"
 #include <maxbase/json.hh>
 #include <maxbase/log.hh>
 #include <maxbase/assert.hh>
@@ -118,7 +119,23 @@ std::vector<TemplateDef> TemplateReader::templates() const
     {
         return read_templates_from_json(m_path, m_default_template);
     }
+    if (extension == "rf")
+    {
+        return read_templates_from_rf(m_path, m_default_template);
+    }
 
-    MXB_THROW(RewriteError,
-              "Unknown extension '" << extension << "' " << m_path << ". Valid extensions are json");
+    MXB_THROW(RewriteError, "Unknown extension '" << extension << "' " << m_path
+                                                  << ". Valid extensions are json and rf");
+}
+
+void check_template_def(const TemplateDef& def)
+{
+    if (def.match_template.empty())
+    {
+        MXB_THROW(RewriteError, "Match template must not be empty");
+    }
+    if (def.replace_template.empty())
+    {
+        MXB_THROW(RewriteError, "Replace template must not be empty");
+    }
 }

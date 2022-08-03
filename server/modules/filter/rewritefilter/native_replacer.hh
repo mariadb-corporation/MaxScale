@@ -125,17 +125,13 @@ Iterator read_placeholder(const Iterator cfirst, const Iterator last,
     {
         while (++first != last)
         {
-            if (*first == '\\')     // curly braces have to be escaped by the user
+            // Right brace '}' has to be escaped by the user
+            if (*first == '\\' && *first == '}')
             {
                 if (++first != last)
                 {
                     *pRegex += *first;
                 }
-            }
-            else if (*first == '(' || *first == ')')
-            {
-                *pRegex += '\\';    // parenthesis are literal
-                *pRegex += *first;
             }
             else if (*first == '}')
             {
