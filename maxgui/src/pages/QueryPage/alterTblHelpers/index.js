@@ -10,7 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-export default [
+
+/**
+ * @public
+ * @returns {Array} - column types
+ */
+const getColumnTypes = () => [
     {
         header: 'String',
         types: [
@@ -92,3 +97,64 @@ export default [
         ],
     },
 ]
+
+const column_types_map = new Map()
+getColumnTypes().forEach(category =>
+    column_types_map.set(
+        category.header,
+        //Remove round brackets
+        category.types.map(type => type.value.replace(/\([^)]*\)/g, ''))
+    )
+)
+const typesSupportCharset = [
+    'CHAR',
+    'NATIONAL CHAR',
+    'VARCHAR',
+    'NATIONAL VARCHAR',
+    'TINYTEXT',
+    'TEXT',
+    'MEDIUMTEXT',
+    'LONGTEXT',
+    ...column_types_map.get('Set'),
+]
+const typesSupport_AI = [...column_types_map.get('Integer'), 'SERIAL']
+
+const typesSupport_UN_ZF = [
+    ...typesSupport_AI,
+    ...column_types_map.get('Float'),
+    ...column_types_map.get('Fixed Num'),
+]
+
+/**
+ * @private
+ * @param {String} payload.datatype - column data type to be checked
+ * @param {Array} payload.supportedTypes - dist
+ * @returns {Boolean} - returns true if provided datatype can be found in supportedTypes
+ */
+const checkOptSupport = ({ datatype, supportedTypes }) =>
+    supportedTypes.some(v => datatype.toUpperCase().includes(v))
+
+/**
+ * @public
+ * @param {String} datatype - column data type to be checked
+ * @returns {Boolean} - returns true if provided data type supports charset/collation
+ */
+const check_charset_support = datatype =>
+    checkOptSupport({ datatype, supportedTypes: typesSupportCharset })
+
+/**
+ * @public
+ * @param {String} datatype - column data type to be checked
+ * @returns {Boolean} - returns true if provided data type supports UNSIGNED|SIGNED and ZEROFILL
+ */
+const check_UN_ZF_support = datatype =>
+    checkOptSupport({ datatype, supportedTypes: typesSupport_UN_ZF })
+
+/**
+ * @public
+ * @param {String} datatype - column data type to be checked
+ * @returns {Boolean} - returns true if provided data type supports AUTO_INCREMENT
+ */
+const check_AI_support = datatype => checkOptSupport({ datatype, supportedTypes: typesSupport_AI })
+
+export { getColumnTypes, check_AI_support, check_UN_ZF_support, check_charset_support }

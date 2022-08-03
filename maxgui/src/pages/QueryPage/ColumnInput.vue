@@ -118,7 +118,7 @@
 
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
-import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
+import { check_charset_support, check_UN_ZF_support, check_AI_support } from './alterTblHelpers'
 import { mapState } from 'vuex'
 export default {
     name: 'column-input',

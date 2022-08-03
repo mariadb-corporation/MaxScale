@@ -27,6 +27,7 @@
                     <alter-cols-opts
                         v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
                         v-model="colsOptsData"
+                        :charsetCollationMap="charset_collation_map"
                         :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
                         :height="tabDim.height"
                         :boundingWidth="tabDim.width"
@@ -82,6 +83,7 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
             tbl_creation_info: state => state.editor.tbl_creation_info,
+            charset_collation_map: state => state.editor.charset_collation_map,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',

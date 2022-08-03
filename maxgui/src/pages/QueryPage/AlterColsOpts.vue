@@ -175,10 +175,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
-import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
-import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
+import {
+    getColumnTypes,
+    check_charset_support,
+    check_UN_ZF_support,
+    check_AI_support,
+} from './alterTblHelpers'
 export default {
     name: 'alter-cols-opts',
     components: {
@@ -191,6 +194,7 @@ export default {
         boundingWidth: { type: Number, required: true },
         defTblCharset: { type: String, required: true },
         defTblCollation: { type: String, required: true },
+        charsetCollationMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -201,9 +205,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            charset_collation_map: state => state.editor.charset_collation_map,
-        }),
         tableMaxHeight() {
             return this.height - this.headerHeight
         },
@@ -270,7 +271,7 @@ export default {
         },
         dataTypes() {
             let items = []
-            column_types.forEach(item => {
+            getColumnTypes().forEach(item => {
                 // place header first, then all its types and add a divider
                 items = [...items, { header: item.header }, ...item.types, { divider: true }]
             })
@@ -421,10 +422,8 @@ export default {
                     [rowIdx]: {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: {
-                            $set: this.$typy(
-                                this.charset_collation_map,
-                                `[${charset}].defCollation`
-                            ).safeString,
+                            $set: this.$typy(this.charsetCollationMap, `[${charset}].defCollation`)
+                                .safeString,
                         },
                     },
                 },
