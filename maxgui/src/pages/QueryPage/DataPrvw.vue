@@ -33,15 +33,17 @@
                     :key="currQueryMode"
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
-                    :headers="
-                        $typy(resultData, 'fields').safeArray.map(field => ({
-                            text: field,
-                        }))
-                    "
+                    :headers="$typy(resultData, 'fields').safeArray.map(field => ({ text: field }))"
                     :rows="$typy(resultData, 'data').safeArray"
                     showGroupBy
                     v-on="$listeners"
                 />
+                <div v-else>
+                    <div v-for="(v, key) in resultData" :key="key">
+                        <b>{{ key }}:</b>
+                        <span class="d-inline-block ml-4">{{ v }}</span>
+                    </div>
+                </div>
             </keep-alive>
         </template>
     </div>
