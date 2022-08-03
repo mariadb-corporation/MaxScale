@@ -5,10 +5,8 @@
             show-arrows
             hide-slider
             :height="height"
-            class="tab-navigation--btn-style wke-navigation flex-grow-0"
-            :style="{
-                maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)`,
-            }"
+            class="tab-navigation--btn-style query-tab-nav flex-grow-0"
+            :style="{ maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)` }"
         >
             <v-tab
                 v-for="wke in worksheets_arr"
@@ -47,7 +45,7 @@
                             </div>
                             <v-btn
                                 v-if="worksheets_arr.length > 1"
-                                class="ml-1 del-wke-btn"
+                                class="ml-1 del-tab-btn"
                                 icon
                                 x-small
                                 :disabled="
@@ -133,22 +131,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.wke-navigation {
-    .tab-btn {
-        &:first-of-type {
-            border-left: none !important;
-        }
-        border-bottom: none !important;
-        border-top: none !important;
-        .del-wke-btn {
-            visibility: hidden;
-        }
-        &:hover {
-            .del-wke-btn {
-                visibility: visible;
-            }
-        }
-    }
-}
-</style>

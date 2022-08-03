@@ -326,16 +326,8 @@ export default {
     width: 100%;
     height: 100%;
 }
-.editor {
-    border-bottom: 1px solid $table-border;
-}
 .chart-config,
-.chart-pane,
-.query-result-ctr,
-.editor {
-    border-left: 1px solid $table-border;
-}
 .chart-pane {
-    border-bottom: 1px solid $table-border;
+    border-left: 1px solid $table-border;
 }
 </style>

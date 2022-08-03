@@ -1,5 +1,5 @@
 <template>
-    <div class="wke-toolbar d-flex align-center flex-grow-1">
+    <div class="wke-toolbar d-flex align-center flex-grow-1 color border-bottom-table-border">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2 fill-height">
             <v-btn
                 :disabled="isAddWkeDisabled"

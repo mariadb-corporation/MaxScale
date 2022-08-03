@@ -5,7 +5,7 @@
             show-arrows
             hide-slider
             :height="height"
-            class="tab-navigation--btn-style session-navigation flex-grow-0"
+            class="tab-navigation--btn-style query-tab-nav flex-grow-0"
             :style="{ maxWidth: `calc(100% - ${sessionNavToolbarWidth + 1}px)` }"
         >
             <v-tab
@@ -40,7 +40,7 @@
                         />
                     </div>
                     <v-btn
-                        class="ml-1 del-session-btn"
+                        class="ml-1 del-tab-btn"
                         icon
                         x-small
                         :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"

@@ -1,6 +1,6 @@
 <template>
     <div
-        class="sidebar-wrapper d-flex flex-column fill-height"
+        class="sidebar-wrapper d-flex flex-column fill-height color border-right-table-border"
         :class="{ 'not-allowed': disabled }"
     >
         <div class="sidebar-toolbar" :class="[isCollapsed ? 'pa-1' : 'pa-3']">
@@ -126,7 +126,6 @@ export default {
 
 <style lang="scss" scoped>
 .sidebar-wrapper {
-    border-top: 1px solid $table-border;
     width: 100%;
     .sidebar-toolbar {
         height: 60px;

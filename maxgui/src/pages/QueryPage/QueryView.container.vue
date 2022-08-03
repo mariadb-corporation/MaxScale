@@ -3,8 +3,9 @@
         ref="queryViewCtr"
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="query-view fill-height d-flex flex-column worksheet-wrapper"
+        class="query-view fill-height d-flex flex-column"
         :class="{ 'query-view--fullscreen': is_fullscreen }"
+        tile
         :loading="is_validating_conn"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
@@ -150,7 +151,7 @@ export default {
 
 <style lang="scss" scoped>
 .query-view {
-    background: #ffffff;
+    box-shadow: none !important;
     &--fullscreen {
         z-index: 7;
         position: fixed;
@@ -158,9 +159,6 @@ export default {
         right: 0px;
         bottom: 0px;
         left: 0px;
-    }
-    .worksheet-wrapper {
-        border-radius: 0px;
     }
 }
 </style>

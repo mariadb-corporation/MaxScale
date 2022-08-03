@@ -1,14 +1,7 @@
 <template>
-    <v-card
-        class="fill-height color border-left-table-border border-right-table-border "
-        :loading="isLoading"
-    >
-        <div
-            v-show="!isLoading"
-            class="relative fill-height color border-left-table-border border-right-table-border"
-        >
+    <v-card class="ddl-editor-ctr fill-height" :loading="isLoading" tile>
+        <div v-show="!isLoading" class="relative fill-height">
             <ddl-editor-toolbar
-                class="color border-left-table-border border-bottom-table-border"
                 :height="ddlEditorToolbarHeight"
                 :disableRevert="!hasChanged"
                 :disableApply="!hasValidChanges"
@@ -440,9 +433,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.ddl-editor-close {
-    position: absolute;
-    top: 4px;
-    right: 6px;
+.ddl-editor-ctr {
+    box-shadow: none !important;
 }
 </style>

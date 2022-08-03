@@ -1,5 +1,8 @@
 <template>
-    <div class="d-flex align-center" :style="{ height: `${height}px` }">
+    <div
+        class="d-flex align-center color border-bottom-table-border"
+        :style="{ height: `${height}px` }"
+    >
         <v-tooltip
             top
             transition="slide-y-transition"

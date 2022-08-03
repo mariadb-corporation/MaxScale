@@ -25,7 +25,7 @@ describe('wke-nav-ctr', () => {
 
     it('Should not show delete worksheet button when worksheets_arr length <= 1', () => {
         expect(wrapper.vm.worksheets_arr.length).to.be.equals(1)
-        expect(wrapper.find('.del-wke-btn').exists()).to.be.equal(false)
+        expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(false)
     })
 
     it('Should show delete worksheet button when worksheets_arr length > 1', () => {
@@ -40,7 +40,7 @@ describe('wke-nav-ctr', () => {
             },
         })
         expect(wrapper.vm.worksheets_arr.length).to.be.equals(2)
-        expect(wrapper.find('.del-wke-btn').exists()).to.be.equal(true)
+        expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(true)
     })
 
     it('Should not show a tooltip when hovering a worksheet tab has no connection', () => {

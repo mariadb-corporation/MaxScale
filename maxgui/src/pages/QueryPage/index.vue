@@ -1,5 +1,5 @@
 <template>
-    <div class="query-editor-page">
+    <div class="query-editor-page color border-all-table-border">
         <router-view />
         <confirm-dialog
             v-model="isConfDlgOpened"
@@ -133,6 +133,7 @@ export default {
 </script>
 <style lang="scss" scoped>
 .query-editor-page {
+    background: #ffffff;
     // ignore root padding
     margin-left: -36px;
     margin-top: -24px;

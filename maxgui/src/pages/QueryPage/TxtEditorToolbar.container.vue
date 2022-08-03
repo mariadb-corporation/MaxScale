@@ -1,6 +1,6 @@
 <template>
     <div
-        class="txt-editor-toolbar color border-bottom-table-border border-left-table-border d-flex align-center"
+        class="txt-editor-toolbar color border-bottom-table-border d-flex align-center"
         :style="{ height: `${height}px` }"
     >
         <!-- Run/Stop buttons-->

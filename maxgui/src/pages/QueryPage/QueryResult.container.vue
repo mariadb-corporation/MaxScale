@@ -1,5 +1,5 @@
 <template>
-    <div class="fill-height">
+    <div class="fill-height color border-top-table-border">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab
                 :disabled="getIsConnBusy && isLoading"

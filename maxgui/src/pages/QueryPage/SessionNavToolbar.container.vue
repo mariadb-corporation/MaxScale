@@ -1,6 +1,6 @@
 <template>
     <div
-        class="session-nav-toolbar-ctr color border-top-table-border border-bottom-table-border border-right-table-border d-flex align-center flex-grow-1"
+        class="session-nav-toolbar-ctr d-flex align-center flex-grow-1 color border-bottom-table-border"
     >
         <div ref="buttonWrapper" class="d-flex align-center pl-2">
             <v-btn
