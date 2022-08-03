@@ -95,8 +95,9 @@
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx } }"
             >
                 <div :key="h.text" class="fill-height d-flex align-center">
-                    <column-input
-                        :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
+                    <col-opt-input
+                        :ref="`colOptInput-row${rowIdx}-col-${colIdx}`"
+                        :initialColOptsData="$typy(initialData, `data['${rowIdx}']`).safeArray"
                         :data="{
                             field: h.text,
                             value: cell,
@@ -175,7 +176,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ColumnInput from './ColumnInput.vue'
+import ColOptInput from './ColOptInput.vue'
 import {
     getColumnTypes,
     check_charset_support,
@@ -185,7 +186,7 @@ import {
 export default {
     name: 'alter-cols-opts',
     components: {
-        'column-input': ColumnInput,
+        'col-opt-input': ColOptInput,
     },
     props: {
         value: { type: Object, required: true },
@@ -495,8 +496,8 @@ export default {
          */
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
-                const columnInput = this.$refs[
-                    `columnInput-row${item.rowIdx}-col-${this.idxOfUQ}`
+                const colOptInput = this.$refs[
+                    `colOptInput-row${item.rowIdx}-col-${this.idxOfUQ}`
                 ][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
@@ -505,7 +506,7 @@ export default {
                             [this.idxOfNN]: { $set: 'NOT NULL' },
                             [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
                             [this.idxOfUQ]: {
-                                $set: columnInput.uniqueIdxName,
+                                $set: colOptInput.uniqueIdxName,
                             },
                         },
                     },

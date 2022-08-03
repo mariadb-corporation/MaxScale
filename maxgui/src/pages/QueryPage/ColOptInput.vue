@@ -99,6 +99,8 @@
  *  field?: string, header name
  *  value?: string, cell value
  *  rowObj?: object, entire row data
+ *  rowIdx?: number
+ *  colIdx?: number
  * }
  * Events
  * Below events are used to handle "coupled case",
@@ -119,9 +121,8 @@
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './alterTblHelpers'
-import { mapState } from 'vuex'
 export default {
-    name: 'column-input',
+    name: 'col-opt-input',
     components: {
         'charset-input': CharsetInput,
         'collation-input': CollationInput,
@@ -132,6 +133,7 @@ export default {
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
         dataTypes: { type: Array, default: () => [] },
+        initialColOptsData: { type: Array, required: true },
     },
     data() {
         return {
@@ -139,15 +141,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            tbl_creation_info: state => state.editor.tbl_creation_info,
-        }),
-        initialCellData() {
-            return this.$typy(
-                this.tbl_creation_info,
-                `data.cols_opts_data.data['${this.data.rowIdx}']`
-            ).safeArray
-        },
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
         },
@@ -168,7 +161,8 @@ export default {
         },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
-            const uqIdxName = this.$typy(this.initialCellData, `['${this.data.colIdx}']`).safeString
+            const uqIdxName = this.$typy(this.initialColOptsData, `['${this.data.colIdx}']`)
+                .safeString
             if (uqIdxName) return uqIdxName
             return `${this.$typy(this.data, 'rowObj.column_name').safeString}_UNIQUE`
         },
