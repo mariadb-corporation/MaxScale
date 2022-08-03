@@ -225,8 +225,8 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            query_confirm_flag: state => state.persisted.query_confirm_flag,
-            query_snippets: state => state.persisted.query_snippets,
+            query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
+            query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             query_txt: state => state.editor.query_txt,
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -265,14 +265,14 @@ export default {
     methods: {
         ...mapActions({
             fetchQueryResult: 'queryResult/fetchQueryResult',
-            pushToQuerySnippets: 'persisted/pushToQuerySnippets',
+            pushToQuerySnippets: 'queryPersisted/pushToQuerySnippets',
             stopQuery: 'queryResult/stopQuery',
             disconnectClone: 'queryConn/disconnectClone',
         }),
         ...mapMutations({
-            SET_QUERY_ROW_LIMIT: 'persisted/SET_QUERY_ROW_LIMIT',
+            SET_QUERY_ROW_LIMIT: 'queryPersisted/SET_QUERY_ROW_LIMIT',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
+            SET_QUERY_CONFIRM_FLAG: 'queryPersisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
             SET_IS_MAX_ROWS_VALID: 'queryResult/SET_IS_MAX_ROWS_VALID',
         }),

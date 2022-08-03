@@ -63,7 +63,7 @@ export default {
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
-                    max_rows: rootState.persisted.query_row_limit,
+                    max_rows: rootState.queryPersisted.query_row_limit,
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
@@ -76,7 +76,7 @@ export default {
                     },
                 })
                 dispatch(
-                    'persisted/pushQueryLog',
+                    'queryPersisted/pushQueryLog',
                     {
                         startTime: now,
                         name: queryName,
@@ -131,7 +131,7 @@ export default {
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
-                    max_rows: rootState.persisted.query_row_limit,
+                    max_rows: rootState.queryPersisted.query_row_limit,
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
@@ -149,7 +149,7 @@ export default {
                 if (query.match(USE_REG))
                     await dispatch('queryConn/updateActiveDb', {}, { root: true })
                 dispatch(
-                    'persisted/pushQueryLog',
+                    'queryPersisted/pushQueryLog',
                     {
                         startTime: now,
                         sql: query,

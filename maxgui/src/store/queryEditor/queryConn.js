@@ -462,7 +462,7 @@ export default {
                     queryName = `Failed to change default database to ${escapedDb}`
                 } else commit('SET_ACTIVE_DB', { payload: db, id: active_session_id })
                 dispatch(
-                    'persisted/pushQueryLog',
+                    'queryPersisted/pushQueryLog',
                     {
                         startTime: now,
                         name: queryName,

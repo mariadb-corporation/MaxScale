@@ -96,8 +96,9 @@ export default {
             })
 
             // Clear all but persist some states of some modules
-            const persistedState = this.vue.$help.lodash.cloneDeep({
-                persisted: rootState.persisted,
+
+            const queryEditorPersistedState = this.vue.$help.lodash.cloneDeep({
+                queryPersisted: rootState.queryPersisted,
                 wke: {
                     worksheets_arr: rootState.wke.worksheets_arr,
                     active_wke_id: rootState.wke.active_wke_id,
@@ -108,9 +109,13 @@ export default {
                     query_sessions: rootState.querySession.query_sessions,
                 },
             })
+            const maxguiPersistedState = this.vue.$help.lodash.cloneDeep({
+                persisted: rootState.persisted,
+            })
             await localForage.clear()
             this.vue.$help.deleteAllCookies()
-            await localForage.setItem('maxgui', persistedState)
+            await localForage.setItem('query-editor', queryEditorPersistedState)
+            await localForage.setItem('maxgui-app', maxguiPersistedState)
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {

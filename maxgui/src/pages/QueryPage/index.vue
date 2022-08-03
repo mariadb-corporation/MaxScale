@@ -160,7 +160,7 @@ export default {
             disconnectAll: 'queryConn/disconnectAll',
             clearConn: 'queryConn/clearConn',
             handleSyncWke: 'wke/handleSyncWke',
-            handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',
+            handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),
         async onLeave() {
             if (this.confirmDelAll) await this.disconnectAll()

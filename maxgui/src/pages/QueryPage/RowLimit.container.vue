@@ -34,7 +34,7 @@ export default {
     computed: {
         ...mapState({
             SQL_DEF_ROW_LIMIT_OPTS: state => state.app_config.SQL_DEF_ROW_LIMIT_OPTS,
-            query_row_limit: state => state.persisted.query_row_limit,
+            query_row_limit: state => state.queryPersisted.query_row_limit,
         }),
         value: {
             get() {

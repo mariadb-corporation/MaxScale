@@ -50,7 +50,7 @@ export default {
                     SQL_SYS_SCHEMAS: SYS_S,
                 } = rootState.app_config
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
-                if (!rootState.persisted.query_show_sys_schemas_flag)
+                if (!rootState.queryPersisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
                 sql += ' ORDER BY SCHEMA_NAME;'
                 const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
@@ -395,7 +395,7 @@ export default {
                 let stmt_err_msg_obj = {}
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
-                    max_rows: rootState.persisted.query_row_limit,
+                    max_rows: rootState.queryPersisted.query_row_limit,
                 })
                 const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
                 const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)
@@ -421,7 +421,7 @@ export default {
                         )
                 }
                 dispatch(
-                    'persisted/pushQueryLog',
+                    'queryPersisted/pushQueryLog',
                     {
                         startTime: request_sent_time,
                         name: queryAction,

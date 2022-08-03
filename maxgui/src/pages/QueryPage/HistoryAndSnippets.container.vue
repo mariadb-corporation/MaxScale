@@ -213,8 +213,8 @@ export default {
             QUERY_LOG_TYPES: state => state.app_config.QUERY_LOG_TYPES,
             SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
-            query_history: state => state.persisted.query_history,
-            query_snippets: state => state.persisted.query_snippets,
+            query_history: state => state.queryPersisted.query_history,
+            query_snippets: state => state.queryPersisted.query_snippets,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -337,8 +337,8 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
-            SET_QUERY_SNIPPETS: 'persisted/SET_QUERY_SNIPPETS',
+            SET_QUERY_HISTORY: 'queryPersisted/SET_QUERY_HISTORY',
+            SET_QUERY_SNIPPETS: 'queryPersisted/SET_QUERY_SNIPPETS',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return

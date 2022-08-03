@@ -35,18 +35,18 @@ export default {
     inheritAttrs: false,
     computed: {
         ...mapState({
-            query_row_limit: state => state.persisted.query_row_limit,
-            query_confirm_flag: state => state.persisted.query_confirm_flag,
-            query_history_expired_time: state => state.persisted.query_history_expired_time,
-            query_show_sys_schemas_flag: state => state.persisted.query_show_sys_schemas_flag,
+            query_row_limit: state => state.queryPersisted.query_row_limit,
+            query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
+            query_history_expired_time: state => state.queryPersisted.query_history_expired_time,
+            query_show_sys_schemas_flag: state => state.queryPersisted.query_show_sys_schemas_flag,
         }),
     },
     methods: {
         ...mapMutations({
-            SET_QUERY_ROW_LIMIT: 'persisted/SET_QUERY_ROW_LIMIT',
-            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
-            SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'persisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
-            SET_QUERY_HISTORY_EXPIRED_TIME: 'persisted/SET_QUERY_HISTORY_EXPIRED_TIME',
+            SET_QUERY_ROW_LIMIT: 'queryPersisted/SET_QUERY_ROW_LIMIT',
+            SET_QUERY_CONFIRM_FLAG: 'queryPersisted/SET_QUERY_CONFIRM_FLAG',
+            SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'queryPersisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
+            SET_QUERY_HISTORY_EXPIRED_TIME: 'queryPersisted/SET_QUERY_HISTORY_EXPIRED_TIME',
         }),
         save(cnf) {
             this.SET_QUERY_ROW_LIMIT(cnf.query_row_limit)

@@ -41,24 +41,32 @@ const plugins = store => {
     store.$cancelAllRequests = cancelAllRequests
 }
 
-const vuexLocalForage = new VuexPersistence({
-    key: 'maxgui',
+const queryEditor = new VuexPersistence({
+    key: 'query-editor',
     storage: localForage,
     asyncStorage: true,
     reducer: state => ({
-        persisted: state.persisted,
+        queryPersisted: state.queryPersisted,
         wke: { worksheets_arr: state.wke.worksheets_arr, active_wke_id: state.wke.active_wke_id },
         queryConn: { sql_conns: state.queryConn.sql_conns },
         querySession: {
             query_sessions: state.querySession.query_sessions,
             active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
         },
+    }),
+})
+const maxgui = new VuexPersistence({
+    key: 'maxgui-app',
+    storage: localForage,
+    asyncStorage: true,
+    reducer: state => ({
+        persisted: state.persisted,
         user: { logged_in_user: state.user.logged_in_user },
     }),
 })
 
 const store = new Vuex.Store({
-    plugins: [plugins, vuexLocalForage.plugin],
+    plugins: [plugins, maxgui.plugin, queryEditor.plugin],
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {
