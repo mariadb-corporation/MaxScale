@@ -1,9 +1,9 @@
 <template>
     <div
         class="sidebar-wrapper d-flex flex-column fill-height"
-        :class="[isCollapsed ? 'pa-1' : 'pa-3', disabled ? 'not-allowed' : '']"
+        :class="{ 'not-allowed': disabled }"
     >
-        <div class="sidebar-toolbar">
+        <div class="sidebar-toolbar" :class="[isCollapsed ? 'pa-1' : 'pa-3']">
             <div class="d-flex align-center justify-center">
                 <span
                     v-if="!isCollapsed"
@@ -130,6 +130,7 @@ export default {
     width: 100%;
     .sidebar-toolbar {
         height: 60px;
+        padding-top: 2px !important;
         &__title {
             font-size: 12px;
             margin-right: auto;
