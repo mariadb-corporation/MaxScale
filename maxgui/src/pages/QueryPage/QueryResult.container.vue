@@ -54,7 +54,7 @@
                     :totalDuration="totalDuration"
                     v-on="$listeners"
                 />
-                <history-and-snippets
+                <history-and-snippets-ctr
                     v-else
                     :style="{
                         height: `calc(100% - 24px)`,
@@ -84,13 +84,13 @@
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import DataPrvw from './DataPrvw'
 import ResultsTab from './ResultsTab'
-import HistoryAndSnippets from './HistoryAndSnippets'
+import HistoryAndSnippets from './HistoryAndSnippets.container.vue'
 export default {
     name: 'query-result-ctr',
     components: {
         DataPrvw,
         ResultsTab,
-        HistoryAndSnippets,
+        'history-and-snippets-ctr': HistoryAndSnippets,
     },
     props: {
         dynDim: {

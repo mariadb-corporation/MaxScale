@@ -188,10 +188,8 @@
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
-    name: 'history-and-snippets',
-    components: {
-        'table-list': ResultDataTable,
-    },
+    name: 'history-and-snippets-ctr',
+    components: { 'table-list': ResultDataTable },
     props: {
         dynDim: {
             type: Object,
