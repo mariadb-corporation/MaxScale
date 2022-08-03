@@ -91,18 +91,18 @@
             @item-selected="selectedItems = $event"
         >
             <template
-                v-for="(h, colIdx) in visHeaders"
-                v-slot:[h.text]="{ data: { rowData, cell, rowIdx } }"
+                v-for="(h, colOptIdx) in visHeaders"
+                v-slot:[h.text]="{ data: { rowData, cell, rowIdx: alterColIdx } }"
             >
                 <div :key="h.text" class="fill-height d-flex align-center">
                     <col-opt-input
-                        :ref="`colOptInput-row${rowIdx}-col-${colIdx}`"
-                        :initialColOptsData="$typy(initialData, `data['${rowIdx}']`).safeArray"
+                        :ref="`colOptInput-alterColIdx-${alterColIdx}-colOptIdx-${colOptIdx}`"
+                        :initialColOptsData="$typy(initialData, `data['${alterColIdx}']`).safeArray"
                         :data="{
                             field: h.text,
                             value: cell,
-                            rowIdx,
-                            colIdx,
+                            alterColIdx,
+                            colOptIdx,
                             rowObj: rowDataToObj(rowData),
                         }"
                         :height="28"
@@ -279,31 +279,31 @@ export default {
             return items
         },
         idxOfId() {
-            return this.findHeaderIdx('id')
+            return this.findColOptIdx('id')
         },
         idxOfCollation() {
-            return this.findHeaderIdx('collation')
+            return this.findColOptIdx('collation')
         },
         idxOfCharset() {
-            return this.findHeaderIdx('charset')
+            return this.findColOptIdx('charset')
         },
         idxOfAI() {
-            return this.findHeaderIdx('AI')
+            return this.findColOptIdx('AI')
         },
         idxOfGenerated() {
-            return this.findHeaderIdx('generated')
+            return this.findColOptIdx('generated')
         },
         idxOfUN() {
-            return this.findHeaderIdx('UN')
+            return this.findColOptIdx('UN')
         },
         idxOfNN() {
-            return this.findHeaderIdx('NN')
+            return this.findColOptIdx('NN')
         },
         idxOfUQ() {
-            return this.findHeaderIdx('UQ')
+            return this.findColOptIdx('UQ')
         },
         idxOfDefAndExp() {
-            return this.findHeaderIdx('default/expression')
+            return this.findColOptIdx('default/expression')
         },
         hasAI() {
             let count = 0
@@ -395,7 +395,7 @@ export default {
             if (rows.length) return rows[0]
             return []
         },
-        findHeaderIdx(headerName) {
+        findColOptIdx(headerName) {
             return this.headers.findIndex(h => h.text === headerName)
         },
         /**
@@ -404,23 +404,23 @@ export default {
         onCellInput(item) {
             this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
-                        [item.colIdx]: { $set: item.value },
+                    [item.alterColIdx]: {
+                        [item.colOptIdx]: { $set: item.value },
                     },
                 },
             })
         },
         /**
-         * This patches charset and collation at provided rowIdx
+         * This patches charset and collation at provided alterColIdx
          * @param {Object} payload.colsOptsData - current colsOptsData
-         * @param {Number} payload.rowIdx - row to be updated
+         * @param {Number} payload.alterColIdx - row to be updated
          * @param {String} payload.charset - charset to set.
          * @returns {Object} - returns new colsOptsData
          */
-        patchCharsetCollation({ colsOptsData, rowIdx, charset }) {
+        patchCharsetCollation({ colsOptsData, alterColIdx, charset }) {
             return this.$help.immutableUpdate(colsOptsData, {
                 data: {
-                    [rowIdx]: {
+                    [alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: {
                             $set: this.$typy(this.charsetCollationMap, `[${charset}].defCollation`)
@@ -440,7 +440,7 @@ export default {
             if (item.value.includes('NATIONAL'))
                 return this.patchCharsetCollation({
                     colsOptsData,
-                    rowIdx: item.rowIdx,
+                    alterColIdx: item.alterColIdx,
                     charset: 'utf8',
                 })
             return colsOptsData
@@ -453,10 +453,10 @@ export default {
          */
         handleUncheck_UN_ZF_AI({ colsOptsData, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
-                const idxOfZF = this.findHeaderIdx('ZF')
+                const idxOfZF = this.findColOptIdx('ZF')
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
-                        [item.rowIdx]: {
+                        [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: '' },
                             [idxOfZF]: { $set: '' },
                             [this.idxOfAI]: { $set: '' },
@@ -481,7 +481,7 @@ export default {
             }
             return this.$help.immutableUpdate(colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
+                    [item.alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
                         [this.idxOfCollation]: { $set: collation },
                     },
@@ -497,11 +497,11 @@ export default {
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
                 const colOptInput = this.$refs[
-                    `colOptInput-row${item.rowIdx}-col-${this.idxOfUQ}`
+                    `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
                 ][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
-                        [item.rowIdx]: {
+                        [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: 'UNSIGNED' },
                             [this.idxOfNN]: { $set: 'NOT NULL' },
                             [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
@@ -521,8 +521,8 @@ export default {
             // first update column_type cell
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
-                        [item.colIdx]: { $set: item.value },
+                    [item.alterColIdx]: {
+                        [item.colOptIdx]: { $set: item.value },
                     },
                 },
             })
@@ -536,13 +536,13 @@ export default {
          * This unchecks the other auto_increment as there
          * can be one table column has this.
          * @param {Object} payload.colsOptsData - current colsOptsData
-         * @param {Number} payload.rowIdx - rowIdx to be excluded
+         * @param {Number} payload.alterColIdx - alterColIdx to be excluded
          * @returns {Object} - returns new colsOptsData
          */
-        uncheckOtherAI({ colsOptsData, rowIdx }) {
+        uncheckOtherAI({ colsOptsData, alterColIdx }) {
             let idx
             for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== rowIdx) {
+                if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== alterColIdx) {
                     idx = i
                     break
                 }
@@ -561,19 +561,21 @@ export default {
         /**
          * This updates NN cell and `default` cell.
          * @param {Object} payload.colsOptsData - current colsOptsData
-         * @param {Number} payload.rowIdx - rowIdx to be updated
+         * @param {Number} payload.alterColIdx - alterColIdx to be updated
          * @param {String} payload.valOfNN - value of NN
          * @param {String} payload.valueOfDefault - value of default cell
          * @returns {Object} - returns new colsOptsData
          */
-        notNullSideEffect({ colsOptsData, rowIdx, valOfNN, valueOfDefault = null }) {
-            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefAndExp}']`)
-                .safeString
+        notNullSideEffect({ colsOptsData, alterColIdx, valOfNN, valueOfDefault = null }) {
+            let defaultVal = this.$typy(
+                colsOptsData,
+                `data['${alterColIdx}']['${this.idxOfDefAndExp}']`
+            ).safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
             if (valueOfDefault !== null) defaultVal = valueOfDefault
             return this.$help.immutableUpdate(colsOptsData, {
                 data: {
-                    [rowIdx]: {
+                    [alterColIdx]: {
                         [this.idxOfNN]: { $set: valOfNN },
                         [this.idxOfDefAndExp]: { $set: defaultVal },
                     },
@@ -586,19 +588,19 @@ export default {
         onInputAI(item) {
             let colsOptsData = this.colsOptsData
             if (this.hasAI)
-                colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
+                colsOptsData = this.uncheckOtherAI({ colsOptsData, alterColIdx: item.alterColIdx })
             // update AI and generated cells
             colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
-                        [item.colIdx]: { $set: item.value },
+                    [item.alterColIdx]: {
+                        [item.colOptIdx]: { $set: item.value },
                         [this.idxOfGenerated]: { $set: '(none)' },
                     },
                 },
             })
             this.colsOptsData = this.notNullSideEffect({
                 colsOptsData,
-                rowIdx: item.rowIdx,
+                alterColIdx: item.alterColIdx,
                 valOfNN: 'NOT NULL',
                 // set to empty string when AI value is AUTO_INCREMENT
                 valueOfDefault: item.value ? '' : null,
@@ -611,8 +613,10 @@ export default {
             let colsOptsData = this.colsOptsData
             let defaultVal = ''
             if (item.value === '(none)') {
-                const nnVal = this.$typy(colsOptsData, `data['${item.rowIdx}']['${this.idxOfNN}']`)
-                    .safeString
+                const nnVal = this.$typy(
+                    colsOptsData,
+                    `data['${item.alterColIdx}']['${this.idxOfNN}']`
+                ).safeString
                 if (nnVal === 'NULL') defaultVal = 'NULL'
                 else if (nnVal === 'NOT NULL') defaultVal = ''
             }
@@ -620,15 +624,15 @@ export default {
             else {
                 defaultVal = this.$typy(
                     this.initialData.data,
-                    `['${item.rowIdx}']['${this.idxOfDefAndExp}']`
+                    `['${item.alterColIdx}']['${this.idxOfDefAndExp}']`
                 ).safeString
             }
 
             // update G and its dependencies cell value
             colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
-                        [item.colIdx]: { $set: item.value },
+                    [item.alterColIdx]: {
+                        [item.colOptIdx]: { $set: item.value },
                         [this.idxOfAI]: { $set: '' },
                         [this.idxOfNN]: { $set: '' },
                         [this.idxOfDefAndExp]: { $set: defaultVal },
@@ -643,7 +647,7 @@ export default {
         onInputCharset(item) {
             this.colsOptsData = this.patchCharsetCollation({
                 colsOptsData: this.colsOptsData,
-                rowIdx: item.rowIdx,
+                alterColIdx: item.alterColIdx,
                 charset: item.value,
             })
         },
@@ -654,15 +658,15 @@ export default {
             // update PK and UQ value
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
-                    [item.rowIdx]: {
-                        [item.colIdx]: { $set: item.value },
+                    [item.alterColIdx]: {
+                        [item.colOptIdx]: { $set: item.value },
                         [this.idxOfUQ]: { $set: '' },
                     },
                 },
             })
             this.colsOptsData = this.notNullSideEffect({
                 colsOptsData,
-                rowIdx: item.rowIdx,
+                alterColIdx: item.alterColIdx,
                 valOfNN: 'NOT NULL',
             })
         },
@@ -672,7 +676,7 @@ export default {
         onInputNN(item) {
             this.colsOptsData = this.notNullSideEffect({
                 colsOptsData: this.colsOptsData,
-                rowIdx: item.rowIdx,
+                alterColIdx: item.alterColIdx,
                 valOfNN: item.value,
             })
         },

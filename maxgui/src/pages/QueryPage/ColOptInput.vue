@@ -99,8 +99,8 @@
  *  field?: string, header name
  *  value?: string, cell value
  *  rowObj?: object, entire row data
- *  rowIdx?: number
- *  colIdx?: number
+ *  alterColIdx?: number, index of the column being altered
+ *  colOptIdx?: number, index of the column option. e.g. index of PK, NN, UN ,...
  * }
  * Events
  * Below events are used to handle "coupled case",
@@ -161,7 +161,7 @@ export default {
         },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
-            const uqIdxName = this.$typy(this.initialColOptsData, `['${this.data.colIdx}']`)
+            const uqIdxName = this.$typy(this.initialColOptsData, `['${this.data.colOptIdx}']`)
                 .safeString
             if (uqIdxName) return uqIdxName
             return `${this.$typy(this.data, 'rowObj.column_name').safeString}_UNIQUE`
