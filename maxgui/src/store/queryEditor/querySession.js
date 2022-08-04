@@ -138,19 +138,17 @@ export default {
          */
         async handleDeleteSession({ commit, dispatch }, session) {
             const { id: conn_id, clone_of_conn_id = null } = session.active_sql_conn || {}
-            if (!clone_of_conn_id) dispatch('releaseQueryModulesMem', session.id)
             //  Send request to delete the clone connection bound to this session and release memory
-            else if (conn_id) {
+            if (conn_id && clone_of_conn_id)
                 await dispatch('queryConn/disconnectClone', { id: conn_id }, { root: true })
-                dispatch('resetSessionStates', { conn_id })
-            }
+            dispatch('releaseQueryModulesMem', session.id)
             commit('DELETE_SESSION', session.id)
         },
         /**
          * Clear all session's data except active_sql_conn data
          * @param {Object} param.session - session to be cleared
          */
-        handleClearTheLastSession({ state, commit, dispatch }, session) {
+        handleClearTheLastSession({ state, commit, dispatch, getters }, session) {
             const freshSession = {
                 ...defSessionState(session.wke_id_fk),
                 id: session.id,
@@ -161,7 +159,9 @@ export default {
             const idx = state.query_sessions.findIndex(s => s.id === session.id)
             commit('UPDATE_SESSION', { idx, session: freshSession })
             dispatch('releaseQueryModulesMem', session.id)
-            dispatch('handleSyncSession', freshSession)
+            // only sync if targetSession is the active session of the worksheet
+            if (getters.getActiveSessionId === session.id)
+                dispatch('handleSyncSession', freshSession)
         },
         /**
          * @param {Object} param.session - session object to be sync to flat states
@@ -207,7 +207,9 @@ export default {
             const freshSession = rootState.querySession.query_sessions.find(
                 s => s.id === targetSession.id
             )
-            dispatch('handleSyncSession', freshSession)
+            // only sync if targetSession is the active session of the worksheet
+            if (getters.getActiveSessionId === session_id)
+                dispatch('handleSyncSession', freshSession)
         },
     },
     getters: {

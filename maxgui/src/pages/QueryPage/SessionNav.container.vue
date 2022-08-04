@@ -44,8 +44,10 @@
                         icon
                         x-small
                         :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
-                        @click="
-                            getIsFileUnsaved ? openConfDlg(session) : handleDeleteSessTab(session)
+                        @click.stop.prevent="
+                            getIsFileUnsavedBySessionId(session.id)
+                                ? openConfDlg(session)
+                                : handleDeleteSessTab(session)
                         "
                     >
                         <v-icon
@@ -104,7 +106,6 @@ export default {
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
-            getIsFileUnsaved: 'editor/getIsFileUnsaved',
         }),
         activeSessionId: {
             get() {
