@@ -57,6 +57,8 @@
             :errMsgObj="stmtErrMsgObj"
             :sqlTobeExecuted.sync="execSqlDlg.sql"
             :editorHeight="execSqlDlg.editorHeight"
+            :dbCmplList="getDbCmplList"
+            :skipRegCompleters="getIsTxtEditor"
             :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
             @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
@@ -121,6 +123,7 @@ export default {
             getIsTxtEditor: 'editor/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)

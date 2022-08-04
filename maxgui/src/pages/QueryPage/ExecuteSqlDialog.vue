@@ -39,13 +39,13 @@
                     v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
-                    :cmplList="getDbCmplList"
+                    :cmplList="dbCmplList"
                     :options="{
                         fontSize: 10,
                         contextmenu: false,
                         wordWrap: 'on',
                     }"
-                    :skipRegCompleters="getIsTxtEditor"
+                    :skipRegCompleters="skipRegCompleters"
                 />
             </div>
         </template>
@@ -68,7 +68,6 @@
  * Events
  * update:sqlTobeExecuted?: (string)
  */
-import { mapGetters } from 'vuex'
 import SqlEditor from '@/components/SqlEditor'
 export default {
     name: 'execute-sql-dialog',
@@ -83,13 +82,11 @@ export default {
         errMsgObj: { type: Object, required: true },
         sqlTobeExecuted: { type: String, required: true },
         editorHeight: { type: Number, default: 250 },
+        dbCmplList: { type: Array, required: true },
+        skipRegCompleters: { type: Boolean, required: true },
         onSave: { type: Function, required: true },
     },
     computed: {
-        ...mapGetters({
-            getDbCmplList: 'schemaSidebar/getDbCmplList',
-            getIsTxtEditor: 'editor/getIsTxtEditor',
-        }),
         isConfDlgOpened: {
             get() {
                 return this.value

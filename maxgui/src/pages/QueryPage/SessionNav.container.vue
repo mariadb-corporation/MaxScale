@@ -146,15 +146,15 @@ export default {
          * @param {Object} session - session object
          */
         openConfDlg(session) {
-            const loadSql = this.$typy(this.txtEditorToolbarRef, '$refs.loadSql').safeObject
-            loadSql.confDlg = {
-                ...loadSql.confDlg,
+            const loadSqlCtr = this.$typy(this.txtEditorToolbarRef, '$refs.loadSqlCtr').safeObject
+            loadSqlCtr.confDlg = {
+                ...loadSqlCtr.confDlg,
                 isOpened: true,
                 title: this.$t('deleteSession'),
                 type: 'deleteSession',
                 confirmMsg: this.$t('confirmations.deleteSession', { targetId: session.name }),
                 onSave: async () => {
-                    await loadSql.handleSaveFile()
+                    await loadSqlCtr.handleSaveFile()
                     await this.handleDeleteSessTab(session)
                 },
                 dontSave: async () => await this.handleDeleteSessTab(session),

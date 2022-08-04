@@ -57,7 +57,7 @@ describe('query-view-ctr', () => {
             wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
             handleRunSpy = sinon.spy(txtEditorToolbar, 'handleRun')
             openSnippetDlgSpy = sinon.spy(txtEditorToolbar, 'openSnippetDlg')
-            handleFileOpenSpy = sinon.spy(txtEditorToolbar.$refs.loadSql, 'handleFileOpen')
+            handleFileOpenSpy = sinon.spy(txtEditorToolbar.$refs.loadSqlCtr, 'handleFileOpen')
         })
 
         afterEach(() => {

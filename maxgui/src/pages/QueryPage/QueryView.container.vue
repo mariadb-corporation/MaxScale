@@ -115,12 +115,13 @@ export default {
                     break
             }
         },
+        //TODO: Refactor to use event bus instead of accessing the target component via $refs
         getTxtEditorToolbar() {
             return this.$typy(this.$refs, `wke[0].$refs.editor[0].$refs.txtEditorToolbar`)
                 .safeObject
         },
-        getLoadSql() {
-            return this.getTxtEditorToolbar().$refs.loadSql
+        getLoadSqlCtr() {
+            return this.getTxtEditorToolbar().$refs.loadSqlCtr
         },
         async onCtrlEnter() {
             await this.getTxtEditorToolbar().handleRun('selected')
@@ -132,18 +133,22 @@ export default {
             this.getTxtEditorToolbar().openSnippetDlg()
         },
         onCtrlO() {
-            this.getTxtEditorToolbar().$refs.loadSql.handleFileOpen()
+            this.getLoadSqlCtr().handleFileOpen()
         },
         async onCtrlS() {
-            const loadSql = this.getLoadSql()
-            if (loadSql.getIsFileUnsaved && loadSql.hasFullSupport && loadSql.hasFileHandle)
-                await loadSql.saveFile()
+            const loadSqlCtr = this.getLoadSqlCtr()
+            if (
+                loadSqlCtr.getIsFileUnsaved &&
+                loadSqlCtr.hasFullSupport &&
+                loadSqlCtr.hasFileHandle
+            )
+                await loadSqlCtr.saveFile()
         },
         async onCtrlShiftS() {
-            const loadSql = this.getLoadSql()
-            if (loadSql.getIsFileUnsaved)
-                if (loadSql.hasFullSupport) await loadSql.saveFileAs()
-                else loadSql.saveFileLegacy()
+            const loadSqlCtr = this.getLoadSqlCtr()
+            if (loadSqlCtr.getIsFileUnsaved)
+                if (loadSqlCtr.hasFullSupport) await loadSqlCtr.saveFileAs()
+                else loadSqlCtr.saveFileLegacy()
         },
     },
 }

@@ -102,7 +102,7 @@
                 {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
             </span>
         </v-tooltip>
-        <load-sql ref="loadSql" />
+        <load-sql-ctr ref="loadSqlCtr" />
         <v-spacer />
         <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
@@ -191,14 +191,14 @@
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimit from './RowLimit.container.vue'
 import SqlEditor from '@/components/SqlEditor'
-import LoadSql from './LoadSql'
+import LoadSql from './LoadSql.container.vue'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
     components: {
         'row-limit-ctr': RowLimit,
         'readonly-sql-editor': SqlEditor,
-        'load-sql': LoadSql,
+        'load-sql-ctr': LoadSql,
     },
     props: {
         session: { type: Object, required: true },

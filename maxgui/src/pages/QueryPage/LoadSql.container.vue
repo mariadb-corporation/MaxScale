@@ -105,7 +105,7 @@ import { mapState, mapGetters, mapMutations } from 'vuex'
 import { fileOpen, supported } from 'browser-fs-access'
 
 export default {
-    name: 'load-sql',
+    name: 'load-sql-ctr',
     data() {
         return {
             confDlg: {
@@ -323,7 +323,7 @@ export default {
                     })
                 }
             } catch (e) {
-                this.$logger('LoadSql-saveFile').error(e)
+                this.$logger('load-sql-ctr-saveFile').error(e)
             }
         },
         async saveFileAs() {
@@ -346,7 +346,7 @@ export default {
                     },
                 })
             } catch (ex) {
-                this.$logger('LoadSql-saveFileAs').error('Unable to write file')
+                this.$logger('load-sql-ctr-saveFileAs').error('Unable to write file')
             }
         },
         /**
@@ -410,7 +410,7 @@ export default {
                 })
             } catch (ex) {
                 if (!ex.name === 'AbortError')
-                    this.$logger('LoadSql-getNewFileHandle').error(
+                    this.$logger('load-sql-ctr-getNewFileHandle').error(
                         'An error occurred trying to open the file.'
                     )
             }
