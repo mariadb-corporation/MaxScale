@@ -303,6 +303,8 @@ function syncStateCreator(namespace) {
                  * name?: string. Connection name. e.g. server_0
                  * type?: string. listeners, servers or services
                  * clone_of_conn_id?: string. The connection id that was used to make this clone connection.
+                 * wke_id_fk?: string. Id of the worksheet that the connection is bound to. For WORKSHEET binding_type
+                 * session_id_fk?: string. Id of the session that the connection is bound to. For SESSION binding_type
                  * binding_type?: string. QUERY_CONN_BINDING_TYPES
                  * If it doesn't have clone_of_conn_id, it's a default connection
                  */

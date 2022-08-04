@@ -1,7 +1,7 @@
 <template>
     <div :style="{ maxWidth: '225px' }">
         <v-select
-            v-model="chosenConn"
+            v-model="chosenWkeConn"
             :items="connOptions"
             outlined
             dense
@@ -120,7 +120,7 @@ export default {
     data() {
         return {
             isConnDlgOpened: false,
-            chosenConn: {},
+            chosenWkeConn: {},
             targetConn: {}, // target connection to be deleted,
             isConfDlgOpened: false,
         }
@@ -131,38 +131,18 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
             active_wke_id: state => state.wke.active_wke_id,
-            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
-            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
+            getWkeConns: 'queryConn/getWkeConns',
+            getClonedConnsOfWkeConn: 'queryConn/getClonedConnsOfWkeConn',
+            getCurrWkeConn: 'queryConn/getCurrWkeConn',
             getActiveSessionId: 'querySession/getActiveSessionId',
-            getActiveSession: 'querySession/getActiveSession',
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
-        defConnOfAllWkes() {
-            return Object.values(this.sql_conns).filter(
-                conn =>
-                    conn.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION &&
-                    !('clone_of_conn_id' in conn)
-            )
-        },
-        /**
-         * @returns connection ids that are bound to session tabs
-         */
-        usedConnections() {
-            return this.query_sessions.reduce((acc, s) => {
-                const connId = this.$typy(s, 'active_sql_conn.id').safeString
-                if (connId) acc.push(connId)
-                return acc
-            }, [])
-        },
+        // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
-            return this.defConnOfAllWkes.map(cnctRsrc =>
-                this.active_sql_conn.id === cnctRsrc.id
-                    ? { ...cnctRsrc, disabled: false }
-                    : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }
-            )
+            return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.wke_id_fk) }))
         },
         availableConnOpts() {
             return this.connOptions.filter(cnn => !cnn.disabled)
@@ -175,15 +155,15 @@ export default {
         /**
          * Watcher to handle multi-worksheets
          */
-        active_sql_conn: {
+        active_wke_id: {
             deep: true,
             immediate: true,
-            async handler(v) {
+            async handler() {
                 /**
-                 * chosenConn is component'state, so when active_sql_conn query's module state
-                 * is changed by changing worksheet, chosenConn needs to be updated by calling assignActiveConn
+                 * chosenWkeConn is component'state, so when active_wke_id is changed
+                 * by changing worksheet, chosenWkeConn needs to be updated by calling assignActiveWkeConn
                  */
-                if (!this.$help.lodash.isEqual(v, this.chosenConn)) this.assignActiveConn(v)
+                this.assignActiveWkeConn()
             },
         },
         pre_select_conn_rsrc: {
@@ -201,11 +181,13 @@ export default {
         ...mapActions({
             openConnect: 'queryConn/openConnect',
             syncSqlConnToSess: 'queryConn/syncSqlConnToSess',
-            cloneAndSyncConnToSessions: 'queryConn/cloneAndSyncConnToSessions',
             disconnect: 'queryConn/disconnect',
             updateRoute: 'wke/updateRoute',
         }),
-        ...mapMutations({ SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN' }),
+        ...mapMutations({
+            SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',
+            UPDATE_SQL_CONN: 'queryConn/UPDATE_SQL_CONN',
+        }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
          * bind it to the current worksheet. otherwise open dialog
@@ -215,57 +197,49 @@ export default {
                 conn => conn.name === this.pre_select_conn_rsrc.id
             )
             if (conn) {
-                this.chosenConn = conn
+                this.chosenWkeConn = conn
                 await this.onSelectConn(conn)
             } else this.openConnDialog()
+        },
+        // Unbind the connection before opening/selecting new one, so that it can be used by other wke
+        unbindConn() {
+            const currentBoundConn = this.getWkeConns.find(c => c.wke_id_fk === this.active_wke_id)
+            if (currentBoundConn) this.UPDATE_SQL_CONN({ ...currentBoundConn, wke_id_fk: '' })
+        },
+        bindConn(chosenWkeConn) {
+            // bind the chosenWkeConn
+            this.UPDATE_SQL_CONN({ ...chosenWkeConn, wke_id_fk: this.active_wke_id })
         },
         /**
          * Function is called after selecting a connection
          */
-        async onSelectConn(chosenConn) {
-            let activeSessConn = chosenConn
+        async onSelectConn(chosenWkeConn) {
+            this.unbindConn()
+            let activeSessConn = {}
             const active_session_id = this.getActiveSessionId
-            const fSess = this.getSessionsOfActiveWke[0]
-            // sync the chosen connection to the first session tab
-            this.syncSqlConnToSess({ sess: fSess, sql_conn: chosenConn })
-
-            // Change the connection of other session tabs
-            const otherSessTabs = this.getSessionsOfActiveWke.filter(s => s.id !== fSess.id)
-            if (otherSessTabs.length) {
-                const clonesOfChosenConn = Object.values(this.sql_conns).filter(
-                    c =>
-                        c.clone_of_conn_id === chosenConn.id &&
-                        c.binding_type === this.QUERY_CONN_BINDING_TYPES.SESSION
-                )
-                const bondableSessTabs = otherSessTabs.slice(0, clonesOfChosenConn.length)
-                const leftoverSessTabs = otherSessTabs.slice(clonesOfChosenConn.length)
-
-                // Bind the existing cloned connections of the chosenConn to bondable session tabs
-                for (const [i, s] of bondableSessTabs.entries()) {
-                    this.syncSqlConnToSess({ sess: s, sql_conn: clonesOfChosenConn[i] })
-                    if (active_session_id === s.id) activeSessConn = clonesOfChosenConn[i]
+            // Change the connection of all session tabs of the worksheet
+            const sessions = this.getSessionsOfActiveWke
+            if (sessions.length) {
+                const clonesOfChosenWkeConn = this.getClonedConnsOfWkeConn(chosenWkeConn.id)
+                // Bind the existing cloned connections
+                for (const [i, s] of sessions.entries()) {
+                    // Bind the session connection with session_id_fk
+                    this.UPDATE_SQL_CONN({ ...clonesOfChosenWkeConn[i], session_id_fk: s.id })
+                    this.syncSqlConnToSess({ sess: s, sql_conn: clonesOfChosenWkeConn[i] })
+                    if (active_session_id === s.id) activeSessConn = clonesOfChosenWkeConn[i]
                 }
-                /**
-                 * If there are more session tabs than the existing cloned connections, clone
-                 * the chosenConn and bind it to those session tabs.
-                 */
-                if (leftoverSessTabs.length)
-                    await this.cloneAndSyncConnToSessions({
-                        sessions: leftoverSessTabs,
-                        conn_to_be_cloned: chosenConn,
-                        active_session_id,
-                        getActiveSessConn: sessConn => (activeSessConn = sessConn),
-                    })
             }
-
             // set active conn once sessions are bound to cloned connections to avoid concurrent query
             this.SET_ACTIVE_SQL_CONN({ payload: activeSessConn, id: active_session_id })
+            // bind the chosenWkeConn
+            this.bindConn(chosenWkeConn)
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
+            this.assignActiveWkeConn()
         },
-        assignActiveConn(conn) {
-            if (conn) this.chosenConn = conn
-            else this.chosenConn = {}
+        assignActiveWkeConn() {
+            if (this.$typy(this.getCurrWkeConn).isEmptyObject) this.chosenWkeConn = {}
+            else this.chosenWkeConn = this.getCurrWkeConn
         },
         openConnDialog() {
             this.isConnDlgOpened = true
@@ -275,18 +249,16 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
+            this.unbindConn()
+            // openConnect will also bind conn
             await this.openConnect(opts)
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
+            this.assignActiveWkeConn()
         },
         async confirmDelConn() {
-            /**
-             * Update route if the conn being deleted is bound to the current active worksheet.
-             * Using the `name` property to check because the cloned conns will always have
-             * the same name but with different id values
-             * e.g server_0
-             */
-            const shouldUpdateRoute = this.active_sql_conn.name === this.targetConn.name
+            //Update route if the conn being deleted is the active wke connection
+            const shouldUpdateRoute = this.getCurrWkeConn.id === this.targetConn.id
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
             if (shouldUpdateRoute) this.updateRoute(this.active_wke_id)
         },

@@ -44,6 +44,11 @@ export default {
         ADD_SQL_CONN(state, payload) {
             this.vue.$set(state.sql_conns, payload.id, payload)
         },
+        UPDATE_SQL_CONN(state, payload) {
+            state.sql_conns = this.vue.$help.immutableUpdate(state.sql_conns, {
+                [payload.id]: { $set: payload },
+            })
+        },
         DELETE_SQL_CONN(state, payload) {
             this.vue.$delete(state.sql_conns, payload.id)
         },
@@ -130,6 +135,7 @@ export default {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
         /**
+         * Called by <conn-man-ctr/>
          * @param {Object} param.body - request body
          * @param {String} param.resourceType - services, servers or listeners.
          */
@@ -155,20 +161,15 @@ export default {
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
+                        wke_id_fk: rootState.wke.active_wke_id,
                     }
                     commit('ADD_SQL_CONN', sql_conn)
 
-                    // sync the created connection to the first session tab
-                    const fSess = activeWkeSessions[0]
                     let activeSessConn = sql_conn
-                    dispatch('syncSqlConnToSess', { sess: fSess, sql_conn })
-
-                    // check if there are other session tabs, clone it to other session tabs
-                    const otherSessions = activeWkeSessions.filter(s => s.id !== fSess.id)
-                    if (otherSessions.length)
+                    if (activeWkeSessions.length)
                         await dispatch('cloneAndSyncConnToSessions', {
-                            sessions: otherSessions,
+                            sessions: activeWkeSessions,
                             conn_to_be_cloned: sql_conn,
                             active_session_id,
                             getActiveSessConn: sessConn => (activeSessConn = sessConn),
@@ -223,6 +224,7 @@ export default {
                 await dispatch('cloneConn', {
                     conn_to_be_cloned,
                     binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                    session_id_fk: s.id,
                     getCloneObjRes: obj => (sessConn = obj),
                 })
                 // return the connection for the active session
@@ -235,9 +237,13 @@ export default {
          *  Clone a connection
          * @param {Object} param.conn_to_be_cloned - connection to be cloned
          * @param {String} param.binding_type - binding_type. Check QUERY_CONN_BINDING_TYPES
+         * @param {String} param.session_id_fk - id of the session that binds this connection
          * @param {Function} param.getCloneObjRes - get the result of the clone object
          */
-        async cloneConn({ commit }, { conn_to_be_cloned, binding_type, getCloneObjRes }) {
+        async cloneConn(
+            { commit },
+            { conn_to_be_cloned, binding_type, session_id_fk, getCloneObjRes }
+        ) {
             try {
                 const res = await this.$queryHttp.post(
                     `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=86400`
@@ -251,6 +257,7 @@ export default {
                         type: conn_to_be_cloned.type,
                         clone_of_conn_id: conn_to_be_cloned.id,
                         binding_type,
+                        session_id_fk,
                     }
                     if (this.vue.$help.isFunction(getCloneObjRes)) getCloneObjRes(conn)
                     commit('ADD_SQL_CONN', conn)
@@ -272,31 +279,24 @@ export default {
             }
         },
         /**
-         * This handles deleting a connection. If the provided connection id is the first opened connection
-         * of a worksheet, then all of its clone connections will be also deleted. Otherwise,
-         * it will find the default connection using `clone_of_conn_id` attribute and delete them all.
-         * This action is meant to be used by `connection-manager` component to "unlink" a resource connection
-         * from the worksheet. It's also be used by the `disconnectAll` action to delete all connection when
-         * leaving the page.
+         * This handles delete the worksheet connection. i.e. the
+         * connection created by the user in the <conn-man-ctr/>
+         * It will also delete its cloned connections by using `clone_of_conn_id` attribute.
+         * This action is meant to be used by:
+         * `conn-man-ctr` component to disconnect a resource connection
+         * `disconnectAll` action to delete all connection when leaving the page.
+         * `handleDeleteWke` action
          * @param {Boolean} param.showSnackbar - should show success message or not
          * @param {Number} param.id - connection id that is bound to the first session tab
          */
-        async disconnect(
-            { state, commit, dispatch, rootState },
-            { showSnackbar, id: targetConnId }
-        ) {
+        async disconnect({ state, commit, dispatch }, { showSnackbar, id: wkeConnId }) {
             try {
-                if (state.sql_conns[targetConnId]) {
+                if (state.sql_conns[wkeConnId]) {
                     const clonedConnIds = Object.values(state.sql_conns)
-                        .filter(
-                            c =>
-                                c.clone_of_conn_id === targetConnId &&
-                                c.binding_type ===
-                                    rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
-                        )
+                        .filter(c => c.clone_of_conn_id === wkeConnId)
                         .map(c => c.id)
-                    const cnnIdsToBeDeleted = [targetConnId, ...clonedConnIds]
-                    dispatch('wke/resetWkeStates', targetConnId, { root: true })
+                    const cnnIdsToBeDeleted = [wkeConnId, ...clonedConnIds]
+                    dispatch('wke/resetWkeStates', wkeConnId, { root: true })
 
                     const allRes = await Promise.all(
                         cnnIdsToBeDeleted.map(id => {
@@ -324,9 +324,9 @@ export default {
                 this.vue.$logger('store-queryConn-disconnect').error(e)
             }
         },
-        async disconnectAll({ state, dispatch }) {
+        async disconnectAll({ getters, dispatch }) {
             try {
-                for (const id of Object.keys(state.sql_conns))
+                for (const { id = '' } of getters.getWkeConns)
                     await dispatch('disconnect', { showSnackbar: false, id })
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnectAll').error(e)
@@ -476,19 +476,18 @@ export default {
                 state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
-        getWkeFirstSessConnByWkeId: (state, getters, rootState) => {
-            const query_sessions = rootState.querySession.query_sessions
-            return wke_id => {
-                const def_session =
-                    query_sessions.find(
-                        s =>
-                            s.wke_id_fk === wke_id &&
-                            s.active_sql_conn &&
-                            s.active_sql_conn.binding_type ===
-                                rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
-                    ) || {}
-                return def_session.active_sql_conn || {}
-            }
-        },
+        getWkeConns: (state, getters, rootState) =>
+            Object.values(state.sql_conns).filter(
+                c => c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+            ) || [],
+
+        getClonedConnsOfWkeConn: state => wkeConnId =>
+            Object.values(state.sql_conns).filter(c => c.clone_of_conn_id === wkeConnId) || [],
+
+        getCurrWkeConn: (state, getters, rootState) =>
+            getters.getWkeConns.find(c => c.wke_id_fk === rootState.wke.active_wke_id) || {},
+
+        getWkeConnByWkeId: (state, getters) => wke_id =>
+            getters.getWkeConns.find(c => c.wke_id_fk === wke_id) || {},
     },
 }

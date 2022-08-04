@@ -193,34 +193,24 @@ export default {
                 )
             }
         },
-        async handleDeleteWke({ commit, dispatch }, id) {
+        async handleDeleteWke({ commit, dispatch, rootGetters }, id) {
             try {
                 // release module memory states
                 dispatch('releaseQueryModulesMem', id)
-                await dispatch('handleDeleteWkeSessions', id)
+
+                const sessions = rootGetters['querySession/getSessionsByWkeId'](id)
+                const { id: wkeConnId = '' } = rootGetters['queryConn/getWkeConnByWkeId'](id)
+                // First call queryConn/disconnect to delete the wke connection and its clones (session tabs)
+                if (wkeConnId)
+                    await dispatch('queryConn/disconnect', { id: wkeConnId }, { root: true })
+                // delete session objects
+                for (const session of sessions)
+                    await dispatch('querySession/handleDeleteSession', session, { root: true })
                 commit('DELETE_WKE', id)
+                // remove the key
+                commit('querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP', { id }, { root: true })
             } catch (e) {
                 this.vue.$logger('store-wke-handleDeleteWke').error(e)
-            }
-        },
-        async handleDeleteWkeSessions({ dispatch, commit, rootGetters }, wke_id) {
-            try {
-                const sessions = rootGetters['querySession/getSessionsByWkeId'](wke_id)
-                for (const session of sessions) {
-                    const { id: conn_id } = session.active_sql_conn || {}
-                    if (conn_id)
-                        await dispatch('queryConn/disconnectClone', { id: conn_id }, { root: true })
-                    dispatch('querySession/releaseQueryModulesMem', session.id, { root: true })
-                    commit('querySession/DELETE_SESSION', session.id, { root: true })
-                }
-                // remove the key
-                commit(
-                    'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
-                    { id: wke_id },
-                    { root: true }
-                )
-            } catch (e) {
-                this.vue.$logger('store-wke-handleDeleteWkeSessions').error(e)
             }
         },
         /**
@@ -250,12 +240,12 @@ export default {
          * wke cleanup
          * release memStates that uses wke id as key,
          * refresh wke state to its initial state.
-         * Call this function when the disconnect the connection in `connection-manager` component
-         * @param {String} wkeBoundCnnId - connection id that is bound to the first session tab
+         * Call this function when the disconnect action is called
+         * @param {String} wkeConnId - id of the connection has binding_type === WORKSHEET
          */
-        resetWkeStates({ commit, rootState, dispatch, rootGetters, getters }, wkeBoundCnnId) {
-            const defSession = rootGetters['querySession/getSessionByConnId'](wkeBoundCnnId)
-            const targetWke = getters.getWkeBySession(defSession)
+        resetWkeStates({ commit, rootState, dispatch, getters }, wkeConnId) {
+            const wkeConn = rootState.queryConn.sql_conns[wkeConnId]
+            const targetWke = getters.getWkeById(wkeConn.wke_id_fk)
             if (targetWke) {
                 dispatch('releaseQueryModulesMem', targetWke.id)
                 commit('REFRESH_WKE', targetWke)
@@ -276,8 +266,8 @@ export default {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id) || {}
         },
-        getWkeBySession: state => {
-            return session => state.worksheets_arr.find(w => w.id === session.wke_id_fk) || {}
+        getWkeById: state => {
+            return id => state.worksheets_arr.find(w => w.id === id) || {}
         },
     },
 }

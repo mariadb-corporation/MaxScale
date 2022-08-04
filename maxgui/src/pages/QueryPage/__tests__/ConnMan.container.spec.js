@@ -87,7 +87,7 @@ describe(`ConnMan - child component's data communication tests `, () => {
             disabled,
         } = wrapper.findComponent({ name: 'v-select' }).vm.$props
 
-        expect(value).to.be.equals(wrapper.vm.$data.chosenConn)
+        expect(value).to.be.equals(wrapper.vm.$data.chosenWkeConn)
         expect(items).to.be.deep.equals(wrapper.vm.connOptions)
         expect(itemText).to.be.equals('name')
         expect(returnObject).to.be.true
@@ -116,9 +116,9 @@ describe(`ConnMan - on created hook tests `, () => {
         fnSpy.restore()
     })
 
-    it(`Should call assignActiveConn if there is an active connection bound
+    it(`Should call assignActiveWkeConn if there is an active connection bound
     to the worksheet`, () => {
-        const fnSpy = sinon.spy(ConnMan.methods, 'assignActiveConn')
+        const fnSpy = sinon.spy(ConnMan.methods, 'assignActiveWkeConn')
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
@@ -155,15 +155,15 @@ describe(`ConnMan - methods and computed properties tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should assign active_sql_conn value to chosenConn if there is an active connection
+    it(`Should assign active_sql_conn value to chosenWkeConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.chosenConn).to.be.deep.equals(wrapper.vm.active_sql_conn)
+        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.active_sql_conn)
     })
-    it(`Should assign an empty object to chosenConn if there is no active connection
+    it(`Should assign an empty object to chosenWkeConn if there is no active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory()
-        expect(wrapper.vm.chosenConn).to.be.an('object').and.be.empty
+        expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
     })
     it(`Should return accurate value for usedConnections computed property`, () => {
         wrapper = mountFactory({
@@ -220,7 +220,6 @@ describe(`ConnMan - connection list dropdown tests`, () => {
             computed: { ...mockActiveConnState() },
             methods: {
                 syncSqlConnToSess: () => null,
-                cloneAndSyncConnToSessions: () => null,
                 SET_ACTIVE_SQL_CONN: v => (setCurrCnctResourceArgs = v),
                 updateRoute: v => (updateRouteArgs = v),
             },

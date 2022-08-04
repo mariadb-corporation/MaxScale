@@ -78,9 +78,8 @@ export default {
     actions: {
         /**
          * This action add new session to the provided worksheet id.
-         * First, it clones the connection of the current active worksheet then
-         * add a new session, set it as the active session and finally set the clone connection as
-         * the active connection.
+         * It uses the worksheet connection to clone into a new connection and bind it
+         * to the session being created.
          * @param {String} param.wke_id - worksheet id
          * @param {String} param.name - session name. If not provided, it'll be auto generated
          */
@@ -89,31 +88,31 @@ export default {
             { wke_id, name }
         ) {
             try {
-                const conn_to_be_cloned = rootGetters['queryConn/getWkeFirstSessConnByWkeId'](
-                    wke_id
-                )
+                // add a blank session
+                commit('ADD_NEW_SESSION', { wke_id, name })
+                const newSessionId = state.query_sessions[state.query_sessions.length - 1].id
+                // Clone the wke conn and bind it to the new session
+                const wke_conn = rootGetters['queryConn/getWkeConnByWkeId'](wke_id)
                 let sessionConn
-                if (conn_to_be_cloned.id) {
+                if (wke_conn.id) {
                     await dispatch(
                         'queryConn/cloneConn',
                         {
-                            conn_to_be_cloned,
+                            conn_to_be_cloned: wke_conn,
                             binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                            session_id_fk: newSessionId,
                             getCloneObjRes: obj => (sessionConn = obj),
                         },
                         { root: true }
                     )
                 }
-
-                commit('ADD_NEW_SESSION', { wke_id, name })
-                const newSessionId = state.query_sessions[state.query_sessions.length - 1].id
+                // Change active session
                 commit('SET_ACTIVE_SESSION_BY_WKE_ID_MAP', {
                     id: wke_id,
                     payload: newSessionId,
                 })
-
+                // Switch to use new clone connection
                 if (sessionConn)
-                    // Switch to use new clone connection
                     commit(
                         'queryConn/SET_ACTIVE_SQL_CONN',
                         {
@@ -132,15 +131,21 @@ export default {
             }
         },
         /**
-         * If the session is bound to the default connection, only session object(tab) will be deleted.
-         * The default connection should always be disconnected by action in the `conn-man-ctr` component
+         * This handle deletes all connections bound to this session and release memory
+         * before deleting the session. A session object tab technically can be bound to a connection,
+         * but when the user switches to a new worksheet connection from an existing worksheet
+         * connection in the <conn-man-ctr/> component, there are now 2 connections to different
+         * servers with the same session_id_fk. So it must be deleted as well.
          * @param {Object} session - A session object
+
          */
-        async handleDeleteSession({ commit, dispatch }, session) {
-            const { id: conn_id, clone_of_conn_id = null } = session.active_sql_conn || {}
-            //  Send request to delete the clone connection bound to this session and release memory
-            if (conn_id && clone_of_conn_id)
-                await dispatch('queryConn/disconnectClone', { id: conn_id }, { root: true })
+        async handleDeleteSession({ commit, rootState, dispatch }, session) {
+            const bound_conns = Object.values(rootState.queryConn.sql_conns).filter(
+                c => c.session_id_fk === session.id
+            )
+            for (const { id } of bound_conns) {
+                if (id) await dispatch('queryConn/disconnectClone', { id }, { root: true })
+            }
             dispatch('releaseQueryModulesMem', session.id)
             commit('DELETE_SESSION', session.id)
         },
