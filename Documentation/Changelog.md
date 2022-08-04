@@ -2,7 +2,9 @@
 
 ## MariaDB MaxScale 6.4
 
-* No new features, only bug fixes.
+* Added `multiplex_timeout`. It sets the time a session can wait
+ for a backend connection to become available when using connection sharing
+ (i.e. `idle_session_pool_time`).
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.4.1 Release Notes](Release-Notes/MaxScale-6.4.1-Release-Notes.md)
