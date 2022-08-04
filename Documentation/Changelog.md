@@ -19,6 +19,10 @@
   Apart from that, query favorite was renamed to query snippets allowing to quickly
   insert the query to the editor by typing its prefix. See MaxGUI tutorial
   [Using-MaxGUI-Tutorial](Tutorials/Using-MaxGUI-Tutorial.md)
+* The Xpand monitor now handles group change explicitly.
+* The `Maintenance|Drain` state of a server is now synchronized between multiple
+  MaxScale instances if configuration synchronization  is enabled.
+* Causal reads now supported in a multi-MaxScale setup.
 
 For more details, please refer to:
 * [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)

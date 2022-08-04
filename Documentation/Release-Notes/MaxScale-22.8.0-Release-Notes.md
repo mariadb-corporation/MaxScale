@@ -18,6 +18,57 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
+### [MXS-2724](https://jira.mariadb.org/browse/MXS-2724) Expose memory usage information
+
+`maxctrl [list|show] session(s)` now provides information about
+the memory usage of a session.
+
+### [MXS-2882](https://jira.mariadb.org/browse/MXS-2882) Query Log All Filter
+
+The `log_data` support a new value `server` that causes the server
+where a query was routed to be logged.
+
+### [MXS-3490](https://jira.mariadb.org/browse/MXS-3490) Xpand Group Change
+
+The Xpand monitor now handles group change explicitly, which leads
+to more robust behavior and less warnings/errors logged.
+
+### [MXS-3605](https://jira.mariadb.org/browse/MXS-3605) Maximum number of routing threads
+
+The maximum number of routing threads has been increased to 256 (was 100).
+
+### [MXS-3619](https://jira.mariadb.org/browse/MXS-3619) Synchronizion of server states
+
+When configuration synchronization is enabled, if the `Maintenance`
+or `Drain` state of a server is changed, it will affect all MaxScale
+instances. Earlier the state was local to a particular MaxScale instance.
+
+### [MXS-3663](https://jira.mariadb.org/browse/MXS-3663) Causal Reads
+
+Causal reads are now supported also in a multi-MaxScale environment. For
+more information, please see [causal_reads](../Routers/ReadWriteSplit.md#causal_reads).
+
+### [MXS-3912](https://jira.mariadb.org/browse/MXS-3912) maxctrl list users
+
+Now shows the last login of a user.
+
+### [MXS-4067](https://jira.mariadb.org/browse/MXS-4067) Proxy Protocol
+
+If _proxy protocol_ is enabled, then MaxScale will use the proxy
+protocol also when it internally opens a connection to a server.
+
+### [MXS-4145](https://jira.mariadb.org/browse/MXS-3145) Multi-MaxScale nosqlprotocol usage
+
+It is now possible to use the nosqlprotocol protocol module also in a
+multi-MaxScale setup. Please see
+[NoSQL Account Database](../Protocols/NoSQL.md#nosql-account-database)
+for more information.
+
+### [MXS-4192](https://jira.mariadb.org/browse/MXS-4192) Logging default
+
+MaxScale no longer _also_ logs to syslog by default. Specify `syslog=true`
+under the `[maxscale]` section to retain the old behavior.
+
 ## Dropped Features
 
 ### MariaDB Monitor
@@ -61,6 +112,40 @@ alias for `admin_ssl_ca` and can still be used, but we suggest taking
 some point be dropped.
 
 ## New Features
+
+### [MXS-2347](https://jira.mariadb.org/browse/MXS-2347) Session restarting
+
+Sessions can now be restarted, which will cause servers that have
+been added since the session was started to be taken into use.
+
+### [MXS-3152](https://jira.mariadb.org/browse/MXS-3952) Kill session
+
+Now possible to kill a session using _maxctrl_.
+
+### [MXS-3398](https://jira.mariadb.org/browse/MXS-3398)  Auto tuning of configuration parameters
+
+MaxScale is now capable of autonomously setting the value of some
+configuration parameters based upon the value of a configuration
+parameter of the server. For more information, please refer to
+[auto_tune](../Getting-Started/Configuration-Guide.md#auto_tune).
+
+### [MXS-3982](https://jira.mariadb.org/browse/MXS-3982) TLS Certificate Reloading
+
+Now possible to reload the TLS certificates of servers and listeners using _maxctrl_.
+
+### [MXS-4010](https://jira.mariadb.org/browse/MXS-4010) Purging Avro log files
+
+The avro router is now capable of purging old log files. For more
+information, please see [max_data_age](../Routers/Avrorouter.md#max_data_age).
+
+### [MXS-4041](https://jira.mariadb.org/browse/MXS-4041) REST API TSL Certificate Reloading
+
+Note possible to reload the TLS certificats of the REST-API using _maxctrl_.
+
+### [MXS-4052](https://jira.mariadb.org/browse/MXS-4052) Kafka Schema object
+
+The sending of the JSON schema objects can now be disabled. For
+more information please see [send_schema](../Routers/KafkaCDC.md#send_schema).
 
 ## Bug fixes
 
