@@ -27,6 +27,13 @@ MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
 have been removed. The first two were ineffective, the latter three are
 replaced by `master_conditions` and `slave_conditions`.
 
+MariaDBMonitor can use Mariabackup to
+[clone](../Monitors/MariaDB-Monitor.md#rebuild-server) the contents of a server.
+
+MariaDBMonitor can issue
+[ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
+similar to CSMon.
+
 ### REST API
 
 The `/v1/maxscale/tasks/` endpoint has been removed from the REST-API.

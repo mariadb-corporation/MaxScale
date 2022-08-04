@@ -11,6 +11,8 @@
   `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
   have been removed. The first two were ineffective, the latter three are
   replaced by `master_conditions` and `slave_conditions`.
+* MariaDBMonitor can use Mariabackup to clone the contents of a server.
+* MariaDBMonitor can issue ColumnStore commands similar to CSMon
 * The `dbfwfilter` module that was deprecated in version 6 has now been removed.
 * MaxGUI Query Editor has changed the type of browser storage from local storage
   to IndexedDB. As the result, query history, favorite, and configuration are reset.
