@@ -8,7 +8,6 @@
             contentClass: 'mariadb-select-v-menu',
             bottom: true,
             offsetY: true,
-            openOnClick: false,
         }"
         :items="input.enum_values"
         item-text="value"
@@ -29,7 +28,6 @@
             contentClass: 'mariadb-select-v-menu',
             bottom: true,
             offsetY: true,
-            openOnClick: false,
         }"
         :items="input.enum_values"
         outlined
@@ -49,22 +47,18 @@
         :disabled="isDisabled"
         @change="onInput"
     />
-    <charset-input
-        v-else-if="input.type === 'charset'"
+    <charset-collate-select
+        v-else-if="input.type === 'charset' || input.type === 'collation'"
         v-model="input.value"
-        :defCharset="defTblCharset"
-        :height="height"
+        :items="
+            input.type === 'charset'
+                ? Object.keys(charsetCollationMap)
+                : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
+        "
+        :defItem="input.type === 'charset' ? defTblCharset : defTblCollation"
         :disabled="isDisabled"
-        @on-input="onInput"
-    />
-    <collation-input
-        v-else-if="input.type === 'collation'"
-        v-model="input.value"
         :height="height"
-        :defCollation="defTblCollation"
-        :charset="columnCharset"
-        :disabled="isDisabled"
-        @on-input="onInput"
+        @input="onInput"
     />
     <v-text-field
         v-else
@@ -118,18 +112,17 @@
  * on-input: (cell)
  */
 
-import CharsetInput from './CharsetInput.vue'
-import CollationInput from './CollationInput.vue'
+import CharsetCollateSelect from './CharsetCollateSelect.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './alterTblHelpers'
 export default {
     name: 'col-opt-input',
     components: {
-        'charset-input': CharsetInput,
-        'collation-input': CollationInput,
+        'charset-collate-select': CharsetCollateSelect,
     },
     props: {
         data: { type: Object, required: true },
         height: { type: Number, required: true },
+        charsetCollationMap: { type: Object, required: true },
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
         dataTypes: { type: Array, default: () => [] },

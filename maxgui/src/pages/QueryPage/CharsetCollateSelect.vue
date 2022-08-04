@@ -1,19 +1,16 @@
 <template>
     <v-combobox
-        v-model="charset"
-        :items="charsets"
+        v-bind="{ ...$attrs }"
         outlined
-        class="std mariadb-select-input error--text__bottom"
+        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :menu-props="{
             contentClass: 'mariadb-select-v-menu',
             bottom: true,
             offsetY: true,
         }"
         dense
-        :height="height"
         hide-details="auto"
-        :disabled="disabled"
-        @input="$emit('on-input', $event)"
+        v-on="$listeners"
     >
         <template v-slot:item="{ item, on, attrs }">
             <div
@@ -22,7 +19,7 @@
                 v-on="on"
             >
                 {{ item }}
-                {{ item === defCharset ? `(${$t('defCharset')})` : '' }}
+                {{ item === defItem ? `(${$t('default')})` : '' }}
             </div>
         </template>
     </v-combobox>
@@ -41,32 +38,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 export default {
-    name: 'charset-input',
+    name: 'charset-collate-select',
+    inheritAttrs: false,
     props: {
-        value: { type: String },
-        defCharset: { type: String, required: true },
-        height: { type: Number, default: 36 },
-        disabled: { type: Boolean, default: false },
-    },
-    computed: {
-        ...mapState({
-            charset_collation_map: state => state.editor.charset_collation_map,
-        }),
-        charset: {
-            get() {
-                return this.value
-            },
-            set(v) {
-                this.$emit('input', v)
-            },
-        },
-        charsets() {
-            return Object.keys(this.charset_collation_map)
-        },
+        defItem: { type: String, required: true },
     },
 }
 </script>
-
-<style lang="sass" scoped></style>

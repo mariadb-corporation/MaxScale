@@ -106,6 +106,7 @@
                             rowObj: rowDataToObj(rowData),
                         }"
                         :height="28"
+                        :charsetCollationMap="charsetCollationMap"
                         :defTblCharset="defTblCharset"
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"

@@ -75,22 +75,28 @@
                     <label class="field__label color text-small-text label-required">
                         {{ $t('charset') }}
                     </label>
-                    <charset-input
+                    <charset-collate-select
                         v-model="tableOptsData.table_charset"
-                        :defCharset="defDbCharset"
+                        :items="Object.keys(charsetCollationMap)"
+                        :defItem="defDbCharset"
                         :height="28"
-                        @on-input="onInputCharset"
+                        @input="onInputCharset"
                     />
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
                     <label class="field__label color text-small-text label-required">
                         {{ $t('collation') }}
                     </label>
-                    <collation-input
+                    <charset-collate-select
                         v-model="tableOptsData.table_collation"
-                        :defCollation="defCollation"
+                        :items="
+                            $typy(
+                                charsetCollationMap,
+                                `[${tableOptsData.table_charset}].collations`
+                            ).safeArray
+                        "
+                        :defItem="defCollation"
                         :height="28"
-                        :charset="tableOptsData.table_charset"
                     />
                 </v-col>
             </v-row>
@@ -111,13 +117,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CharsetInput from './CharsetInput.vue'
-import CollationInput from './CollationInput.vue'
+import CharsetCollateSelect from './CharsetCollateSelect.vue'
 export default {
     name: 'alter-table-opts',
     components: {
-        'charset-input': CharsetInput,
-        'collation-input': CollationInput,
+        'charset-collate-select': CharsetCollateSelect,
     },
     props: {
         value: { type: Object, required: true },
