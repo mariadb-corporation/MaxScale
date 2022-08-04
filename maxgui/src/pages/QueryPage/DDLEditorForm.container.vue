@@ -3,7 +3,12 @@
         <div ref="header">
             <alter-table-opts
                 v-model="tableOptsData"
-                :initialData="$typy(initialData, 'table_opts_data').safeObjectOrEmpty"
+                :engines="engines"
+                :charsetCollationMap="charset_collation_map"
+                :defDbCharset="
+                    $typy(def_db_charset_map, `${$typy(tableOptsData, 'dbName').safeString}`)
+                        .safeString
+                "
             />
         </div>
         <v-tabs
@@ -58,7 +63,7 @@ import AlterTableOpts from './AlterTableOpts.vue'
 import AlterColsOpts from './AlterColsOpts.vue'
 
 export default {
-    name: 'ddl-editor-form',
+    name: 'ddl-editor-form-ctr',
     components: {
         'alter-table-opts': AlterTableOpts,
         'alter-cols-opts': AlterColsOpts,
@@ -69,6 +74,7 @@ export default {
     },
     props: {
         formData: { type: Object, required: true },
+        initialData: { type: Object, required: true },
         dim: { type: Object, required: true },
     },
     data() {
@@ -82,15 +88,13 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
-            tbl_creation_info: state => state.editor.tbl_creation_info,
             charset_collation_map: state => state.editor.charset_collation_map,
+            engines: state => state.editor.engines,
+            def_db_charset_map: state => state.editor.def_db_charset_map,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
-        initialData() {
-            return this.$typy(this.tbl_creation_info, 'data').safeObjectOrEmpty
-        },
         tableOptsData: {
             get() {
                 return this.$typy(this.formData, 'table_opts_data').safeObjectOrEmpty

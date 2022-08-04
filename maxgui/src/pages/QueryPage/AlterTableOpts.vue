@@ -111,7 +111,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
 export default {
@@ -122,7 +121,9 @@ export default {
     },
     props: {
         value: { type: Object, required: true },
-        initialData: { type: Object, required: true },
+        engines: { type: Array, required: true },
+        defDbCharset: { type: String, required: true },
+        charsetCollationMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -135,11 +136,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            charset_collation_map: state => state.editor.charset_collation_map,
-            engines: state => state.editor.engines,
-            def_db_charset_map: state => state.editor.def_db_charset_map,
-        }),
         tableOptsData: {
             get() {
                 return this.value
@@ -150,21 +146,9 @@ export default {
         },
         defCollation() {
             return this.$typy(
-                this.charset_collation_map,
+                this.charsetCollationMap,
                 `[${this.tableOptsData.table_charset}].defCollation`
             ).safeString
-        },
-        defDbCharset() {
-            return this.$typy(this.def_db_charset_map, `${this.tableOptsData.dbName}`).safeString
-        },
-    },
-    watch: {
-        initialData: {
-            deep: true,
-            handler(v, oV) {
-                // show the content when alter "new" table
-                if (!this.$help.lodash.isEqual(v, oV)) this.showInputs = true
-            },
         },
     },
     methods: {
