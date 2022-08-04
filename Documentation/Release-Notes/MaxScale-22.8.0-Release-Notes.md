@@ -78,13 +78,6 @@ MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
 have been removed. The first two were ineffective, the latter three are
 replaced by `master_conditions` and `slave_conditions`.
 
-MariaDBMonitor can use Mariabackup to
-[clone](../Monitors/MariaDB-Monitor.md#rebuild-server) the contents of a server.
-
-MariaDBMonitor can issue
-[ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
-similar to CSMon.
-
 ### REST API
 
 The `/v1/maxscale/tasks/` endpoint has been removed from the REST-API.
@@ -146,6 +139,17 @@ Note possible to reload the TLS certificats of the REST-API using _maxctrl_.
 
 The sending of the JSON schema objects can now be disabled. For
 more information please see [send_schema](../Routers/KafkaCDC.md#send_schema).
+
+### [MXS-2542](https://jira.mariadb.org/browse/MXS-2542) Rebuild server
+
+MariaDBMonitor can use Mariabackup to
+[clone](../Monitors/MariaDB-Monitor.md#rebuild-server) the contents of a server.
+
+### [MXS-3217](https://jira.mariadb.org/browse/MXS-3217) ColumnStore commands
+
+MariaDBMonitor can issue
+[ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
+similar to CSMon.
 
 ## Bug fixes
 
