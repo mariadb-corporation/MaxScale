@@ -124,6 +124,7 @@ export default {
                     {
                         conn_to_be_cloned: active_sql_conn,
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                        session_id_fk: active_session_id,
                     },
                     { root: true }
                 )
@@ -174,9 +175,8 @@ export default {
                     id: active_session_id,
                     payload: { value: true },
                 })
-                const bgConn = rootGetters['queryConn/getCloneConn']({
-                    clone_of_conn_id: active_sql_conn.id,
-                    binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                const bgConn = rootGetters['queryConn/getBgConn']({
+                    session_id_fk: active_session_id,
                 })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},

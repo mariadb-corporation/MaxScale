@@ -232,13 +232,12 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             selected_query_txt: state => state.editor.selected_query_txt,
-            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
-            getCloneConn: 'queryConn/getCloneConn',
+            getBgConn: 'queryConn/getBgConn',
             getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
             getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
@@ -280,10 +279,7 @@ export default {
         watch_isQueryKilled() {
             this.unwatch_isQueryKilled = this.$watch('isQueryKilled', async (v, oV) => {
                 if (v !== oV && v) {
-                    const bgConn = this.getCloneConn({
-                        clone_of_conn_id: this.session.active_sql_conn.id,
-                        binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
-                    })
+                    const bgConn = this.getBgConn({ session_id_fk: this.session.id })
                     if (bgConn.id) await this.disconnectClone({ id: bgConn.id })
                 }
             })

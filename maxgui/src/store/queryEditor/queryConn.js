@@ -448,16 +448,16 @@ export default {
         },
     },
     getters: {
-        // return the first found object, so it only works for BACKGROUND connection for now
-        getCloneConn: state => {
+        getBgConn: (state, getters, rootState) => {
             /**
              * @param {Number} - active connection id that was cloned
              */
-            return ({ clone_of_conn_id, binding_type }) =>
+            return ({ session_id_fk }) =>
                 Object.values(state.sql_conns).find(
                     conn =>
-                        conn.clone_of_conn_id === clone_of_conn_id &&
-                        conn.binding_type === binding_type
+                        conn.binding_type ===
+                            rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND &&
+                        conn.session_id_fk === session_id_fk
                 ) || {}
         },
         getIsConnBusy: (state, getters, rootState, rootGetters) => {
