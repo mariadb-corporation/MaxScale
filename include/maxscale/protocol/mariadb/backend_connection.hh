@@ -164,7 +164,7 @@ private:
     void process_stmt_execute(GWBUF** buffer, uint32_t id, PSInfo& info);
     void pin_history_responses();
 
-    GWBUF* track_response(GWBUF** buffer);
+    GWBUF  track_response(GWBUF& buffer);
     bool   read_backend_handshake(GWBUF&& buffer);
     void   handle_error_response(DCB* plain_dcb, GWBUF* buffer);
     bool   session_ok_to_route(DCB* dcb);
@@ -178,7 +178,7 @@ private:
     std::string create_response_mismatch_error();
 
     uint32_t create_capabilities(bool with_ssl, uint64_t capabilities);
-    GWBUF*   process_packets(GWBUF** result);
+    GWBUF    process_packets(GWBUF& result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);
     void     process_result_start(Iter it, Iter end);
@@ -233,7 +233,7 @@ private:
     bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
     uint64_t    m_num_coldefs {0};
-    mxs::Buffer m_collectq;             /**< Used to collect results when resultset collection is requested */
+    GWBUF       m_collectq;             /**< Used to collect results when resultset collection is requested */
     int64_t     m_ps_packets {0};
     bool        m_opening_cursor = false;   /**< Whether we are opening a cursor */
     bool        m_large_query = false;

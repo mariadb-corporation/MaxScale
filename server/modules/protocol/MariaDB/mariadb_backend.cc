@@ -696,8 +696,6 @@ void MariaDBBackendConnection::normal_read()
         }
     }
 
-    auto* read_buffer = new GWBUF(move(buffer));
-
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
     uint64_t capabilities = session->capabilities();
@@ -706,23 +704,23 @@ void MariaDBBackendConnection::normal_read()
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)
     {
-        GWBUF* tmp;
+        GWBUF tmp;
         bool track = rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
             && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT);
 
         if (track || m_collect_result)
         {
-            tmp = track_response(&read_buffer);
+            tmp = track_response(buffer);
         }
         else
         {
-            tmp = modutil_get_complete_packets(&read_buffer);
+            tmp = mariadb::get_complete_packets(buffer);
         }
 
         // Store any partial packets in the DCB's read buffer
-        if (read_buffer)
+        if (!buffer.empty())
         {
-            m_dcb->unread(read_buffer);
+            m_dcb->unread(std::move(buffer));
 
             if (m_reply.is_complete())
             {
@@ -732,31 +730,31 @@ void MariaDBBackendConnection::normal_read()
             }
         }
 
-        if (!tmp)
+        if (tmp.empty())
         {
             return;     // No complete packets
         }
 
-        read_buffer = tmp;
+        buffer = std::move(tmp);
     }
 
     if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) || m_collect_result)
     {
-        m_collectq.append(read_buffer);
+        m_collectq.merge_back(std::move(buffer));
 
         if (!m_reply.is_complete())
         {
             return;
         }
 
-        read_buffer = m_collectq.release();
+        buffer = std::move(m_collectq);
         m_collect_result = false;
         result_collected = true;
     }
 
     do
     {
-        GWBUF* stmt = nullptr;
+        GWBUF stmt;
 
         if (!result_collected && rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
         {
@@ -764,41 +762,36 @@ void MariaDBBackendConnection::normal_read()
             // the packets have been processed.
             if (!m_dcb->is_open())
             {
-                gwbuf_free(read_buffer),
-                read_buffer = nullptr;
+                buffer.clear();
                 break;
             }
 
             // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and iterate over all packets in the resultset
-            stmt = modutil_get_next_MySQL_packet(&read_buffer);
-            mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
+            stmt = mariadb::get_next_MySQL_packet(buffer);
+            mxb_assert_message(!stmt.empty(), "There should be only complete packets in buffer");
 
-            // Make sure the buffer is contiguous
-            stmt = gwbuf_make_contiguous(stmt);
-
-            GWBUF* tmp = track_response(&stmt);
-            mxb_assert(!stmt);
-            stmt = tmp;
+            GWBUF tmp = track_response(stmt);
+            mxb_assert(stmt.empty());
+            stmt = std::move(tmp);
         }
         else
         {
-            stmt = read_buffer;
-            read_buffer = nullptr;
+            stmt = std::move(buffer);
         }
 
         if (session_ok_to_route(m_dcb))
         {
             thread_local mxs::ReplyRoute route;
             route.clear();
-            m_upstream->clientReply(stmt, route, m_reply);
+            m_upstream->clientReply(mxs::gwbuf_to_gwbufptr(std::move(stmt)), route, m_reply);
             m_reply.clear_row_data();
         }
-        else    /*< session is closing; replying to client isn't possible */
+        else
         {
-            gwbuf_free(stmt);
+            /*< session is closing; replying to client isn't possible */
         }
     }
-    while (read_buffer);
+    while (!buffer.empty());
 
     if (!m_dcb->is_open())
     {
@@ -864,12 +857,10 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
         }
         else
         {
-            GWBUF* read_buffer = new GWBUF(move(buffer));
-            mxs::Buffer result = track_response(&read_buffer);
-
-            if (read_buffer)
+            track_response(buffer);
+            if (!buffer.empty())
             {
-                m_dcb->unread(read_buffer);
+                m_dcb->unread(std::move(buffer));
             }
 
             if (m_reply.is_complete())
@@ -1734,19 +1725,16 @@ json_t* MariaDBBackendConnection::diagnostics() const
  * Process a reply from a backend server. This method collects all complete packets and
  * updates the internal response state.
  *
- * @param buffer Pointer to buffer containing the raw response. Any partial packets will be left in this
- *               buffer.
+ * @param buffer Buffer containing the raw response. Any partial packets will be left in this buffer.
  * @return All complete packets that were in `buffer`
  */
-GWBUF* MariaDBBackendConnection::track_response(GWBUF** buffer)
+GWBUF MariaDBBackendConnection::track_response(GWBUF& buffer)
 {
-    GWBUF* rval = process_packets(buffer);
-
-    if (rval)
+    GWBUF rval = process_packets(buffer);
+    if (!rval.empty())
     {
-        m_reply.add_bytes(gwbuf_length(rval));
+        m_reply.add_bytes(rval.length());
     }
-
     return rval;
 }
 
@@ -2098,17 +2086,16 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
     return final_capabilities;
 }
 
-GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
+GWBUF MariaDBBackendConnection::process_packets(GWBUF& result)
 {
-    GWBUF* buffer = *result;
-    auto it = buffer->begin();
-    size_t total_bytes = buffer->length();
+    GWBUF& buffer = result;
+    auto it = buffer.begin();
+    size_t total_bytes = buffer.length();
     size_t bytes_used = 0;
 
-    while (it != buffer->end())
+    while (it != buffer.end())
     {
         size_t bytes_left = total_bytes - bytes_used;
-
         if (bytes_left < MYSQL_HEADER_LEN)
         {
             // Partial header
@@ -2117,8 +2104,6 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
 
         // Extract packet length
         uint32_t len = mariadb::get_header(it).pl_length;
-        it += 4;
-
         if (bytes_left < len + MYSQL_HEADER_LEN)
         {
             // Partial packet payload
@@ -2126,11 +2111,11 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
         }
 
         bytes_used += len + MYSQL_HEADER_LEN;
-
-        mxb_assert(it != buffer->end());
+        it += MYSQL_HEADER_LEN;
+        mxb_assert(it != buffer.end());
         auto end = it + len;
 
-        // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
+        // Ignore the tail end of a large packet. Only resultsets can generate packets this large
         // and we don't care what the contents are and thus it is safe to ignore it.
         bool skip_next = m_skip_next;
         m_skip_next = len == GW_MYSQL_MAX_PACKET_LEN;
@@ -2148,7 +2133,7 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
         }
     }
 
-    return gwbuf_split(result, bytes_used);
+    return result.split(bytes_used);
 }
 
 void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t len)

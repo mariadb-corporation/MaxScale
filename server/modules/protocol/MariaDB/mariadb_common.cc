@@ -31,6 +31,16 @@ using std::move;
 using mxs::ReplyState;
 using UserEntry = mariadb::UserEntry;
 
+namespace
+{
+// Helper function for debug assertions
+bool only_one_packet(const GWBUF& buffer)
+{
+    auto header = mariadb::get_header(buffer.data());
+    auto buffer_len = buffer.length();
+    return header.pl_length + MYSQL_HEADER_LEN == buffer_len;
+}
+}
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
                              int packet_number)
 {
@@ -656,5 +666,59 @@ GWBUF create_query(const string& query)
     rval.write_complete(ptr - rval.data());
     mxb_assert(rval.length() == total_len);
     return rval;
+}
+
+/**
+ * Split the buffer into complete and partial packets.
+ *
+ * @param buffer Buffer to split. Can be left empty.
+ * @return Complete packets
+ */
+GWBUF get_complete_packets(GWBUF& buffer)
+{
+    const auto* start = buffer.data();
+    size_t offset = 0;
+    auto len_remaining = buffer.length();
+    while (len_remaining >= MYSQL_HEADER_LEN)
+    {
+        auto header = get_header(start + offset);
+        auto packet_len = MYSQL_HEADER_LEN + header.pl_length;
+        if (len_remaining >= packet_len)
+        {
+            len_remaining -= packet_len;
+            offset += packet_len;
+        }
+        else
+        {
+            len_remaining = 0;
+        }
+    }
+
+    return buffer.split(offset);
+}
+
+/**
+ * Return the first packet from a buffer.
+ *
+ * @param buffer If the GWBUF contains a complete packet, after the call it will have been updated to
+ * begin at the byte following the packet.
+ *
+ * @return The first complete packet, or empty
+ */
+GWBUF get_next_MySQL_packet(GWBUF& buffer)
+{
+    GWBUF packet;
+    size_t totalbuflen = buffer.length();
+    if (totalbuflen >= MYSQL_HEADER_LEN)
+    {
+        auto packetlen = MYSQL_HEADER_LEN + get_header(buffer.data()).pl_length;
+        if (packetlen <= totalbuflen)
+        {
+            packet = buffer.split(packetlen);
+        }
+    }
+
+    mxb_assert(packet.empty() || only_one_packet(packet));
+    return packet;
 }
 }

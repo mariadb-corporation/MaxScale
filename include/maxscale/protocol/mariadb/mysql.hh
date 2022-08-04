@@ -241,6 +241,10 @@ bool is_com_query_or_prepare(const GWBUF& buf);
 GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows);
 
 GWBUF create_query(const std::string& query);
+
+GWBUF get_complete_packets(GWBUF& buffer);
+
+GWBUF get_next_MySQL_packet(GWBUF& buffer);
 }
 
 /** MySQL protocol constants */
