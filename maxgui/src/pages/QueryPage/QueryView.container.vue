@@ -9,20 +9,22 @@
         :loading="is_validating_conn"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
-        <wke-nav-ctr :height="wkeNavCtrHeight" />
-        <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
-            <wke-ctr
-                v-if="active_wke_id === wke.id && ctrDim.height"
-                ref="wke"
-                :ctrDim="ctrDim"
-                @onCtrlEnter="onCtrlEnter"
-                @onCtrlShiftEnter="onCtrlShiftEnter"
-                @onCtrlD="onCtrlD"
-                @onCtrlO="onCtrlO"
-                @onCtrlS="onCtrlS"
-                @onCtrlShiftS="onCtrlShiftS"
-            />
-        </keep-alive>
+        <template v-if="!is_validating_conn">
+            <wke-nav-ctr :height="wkeNavCtrHeight" />
+            <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
+                <wke-ctr
+                    v-if="active_wke_id === wke.id && ctrDim.height"
+                    ref="wke"
+                    :ctrDim="ctrDim"
+                    @onCtrlEnter="onCtrlEnter"
+                    @onCtrlShiftEnter="onCtrlShiftEnter"
+                    @onCtrlD="onCtrlD"
+                    @onCtrlO="onCtrlO"
+                    @onCtrlS="onCtrlS"
+                    @onCtrlShiftS="onCtrlShiftS"
+                />
+            </keep-alive>
+        </template>
     </v-card>
 </template>
 
