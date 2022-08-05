@@ -111,9 +111,20 @@ some point be dropped.
 Sessions can now be restarted, which will cause servers that have
 been added since the session was started to be taken into use.
 
+### [MXS-2542](https://jira.mariadb.org/browse/MXS-2542) Rebuild server
+
+MariaDBMonitor can use Mariabackup to
+[clone](../Monitors/MariaDB-Monitor.md#rebuild-server) the contents of a server.
+
 ### [MXS-3152](https://jira.mariadb.org/browse/MXS-3952) Kill session
 
 Now possible to kill a session using _maxctrl_.
+
+### [MXS-3217](https://jira.mariadb.org/browse/MXS-3217) ColumnStore commands
+
+MariaDBMonitor can issue
+[ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
+similar to CSMon.
 
 ### [MXS-3398](https://jira.mariadb.org/browse/MXS-3398)  Auto tuning of configuration parameters
 
@@ -140,22 +151,13 @@ Note possible to reload the TLS certificats of the REST-API using _maxctrl_.
 The sending of the JSON schema objects can now be disabled. For
 more information please see [send_schema](../Routers/KafkaCDC.md#send_schema).
 
-### [MXS-2542](https://jira.mariadb.org/browse/MXS-2542) Rebuild server
-
-MariaDBMonitor can use Mariabackup to
-[clone](../Monitors/MariaDB-Monitor.md#rebuild-server) the contents of a server.
-
-### [MXS-3217](https://jira.mariadb.org/browse/MXS-3217) ColumnStore commands
-
-MariaDBMonitor can issue
-[ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
-similar to CSMon.
-
 ### MaxGUI
 
 Numerous additions have been added and improvements made to MaxGUI.
 The most notable ones are listed here:
 
+[MXS-3216](https://jira.mariadb.org/browse/MXS-3216) Add Columnstore operations to MaxGUI
+[MXS-3642](https://jira.mariadb.org/browse/MXS-3642) Control replication with drag and drop in MaxGUI
 [MXS-3723](https://jira.mariadb.org/browse/MXS-3723) Save and Load .sql files in the Query Editor
 [MXS-3725](https://jira.mariadb.org/browse/MXS-3725) Allow storing query as snippets in the Query Editor
 [MXS-3783](https://jira.mariadb.org/browse/MXS-3783) User access control in MaxGUI
