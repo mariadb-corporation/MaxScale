@@ -126,6 +126,11 @@ MariaDBMonitor can issue
 [ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
 similar to CSMon.
 
+### [MXS-3394](https://jira.mariadb.org/browse/MXS-3394) Query Rewrite
+
+Filter which rewrites queries based on a query template.
+Please refer to rewritefilter documentation [here](../Filters/RewriteFilter.md).
+
 ### [MXS-3398](https://jira.mariadb.org/browse/MXS-3398)  Auto tuning of configuration parameters
 
 MaxScale is now capable of autonomously setting the value of some
@@ -150,11 +155,6 @@ Note possible to reload the TLS certificats of the REST-API using _maxctrl_.
 
 The sending of the JSON schema objects can now be disabled. For
 more information please see [send_schema](../Routers/KafkaCDC.md#send_schema).
-
-### [MXS-3394](https://jira.mariadb.org/browse/MXS-3394) Query Rewrite
-
-Filter which rewrites queries based on a query template.
-Please refer to rewritefilter documentation [here](../Filters/RewriteFilter.md).
 
 ### MaxGUI
 

@@ -2,17 +2,21 @@
 
 ## MariaDB MaxScale 22.8
 
+* Sessions can now be restarted so that added server are taken into use.
+* Sessions can now be killed using maxctrl.
+* MariaDBMonitor can use Mariabackup to clone the contents of a server.
+* MariaDBMonitor can issue ColumnStore commands similar to CSMon
+* MariaDBMonitor settings `ignore_external_masters`, `detect_replication_lag`
+  `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
+  have been removed. The first two were ineffective, the latter three are
+  replaced by `master_conditions` and `slave_conditions`.
+* A new Query Rewrite filter, using which queries can be rewritten based
+  upon a template, has been added.
 * MaxScale no longer logs to both the SystemD journal and MaxScale log by
   default: the default value of `syslog` was changed from `true` to `false` to
   reduce the amount of redundant log messages that are logged. To retain the old
   behavior of logging to both MaxScale's own files and to the SystemD journal,
   add `syslog=true` under the `[maxscale]` section.
-* MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
-  `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
-  have been removed. The first two were ineffective, the latter three are
-  replaced by `master_conditions` and `slave_conditions`.
-* MariaDBMonitor can use Mariabackup to clone the contents of a server.
-* MariaDBMonitor can issue ColumnStore commands similar to CSMon
 * The `dbfwfilter` module that was deprecated in version 6 has now been removed.
 * MaxGUI Query Editor has changed the type of browser storage from local storage
   to IndexedDB. As the result, query history, favorite, and configuration are reset.
