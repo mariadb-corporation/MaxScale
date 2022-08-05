@@ -151,6 +151,20 @@ MariaDBMonitor can issue
 [ColumnStore commands](../Monitors/MariaDB-Monitor.md#columnstore-commands)
 similar to CSMon.
 
+### MaxGUI
+
+Numerous additions have been added and improvements made to MaxGUI.
+The most notable ones are listed here:
+
+[MXS-3723](https://jira.mariadb.org/browse/MXS-3723) Save and Load .sql files in the Query Editor
+[MXS-3725](https://jira.mariadb.org/browse/MXS-3725) Allow storing query as snippets in the Query Editor
+[MXS-3783](https://jira.mariadb.org/browse/MXS-3783) User access control in MaxGUI
+[MXS-3853](https://jira.mariadb.org/browse/MXS-3853) Manage MaxScale users in MaxGUI
+[MXS-3918](https://jira.mariadb.org/browse/MXS-3918) Add stop query button in the Query Editor
+[MXS-4025](https://jira.mariadb.org/browse/MXS-4025) Multiple query tabs on the same worksheet
+[MXS-4087](https://jira.mariadb.org/browse/MXS-4087) Kill session in MaxGUI
+[MXS-4167](https://jira.mariadb.org/browse/MXS-4167) Show filter diagnostics in MaxGUI
+
 ## Bug fixes
 
 ## Known Issues and Limitations
