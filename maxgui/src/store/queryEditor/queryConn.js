@@ -78,7 +78,7 @@ export default {
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
         async validatingConn(
-            { state, commit, dispatch, rootGetters },
+            { state, commit, dispatch, rootState, rootGetters },
             { silentValidation = false } = {}
         ) {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
@@ -109,12 +109,53 @@ export default {
                     const invalidCnctIds = Object.keys(state.sql_conns).filter(
                         id => !(id in validSqlConns)
                     )
-                    //deleteInvalidConn
+                    //delete cookies and reset sessions bound those invalid connections
                     invalidCnctIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
                         dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                     })
 
+                    // Delete also leftover cloned connections when its wke connections are expired
+                    const wkeConnIds = Object.values(validSqlConns)
+                        .filter(
+                            c =>
+                                c.binding_type ===
+                                rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                        )
+                        .map(c => c.id)
+
+                    const leftoverConns = Object.values(validSqlConns).filter(
+                        c =>
+                            !wkeConnIds.includes(c.clone_of_conn_id) &&
+                            c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
+                    )
+
+                    let wkeIdsToBeReset = []
+                    for (const conn of leftoverConns) {
+                        await this.$queryHttp.delete(`/sql/${conn.id}`)
+                        const { wke_id_fk } = rootGetters['querySession/getSessionByConnId'](
+                            conn.id
+                        )
+                        if (wke_id_fk && !wkeIdsToBeReset.includes(wke_id_fk))
+                            wkeIdsToBeReset.push(wke_id_fk)
+                        dispatch(
+                            'querySession/resetSessionStates',
+                            { conn_id: conn.id },
+                            { root: true }
+                        )
+                    }
+
+                    wkeIdsToBeReset.forEach(id => {
+                        commit(
+                            'wke/REFRESH_WKE',
+                            rootState.wke.worksheets_arr.find(wke => wke.id === id),
+                            { root: true }
+                        )
+                        dispatch('wke/releaseQueryModulesMem', id, { root: true })
+                    })
+
+                    // remove leftover conns
+                    leftoverConns.forEach(c => delete validSqlConns[c.id])
                     commit('SET_SQL_CONNS', validSqlConns)
                     // get the connection of the active session
                     const session_conn = this.vue.$typy(active_session, 'active_sql_conn')
