@@ -112,10 +112,11 @@ export default {
                 return this.getActiveSessionId
             },
             set(v) {
-                this.SET_ACTIVE_SESSION_BY_WKE_ID_MAP({
-                    payload: v,
-                    id: this.active_wke_id,
-                })
+                if (v)
+                    this.SET_ACTIVE_SESSION_BY_WKE_ID_MAP({
+                        payload: v,
+                        id: this.active_wke_id,
+                    })
             },
         },
     },

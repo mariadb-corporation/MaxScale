@@ -62,7 +62,7 @@ export default {
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             try {
-                const res = await this.$http.get(`/${resourceType}?fields[${resourceType}]=id`)
+                const res = await this.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
                 if (res.data.data) {
                     const names = res.data.data.map(({ id, type }) => ({ id, type }))
                     commit('SET_RC_TARGET_NAMES_MAP', {
@@ -85,7 +85,7 @@ export default {
             try {
                 const active_session_id = rootGetters['querySession/getActiveSessionId']
                 const active_session = rootGetters['querySession/getActiveSession']
-                const res = await this.$http.get(`/sql/`)
+                const res = await this.$queryHttp.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -145,7 +145,7 @@ export default {
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 // create the connection
-                const res = await this.$http.post(`/sql?persist=yes&max-age=86400`, body)
+                const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -272,7 +272,7 @@ export default {
          */
         async disconnectClone({ state, commit }, { id }) {
             try {
-                const res = await this.$http.delete(`/sql/${id}`)
+                const res = await this.$queryHttp.delete(`/sql/${id}`)
                 if (res.status === 204) commit('DELETE_SQL_CONN', state.sql_conns[id])
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnectClone').error(e)
@@ -306,7 +306,7 @@ export default {
                                 { conn_id: id },
                                 { root: true }
                             )
-                            return this.$http.delete(`/sql/${id}`)
+                            return this.$queryHttp.delete(`/sql/${id}`)
                         })
                     )
 
