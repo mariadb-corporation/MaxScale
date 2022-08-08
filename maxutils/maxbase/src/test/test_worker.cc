@@ -167,7 +167,7 @@ public:
     void start()
     {
         cout << "Ping: " << flush;
-        dcall(10ms, &MoveTest::ping, this);
+        dcall(1ms, &MoveTest::ping, this);
     }
 
     void move()
@@ -181,42 +181,33 @@ public:
 
         cout << "Move(" << m_nMoves << "): " << m_pW << endl;
 
-        if (m_nMoves < 100)
+        m_pW = nullptr;
+
+        if (pW == m_pW1)
         {
-            suspend_dcalls();
-            set_worker(nullptr);
-            m_pW = nullptr;
-
-            if (pW == m_pW1)
-            {
-                pW = m_pW2;
-            }
-            else if (pW == m_pW2)
-            {
-                pW = m_pW3;
-            }
-            else
-            {
-                mxb_assert(pW == m_pW3);
-                pW = m_pW1;
-            }
-
-            pW->execute([this, pW]() {
-                    m_moving = false;
-                    m_pW = pW;
-                    m_stopwatch.restart();
-
-                    cout << "Ping: " << flush;
-                    set_worker(pW);
-                    resume_dcalls();
-                }, mxb::Worker::EXECUTE_QUEUED);
+            pW = m_pW2;
+        }
+        else if (pW == m_pW2)
+        {
+            pW = m_pW3;
         }
         else
         {
-            m_pW3->shutdown();
-            m_pW2->shutdown();
-            m_pW1->shutdown();
+            mxb_assert(pW == m_pW3);
+            pW = m_pW1;
         }
+
+        set_worker(nullptr);
+        pW->execute([this, pW]() {
+                set_worker(pW);
+                m_pW = pW;
+
+                resume_dcalls();
+                m_stopwatch.restart();
+
+                cout << "Ping: " << flush;
+                m_moving = false;
+            }, mxb::Worker::EXECUTE_QUEUED);
     }
 
     bool ping(Callable::Action action)
@@ -226,15 +217,31 @@ public:
             return false;
         }
 
+        mxb_assert(!m_moving);
+
         auto* pW = worker();
         mxb_assert(pW == m_pW);
 
         cout << "." << flush;
 
-        if (!m_moving && m_stopwatch.split() > std::chrono::milliseconds(100))
+        if (m_stopwatch.split() > std::chrono::milliseconds(10))
         {
             cout << endl;
-            move();
+
+            if (m_nMoves < 1000)
+            {
+                suspend_dcalls();
+
+                pW->execute([this](){
+                        move();
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            }
+            else
+            {
+                m_pW3->shutdown();
+                m_pW2->shutdown();
+                m_pW1->shutdown();
+            }
         }
 
         return true;
