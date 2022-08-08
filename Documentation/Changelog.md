@@ -1,6 +1,6 @@
 # Changelog
 
-## MariaDB MaxScale 22.8
+## MariaDB MaxScale 22.08
 
 * Sessions can now be restarted so that added server are taken into use.
 * Sessions can now be killed using maxctrl.
@@ -29,7 +29,7 @@
 * Causal reads now supported in a multi-MaxScale setup.
 
 For more details, please refer to:
-* [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)
+* [MariaDB MaxScale 22.08.0 Release Notes](Release-Notes/MaxScale-22.08.0-Release-Notes.md)
 
 ## MariaDB MaxScale 6.4
 

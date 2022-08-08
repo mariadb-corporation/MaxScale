@@ -16,6 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
+- [Upgrading MariaDB MaxScale from 6 to 22.08](Upgrading/Upgrading-To-MaxScale-22.08.md)
 - [Upgrading MariaDB MaxScale from 2.5 to 6](Upgrading/Upgrading-To-MaxScale-6.md)
 - [Upgrading MariaDB MaxScale from 2.4 to 2.5](Upgrading/Upgrading-To-MaxScale-2.5.md)
 - [Upgrading MariaDB MaxScale from 2.3 to 2.4](Upgrading/Upgrading-To-MaxScale-2.4.md)
@@ -76,6 +77,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
 
  - [Binlog Filter](Filters/BinlogFilter.md)
  - [Cache](Filters/Cache.md)
+ - [Comment Filter](Filters/Comment.md)
  - [Consistent Critical Read Filter](Filters/CCRFilter.md)
  - [Hint Filter](Filters/Hintfilter.md)
  - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
@@ -85,6 +87,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Named Server Filter](Filters/Named-Server-Filter.md)
  - [Query Log All](Filters/Query-Log-All-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
+ - [Rewrite Filter](Filters/RewriteFilter.md)
  - [Tee Filter](Filters/Tee-Filter.md)
  - [Throttle Filter](Filters/Throttle.md)
  - [Top N Filter](Filters/Top-N-Filter.md)

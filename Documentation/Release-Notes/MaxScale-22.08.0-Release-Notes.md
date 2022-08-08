@@ -1,4 +1,4 @@
-# MariaDB MaxScale 22.8 Release Notes
+# MariaDB MaxScale 22.08 Release Notes
 
 The versioning scheme for MaxScale releases has changed; the format of the
 version will be `YY.MM.PATCH` where `YY` is the last two digits of the year and
@@ -8,9 +8,9 @@ incremented whenever a maintenance release is made.
 According to the old scheme, this MaxScale release would have been called 7 and
 the version number would have been 7.0.0.
 
-Release 22.8.0 is a Beta release.
+Release 22.08.0 is a Beta release.
 
-This document describes the changes in release 22.8, when compared to
+This document describes the changes in release 22.08, when compared to
 release 6.
 
 For any problems you encounter, please consider submitting a bug
@@ -85,7 +85,7 @@ The `/v1/maxscale/tasks/` endpoint has been removed from the REST-API.
 ### Database Firewall Filter
 
 The `dbfwfilter` that was deprecated in MaxScale 6 has been removed in
-MaxScale 22.8.
+MaxScale 22.08.
 
 ## Deprecated Features
 
