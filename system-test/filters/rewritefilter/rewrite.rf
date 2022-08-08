@@ -1,0 +1,6 @@
+# The real template tests are unit tests
+%%
+%
+select id from @{1} where id = @{2}
+%
+select id, str_id from @{1} where id = @{2}

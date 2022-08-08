@@ -1,0 +1,34 @@
+[maxscale]
+threads=###threads###
+log_info=true
+
+[server1]
+type = server
+address = ###node_server_IP_1###
+port = ###node_server_port_1###
+
+[Cluster]
+type=monitor
+module=mariadbmon
+servers=server1
+user=maxskysql
+password=skysql
+
+[Rewrite]
+type = filter
+module = rewritefilter
+template_file = /###access_homedir###/rewrite.rf
+log_replacement=true
+
+[RWS]
+type = service
+router = readwritesplit
+servers=server1
+user = maxskysql
+password = skysql
+filters = Rewrite
+
+[RWS-Listener]
+type = listener
+service = RWS
+port = 4006
