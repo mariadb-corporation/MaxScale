@@ -19,44 +19,56 @@
 #undef NDEBUG
 #endif
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include <maxbase/log.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/buffer.hh>
+#include <maxbase/format.hh>
 
-/**
- * test1    Allocate a service and do lots of other things
- *
- */
+namespace
+{
+void expect_impl(int linenum, bool res, const char* fmt, ...) __attribute__ ((format(printf, 3, 4)));
 
-static int test1()
+#define expect(format, ...) expect_impl(__LINE__, format, ##__VA_ARGS__)
+
+int retval = 0;
+void expect_impl(int linenum, bool res, const char* fmt, ...)
+{
+    if (!res)
+    {
+        va_list valist;
+        va_start(valist, fmt);
+        std::string msg = mxb::string_vprintf(fmt, valist);
+        va_end(valist);
+        retval++;
+        printf("ERROR on line %i: %s\n", linenum, msg.c_str());
+    }
+}
+
+void test1()
 {
     GWBUF* buffer;
     const char* sql;
-    int result, length, residual;
+    int length, residual;
 
     /* Poll tests */
     fprintf(stderr,
             "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
     memset(GWBUF_DATA(buffer), 0, gwbuf_link_length(buffer));
-    mxb_assert_message(mariadb::is_com_query(*buffer) == false,
-                       "Default buffer should be diagnosed as not SQL");
+    expect(mariadb::is_com_query(*buffer) == false,
+           "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
-    mxb_assert_message(0 == modutil_extract_SQL(*buffer, &sql, &length), "Default buffer should fail");
+    expect(0 == modutil_extract_SQL(*buffer, &sql, &length), "Default buffer should fail");
     fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
     fprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
     fprintf(stderr, "\t..done\n");
-
-    return 0;
 }
 
-int test2()
+void test2()
 {
     GWBUF* buffer;
     unsigned int len = 128;
@@ -64,7 +76,7 @@ int test2()
 
     /** Allocate space for the COM_QUERY header and payload */
     buffer = gwbuf_alloc(5 + 128);
-    mxb_assert_message((buffer != NULL), "Buffer should not be null");
+    expect((buffer != NULL), "Buffer should not be null");
 
     memset(query, ';', 128);
     memset(query + 128, '\0', 1);
@@ -80,11 +92,14 @@ int test2()
     gwbuf_free(buffer);
     MXB_FREE(result);
     fprintf(stderr, "\t..done\n");
-    return 0;
+}
 }
 
+
+
+
 /** This is a standard OK packet */
-static char ok[] =
+static uint8_t ok[] =
 {
     0x07, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00
 };
@@ -143,152 +158,142 @@ struct packet
 //
 void test_single_sql_packet1()
 {
-    printf("%s\n", __func__);
     /** Single packet */
-    GWBUF* buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
-    GWBUF* complete = modutil_get_complete_packets(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
-    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(ok),
-                       "Complete packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(complete), ok, gwbuf_link_length(complete)) == 0,
-                       "Complete packet buffer's data should be equal to original data");
-    gwbuf_free(complete);
+    GWBUF buffer(ok, sizeof(ok));
+    GWBUF complete = mariadb::get_complete_packets(buffer);
+    expect(buffer.empty(), "Old buffer should be empty");
+    expect(!complete.empty(), "Complete packet buffer should not be empty");
+    expect(complete.length() == sizeof(ok), "Complete packet buffer should contain enough data");
+    expect(memcmp(complete.data(), ok, complete.length()) == 0,
+           "Complete packet buffer's data should be equal to original data");
 
     /** Partial single packet */
-    buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
-    complete = modutil_get_complete_packets(&buffer);
-    mxb_assert_message(buffer, "Old buffer should be not NULL");
-    mxb_assert_message(complete == NULL, "Complete packet buffer should be NULL");
-    mxb_assert_message(gwbuf_length(buffer) == sizeof(ok) - 4,
-                       "Old buffer should contain right amount of data");
+    buffer = GWBUF(ok, sizeof(ok) - 4);
+    complete = mariadb::get_complete_packets(buffer);
+    expect(!buffer.empty(), "Old buffer should be not empty");
+    expect(complete.empty(), "Complete packet buffer should be empty");
+    expect(buffer.length() == sizeof(ok) - 4, "Old buffer should contain right amount of data");
 
     /** Add the missing data */
-    buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(4, ok + sizeof(ok) - 4));
-    complete = modutil_get_complete_packets(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
-    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(ok), "Buffer should contain all data");
-    gwbuf_free(complete);
+    buffer.append(ok + sizeof(ok) - 4, 4);
+    complete = mariadb::get_complete_packets(buffer);
+    expect(buffer.empty(), "Old buffer should be empty");
+    expect(!complete.empty(), "Complete packet buffer should not be empty");
+    expect(complete.length() == sizeof(ok), "Buffer should contain all data");
 }
 
 void test_multiple_sql_packets1()
 {
     printf("%s\n", __func__);
     /** All of the data */
-    GWBUF* buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
-    GWBUF* complete = modutil_get_complete_packets(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
-    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
-                       "Complete packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(complete), resultset, gwbuf_link_length(complete)) == 0,
-                       "Complete packet buffer's data should be equal to original data");
-    gwbuf_free(complete);
+    GWBUF buffer(resultset, sizeof(resultset));
+    GWBUF complete = mariadb::get_complete_packets(buffer);
+    expect(buffer.empty(), "Old buffer should be empty");
+    expect(!complete.empty(), "Complete packet buffer should not be NULL");
+    expect(complete.length() == sizeof(resultset),
+           "Complete packet buffer should contain enough data");
+    expect(memcmp(complete.data(), resultset, complete.length()) == 0,
+           "Complete packet buffer's data should be equal to original data");
 
     /** Partial data available with one complete packet */
-    GWBUF* head = gwbuf_alloc_and_load(7, resultset);
-    GWBUF* tail = gwbuf_alloc_and_load(sizeof(resultset) - 7, resultset + 7);
-    complete = modutil_get_complete_packets(&head);
-    mxb_assert_message(head, "Old buffer should not be NULL");
-    mxb_assert_message(complete, "Complete buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == 5, "Complete buffer should contain first packet only");
-    mxb_assert_message(gwbuf_length(head) == 2, "Complete buffer should contain first packet only");
-    gwbuf_free(complete);
+    GWBUF head(resultset, 7);
+    GWBUF tail(resultset + 7, sizeof(resultset) - 7);
+    complete = mariadb::get_complete_packets(head);
+    expect(!head.empty(), "Old buffer should not be empty");
+    expect(!complete.empty(), "Complete buffer should not be empty");
+    expect(complete.length() == 5, "Complete buffer should contain first packet only");
+    expect(head.length() == 2, "Complete buffer should contain first packet only");
 
     /** All packets are available */
-    head = gwbuf_append(head, tail);
-    complete = modutil_get_complete_packets(&head);
-    mxb_assert_message(head == NULL, "Old buffer should be NULL");
-    mxb_assert_message(complete, "Complete packet buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset) - 5,
-                       "Complete packet should be sizeof(resultset) - 5 bytes");
-    gwbuf_free(complete);
+    head.append(tail);
+    complete = mariadb::get_complete_packets(head);
+    expect(head.empty(), "Old buffer should be empty");
+    expect(!complete.empty(), "Complete packet buffer should not be empty");
+    expect(complete.length() == sizeof(resultset) - 5,
+           "Complete packet should be sizeof(resultset) - 5 bytes");
 
     /** Sliding cutoff of the buffer boundary */
     for (size_t i = 1; i < sizeof(resultset); i++)
     {
-        head = gwbuf_alloc_and_load(i, resultset);
-        tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
-        head = gwbuf_append(head, tail);
-        complete = modutil_get_complete_packets(&head);
-        int headlen = head ? gwbuf_length(head) : 0;
-        int completelen = complete ? gwbuf_length(complete) : 0;
-        mxb_assert_message(headlen + completelen == sizeof(resultset),
-                           "Both buffers should sum up to sizeof(resutlset) bytes");
+        head = GWBUF(resultset, i);
+        tail = GWBUF(resultset + i, sizeof(resultset) - i);
+        head.append(tail);
+        complete = mariadb::get_complete_packets(head);
+        auto headlen = head.length();
+        auto completelen = complete.length();
+        expect(headlen + completelen == sizeof(resultset),
+               "Both buffers should sum up to sizeof(resutlset) bytes");
         uint8_t databuf[sizeof(resultset)];
-        gwbuf_copy_data(complete, 0, completelen, databuf);
-        if (head)
+        complete.copy_data(0, completelen, databuf);
+        if (!head.empty())
         {
-            gwbuf_copy_data(head, 0, headlen, databuf + completelen);
+            head.copy_data(0, headlen, databuf + completelen);
         }
-        mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
-        gwbuf_free(head);
-        gwbuf_free(complete);
+        expect(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
     }
 
     /** Fragmented buffer chain */
     size_t chunk = 5;
     size_t total = 0;
-    head = NULL;
+    head.clear();
 
     do
     {
         chunk = chunk + 5 < sizeof(resultset) ? 5 : (chunk + 5) - sizeof(resultset);
-        head = gwbuf_append(head, gwbuf_alloc_and_load(chunk, resultset + total));
+        head.append(resultset + total, chunk);
         total += chunk;
     }
     while (total < sizeof(resultset));
 
-    mxb_assert_message(gwbuf_length(head) == sizeof(resultset), "Head should be sizeof(resulset) bytes long");
-    complete = modutil_get_complete_packets(&head);
-    mxb_assert_message(head == NULL, "Head should be NULL");
-    mxb_assert_message(complete, "Complete should not be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
-                       "Complete should be sizeof(resulset) bytes long");
+    expect(head.length() == sizeof(resultset), "Head should be sizeof(resulset) bytes long");
+    complete = mariadb::get_complete_packets(head);
+    expect(head.empty(), "Head should be empty");
+    expect(!complete.empty(), "Complete should not be empty");
+    expect(complete.length() == sizeof(resultset),
+           "Complete should be sizeof(resulset) bytes long");
 
-    unsigned int headlen = head ? gwbuf_length(head) : 0;
-    unsigned int completelen = complete ? gwbuf_length(complete) : 0;
+    auto headlen = head.length();
+    auto completelen = complete.length();
     uint8_t databuf[sizeof(resultset)];
-    mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
-                       "Expected data should be readable");
-    if (head)
+    expect(complete.copy_data(0, completelen, databuf) == completelen,
+           "Expected data should be readable");
+    if (!head.empty())
     {
-        mxb_assert_message(gwbuf_copy_data(head, 0, headlen, databuf + completelen) == headlen,
-                           "Expected data should be readable");
+        expect(head.copy_data(0, headlen, databuf + completelen) == headlen,
+               "Expected data should be readable");
     }
-    mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+    expect(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
 
     /** Fragmented buffer split into multiple chains and then reassembled as a complete resultset */
-    GWBUF* half = complete;
-    GWBUF* quarter = gwbuf_split(&half, gwbuf_length(half) / 2);
-    head = gwbuf_split(&quarter, gwbuf_length(quarter) / 2);
-    mxb_assert_message(half && quarter && head, "gwbuf_split should work");
+    GWBUF half(complete);
+    GWBUF quarter = half.split(half.length() / 2);
+    head = quarter.split(quarter.length() / 2);
+    expect(!half.empty() && !quarter.empty() && !head.empty(), "split should work");
 
-    complete = modutil_get_complete_packets(&head);
-    mxb_assert_message(complete && head, "Both buffers should have data");
-    mxb_assert_message(gwbuf_length(complete) + gwbuf_length(head) + gwbuf_length(quarter)
-                       + gwbuf_length(half) == sizeof(resultset),
-                       "a quarter of data should be available");
+    complete = mariadb::get_complete_packets(head);
+    expect(!complete.empty() && !head.empty(), "Both buffers should have data");
+    expect(complete.length() + head.length() + quarter.length()
+           + half.length() == sizeof(resultset), "A quarter of data should be available");
 
-    quarter = gwbuf_append(gwbuf_append(complete, head), quarter);
-    complete = modutil_get_complete_packets(&quarter);
-    mxb_assert_message(gwbuf_length(complete) + gwbuf_length(quarter)
-                       + gwbuf_length(half) == sizeof(resultset),
-                       "half of data should be available");
+    complete.append(head);
+    complete.append(quarter);
+    quarter = std::move(complete);
+    complete = mariadb::get_complete_packets(quarter);
+    expect(complete.length() + quarter.length() + half.length() == sizeof(resultset),
+           "half of data should be available");
 
-    half = gwbuf_append(gwbuf_append(complete, quarter), half);
-    complete = modutil_get_complete_packets(&half);
-    mxb_assert_message(complete, "Complete should not be NULL");
-    mxb_assert_message(half == NULL, "Old buffer should be NULL");
-    mxb_assert_message(gwbuf_length(complete) == sizeof(resultset),
-                       "Complete should contain all of the data");
+    complete.append(quarter);
+    complete.append(half);
+    half = std::move(complete);
+    complete = mariadb::get_complete_packets(half);
+    expect(!complete.empty(), "Complete should not be empty");
+    expect(half.empty(), "Old buffer should be empty");
+    expect(complete.length() == sizeof(resultset), "Complete should contain all of the data");
 
-    completelen = gwbuf_length(complete);
-    mxb_assert_message(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
-                       "All data should be readable");
-    mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
-    gwbuf_free(complete);
+    completelen = complete.length();
+    expect(complete.copy_data(0, completelen, databuf) == completelen,
+           "All data should be readable");
+    expect(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
 }
 
 //
@@ -296,247 +301,217 @@ void test_multiple_sql_packets1()
 //
 void test_single_sql_packet2()
 {
-    printf("%s\n", __func__);
     /** Single packet */
-    GWBUF* buffer;
-    GWBUF* next;
-
-    buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
-    mxb_assert_message(next, "Next packet buffer should not be NULL");
-    mxb_assert_message(gwbuf_length(next) == sizeof(ok), "Next packet buffer should contain enough data");
-    mxb_assert_message(memcmp(GWBUF_DATA(next), ok, gwbuf_link_length(next)) == 0,
-                       "Next packet buffer's data should be equal to original data");
-    gwbuf_free(buffer);
-    gwbuf_free(next);
+    GWBUF buffer(ok, sizeof(ok));
+    GWBUF next = mariadb::get_next_MySQL_packet(buffer);
+    expect(buffer.empty(), "Old buffer should be empty");
+    expect(!next.empty(), "Next packet buffer should not be empty");
+    expect(next.length() == sizeof(ok), "Next packet buffer should contain enough data");
+    expect(memcmp(next.data(), ok, next.length()) == 0,
+           "Next packet buffer's data should be equal to original data");
 
     /** Partial single packet */
-    buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should be not NULL");
-    mxb_assert_message(next == NULL, "Next packet buffer should be NULL");
-    mxb_assert_message(gwbuf_length(buffer) == sizeof(ok) - 4,
-                       "Old buffer should contain right amount of data");
+    buffer = GWBUF(ok, sizeof(ok) - 4);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should be not empty");
+    expect(next.empty(), "Next packet buffer should be empty");
+    expect(buffer.length() == sizeof(ok) - 4, "Old buffer should contain right amount of data");
 
     /** Add the missing data */
-    buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(4, ok + sizeof(ok) - 4));
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL");
-    mxb_assert_message(next, "Next packet buffer should not be NULL");
-    // To be put back when the current realloc behaviour is replaced with splitting behaviour.
-    // mxb_assert_message(next->next, "The next packet should be a chain of buffers");
-    mxb_assert_message(gwbuf_length(next) == sizeof(ok), "Buffer should contain all data");
-    gwbuf_free(next);
+    buffer.append(ok + sizeof(ok) - 4, 4);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(buffer.empty(), "Old buffer should be empty");
+    expect(!next.empty(), "Next packet buffer should not be empty");
+    expect(next.length() == sizeof(ok), "Buffer should contain all data");
 }
 
 void test_multiple_sql_packets2()
 {
     printf("%s\n", __func__);
     /** All of the data */
-    GWBUF* buffer;
-    GWBUF* next;
+    GWBUF buffer(resultset, sizeof(resultset));
 
-    buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
     // Empty buffer packet by packet.
     for (unsigned int i = 0; i < N_PACKETS; i++)
     {
-        GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
-        mxb_assert_message(next, "Next packet buffer should not be NULL");
-        mxb_assert_message(gwbuf_length(next) == packets[i].length,
-                           "Next packet buffer should contain enough data");
-        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], gwbuf_link_length(next)) == 0,
-                           "Next packet buffer's data should be equal to original data");
-        gwbuf_free(next);
+        GWBUF next = mariadb::get_next_MySQL_packet(buffer);
+        expect(!next.empty(), "Next packet buffer should not be NULL");
+        expect(next.length() == packets[i].length,
+               "Next packet buffer should contain enough data");
+        expect(memcmp(next.data(), &resultset[packets[i].index], next.length()) == 0,
+               "Next packet buffer's data should be equal to original data");
     }
-    mxb_assert_message(buffer == NULL, "Buffer should be NULL");
+    expect(buffer.empty(), "Buffer should be empty");
 
-    size_t len;
     // Exactly one packet
-    len = PACKET_1_LEN;
-    buffer = gwbuf_alloc_and_load(len, resultset);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer == NULL, "Old buffer should be NULL.");
-    mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(gwbuf_link_length(next) == PACKET_1_LEN, "Length should match.");
-    gwbuf_free(next);
+    size_t len = PACKET_1_LEN;
+    buffer.append(resultset, len);
+    GWBUF next = mariadb::get_next_MySQL_packet(buffer);
+    expect(buffer.empty(), "Old buffer should be empty.");
+    expect(next.length() == PACKET_1_LEN, "Length should match.");
+    next.clear();
 
     // Slightly less than one packet
     len = PACKET_1_LEN - 1;
-    buffer = gwbuf_alloc_and_load(len, resultset);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should not be NULL.");
-    mxb_assert_message(next == NULL, "Next should be NULL.");
+    buffer.append(resultset, len);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should not be empty.");
+    expect(next.empty(), "Next should be empty.");
 
-    GWBUF* tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
-    buffer = gwbuf_append(buffer, tail);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should not be NULL.");
-    mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(gwbuf_length(next) == PACKET_1_LEN, "Length should match.");
-    gwbuf_free(buffer);
-    gwbuf_free(next);
+    GWBUF tail(resultset + len, (sizeof(resultset) - len));
+    buffer.append(tail);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should not be empty.");
+    expect(next.length() == PACKET_1_LEN, "Length should match.");
 
     // Slightly more than one packet
     len = PACKET_1_LEN + 1;
-    buffer = gwbuf_alloc_and_load(len, resultset);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should not be NULL.");
-    mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(gwbuf_link_length(next) == PACKET_1_LEN, "Length should match.");
-    gwbuf_free(next);
+    buffer = GWBUF(resultset, len);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should not be empty.");
+    expect(next.length() == PACKET_1_LEN, "Length should match.");
 
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should not be NULL.");
-    mxb_assert_message(next == NULL, "Next should be NULL.");
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should not be empty.");
+    expect(next.empty(), "Next should be empty.");
 
-    tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
-    buffer = gwbuf_append(buffer, tail);
-    next = modutil_get_next_MySQL_packet(&buffer);
-    mxb_assert_message(buffer, "Old buffer should not be NULL.");
-    mxb_assert_message(next, "Next should not be NULL.");
-    mxb_assert_message(gwbuf_length(next) == PACKET_2_LEN, "Length should match.");
-    mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], gwbuf_link_length(next)) == 0,
-                       "Next packet buffer's data should be equal to original data");
-    gwbuf_free(buffer);
-    gwbuf_free(next);
+    tail = GWBUF(resultset + len, sizeof(resultset) - len);
+    buffer.append(tail);
+    next = mariadb::get_next_MySQL_packet(buffer);
+    expect(!buffer.empty(), "Old buffer should not be empty.");
+    expect(next.length() == PACKET_2_LEN, "Length should match.");
+    expect(memcmp(next.data(), &resultset[PACKET_2_IDX], next.length()) == 0,
+           "Next packet buffer's data should be equal to original data");
 
-    GWBUF* head;
+    GWBUF head;
     /** Sliding cutoff of the buffer boundary */
     for (size_t i = 1; i < sizeof(resultset); i++)
     {
-        head = gwbuf_alloc_and_load(i, resultset);
-        tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
-        head = gwbuf_append(head, tail);
-        next = modutil_get_next_MySQL_packet(&head);
-        int headlen = gwbuf_length(head);
-        int nextlen = next ? gwbuf_length(next) : 0;
-        mxb_assert_message(headlen + nextlen == sizeof(resultset),
-                           "Both buffers should sum up to sizeof(resutlset) bytes");
+        head = GWBUF(resultset, i);
+        tail = GWBUF(resultset + i, sizeof(resultset) - i);
+        head.append(tail);
+        next = mariadb::get_next_MySQL_packet(head);
+        auto headlen = head.length();
+        auto nextlen = next.length();
+        expect(headlen + nextlen == sizeof(resultset),
+               "Both buffers should sum up to sizeof(resutlset) bytes");
         uint8_t databuf[sizeof(resultset)];
-        gwbuf_copy_data(next, 0, nextlen, databuf);
-        gwbuf_copy_data(head, 0, headlen, databuf + nextlen);
-        mxb_assert_message(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
-        gwbuf_free(head);
-        gwbuf_free(next);
+        next.copy_data(0, nextlen, databuf);
+        head.copy_data(0, headlen, databuf + nextlen);
+        expect(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
     }
 
     /** Fragmented buffer chain */
     size_t chunk = 5;
     size_t total = 0;
-    buffer = NULL;
+    buffer.clear();
 
     do
     {
         chunk = chunk + 5 < sizeof(resultset) ? 5 : (chunk + 5) - sizeof(resultset);
-        buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(chunk, resultset + total));
+        buffer.append(resultset + total, chunk);
         total += chunk;
     }
     while (total < sizeof(resultset));
 
     for (unsigned int i = 0; i < N_PACKETS; i++)
     {
-        GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
-        mxb_assert_message(next, "Next packet buffer should not be NULL");
-        mxb_assert_message(gwbuf_length(next) == packets[i].length,
-                           "Next packet buffer should contain enough data");
-        next = gwbuf_make_contiguous(next);
-        mxb_assert_message(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], gwbuf_link_length(next)) == 0,
-                           "Next packet buffer's data should be equal to original data");
-        gwbuf_free(next);
+        GWBUF next2 = mariadb::get_next_MySQL_packet(buffer);
+        expect(next2.length() == packets[i].length,
+               "Next packet buffer should contain enough data");
+        expect(memcmp(next2.data(), &resultset[packets[i].index], next2.length()) == 0,
+               "Next packet buffer's data should be equal to original data");
     }
-    mxb_assert_message(buffer == NULL, "Buffer should be NULL");
+    expect(buffer.empty(), "Buffer should be empty");
 }
 
 void test_strnchr_esc_mariadb()
 {
     char comment1[] = "This will -- fail.";
-    mxb_assert_message(mxb::strnchr_esc_mariadb(comment1, '.', sizeof(comment1) - 1) == NULL,
-                       "Commented character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(comment1, '.', sizeof(comment1) - 1) == NULL,
+           "Commented character should return NULL");
 
     char comment2[] = "This will # fail.";
-    mxb_assert_message(mxb::strnchr_esc_mariadb(comment2, '.', sizeof(comment2) - 1) == NULL,
-                       "Commented character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(comment2, '.', sizeof(comment2) - 1) == NULL,
+           "Commented character should return NULL");
 
     char comment3[] = "This will fail/* . */";
-    mxb_assert_message(mxb::strnchr_esc_mariadb(comment3, '.', sizeof(comment3) - 1) == NULL,
-                       "Commented character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(comment3, '.', sizeof(comment3) - 1) == NULL,
+           "Commented character should return NULL");
 
     char comment4[] = "This will not /* . */ fail.";
-    mxb_assert_message(mxb::strnchr_esc_mariadb(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
-                       "Uncommented character should be matched");
+    expect(mxb::strnchr_esc_mariadb(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
+           "Uncommented character should be matched");
 
     char comment5[] = "This will fail/* . ";
-    mxb_assert_message(mxb::strnchr_esc_mariadb(comment5, '.', sizeof(comment5) - 1) == NULL,
-                       "Bad comment should fail");
+    expect(mxb::strnchr_esc_mariadb(comment5, '.', sizeof(comment5) - 1) == NULL,
+           "Bad comment should fail");
 }
 
 void test_strnchr_esc()
 {
     /** Single escaped and quoted characters */
     char esc1[] = "This will fail\\.";
-    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
 
     char esc2[] = "This will fail\".\"";
-    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
 
     char esc3[] = "This will fail'.'";
-    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
-                       "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
+    expect(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
+           "Only escaped character should return NULL");
 
     /** Test escaped and quoted characters */
     char str1[] = "this \\. is a test.";
-    mxb_assert_message(mxb::strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
-                       "Escaped characters should be ignored");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
-                       "Escaped characters should be ignored");
+    expect(mxb::strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+           "Escaped characters should be ignored");
+    expect(mxb::strnchr_esc_mariadb(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+           "Escaped characters should be ignored");
     char str2[] = "this \"is . \" a test .";
-    mxb_assert_message(mxb::strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
-                       "Double quoted characters should be ignored");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
-                       "Double quoted characters should be ignored");
+    expect(mxb::strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+           "Double quoted characters should be ignored");
+    expect(mxb::strnchr_esc_mariadb(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+           "Double quoted characters should be ignored");
     char str3[] = "this 'is . ' a test .";
-    mxb_assert_message(mxb::strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
-                       "Double quoted characters should be ignored");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
-                       "Double quoted characters should be ignored");
+    expect(mxb::strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+           "Double quoted characters should be ignored");
+    expect(mxb::strnchr_esc_mariadb(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+           "Double quoted characters should be ignored");
 
     /** Bad quotation tests */
     char bad1[] = "This will \" fail.";
-    mxb_assert_message(mxb::strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    expect(mxb::strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    expect(mxb::strnchr_esc_mariadb(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
 
     char bad2[] = "This will ' fail.";
-    mxb_assert_message(mxb::strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    expect(mxb::strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    expect(mxb::strnchr_esc_mariadb(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
 
     char bad3[] = "This will \" fail. '";
-    mxb_assert_message(mxb::strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(bad3, '.', sizeof(bad3) - 1) == NULL,
-                       "Different quote pairs should fail");
+    expect(mxb::strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
+    expect(mxb::strnchr_esc_mariadb(bad3, '.', sizeof(bad3) - 1) == NULL,
+           "Different quote pairs should fail");
 
     char bad4[] = "This will ' fail. \"";
-    mxb_assert_message(mxb::strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
-    mxb_assert_message(mxb::strnchr_esc_mariadb(bad4, '.', sizeof(bad4) - 1) == NULL,
-                       "Different quote pairs should fail");
+    expect(mxb::strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
+    expect(mxb::strnchr_esc_mariadb(bad4, '.', sizeof(bad4) - 1) == NULL,
+           "Different quote pairs should fail");
 }
 
-GWBUF* create_buffer(size_t size)
+GWBUF create_buffer(size_t size)
 {
-    GWBUF* buffer = gwbuf_alloc(size + 4);
-    uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
-    *(data + 0) = size;
-    *(data + 1) = size >> 8;
-    *(data + 2) = size >> 16;
-    *(data + 3) = 0;
+    GWBUF buffer;
+    auto [ptr, _] = buffer.prepare_to_write(size + MYSQL_HEADER_LEN);
+    mariadb::write_header(ptr, size, 0);
+    buffer.write_complete(size + MYSQL_HEADER_LEN);
     return buffer;
 }
 
@@ -547,44 +522,41 @@ void test_large_packets()
     {
         unsigned long ul = 0x00ffffff + i;
         size_t first_len = ul > 0x00ffffff ? 0x00ffffff : ul;
-        GWBUF* buffer = create_buffer(first_len);
+        GWBUF buffer = create_buffer(first_len);
 
         if (first_len < ul)
         {
-            buffer = gwbuf_append(buffer, create_buffer(ul - first_len));
+            buffer.append(create_buffer(ul - first_len));
         }
-        size_t before = gwbuf_length(buffer);
-        GWBUF* complete = modutil_get_complete_packets(&buffer);
+        size_t before = buffer.length();
+        GWBUF complete = mariadb::get_complete_packets(buffer);
 
-        mxb_assert_message(buffer == NULL, "Original buffer should be NULL");
-        mxb_assert_message(complete, "Complete buffer should not be NULL");
-        mxb_assert_message(gwbuf_length(complete) == before, "Complete buffer should contain all data");
-        gwbuf_free(complete);
+        expect(buffer.empty(), "Original buffer should be empty");
+        expect(!complete.empty(), "Complete buffer should not be empty");
+        expect(complete.length() == before, "Complete buffer should contain all data");
     }
 
     /** Incomplete packet */
     for (int i = 0; i < 5; i++)
     {
-        GWBUF* buffer = create_buffer(0x00ffffff - i);
-        buffer = gwbuf_rtrim(buffer, 4);
-        GWBUF* complete = modutil_get_complete_packets(&buffer);
-        mxb_assert_message(buffer, "Incomplete buffer is not NULL");
-        mxb_assert_message(complete == NULL, "The complete buffer is NULL");
-        gwbuf_free(buffer);
+        GWBUF buffer = create_buffer(0x00ffffff - i);
+        buffer.rtrim(4);
+        GWBUF complete = mariadb::get_complete_packets(buffer);
+        expect(!buffer.empty(), "Incomplete buffer should not be empty");
+        expect(complete.empty(), "The complete buffer should be empty");
     }
 
     /** Incomplete second packet */
     for (int i = 2; i < 8; i++)
     {
-        GWBUF* buffer = gwbuf_append(create_buffer(0x00ffffff), create_buffer(i));
-        mxb_assert(gwbuf_length(buffer) == 0xffffffUL + i + 8);
-        GWBUF_RTRIM(buffer, 1);
-        GWBUF* complete = modutil_get_complete_packets(&buffer);
-        mxb_assert_message(buffer, "Incomplete buffer is not NULL");
-        mxb_assert_message(complete, "The complete buffer is not NULL");
-        mxb_assert_message(gwbuf_length(complete) == 0xffffff + 4, "Length should be correct");
-        gwbuf_free(buffer);
-        gwbuf_free(complete);
+        GWBUF buffer = create_buffer(0x00ffffff);
+        buffer.append(create_buffer(i));
+        mxb_assert(buffer.length() == 0xffffffUL + i + 8);
+        buffer.rtrim(1);
+        GWBUF complete = mariadb::get_complete_packets(buffer);
+        expect(!buffer.empty(), "Incomplete buffer should not be empty");
+        expect(!complete.empty(), "The complete buffer should not be empty");
+        expect(complete.length() == 0xffffff + 4, "Length should be correct");
     }
 }
 
@@ -598,41 +570,37 @@ void test_bypass_whitespace()
     const char* sql;
 
     sql = bypass_whitespace("SELECT");
-    mxb_assert_message(*sql == 'S', "1");
+    expect(*sql == 'S', "1");
 
     sql = bypass_whitespace(" SELECT");
-    mxb_assert_message(*sql == 'S', "2");
+    expect(*sql == 'S', "2");
 
     sql = bypass_whitespace("\tSELECT");
-    mxb_assert_message(*sql == 'S', "3");
+    expect(*sql == 'S', "3");
 
     sql = bypass_whitespace("\nSELECT");
-    mxb_assert_message(*sql == 'S', "4");
+    expect(*sql == 'S', "4");
 
     sql = bypass_whitespace("/* comment */SELECT");
-    mxb_assert_message(*sql == 'S', "5");
+    expect(*sql == 'S', "5");
 
     sql = bypass_whitespace(" /* comment */ SELECT");
-    mxb_assert_message(*sql == 'S', "6");
+    expect(*sql == 'S', "6");
 
     sql = bypass_whitespace("-- comment\nSELECT");
-    mxb_assert_message(*sql == 'S', "7");
+    expect(*sql == 'S', "7");
 
     sql = bypass_whitespace("-- comment\n /* comment */ SELECT");
-    mxb_assert_message(*sql == 'S', "8");
+    expect(*sql == 'S', "8");
 
     sql = bypass_whitespace("# comment\nSELECT");
-    mxb_assert_message(*sql == 'S', "9");
+    expect(*sql == 'S', "9");
 }
 
 int main(int argc, char** argv)
 {
-    mxb::Log log;
-
-    int result = 0;
-
-    result += test1();
-    result += test2();
+    test1();
+    test2();
     test_single_sql_packet1();
     test_single_sql_packet2();
     test_multiple_sql_packets1();
@@ -641,5 +609,5 @@ int main(int argc, char** argv)
     test_strnchr_esc_mariadb();
     test_large_packets();
     test_bypass_whitespace();
-    exit(result);
+    return retval;
 }

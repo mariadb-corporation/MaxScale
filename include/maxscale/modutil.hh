@@ -23,9 +23,6 @@
 
 extern char* modutil_get_SQL(GWBUF*);
 
-GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
-GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf);
-
 GWBUF* modutil_create_query(const char* query);
 GWBUF* modutil_create_mysql_err_msg(int packet_number, int affected_rows, int merrno,
                                     const char* statemsg, const char* msg);
