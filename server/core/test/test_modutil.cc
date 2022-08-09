@@ -11,20 +11,11 @@
  * Public License.
  */
 
-// To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
-#define SS_DEBUG
-#endif
-#if defined (NDEBUG)
-#undef NDEBUG
-#endif
 #include <stdio.h>
 #include <string.h>
-
-#include <maxbase/alloc.hh>
-#include <maxscale/modutil.hh>
-#include <maxscale/buffer.hh>
 #include <maxbase/format.hh>
+#include <maxscale/buffer.hh>
+#include <maxscale/modutil.hh>
 
 namespace
 {
@@ -33,6 +24,7 @@ void expect_impl(int linenum, bool res, const char* fmt, ...) __attribute__ ((fo
 #define expect(format, ...) expect_impl(__LINE__, format, ##__VA_ARGS__)
 
 int retval = 0;
+
 void expect_impl(int linenum, bool res, const char* fmt, ...)
 {
     if (!res)
@@ -48,58 +40,42 @@ void expect_impl(int linenum, bool res, const char* fmt, ...)
 
 void test1()
 {
-    GWBUF* buffer;
+    const int writelen = 100;
+    GWBUF buffer(writelen);
+    memset(buffer.data(), 0, writelen);
+    buffer.write_complete(writelen);
+    expect(buffer.length() == writelen, "Length should be correct");
+    expect(mariadb::is_com_query(buffer) == false, "Default buffer should not be diagnosed as SQL");
     const char* sql;
-    int length, residual;
-
-    /* Poll tests */
-    fprintf(stderr,
-            "testmodutil : Rudimentary tests.");
-    buffer = gwbuf_alloc(100);
-    memset(GWBUF_DATA(buffer), 0, gwbuf_link_length(buffer));
-    expect(mariadb::is_com_query(*buffer) == false,
-           "Default buffer should be diagnosed as not SQL");
-    /* There would ideally be some straightforward way to create a SQL buffer? */
-    fprintf(stderr, "\t..done\nExtract SQL from buffer");
-    expect(0 == modutil_extract_SQL(*buffer, &sql, &length), "Default buffer should fail");
-    fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
-    fprintf(stderr, "\t..done\nTidy up.");
-    gwbuf_free(buffer);
-    fprintf(stderr, "\t..done\n");
+    int length;
+    expect(!modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
 }
 
 void test2()
 {
-    GWBUF* buffer;
     unsigned int len = 128;
-    char query[129];
-
     /** Allocate space for the COM_QUERY header and payload */
-    buffer = gwbuf_alloc(5 + 128);
-    expect((buffer != NULL), "Buffer should not be null");
+    auto total_len = MYSQL_HEADER_LEN + 1 + len;
+    GWBUF buffer(total_len);
+    expect((buffer.empty()), "Buffer should be empty");
 
-    memset(query, ';', 128);
-    memset(query + 128, '\0', 1);
-    auto ptr = buffer->data();
-    *ptr = len;
-    *(ptr + 1) = 0;
-    *(ptr + 2) = 0;
-    *(ptr + 3) = 1;
-    *(ptr + 4) = 0x03;
-    memcpy(ptr + 5, query, strlen(query));
-    char* result = modutil_get_SQL(buffer);
-    mxb_assert(strcmp(result, query) == 0);
-    gwbuf_free(buffer);
-    MXB_FREE(result);
-    fprintf(stderr, "\t..done\n");
+    char query[len + 1];
+    memset(query, ';', len);
+    memset(query + len, '\0', 1);
+    auto ptr = buffer.data();
+    ptr = mariadb::write_header(ptr, len, 1);
+    *ptr++ = 0x03;
+    mariadb::copy_chars(ptr, query, strlen(query));
+    buffer.write_complete(total_len);
+
+    const char* sql;
+    int length;
+    modutil_extract_SQL(buffer, &sql, &length);
+    expect(strncmp(sql, query, len) == 0, "SQL should match");
 }
-}
-
-
-
 
 /** This is a standard OK packet */
-static uint8_t ok[] =
+const uint8_t ok[] =
 {
     0x07, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00
 };
@@ -108,7 +84,7 @@ static uint8_t ok[] =
  * CREATE OR REPLACE TABLE test.t1 (id int);
  * INSERT INTO test.t1 VALUES (3000);
  * SELECT * FROM test.t1; */
-static const uint8_t resultset[] =
+const uint8_t resultset[] =
 {
     /* Packet 1 */
     0x01, 0x00, 0x00, 0x01, 0x01,
@@ -123,6 +99,7 @@ static const uint8_t resultset[] =
     /* Packet 5 */
     0x05, 0x00, 0x00, 0x05, 0xfe,0x00,  0x00, 0x22, 0x00
 };
+}
 
 #define PACKET_HDR_LEN 4
 
@@ -184,7 +161,6 @@ void test_single_sql_packet1()
 
 void test_multiple_sql_packets1()
 {
-    printf("%s\n", __func__);
     /** All of the data */
     GWBUF buffer(resultset, sizeof(resultset));
     GWBUF complete = mariadb::get_complete_packets(buffer);
@@ -327,7 +303,6 @@ void test_single_sql_packet2()
 
 void test_multiple_sql_packets2()
 {
-    printf("%s\n", __func__);
     /** All of the data */
     GWBUF buffer(resultset, sizeof(resultset));
 
