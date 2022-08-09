@@ -33,3 +33,4 @@ console.warn = () => {}
 window.HTMLElement.prototype.scrollIntoView = () => {}
 // mock $help.copyTextToClipboard as execCommand is undefined in jsdom
 global.document.execCommand = () => {}
+global.AbortController = sinon.stub()

@@ -18,15 +18,9 @@ const HEADERS = {
     'Cache-Control': 'no-cache',
 }
 const BASE_URL = '/'
-const cancelToken = ax.CancelToken
-const CANCEL_MESSAGE = 'Request canceled by user'
-let cancelSource = cancelToken.source()
-const refreshAxiosToken = () => {
-    cancelSource = cancelToken.source()
-}
-const cancelAllRequests = () => {
-    cancelSource.cancel(CANCEL_MESSAGE)
-}
+const controller = new AbortController()
+const CANCEL_MESSAGE = 'canceled'
+const abortRequests = () => controller.abort()
 function baseConf() {
     return ax.create({
         baseURL: BASE_URL,
@@ -59,7 +53,7 @@ function baseErrStatusHandlerMap({ store, error }) {
     return {
         401: async function() {
             // cancel all previous requests before logging out
-            store.$cancelAllRequests()
+            store.$abortRequests()
             await store.dispatch('user/logout')
         },
         404: async function() {
@@ -81,7 +75,7 @@ function baseErrStatusHandlerMap({ store, error }) {
 // axios instance for auth endpoint
 let authHttp = baseConf()
 authHttp.interceptors.request.use(
-    config => ({ ...config, cancelToken: cancelSource.token }),
+    config => ({ ...config, signal: controller.signal }),
     error => Promise.reject(error)
 )
 
@@ -90,7 +84,7 @@ function http(store) {
     let http = baseConf()
 
     http.interceptors.request.use(
-        config => ({ ...config, cancelToken: cancelSource.token }),
+        config => ({ ...config, signal: controller.signal }),
         error => Promise.reject(error)
     )
     http.interceptors.response.use(
@@ -159,7 +153,7 @@ function queryHttp(store) {
     queryHttp.interceptors.request.use(
         config => {
             patchIsConnBusyMap({ store, value: true, sql_conn_id: getSqlConnId(config.url) })
-            return { ...config, cancelToken: cancelSource.token }
+            return { ...config, signal: controller.signal }
         },
         error => Promise.reject(error)
     )
@@ -195,4 +189,4 @@ function queryHttp(store) {
     return queryHttp
 }
 
-export { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp }
+export { abortRequests, authHttp, http, queryHttp }

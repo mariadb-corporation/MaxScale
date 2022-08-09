@@ -29,7 +29,7 @@ import i18n from 'plugins/i18n'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 
-import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
+import { abortRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
@@ -37,8 +37,7 @@ const plugins = store => {
     store.$authHttp = authHttp
     store.$http = http(store)
     store.$queryHttp = queryHttp(store)
-    store.$refreshAxiosToken = refreshAxiosToken
-    store.$cancelAllRequests = cancelAllRequests
+    store.$abortRequests = abortRequests
 }
 
 const queryEditor = new VuexPersistence({
@@ -126,7 +125,6 @@ const store = new Vuex.Store({
          * It should be dispatched on public route when routing occurs
          */
         async checkingForUpdate({ commit }) {
-            this.$refreshAxiosToken()
             const logger = this.vue.$logger('index-store')
             const res = await this.$http.get(`/`)
             logger.info('Checking for update')

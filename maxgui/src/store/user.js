@@ -43,7 +43,6 @@ export default {
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
                 /* Using $authHttp instance, instead of using $http as it's configured to have global interceptor*/
-                this.$refreshAxiosToken()
                 let url = '/auth?persist=yes'
                 let res = await this.$authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
                     auth,
@@ -74,7 +73,7 @@ export default {
         },
         async logout({ commit, dispatch, rootState }) {
             await dispatch('queryConn/disconnectAll', {}, { root: true })
-            this.$cancelAllRequests() // cancel all previous requests before logging out
+            await this.$abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
 
