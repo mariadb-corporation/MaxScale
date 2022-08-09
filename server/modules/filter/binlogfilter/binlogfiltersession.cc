@@ -151,8 +151,8 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
             mxs::ReplyRoute rr;
             mxs::Reply reply;
             mxs::FilterSession::clientReply(
-                modutil_create_mysql_err_msg(1, 0, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
-                                             ss.str().c_str()), rr, reply);
+                mariadb::create_error_packet_ptr(1, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
+                                                 ss.str().c_str()), rr, reply);
             return 0;
         }
         break;

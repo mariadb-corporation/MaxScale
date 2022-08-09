@@ -78,7 +78,7 @@ GWBUF* MySQLProtocolModule::reject(const std::string& host)
 {
     std::string message = "Host '" + host
         + "' is temporarily blocked due to too many authentication failures.";
-    return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
+    return mariadb::create_error_packet_ptr(0, 1129, "HY000", message.c_str());
 }
 
 std::string MySQLProtocolModule::name() const

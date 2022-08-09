@@ -843,7 +843,7 @@ bool SchemaRouterSession::send_shards()
 
 void SchemaRouterSession::write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg)
 {
-    set_response(modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg));
+    set_response(mariadb::create_error_packet_ptr(1, errnum, mysqlstate, errmsg));
 }
 
 /**
@@ -988,8 +988,8 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
         }
         else if (rc == SHOWDB_FATAL_ERROR)
         {
-            auto err = modutil_create_mysql_err_msg(
-                1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
+            auto err = mariadb::create_error_packet_ptr(
+                1, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
                 ("Error: database mapping failed due to: " + reply.error().message()).c_str());
 
             mxs::ReplyRoute route;
@@ -1020,10 +1020,10 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
 
                 /** Send the client an error about duplicate databases
                  * if there is a queued query from the client. */
-                if (m_queue.size())
+                if (!m_queue.empty())
                 {
-                    auto err = modutil_create_mysql_err_msg(
-                        1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
+                    auto err = mariadb::create_error_packet_ptr(
+                        1, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
                         "Error: duplicate tables found on two different shards.");
 
                     mxs::ReplyRoute route;

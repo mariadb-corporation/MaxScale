@@ -2720,7 +2720,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
                 if (!errmsg.empty())
                 {
                     // No need to route the query, send error to client.
-                    success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg.c_str())) != 0;
+                    success = write(mariadb::create_error_packet(1, 1193, "HY000", errmsg.c_str()));
                     route = false;
                 }
                 // Some queries require special handling. Some of these are text versions of other
@@ -2770,8 +2770,7 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
 bool MariaDBClientConnection::send_mysql_err_packet(int mysql_errno, const char* sqlstate_msg,
                                                     const char* mysql_message)
 {
-    GWBUF* buf = modutil_create_mysql_err_msg(m_next_sequence, 0, mysql_errno, sqlstate_msg, mysql_message);
-    return write(buf);
+    return write(mariadb::create_error_packet(m_next_sequence, mysql_errno, sqlstate_msg, mysql_message));
 }
 
 bool

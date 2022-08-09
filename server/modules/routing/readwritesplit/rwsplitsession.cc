@@ -301,10 +301,9 @@ void RWSplitSession::trx_replay_next_stmt()
                 else
                 {
                     MXB_INFO("Checksum mismatch, transaction replay failed. Closing connection.");
-                    GWBUF* buf = modutil_create_mysql_err_msg(1, 0, 1927, "08S01",
-                                                              "Transaction checksum mismatch encountered "
-                                                              "when replaying transaction.");
-
+                    GWBUF* buf = mariadb::create_error_packet_ptr(
+                        1, 1927, "08S01", "Transaction checksum mismatch encountered when replaying "
+                                          "transaction.");
                     m_pSession->kill(buf);
                 }
             }

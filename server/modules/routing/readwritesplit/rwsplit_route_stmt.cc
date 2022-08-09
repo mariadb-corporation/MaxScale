@@ -228,7 +228,7 @@ void RWSplitSession::send_readonly_error()
     mxs::ReplyRoute route;
     mxs::Reply reply;
     reply.set_error(errnum, sqlstate, sqlstate + sizeof(sqlstate) - 1, errmsg, errmsg + sizeof(errmsg) - 1);
-    RouterSession::clientReply(modutil_create_mysql_err_msg(1, 0, errnum, sqlstate, errmsg), route, reply);
+    RouterSession::clientReply(mariadb::create_error_packet_ptr(1, errnum, sqlstate, errmsg), route, reply);
 }
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
@@ -245,7 +245,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
             std::stringstream ss;
             ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
                << ") for " << STRPACKETTYPE(info.command()) << " given to MaxScale";
-            err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+            err = mariadb::create_error_packet_ptr(1, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
         }
         else
         {
@@ -261,9 +261,8 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
                   "supported with `use_sql_variables_in=all`.",
                   STRPACKETTYPE(info.command()), querybuf->get_sql().c_str());
 
-        err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
-                                           "Routing query to backend failed. "
-                                           "See the error log for further details.");
+        err = mariadb::create_error_packet_ptr(1, 1064, "42000", "Routing query to backend failed. "
+                                                                 "See the error log for further details.");
     }
 
     if (err)

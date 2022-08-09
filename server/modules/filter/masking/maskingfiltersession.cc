@@ -36,7 +36,7 @@ namespace
 
 GWBUF* create_error_response(const char* zMessage)
 {
-    return modutil_create_mysql_err_msg(1, 0, 1141, "HY000", zMessage);
+    return mariadb::create_error_packet_ptr(1, 1141, "HY000", zMessage);
 }
 
 GWBUF* create_parse_error_response()

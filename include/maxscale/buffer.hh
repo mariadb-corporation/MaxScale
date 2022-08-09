@@ -349,6 +349,10 @@ public:
         return static_size() + varying_size();
     }
 
+    GWBUF& add_byte(uint8_t byte);
+    GWBUF& add_lsbyte2(uint16_t bytes);
+    GWBUF& add_chars(const char* str, size_t n_bytes);
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 
@@ -1551,6 +1555,5 @@ inline bool operator!=(const Buffer& lhs, const GWBUF& rhs)
 }
 
 // Conversion functions. Likely needed only temporarily.
-Buffer gwbuf_to_buffer(GWBUF&& buffer);
 GWBUF* gwbuf_to_gwbufptr(GWBUF&& buffer);
 }

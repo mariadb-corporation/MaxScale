@@ -44,8 +44,8 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
             // If a causal read fails inside of a read-only transaction, it cannot be retried on the master.
             m_wait_gtid = NONE;
             gwbuf_free(buffer);
-            buffer = modutil_create_mysql_err_msg(
-                0, 0, 1792, "25006",
+            buffer = mariadb::create_error_packet_ptr(
+                0, 1792, "25006",
                 "Causal read timed out while in a read-only transaction, cannot retry command.");
         }
         else

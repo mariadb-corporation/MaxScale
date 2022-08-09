@@ -18,7 +18,7 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-#include <mysql.h>
+#include "maxscale/protocol/mariadb/mysql.hh"
 #include <maxbase/format.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
@@ -720,5 +720,31 @@ GWBUF get_next_MySQL_packet(GWBUF& buffer)
 
     mxb_assert(packet.empty() || only_one_packet(packet));
     return packet;
+}
+
+/**
+ * Create a MySQL ERR packet.
+ *
+ * @param sequence Packet sequence number
+ * @param err_num  MySQL error number
+ * @param statemsg MySQL State Message
+ * @param msg      Human-readable error message
+ * @return         The buffer
+ */
+GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
+{
+    mxb_assert(statemsg && strlen(statemsg) == 5 && msg);
+    GWBUF errbuf(100);                      // reserve guess
+    errbuf.write_complete(MYSQL_HEADER_LEN);// write header last
+    auto msglen = strlen(msg);
+    errbuf.add_byte(0xff).add_lsbyte2(err_num).add_byte('#').add_chars(statemsg, 5).add_chars(msg, msglen);
+    auto pl_size = errbuf.length() - MYSQL_HEADER_LEN;
+    mariadb::write_header(errbuf.data(), pl_size, sequence);
+    return errbuf;
+}
+
+GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg)
+{
+    return mxs::gwbuf_to_gwbufptr(create_error_packet(sequence, err_num, statemsg, msg));
 }
 }

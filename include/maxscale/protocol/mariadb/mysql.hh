@@ -245,6 +245,10 @@ GWBUF create_query(const std::string& query);
 GWBUF get_complete_packets(GWBUF& buffer);
 
 GWBUF get_next_MySQL_packet(GWBUF& buffer);
+
+GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
+
+GWBUF* create_error_packet_ptr(uint8_t sequence, uint16_t err_num, const char* statemsg, const char* msg);
 }
 
 /** MySQL protocol constants */

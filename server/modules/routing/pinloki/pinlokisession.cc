@@ -67,22 +67,22 @@ GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vect
 
 GWBUF* create_slave_running_error()
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
+    return mariadb::create_error_packet_ptr(
+        1, 1198, "HY000",
         "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
 }
 
 GWBUF* create_select_master_error()
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
+    return mariadb::create_error_packet_ptr(
+        1, 1198, "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
 }
 
 GWBUF* create_change_master_error(const std::string& err)
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
+    return mariadb::create_error_packet_ptr(
+        1, 1198, "HY000",
         err.c_str());
 }
 }
@@ -144,7 +144,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         catch (const GtidNotFoundError& err)
         {
             MXB_SINFO("Could not find GTID: " << err.what());
-            send(modutil_create_mysql_err_msg(1, 0, 1236, "HY000", err.what()));
+            send(mariadb::create_error_packet_ptr(1, 1236, "HY000", err.what()));
             rval = 1;
         }
         catch (const BinlogReadError& err)
@@ -361,7 +361,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
             const char* const msg = "Replica trying to connect with "
                                     "invalid GTID (@@slave_connect_state)";
             MXB_WARNING(msg);
-            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000", msg);
+            buf = mariadb::create_error_packet_ptr(1, 1941, "HY000", msg);
         }
         else
         {
@@ -380,13 +380,13 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
 
         if (!gtid_list.is_valid())
         {
-            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
-                                               "Could not parse GTID");
+            buf = mariadb::create_error_packet_ptr(1, 1941, "HY000",
+                                                   "Could not parse GTID");
         }
         else if (m_router->is_slave_running())
         {
-            buf = modutil_create_mysql_err_msg(
-                1, 0, 1198, "HY000",
+            buf = mariadb::create_error_packet_ptr(
+                1, 1198, "HY000",
                 "This operation cannot be performed as you have a running slave;"
                 " run STOP SLAVE first");
         }
@@ -442,8 +442,8 @@ void PinlokiSession::start_slave()
     else
     {
         // Slave not configured
-        buf = modutil_create_mysql_err_msg(
-            1, 0, 1200, "HY000",
+        buf = mariadb::create_error_packet_ptr(
+            1, 1200, "HY000",
             err_str.c_str());
     }
 
@@ -590,16 +590,15 @@ void PinlokiSession::purge_logs(const std::string& up_to)
         break;
 
     case PurgeResult::UpToFileNotFound:
-        auto buf = modutil_create_mysql_err_msg(1, 0, 1373, "HY000",
-                                                MAKE_STR("Target log "
-                                                         << up_to
-                                                         << " not found in binlog index").c_str());
+        auto buf = mariadb::create_error_packet_ptr(1, 1373, "HY000",
+                                                    MAKE_STR("Target log " << up_to
+                                                             << " not found in binlog index").c_str());
         send(buf);
     }
 }
 
 void PinlokiSession::error(const std::string& err)
 {
-    send(modutil_create_mysql_err_msg(1, 0, 1064, "42000", err.c_str()));
+    send(mariadb::create_error_packet_ptr(1, 1064, "42000", err.c_str()));
 }
 }

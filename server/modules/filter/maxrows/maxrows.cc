@@ -119,10 +119,10 @@ bool MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const
 
             case MaxRowsConfig::Mode::ERR:
                 m_buffer.reset(
-                    modutil_create_mysql_err_msg(1, 0, 1226, "42000",
-                                                 reply.rows_read() > m_max_rows ?
-                                                 "Resultset row limit exceeded" :
-                                                 "Resultset size limit exceeded"));
+                    mariadb::create_error_packet_ptr(1, 1226, "42000",
+                                                     reply.rows_read() > m_max_rows ?
+                                                     "Resultset row limit exceeded" :
+                                                     "Resultset size limit exceeded"));
                 m_collect = false;
                 break;
 
