@@ -177,8 +177,8 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-::v-deep .config-checkbox {
+<style lang="scss">
+.config-checkbox {
     label {
         font-size: $label-control-size;
         color: $small-text;

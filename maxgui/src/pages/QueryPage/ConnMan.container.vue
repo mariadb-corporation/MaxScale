@@ -266,12 +266,11 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-::v-deep .mariadb-select-input.conn-dropdown {
+<style lang="scss">
+.conn-dropdown {
     .v-input__control {
-        min-height: 0px;
         fieldset {
-            border: thin solid $accent-dark;
+            border: thin solid $accent-dark !important;
         }
     }
 }

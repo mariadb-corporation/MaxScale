@@ -377,8 +377,8 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-::v-deep .show-trendline label {
+<style lang="scss">
+.show-trendline label {
     font-size: $label-control-size;
     color: $small-text;
     font-weight: 400;

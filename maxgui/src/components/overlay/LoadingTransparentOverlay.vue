@@ -1,10 +1,10 @@
 <template>
-    <v-overlay z-index="9999">
+    <v-overlay z-index="9999" class="loading-transparent-overlay">
         <v-progress-circular indeterminate size="64" />
     </v-overlay>
 </template>
-<style lang="scss" scoped>
-::v-deep .v-overlay__content {
+<style lang="scss">
+.loading-transparent-overlay .v-overlay__content {
     display: flex;
     justify-content: center;
     align-items: center;

@@ -68,26 +68,18 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-::v-deep.row-limit-dropdown {
+<style lang="scss">
+.row-limit-dropdown {
     .v-input__control {
-        .v-input__prepend-inner {
-            display: flex;
-            height: 100%;
-            align-items: center;
-            margin-top: 0px !important;
-            width: 68px;
-        }
         .v-text-field__prefix {
             color: $small-text;
         }
     }
 }
-
-::v-deep.row-limit-dropdown--fieldset-border {
+.row-limit-dropdown--fieldset-border {
     .v-input__control {
         fieldset {
-            border: thin solid $accent-dark;
+            border: thin solid $accent-dark !important;
         }
     }
 }

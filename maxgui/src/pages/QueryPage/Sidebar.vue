@@ -134,16 +134,19 @@ export default {
             font-size: 12px;
             margin-right: auto;
         }
-        ::v-deep .filter-objects {
-            input {
-                font-size: 12px;
-            }
-        }
     }
     .schema-list-ctr {
         font-size: 12px;
         overflow-y: auto;
         z-index: 1;
+    }
+}
+</style>
+
+<style lang="scss">
+.std.filter-objects {
+    input {
+        font-size: 12px !important;
     }
 }
 </style>

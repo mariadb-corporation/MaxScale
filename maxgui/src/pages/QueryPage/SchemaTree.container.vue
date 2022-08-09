@@ -510,17 +510,21 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-::v-deep .v-treeview-node__toggle {
-    width: 16px;
-    height: 16px;
-}
-::v-deep .v-treeview-node__level {
-    width: 16px;
-}
 .node-label {
     height: 40px;
 }
 .node-tooltip {
     font-size: 0.75rem;
+}
+</style>
+<style lang="scss">
+.m-treeview {
+    .v-treeview-node__toggle {
+        width: 16px;
+        height: 16px;
+    }
+    .v-treeview-node__level {
+        width: 16px;
+    }
 }
 </style>

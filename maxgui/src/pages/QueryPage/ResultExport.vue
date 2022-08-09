@@ -296,9 +296,9 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .field__label-radio {
-    ::v-deep.v-label {
+    .v-label {
         color: $small-text;
         font-size: $label-control-size;
     }

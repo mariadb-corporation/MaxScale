@@ -50,7 +50,7 @@
                 <v-checkbox
                     dense
                     color="primary"
-                    class="pa-0 ma-0 checkbox d-flex align-center"
+                    class="pa-0 ma-0 filter-list__checkbox d-flex align-center"
                     hide-details
                     :label="$t('selectAll')"
                     :input-value="isAllSelected"
@@ -64,7 +64,7 @@
                     v-model="selectedItems"
                     dense
                     color="primary"
-                    class="pa-0 ma-0 checkbox d-flex align-center"
+                    class="pa-0 ma-0 filter-list__checkbox d-flex align-center"
                     :value="item.text"
                     hide-details
                 >
@@ -182,28 +182,26 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .filter-list {
     overflow-y: auto;
     &__search {
-        ::v-deep .v-input__control {
+        .v-input__control {
             fieldset {
                 border: none !important;
             }
         }
     }
 }
-::v-deep.checkbox {
+.filter-list__checkbox {
     width: 100%;
     height: 36px;
-    label {
-        height: 36px !important;
+    .v-label {
         font-size: 0.875rem;
         color: $navigation;
-        display: inline-block !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         line-height: 36px;
     }
 }

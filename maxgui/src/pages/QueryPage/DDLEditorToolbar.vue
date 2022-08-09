@@ -74,12 +74,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-::v-deep.apply-btn {
-    .v-progress-circular {
-        height: 16px !important;
-        width: 16px !important;
-    }
-}
-</style>
