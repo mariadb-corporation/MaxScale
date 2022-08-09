@@ -100,6 +100,7 @@ export default {
                 persisted: rootState.persisted,
                 wke: {
                     worksheets_arr: rootState.wke.worksheets_arr,
+                    active_wke_id: rootState.wke.active_wke_id,
                 },
                 querySession: {
                     active_session_by_wke_id_map:

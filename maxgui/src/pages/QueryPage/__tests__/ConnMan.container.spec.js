@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -16,8 +17,27 @@ import ConnMan from '@/pages/QueryPage/ConnMan.container.vue'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_sql_conns = {
-    1: { id: '1', name: 'server_0', type: 'servers', binding_type: 'SESSION' },
-    2: { id: '2', name: 'server_1', type: 'servers', binding_type: 'SESSION' },
+    1: {
+        id: '1',
+        name: 'server_0',
+        type: 'servers',
+        binding_type: 'WORKSHEET',
+        wke_id_fk: 'WKE_ID_123',
+    },
+    2: {
+        id: '2',
+        name: 'server_1',
+        type: 'servers',
+        binding_type: 'WORKSHEET',
+        wke_id_fk: 'WKE_ID_456',
+    },
+    3: {
+        id: '3',
+        name: 'server_2',
+        type: 'servers',
+        binding_type: 'WORKSHEET',
+        wke_id_fk: '',
+    },
 }
 
 const mountFactory = opts =>
@@ -27,12 +47,11 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// To have an active connection, active_sql_conn and sql_conns should have value
+// To have an active connection, getCurrWkeConn should have value
 function mockActiveConnState() {
     return {
-        sql_conns: () => dummy_sql_conns,
-        active_sql_conn: () => dummy_sql_conns['1'],
-        allWkesFirstConn: () => Object.values(dummy_sql_conns),
+        getWkeConns: () => Object.values(dummy_sql_conns),
+        getCurrWkeConn: () => dummy_sql_conns['1'],
         getActiveSessionId: () => 'SESSION_123_45',
     }
 }
@@ -127,6 +146,9 @@ describe(`ConnMan - on created hook tests `, () => {
 
 describe(`ConnMan - methods and computed properties tests `, () => {
     let wrapper
+    afterEach(() => {
+        wrapper.destroy()
+    })
     it(`Should call onSelectConn if there is available connection has name
     equals to pre_select_conn_rsrc `, () => {
         const fnSpy = sinon.spy(ConnMan.methods, 'onSelectConn')
@@ -139,7 +161,7 @@ describe(`ConnMan - methods and computed properties tests `, () => {
             },
             methods: {
                 SET_ACTIVE_SQL_CONN: () => null,
-                updateRoute: () => null,
+                assignActiveWkeConn: () => null,
             },
         })
         fnSpy.should.have.been.calledOnceWith(
@@ -155,42 +177,22 @@ describe(`ConnMan - methods and computed properties tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should assign active_sql_conn value to chosenWkeConn if there is an active connection
+    it(`Should assign getCurrWkeConn value to chosenWkeConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.active_sql_conn)
+        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.getCurrWkeConn)
     })
     it(`Should assign an empty object to chosenWkeConn if there is no active connection
       bound to the worksheet`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
-    })
-    it(`Should return accurate value for usedConnections computed property`, () => {
-        wrapper = mountFactory({
-            computed: { query_sessions: () => [{ active_sql_conn: dummy_sql_conns['1'] }] },
-        })
-        expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_sql_conns['1'].id])
-    })
-    it(`Should not disabled current connection that is bound to current worksheet
-      in connOptions`, () => {
-        wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.connOptions[0]).to.be.deep.equals({
-            // first obj in mockActiveConnState is used as active_sql_conn
-            ...dummy_sql_conns['1'],
-            disabled: false,
+        wrapper = mountFactory({ computed: { getCurrWkeConn: () => ({}) } })
+        wrapper.vm.$nextTick(() => {
+            expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
         })
     })
     it(`Should disabled connections that are bound to a worksheet in connOptions`, () => {
-        wrapper = mountFactory({
-            computed: {
-                ...mockActiveConnState(),
-                usedConnections: () => [dummy_sql_conns['2'].id],
-            },
-        })
-        expect(wrapper.vm.connOptions[1]).to.be.deep.equals({
-            ...dummy_sql_conns['2'],
-            disabled: true,
-        })
+        wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
+        expect(wrapper.vm.connOptions[1]).to.have.property('disabled')
+        expect(wrapper.vm.connOptions[1].disabled).to.be.true
     })
     it(`Should return accurate value for connToBeDel computed property`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
@@ -207,30 +209,11 @@ describe(`ConnMan - connection list dropdown tests`, () => {
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
-            methods: { SET_ACTIVE_SQL_CONN: () => null, initialFetch: () => null },
+            methods: { SET_ACTIVE_SQL_CONN: () => null },
         })
         await itemSelectMock(wrapper, wrapper.vm.connOptions[1], '.conn-dropdown')
         onSelectConnSpy.should.have.been.calledOnce
         onSelectConnSpy.restore()
-    })
-    it(`Should call SET_ACTIVE_SQL_CONN and updateRoute with accurate arguments
-      when onSelectConn is called`, async () => {
-        let updateRouteArgs, setCurrCnctResourceArgs
-        wrapper = mountFactory({
-            computed: { ...mockActiveConnState() },
-            methods: {
-                syncSqlConnToSess: () => null,
-                SET_ACTIVE_SQL_CONN: v => (setCurrCnctResourceArgs = v),
-                updateRoute: v => (updateRouteArgs = v),
-            },
-        })
-        const selectConn = wrapper.vm.connOptions[1]
-        await wrapper.vm.onSelectConn(selectConn)
-        expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
-        expect(setCurrCnctResourceArgs).to.be.deep.equals({
-            payload: selectConn,
-            id: wrapper.vm.getActiveSessionId,
-        })
     })
 })
 

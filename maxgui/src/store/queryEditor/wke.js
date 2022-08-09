@@ -14,14 +14,15 @@ import queryHelper from './queryHelper'
 import allMemStatesModules from './allMemStatesModules'
 import init, { defWorksheetState } from './initQueryEditorState'
 
+const def_worksheets_arr = init.get_def_worksheets_arr
 export default {
     namespaced: true,
     state: {
         // Toolbar states
         is_fullscreen: false,
         // worksheet states
-        worksheets_arr: init.get_def_worksheets_arr, // persisted
-        active_wke_id: '',
+        worksheets_arr: def_worksheets_arr, // persisted
+        active_wke_id: def_worksheets_arr[0].id, // persisted
     },
     mutations: {
         //Toolbar mutations
@@ -84,92 +85,6 @@ export default {
             } catch (e) {
                 this.vue.$logger('store-wke-handleInitialFetch').error(e)
             }
-        },
-        async chooseActiveWke({ state, commit, dispatch, rootState }) {
-            const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
-            if (paramId) {
-                if (type === 'blank_wke') {
-                    const wke = state.worksheets_arr.find(wke => wke.id === paramId)
-                    if (wke) commit('SET_ACTIVE_WKE_ID', wke.id)
-                } else {
-                    /**
-                     * Check if there is a worksheet connected to the provided resource id (paramId)
-                     * then if it's not the current active worksheet, change current worksheet tab to targetWke.
-                     * Otherwise, find an empty worksheet(has not been bound to a connection), set it as active and
-                     * dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
-                     */
-                    const targetSession = rootState.querySession.query_sessions.find(
-                        s => this.vue.$typy(s, 'active_sql_conn.name').safeString === paramId
-                    )
-                    const targetWke = state.worksheets_arr.find(
-                        w => w.id === this.vue.$typy(targetSession, 'wke_id_fk').safeString
-                    )
-                    if (targetWke) {
-                        if (state.active_wke_id !== targetWke.id)
-                            commit('SET_ACTIVE_WKE_ID', targetWke.id)
-                        commit(
-                            'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
-                            {
-                                id: targetWke.id,
-                                payload:
-                                    rootState.querySession.active_session_by_wke_id_map[
-                                        targetWke.id
-                                    ],
-                            },
-                            { root: true }
-                        )
-                    } else {
-                        const blankSession = rootState.querySession.query_sessions.find(
-                            s => this.vue.$typy(s, 'active_sql_conn').isEmptyObject
-                        )
-                        // Use a blank wke if there is one, otherwise create a new one
-                        const blankWke = state.worksheets_arr.find(
-                            wke => wke.id === this.vue.$typy(blankSession, 'wke_id_fk').safeString
-                        )
-                        if (blankWke) {
-                            commit('SET_ACTIVE_WKE_ID', blankWke.id)
-                            commit(
-                                'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
-                                {
-                                    id: blankWke.id,
-                                    payload: blankSession.id,
-                                },
-                                { root: true }
-                            )
-                        } else await dispatch('addNewWs')
-                        commit(
-                            'queryConn/SET_PRE_SELECT_CONN_RSRC',
-                            { type, id: paramId },
-                            { root: true }
-                        )
-                    }
-                }
-            } else if (state.worksheets_arr.length) {
-                // set the first wke as active if route param id is not specified
-                const activeWkeId = state.worksheets_arr[0].id
-                commit('SET_ACTIVE_WKE_ID', activeWkeId)
-            }
-        },
-        /**
-         * This handles updating route for the current active worksheet.
-         * If it is bound to a connection, it navigates route to the nested route. i.e /query/:resourceType/:resourceId
-         * Otherwise, it uses worksheet id as nested route id. i.e. /query/blank_wke/:wkeId.
-         * This function must be called in the following cases:
-         * 1. When $route changes. e.g. The use edits url or enter page with an absolute link
-         * 2. When active_wke_id is changed. e.g. The user creates new worksheet or navigate between worksheets
-         * 3. When active_sql_conn is changed. e.g. The user selects connection in the dropdown or opens new one
-         * 4. When the connection is unlinked from the worksheet
-         * @param {String} wkeId - worksheet id
-         */
-        updateRoute({ state, rootState }, wkeId) {
-            let from = this.router.app.$route.path,
-                to = `/query/blank_wke/${wkeId}`
-            const targetWke = state.worksheets_arr.find(w => w.id === wkeId)
-            const sessionId = rootState.querySession.active_session_by_wke_id_map[targetWke.id]
-            const session = rootState.querySession.query_sessions.find(s => s.id === sessionId)
-            const { type, name } = this.vue.$typy(session, 'active_sql_conn').safeObjectOrEmpty
-            if (name) to = `/query/${type}/${name}`
-            if (from !== to) this.router.push(to)
         },
         async addNewWs({ commit, state, dispatch }) {
             try {

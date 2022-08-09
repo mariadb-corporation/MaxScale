@@ -41,7 +41,12 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn small icon :to="`/query/servers/${node.id}`" v-on="on">
+                            <v-btn
+                                small
+                                icon
+                                @click="openQueryEditor({ type: 'servers', conn_name: node.id })"
+                                v-on="on"
+                            >
                                 <v-icon size="16" :color="iconColor">
                                     $vuetify.icons.queryEditor
                                 </v-icon>
@@ -152,7 +157,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 /*
 @node-height: v: Number. Cluster node height. Emit from <tree-graph-node/>
 @get-expanded-node: v: String. Id of expanded node. Emit from <tree-graph-node/>
@@ -263,7 +268,13 @@ export default {
             return [...this.serverOps]
         },
     },
-    methods: {},
+    methods: {
+        ...mapActions({ chooseActiveQueryEditorWke: 'visualization/chooseActiveQueryEditorWke' }),
+        openQueryEditor(param) {
+            this.chooseActiveQueryEditorWke(param)
+            this.$router.push(`/query`)
+        },
+    },
 }
 </script>
 

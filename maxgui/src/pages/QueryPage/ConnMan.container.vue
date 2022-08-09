@@ -127,8 +127,6 @@ export default {
     },
     computed: {
         ...mapState({
-            sql_conns: state => state.queryConn.sql_conns,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
             active_wke_id: state => state.wke.active_wke_id,
         }),
@@ -182,7 +180,6 @@ export default {
             openConnect: 'queryConn/openConnect',
             syncSqlConnToSess: 'queryConn/syncSqlConnToSess',
             disconnect: 'queryConn/disconnect',
-            updateRoute: 'wke/updateRoute',
         }),
         ...mapMutations({
             SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',
@@ -233,8 +230,6 @@ export default {
             this.SET_ACTIVE_SQL_CONN({ payload: activeSessConn, id: active_session_id })
             // bind the chosenWkeConn
             this.bindConn(chosenWkeConn)
-            // handle navigate to the corresponding nested route
-            this.updateRoute(this.active_wke_id)
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
@@ -252,15 +247,10 @@ export default {
             this.unbindConn()
             // openConnect will also bind conn
             await this.openConnect(opts)
-            // handle navigate to the corresponding nested route
-            this.updateRoute(this.active_wke_id)
             this.assignActiveWkeConn()
         },
         async confirmDelConn() {
-            //Update route if the conn being deleted is the active wke connection
-            const shouldUpdateRoute = this.getCurrWkeConn.id === this.targetConn.id
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
-            if (shouldUpdateRoute) this.updateRoute(this.active_wke_id)
         },
     },
 }

@@ -26,11 +26,8 @@ const Visualization = () => import(/* webpackChunkName: "vis" */ 'pages/Visualiz
 const Conf = () => import(/* webpackChunkName: "vis-conf" */ 'pages/Visualization/Configuration')
 const Clusters = () => import(/* webpackChunkName: "vis-clusters" */ 'pages/Visualization/Clusters')
 
-//Query editor views
+//Query editor view
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
-const QueryView = () =>
-    import(/* webpackChunkName: "query-view" */ 'pages/QueryPage/QueryView.container')
-
 // Other views
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
 const Logs = () => import(/* webpackChunkName: "logs" */ 'pages/Logs')
@@ -178,21 +175,6 @@ export const sideBarRoutes = [
         },
         name: 'queryEditor',
         label: 'queryEditor',
-        children: [
-            {
-                path: ':type/:id',
-                component: QueryView,
-                meta: {
-                    requiresAuth: true,
-                    layout: 'app-layout',
-                },
-                name: 'query',
-                props: route => ({
-                    id: route.params.id,
-                    type: route.params.type,
-                }),
-            },
-        ],
     },
     {
         path: '/users',

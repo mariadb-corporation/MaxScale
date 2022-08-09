@@ -47,7 +47,7 @@ const vuexLocalForage = new VuexPersistence({
     asyncStorage: true,
     reducer: state => ({
         persisted: state.persisted,
-        wke: { worksheets_arr: state.wke.worksheets_arr },
+        wke: { worksheets_arr: state.wke.worksheets_arr, active_wke_id: state.wke.active_wke_id },
         queryConn: { sql_conns: state.queryConn.sql_conns },
         querySession: {
             query_sessions: state.querySession.query_sessions,
