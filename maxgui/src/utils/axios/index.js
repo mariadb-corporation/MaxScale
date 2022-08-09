@@ -66,7 +66,7 @@ function baseErrStatusHandlerMap({ store, error }) {
             await store.router.push('/404')
         },
         null: function() {
-            if (error.toString() === `Cancel: ${CANCEL_MESSAGE}`)
+            if (error.toString().includes(CANCEL_MESSAGE))
                 // request is cancelled by user, so no response is received
                 return Promise.reject(error)
             else
