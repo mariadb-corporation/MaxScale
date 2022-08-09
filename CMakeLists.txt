@@ -114,11 +114,12 @@ else()
 endif()
 
 # Make sure the release notes for this release are present if it is a stable one
+# TODO: Since we don't use "-stable", this seems to be dead code.
 if(${MAXSCALE_VERSION} MATCHES "-stable")
-  file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION_NUMERIC}*.md)
+  file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION}*.md)
   list(LENGTH RELEASE_NOTES HAVE_NOTES)
   if( NOT HAVE_NOTES EQUAL 1)
-    message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION_NUMERIC}")
+    message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION}")
   endif()
 endif()
 
