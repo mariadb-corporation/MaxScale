@@ -10,7 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import authHttp from './authHttp'
-import http from './http'
-import queryHttp from './queryHttp'
-export { authHttp, http, queryHttp }
+import { baseConf, controller } from './config'
+// axios instance for `/auth` endpoint
+export default function authHttp() {
+    let authHttp = baseConf()
+    authHttp.interceptors.request.use(
+        config => ({ ...config, signal: controller.signal }),
+        error => Promise.reject(error)
+    )
+    return authHttp
+}

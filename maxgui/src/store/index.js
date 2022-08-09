@@ -28,13 +28,14 @@ import router from 'router'
 import i18n from 'plugins/i18n'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
+import { abortRequests } from 'utils/axios/config'
+import { authHttp, http, queryHttp } from 'utils/axios'
 
-import { abortRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
     store.i18n = i18n
-    store.$authHttp = authHttp
+    store.$authHttp = authHttp()
     store.$http = http(store)
     store.$queryHttp = queryHttp(store)
     store.$abortRequests = abortRequests
