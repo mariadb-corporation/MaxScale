@@ -4,10 +4,15 @@
 
 #### Config local build path and API
 
-Create `.env.development` file and add the following lines
+Create `.env.local` file and add the following line
 
 ```
 buildPath=/home/user/maxscale-dev/share/maxscale
+```
+
+Create `.env.development` file and add the following lines
+
+```
 httpsKey=/home/user/cert/localhost-key.pem
 httpsCert=/home/user/cert/localhost.pem
 VUE_APP_API=https://127.0.0.1:8989
