@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
 import Vuex from 'vuex'
 import user from 'store/user'
 import maxscale from './maxscale'
@@ -23,37 +22,11 @@ import listener from './listener'
 import persisted from './persisted'
 import visualization from './visualization'
 import queryEditorModules from '@queryEditor/store/modules'
-import queryEditorStorePlugins from '@queryEditor/store/plugins'
 import { APP_CONFIG } from 'utils/constants'
-import router from 'router'
-import i18n from 'plugins/i18n'
-import VuexPersistence from 'vuex-persist'
-import localForage from 'localforage'
-import { abortRequests } from 'utils/axios/config'
-import { authHttp, http, queryHttp } from 'utils/axios'
-
-const plugins = store => {
-    store.router = router
-    store.vue = Vue.prototype
-    store.i18n = i18n
-    store.$authHttp = authHttp()
-    store.$http = http(store)
-    store.$queryHttp = queryHttp(store)
-    store.$abortRequests = abortRequests
-}
-
-const maxgui = new VuexPersistence({
-    key: 'maxgui-app',
-    storage: localForage,
-    asyncStorage: true,
-    reducer: state => ({
-        persisted: state.persisted,
-        user: { logged_in_user: state.user.logged_in_user },
-    }),
-})
+import plugins from './plugins'
 
 const store = new Vuex.Store({
-    plugins: [plugins, maxgui.plugin, ...queryEditorStorePlugins],
+    plugins,
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {
