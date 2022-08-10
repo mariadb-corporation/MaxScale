@@ -68,7 +68,7 @@
  * Events
  * update:sqlTobeExecuted?: (string)
  */
-import SqlEditor from '@/components/SqlEditor'
+import SqlEditor from './SqlEditor'
 export default {
     name: 'execute-sql-dialog',
     components: {

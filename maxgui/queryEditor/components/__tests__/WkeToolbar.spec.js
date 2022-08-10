@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeToolbar from '@/pages/QueryPage/WkeToolbar'
+import WkeToolbar from '../WkeToolbar'
 
 const mountFactory = opts =>
     mount({

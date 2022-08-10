@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Sidebar from '@/pages/QueryPage/Sidebar.vue'
+import Sidebar from '../Sidebar.vue'
 
 const mountFactory = opts =>
     mount({

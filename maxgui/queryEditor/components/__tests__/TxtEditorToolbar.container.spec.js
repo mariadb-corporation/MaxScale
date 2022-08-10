@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TxtEditorToolbar from '@/pages/QueryPage/TxtEditorToolbar.container.vue'
+import TxtEditorToolbar from '../TxtEditorToolbar.container.vue'
 import { merge } from 'utils/helpers'
 
 const dummy_session = { id: 'SESSION_123_45' }

@@ -96,7 +96,7 @@
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
-import SqlEditor from '@/components/SqlEditor'
+import SqlEditor from './SqlEditor'
 import QueryResult from './QueryResult.container.vue'
 import ChartConfig from './ChartConfig'
 import ChartPane from './ChartPane'

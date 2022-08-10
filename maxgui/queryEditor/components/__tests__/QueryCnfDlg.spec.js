@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import QueryCnfDlg from '@/pages/QueryPage/QueryCnfDlg'
+import QueryCnfDlg from '../QueryCnfDlg'
 import { getErrMsgEle, inputChangeMock } from '@tests/unit/utils'
 import { addDaysToNow } from 'utils/helpers'
 

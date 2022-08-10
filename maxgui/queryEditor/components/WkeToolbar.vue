@@ -81,7 +81,7 @@
  */
 import QueryCnfDlg from './QueryCnfDlg.container.vue'
 import ConnMan from './ConnMan.container.vue'
-import asyncEmit from 'mixins/asyncEmit'
+import asyncEmit from '@/mixins/asyncEmit'
 
 export default {
     name: 'wke-toolbar',

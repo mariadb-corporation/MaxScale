@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import QueryPage from '@/pages/QueryPage'
+import QueryEditor from '../index.vue'
 import { merge } from 'utils/helpers'
 
 const sql_conns_mock = {
@@ -38,7 +38,7 @@ const mountFactory = opts =>
         merge(
             {
                 shallow: false,
-                component: QueryPage,
+                component: QueryEditor,
                 computed: {
                     is_validating_conn: () => false,
                     worksheets_arr: () => [{ id: 'WORKSHEET_123' }],
@@ -54,10 +54,10 @@ const mountFactory = opts =>
             opts
         )
     )
-describe('QueryPage', () => {
+describe('QueryEditor', () => {
     let wrapper
 
-    describe('QueryPage created hook tests', () => {
+    describe('QueryEditor created hook tests', () => {
         let handleAutoClearQueryHistoryCallCount = 0,
             validatingConnCallCount = 0
         before(() => {
@@ -113,7 +113,7 @@ describe('QueryPage', () => {
         let disconnectAllSpy
 
         beforeEach(() => {
-            disconnectAllSpy = sinon.spy(QueryPage.methods, 'disconnectAll')
+            disconnectAllSpy = sinon.spy(QueryEditor.methods, 'disconnectAll')
             wrapper = mountFactory({
                 shallow: true,
                 computed: {

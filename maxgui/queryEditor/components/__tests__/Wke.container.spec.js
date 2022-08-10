@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Wke from '@/pages/QueryPage/Wke.container.vue'
+import Wke from '../Wke.container.vue'
 import { merge } from 'utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }

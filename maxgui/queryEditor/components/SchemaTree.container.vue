@@ -110,8 +110,8 @@ This component emits the following events
 @on-dragend: Event.
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
-import customDragEvt from 'mixins/customDragEvt'
-import asyncEmit from 'mixins/asyncEmit'
+import customDragEvt from '@/mixins/customDragEvt'
+import asyncEmit from '@/mixins/asyncEmit'
 export default {
     name: 'schema-tree-ctr',
     mixins: [customDragEvt, asyncEmit],

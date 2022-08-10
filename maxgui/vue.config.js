@@ -28,8 +28,17 @@ module.exports = {
         const types = ['vue-modules', 'vue', 'normal-modules', 'normal']
         types.forEach(type => addStyleResource(config.module.rule('scss').oneOf(type)))
         config.module.rule('js').exclude.add(/\.worker\.js$/)
-        config.resolve.alias.set('@tests', path.resolve(__dirname, 'tests'))
-        config.resolve.alias.set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
+
+        config.resolve.modules
+            .add(path.resolve(__dirname, 'src'), 'node_modules')
+            //TODO: Once the queryEditor has its own node_modules for monaco package, this won't be needed anymore
+            .add(path.resolve(__dirname, 'queryEditor'), 'node_modules')
+
+        config.resolve.alias
+            .set('@', path.resolve(__dirname, 'src'))
+            .set('@tests', path.resolve(__dirname, 'tests'))
+            .set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
+
         const key = process.env.httpsKey
         const cert = process.env.httpsCert
         const isHttps = Boolean(key && cert)
@@ -91,8 +100,6 @@ module.exports = {
                 name: '[name]:[hash:8].js',
             })
             .end()
-
-        config.resolve.modules.add(path.resolve('./src'), path.resolve('./node_modules'))
 
         /*
             To strip all locales except “en”, and ...

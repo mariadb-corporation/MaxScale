@@ -190,7 +190,7 @@
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimit from './RowLimit.container.vue'
-import SqlEditor from '@/components/SqlEditor'
+import SqlEditor from './SqlEditor'
 import LoadSql from './LoadSql.container.vue'
 
 export default {

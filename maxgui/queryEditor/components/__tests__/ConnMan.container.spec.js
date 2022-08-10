@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnMan from '@/pages/QueryPage/ConnMan.container.vue'
+import ConnMan from '../ConnMan.container.vue'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_sql_conns = {

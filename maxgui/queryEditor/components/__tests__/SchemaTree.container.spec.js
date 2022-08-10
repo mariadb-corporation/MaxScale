@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import SchemaTree from '@/pages/QueryPage/SchemaTree.container.vue'
+import SchemaTree from '../SchemaTree.container.vue'
 import { merge } from 'utils/helpers'
 
 const mountFactory = opts =>

@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeNav from '@/pages/QueryPage/WkeNav.container.vue'
+import WkeNav from '../WkeNav.container.vue'
 
 const mountFactory = opts => mount({ shallow: false, component: WkeNav, ...opts })
 

@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import RowLimit from '@/pages/QueryPage/RowLimit'
+import RowLimit from '../RowLimit'
 import { getErrMsgEle } from '@tests/unit/utils'
 
 const mountFactory = opts =>

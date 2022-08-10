@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ReconnDlg from '@/pages/QueryPage/ReconnDlg.container.vue'
+import ReconnDlg from '../ReconnDlg.container.vue'
 
 const dummy_conn_err_obj = {
     message: 'Lost connection to server during query',

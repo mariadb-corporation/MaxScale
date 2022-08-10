@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnDlg from '@/pages/QueryPage/ConnDlg.container.vue'
+import ConnDlg from '../ConnDlg.container.vue'
 import { merge } from 'utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
