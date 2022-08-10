@@ -6,6 +6,6 @@
             "*": ["src/*"]
         }
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "queryEditor"],
     "exclude": ["node_modules"]
 }

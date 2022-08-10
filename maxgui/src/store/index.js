@@ -20,9 +20,10 @@ import monitor from './monitor'
 import filter from './filter'
 import session from './session'
 import listener from './listener'
-import queryEditorModules from './queryEditor'
 import persisted from './persisted'
 import visualization from './visualization'
+import queryEditorModules from '@queryEditor/store/modules'
+import queryEditorStorePlugins from '@queryEditor/store/plugins'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
@@ -41,20 +42,6 @@ const plugins = store => {
     store.$abortRequests = abortRequests
 }
 
-const queryEditor = new VuexPersistence({
-    key: 'query-editor',
-    storage: localForage,
-    asyncStorage: true,
-    reducer: state => ({
-        queryPersisted: state.queryPersisted,
-        wke: { worksheets_arr: state.wke.worksheets_arr, active_wke_id: state.wke.active_wke_id },
-        queryConn: { sql_conns: state.queryConn.sql_conns },
-        querySession: {
-            query_sessions: state.querySession.query_sessions,
-            active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
-        },
-    }),
-})
 const maxgui = new VuexPersistence({
     key: 'maxgui-app',
     storage: localForage,
@@ -66,7 +53,7 @@ const maxgui = new VuexPersistence({
 })
 
 const store = new Vuex.Store({
-    plugins: [plugins, maxgui.plugin, queryEditor.plugin],
+    plugins: [plugins, maxgui.plugin, ...queryEditorStorePlugins],
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {

@@ -29,6 +29,7 @@ module.exports = {
         types.forEach(type => addStyleResource(config.module.rule('scss').oneOf(type)))
         config.module.rule('js').exclude.add(/\.worker\.js$/)
         config.resolve.alias.set('@tests', path.resolve(__dirname, 'tests'))
+        config.resolve.alias.set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
         const key = process.env.httpsKey
         const cert = process.env.httpsCert
         const isHttps = Boolean(key && cert)
