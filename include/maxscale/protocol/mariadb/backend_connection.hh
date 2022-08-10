@@ -120,7 +120,7 @@ private:
     /**
      * Packets received from router while the connection was busy handshaking/authenticating.
      * Sent to server once connection is ready. */
-    std::vector<mxs::Buffer> m_delayed_packets;
+    std::vector<GWBUF> m_delayed_packets;
 
     /**
      * Contains information about custom connection initialization queries.
@@ -154,26 +154,26 @@ private:
     bool            send_change_user_to_backend();
     StateMachineRes read_change_user();
 
-    bool   send_proxy_protocol_header();
-    GWBUF* create_change_user_packet();
-    GWBUF* create_reset_connection_packet();
-    void   read_com_ping_response();
-    void   do_handle_error(DCB* dcb, const std::string& errmsg,
-                           mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
+    bool  send_proxy_protocol_header();
+    GWBUF create_change_user_packet();
+    GWBUF create_reset_connection_packet();
+    void  read_com_ping_response();
+    void  do_handle_error(DCB* dcb, const std::string& errmsg,
+                          mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(const GWBUF& buffer);
-    void process_stmt_execute(GWBUF** buffer, uint32_t id, PSInfo& info);
+    void process_stmt_execute(GWBUF& buffer, uint32_t id, PSInfo& info);
     void pin_history_responses();
 
-    GWBUF  track_response(GWBUF& buffer);
-    bool   read_backend_handshake(GWBUF&& buffer);
-    void   handle_error_response(DCB* plain_dcb, GWBUF* buffer);
-    bool   session_ok_to_route(DCB* dcb);
-    bool   handle_auth_change_response(const GWBUF& reply, DCB* dcb);
-    int    send_mysql_native_password_response(const GWBUF& reply, DCB* dcb);
-    int    gw_decode_mysql_server_handshake(uint8_t* payload);
-    GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
-    bool   expecting_reply() const;
-    bool   capability_mismatch() const;
+    GWBUF track_response(GWBUF& buffer);
+    bool  read_backend_handshake(GWBUF&& buffer);
+    void  handle_error_response(DCB* plain_dcb, GWBUF* buffer);
+    bool  session_ok_to_route(DCB* dcb);
+    bool  handle_auth_change_response(const GWBUF& reply, DCB* dcb);
+    int   send_mysql_native_password_response(const GWBUF& reply, DCB* dcb);
+    int   gw_decode_mysql_server_handshake(uint8_t* payload);
+    GWBUF gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
+    bool  expecting_reply() const;
+    bool  capability_mismatch() const;
 
     std::string create_response_mismatch_error();
 

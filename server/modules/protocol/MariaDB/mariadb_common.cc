@@ -341,12 +341,12 @@ uint8_t mxs_mysql_get_command(const GWBUF* buffer)
     return rval;
 }
 
-uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
+uint32_t mxs_mysql_extract_ps_id(const GWBUF* buffer)
 {
     uint32_t rval = 0;
     uint8_t id[MYSQL_PS_ID_SIZE];
 
-    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    if (buffer->copy_data(MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
     {
         rval = mariadb::get_byte4(id);
     }

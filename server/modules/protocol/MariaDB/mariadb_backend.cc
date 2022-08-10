@@ -221,12 +221,12 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
         m_dcb->reset(session);
 
         bool reset_conn = reuse_type == ReuseType::RESET_CONNECTION;
-        GWBUF* buffer = reset_conn ? create_reset_connection_packet() : create_change_user_packet();
+        GWBUF buffer = reset_conn ? create_reset_connection_packet() : create_change_user_packet();
 
         /**
          * This is a connection that was just taken out of the persistent connection pool.
          * Send a COM_CHANGE_USER query to the backend to reset the session state. */
-        if (m_dcb->writeq_append(buffer))
+        if (m_dcb->writeq_append(std::move(buffer)))
         {
             MXB_INFO("Reusing connection, sending %s",
                      reset_conn ? "COM_RESET_CONNECTION" : "COM_CHANGE_USER");
@@ -354,13 +354,13 @@ void MariaDBBackendConnection::prepare_for_write(const GWBUF& buffer)
     m_track_state = buffer.type_is_track_state();
 }
 
-void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
+void MariaDBBackendConnection::process_stmt_execute(GWBUF& original, uint32_t id, PSInfo& ps_info)
 {
     // Only prepared statements with input parameters send metadata with COM_STMT_EXECUTE
     if (ps_info.n_params > 0 && !ps_info.exec_metadata_sent)
     {
         size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((ps_info.n_params + 7) / 8);
-        uint8_t* ptr = gwbuf_link_data(*original) + types_offset;
+        uint8_t* ptr = original.data() + types_offset;
 
         if (*ptr == 0)
         {
@@ -373,28 +373,27 @@ void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t i
             {
                 const auto& metadata = it->second;
 
-                mxs::Buffer buf(*original);
-                mxs::Buffer newbuf(buf.length() + metadata.size());
-                auto data = newbuf.data();
+                auto newsize = original.length() + metadata.size();
+                GWBUF newbuf(newsize);
+                newbuf.write_complete(newsize);
+                auto dataptr = newbuf.data();
 
-                memcpy(data, buf.data(), types_offset);
-                data += types_offset;
+                memcpy(dataptr, original.data(), types_offset);
+                dataptr += types_offset;
 
                 // Set to 1, we are sending the types
-                *data++ = 1;
+                *dataptr++ = 1;
 
                 // Splice the metadata into COM_STMT_EXECUTE
-                memcpy(data, metadata.data(), metadata.size());
-                data += metadata.size();
+                memcpy(dataptr, metadata.data(), metadata.size());
+                dataptr += metadata.size();
 
                 // Copy remaining data that is being sent and update the packet length
-                mxb_assert(buf.length() > types_offset + 1);
-                memcpy(data, buf.data() + types_offset + 1, buf.length() - types_offset - 1);
-                gw_mysql_set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
+                mxb_assert(original.length() > types_offset + 1);
+                memcpy(dataptr, original.data() + types_offset + 1, original.length() - types_offset - 1);
+                mariadb::set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
 
-                // The old buffer is freed along with `buf`
-                *original = newbuf.release();
-
+                original = std::move(newbuf);
                 ps_info.exec_metadata_sent = true;
             }
             else
@@ -1141,6 +1140,11 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
  */
 int32_t MariaDBBackendConnection::write(GWBUF* queue)
 {
+    return write(mxs::gwbufptr_to_gwbuf(queue)) ? 1 : 0;
+}
+
+bool MariaDBBackendConnection::write(GWBUF&& queue)
+{
     int rc = 0;
     switch (m_state)
     {
@@ -1151,7 +1155,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                       m_server.name(), m_server.status_string().c_str());
         }
 
-        gwbuf_free(queue);
         rc = 0;
         break;
 
@@ -1161,12 +1164,12 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             // state of m_large_query must be updated for each routed packet to accurately know whether the
             // command byte is accurate or not.
             bool was_large = m_large_query;
-            uint32_t packet_len = mxs_mysql_get_packet_len(queue);
-            m_large_query = packet_len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+            uint32_t packet_len = mariadb::get_header(queue.data()).pl_length;
+            m_large_query = packet_len == MYSQL_PACKET_LENGTH_MAX;
 
             if (was_large || m_reply.state() == ReplyState::LOAD_DATA)
             {
-                if (packet_len == MYSQL_HEADER_LEN && m_reply.state() == ReplyState::LOAD_DATA)
+                if (packet_len == 0 && m_reply.state() == ReplyState::LOAD_DATA)
                 {
                     // An empty packet is sent at the end of the LOAD DATA LOCAL INFILE. Any packets received
                     // after this but before the server responds with the result should go through the normal
@@ -1175,17 +1178,14 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 }
 
                 // Not the start of a packet, don't analyze it.
-                return m_dcb->writeq_append(queue);
+                return m_dcb->writeq_append(std::move(queue));
             }
 
-            queue = gwbuf_make_contiguous(queue);
-            uint8_t cmd = mxs_mysql_get_command(queue);
+            uint8_t cmd = mxs_mysql_get_command(&queue);
 
             if (cmd == MXS_COM_CHANGE_USER)
             {
                 // Discard the packet, we'll generate our own when we send it.
-                gwbuf_free(queue);
-
                 if (expecting_reply())
                 {
                     // Busy with something else, wait for it to complete and then send the COM_CHANGE_USER.
@@ -1198,21 +1198,21 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 }
             }
 
-            prepare_for_write(*queue);
+            prepare_for_write(queue);
 
             if (mxs_mysql_is_ps_command(cmd))
             {
-                uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                uint32_t ps_id = mxs_mysql_extract_ps_id(&queue);
                 auto it = m_ps_map.find(ps_id);
 
                 if (it != m_ps_map.end())
                 {
                     // Ensure unique GWBUF to prevent our modification of the PS ID from
                     // affecting the original buffer.
-                    queue->ensure_unique();
+                    queue.ensure_unique();
 
                     // Replace our generated ID with the real PS ID
-                    uint8_t* ptr = queue->data() + MYSQL_PS_ID_OFFSET;
+                    uint8_t* ptr = queue.data() + MYSQL_PS_ID_OFFSET;
                     mariadb::set_byte4(ptr, it->second.real_id);
 
                     if (cmd == MXS_COM_STMT_CLOSE)
@@ -1221,13 +1221,11 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     }
                     else if (cmd == MXS_COM_STMT_EXECUTE)
                     {
-                        process_stmt_execute(&queue, ps_id, it->second);
+                        process_stmt_execute(queue, ps_id, it->second);
                     }
                 }
                 else if (ps_id != MARIADB_PS_DIRECT_EXEC_ID)
                 {
-                    gwbuf_free(queue);
-
                     std::stringstream ss;
                     ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
                        << STRPACKETTYPE(cmd) << " by " << m_session->user_and_host();
@@ -1277,7 +1275,6 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             if (cmd == MXS_COM_QUIT && m_server.persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
-                gwbuf_free(queue);
                 rc = 1;
             }
             else
@@ -1293,7 +1290,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 }
 
                 /** Write to backend */
-                rc = m_dcb->writeq_append(queue);
+                rc = m_dcb->writeq_append(std::move(queue));
             }
         }
         break;
@@ -1303,14 +1300,15 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             if (m_large_query)
             {
                 // A continuation of a large COM_STMT_PREPARE
-                m_large_query = mxs_mysql_get_packet_len(queue) == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
-                rc = m_dcb->writeq_append(queue);
+                auto hdr = mariadb::get_header(queue.data());
+                m_large_query = hdr.pl_length == MYSQL_PACKET_LENGTH_MAX;
+                rc = m_dcb->writeq_append(std::move(queue));
             }
             else
             {
-                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
-                         to_string(m_state).c_str(), queue->get_sql().c_str());
-                m_delayed_packets.emplace_back(queue);
+                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(&queue)),
+                         to_string(m_state).c_str(), queue.get_sql().c_str());
+                m_delayed_packets.emplace_back(std::move(queue));
                 rc = 1;
             }
         }
@@ -1318,19 +1316,14 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     default:
         {
-            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
-                     to_string(m_state).c_str(), queue->get_sql().c_str());
-            m_delayed_packets.emplace_back(queue);
+            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(&queue)),
+                     to_string(m_state).c_str(), queue.get_sql().c_str());
+            m_delayed_packets.emplace_back(std::move(queue));
             rc = 1;
         }
         break;
     }
     return rc;
-}
-
-bool MariaDBBackendConnection::write(GWBUF&& buffer)
-{
-    return write(mxs::gwbuf_to_gwbufptr(move(buffer)));
 }
 
 /**
@@ -1400,10 +1393,10 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
     }
 }
 
-GWBUF* MariaDBBackendConnection::create_reset_connection_packet()
+GWBUF MariaDBBackendConnection::create_reset_connection_packet()
 {
     uint8_t buf[] = {0x1, 0x0, 0x0, 0x0, MXS_COM_RESET_CONNECTION};
-    return gwbuf_alloc_and_load(sizeof(buf), buf);
+    return GWBUF(buf, sizeof(buf));
 }
 
 /**
@@ -1412,7 +1405,7 @@ GWBUF* MariaDBBackendConnection::create_reset_connection_packet()
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
  * @note the function doesn't fail
  */
-GWBUF* MariaDBBackendConnection::create_change_user_packet()
+GWBUF MariaDBBackendConnection::create_change_user_packet()
 {
     const auto& client_auth_data = *m_auth_data.client_data->auth_data;
     auto make_auth_token = [this, &client_auth_data] {
@@ -1482,14 +1475,14 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
     auto& attr = client_auth_data.attributes;
     payload.insert(payload.end(), attr.begin(), attr.end());
 
-    GWBUF* buffer = gwbuf_alloc(payload.size() + MYSQL_HEADER_LEN);
-    auto data = GWBUF_DATA(buffer);
-    mariadb::set_byte3(data, payload.size());
-    data += 3;
-    *data++ = 0;    // Sequence.
-    memcpy(data, payload.data(), payload.size());
+    auto buflen = MYSQL_HEADER_LEN + payload.size();
+    GWBUF buffer(buflen);
+    buffer.write_complete(buflen);
+    auto data = buffer.data();
+    data = mariadb::write_header(data, payload.size(), 0);
+    mariadb::copy_bytes(data, payload.data(), payload.size());
     // COM_CHANGE_USER is a session command so the result must be collected.
-    buffer->set_type(GWBUF::TYPE_COLLECT_RESULT);
+    buffer.set_type(GWBUF::TYPE_COLLECT_RESULT);
 
     return buffer;
 }
@@ -1501,9 +1494,8 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
  */
 bool MariaDBBackendConnection::send_change_user_to_backend()
 {
-    GWBUF* buffer = create_change_user_packet();
     bool rval = false;
-    if (m_dcb->writeq_append(buffer))
+    if (m_dcb->writeq_append(create_change_user_packet()))
     {
         m_state = State::READ_CHANGE_USER;
         rval = true;
@@ -1680,9 +1672,7 @@ void MariaDBBackendConnection::ping()
         0x01, 0x00, 0x00, 0x00, 0x0e
     };
 
-    GWBUF* buffer = gwbuf_alloc_and_load(sizeof(com_ping_packet), com_ping_packet);
-
-    if (m_dcb->writeq_append(buffer))
+    if (m_dcb->writeq_append(GWBUF(com_ping_packet, sizeof(com_ping_packet))))
     {
         m_state = State::PINGING;
     }
@@ -1902,8 +1892,8 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
  *
  * @return Generated response packet
  */
-GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ssl_established,
-                                                           uint64_t service_capabilities)
+GWBUF MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ssl_established,
+                                                          uint64_t service_capabilities)
 {
     auto client_data = m_auth_data.client_data;
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
@@ -1944,8 +1934,9 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     }
 
     // allocating the GWBUF
-    GWBUF* buffer = gwbuf_alloc(bytes);
-    uint8_t* payload = GWBUF_DATA(buffer);
+    GWBUF buffer(bytes);
+    buffer.write_complete(bytes);
+    uint8_t* payload = buffer.data();
 
     // clearing data
     memset(payload, '\0', bytes);
@@ -2837,8 +2828,8 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
             {
                 // SSL-connection starts by sending a cleartext SSLRequest-packet,
                 // then initiating SSL-negotiation.
-                GWBUF* ssl_req = gw_generate_auth_response(true, false, m_dcb->service()->capabilities());
-                if (ssl_req && m_dcb->writeq_append(ssl_req) && m_dcb->ssl_handshake() >= 0)
+                GWBUF ssl_req = gw_generate_auth_response(true, false, m_dcb->service()->capabilities());
+                if (m_dcb->writeq_append(std::move(ssl_req)) && m_dcb->ssl_handshake() >= 0)
                 {
                     m_hs_state = HandShakeState::SSL_NEG;
                 }
@@ -2874,9 +2865,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
         case HandShakeState::SEND_HS_RESP:
             {
                 bool with_ssl = m_dcb->using_ssl();
-                GWBUF* hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
-                                                           m_dcb->service()->capabilities());
-                if (m_dcb->writeq_append(hs_resp))
+                GWBUF hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
+                                                          m_dcb->service()->capabilities());
+                if (m_dcb->writeq_append(std::move(hs_resp)))
                 {
                     m_hs_state = HandShakeState::COMPLETE;
                 }
@@ -2962,12 +2953,11 @@ bool MariaDBBackendConnection::send_delayed_packets()
     // Store the packets in a local variable to prevent modifications to m_delayed_packets while we're
     // iterating it. This can happen if one of the packets causes the state to change from State::ROUTING to
     // something else (e.g. multiple COM_STMT_PREPARE packets being sent at the same time).
-    auto packets = m_delayed_packets;
-    m_delayed_packets.clear();
+    auto packets = std::move(m_delayed_packets);
 
     for (auto it = packets.begin(); it != packets.end(); ++it)
     {
-        if (!write(it->release()))
+        if (!write(std::move(*it)))
         {
             rval = false;
             break;

@@ -732,3 +732,10 @@ GWBUF* mxs::gwbuf_to_gwbufptr(GWBUF&& buffer)
 {
     return new GWBUF(move(buffer));
 }
+
+GWBUF mxs::gwbufptr_to_gwbuf(GWBUF* buffer)
+{
+    GWBUF rval(std::move(*buffer));
+    delete buffer;
+    return rval;
+}
