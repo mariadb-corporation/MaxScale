@@ -1,4 +1,4 @@
-# MariaDB MaxScale 22.08 Release Notes
+# MariaDB MaxScale 22.08 Release Notes -- 2022-08-15
 
 The versioning scheme for MaxScale releases has changed; the format of the
 version will be `YY.MM.PATCH` where `YY` is the last two digits of the year and
