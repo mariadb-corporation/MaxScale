@@ -16,6 +16,7 @@
 #include <set>
 #include <maxbase/host.hh>
 #include <maxbase/string.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
@@ -38,6 +39,14 @@ using maxscale::MonitorServer;
 
 namespace
 {
+
+struct ThisUnit
+{
+    const std::array<string, 4> extra_parameters;
+} this_unit =
+{
+    { CN_MAX_ROUTING_CONNECTIONS, CN_PERSISTMAXTIME, CN_PERSISTPOOLMAX, CN_PROXY_PROTOCOL }
+};
 
 namespace xpandmon
 {
@@ -281,6 +290,16 @@ bool XpandMonitor::configure(const mxs::ConfigParameters* pParams)
 
     if (!MonitorWorker::configure(pParams))
     {
+        return false;
+    }
+
+    if (!get_extra_settings(&m_extra))
+    {
+        ostringstream ss;
+        ss << "The settings " << mxb::join(this_unit.extra_parameters, ", ", "'")
+           << " must be the same on all bootstrap servers.";
+
+        MXB_SERROR(ss.str());
         return false;
     }
 
@@ -1121,8 +1140,8 @@ void XpandMonitor::update_server_statuses()
 }
 
 SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
-                                          const std::string& ip,
-                                          int port)
+                                             const std::string& ip,
+                                             int port)
 {
     SERVER* pServer = nullptr;
 
@@ -1131,11 +1150,23 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
     string who = name();
 
     mxs::ConfigParameters extra;
-
-    for (auto srv : servers())
+    if (!get_extra_settings(&extra))
     {
-        // TODO: Don't assume all servers have the same parameters
-        extra.set_multiple(srv->server->to_params());
+        ostringstream ss;
+
+        ss << "The settings " << mxb::join(this_unit.extra_parameters, ", ", "'")
+           << " do not have the same values on all bootstrap servers. ";
+
+        vector<string> settings;
+        for (const auto& parameter : this_unit.extra_parameters)
+        {
+            settings.push_back(parameter + "=" + m_extra.get_string(parameter));
+        }
+
+        ss << "Using the last known consistent settings " << mxb::join(settings, ", ", "'") << ".";
+
+        MXB_SWARNING(ss.str());
+        extra = m_extra;
     }
 
     if (Worker::get_current() == pMain)
@@ -1340,6 +1371,54 @@ void XpandMonitor::update_http_urls()
 
         m_health_urls.swap(health_urls);
     }
+}
+
+bool XpandMonitor::get_extra_settings(mxs::ConfigParameters* pExtra) const
+{
+    bool rv = true;
+
+    mxs::ConfigParameters extra;
+
+    bool first = true;
+    for (auto* pMs : servers())
+    {
+        SERVER* pServer = pMs->server;
+        mxb_assert(pServer);
+
+        mxs::ConfigParameters server_parameters = pServer->to_params();
+
+        for (const string& parameter : this_unit.extra_parameters)
+        {
+            if (first)
+            {
+                extra.set(parameter, server_parameters.get_string(parameter));
+            }
+            else
+            {
+                const string& value = server_parameters.get_string(parameter);
+
+                if (value != extra.get_string(parameter))
+                {
+                    rv = false;
+                    break;
+                }
+            }
+        }
+
+        if (!rv)
+        {
+            break;
+        }
+
+        first = false;
+    }
+
+    if (rv)
+    {
+        *pExtra = extra;
+    }
+
+    return rv;
 }
 
 bool XpandMonitor::perform_softfail(SERVER* pServer, json_t** ppError)
