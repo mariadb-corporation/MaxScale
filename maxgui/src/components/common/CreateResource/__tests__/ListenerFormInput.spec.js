@@ -18,7 +18,7 @@ import {
     dummy_all_services,
     getServiceListStub,
 } from '@tests/unit/utils'
-import ListenerFormInput from '@CreateResource/ListenerFormInput'
+import ListenerFormInput from '../ListenerFormInput'
 
 const mockupResourceModules = [
     {

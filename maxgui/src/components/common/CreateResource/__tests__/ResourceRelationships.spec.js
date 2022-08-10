@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ResourceRelationships from '@CreateResource/ResourceRelationships'
+import ResourceRelationships from '../ResourceRelationships'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const mockupResourceItems = [

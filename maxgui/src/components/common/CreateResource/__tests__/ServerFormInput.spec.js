@@ -20,7 +20,7 @@ import {
     dummy_all_monitors,
     getMonitorListStub,
 } from '@tests/unit/utils'
-import ServerFormInput from '@CreateResource/ServerFormInput'
+import ServerFormInput from '../ServerFormInput'
 
 const mockupResourceModules = [
     {

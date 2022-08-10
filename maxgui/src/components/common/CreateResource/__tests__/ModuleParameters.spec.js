@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
-import ModuleParameters from '@CreateResource/ModuleParameters'
+import ModuleParameters from '../ModuleParameters'
 
 const mockupModules = [
     {
