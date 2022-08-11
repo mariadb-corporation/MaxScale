@@ -10,12 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
+
 import Vuetify from 'vuetify/lib'
 import icons from '@/icons'
-import i18n from '@/plugins/i18n'
+import i18n from './i18n'
 import '@mdi/font/css/materialdesignicons.css'
-Vue.use(Vuetify)
 
 export default new Vuetify({
     icons: {

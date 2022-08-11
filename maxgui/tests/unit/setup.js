@@ -12,15 +12,11 @@
  */
 import Vue from 'vue'
 import { mount, shallowMount, createLocalVue } from '@vue/test-utils'
+import '@/pluginReg'
 import 'utils/helpers'
-import '@/plugins/logger'
-import '@/plugins/vuex'
-import 'plugins/moment'
-import 'plugins/typy'
-import i18n from '@/plugins/i18n'
-import vuetify from '@/plugins/vuetify'
+import i18n from '@share/plugins/i18n'
+import vuetify from '@share/plugins/vuetify'
 import store from 'store'
-
 import Router from 'vue-router'
 import { routes } from '@/router/routes'
 import commonComponents from 'components/common'

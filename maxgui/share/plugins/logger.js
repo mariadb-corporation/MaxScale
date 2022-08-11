@@ -11,14 +11,11 @@
  * Public License.
  */
 /* eslint-disable no-console */
-import Vue from 'vue'
-import { isNull, isUndefined } from 'utils/helpers'
 const stackParser = require('stacktrace-parser')
 const traceCaller = level => stackParser.parse(new Error().stack)[level]
-
 const defCaller = { file: 'n/a', lineNumber: 'n/a' }
 const logger = name => {
-    if (isNull(name) || isUndefined(name))
+    if (name === null || name === undefined)
         throw new Error('You must provide name when calling new logger method')
     return {
         info: (...args) => {
@@ -59,4 +56,9 @@ const logger = name => {
         },
     }
 }
-Vue.prototype.$logger = logger
+
+export default {
+    install: Vue => {
+        Vue.prototype.$logger = logger
+    },
+}

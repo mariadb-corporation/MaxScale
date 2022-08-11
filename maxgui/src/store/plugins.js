@@ -12,7 +12,7 @@
  */
 import Vue from 'vue'
 import router from 'router'
-import i18n from 'plugins/i18n'
+import i18n from '@share/plugins/i18n'
 import { authHttp, http, abortRequests } from 'utils/axios'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'

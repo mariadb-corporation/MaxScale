@@ -10,10 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-import VueMoment from 'vue-moment'
-import momentDurationFormatSetup from 'moment-duration-format'
-
-Vue.use(VueMoment)
-
-momentDurationFormatSetup(Vue.moment)
+import VueShortKey from 'vue-shortkey'
+export default {
+    install: Vue => {
+        Vue.use(VueShortKey, { prevent: ['input', 'textarea'] })
+    },
+}
