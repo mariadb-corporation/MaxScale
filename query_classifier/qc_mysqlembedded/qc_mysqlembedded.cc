@@ -267,6 +267,11 @@ public:
                         zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
     }
 
+    size_t size() const override
+    {
+        return sizeof(*this); // TODO: calculate better if needed. Not really relevant.
+    }
+
     MYSQL*               pi_handle { nullptr } ;            /*< parsing info object pointer */
     char*                pi_query_plain_str { nullptr };   /*< query as plain string */
     QC_FIELD_INFO*       field_infos { nullptr };
@@ -294,11 +299,10 @@ static unsigned long set_client_flags(MYSQL* mysql);
 static bool          create_parse_tree(THD* thd);
 static uint32_t      resolve_query_type(parsing_info_t*, THD* thd);
 static bool          skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
+static int           is_autocommit_stmt(LEX* lex);
 
-static int             is_autocommit_stmt(LEX* lex);
-static parsing_info_t* parsing_info_init(GWBUF* querybuf);
-/** Free THD context and close MYSQL */
-static void        parsing_info_done(void* ptr);
+static std::unique_ptr<parsing_info_t> parsing_info_init(GWBUF* querybuf);
+
 static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
 static bool        ensure_query_is_parsed(GWBUF* query);
 static bool        parse_query(GWBUF* querybuf);
@@ -614,9 +618,8 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 
     if (parsed)
     {
-        parsing_info_t* pi = (parsing_info_t*) querybuf->get_classifier_data();
+        auto pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
         mxb_assert(pi);
-
         *result = pi->result;
     }
     else
@@ -648,9 +651,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
     /** Read thd pointer and resolve the query type with it. */
     if (succp)
     {
-        parsing_info_t* pi;
-
-        pi = (parsing_info_t*) querybuf->get_classifier_data();
+        auto pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
 
         if (pi != NULL)
         {
@@ -696,7 +697,6 @@ static bool parse_query(GWBUF* querybuf)
     uint8_t* data;
     size_t len;
     char* query_str = NULL;
-    parsing_info_t* pi;
 
     /** Do not parse without releasing previous parse info first */
     mxb_assert(!query_is_parsed(querybuf));
@@ -708,10 +708,10 @@ static bool parse_query(GWBUF* querybuf)
     }
 
     /** Create parsing info */
-    pi = parsing_info_init(querybuf);
+    std::unique_ptr<parsing_info_t> pi = parsing_info_init(querybuf);
 
     /** Get one or create new THD object to be use in parsing */
-    thd = get_or_create_thd_for_parsing((MYSQL*) pi->pi_handle, pi->pi_query_plain_str);
+    thd = get_or_create_thd_for_parsing(pi->pi_handle, pi->pi_query_plain_str);
     mxb_assert(thd);
 
     /**
@@ -724,7 +724,7 @@ static bool parse_query(GWBUF* querybuf)
     }
 
     /** Add complete parsing info struct to the query buffer */
-    querybuf->set_classifier_data(pi, parsing_info_done);
+    querybuf->set_classifier_data(std::move(pi));
 
     // By calling qc_mysql_get_field_info() now, the result will be
     // QC_QUERY_PARTIALLY_PARSED, if some field is not found in the
@@ -1824,7 +1824,7 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 
     if ((querybuf != NULL) && gwbuf_is_parsed(querybuf))
     {
-        pi = (parsing_info_t*) querybuf->get_classifier_data();
+        pi = static_cast<parsing_info_t*>(querybuf->get_classifier_data_ptr());
     }
 
     return pi;
@@ -2059,23 +2059,9 @@ int32_t qc_mysql_is_drop_table_query(GWBUF* querybuf, int32_t* answer)
  *
  * @return pointer to parsing information
  */
-static parsing_info_t* parsing_info_init(GWBUF* querybuf)
+static std::unique_ptr<parsing_info_t> parsing_info_init(GWBUF* querybuf)
 {
-    return new parsing_info_t(querybuf);
-}
-
-/**
- * Free function for parsing info. Called by gwbuf_free or in case initialization
- * of parsing information fails.
- *
- * @param ptr Pointer to parsing information, cast required
- *
- * @return void
- *
- */
-static void parsing_info_done(void* ptr)
-{
-    delete static_cast<parsing_info_t*>(ptr);
+    return std::make_unique<parsing_info_t>(querybuf);
 }
 
 /**
@@ -4113,13 +4099,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_server_version,
         qc_mysql_get_sql_mode,
         qc_mysql_set_sql_mode,
-        nullptr,        // qc_info_dup not supported.
-        nullptr,        // qc_info_close not supported.
         qc_mysql_get_options,
         qc_mysql_set_options,
         nullptr,        // qc_get_result_from_info not supported
         qc_mysql_get_current_stmt,
-        nullptr,        // qc_info_size not supported.
         nullptr,        // qc_info_get_canonical not supported.
     };
 

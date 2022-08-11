@@ -112,6 +112,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
 #ifdef SS_DEBUG
         GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
+        stmt.set_classifier_data(nullptr);      // To ensure cloned buffer is parsed.
         mxb_assert(qc_get_type_mask(&stmt) == (qc_get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT));
 #endif
 

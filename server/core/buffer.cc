@@ -188,6 +188,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     m_id = exchange(rhs.m_id, 0);
 
     hints = move(rhs.hints);
+    m_stmt_info = std::move(rhs.m_stmt_info);
     m_sbuf = move(rhs.m_sbuf);
     m_sql = move(rhs.m_sql);
     m_canonical = move(rhs.m_canonical);
@@ -238,6 +239,7 @@ void GWBUF::clone_helper(const GWBUF& other)
     hints = other.hints;
     m_type = other.m_type;
     m_id = other.m_id;
+    m_stmt_info = other.m_stmt_info;
 
     m_sql = other.m_sql;
     m_canonical = other.m_canonical;
@@ -363,18 +365,19 @@ void GWBUF::set_type(Type type)
     m_type |= type;
 }
 
-void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
+void GWBUF::set_classifier_data(std::shared_ptr<QC_STMT_INFO> new_data)
 {
-    auto& obj = m_sbuf->classifier_data;
-    mxb_assert(obj.data == nullptr && obj.deleter == nullptr);
-    mxb_assert(!new_data || deleter);   // If data is given, a deleter must also be set.
-    obj.data = new_data;
-    obj.deleter = deleter;
+    m_stmt_info = std::move(new_data);
 }
 
-void* GWBUF::get_classifier_data() const
+QC_STMT_INFO* GWBUF::get_classifier_data_ptr() const
 {
-    return m_sbuf->classifier_data.data;
+    return m_stmt_info.get();
+}
+
+std::shared_ptr<QC_STMT_INFO> GWBUF::get_classifier_data() const
+{
+    return m_stmt_info;
 }
 
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
@@ -392,20 +395,14 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
     auto old_len = length();
     auto new_len = old_len + n_bytes;
 
-    auto clone_sbuf = [this, old_len](bool swap_cl_data, size_t alloc_size) {
-            auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
-
-            auto* new_buf_start = new_sbuf->buf_start.get();
-            memcpy(new_buf_start, m_start, old_len);
-            if (swap_cl_data)
-            {
-                std::swap(new_sbuf->classifier_data, m_sbuf->classifier_data);
-            }
-
-            m_sbuf = move(new_sbuf);
-            m_start = new_buf_start;
-            m_end = m_start + old_len;
-        };
+    auto clone_sbuf = [this, old_len](size_t alloc_size) {
+        auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
+        auto* new_buf_start = new_sbuf->buf_start.get();
+        memcpy(new_buf_start, m_start, old_len);
+        m_sbuf = move(new_sbuf);
+        m_start = new_buf_start;
+        m_end = m_start + old_len;
+    };
 
     if (m_sbuf.unique())
     {
@@ -427,16 +424,14 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
             // Have to reallocate the shared buffer. At least double the previous size to handle future
             // writes.
             auto alloc_size = std::max(new_len, 2 * m_sbuf->size());
-            clone_sbuf(true, alloc_size);
+            clone_sbuf(alloc_size);
         }
     }
     else
     {
-        // If called for a shared (shallow-cloned) buffer, make a new copy of the underlying data. The custom
-        // data is not copied, as it does not have a copy-function.
-        // TODO: think if custom data should be copied.
+        // If called for a shared (shallow-cloned) buffer, make a new copy of the underlying data.
         // Also ends up here if the shared ptr is null.
-        clone_sbuf(false, new_len);
+        clone_sbuf(new_len);
     }
     return {m_end, m_sbuf->buf_end - m_end};
 }
@@ -472,7 +467,6 @@ void GWBUF::reset()
     {
         m_start = m_sbuf->buf_start.get();
         m_end = m_start;
-        m_sbuf->classifier_data.clear();
     }
     else
     {
@@ -480,6 +474,7 @@ void GWBUF::reset()
     }
 
     hints.clear();
+    m_stmt_info.reset();
     m_type = TYPE_UNDEFINED;
     m_id = 0;
 
@@ -705,21 +700,6 @@ uint8_t* maxscale::Buffer::data()
 const uint8_t* maxscale::Buffer::data() const
 {
     return GWBUF_DATA(m_pBuffer);
-}
-
-BufferObject::~BufferObject()
-{
-    clear();
-}
-
-void BufferObject::clear()
-{
-    if (deleter)
-    {
-        deleter(data);
-        deleter = nullptr;
-        data = nullptr;
-    }
 }
 
 SHARED_BUF::SHARED_BUF(size_t len)

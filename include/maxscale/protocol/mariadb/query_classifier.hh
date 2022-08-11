@@ -172,14 +172,6 @@ enum qc_result_t
 };
 
 /**
- * QC_STMT_INFO is an opaque type where the query classifier stores
- * information about a statement.
- */
-struct QC_STMT_INFO
-{
-};
-
-/**
  * QC_STMT_RESULT contains limited information about a particular
  * statement.
  */

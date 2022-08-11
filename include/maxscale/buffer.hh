@@ -20,8 +20,9 @@
 #include <cstring>
 #include <vector>
 #include <maxbase/assert.hh>
-#include <maxscale/hint.hh>
 #include <maxsimd/canonical.hh>
+#include <maxscale/hint.hh>
+#include <maxscale/qc_stmt_info.hh>
 
 class SERVER;
 
@@ -38,19 +39,6 @@ class Worker;
 namespace mxb = maxbase;
 
 /**
- * A structure for adding arbitrary data to a buffer.
- */
-struct BufferObject
-{
-    void* data = nullptr;
-    void  (* deleter)(void*) = nullptr;
-
-    ~BufferObject();
-
-    void clear();
-};
-
-/**
  * A structure to encapsulate the data in a form that the data itself can be
  * shared between multiple GWBUF's without the need to make multiple copies
  * but still maintain separate data pointers.
@@ -65,7 +53,6 @@ public:
         return buf_end - buf_start.get();
     }
 
-    BufferObject               classifier_data;     /**< Parsing info */
     std::unique_ptr<uint8_t[]> buf_start;           /**< Actual memory that was allocated */
     uint8_t*                   buf_end {nullptr};   /**< Past end pointer of allocated memory */
 };
@@ -156,14 +143,21 @@ public:
      * @param new_data Data of the object
      * @param deleter Deleter function
      */
-    void set_classifier_data(void* new_data, void (* deleter)(void*));
+    void set_classifier_data(std::shared_ptr<QC_STMT_INFO> new_data);
 
     /**
-     * Get classifier data.
+     * Get classifier data pointer. The pointer should not be saved, as it's a borrowed reference.
      *
      * @return Data or null
      */
-    void* get_classifier_data() const;
+    QC_STMT_INFO* get_classifier_data_ptr() const;
+
+    /**
+     * Return a shared pointer to classifier data. Required when saving the pointer.
+     *
+     * @return Data or null
+     */
+    std::shared_ptr<QC_STMT_INFO> get_classifier_data() const;
 
     iterator       begin();
     iterator       end();
@@ -339,6 +333,11 @@ public:
             rv += m_sbuf->size() / m_sbuf.use_count();
         }
 
+        if (m_stmt_info)
+        {
+            rv += sizeof(*m_stmt_info.get());
+            rv += m_stmt_info->size() / m_stmt_info.use_count();
+        }
         rv += m_sql.capacity();
         rv += m_canonical.capacity();
         rv += m_markers.capacity() * sizeof(decltype(m_markers)::value_type);
@@ -361,7 +360,8 @@ public:
     GWBUF& add_chars(const char* str, size_t n_bytes);
 
 private:
-    std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
+    std::shared_ptr<SHARED_BUF>   m_sbuf;       /**< The shared buffer with the real data */
+    std::shared_ptr<QC_STMT_INFO> m_stmt_info;  /**< Classifier data */
 
     uint8_t* m_start {nullptr};         /**< Start of the valid data */
     uint8_t* m_end {nullptr};           /**< First byte after the valid data */
@@ -410,7 +410,7 @@ inline bool GWBUF::type_is_track_state() const
 
 inline bool gwbuf_is_parsed(const GWBUF* b)
 {
-    return b->get_classifier_data() != nullptr;
+    return b->get_classifier_data_ptr() != nullptr;
 }
 
 inline uint8_t* GWBUF::data()

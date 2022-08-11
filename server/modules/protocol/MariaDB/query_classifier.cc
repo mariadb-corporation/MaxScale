@@ -136,23 +136,18 @@ public:
     ~QCInfoCache()
     {
         mxb_assert(this_unit.classifier);
-
-        for (const auto& a : m_infos)
-        {
-            this_unit.classifier->qc_info_close(a.second.pInfo);
-        }
     }
 
     QC_STMT_INFO* peek(std::string_view canonical_stmt) const
     {
         auto i = m_infos.find(canonical_stmt);
 
-        return i != m_infos.end() ? i->second.pInfo : nullptr;
+        return i != m_infos.end() ? i->second.sInfo.get() : nullptr;
     }
 
-    QC_STMT_INFO* get(std::string_view canonical_stmt)
+    std::shared_ptr<QC_STMT_INFO> get(std::string_view canonical_stmt)
     {
-        QC_STMT_INFO* pInfo = nullptr;
+        std::shared_ptr<QC_STMT_INFO> sInfo;
         qc_sql_mode_t sql_mode = qc_get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
@@ -165,8 +160,7 @@ public:
                 && (entry.options == this_thread.options))
             {
                 mxb_assert(this_unit.classifier);
-                this_unit.classifier->qc_info_dup(entry.pInfo);
-                pInfo = entry.pInfo;
+                sInfo = entry.sInfo;
 
                 ++entry.hits;
                 ++m_stats.hits;
@@ -184,10 +178,10 @@ public:
             ++m_stats.misses;
         }
 
-        return pInfo;
+        return sInfo;
     }
 
-    void insert(std::string_view canonical_stmt, QC_STMT_INFO* pInfo)
+    void insert(std::string_view canonical_stmt, std::shared_ptr<QC_STMT_INFO> sInfo)
     {
         mxb_assert(peek(canonical_stmt) == nullptr);
         mxb_assert(this_unit.classifier);
@@ -208,7 +202,7 @@ public:
          */
         cache_max_size *= 0.65;
 
-        int64_t size = entry_size(pInfo);
+        int64_t size = entry_size(sInfo.get());
 
         if (size < max_entry_size && size <= cache_max_size)
         {
@@ -221,9 +215,8 @@ public:
 
             if (m_stats.size + size <= cache_max_size)
             {
-                this_unit.classifier->qc_info_dup(pInfo);
-
-                m_infos.emplace(canonical_stmt, Entry(pInfo, qc_get_sql_mode(), this_thread.options));
+                m_infos.emplace(canonical_stmt,
+                                Entry(std::move(sInfo), qc_get_sql_mode(), this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -255,7 +248,7 @@ public:
                 QC_CACHE_ENTRY e {};
 
                 e.hits = entry.hits;
-                e.result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
+                e.result = this_unit.classifier->qc_get_result_from_info(entry.sInfo.get());
 
                 state.insert(std::make_pair(stmt, e));
             }
@@ -265,7 +258,7 @@ public:
 
                 e.hits += entry.hits;
 #if defined (SS_DEBUG)
-                QC_STMT_RESULT result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
+                QC_STMT_RESULT result = this_unit.classifier->qc_get_result_from_info(entry.sInfo.get());
 
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
@@ -281,8 +274,7 @@ public:
 
         for (auto& kv : m_infos)
         {
-            rv += entry_size(kv.second.pInfo);
-            this_unit.classifier->qc_info_close(kv.second.pInfo);
+            rv += entry_size(kv.second.sInfo.get());
         }
 
         m_infos.clear();
@@ -293,18 +285,18 @@ public:
 private:
     struct Entry
     {
-        Entry(QC_STMT_INFO* pInfo, qc_sql_mode_t sql_mode, uint32_t options)
-            : pInfo(pInfo)
+        Entry(std::shared_ptr<QC_STMT_INFO> sInfo, qc_sql_mode_t sql_mode, uint32_t options)
+            : sInfo(std::move(sInfo))
             , sql_mode(sql_mode)
             , options(options)
             , hits(0)
         {
         }
 
-        QC_STMT_INFO* pInfo;
-        qc_sql_mode_t sql_mode;
-        uint32_t      options;
-        int64_t       hits;
+        std::shared_ptr<QC_STMT_INFO> sInfo;
+        qc_sql_mode_t                 sql_mode;
+        uint32_t                      options;
+        int64_t                       hits;
     };
 
     typedef std::unordered_map<std::string_view, Entry> InfosByStmt;
@@ -314,12 +306,12 @@ private:
         const int64_t map_entry_overhead = 4 * sizeof(void *);
         const int64_t constant_overhead = sizeof(std::string_view) + sizeof(Entry) + map_entry_overhead;
 
-        return constant_overhead + this_unit.classifier->qc_info_size(pInfo);
+        return constant_overhead + pInfo->size();
     }
 
     int64_t entry_size(const InfosByStmt::value_type& entry)
     {
-        return entry_size(entry.second.pInfo);
+        return entry_size(entry.second.sInfo.get());
     }
 
     void erase(InfosByStmt::iterator& i)
@@ -329,8 +321,6 @@ private:
         m_stats.size -= entry_size(*i);
 
         mxb_assert(this_unit.classifier);
-        this_unit.classifier->qc_info_close(i->second.pInfo);
-
         m_infos.erase(i);
 
         ++m_stats.evictions;
@@ -400,15 +390,8 @@ bool use_cached_result()
 bool has_not_been_parsed(GWBUF* pStmt)
 {
     // A GWBUF has not been parsed, if it does not have a parsing info object attached.
-    return pStmt->get_classifier_data() == nullptr;
+    return pStmt->get_classifier_data_ptr() == nullptr;
 }
-
-void info_object_close(void* pData)
-{
-    mxb_assert(this_unit.classifier);
-    this_unit.classifier->qc_info_close(static_cast<QC_STMT_INFO*>(pData));
-}
-
 
 /**
  * @class QCInfoCacheScope
@@ -431,8 +414,8 @@ public:
     QCInfoCacheScope(GWBUF* pStmt)
         : m_pStmt(pStmt)
     {
-        auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-        m_info_size_before = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
+        auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data_ptr());
+        m_info_size_before = pInfo ? pInfo->size() : 0;
 
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
@@ -445,12 +428,11 @@ public:
                 m_canonical += ":P";
             }
 
-            pInfo = this_thread.pInfo_cache->get(m_canonical);
-
-            if (pInfo)
+            std::shared_ptr<QC_STMT_INFO> sInfo = this_thread.pInfo_cache->get(m_canonical);
+            if (sInfo)
             {
-                m_info_size_before = this_unit.classifier->qc_info_size(pInfo);
-                m_pStmt->set_classifier_data(pInfo, info_object_close);
+                m_info_size_before = sInfo->size();
+                m_pStmt->set_classifier_data(std::move(sInfo));
                 m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
             }
         }
@@ -462,20 +444,20 @@ public:
 
         if (!m_canonical.empty() && !exclude)
         {   // Cache for the first time
-            auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-            mxb_assert(pInfo);
+            auto sInfo = m_pStmt->get_classifier_data();
+            mxb_assert(sInfo);
 
             // Now from QC and this will have the trailing ":P" in case the GWBUF
             // contained a COM_STMT_PREPARE.
-            std::string_view canonical = this_unit.classifier->qc_info_get_canonical(pInfo);
+            std::string_view canonical = this_unit.classifier->qc_info_get_canonical(sInfo.get());
             mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(canonical, pInfo);
+            this_thread.pInfo_cache->insert(canonical, std::move(sInfo));
         }
         else if (!exclude)
         {   // The size might have changed
-            auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-            auto info_size_after = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
+            auto pInfo = m_pStmt->get_classifier_data_ptr();
+            auto info_size_after = pInfo ? pInfo->size() : 0;
 
             if (m_info_size_before != info_size_after)
             {
@@ -488,7 +470,7 @@ public:
 private:
     GWBUF*      m_pStmt;
     std::string m_canonical;
-    int32_t     m_info_size_before;
+    size_t      m_info_size_before;
 
     bool exclude_from_cache() const
     {

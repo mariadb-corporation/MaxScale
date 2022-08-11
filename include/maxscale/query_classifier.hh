@@ -14,6 +14,7 @@
 
 #include <map>
 #include <maxscale/ccdefs.hh>
+#include <maxscale/qc_stmt_info.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 
 /**
@@ -258,24 +259,6 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_set_sql_mode)(qc_sql_mode_t sql_mode);
 
     /**
-     * Dups the provided info object. After having been dupped, the info object
-     * can be stored on another GWBUF.
-     *
-     * @param info  The info to be dupped.
-     *
-     * @return The same info that was provided as argument.
-     */
-    QC_STMT_INFO* (* qc_info_dup)(QC_STMT_INFO* info);
-
-    /**
-     * Closes a dupped info object. After the info object has been closed, it must
-     * not be accessed.
-     *
-     * @param info  The info to be closed.
-     */
-    void (* qc_info_close)(QC_STMT_INFO* info);
-
-    /**
      * Gets the options of the *calling* thread.
      *
      * @return Bit mask of values from qc_option_t.
@@ -312,15 +295,6 @@ struct QUERY_CLASSIFIER
      *         classified), QC_RESULT_ERROR otherwise.
      */
     int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
-
-    /**
-     * Returns the actual size of the info.
-     *
-     * @param info  The info whose size should be returned.
-     *
-     * @return The total amount of memory used by @ info.
-     */
-    int32_t (* qc_info_size)(const QC_STMT_INFO* info);
 
     /**
      * Get canonical statement

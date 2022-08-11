@@ -180,7 +180,6 @@ typedef enum qc_token_position
     QC_TOKEN_RIGHT,     // To the right, e.g: "b" in "a = b".
 } qc_token_position_t;
 
-static void        buffer_object_free(void* data);
 static void        enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool        ensure_query_is_parsed(GWBUF* query, uint32_t collect);
 static void        log_invalid_data(GWBUF* query, const char* message);
@@ -245,20 +244,6 @@ class QcSqliteInfo : public QC_STMT_INFO
     QcSqliteInfo& operator=(const QcSqliteInfo&);
 
 public:
-    void inc_ref()
-    {
-        mxb_assert(m_refs > 0);
-        ++m_refs;
-    }
-
-    void dec_ref()
-    {
-        mxb_assert(m_refs > 0);
-        if (--m_refs == 0)
-        {
-            delete this;
-        }
-    }
 
     void calculate_size()
     {
@@ -316,7 +301,7 @@ public:
         m_size = size;
     }
 
-    int32_t size() const
+    size_t size() const override
     {
         return m_size;
     }
@@ -333,11 +318,9 @@ public:
         return result;
     }
 
-    static QcSqliteInfo* create(uint32_t collect)
+    static std::unique_ptr<QcSqliteInfo> create(uint32_t collect)
     {
-        QcSqliteInfo* pInfo = new(std::nothrow) QcSqliteInfo(collect);
-        mxb_assert(pInfo);
-        return pInfo;
+        return std::make_unique<QcSqliteInfo>(collect);
     }
 
     static QcSqliteInfo* get(GWBUF* pStmt, uint32_t collect)
@@ -346,7 +329,7 @@ public:
 
         if (ensure_query_is_parsed(pStmt, collect))
         {
-            pInfo = static_cast<QcSqliteInfo*>(pStmt->get_classifier_data());
+            pInfo = static_cast<QcSqliteInfo*>(pStmt->get_classifier_data_ptr());
             mxb_assert(pInfo);
         }
 
@@ -3379,10 +3362,8 @@ public:
         m_type_mask = type_mask;
     }
 
-private:
     QcSqliteInfo(uint32_t cllct)
         : m_size(0)
-        , m_refs(1)
         , m_status(QC_QUERY_INVALID)
         , m_status_cap(QC_QUERY_PARSED)
         , m_collect(cllct)
@@ -3402,7 +3383,6 @@ private:
 
     ~QcSqliteInfo()
     {
-        mxb_assert(m_refs == 0);
         gwbuf_free(m_pPreparable_stmt);
     }
 
@@ -3710,17 +3690,6 @@ extern void maxscaleSetStatusCap(int cap);
 extern int  maxscaleTranslateKeyword(int token);
 }
 
-/**
- * Used for freeing a QcSqliteInfo object added to a GWBUF.
- *
- * @param object A pointer to a QcSqliteInfo object.
- */
-static void buffer_object_free(void* pData)
-{
-    QcSqliteInfo* pInfo = static_cast<QcSqliteInfo*>(pData);
-    pInfo->dec_ref();
-}
-
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity)
 {
     if (len + n >= *pCapacity)
@@ -3882,7 +3851,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
             {
                 bool suppress_logging = false;
 
-                auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data());
+                auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data_ptr());
                 if (pInfo)
                 {
                     mxb_assert((~pInfo->m_collect & collect) != 0);
@@ -3904,10 +3873,11 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                 }
                 else
                 {
-                    pInfo = QcSqliteInfo::create(collect);
+                    auto sInfo = QcSqliteInfo::create(collect);
+                    pInfo = sInfo.get();
                     if (pInfo)
                     {
-                        query->set_classifier_data(pInfo, buffer_object_free);
+                        query->set_classifier_data(std::move(sInfo));
 
                         // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
                         // TODO: but sorting that out is for later.
@@ -3984,7 +3954,7 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
 
     if (rc)
     {
-        auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data());
+        auto* pInfo = static_cast<QcSqliteInfo*>(query->get_classifier_data_ptr());
         mxb_assert(pInfo);
 
         if ((~pInfo->m_collected & collect) != 0)
@@ -4901,7 +4871,7 @@ static void           qc_sqlite_info_close(QC_STMT_INFO* info);
 static uint32_t       qc_sqlite_get_options();
 static int32_t        qc_sqlite_set_options(uint32_t options);
 static QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
-static int32_t        qc_sqlite_info_size(const QC_STMT_INFO* pInfo);
+
 static string_view    qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo);
 
 
@@ -5088,11 +5058,11 @@ static int32_t qc_sqlite_thread_init(void)
         MXB_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
 
-        QcSqliteInfo* pInfo = QcSqliteInfo::create(QC_COLLECT_ALL);
+        std::unique_ptr<QcSqliteInfo> sInfo = QcSqliteInfo::create(QC_COLLECT_ALL);
 
-        if (pInfo)
+        if (sInfo)
         {
-            this_thread.pInfo = pInfo;
+            this_thread.pInfo = sInfo.get();
 
             // With this statement we cause sqlite3 to initialize itself, so that it
             // is not done as part of the actual classification of data.
@@ -5106,8 +5076,6 @@ static int32_t qc_sqlite_thread_init(void)
             parse_query_string(s, len, suppress_logging);
             this_thread.pInfo->m_pQuery = NULL;
             this_thread.pInfo->m_nQuery = 0;
-
-            this_thread.pInfo->dec_ref();
             this_thread.pInfo = NULL;
 
             this_thread.initialized = true;
@@ -5551,17 +5519,6 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
     return rv;
 }
 
-QC_STMT_INFO* qc_sqlite_info_dup(QC_STMT_INFO* info)
-{
-    static_cast<QcSqliteInfo*>(info)->inc_ref();
-    return info;
-}
-
-void qc_sqlite_info_close(QC_STMT_INFO* info)
-{
-    static_cast<QcSqliteInfo*>(info)->dec_ref();
-}
-
 uint32_t qc_sqlite_get_options()
 {
     return this_thread.options;
@@ -5600,11 +5557,6 @@ int32_t qc_sqlite_get_current_stmt(const char** ppStmt, size_t* pLen)
     }
 
     return rv;
-}
-
-int32_t qc_sqlite_info_size(const QC_STMT_INFO* pInfo)
-{
-    return static_cast<const QcSqliteInfo*>(pInfo)->size();
 }
 
 string_view qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo)
@@ -5653,13 +5605,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_server_version,
         qc_sqlite_get_sql_mode,
         qc_sqlite_set_sql_mode,
-        qc_sqlite_info_dup,
-        qc_sqlite_info_close,
         qc_sqlite_get_options,
         qc_sqlite_set_options,
         qc_sqlite_get_result_from_info,
         qc_sqlite_get_current_stmt,
-        qc_sqlite_info_size,
         qc_sqlite_info_get_canonical,
     };
 
