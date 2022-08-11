@@ -1,5 +1,5 @@
 <template>
-    <query-editor class="query-editor-page" @leave-page="$router.push($event)" />
+    <query-editor ref="queryEditor" class="query-editor-page" @leave-page="$router.push($event)" />
 </template>
 
 <script>
@@ -19,6 +19,9 @@ import QueryEditor from '@queryEditor'
 export default {
     name: 'query-page',
     components: { QueryEditor },
+    async beforeRouteLeave(to, from, next) {
+        this.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
+    },
 }
 </script>
 <style lang="scss" scoped>

@@ -65,6 +65,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/* Emits
+ * @leave-page: v:Object. `to` object of beforeRouteLeave hook
+ */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import Wke from './components/Wke.container.vue'
 import WkeNav from './components/WkeNav.container.vue'
@@ -123,36 +126,7 @@ export default {
     mounted() {
         this.$nextTick(() => this.setDim())
     },
-    async beforeRouteLeave(to, from, next) {
-        if (this.to) {
-            next()
-        } else {
-            this.to = to
-            /**
-             * Allow to leave page immediately if next path is to login page (user logouts)
-             * or if there is no active connections
-             */
-            if (Object.keys(this.sql_conns).length === 0) this.leavePage()
-            else
-                switch (to.path) {
-                    case '/login':
-                        this.leavePage()
-                        break
-                    case '/404':
-                        this.SET_SNACK_BAR_MESSAGE({
-                            text: [this.$t('info.notFoundConn')],
-                            type: 'error',
-                        })
-                        this.cancelLeave()
-                        this.clearConn()
-                        await this.validatingConn()
-                        break
-                    default:
-                        this.confirmDelAll = true
-                        this.isConfDlgOpened = true
-                }
-        }
-    },
+
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
@@ -162,6 +136,44 @@ export default {
             handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),
+        /**
+         * sub-component doesn't have beforeRouteLeave hook, so the hook should be
+         * placed in the parent component and call this beforeRouteLeave function
+         * via ref
+         * @param {Object} to - `to` object of beforeRouteLeave hook
+         * @param {Object} from - `from` object of beforeRouteLeave hook
+         * @param {Function} next - `next` function of beforeRouteLeave hook
+         */
+        beforeRouteLeaveHandler(to, from, next) {
+            if (this.to) {
+                next()
+            } else {
+                this.to = to
+                /**
+                 * Allow to leave page immediately if next path is to login page (user logouts)
+                 * or if there is no active connections
+                 */
+                if (Object.keys(this.sql_conns).length === 0) this.leavePage()
+                else
+                    switch (to.path) {
+                        case '/login':
+                            this.leavePage()
+                            break
+                        case '/404':
+                            this.SET_SNACK_BAR_MESSAGE({
+                                text: [this.$t('info.notFoundConn')],
+                                type: 'error',
+                            })
+                            this.cancelLeave()
+                            this.clearConn()
+                            this.validatingConn()
+                            break
+                        default:
+                            this.confirmDelAll = true
+                            this.isConfDlgOpened = true
+                    }
+            }
+        },
         async onLeave() {
             if (this.confirmDelAll) await this.disconnectAll()
             this.leavePage()
