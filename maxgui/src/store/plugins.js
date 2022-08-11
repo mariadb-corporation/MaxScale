@@ -13,8 +13,7 @@
 import Vue from 'vue'
 import router from 'router'
 import i18n from 'plugins/i18n'
-import { abortRequests } from 'utils/axios/config'
-import { authHttp, http, queryHttp } from 'utils/axios'
+import { authHttp, http, abortRequests } from 'utils/axios'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 import queryEditorStorePlugins from '@queryEditor/store/plugins'
@@ -26,7 +25,6 @@ const plugins = store => {
     store.$authHttp = authHttp()
     store.$http = http(store)
     store.$abortRequests = abortRequests
-    store.$queryHttp = queryHttp(store)
 }
 
 const appPersistConfig = new VuexPersistence({

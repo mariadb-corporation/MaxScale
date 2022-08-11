@@ -10,7 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { baseConf, controller, defErrStatusHandler, baseErrStatusHandlerMap } from './config'
+import ax from 'axios'
+import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 
 /**
  *
@@ -61,11 +62,19 @@ function getSqlConnId(url) {
  * @returns {Object} axios instance
  */
 export default function queryHttp(store) {
-    let queryHttp = baseConf()
+    //TODO: Make baseURL and perhaps headers configurable
+    let queryHttp = ax.create({
+        baseURL: '/',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+        },
+    })
     queryHttp.interceptors.request.use(
         config => {
             patchIsConnBusyMap({ store, value: true, sql_conn_id: getSqlConnId(config.url) })
-            return { ...config, signal: controller.signal }
+            return { ...config }
         },
         error => Promise.reject(error)
     )
@@ -82,20 +91,21 @@ export default function queryHttp(store) {
         async error => {
             const { getErrorsArr } = store.vue.$help
             const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
-            const errStatusHandlerMap = baseErrStatusHandlerMap({ store, error })
-            if (status === 404 || status === 503) {
-                return store.commit('SET_SNACK_BAR_MESSAGE', {
-                    text: [...getErrorsArr(error), 'Please reconnect'],
-                    type: 'error',
-                })
-            } else if (Object.keys(errStatusHandlerMap).includes(`${status}`)) {
-                await errStatusHandlerMap[status]()
-            } else defErrStatusHandler({ store, error })
-            patchIsConnBusyMap({
-                store,
-                value: false,
-                sql_conn_id: getSqlConnId(url),
-            })
+            switch (status) {
+                case null:
+                    handleNullStatusCode({ store, error })
+                    break
+                case 404:
+                case 503:
+                    store.commit('SET_SNACK_BAR_MESSAGE', {
+                        text: [...getErrorsArr(error), 'Please reconnect'],
+                        type: 'error',
+                    })
+                    break
+                default:
+                    defErrStatusHandler({ store, error })
+            }
+            patchIsConnBusyMap({ store, value: false, sql_conn_id: getSqlConnId(url) })
         }
     )
     return queryHttp
