@@ -90,6 +90,8 @@ const std::string option_what_if = "what_if:";
 const std::string option_continue_if_matched = "continue_if_matched:";
 const std::string option_ignore_whitespace = "ignore_whitespace:";
 const std::string option_regex_grammar = "regex_grammar:";
+const std::string option_unit_test_input = "unit_test_input:";
+const std::string option_unit_test_output = "unit_test_output:";
 
 enum class Option
 {
@@ -98,7 +100,9 @@ enum class Option
     WHAT_IF,
     CONTINUE_IF_MATCHED,
     IGNORE_WHITESPACE,
-    REGEX_GRAMMAR
+    REGEX_GRAMMAR,
+    UNIT_TEST_INPUT,
+    UNIT_TEST_OUTPUT,
 };
 
 struct OptionDefinition
@@ -113,13 +117,15 @@ struct OptionValue
     std::string      value;
 };
 
-const std::array<OptionDefinition, 5> options
+const std::array<OptionDefinition, 7> options
 {{
     {Option::CASE_SENSITIVE, option_case_sensitive},
     {Option::WHAT_IF, option_what_if},
     {Option::CONTINUE_IF_MATCHED, option_continue_if_matched},
     {Option::IGNORE_WHITESPACE, option_ignore_whitespace},
     {Option::REGEX_GRAMMAR, option_regex_grammar},
+    {Option::UNIT_TEST_INPUT, option_unit_test_input},
+    {Option::UNIT_TEST_OUTPUT, option_unit_test_output}
 }};
 
 OptionValue find_option(std::string line)
@@ -216,7 +222,7 @@ RfReader::RfReader(const std::string& path, const TemplateDef& default_def)
 
         case State::ReplaceTemplate:
             def.replace_template = read_template(in, line, "%%");
-            check_template_def(def);
+            validate_template_def(def);
             m_templates.push_back(def);
             def = default_def;
             state = State::Options;
@@ -266,6 +272,14 @@ RfReader::State RfReader::set_option(TemplateDef& def, const std::string& line, 
                           << '\'');
             }
         }
+        break;
+
+    case Option::UNIT_TEST_INPUT:
+        def.unit_test_input.push_back(opt.value);
+        break;
+
+    case Option::UNIT_TEST_OUTPUT:
+        def.unit_test_output.push_back(opt.value);
         break;
 
     case Option::NONE:

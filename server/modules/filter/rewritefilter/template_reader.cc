@@ -128,7 +128,7 @@ std::vector<TemplateDef> TemplateReader::templates() const
                                                   << ". Valid extensions are json and rf");
 }
 
-void check_template_def(const TemplateDef& def)
+void validate_template_def(const TemplateDef& def)
 {
     if (def.match_template.empty())
     {
@@ -137,5 +137,9 @@ void check_template_def(const TemplateDef& def)
     if (def.replace_template.empty())
     {
         MXB_THROW(RewriteError, "Replace template must not be empty");
+    }
+    if (def.unit_test_input.size() != def.unit_test_output.size())
+    {
+        MXB_THROW(RewriteError, "The number of input/output unit tests must match");
     }
 }

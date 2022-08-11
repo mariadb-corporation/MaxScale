@@ -48,6 +48,9 @@ struct TemplateDef
     bool         ignore_whitespace = true;
     std::string  match_template;
     std::string  replace_template;
+
+    std::vector<std::string> unit_test_input;
+    std::vector<std::string> unit_test_output;
 };
 
 // Could be a free function but wrapped for extensions
@@ -62,4 +65,4 @@ private:
 };
 
 // Throws if TemplateDef is not complete
-void check_template_def(const TemplateDef& def);
+void validate_template_def(const TemplateDef& def);
