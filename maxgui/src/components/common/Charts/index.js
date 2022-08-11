@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Chart from 'chart.js'
+import './config'
 import LineChartStream from './LineChartStream.vue'
 import LineChart from './LineChart.vue'
 import ScatterChart from './ScatterChart.vue'
@@ -19,24 +19,7 @@ import HorizBarChart from './HorizBarChart.vue'
 import TreeGraph from './TreeGraph.vue'
 import TreeGraphNode from './TreeGraphNode.vue'
 import DagGraph from './DagGraph.vue'
-import './customTooltip.scss'
-import 'chartjs-plugin-trendline'
-Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
-Chart.defaults.global.defaultFontColor = '#424F62'
-Chart.defaults.global.defaultFontSize = 10
 
-Chart.defaults.scale.gridLines.lineWidth = 0.6
-Chart.defaults.scale.gridLines.color = 'rgba(234, 234, 234, 1)'
-Chart.defaults.scale.gridLines.drawTicks = false
-Chart.defaults.scale.gridLines.drawBorder = true
-Chart.defaults.scale.gridLines.zeroLineColor = 'rgba(234, 234, 234, 1)'
-Chart.defaults.scale.ticks.padding = 12
-
-/**
- * show tooltip at cursor position.
- * tooltips.position = 'cursor'
- */
-Chart.Tooltip.positioners.cursor = (_, coordinates) => coordinates
 export default {
     'line-chart-stream': LineChartStream,
     'line-chart': LineChart,
