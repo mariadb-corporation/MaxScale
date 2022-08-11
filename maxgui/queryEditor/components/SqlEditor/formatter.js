@@ -1,7 +1,7 @@
 //https://github.com/zeroturnaround/sql-formatter/blob/master/src/languages/MariaDbFormatter.jsu
 import Formatter from 'sql-formatter/lib/core/Formatter'
 import Tokenizer from 'sql-formatter/lib/core/Tokenizer'
-import reservedWords from '@queryEditor/components/SqlEditor/reservedWords'
+import reservedWords from './reservedWords'
 
 const reservedTopLevelWords = [
     'ALTER COLUMN',
@@ -70,6 +70,6 @@ class MariaDbFormatter extends Formatter {
     }
 }
 
-export const format = (query, cfg = {}) => {
+export default function(query, cfg = {}) {
     return new MariaDbFormatter(cfg).format(query)
 }

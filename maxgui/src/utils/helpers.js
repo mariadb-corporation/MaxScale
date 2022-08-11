@@ -14,7 +14,7 @@ import Vue from 'vue'
 import update from 'immutability-helper'
 import { v1 as uuidv1 } from 'uuid'
 import deepDiff from 'deep-diff'
-import { format as sqlFormatter } from './sqlFormatter'
+import sqlFormatter from '@queryEditor/components/SqlEditor/formatter'
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
