@@ -74,7 +74,7 @@ const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 // value is reached, the counter is reset back to 1. This makes sure we reserve the values 0 and 0xffffffff as
 // special values that are never assigned by MaxScale.
 const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
-static_assert(MAX_SESCMD_ID == MARIADB_PS_DIRECT_EXEC_ID);
+static_assert(MAX_SESCMD_ID == MARIADB_PS_DIRECT_EXEC_ID, "MAX_SESCMD_ID should equal to MARIADB_PS_DIRECT_EXEC_ID");
 
 // Default version string sent to clients
 const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";

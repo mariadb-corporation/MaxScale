@@ -23,9 +23,9 @@ using namespace std;
 namespace nosql
 {
 
-static_assert(NOSQL_MD5_DIGEST_LENGTH == MD5_DIGEST_LENGTH);
-static_assert(NOSQL_SHA_DIGEST_LENGTH == SHA_DIGEST_LENGTH);
-static_assert(NOSQL_SHA256_DIGEST_LENGTH == SHA256_DIGEST_LENGTH);
+static_assert(NOSQL_MD5_DIGEST_LENGTH == MD5_DIGEST_LENGTH, "NOSQL_MD5_DIGEST_LENGTH should equal to MD5_DIGEST_LENGTH");
+static_assert(NOSQL_SHA_DIGEST_LENGTH == SHA_DIGEST_LENGTH, "NOSQL_SHA_DIGEST_LENGTH should equal to SHA_DIGEST_LENGTH");
+static_assert(NOSQL_SHA256_DIGEST_LENGTH == SHA256_DIGEST_LENGTH, "NOSQL_SHA256_DIGEST_LENGTH should equal to SHA256_DIGEST_LENGTH");
 
 vector<uint8_t> crypto::create_random_bytes(size_t size)
 {

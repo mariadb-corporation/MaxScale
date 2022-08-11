@@ -1004,25 +1004,25 @@ constexpr bool all_bits_set(const uint8_t* ptr, int columns)
 constexpr bool test_bit_mask()
 {
     constexpr uint8_t case1[1] = {0xff};
-    static_assert(all_bits_set(case1, 8));
-    static_assert(all_bits_set(case1, 3));
-    static_assert(all_bits_set(case1, 1));
+    static_assert(all_bits_set(case1, 8), "all_bits_set check failed");
+    static_assert(all_bits_set(case1, 3), "all_bits_set check failed");
+    static_assert(all_bits_set(case1, 1), "all_bits_set check failed");
 
     constexpr uint8_t case2[2] = {0xff, 0b01111111};
-    static_assert(all_bits_set(case2, 11));
-    static_assert(all_bits_set(case2, 15));
-    static_assert(!all_bits_set(case2, 16));
+    static_assert(all_bits_set(case2, 11), "all_bits_set check failed");
+    static_assert(all_bits_set(case2, 15), "all_bits_set check failed");
+    static_assert(!all_bits_set(case2, 16), "all_bits_set check failed");
 
     constexpr uint8_t case3[1] = {0b0111};
-    static_assert(all_bits_set(case3, 1));
-    static_assert(all_bits_set(case3, 3));
-    static_assert(!all_bits_set(case3, 4));
+    static_assert(all_bits_set(case3, 1), "all_bits_set check failed");
+    static_assert(all_bits_set(case3, 3), "all_bits_set check failed");
+    static_assert(!all_bits_set(case3, 4), "all_bits_set check failed");
 
     constexpr uint8_t case4[1] = {0b1011};
-    static_assert(all_bits_set(case4, 1));
-    static_assert(all_bits_set(case4, 2));
-    static_assert(!all_bits_set(case4, 3));
-    static_assert(!all_bits_set(case4, 4));
+    static_assert(all_bits_set(case4, 1), "all_bits_set check failed");
+    static_assert(all_bits_set(case4, 2), "all_bits_set check failed");
+    static_assert(!all_bits_set(case4, 3), "all_bits_set check failed");
+    static_assert(!all_bits_set(case4, 4), "all_bits_set check failed");
 
     return true;
 }
