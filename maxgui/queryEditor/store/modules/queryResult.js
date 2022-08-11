@@ -51,11 +51,11 @@ export default {
                 let sql, queryName
                 const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
                 switch (prvwMode) {
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
+                    case rootState.queryEditorConfig.config.SQL_QUERY_MODES.PRVW_DATA:
                         sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
                         queryName = `Preview ${escapedTblId} data`
                         break
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    case rootState.queryEditorConfig.config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                         sql = `DESCRIBE ${escapedTblId};`
                         queryName = `View ${escapedTblId} details`
                         break
@@ -83,7 +83,7 @@ export default {
                         sql,
                         res,
                         connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -123,7 +123,8 @@ export default {
                     'queryConn/cloneConn',
                     {
                         conn_to_be_cloned: active_sql_conn,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                        binding_type:
+                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
                         session_id_fk: active_session_id,
                     },
                     { root: true }
@@ -155,7 +156,7 @@ export default {
                         sql: query,
                         res,
                         connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.USER_LOGS,
+                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.USER_LOGS,
                     },
                     { root: true }
                 )
@@ -290,7 +291,10 @@ export default {
                 }
             }
             // preview data
-            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.app_config.SQL_QUERY_MODES
+            const {
+                PRVW_DATA,
+                PRVW_DATA_DETAILS,
+            } = rootState.queryEditorConfig.config.SQL_QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
             for (const mode of prvwModes) {
                 const data = scope.$help.stringifyClone(

@@ -99,7 +99,8 @@ export default {
                         'queryConn/cloneConn',
                         {
                             conn_to_be_cloned: wke_conn,
-                            binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                            binding_type:
+                                rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.SESSION,
                             session_id_fk: newSessionId,
                             getCloneObjRes: obj => (sessionConn = obj),
                         },

@@ -12,7 +12,7 @@
             <router-link to="/dashboard/servers">
                 <img src="@/assets/logo.svg" alt="MariaDB Logo" />
                 <span class="product-name tk-azo-sans-web font-weight-medium  white--text">
-                    {{ $t('productName') }}
+                    MaxScale
                 </span>
             </router-link>
         </v-toolbar-title>

@@ -92,7 +92,7 @@ export default {
             sql_conns: state => state.queryConn.sql_conns,
             is_fullscreen: state => state.wke.is_fullscreen,
             is_validating_conn: state => state.queryConn.is_validating_conn,
-            QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
+            QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
             worksheets_arr: state => state.wke.worksheets_arr,
         }),
         ...mapGetters({

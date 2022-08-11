@@ -5,7 +5,7 @@
                 <div class="logo">
                     <img src="@/assets/logo.svg" alt="MariaDB Logo" />
                     <span class="product-name font-weight-medium ml-2 white--text">
-                        {{ app_config.productName }}
+                        MaxScale
                     </span>
                 </div>
                 <login-form />
@@ -29,7 +29,6 @@
  * Public License.
  */
 import Vue from 'vue'
-import { mapState } from 'vuex'
 import LoginForm from './LoginForm'
 import IntroAnimation from './IntroAnimation'
 
@@ -43,9 +42,6 @@ export default {
         return {
             bus: new Vue(),
         }
-    },
-    computed: {
-        ...mapState(['app_config']),
     },
     methods: {
         onResize() {

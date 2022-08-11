@@ -1,5 +1,4 @@
 {
-    "productName": "MaxScale",
     "welcomeTo": "Welcome to",
     "mariaDbMaxScale": "MariaDB MaxScale",
     "welcome": "Welcome",
@@ -206,8 +205,6 @@
     "alterSpecs": "Alter Specifications",
     "queryResInfo": "Query results information",
     "logTypes": "Log Types",
-    "userQueryLogs": "User query logs",
-    "actionLogs": "Action logs",
     "dropTbl": "Drop Table",
     "dropSchema": "Drop Schema",
     "dropSp": "Drop Stored Procedure",

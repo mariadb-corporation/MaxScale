@@ -125,10 +125,10 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
+            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
+            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            SQL_NODE_CTX_OPT_TYPES: state => state.queryEditorConfig.config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
             active_db: state => state.queryConn.active_db,

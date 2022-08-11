@@ -41,8 +41,8 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            CMPL_SNIPPET_KIND: state => state.app_config.CMPL_SNIPPET_KIND,
+            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
         }),
         builtInCmplItems() {
             const keywordCmplItems = languageTokens.keywords.map(s => ({

@@ -33,7 +33,7 @@ export default {
     inheritAttrs: false,
     computed: {
         ...mapState({
-            SQL_DEF_ROW_LIMIT_OPTS: state => state.app_config.SQL_DEF_ROW_LIMIT_OPTS,
+            SQL_DEF_ROW_LIMIT_OPTS: state => state.queryEditorConfig.config.SQL_DEF_ROW_LIMIT_OPTS,
             query_row_limit: state => state.queryPersisted.query_row_limit,
         }),
         value: {

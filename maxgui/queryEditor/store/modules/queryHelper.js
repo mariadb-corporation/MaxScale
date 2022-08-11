@@ -11,7 +11,7 @@
  * Public License.
  */
 import { immutableUpdate } from 'utils/helpers'
-import { APP_CONFIG } from 'utils/constants'
+import { SQL_NODE_TYPES, SQL_EDITOR_MODES } from '@queryEditor/config'
 
 /**
  * @private
@@ -90,7 +90,7 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
         const idxOfTablesNode = getIdxOfDbChildNode({
             dbIdx,
             db_tree,
-            childType: APP_CONFIG.SQL_NODE_TYPES.TABLES,
+            childType: SQL_NODE_TYPES.TABLES,
         })
         const tblIdx = db_tree[dbIdx].children[idxOfTablesNode].children.findIndex(
             tbl => tbl.name === tblName
@@ -285,7 +285,7 @@ function syncStateCreator(namespace) {
                  * file_handle?: FileSystemFileHandle. File handle.
                  */
                 blob_file: {},
-                curr_editor_mode: APP_CONFIG.SQL_EDITOR_MODES.TXT_EDITOR,
+                curr_editor_mode: SQL_EDITOR_MODES.TXT_EDITOR,
                 /**
                  * properties:
                  * altered_active_node?: object

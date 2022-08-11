@@ -38,7 +38,7 @@ function analyzeRes({ res, store, sql_conn_id }) {
     const results = store.vue.$typy(res, 'data.data.attributes.results').safeArray
     const lostCnnErrMsgs = results.filter(res => {
         const errno = store.vue.$typy(res, 'errno').safeNumber
-        return store.state.app_config.MARIADB_NET_ERRNO.includes(errno)
+        return store.state.queryEditorConfig.config.MARIADB_NET_ERRNO.includes(errno)
     })
     if (lostCnnErrMsgs.length) {
         const { id: active_session_id } =

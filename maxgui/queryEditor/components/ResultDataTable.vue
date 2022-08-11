@@ -211,7 +211,8 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
+            SQL_RES_TBL_CTX_OPT_TYPES: state =>
+                state.queryEditorConfig.config.SQL_RES_TBL_CTX_OPT_TYPES,
         }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8

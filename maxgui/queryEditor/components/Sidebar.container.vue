@@ -57,10 +57,10 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
+            SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,

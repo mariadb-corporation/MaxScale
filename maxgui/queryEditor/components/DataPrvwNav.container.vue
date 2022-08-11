@@ -41,7 +41,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
         ...mapGetters({
