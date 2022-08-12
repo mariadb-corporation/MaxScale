@@ -325,6 +325,7 @@ export default {
         },
         getDefFileName() {
             return `MaxScale ${this.type} Chart - ${this.$help.dateFormat({
+                moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
             })}`

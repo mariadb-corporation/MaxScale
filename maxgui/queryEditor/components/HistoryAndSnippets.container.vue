@@ -62,6 +62,7 @@
                         <truncate-string
                             :text="
                                 `${$help.dateFormat({
+                                    moment: $moment,
                                     value: cell,
                                     formatType: 'ddd, DD MMM YYYY',
                                 })}`
@@ -358,6 +359,7 @@ export default {
                     let map = new Map()
                     rows.forEach(row => {
                         const key = this.$help.dateFormat({
+                            moment: this.$moment,
                             value: row[idx],
                             formatType: 'ddd, DD MMM YYYY',
                         })

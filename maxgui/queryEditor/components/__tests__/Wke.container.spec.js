@@ -13,13 +13,13 @@
 
 import mount from '@tests/unit/setup'
 import Wke from '../Wke.container.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }
 const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
 const mountFactory = opts =>
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: true,
                 component: Wke,

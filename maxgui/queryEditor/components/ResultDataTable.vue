@@ -291,9 +291,9 @@ export default {
         menuItems() {
             if (this.menuOpts.length) {
                 // Deep merge of menuOpts with baseOpts
-                const { deepMergeWith, keyBy, values } = this.$help.lodash
+                const { mergeWith, keyBy, values } = this.$help.lodash
                 const merged = values(
-                    deepMergeWith(
+                    mergeWith(
                         keyBy(this.baseOpts, 'text'),
                         keyBy(this.menuOpts, 'text'),
                         (objVal, srcVal) => {

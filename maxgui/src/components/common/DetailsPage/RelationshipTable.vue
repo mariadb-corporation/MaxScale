@@ -160,7 +160,7 @@ export default {
     watch: {
         getRelationshipData: {
             handler(value) {
-                if (!this.readOnly && !this.$help.isFunction(value))
+                if (!this.readOnly && !this.$typy(value).isFunction)
                     this.logger.error("property 'getRelationshipData' is required.")
             },
             immediate: true,

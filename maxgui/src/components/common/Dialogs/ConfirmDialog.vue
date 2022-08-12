@@ -9,7 +9,7 @@
         <template v-slot:form-body>
             <slot name="confirm-text">
                 <p
-                    v-if="!$help.isNull(item)"
+                    v-if="!$typy(item).isNull"
                     class="confirmations-text"
                     v-html="$t(`confirmations.${type}`, { targetId: item.id })"
                 ></p>

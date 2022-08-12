@@ -100,7 +100,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-server-createServer')
@@ -135,7 +135,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-server-updateServerParameters')
@@ -180,7 +180,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-server-updateServerRelationship')
@@ -237,7 +237,7 @@ export default {
                         { text: message, type: 'success' },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(callback)) await callback()
+                    await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-server-setOrClearServerState')

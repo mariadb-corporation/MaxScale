@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { addDaysToNow } from 'utils/helpers'
+import { addDaysToNow } from '@/utils/helpers'
 
 // Place here any query editor states need to be persisted without being cleared when logging out
 export default {
@@ -106,6 +106,7 @@ export default {
                         date: startTime, // Unix time
                         connection_name,
                         time: this.vue.$help.dateFormat({
+                            moment: this.vue.$moment,
                             value: startTime,
                             formatType: 'HH:mm:ss',
                         }),
@@ -131,6 +132,7 @@ export default {
                     payload: {
                         date, // Unix time
                         time: this.vue.$help.dateFormat({
+                            moment: this.vue.$moment,
                             value: date,
                             formatType: 'HH:mm:ss',
                         }),
@@ -152,7 +154,12 @@ export default {
             }
         },
         handleAutoClearQueryHistory({ state, commit }) {
-            if (this.vue.$help.daysDiff(state.query_history_expired_time) <= 0) {
+            if (
+                this.vue.$help.daysDiff({
+                    moment: this.vue.$moment,
+                    timestamp: state.query_history_expired_time,
+                }) <= 0
+            ) {
                 commit('SET_QUERY_HISTORY', [])
                 commit('SET_QUERY_HISTORY_EXPIRED_TIME', addDaysToNow(30))
             }

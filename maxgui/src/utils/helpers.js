@@ -15,62 +15,33 @@ import update from 'immutability-helper'
 import { v1 as uuidv1 } from 'uuid'
 import deepDiff from 'deep-diff'
 import sqlFormatter from '@queryEditor/components/SqlEditor/formatter'
-export const isEmpty = require('lodash/isEmpty')
-export const cloneDeep = require('lodash/cloneDeep')
-export const isEqual = require('lodash/isEqual')
-export const xorWith = require('lodash/xorWith')
-export const uniqueId = require('lodash/uniqueId')
-export const get = require('lodash/get')
-export const objectSet = require('lodash/set')
-export const unionBy = require('lodash/unionBy')
-export const pick = require('lodash/pick')
-export const pickBy = require('lodash/pickBy')
-export const uniqBy = require('lodash/uniqBy')
-export const merge = require('lodash/merge')
-export const differenceWith = require('lodash/differenceWith')
-export const countBy = require('lodash/countBy')
-export const keyBy = require('lodash/keyBy')
-export const values = require('lodash/values')
-export const mergeWith = require('lodash/mergeWith')
-export const camelCase = require('lodash/camelCase')
+
 export const lodash = {
-    isEmpty,
-    cloneDeep,
-    isEqual,
-    xorWith,
-    uniqueId,
-    objectGet: get,
-    objectSet,
-    unionBy,
-    pick,
-    pickBy,
-    uniqBy,
-    deepMerge: merge,
-    deepMergeWith: mergeWith,
-    differenceWith,
-    countBy,
-    keyBy,
-    values,
-    camelCase,
-}
-
-export function isNull(v) {
-    return v === null
-}
-
-export function isUndefined(v) {
-    return v === undefined
-}
-
-export function isFunction(v) {
-    return typeof v === 'function'
+    isEmpty: require('lodash/isEmpty'),
+    cloneDeep: require('lodash/cloneDeep'),
+    isEqual: require('lodash/isEqual'),
+    xorWith: require('lodash/xorWith'),
+    uniqueId: require('lodash/uniqueId'),
+    get: require('lodash/get'),
+    set: require('lodash/set'),
+    unionBy: require('lodash/unionBy'),
+    pick: require('lodash/pick'),
+    pickBy: require('lodash/pickBy'),
+    uniqBy: require('lodash/uniqBy'),
+    merge: require('lodash/merge'),
+    mergeWith: require('lodash/mergeWith'),
+    differenceWith: require('lodash/differenceWith'),
+    countBy: require('lodash/countBy'),
+    keyBy: require('lodash/keyBy'),
+    values: require('lodash/values'),
+    camelCase: require('lodash/camelCase'),
 }
 
 export function isNotEmptyObj(v) {
-    return !isNull(v) && !Array.isArray(v) && typeof v === 'object' && !isEmpty(v)
+    return v !== null && !Array.isArray(v) && typeof v === 'object' && !lodash.isEmpty(v)
 }
 export function isNotEmptyArray(v) {
-    return !isNull(v) && Array.isArray(v) && v.length > 0
+    return v !== null && Array.isArray(v) && v.length > 0
 }
 
 export function getCookie(name) {
@@ -182,15 +153,15 @@ export function strReplaceAt({ str, index, newChar }) {
  * @return {Array} An array of error string
  */
 export function getErrorsArr(error) {
-    if (isUndefined(error.response) || isUndefined(error.response.data)) return [error]
-
-    if (!isUndefined(error.response.data.errors))
-        return error.response.data.errors.map(ele => `${ele.detail}`)
-
-    // async cmd response has error messages inside meta object
-    if (!isUndefined(error.response.data.meta) && !isUndefined(error.response.data.meta.errors))
-        return error.response.data.meta.errors.map(ele => `${ele.detail}`)
-    return []
+    if (typeof error === 'string') return [error]
+    else {
+        const errors = lodash.get(error, 'response.data.errors') || []
+        // fetch-cmd-result has error messages inside meta object
+        const metaErrs = lodash.get(error, 'response.data.meta.errors') || []
+        if (errors.length) return errors.map(ele => `${ele.detail}`)
+        if (metaErrs.length) return metaErrs.map(ele => `${ele.detail}`)
+        return [error]
+    }
 }
 
 /**
@@ -205,7 +176,7 @@ export function getErrorsArr(error) {
 export function hashMapByPath({ arr, path }) {
     let hashMap = {}
     arr.forEach(obj => {
-        const keyValue = lodash.objectGet(obj, path)
+        const keyValue = lodash.get(obj, path)
         if (hashMap[keyValue] === undefined) hashMap[keyValue] = []
         hashMap[keyValue].push(obj)
     })
@@ -213,12 +184,15 @@ export function hashMapByPath({ arr, path }) {
 }
 
 /**
+ * TODO: Move this helper to somewhere else where it has access to moment object.
+ * Right now, the moment needs to be passed as arg
  * Handle format date value
- * @param {String} payload.value - String date to be formatted
- * @param {String} payload.formatType - format type (default is HH:mm:ss MM.DD.YYYY)
+ * @param {Object} param.moment - moment
+ * @param {String} param.value - String date to be formatted
+ * @param {String} param.formatType - format type (default is HH:mm:ss MM.DD.YYYY)
  * @return {String} new date format
  */
-export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
+export function dateFormat({ moment, value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
     let date = new Date(value)
     const DATE_RFC2822 = 'ddd, DD MMM YYYY HH:mm:ss'
     let format
@@ -229,7 +203,7 @@ export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
         default:
             format = formatType
     }
-    return Vue.moment(date).format(format)
+    return moment(date).format(format)
 }
 
 let nodeId = 0 // must be a number, so that hierarchySort can be done
@@ -245,7 +219,7 @@ let nodeId = 0 // must be a number, so that hierarchySort can be done
 export function objToTree({ obj, keepPrimitiveValue, level, parentNodeId = 0 }) {
     let tree = []
     if (isNotEmptyObj(obj)) {
-        const targetObj = cloneDeep(obj)
+        const targetObj = lodash.cloneDeep(obj)
         Object.keys(targetObj).forEach(key => {
             const value = keepPrimitiveValue ? targetObj[key] : convertType(targetObj[key])
 
@@ -295,7 +269,7 @@ export function objToTree({ obj, keepPrimitiveValue, level, parentNodeId = 0 }) 
  */
 export function flattenTree(tree) {
     let flattened = []
-    let target = cloneDeep(tree)
+    let target = lodash.cloneDeep(tree)
     //Traversal
     target.forEach(o => {
         if (o.children && o.children.length > 0) {
@@ -342,7 +316,7 @@ export function treeToObj({ changedNodes, tree }) {
     let resultObj = {}
     if (isNotEmptyArray(changedNodes)) {
         let ancestorsHash = {}
-        const target = cloneDeep(changedNodes)
+        const target = lodash.cloneDeep(changedNodes)
         let treeMap = new Map()
         const flattened = flattenTree(tree)
         flattened.forEach(node => treeMap.set(node.nodeId, node))
@@ -709,12 +683,13 @@ export function addDaysToNow(days) {
 }
 /**
  * This returns number of days between target timestamp and current date
- * @param {String} timestamp - target unix timestamp
+ * @param {Object} param.moment - moment
+ * @param {String} param.timestamp - target unix timestamp
  * @returns {Number} - days diff
  */
-export function daysDiff(timestamp) {
-    const now = Vue.moment().startOf('day')
-    const end = Vue.moment(timestamp).startOf('day')
+export function daysDiff({ moment, timestamp }) {
+    const now = moment().startOf('day')
+    const end = moment(timestamp).startOf('day')
     return end.diff(now, 'days')
 }
 
@@ -745,7 +720,7 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
         newArrIds.push(obj2[idField])
         const obj1 = baseMap.get(obj2[idField])
         if (!obj1) resultMap.set('added', [...resultMap.get('added'), obj2])
-        else if (isEqual(obj1, obj2))
+        else if (lodash.isEqual(obj1, obj2))
             resultMap.set('unchanged', [...resultMap.get('unchanged'), obj2])
         else {
             const diff = deepDiff(obj1, obj2)
@@ -780,7 +755,7 @@ export function getMin({ arr, pickBy }) {
  * @returns {String} - returns the most frequent value
  */
 export function getMostFreq({ arr, pickBy }) {
-    let countObj = countBy(arr, pickBy)
+    let countObj = lodash.countBy(arr, pickBy)
     return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
 }
 
@@ -897,9 +872,6 @@ Object.defineProperties(Vue.prototype, {
                 convertDuration,
                 convertSize,
                 genLineStreamDataset,
-                isNull,
-                isFunction,
-                isUndefined,
                 lodash,
                 immutableUpdate,
                 resourceTxtTransform,

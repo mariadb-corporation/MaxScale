@@ -214,9 +214,9 @@ describe('helpers unit tests', () => {
             if (type === undefined)
                 des = des.replace(`format ${type}`, 'default format HH:mm:ss MM.DD.YYYY')
             it(des, () => {
-                expect(helper.dateFormat({ value: dummyValue, formatType: type })).to.be.equals(
-                    expectedReturn[i]
-                )
+                expect(
+                    helper.dateFormat({ moment: Vue.moment, value: dummyValue, formatType: type })
+                ).to.be.equals(expectedReturn[i])
             })
         })
     })

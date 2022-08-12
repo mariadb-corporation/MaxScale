@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import QueryEditor from '../index.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 
 const sql_conns_mock = {
     1: {
@@ -35,7 +35,7 @@ const stubModuleMethods = {
 
 const mountFactory = opts =>
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: false,
                 component: QueryEditor,

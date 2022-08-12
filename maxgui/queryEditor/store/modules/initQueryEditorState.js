@@ -1,4 +1,4 @@
-import { uniqueId } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 import queryHelper from './queryHelper'
 
 /**
@@ -6,7 +6,7 @@ import queryHelper from './queryHelper'
  */
 export function defWorksheetState() {
     return {
-        id: uniqueId(`WORKSHEET_${new Date().getUTCMilliseconds()}_`),
+        id: lodash.uniqueId(`WORKSHEET_${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
         ...queryHelper.syncStateCreator('schemaSidebar'),
     }
@@ -16,7 +16,7 @@ export function defWorksheetState() {
  */
 export function defSessionState(wke_id) {
     return {
-        id: uniqueId(`SESSION_${new Date().getUTCMilliseconds()}_`),
+        id: lodash.uniqueId(`SESSION_${new Date().getUTCMilliseconds()}_`),
         name: 'Query Tab 1',
         wke_id_fk: wke_id,
         count: 1,

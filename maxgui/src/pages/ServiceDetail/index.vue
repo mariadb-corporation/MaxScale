@@ -178,7 +178,7 @@ export default {
                 ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
                     id,
                     user: `${user}@${remote}`,
-                    connected: this.$help.dateFormat({ value: connected }),
+                    connected: this.$help.dateFormat({ moment: this.$moment, value: connected }),
                     idle,
                     memory,
                 })

@@ -36,7 +36,7 @@
             </v-btn>
 
             <!-- no content for the corresponding header, usually this is an error -->
-            <span v-if="$help.isUndefined(item[header.value])"></span>
+            <span v-if="$typy(item[header.value]).isUndefined"></span>
             <div
                 v-else
                 ref="truncateEle"

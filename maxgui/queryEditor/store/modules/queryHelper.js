@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { immutableUpdate } from 'utils/helpers'
+import { immutableUpdate } from '@/utils/helpers'
 import { SQL_NODE_TYPES, SQL_EDITOR_MODES } from '@queryEditor/config'
 
 /**
@@ -240,7 +240,7 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
         state,
         vue: {
             $help: {
-                lodash: { objectSet },
+                lodash: { set },
                 immutableUpdate,
             },
             $typy,
@@ -248,7 +248,7 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
     } = scope
     const persistedArray = $typy(state, persistedArrayPath).safeArray
     const idx = persistedArray.findIndex(obj => obj.id === id)
-    objectSet(
+    set(
         state, //obj
         persistedArrayPath, //path
         //new value

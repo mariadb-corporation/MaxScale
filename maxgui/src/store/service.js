@@ -102,7 +102,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-createService')
@@ -136,7 +136,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-updateServiceParameters')
@@ -180,7 +180,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-updateServiceRelationship')
@@ -237,7 +237,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(callback)) await callback()
+                    await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-stopOrStartService')

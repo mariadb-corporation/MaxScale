@@ -13,7 +13,7 @@
 import Vue from 'vue'
 import { mount, shallowMount, createLocalVue } from '@vue/test-utils'
 import '@/pluginReg'
-import 'utils/helpers'
+import '@/utils/helpers'
 import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
 import store from 'store'

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { camelCase } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 let icons = {}
 const req = require.context(
     // The relative path of the components folder
@@ -20,7 +20,7 @@ const req = require.context(
     /\.(vue)$/i
 )
 req.keys().forEach(fileName => {
-    const name = camelCase(
+    const name = lodash.camelCase(
         fileName
             .split('/')
             .pop()

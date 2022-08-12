@@ -303,7 +303,7 @@ export default {
             // data type shouldn't be handled here as it will break the filter result
             // use helper function to handle value before passing the data to table
             let value = item[header.value]
-            return this.$help.isFunction(header.format) ? header.format(value) : `${value}`
+            return this.$typy(header.format).isFunction ? header.format(value) : `${value}`
         },
 
         //--------------------------------- @private Table sorting ---------------------------------------------------

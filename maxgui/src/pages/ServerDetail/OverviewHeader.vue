@@ -59,7 +59,11 @@
                     <template>
                         {{
                             name === 'triggered_at' && value !== 'undefined'
-                                ? $help.dateFormat({ value, formatType: 'DATE_RFC2822' })
+                                ? $help.dateFormat({
+                                      moment: $moment,
+                                      value,
+                                      formatType: 'DATE_RFC2822',
+                                  })
                                 : value
                         }}
                     </template>

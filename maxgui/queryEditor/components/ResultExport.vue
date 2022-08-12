@@ -275,6 +275,7 @@ export default {
         },
         getDefFileName() {
             return `${this.defExportFileName} - ${this.$help.dateFormat({
+                moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
             })}`

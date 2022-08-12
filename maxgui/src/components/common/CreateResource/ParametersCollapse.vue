@@ -116,7 +116,7 @@ export default {
                 /* this ensure 0 default_value could be assigned,
                    undefined default_value property will fallback to null to make the input visibled
                  */
-                const defaultValue = this.$help.isUndefined(paramObj.default_value)
+                const defaultValue = this.$typy(paramObj.default_value).isUndefined
                     ? null
                     : paramObj.default_value
 

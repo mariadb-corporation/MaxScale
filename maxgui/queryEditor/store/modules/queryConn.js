@@ -304,7 +304,7 @@ export default {
                         binding_type,
                         session_id_fk,
                     }
-                    if (this.vue.$help.isFunction(getCloneObjRes)) getCloneObjRes(conn)
+                    this.vue.$typy(getCloneObjRes).safeFunction(conn)
                     commit('ADD_SQL_CONN', conn)
                 }
             } catch (e) {

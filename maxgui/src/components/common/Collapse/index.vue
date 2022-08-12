@@ -2,7 +2,7 @@
     <div
         :class="wrapperClass"
         v-on="
-            $help.isFunction(onEdit) && editable
+            $typy(onEdit).isFunction && editable
                 ? {
                       mouseenter: e => (showEditBtn = true),
                       mouseleave: e => (showEditBtn = false),

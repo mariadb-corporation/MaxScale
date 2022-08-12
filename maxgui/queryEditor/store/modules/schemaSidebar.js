@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { uniqBy } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
@@ -460,7 +460,7 @@ export default {
         getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
         getDbCmplList: (state, getters) => {
             if (getters.getCurrDbTree.db_completion_list)
-                return uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
+                return lodash.uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
             return []
         },
         // exe_stmt_result_map getters

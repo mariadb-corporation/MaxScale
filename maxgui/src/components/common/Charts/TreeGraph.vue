@@ -110,7 +110,7 @@ export default {
     },
     computed: {
         layout() {
-            return this.$help.lodash.deepMerge({ margin: { left: 24 } }, this.layoutConf)
+            return this.$help.lodash.merge({ margin: { left: 24 } }, this.layoutConf)
         },
         treeLayout() {
             return tree().size([this.dim.height, this.dim.width])

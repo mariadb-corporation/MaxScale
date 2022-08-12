@@ -13,11 +13,11 @@
 
 import mount from '@tests/unit/setup'
 import SchemaTree from '../SchemaTree.container.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@/utils/helpers'
 
 const mountFactory = opts =>
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: true,
                 component: SchemaTree,
