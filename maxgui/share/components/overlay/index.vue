@@ -22,7 +22,7 @@ import {
     OVERLAY_LOADING,
     OVERLAY_ERROR,
     OVERLAY_TRANSPARENT_LOADING,
-} from 'store/overlayTypes'
+} from '@share/overlayTypes'
 import ErrorOverlay from './ErrorOverlay'
 import LoadingTransparentOverlay from './LoadingTransparentOverlay'
 import LoadingOverlay from './LoadingOverlay'

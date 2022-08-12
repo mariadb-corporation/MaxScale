@@ -105,7 +105,7 @@
  * after-close: (function)
  */
 import { mapMutations } from 'vuex'
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 
 export default {
     name: 'base-dialog',

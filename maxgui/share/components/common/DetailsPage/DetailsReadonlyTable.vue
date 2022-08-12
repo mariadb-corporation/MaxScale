@@ -44,7 +44,7 @@
  * It accepts tableData as an object or processed data array with
  * valid data-table format.
  */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState } from 'vuex'
 
 export default {

@@ -13,7 +13,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import { routes } from './routes'
-import { OVERLAY_LOADING } from 'store/overlayTypes'
+import { OVERLAY_LOADING } from '@share/overlayTypes'
 import store from 'store'
 
 Vue.use(Router)

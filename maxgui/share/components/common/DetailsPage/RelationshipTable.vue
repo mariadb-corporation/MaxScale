@@ -92,7 +92,7 @@ isFilterDrag will be only added to event data object if relationshipType props =
 - $emit('open-listener-form-dialog')
 This callback event is emitted only when relationshipType props === 'listeners'
 */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState, mapGetters } from 'vuex'
 
 export default {

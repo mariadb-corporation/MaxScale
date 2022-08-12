@@ -119,7 +119,7 @@ PROPS:
   in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter
  */
 import { mapState, mapGetters } from 'vuex'
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import getParamInfo from '@share/mixins/getParamInfo'
 export default {
     name: 'details-parameters-table',
