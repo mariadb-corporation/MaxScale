@@ -12,7 +12,7 @@
  */
 
 import Vuetify from 'vuetify/lib'
-import icons from '@/icons'
+import icons from '@share/icons'
 import i18n from './i18n'
 import '@mdi/font/css/materialdesignicons.css'
 
