@@ -480,7 +480,10 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 }
                 else
                 {
-                    gwbuf_free(pPacket);
+                    // TODO: In most cases this causes a double delete.
+                    // TODO: Removing it may cause a leak.
+                    // TODO: Refactor things so that there is no ambiguity.
+                    // gwbuf_free(pPacket);
                 }
             }
         }
