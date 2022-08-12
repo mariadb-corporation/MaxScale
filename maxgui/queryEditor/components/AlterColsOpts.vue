@@ -69,7 +69,7 @@
                         <v-icon
                             size="14"
                             color="accent-dark"
-                            :class="{ 'rotate-icon__vert': !isVertTable }"
+                            :class="{ 'rotate-left': !isVertTable }"
                         >
                             mdi-format-rotate-90
                         </v-icon>

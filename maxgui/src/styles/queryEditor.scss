@@ -1,16 +1,52 @@
-.tab-navigation--btn-style.query-tab-nav {
+.v-tabs--query-editor-style {
+    width: unset !important;
     .tab-btn {
-        border-left: none !important;
-        border-top: none !important;
-        border-right: 1px solid $table-border !important;
-        border-bottom: 1px solid $table-border !important;
-        .del-tab-btn {
-            visibility: hidden;
+        border: thin solid rgba(0, 0, 0, 0.12) !important;
+        border-right: none !important;
+        font-size: 0.75rem;
+        &:last-of-type {
+            border-right: thin solid rgba(0, 0, 0, 0.12) !important;
         }
-        &:hover {
-            .del-tab-btn {
-                visibility: visible;
+        &--active {
+            color: $primary !important;
+            &::before {
+                opacity: 0.12 !important;
             }
+        }
+        &--err-tab {
+            color: $error !important;
+            &:last-of-type {
+                border-color: $error !important;
+            }
+        }
+    }
+    &.query-tab-nav {
+        .tab-btn {
+            border-left: none !important;
+            border-top: none !important;
+            border-right: 1px solid $table-border !important;
+            border-bottom: 1px solid $table-border !important;
+            .del-tab-btn {
+                visibility: hidden;
+            }
+            &:hover {
+                .del-tab-btn {
+                    visibility: visible;
+                }
+            }
+        }
+        .v-slide-group__prev,
+        .v-slide-group__next {
+            border-bottom: 1px solid $table-border !important;
+            border-right: 1px solid $table-border !important;
+        }
+    }
+
+    &.v-tabs--custom-small-pagination-btn {
+        .v-slide-group__prev,
+        .v-slide-group__next {
+            flex: 0 1 36px;
+            min-width: 36px;
         }
     }
 }

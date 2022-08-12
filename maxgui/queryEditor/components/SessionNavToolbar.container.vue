@@ -2,7 +2,7 @@
     <div
         class="session-nav-toolbar-ctr d-flex align-center flex-grow-1 color border-bottom-table-border"
     >
-        <div ref="buttonWrapper" class="d-flex align-center pl-2">
+        <div ref="buttonWrapper" class="d-flex align-center px-2">
             <v-btn
                 :disabled="$typy(active_sql_conn).isEmptyObject"
                 small

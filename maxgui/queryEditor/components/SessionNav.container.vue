@@ -5,8 +5,9 @@
             show-arrows
             hide-slider
             :height="height"
-            class="tab-navigation--btn-style query-tab-nav flex-grow-0"
+            class="v-tabs--query-editor-style query-tab-nav v-tabs--custom-small-pagination-btn flex-grow-0"
             :style="{ maxWidth: `calc(100% - ${sessionNavToolbarWidth + 1}px)` }"
+            center-active
         >
             <v-tab
                 v-for="session in getSessionsOfActiveWke"

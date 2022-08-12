@@ -1,5 +1,5 @@
 <template>
-    <v-tabs v-model="activeTab" class="tab-navigation-wrapper">
+    <v-tabs v-model="activeTab" class="v-tabs--mariadb-style">
         <v-tab v-for="route in dashboardTabRoutes" :key="route.path" :to="route.path">
             {{ $tc(route.text, 2) }}
             <span class="field-text-info color text-field-text">

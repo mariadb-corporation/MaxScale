@@ -1,43 +1,41 @@
 <template>
-    <div>
-        <v-tooltip
-            :disabled="isGettingEndTime"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop pa-3"
-        >
-            <template v-slot:activator="{ on }">
-                <pre v-on="on">
-                    {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</pre
-                >
-            </template>
-            <v-sheet min-width="220" max-width="450" class="color text-small-text">
-                <div class="d-flex align-center color text-navigation font-weight-bold">
-                    <span>{{ $t('totalDuration') }}:</span>
-                    <v-spacer />
-                    <span> {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
-                </div>
-                <div class="d-flex align-center">
-                    <span>{{ $t('networkDelay') }} </span>
-                    <v-spacer />
-                    <span class="color text-navigation">
-                        {{
-                            $tc('seconds', networkDelay === 1 ? 1 : 2, {
-                                value: networkDelay,
-                            })
-                        }}
-                    </span>
-                </div>
-                <div class="d-flex align-center">
-                    <span>{{ $t('exeTime') }}: </span>
-                    <v-spacer />
-                    <span class="color text-navigation">
-                        {{ $tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
-                    </span>
-                </div>
-            </v-sheet>
-        </v-tooltip>
-    </div>
+    <v-tooltip
+        :disabled="isGettingEndTime"
+        top
+        transition="slide-y-transition"
+        content-class="shadow-drop pa-3"
+    >
+        <template v-slot:activator="{ on }">
+            <span v-on="on">
+                {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span
+            >
+        </template>
+        <v-sheet min-width="220" max-width="450" class="color text-small-text">
+            <div class="d-flex align-center color text-navigation font-weight-bold">
+                <span>{{ $t('totalDuration') }}:</span>
+                <v-spacer />
+                <span> {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
+            </div>
+            <div class="d-flex align-center">
+                <span>{{ $t('networkDelay') }} </span>
+                <v-spacer />
+                <span class="color text-navigation">
+                    {{
+                        $tc('seconds', networkDelay === 1 ? 1 : 2, {
+                            value: networkDelay,
+                        })
+                    }}
+                </span>
+            </div>
+            <div class="d-flex align-center">
+                <span>{{ $t('exeTime') }}: </span>
+                <v-spacer />
+                <span class="color text-navigation">
+                    {{ $tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
+                </span>
+            </div>
+        </v-sheet>
+    </v-tooltip>
 </template>
 
 <script>

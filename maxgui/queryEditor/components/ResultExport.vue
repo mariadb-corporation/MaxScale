@@ -97,12 +97,12 @@
                                     <v-radio
                                         :label="$t('withHeaders')"
                                         :value="true"
-                                        class="field__label-radio"
+                                        class="v-radio--custom-label"
                                     />
                                     <v-radio
                                         :label="$t('withoutHeaders')"
                                         :value="false"
-                                        class="field__label-radio"
+                                        class="v-radio--custom-label"
                                     />
                                 </v-radio-group>
                             </v-col>
@@ -296,12 +296,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.field__label-radio {
-    .v-label {
-        color: $small-text;
-        font-size: $label-control-size;
-    }
-}
-</style>

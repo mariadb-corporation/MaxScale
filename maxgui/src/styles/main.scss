@@ -17,6 +17,7 @@
 @import 'variables.scss';
 @import 'sqlEditor.scss';
 @import 'queryEditor.scss';
+@import 'override.scss';
 // layout
 html {
     margin: 0;
@@ -46,23 +47,6 @@ html {
     margin: 0 auto;
 }
 
-.rotate {
-    &-left {
-        transform: rotate(90deg);
-    }
-    &-up {
-        transform: rotate(180deg);
-    }
-    &-right {
-        transform: rotate(-90deg);
-    }
-    &-down {
-        transform: rotate(0deg);
-    }
-}
-.rotate-icon__vert {
-    transform: rotate(90deg);
-}
 // Vuetify custom
 
 .v-overlay__scrim {
@@ -134,51 +118,6 @@ html {
     }
 }
 
-.tab-navigation-wrapper {
-    .v-slide-group__wrapper {
-        border-bottom: thin solid $table-border !important;
-    }
-    .v-tabs-slider-wrapper {
-        height: 3px !important;
-    }
-    .v-tab {
-        letter-spacing: -0.01em;
-        font-weight: normal;
-        text-transform: capitalize;
-    }
-    .v-tab:not(.v-tab--active) {
-        color: $primary !important;
-    }
-
-    .v-tab--active {
-        color: $navigation !important;
-        font-weight: 600;
-    }
-}
-
-.tab-navigation--btn-style {
-    width: unset !important;
-    .tab-btn {
-        border: thin solid rgba(0, 0, 0, 0.12) !important;
-        border-right: none !important;
-        font-size: 0.75rem;
-        &:last-of-type {
-            border-right: thin solid rgba(0, 0, 0, 0.12) !important;
-        }
-        &--active {
-            color: $primary !important;
-            &::before {
-                opacity: 0.12 !important;
-            }
-        }
-        &--err-tab {
-            color: $error !important;
-            &:last-of-type {
-                border-color: $error !important;
-            }
-        }
-    }
-}
 .v-card.v-card-custom {
     box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
     border: 1px solid #e3e6ea !important;
@@ -447,19 +386,4 @@ h6 {
 
 .row + .row {
     margin-top: 0;
-}
-
-.tbl-code {
-    width: 100%;
-    background-color: $reflection;
-    td {
-        color: $code-color;
-        vertical-align: top;
-        padding-bottom: 4px;
-        width: auto;
-        &:first-of-type {
-            width: 1px;
-            padding-right: 16px;
-        }
-    }
 }

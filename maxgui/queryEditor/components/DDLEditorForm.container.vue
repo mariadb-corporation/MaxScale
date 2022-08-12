@@ -15,7 +15,7 @@
             v-if="!isEmptyFormData && activated"
             v-model="activeColSpec"
             :height="24"
-            class="tab-navigation-wrapper"
+            class="v-tabs--mariadb-style"
         >
             <v-tab
                 v-for="spec of SQL_DDL_ALTER_SPECS"

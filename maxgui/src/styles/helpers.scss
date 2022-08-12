@@ -103,14 +103,6 @@
     left: 0;
 }
 
-.checkbox--scale-reduce {
-    transform: scale(0.75);
-    transform-origin: 50% 50%;
-    .v-input--selection-controls__input {
-        margin-right: 0 !important;
-    }
-}
-
 .override-td--padding {
     width: calc(100% + 48px);
     margin: 0px -24px;
@@ -138,5 +130,35 @@ tooltip needs to be disabled.
     border-radius: 0px !important;
     &:hover {
         border-radius: 0px !important;
+    }
+}
+
+.rotate {
+    &-left {
+        transform: rotate(90deg);
+    }
+    &-up {
+        transform: rotate(180deg);
+    }
+    &-right {
+        transform: rotate(-90deg);
+    }
+    &-down {
+        transform: rotate(0deg);
+    }
+}
+
+.tbl-code {
+    width: 100%;
+    background-color: $reflection;
+    td {
+        color: $code-color;
+        vertical-align: top;
+        padding-bottom: 4px;
+        width: auto;
+        &:first-of-type {
+            width: 1px;
+            padding-right: 16px;
+        }
     }
 }

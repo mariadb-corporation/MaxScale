@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <div ref="header" class="pb-2 result-header d-flex align-center">
+        <div ref="header" class="pb-2 result-header d-flex align-center d-flex flex-row">
             <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
             <v-menu
                 v-else
@@ -21,13 +21,14 @@
                     {{ queryTxt }}
                 </v-sheet>
             </v-menu>
-
+            <!-- TODO: Get dynamic width instead of hard-code value (200) -->
             <v-tabs
                 v-model="activeResSet"
                 show-arrows
                 hide-slider
                 :height="20"
-                class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
+                class="v-tabs--query-editor-style v-tabs--custom-small-pagination-btn"
+                :style="{ maxWidth: `calc(100% - ${200}px)` }"
                 center-active
             >
                 <v-tab
@@ -196,9 +197,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.tab-navigation--btn-style--custom-max-width {
-    max-width: calc(100% - 330px);
-}
-</style>

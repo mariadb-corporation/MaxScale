@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-08-08
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+// Override vuetify component style by adding these class to the component
+.v-radio--custom-label,
+.v-checkbox--custom-label {
+    label {
+        color: $small-text;
+        font-size: 0.75rem;
+    }
+}
+
+.v-tabs--mariadb-style {
+    .v-slide-group__wrapper {
+        border-bottom: thin solid $table-border !important;
+    }
+    .v-tabs-slider-wrapper {
+        height: 3px !important;
+    }
+    .v-tab {
+        letter-spacing: -0.01em;
+        font-weight: normal;
+        text-transform: capitalize;
+    }
+    .v-tab:not(.v-tab--active) {
+        color: $primary !important;
+    }
+
+    .v-tab--active {
+        color: $navigation !important;
+        font-weight: 600;
+    }
+}
+
+.v-checkbox--scale-reduce {
+    transform: scale(0.75);
+    transform-origin: 50% 50%;
+    .v-input--selection-controls__input {
+        margin-right: 0 !important;
+    }
+}

@@ -41,7 +41,7 @@
         v-else-if="input.type === 'bool'"
         v-model="input.value"
         dense
-        class="checkbox--scale-reduce ma-0 pa-0"
+        class="v-checkbox--scale-reduce ma-0 pa-0"
         primary
         hide-details
         :disabled="isDisabled"

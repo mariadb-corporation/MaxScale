@@ -100,7 +100,7 @@
                     v-model="showTrendline"
                     dense
                     color="primary"
-                    class="mt-2 show-trendline"
+                    class="mt-2 v-checkbox--custom-label"
                     hide-details
                 >
                     <template v-slot:label>
@@ -376,11 +376,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.show-trendline label {
-    font-size: $label-control-size;
-    color: $small-text;
-    font-weight: 400;
-}
-</style>

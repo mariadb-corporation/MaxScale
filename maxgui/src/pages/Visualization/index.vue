@@ -1,7 +1,7 @@
 <template>
     <page-wrapper fluid :spacerStyle="{ borderBottom: 'thin solid #e7eef1' }">
         <portal to="page-header">
-            <v-tabs v-model="activeTab" class="tab-navigation-wrapper flex-grow-0">
+            <v-tabs v-model="activeTab" class="v-tabs--mariadb-style flex-grow-0">
                 <v-tab v-for="route in visTabRoutes" :key="route.path" :to="route.path">
                     {{ $t(route.name) }}
                 </v-tab>
@@ -43,7 +43,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-::v-deep .tab-navigation-wrapper {
+::v-deep .v-tabs--mariadb-style {
     .v-window,
     .v-window-item {
         height: 100%;

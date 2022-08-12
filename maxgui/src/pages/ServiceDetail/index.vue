@@ -14,7 +14,7 @@
                 :refreshRate="refreshRate"
             />
 
-            <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
+            <v-tabs v-model="currentActiveTab" class="v-tabs--mariadb-style">
                 <v-tab v-for="tab in tabs" :key="tab.name">
                     {{ tab.name }}
                 </v-tab>

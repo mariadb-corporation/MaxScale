@@ -1,5 +1,5 @@
 <template>
-    <v-tabs v-model="activeView" hide-slider :height="20" class="tab-navigation--btn-style">
+    <v-tabs v-model="activeView" hide-slider :height="20" class="v-tabs--query-editor-style">
         <v-tab
             :key="SQL_QUERY_MODES.PRVW_DATA"
             :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"

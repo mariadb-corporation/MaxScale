@@ -1,6 +1,6 @@
 <template>
-    <div class="wke-toolbar d-flex align-center flex-grow-1 color border-bottom-table-border">
-        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2 fill-height">
+    <div class="wke-toolbar d-flex align-center flex-grow-1 color border-bottom-table-border px-2">
+        <div ref="leftBtns" class="d-flex align-center left-buttons fill-height">
             <v-btn
                 :disabled="isAddWkeDisabled"
                 small
@@ -12,7 +12,7 @@
             </v-btn>
         </div>
         <v-spacer />
-        <div ref="rightBtns" class="d-flex align-center right-buttons pr-2 fill-height">
+        <div ref="rightBtns" class="d-flex align-center right-buttons fill-height">
             <conn-man-ctr class="mx-2" />
             <v-tooltip
                 top

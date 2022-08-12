@@ -55,7 +55,7 @@
                     >
                         <v-checkbox
                             v-model="config[key]"
-                            class="config-checkbox pa-0 ma-0"
+                            class="v-checkbox--custom-label pa-0 ma-0"
                             :class="[key]"
                             :label="$t(key)"
                             color="primary"
@@ -177,12 +177,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.config-checkbox {
-    label {
-        font-size: $label-control-size;
-        color: $small-text;
-    }
-}
-</style>

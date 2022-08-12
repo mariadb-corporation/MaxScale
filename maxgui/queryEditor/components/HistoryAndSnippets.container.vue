@@ -1,7 +1,12 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
-            <v-tabs v-model="activeView" hide-slider :height="20" class="tab-navigation--btn-style">
+            <v-tabs
+                v-model="activeView"
+                hide-slider
+                :height="20"
+                class="v-tabs--query-editor-style"
+            >
                 <v-tab
                     :key="SQL_QUERY_MODES.HISTORY"
                     :href="`#${SQL_QUERY_MODES.HISTORY}`"
