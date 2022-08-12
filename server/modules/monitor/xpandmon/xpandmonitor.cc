@@ -288,7 +288,8 @@ bool XpandMonitor::post_configure()
         ss << "The settings " << mxb::join(this_unit.extra_parameters, ", ", "'")
            << " must be the same on all bootstrap servers.";
 
-        MXB_SWARNING(ss.str());
+        MXB_ERROR("%s: %s", name(), ss.str().c_str());
+        return false;
     }
 
     check_bootstrap_servers();
@@ -1249,7 +1250,7 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
 
         ss << "Using the last known consistent settings " << mxb::join(settings, ", ", "'") << ".";
 
-        MXB_SWARNING(ss.str());
+        MXB_WARNING("%s: %s", name(), ss.str().c_str());
         extra = m_extra;
     }
 
