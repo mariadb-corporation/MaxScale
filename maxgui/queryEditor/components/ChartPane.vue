@@ -120,7 +120,7 @@
 /*
 @close-chart. Emit when close-chart button is clicked
 */
-import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
+import { objectTooltip } from '@share/components/common/Charts/customTooltips.js'
 export default {
     name: 'chart-pane',
     props: {

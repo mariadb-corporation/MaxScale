@@ -17,7 +17,7 @@ import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
 import App from './App.vue'
 import router from 'router'
-import commonComponents from 'components/common'
+import commonComponents from '@share/components/common'
 
 Object.keys(commonComponents).forEach(name => {
     Vue.component(name, commonComponents[name])

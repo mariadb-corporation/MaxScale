@@ -119,7 +119,7 @@
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import refreshRate from 'mixins/refreshRate'
+import refreshRate from '@share/mixins/refreshRate'
 
 export default {
     name: 'service-detail',
