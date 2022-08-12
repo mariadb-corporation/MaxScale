@@ -2,7 +2,7 @@
     <div class="fill-height">
         <app-header />
         <navigation />
-        <snackbars />
+        <snackbars :msgObj="$store.state.snackbar_message" />
         <v-main class="fill-height">
             <div class="fill-height py-6 px-9">
                 <transition name="fade" mode="out-in">
@@ -58,7 +58,7 @@
  */
 import Navigation from './Navigation'
 import AppHeader from './AppHeader'
-import Snackbars from './Snackbars'
+import Snackbars from '@share/components/Snackbars'
 
 export default {
     name: 'app-layout',

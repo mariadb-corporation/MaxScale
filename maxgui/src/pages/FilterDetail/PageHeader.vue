@@ -63,7 +63,7 @@
  */
 
 import { mapActions, mapState } from 'vuex'
-import goBack from 'mixins/goBack'
+import goBack from '@share/mixins/goBack'
 
 export default {
     name: 'page-header',

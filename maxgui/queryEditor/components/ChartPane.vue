@@ -120,7 +120,7 @@
 /*
 @close-chart. Emit when close-chart button is clicked
 */
-import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
+import { objectTooltip } from '@share/components/common/Charts/customTooltips.js'
 export default {
     name: 'chart-pane',
     props: {
@@ -325,6 +325,7 @@ export default {
         },
         getDefFileName() {
             return `MaxScale ${this.type} Chart - ${this.$help.dateFormat({
+                moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
             })}`

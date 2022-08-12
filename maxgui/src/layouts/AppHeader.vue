@@ -10,9 +10,9 @@
     >
         <v-toolbar-title class="app-headline text-h5">
             <router-link to="/dashboard/servers">
-                <img src="@/assets/logo.svg" alt="MariaDB Logo" />
+                <img src="@share/assets/logo.svg" alt="MariaDB Logo" />
                 <span class="product-name tk-azo-sans-web font-weight-medium  white--text">
-                    {{ $t('productName') }}
+                    MaxScale
                 </span>
             </router-link>
         </v-toolbar-title>
@@ -47,7 +47,7 @@
             </template>
 
             <v-list dark class="color bg-color-navigation">
-                <v-list-item @click="handleLogout">
+                <v-list-item @shareclick="handleLogout">
                     <v-list-item-title>{{ $t('logout') }}</v-list-item-title>
                 </v-list-item>
             </v-list>

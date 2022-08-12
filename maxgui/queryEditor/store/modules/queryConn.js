@@ -120,14 +120,16 @@ export default {
                         .filter(
                             c =>
                                 c.binding_type ===
-                                rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                                rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
+                                    .WORKSHEET
                         )
                         .map(c => c.id)
 
                     const leftoverConns = Object.values(validSqlConns).filter(
                         c =>
                             !wkeConnIds.includes(c.clone_of_conn_id) &&
-                            c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
+                            c.binding_type ===
+                                rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.SESSION
                     )
 
                     let wkeIdsToBeReset = []
@@ -202,7 +204,8 @@ export default {
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
+                        binding_type:
+                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                         wke_id_fk: rootState.wke.active_wke_id,
                     }
                     commit('ADD_SQL_CONN', sql_conn)
@@ -264,7 +267,8 @@ export default {
                 let sessConn
                 await dispatch('cloneConn', {
                     conn_to_be_cloned,
-                    binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                    binding_type:
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.SESSION,
                     session_id_fk: s.id,
                     getCloneObjRes: obj => (sessConn = obj),
                 })
@@ -300,7 +304,7 @@ export default {
                         binding_type,
                         session_id_fk,
                     }
-                    if (this.vue.$help.isFunction(getCloneObjRes)) getCloneObjRes(conn)
+                    this.vue.$typy(getCloneObjRes).safeFunction(conn)
                     commit('ADD_SQL_CONN', conn)
                 }
             } catch (e) {
@@ -469,7 +473,7 @@ export default {
                         sql,
                         res,
                         connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -497,8 +501,8 @@ export default {
                 Object.values(state.sql_conns).find(
                     conn =>
                         conn.binding_type ===
-                            rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND &&
-                        conn.session_id_fk === session_id_fk
+                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
+                                .BACKGROUND && conn.session_id_fk === session_id_fk
                 ) || {}
         },
         getIsConnBusy: (state, getters, rootState, rootGetters) => {
@@ -519,7 +523,9 @@ export default {
         },
         getWkeConns: (state, getters, rootState) =>
             Object.values(state.sql_conns).filter(
-                c => c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                c =>
+                    c.binding_type ===
+                    rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.WORKSHEET
             ) || [],
 
         getClonedConnsOfWkeConn: state => wkeConnId =>

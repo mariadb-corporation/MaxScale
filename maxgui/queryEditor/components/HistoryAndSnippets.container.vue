@@ -62,6 +62,7 @@
                         <truncate-string
                             :text="
                                 `${$help.dateFormat({
+                                    moment: $moment,
                                     value: cell,
                                     formatType: 'ddd, DD MMM YYYY',
                                 })}`
@@ -209,9 +210,10 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            QUERY_LOG_TYPES: state => state.app_config.QUERY_LOG_TYPES,
-            SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
+            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
+            SQL_RES_TBL_CTX_OPT_TYPES: state =>
+                state.queryEditorConfig.config.SQL_RES_TBL_CTX_OPT_TYPES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.queryPersisted.query_history,
             query_snippets: state => state.queryPersisted.query_snippets,
@@ -357,6 +359,7 @@ export default {
                     let map = new Map()
                     rows.forEach(row => {
                         const key = this.$help.dateFormat({
+                            moment: this.$moment,
                             value: row[idx],
                             formatType: 'ddd, DD MMM YYYY',
                         })

@@ -38,6 +38,7 @@ module.exports = {
             .set('@', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
             .set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
+            .set('@share', path.resolve(__dirname, 'share'))
 
         const key = process.env.httpsKey
         const cert = process.env.httpsCert

@@ -183,7 +183,7 @@ export default {
                         { text: message, type: 'success' },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-user-manageInetUser')

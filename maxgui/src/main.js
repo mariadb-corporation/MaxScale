@@ -11,21 +11,13 @@
  * Public License.
  */
 import Vue from 'vue'
-import 'plugins/logger'
-import 'utils/helpers'
-import 'plugins/vuex'
-import 'plugins/moment'
-import 'plugins/typy'
-import 'plugins/shortkey'
-import i18n from 'plugins/i18n'
+import './pluginReg'
 import 'styles/main.scss'
-import vuetify from 'plugins/vuetify'
+import i18n from '@share/plugins/i18n'
+import vuetify from '@share/plugins/vuetify'
 import App from './App.vue'
 import router from 'router'
-import commonComponents from 'components/common'
-import PortalVue from 'portal-vue'
-
-Vue.use(PortalVue)
+import commonComponents from '@share/components/common'
 
 Object.keys(commonComponents).forEach(name => {
     Vue.component(name, commonComponents[name])

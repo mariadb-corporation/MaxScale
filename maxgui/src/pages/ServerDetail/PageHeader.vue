@@ -116,8 +116,8 @@
  */
 
 import { mapActions, mapGetters, mapState } from 'vuex'
-import goBack from 'mixins/goBack'
-import refreshRate from 'mixins/refreshRate'
+import goBack from '@share/mixins/goBack'
+import refreshRate from '@share/mixins/refreshRate'
 
 export default {
     name: 'page-header',

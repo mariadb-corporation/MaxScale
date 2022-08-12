@@ -53,7 +53,7 @@
                                 datasets: threads_datasets,
                             }"
                             :options="
-                                $help.lodash.deepMerge(streamOpts, {
+                                $help.lodash.merge(streamOpts, {
                                     scales: {
                                         yAxes: [
                                             {

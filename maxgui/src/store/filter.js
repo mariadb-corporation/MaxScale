@@ -77,7 +77,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-filter-createFilter')
@@ -111,7 +111,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-filter-updateFilterParameters')

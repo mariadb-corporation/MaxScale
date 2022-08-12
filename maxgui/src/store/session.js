@@ -76,7 +76,7 @@ export default {
                         { text: [this.i18n.t('info.killSessionSuccessfully')], type: 'success' },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(callback)) await callback()
+                    await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-sessions-killSession')

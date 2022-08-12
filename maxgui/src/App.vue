@@ -28,7 +28,7 @@
 import store from 'store'
 import AppLayout from 'layouts/AppLayout'
 import NoLayout from 'layouts/NoLayout'
-import Overlay from './components/overlay/Index'
+import Overlay from '@share/components/overlay'
 import { mapState, mapMutations } from 'vuex'
 
 export default {

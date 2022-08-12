@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { uniqBy } from 'utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
@@ -48,7 +48,7 @@ export default {
                 const {
                     SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
                     SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.app_config
+                } = rootState.queryEditorConfig.config
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.queryPersisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
@@ -120,7 +120,7 @@ export default {
                 const {
                     SQL_NODE_TYPES: { TABLES, TABLE, SPS, SP, COLS, TRIGGERS },
                     SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.app_config
+                } = rootState.queryEditorConfig.config
                 // a db node id is formed by dbName.node_type So getting dbName by removing node type part from id.
                 let reg = `\\b.${node.type}\\b`
                 dbName = node.id.replace(new RegExp(reg, 'g'), '')
@@ -211,7 +211,7 @@ export default {
                 const {
                     SQL_NODE_TYPES: { COLS, COL, TRIGGERS, TRIGGER },
                     SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.app_config
+                } = rootState.queryEditorConfig.config
                 let grandChildNodeType, rowName, query
                 switch (node.type) {
                     case TRIGGERS:
@@ -271,7 +271,12 @@ export default {
          */
         async getTreeData({ dispatch, rootState }, { node, db_tree, cmpList }) {
             try {
-                const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
+                const {
+                    TABLES,
+                    SPS,
+                    COLS,
+                    TRIGGERS,
+                } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
                 switch (node.type) {
                     case TABLES:
                     case SPS: {
@@ -343,7 +348,12 @@ export default {
                 if (db_tree.length) {
                     let tree = db_tree
                     let completionList = cmpList
-                    const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
+                    const {
+                        TABLES,
+                        SPS,
+                        COLS,
+                        TRIGGERS,
+                    } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
                     const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
                     for (const node of expanded_nodes) {
                         if (nodesHaveChild.includes(node.type)) {
@@ -428,7 +438,7 @@ export default {
                         sql,
                         res,
                         connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -450,7 +460,7 @@ export default {
         getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
         getDbCmplList: (state, getters) => {
             if (getters.getCurrDbTree.db_completion_list)
-                return uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
+                return lodash.uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
             return []
         },
         // exe_stmt_result_map getters

@@ -13,12 +13,12 @@
 
 import mount from '@tests/unit/setup'
 import TxtEditorToolbar from '../TxtEditorToolbar.container.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@share/utils/helpers'
 
 const dummy_session = { id: 'SESSION_123_45' }
 const mountFactory = opts =>
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: false,
                 component: TxtEditorToolbar,

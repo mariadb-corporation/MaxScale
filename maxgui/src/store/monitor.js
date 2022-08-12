@@ -122,7 +122,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-createMonitor')
@@ -157,7 +157,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-updateMonitorParameters')
@@ -272,7 +272,7 @@ export default {
                                     { text: message, type: 'success' },
                                     { root: true }
                                 )
-                            if (this.vue.$help.isFunction(successCb)) await successCb()
+                            await this.vue.$typy(successCb).safeFunction()
                             break
                     }
                 }
@@ -308,7 +308,7 @@ export default {
                 // response ok
                 if (status === 200) {
                     if (meta.errors) await dispatch('handleAsyncCmdPending', { ...param, meta })
-                    else if (this.vue.$help.isFunction(custAsyncCmdDone))
+                    else if (this.vue.$typy(custAsyncCmdDone).isFunction)
                         await custAsyncCmdDone(meta)
                     else await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
                 }
@@ -328,7 +328,7 @@ export default {
                     { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
                     { root: true }
                 )
-            if (this.vue.$help.isFunction(successCb)) await successCb(meta)
+            await this.vue.$typy(successCb).safeFunction(meta)
         },
 
         /**
@@ -371,7 +371,7 @@ export default {
                 const errArr = meta.errors.map(error => error.detail)
                 if (showSnackbar)
                     commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
-                if (this.vue.$help.isFunction(asyncCmdErrCb)) await asyncCmdErrCb(errArr)
+                await this.vue.$typy(asyncCmdErrCb).safeFunction(errArr)
             }
         },
 
@@ -403,7 +403,7 @@ export default {
                     successCb: async meta => {
                         commit('SET_CURR_CS_STATUS', meta)
                         commit('SET_CS_NO_DATA_TXT', '')
-                        if (this.vue.$help.isFunction(successCb)) await successCb(meta)
+                        await this.vue.$typy(successCb).safeFunction(meta)
                     },
                     asyncCmdErrCb: meta => {
                         commit('SET_CURR_CS_STATUS', {})
@@ -442,7 +442,7 @@ export default {
                         },
                         { root: true }
                     )
-                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                    await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')

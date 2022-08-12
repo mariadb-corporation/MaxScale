@@ -119,7 +119,7 @@
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
-import refreshRate from 'mixins/refreshRate'
+import refreshRate from '@share/mixins/refreshRate'
 
 export default {
     name: 'service-detail',
@@ -178,7 +178,7 @@ export default {
                 ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
                     id,
                     user: `${user}@${remote}`,
-                    connected: this.$help.dateFormat({ value: connected }),
+                    connected: this.$help.dateFormat({ moment: this.$moment, value: connected }),
                     idle,
                     memory,
                 })

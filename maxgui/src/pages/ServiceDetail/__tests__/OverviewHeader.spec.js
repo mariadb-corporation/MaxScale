@@ -95,7 +95,9 @@ describe('ServiceDetail - OverviewHeader', () => {
             const cardTitle = outlineOverviewCards[1].find('.text-caption')
             const cardBody = outlineOverviewCards[1].find('.started')
             expect(cardTitle.text()).to.be.equals('STARTED AT')
-            expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))
+            expect(cardBody.text()).to.be.equals(
+                dateFormat({ moment: wrapper.vm.$moment, value: started })
+            )
         })
         it(`Should not show tile in the last outlined-overview-card`, () => {
             expect(outlineOverviewCards[2].vm.$props.tile).to.be.false

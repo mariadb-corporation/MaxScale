@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import QueryEditor from '../index.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@share/utils/helpers'
 
 const sql_conns_mock = {
     1: {
@@ -26,7 +26,7 @@ const from_route_mock = { name: 'queryEditor', path: '/query' }
 const to_route_mock = { name: 'settings', path: '/settings' }
 function mockBeforeRouteLeave(wrapper) {
     const next = sinon.stub()
-    wrapper.vm.$options.beforeRouteLeave[0].call(wrapper.vm, to_route_mock, from_route_mock, next)
+    wrapper.vm.beforeRouteLeaveHandler(to_route_mock, from_route_mock, next) // stub
 }
 const stubModuleMethods = {
     handleAutoClearQueryHistory: () => null,
@@ -35,7 +35,7 @@ const stubModuleMethods = {
 
 const mountFactory = opts =>
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: false,
                 component: QueryEditor,
@@ -106,6 +106,18 @@ describe('QueryEditor', () => {
             expect(wrapper.vm.sql_conns).to.be.empty
             mockBeforeRouteLeave(wrapper)
             expect(wrapper.vm.$data.isConfDlgOpened).to.be.false
+        })
+        it(`Should emit leave-page when there is no active connection`, () => {
+            wrapper = mountFactory({
+                shallow: true,
+                computed: {
+                    // stub for having no active connection
+                    sql_conns: () => ({}),
+                },
+                methods: stubModuleMethods,
+            })
+            mockBeforeRouteLeave(wrapper)
+            expect(wrapper.emitted()).to.have.property('leave-page')
         })
     })
 

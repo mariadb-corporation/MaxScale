@@ -224,7 +224,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,

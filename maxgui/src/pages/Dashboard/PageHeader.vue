@@ -80,6 +80,7 @@
                             >
                                 {{
                                     $help.dateFormat({
+                                        moment: $moment,
                                         value,
                                         formatType: 'MM.DD.YYYY HH:mm:ss',
                                     })
@@ -135,7 +136,7 @@ export default {
         }),
         pageTitle: function() {
             const { version = '' } = this.maxscale_overview_info
-            return `MariaDB ${this.$t('productName')} ${version}`
+            return `MariaDB MaxScale ${version}`
         },
         getMaxScaleInfo: function() {
             const { commit, started_at, activated_at } = this.maxscale_overview_info

@@ -86,7 +86,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
+            SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
             charset_collation_map: state => state.editor.charset_collation_map,
             engines: state => state.editor.engines,

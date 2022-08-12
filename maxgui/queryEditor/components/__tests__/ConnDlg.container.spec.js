@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import ConnDlg from '../ConnDlg.container.vue'
-import { merge } from 'utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
 const dummy_rc_target_names_map = {
@@ -35,7 +35,7 @@ const dummy_pre_select_conn_rsrc = { id: 'server_0', type: 'servers' }
 const mountFactory = opts =>
     // deep merge opts
     mount(
-        merge(
+        lodash.merge(
             {
                 shallow: true,
                 component: ConnDlg,

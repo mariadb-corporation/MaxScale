@@ -154,9 +154,15 @@ export default {
                     id,
                     role: account,
                     type,
-                    created: created ? this.$help.dateFormat({ value: created }) : '',
-                    last_update: last_update ? this.$help.dateFormat({ value: last_update }) : '',
-                    last_login: last_login ? this.$help.dateFormat({ value: last_login }) : '',
+                    created: created
+                        ? this.$help.dateFormat({ moment: this.$moment, value: created })
+                        : '',
+                    last_update: last_update
+                        ? this.$help.dateFormat({ moment: this.$moment, value: last_update })
+                        : '',
+                    last_login: last_login
+                        ? this.$help.dateFormat({ moment: this.$moment, value: last_login })
+                        : '',
                 })
             }
             return rows

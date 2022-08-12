@@ -168,9 +168,11 @@ export default {
     getters: {
         //editor mode getter
         getIsTxtEditor: (state, getters, rootState) =>
-            state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.TXT_EDITOR,
+            state.curr_editor_mode ===
+            rootState.queryEditorConfig.config.SQL_EDITOR_MODES.TXT_EDITOR,
         getIsDDLEditor: (state, getters, rootState) =>
-            state.curr_editor_mode === rootState.app_config.SQL_EDITOR_MODES.DDL_EDITOR,
+            state.curr_editor_mode ===
+            rootState.queryEditorConfig.config.SQL_EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
         getLoadingTblCreationInfo: state => {
             const { loading_tbl_creation_info = true } = state.tbl_creation_info
