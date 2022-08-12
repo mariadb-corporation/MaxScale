@@ -134,6 +134,8 @@ private:
     bool check_http();
     void update_http_urls();
 
+    bool get_extra_settings(mxs::ConfigParameters* pExtra) const;
+
     bool perform_softfail(SERVER* pServer, json_t** ppError);
     bool perform_unsoftfail(SERVER* pServer, json_t** ppError);
 
@@ -192,4 +194,5 @@ private:
     sqlite3*                 m_pDb {nullptr};
     std::vector<SERVER*>     m_cluster_servers;
     bool                     m_is_group_change {false};
+    mxs::ConfigParameters    m_extra;
 };
