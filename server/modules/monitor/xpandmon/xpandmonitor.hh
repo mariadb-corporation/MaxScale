@@ -33,7 +33,7 @@ public:
     class Config : public config::Configuration
     {
     public:
-        Config(const std::string& name, XpandMonitor* monitor);
+        Config(const std::string& name, XpandMonitor* pMonitor);
 
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
@@ -62,7 +62,7 @@ public:
         config::Count                               m_health_check_threshold;
         config::Bool                                m_dynamic_node_detection;
         config::Integer                             m_health_check_port;
-        XpandMonitor*                               m_monitor;
+        XpandMonitor*                               m_pMonitor;
     };
 
     ~XpandMonitor();

@@ -212,19 +212,19 @@ void run_in_mainworker(const function<void(void)>& func)
 }
 }
 
-XpandMonitor::Config::Config(const std::string& name, XpandMonitor* monitor)
+XpandMonitor::Config::Config(const std::string& name, XpandMonitor* pMonitor)
     : config::Configuration(name, &xpandmon::specification)
     , m_cluster_monitor_interval(this, &xpandmon::cluster_monitor_interval)
     , m_health_check_threshold(this, &xpandmon::health_check_threshold)
     , m_dynamic_node_detection(this, &xpandmon::dynamic_node_detection)
     , m_health_check_port(this, &xpandmon::health_check_port)
-    , m_monitor(monitor)
+    , m_pMonitor(pMonitor)
 {
 }
 
 bool XpandMonitor::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    return m_monitor->post_configure();
+    return m_pMonitor->post_configure();
 }
 
 XpandMonitor::XpandMonitor(const string& name, const string& module, sqlite3* pDb)
