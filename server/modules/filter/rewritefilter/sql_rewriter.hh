@@ -51,6 +51,8 @@ private:
     const std::string m_replace_template;
 };
 
+std::vector<std::unique_ptr<SqlRewriter>> create_rewriters(const std::vector<TemplateDef>& templates);
+
 /**
  * @brief ignore_whitespace_in_regex
  * @param regex
