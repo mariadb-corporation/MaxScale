@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
 import Vuex from 'vuex'
 import user from 'store/user'
 import maxscale from './maxscale'
@@ -20,45 +19,14 @@ import monitor from './monitor'
 import filter from './filter'
 import session from './session'
 import listener from './listener'
-import queryEditorModules from './queryEditor'
 import persisted from './persisted'
 import visualization from './visualization'
+import queryEditorModules from '@queryEditor/store/modules'
 import { APP_CONFIG } from 'utils/constants'
-import router from 'router'
-import i18n from 'plugins/i18n'
-import VuexPersistence from 'vuex-persist'
-import localForage from 'localforage'
-
-import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
-const plugins = store => {
-    store.router = router
-    store.vue = Vue.prototype
-    store.i18n = i18n
-    store.$authHttp = authHttp
-    store.$http = http(store)
-    store.$queryHttp = queryHttp(store)
-    store.$refreshAxiosToken = refreshAxiosToken
-    store.$cancelAllRequests = cancelAllRequests
-}
-
-const vuexLocalForage = new VuexPersistence({
-    key: 'maxgui',
-    storage: localForage,
-    asyncStorage: true,
-    reducer: state => ({
-        persisted: state.persisted,
-        wke: { worksheets_arr: state.wke.worksheets_arr },
-        queryConn: { sql_conns: state.queryConn.sql_conns },
-        querySession: {
-            query_sessions: state.querySession.query_sessions,
-            active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
-        },
-        user: { logged_in_user: state.user.logged_in_user },
-    }),
-})
+import plugins from './plugins'
 
 const store = new Vuex.Store({
-    plugins: [plugins, vuexLocalForage.plugin],
+    plugins,
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {
@@ -118,7 +86,6 @@ const store = new Vuex.Store({
          * It should be dispatched on public route when routing occurs
          */
         async checkingForUpdate({ commit }) {
-            this.$refreshAxiosToken()
             const logger = this.vue.$logger('index-store')
             const res = await this.$http.get(`/`)
             logger.info('Checking for update')

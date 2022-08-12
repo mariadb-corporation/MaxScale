@@ -19,7 +19,7 @@ import {
     dummy_all_filters,
     getFilterListStub,
 } from '@tests/unit/utils'
-import ServiceFormInput from '@CreateResource/ServiceFormInput'
+import ServiceFormInput from '../ServiceFormInput'
 
 const mockupResourceModules = [
     {

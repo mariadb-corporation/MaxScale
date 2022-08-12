@@ -82,6 +82,55 @@ export default {
                 logger.error(e)
             }
         },
+        /**
+         * Check if there is a worksheet connected to the provided conn_name make it the current
+         * active worksheet if it's not. Otherwise, find an empty worksheet(has not been bound to a connection),
+         * set it as active and dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
+         * @param {String} param.conn_name - connection name
+         */
+        async chooseActiveQueryEditorWke(
+            { commit, dispatch, rootState, rootGetters },
+            { type, conn_name }
+        ) {
+            const conn = rootGetters['queryConn/getWkeConns'].find(c => c.name === conn_name)
+            const targetWke = rootState.wke.worksheets_arr.find(
+                w => w.id === this.vue.$typy(conn, 'wke_id_fk').safeString
+            )
+            if (targetWke) {
+                if (rootState.wke.active_wke_id !== targetWke.id)
+                    commit('wke/SET_ACTIVE_WKE_ID', targetWke.id, { root: true })
+                commit(
+                    'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                    {
+                        id: targetWke.id,
+                        payload: rootState.querySession.active_session_by_wke_id_map[targetWke.id],
+                    },
+                    { root: true }
+                )
+            }
+            // Use a blank wke if there is one, otherwise create a new one
+            else {
+                const blankSession = rootState.querySession.query_sessions.find(
+                    s => this.vue.$typy(s, 'active_sql_conn').isEmptyObject
+                )
+                const blankWke = rootState.wke.worksheets_arr.find(
+                    wke => wke.id === this.vue.$typy(blankSession, 'wke_id_fk').safeString
+                )
+                if (blankWke) {
+                    commit('wke/SET_ACTIVE_WKE_ID', blankWke.id, { root: true })
+                    commit(
+                        'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                        { id: blankWke.id, payload: blankSession.id },
+                        { root: true }
+                    )
+                } else await dispatch('wke/addNewWs', { root: true })
+                commit(
+                    'queryConn/SET_PRE_SELECT_CONN_RSRC',
+                    { type, id: conn_name },
+                    { root: true }
+                )
+            }
+        },
     },
     getters: {
         getServerData: (state, getters, rootState, rootGetters) => {

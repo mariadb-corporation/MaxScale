@@ -43,7 +43,6 @@ export default {
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
                 /* Using $authHttp instance, instead of using $http as it's configured to have global interceptor*/
-                this.$refreshAxiosToken()
                 let url = '/auth?persist=yes'
                 let res = await this.$authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
                     auth,
@@ -74,7 +73,7 @@ export default {
         },
         async logout({ commit, dispatch, rootState }) {
             await dispatch('queryConn/disconnectAll', {}, { root: true })
-            this.$cancelAllRequests() // cancel all previous requests before logging out
+            await this.$abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
 
@@ -96,10 +95,12 @@ export default {
             })
 
             // Clear all but persist some states of some modules
-            const persistedState = this.vue.$help.lodash.cloneDeep({
-                persisted: rootState.persisted,
+
+            const queryEditorPersistedState = this.vue.$help.lodash.cloneDeep({
+                queryPersisted: rootState.queryPersisted,
                 wke: {
                     worksheets_arr: rootState.wke.worksheets_arr,
+                    active_wke_id: rootState.wke.active_wke_id,
                 },
                 querySession: {
                     active_session_by_wke_id_map:
@@ -107,9 +108,13 @@ export default {
                     query_sessions: rootState.querySession.query_sessions,
                 },
             })
+            const maxguiPersistedState = this.vue.$help.lodash.cloneDeep({
+                persisted: rootState.persisted,
+            })
             await localForage.clear()
             this.vue.$help.deleteAllCookies()
-            await localForage.setItem('maxgui', persistedState)
+            await localForage.setItem('query-editor', queryEditorPersistedState)
+            await localForage.setItem('maxgui-app', maxguiPersistedState)
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {
