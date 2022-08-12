@@ -238,12 +238,17 @@ bool NativeRewriter::replace(const std::string& sql, std::string* pSql) const
     auto first = begin(sql);
     auto last = end(sql);
 
-    // Skip trailing semicolon
-    size_t semicolon = sql.find_last_not_of(" \t\r\n\v\f");
-    if (semicolon != std::string::npos && sql[semicolon] == ';')
+    // Skip trailing semicolons
+    auto last_pos = sql.length();
+    for (size_t pos = last_pos;
+         pos > 0
+         && (pos = sql.find_last_not_of(" \t\r\n\v\f", pos)) != std::string::npos
+         && sql[pos] == ';';
+         --pos)
     {
-        last = first + semicolon;
+        last_pos = pos;
     }
+    last = first + last_pos;
 
     std::smatch match;
     bool matched = std::regex_match(first, last, match, m_regex);
