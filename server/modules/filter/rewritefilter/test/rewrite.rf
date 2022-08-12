@@ -1,0 +1,103 @@
+##### Normal match, and check that semicolons at end of sql are ignored
+%%
+unit_test_input:  select count(distinct id) from t1;
+unit_test_output: select count(*) from (select distinct id from t1) as t1066
+unit_test_input:  select count(distinct id) from t1;;;;;
+unit_test_output: select count(*) from (select distinct id from t1) as t1066
+%
+select count(distinct @{1}) from @{2}
+%
+select count(*) from (select distinct @{1} from @{2}) as t1066
+
+
+##### Forward reference and multiline sql
+%%
+unit_test_input:  select sector from mydb.mytable group by sector
+unit_test_output: select sector, count(*) from mydb.mytable group by sector
+%
+select @{1}
+from mydb.@{2} group by   @{1}
+%
+select @{1}, count(*) from mydb.@{2} group by @{1}
+
+
+##### Whitespace should cause a mismatch when ignore_whitespace==false
+%%
+ignore_whitespace: false
+unit_test_input:  select sector from mydb.mytable group by sector
+unit_test_output:
+%
+select @{1} from mydb.@{2} group by   @{1}
+%
+select @{1}, count(*) from mydb.@{2} group by @{1}
+
+
+##### Placeholder regex
+%%
+unit_test_input:  select zip_code from address_book where str_id = "1234"
+unit_test_output: select zip_code from address_book where id = 1234
+%
+select zip_code from address_book where str_id = ["]@{1:[[:digit:]]+}["]
+%
+select zip_code from address_book where id = @{1}
+
+
+##### The first match should be replaced
+%%
+unit_test_input:  select * from mytable where id = 42 # from mytable
+unit_test_output: select * from mytable force index (myindex) where id = 42 # from mytable
+%
+from mytable
+%
+from mytable force index (myindex)
+
+
+##### The second match should be replaced
+%%
+unit_test_input:  select * from mytable where id = 42 # from mytable
+unit_test_output: select * from mytable where id = 42 # from mytable force index (myindex)
+%
+from mytable @{1} from mytable
+%
+from mytable @{1} from mytable force index (myindex)
+
+#### Scan and replace with continue_if_matched
+%%
+regex_grammar: EPosix
+continue_if_matched: true
+unit_test_input:  select wrong_column_name from wrong_table_name where wrong_column_name != 0
+unit_test_output: select wrong_column_name from correct_table_name where wrong_column_name != 0
+%
+wrong_table_name
+%
+correct_table_name
+
+#### Scan and replace continuation
+%%
+regex_grammar: EPosix
+unit_test_input:  select wrong_column_name from correct_table_name where wrong_column_name != 0
+unit_test_output: select correct_column_name from correct_table_name where correct_column_name != 0
+%
+wrong_column_name
+%
+correct_column_name
+
+#### Case insensitive, should succeed
+%%
+case_sensitive: false
+unit_test_input:  SELECT id from case
+unit_test_output: select id from case
+%
+select id from case
+%
+select id from case
+
+#### Case sensitive, should fail
+%%
+case_sensitive: true
+unit_test_input:  SELECT id from case
+unit_test_output:
+%
+select id from case
+%
+select id from case
