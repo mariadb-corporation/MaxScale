@@ -1,26 +1,28 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center d-flex flex-row">
-            <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
-            <v-menu
-                v-else
-                offset-y
-                top
-                transition="slide-y-transition"
-                :close-on-content-click="false"
-                content-class="shadow-drop color text-navigation "
-                open-on-hover
-                nudge-left="16"
-            >
-                <template v-slot:activator="{ on }">
-                    <span class="mr-4 pointer color text-links " v-on="on">
-                        {{ $t('queryTxt') }}
-                    </span>
-                </template>
-                <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
-                    {{ queryTxt }}
-                </v-sheet>
-            </v-menu>
+            <template v-if="!isLoading">
+                <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
+                <v-menu
+                    v-else
+                    offset-y
+                    top
+                    transition="slide-y-transition"
+                    :close-on-content-click="false"
+                    content-class="shadow-drop color text-navigation "
+                    open-on-hover
+                    nudge-left="16"
+                >
+                    <template v-slot:activator="{ on }">
+                        <span class="mr-4 pointer color text-links " v-on="on">
+                            {{ $t('queryTxt') }}
+                        </span>
+                    </template>
+                    <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
+                        {{ queryTxt }}
+                    </v-sheet>
+                </v-menu>
+            </template>
             <!-- TODO: Get dynamic width instead of hard-code value (200) -->
             <v-tabs
                 v-model="activeResSet"
