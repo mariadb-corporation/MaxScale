@@ -53,10 +53,7 @@ namespace
 constexpr const char CN_EXTRA_PORT[] = "extra_port";
 constexpr const char CN_MONITORPW[] = "monitorpw";
 constexpr const char CN_MONITORUSER[] = "monitoruser";
-constexpr const char CN_PERSISTMAXTIME[] = "persistmaxtime";
-constexpr const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
 constexpr const char CN_PRIORITY[] = "priority";
-constexpr const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
 
@@ -151,7 +148,7 @@ static cfg::ParamEnum<int64_t> s_rank(
     }, RANK_PRIMARY, AT_RUNTIME);
 
 static cfg::ParamCount s_max_routing_connections(
-    &s_spec, "max_routing_connections", "Maximum routing connections", 0, AT_RUNTIME);
+    &s_spec, CN_MAX_ROUTING_CONNECTIONS, "Maximum routing connections", 0, AT_RUNTIME);
 
 //
 // TLS parameters

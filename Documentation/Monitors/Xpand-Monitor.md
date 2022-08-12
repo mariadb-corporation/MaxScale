@@ -79,6 +79,12 @@ the names of the created server objects will be:
 @@TheXpandMonitor:node-3
 ```
 
+When dynamic servers are created, the values for the configuraton settings
+`max_routing_connections`, `persistmaxtime`, `persistpoolmax` and
+`proxy_protocol` are copied from the settings of the bootstrap servers.
+Note that the values of these settings must be **identical** on every
+bootstrap server.
+
 ## Common Monitor Parameters
 
 For a list of optional parameters that all monitors support, read the
