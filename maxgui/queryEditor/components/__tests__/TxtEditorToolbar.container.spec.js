@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import TxtEditorToolbar from '../TxtEditorToolbar.container.vue'
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 
 const dummy_session = { id: 'SESSION_123_45' }
 const mountFactory = opts =>

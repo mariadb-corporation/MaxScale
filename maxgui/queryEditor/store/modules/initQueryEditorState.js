@@ -1,4 +1,4 @@
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import queryHelper from './queryHelper'
 
 /**

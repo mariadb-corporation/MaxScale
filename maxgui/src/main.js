@@ -13,8 +13,6 @@
 import Vue from 'vue'
 import './pluginReg'
 import 'styles/main.scss'
-//TODO: resolve helpers
-import 'utils/helpers'
 import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
 import App from './App.vue'

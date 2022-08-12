@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import ConnDlg from '../ConnDlg.container.vue'
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
 const dummy_rc_target_names_map = {

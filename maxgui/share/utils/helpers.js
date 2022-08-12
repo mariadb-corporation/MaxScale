@@ -10,11 +10,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-import update from 'immutability-helper'
-import { v1 as uuidv1 } from 'uuid'
-import deepDiff from 'deep-diff'
+import { v1 } from 'uuid'
 import sqlFormatter from '@queryEditor/components/SqlEditor/formatter'
+
+export const uuidv1 = v1
+
+export const immutableUpdate = require('immutability-helper')
+
+export const deepDiff = require('deep-diff')
+
+export function formatSQL(v) {
+    return sqlFormatter(v, {
+        indent: '   ',
+        uppercase: true,
+        linesBetweenQueries: 2,
+    })
+}
 
 export const lodash = {
     isEmpty: require('lodash/isEmpty'),
@@ -564,8 +575,6 @@ export function pxToPct({ px, containerPx }) {
     return (px / containerPx) * 100
 }
 
-export const immutableUpdate = update
-
 /**
  * @param {String|Number} value value to be handled
  * @returns {String} Returns px unit string
@@ -734,13 +743,6 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
     return resultMap
 }
 
-export function formatSQL(v) {
-    return sqlFormatter(v, {
-        indent: '   ',
-        uppercase: true,
-        linesBetweenQueries: 2,
-    })
-}
 /**
  * @param {Array} payload.arr - Array of objects
  * @param {String} payload.pickBy - property to find the minimum value
@@ -839,67 +841,3 @@ export function getAddress(parameters) {
 export function stringifyClone(data) {
     return JSON.parse(JSON.stringify(data))
 }
-
-Object.defineProperties(Vue.prototype, {
-    $help: {
-        get() {
-            return {
-                getCookie,
-                deleteCookie,
-                deleteAllCookies,
-                range,
-                serviceStateIcon,
-                serverStateIcon,
-                repStateIcon,
-                monitorStateIcon,
-                listenerStateIcon,
-                isNotEmptyObj,
-                isNotEmptyArray,
-                delay,
-                dynamicColors,
-                strReplaceAt,
-                getErrorsArr,
-                hashMapByPath,
-                dateFormat,
-                objToTree,
-                flattenTree,
-                findAncestor,
-                updateNode,
-                treeToObj,
-                convertType,
-                capitalizeFirstLetter,
-                getSuffixFromValue,
-                convertDuration,
-                convertSize,
-                genLineStreamDataset,
-                lodash,
-                immutableUpdate,
-                resourceTxtTransform,
-                ciStrIncludes,
-                doubleRAF,
-                escapeIdentifiers,
-                getObjectRows,
-                pxToPct,
-                handleAddPxUnit,
-                getScrollbarWidth,
-                copyTextToClipboard,
-                removeTargetDragEle,
-                addDragTargetEle,
-                preventNonNumericalVal,
-                preventNonInteger,
-                addDaysToNow,
-                daysDiff,
-                uuidv1,
-                arrOfObjsDiff,
-                formatSQL,
-                deepDiff,
-                getMin,
-                getMostFreq,
-                getRepStats,
-                filterSlaveConn,
-                getAddress,
-                stringifyClone,
-            }
-        },
-    },
-})

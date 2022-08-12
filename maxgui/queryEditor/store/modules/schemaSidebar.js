@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')

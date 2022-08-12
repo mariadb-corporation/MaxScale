@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 let icons = {}
 const req = require.context(
     // The relative path of the components folder

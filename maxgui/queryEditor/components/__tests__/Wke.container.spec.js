@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import Wke from '../Wke.container.vue'
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }
 const dummy_query_sessions = [{ id: 'SESSION_123_45' }]

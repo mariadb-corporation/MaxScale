@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import IconSpriteSheet from '@/components/common/IconSpriteSheet'
-import { lodash } from '@/utils/helpers'
+import { lodash } from '@share/utils/helpers'
 import { APP_CONFIG } from 'utils/constants'
 
 const sheets = APP_CONFIG.ICON_SHEETS

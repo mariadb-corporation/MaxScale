@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import QueryCnfDlg from '../QueryCnfDlg'
 import { getErrMsgEle, inputChangeMock } from '@tests/unit/utils'
-import { addDaysToNow } from 'utils/helpers'
+import { addDaysToNow } from '@share/utils/helpers'
 
 const defCnf = {
     query_row_limit: 10000,

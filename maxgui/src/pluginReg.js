@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuetify from 'vuetify/lib'
+import helpers from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'
 import typy from '@share/plugins/typy'
 import shortkey from '@share/plugins/shortkey'
@@ -11,6 +12,7 @@ import VueI18n from 'vue-i18n'
 
 Vue.use(VueI18n)
 Vue.use(Vuetify)
+Vue.use(helpers)
 Vue.use(typy)
 Vue.use(shortkey)
 Vue.use(logger)
