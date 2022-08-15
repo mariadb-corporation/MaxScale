@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
 
     /* Copy the rewrite template file to the maxscale node */
     auto rf_file = "rewrite.rf"s;
-    std::string from = mxt::SOURCE_DIR + "/rewritefilter/"s + rf_file;
+    std::string from = mxt::SOURCE_DIR + "/filters/rewritefilter/"s + rf_file;
     std::string to = test.maxscale->access_homedir() + rf_file;
     test.maxscale->copy_to_node(from.c_str(), to.c_str());
     test.maxscale->ssh_node(("chmod a+r "s + to).c_str(), true);
