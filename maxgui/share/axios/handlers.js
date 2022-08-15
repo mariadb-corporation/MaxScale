@@ -19,7 +19,7 @@ export async function defErrStatusHandler({ store, error }) {
 export function handleNullStatusCode({ store, error }) {
     if (error.toString().includes(CANCEL_MESSAGE))
         // request is cancelled by user, so no response is received
-        return Promise.reject(error)
+        return store.vue.$logger('handleNullStatusCode').info(error.toString())
     else
         return store.commit('SET_SNACK_BAR_MESSAGE', {
             text: ['Lost connection to MaxScale, please check if MaxScale is running'],
