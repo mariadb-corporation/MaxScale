@@ -18,10 +18,10 @@
 
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
-                        <v-row class="my-0">
-                            <v-col class="py-0 my-0" cols="4">
-                                <v-row class="my-0 pa-0 ma-0">
-                                    <v-col cols="12" class="pa-0 ma-0">
+                        <v-row>
+                            <v-col cols="4">
+                                <v-row>
+                                    <v-col cols="12">
                                         <details-readonly-table
                                             ref="statistics-table"
                                             :title="`${$tc('statistics', 2)}`"
@@ -29,7 +29,7 @@
                                             isTree
                                         />
                                     </v-col>
-                                    <v-col cols="12" class="pa-0 mt-4">
+                                    <v-col cols="12">
                                         <relationship-table
                                             relationshipType="services"
                                             :tableRows="serviceTableRow"
@@ -39,7 +39,7 @@
                                     </v-col>
                                 </v-row>
                             </v-col>
-                            <v-col class="py-0 ma-0" cols="8">
+                            <v-col cols="8">
                                 <sessions-table
                                     :search="search_keyword"
                                     :collapsible="true"
@@ -58,7 +58,7 @@
                     <!-- Parameters & Diagnostics tab -->
                     <v-tab-item class="pt-5">
                         <v-row>
-                            <v-col class="py-0 my-0" cols="6">
+                            <v-col cols="6">
                                 <details-parameters-table
                                     :resourceId="current_server.id"
                                     :parameters="current_server.attributes.parameters"
@@ -67,7 +67,7 @@
                                     :onEditSucceeded="dispatchFetchServer"
                                 />
                             </v-col>
-                            <v-col class="py-0 my-0" cols="6">
+                            <v-col cols="6">
                                 <details-readonly-table
                                     ref="diagnostics-table"
                                     :title="`${$t('monitorDiagnostics')}`"

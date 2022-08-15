@@ -1,6 +1,6 @@
 <template>
-    <v-row style="margin:0px -8px">
-        <v-col cols="4" style="padding:0px 8px">
+    <v-row class="mx-n2">
+        <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
                     {{ $tc('sessions', 2) }}
@@ -18,7 +18,7 @@
                 </template>
             </outlined-overview-card>
         </v-col>
-        <v-col cols="4" style="padding:0px 8px">
+        <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
                     {{ $tc('connections', 2) }}
@@ -38,7 +38,7 @@
                 </template>
             </outlined-overview-card>
         </v-col>
-        <v-col cols="4" style="padding:0px 8px">
+        <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
                     {{ $t('load') }}

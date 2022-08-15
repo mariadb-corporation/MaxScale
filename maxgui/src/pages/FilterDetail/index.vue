@@ -1,8 +1,8 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_filter)" class="pl-6">
-            <page-header :currentFilter="current_filter" />
-            <v-row class="my-0">
+            <page-header :currentFilter="current_filter" class="pb-3" />
+            <v-row>
                 <v-col cols="6">
                     <details-parameters-table
                         :resourceId="current_filter.id"
@@ -11,8 +11,8 @@
                         :onEditSucceeded="dispatchFetchFilter"
                     />
                 </v-col>
-                <v-col class="py-0 my-0" cols="6">
-                    <v-row class="my-0 pa-0 ma-0">
+                <v-col cols="6">
+                    <v-row>
                         <v-col cols="12">
                             <relationship-table
                                 relationshipType="services"

@@ -1,8 +1,8 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_listener)" class="pl-6">
-            <page-header :currentListener="current_listener" />
-            <v-row class="my-0">
+            <page-header :currentListener="current_listener" class="pb-3" />
+            <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-table

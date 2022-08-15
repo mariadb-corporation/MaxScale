@@ -1,7 +1,7 @@
 <template>
-    <v-container v-resize="onResize" class="pa-0 ma-0 container--fluid login-wrapper fill-height ">
-        <v-row class="pa-0 ma-0">
-            <v-col class="pa-0 ma-0 " cols="12" align="center">
+    <v-container v-resize="onResize" fluid class="login-wrapper fill-height">
+        <v-row>
+            <v-col cols="12" align="center">
                 <div class="logo">
                     <img src="@share/assets/logo.svg" alt="MariaDB Logo" />
                     <span class="product-name font-weight-medium ml-2 white--text">

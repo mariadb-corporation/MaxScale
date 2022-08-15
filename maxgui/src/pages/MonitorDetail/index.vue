@@ -13,8 +13,12 @@
                     </router-link>
                 </template>
             </monitor-page-header>
-            <overview-header :currentMonitor="current_monitor" @switch-over="handleSwitchover" />
-            <v-row class="my-0">
+            <overview-header
+                :currentMonitor="current_monitor"
+                class="pb-3"
+                @switch-over="handleSwitchover"
+            />
+            <v-row>
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-table
@@ -25,8 +29,8 @@
                     />
                 </v-col>
                 <v-col cols="6">
-                    <v-row class="my-0 pa-0 ma-0">
-                        <v-col cols="12" class="pa-0 ma-0">
+                    <v-row>
+                        <v-col cols="12">
                             <relationship-table
                                 relationshipType="servers"
                                 :tableRows="serverStateTableRow"
@@ -35,7 +39,7 @@
                                 @on-relationship-update="dispatchRelationshipUpdate"
                             />
                         </v-col>
-                        <v-col v-if="isColumnStoreCluster && isAdmin" cols="12" class="pa-0 mt-4">
+                        <v-col v-if="isColumnStoreCluster && isAdmin" cols="12">
                             <details-readonly-table
                                 :title="`${$t('csStatus')}`"
                                 :tableData="curr_cs_status"

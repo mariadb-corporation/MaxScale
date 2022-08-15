@@ -2,14 +2,7 @@
     <v-container v-if="!$typy(clusters).isEmptyObject" fluid>
         <page-header-right @on-count-done="discoveryClusters" />
         <v-row>
-            <v-col
-                v-for="cluster in clusters"
-                :key="cluster.id"
-                class="pa-2 pb-4 pt-0"
-                cols="12"
-                md="6"
-                lg="4"
-            >
+            <v-col v-for="cluster in clusters" :key="cluster.id" cols="12" md="6" lg="4">
                 <v-card hover outlined class="cluster-card" @click="navToCluster(cluster)">
                     <v-list-item>
                         <v-list-item-avatar v-show="cluster.state" class="mr-2 mt-n2" size="20">
