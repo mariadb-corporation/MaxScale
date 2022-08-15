@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { OVERLAY_LOGOUT } from 'store/overlayTypes'
+import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import localForage from 'localforage'
 export default {
     namespaced: true,

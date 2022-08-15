@@ -108,7 +108,7 @@
 /*
 @confirm-kill: item:object.
 */
-import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState, mapGetters } from 'vuex'
 import asyncEmit from '@share/mixins/asyncEmit'
 
