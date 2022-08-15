@@ -13,8 +13,12 @@
 import ax from 'axios'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 
-export const controller = new AbortController()
-export const abortRequests = () => controller.abort()
+let controller = new AbortController()
+export const abortRequests = () => {
+    controller.abort()
+    // refresh the controller
+    controller = new AbortController()
+}
 
 function baseConf() {
     return ax.create({
