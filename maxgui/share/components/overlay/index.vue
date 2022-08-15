@@ -1,6 +1,15 @@
 <template>
     <v-fade-transition>
-        <component :is="currentOverLay" :key="overlay_type" />
+        <loading-transparent-overlay
+            v-if="transparentLoading"
+            class="v-overlay--custom transparent-loading"
+        />
+        <loading-overlay
+            v-else-if="isLoadingOverlay"
+            :showWelcomeTxt="isLogging"
+            :msg="msg"
+            class="v-overlay--custom"
+        />
     </v-fade-transition>
 </template>
 
@@ -17,49 +26,56 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import {
-    OVERLAY_LOGOUT,
-    OVERLAY_LOADING,
-    OVERLAY_ERROR,
-    OVERLAY_TRANSPARENT_LOADING,
-} from '@share/overlayTypes'
-import ErrorOverlay from './ErrorOverlay'
+import { OVERLAY_LOGOUT, OVERLAY_LOGGING, OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import LoadingTransparentOverlay from './LoadingTransparentOverlay'
 import LoadingOverlay from './LoadingOverlay'
-import LogoutOverlay from './LogoutOverlay'
 import { mapState } from 'vuex'
 
 export default {
     name: 'overlay',
+    components: {
+        'loading-overlay': LoadingOverlay,
+        'loading-transparent-overlay': LoadingTransparentOverlay,
+    },
     computed: {
         ...mapState({
             overlay_type: 'overlay_type',
         }),
-        currentOverLay: function() {
-            switch (this.overlay_type) {
-                case OVERLAY_TRANSPARENT_LOADING:
-                    return LoadingTransparentOverlay
-                case OVERLAY_LOADING:
-                    return LoadingOverlay
-                case OVERLAY_LOGOUT:
-                    return LogoutOverlay
-                case OVERLAY_ERROR:
-                    return ErrorOverlay
-                default:
-                    return false
-            }
+        transparentLoading() {
+            return this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
-    },
-    watch: {
-        overlay_type: function(newVal) {
-            let html = document.getElementsByTagName('html')[0]
-
-            if (newVal) {
-                html.style.overflow = 'hidden'
-            } else {
-                html.style.overflow = 'auto'
+        isLoadingOverlay() {
+            return this.overlay_type === OVERLAY_LOGGING || this.overlay_type === OVERLAY_LOGOUT
+        },
+        isLogging() {
+            return this.overlay_type === OVERLAY_LOGGING
+        },
+        msg() {
+            switch (this.overlay_type) {
+                case OVERLAY_LOGGING:
+                    return this.$t('initializing')
+                case OVERLAY_LOGOUT:
+                    return this.$t('loggingOut')
+                default:
+                    return ''
             }
         },
     },
 }
 </script>
+<style lang="scss">
+.v-overlay--custom {
+    .v-overlay__scrim,
+    .v-overlay__content {
+        width: 100vw;
+        height: 100vh;
+    }
+}
+.v-overlay--custom.transparent-loading {
+    .v-overlay__content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+}
+</style>

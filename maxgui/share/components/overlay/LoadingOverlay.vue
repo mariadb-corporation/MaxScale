@@ -1,14 +1,15 @@
 <template>
-    <v-overlay z-index="9999" :opacity="1" :absolute="true">
-        <div class="overlay">
-            <div class="overlay-content">
-                <loading-message :text="$t('welcomeTo')" />
-                <div class="loading-icon">
-                    <img src="@share/assets/icon-globe.svg" alt="MariaDB" />
-                </div>
-                <div class="color text-accent text-center">
-                    {{ $t('initializing') }}
-                </div>
+    <v-overlay z-index="9999">
+        <div class="overlay-wrapper d-flex flex-column justify-center align-center fill-height">
+            <div class="welcome-txt text-center color text-text-subtle">
+                <div v-if="showWelcomeTxt">{{ $t('welcomeTo') }}</div>
+                <div class="font-weight-medium">{{ $t('mariaDbMaxScale') }}</div>
+            </div>
+            <div class="loading-icon">
+                <img src="@share/assets/icon-globe.svg" alt="MariaDB" />
+            </div>
+            <div class="color text-accent text-center">
+                {{ msg }}
             </div>
         </div>
     </v-overlay>
@@ -27,9 +28,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import LoadingMessage from './LoadingMessage'
 export default {
-    name: 'load-overlay',
-    components: { LoadingMessage },
+    name: 'loading-overlay',
+    props: {
+        msg: { type: String, default: '' },
+        showWelcomeTxt: { type: Boolean, default: true },
+    },
 }
 </script>
+<style lang="scss" scoped>
+.overlay-wrapper {
+    background: radial-gradient(1100px at 100% 89%, $accent 0%, $deep-ocean 100%);
+
+    .welcome-txt {
+        font-size: 30px;
+    }
+}
+</style>

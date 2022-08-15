@@ -17,11 +17,20 @@
 @import 'variables.scss';
 @import 'override.scss';
 // layout
-html {
+html,
+body,
+#app {
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
-    //dashboard "responsive". preserve ratio
-    overflow: auto !important;
+    overflow: hidden;
+}
+
+main.v-main {
+    .v-main__wrap {
+        overflow: auto;
+    }
 }
 ::-webkit-scrollbar {
     width: 10px;
@@ -47,27 +56,6 @@ html {
 
 // Vuetify custom
 
-.v-overlay__scrim {
-    width: 100vw;
-    height: 100vh;
-}
-.v-overlay__content {
-    width: 100%;
-    height: 100%;
-    .overlay {
-        display: table;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(1100px at 100% 89%, $accent 0%, $deep-ocean 100%);
-        .overlay-content {
-            display: table-cell;
-            vertical-align: middle;
-        }
-        .loading-icon {
-            text-align: center;
-        }
-    }
-}
 .v-menu--with-arrow {
     contain: initial;
     overflow: visible;
