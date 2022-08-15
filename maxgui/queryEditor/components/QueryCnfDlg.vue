@@ -19,7 +19,7 @@
                             :key="isOpened"
                             :height="36"
                             hide-details="auto"
-                            class="std error--text__bottom mb-2 rowLimit"
+                            class="vuetify-input--override error--text__bottom mb-2 rowLimit"
                             @change="config.rowLimit = $event"
                         />
                         <v-icon size="16" color="warning" class="mr-2">
@@ -35,7 +35,7 @@
                             v-model.number="config.queryHistoryRetentionPeriod"
                             type="number"
                             :rules="rules.queryHistoryRetentionPeriod"
-                            class="std error--text__bottom mb-2 queryHistoryRetentionPeriod"
+                            class="vuetify-input--override error--text__bottom mb-2 queryHistoryRetentionPeriod"
                             dense
                             :height="36"
                             hide-details="auto"
@@ -56,6 +56,7 @@
                         <v-checkbox
                             v-model="config[key]"
                             class="v-checkbox--custom-label pa-0 ma-0"
+                            dense
                             :class="[key]"
                             :label="$t(key)"
                             color="primary"

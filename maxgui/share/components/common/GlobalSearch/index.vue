@@ -2,7 +2,7 @@
     <v-text-field
         id="search"
         v-model.trim="search"
-        class="search-restyle"
+        class="vuetify-input--override global-search"
         :class="`route-${$route.name}`"
         name="search"
         :height="36"
@@ -14,7 +14,7 @@
         rounded
         @keyup.enter="create"
     >
-        <v-icon slot="append" size="16">$vuetify.icons.search</v-icon>
+        <v-icon slot="append" size="16" class="search-icon">$vuetify.icons.search</v-icon>
     </v-text-field>
 </template>
 
@@ -55,23 +55,29 @@ export default {
 </script>
 
 <style lang="scss">
-.search-restyle {
+.global-search {
     max-width: 175px;
-
-    .v-input__slot {
-        min-height: 0 !important;
-        padding: 0px 10px 0px 15px !important;
+    .v-input__control {
+        .v-input__slot {
+            padding: 0px 10px 0px 15px;
+            input {
+                font-size: 12px;
+                color: $navigation;
+            }
+            .v-input__append-inner {
+                display: flex;
+                align-items: center;
+                height: 100%;
+                margin: 0px;
+            }
+        }
     }
-    input {
-        font-size: 12px !important;
-    }
-    .v-input__append-inner {
-        margin-top: 12px !important;
-    }
-}
-.search-restyle.primary--text {
-    svg {
-        color: $primary;
+    &.v-input--is-focused {
+        .search-icon {
+            svg {
+                color: $primary;
+            }
+        }
     }
 }
 </style>

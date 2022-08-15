@@ -66,7 +66,7 @@
                 dense
                 outlined
                 height="28"
-                class="std filter-objects"
+                class="vuetify-input--override filter-objects"
                 :placeholder="$t('filterSchemaObjects')"
                 :disabled="!hasConn"
             />
@@ -144,7 +144,7 @@ export default {
 </style>
 
 <style lang="scss">
-.std.filter-objects {
+.vuetify-input--override.filter-objects {
     input {
         font-size: 12px !important;
     }

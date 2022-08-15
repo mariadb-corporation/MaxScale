@@ -36,7 +36,7 @@
                                 </label>
                                 <v-text-field
                                     v-model="fileName"
-                                    class="std error--text__bottom"
+                                    class="vuetify-input--override error--text__bottom"
                                     name="file-name"
                                     dense
                                     outlined
@@ -61,7 +61,7 @@
                                     outlined
                                     dense
                                     :height="36"
-                                    class="std mariadb-select-input error--text__bottom"
+                                    class="vuetify-input--override mariadb-select-input error--text__bottom"
                                     :menu-props="{
                                         contentClass: 'mariadb-select-v-menu',
                                         bottom: true,
@@ -120,7 +120,7 @@
                                     outlined
                                     dense
                                     :height="36"
-                                    class="std mariadb-select-input error--text__bottom"
+                                    class="vuetify-input--override mariadb-select-input error--text__bottom"
                                     :menu-props="{
                                         contentClass: 'mariadb-select-v-menu',
                                         bottom: true,
@@ -143,7 +143,7 @@
                                 </label>
                                 <v-text-field
                                     v-model="custDelimiter"
-                                    class="std error--text__bottom"
+                                    class="vuetify-input--override error--text__bottom"
                                     dense
                                     outlined
                                     :height="36"

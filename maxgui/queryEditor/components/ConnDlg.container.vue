@@ -43,7 +43,7 @@
                 :items="resourceTypes"
                 name="resourceName"
                 outlined
-                class="mt-4 std mariadb-select-input error--text__bottom resource-type-dropdown"
+                class="mt-4 vuetify-input--override mariadb-select-input error--text__bottom resource-type-dropdown"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -96,7 +96,7 @@
                             id="db-user"
                             v-model.trim="body.user"
                             :rules="rules.user"
-                            class="std error--text__bottom user"
+                            class="vuetify-input--override error--text__bottom user"
                             name="db-user"
                             autocomplete="new-username"
                             dense
@@ -116,7 +116,7 @@
                             v-model.trim="body.password"
                             :rules="rules.password"
                             :type="isPwdVisible ? 'text' : 'password'"
-                            class="std error--text__bottom password"
+                            class="vuetify-input--override error--text__bottom password"
                             name="db-password"
                             autocomplete="new-password"
                             dense
@@ -136,7 +136,7 @@
                         </label>
                         <v-text-field
                             v-model.trim="body.db"
-                            class="std error--text__bottom"
+                            class="vuetify-input--override error--text__bottom"
                             name="db"
                             dense
                             :height="36"
@@ -152,7 +152,7 @@
                         <v-text-field
                             v-model.number="body.timeout"
                             type="number"
-                            class="std error--text__bottom timeout"
+                            class="vuetify-input--override error--text__bottom timeout"
                             name="timeout"
                             dense
                             :height="36"

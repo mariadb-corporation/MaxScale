@@ -44,9 +44,10 @@
             <template v-slot:body-append>
                 <v-checkbox
                     v-model="confirmDelAll"
-                    class="small"
+                    class="v-checkbox--custom-label"
                     :label="$t('disconnectAll')"
                     color="primary"
+                    dense
                     hide-details
                 />
             </template>

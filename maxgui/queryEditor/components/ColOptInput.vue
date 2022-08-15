@@ -2,7 +2,7 @@
     <v-combobox
         v-if="input.type === 'column_type'"
         v-model="input.value"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :class="input.type"
         :menu-props="{
             contentClass: 'mariadb-select-v-menu',
@@ -22,7 +22,7 @@
     <v-select
         v-else-if="input.type === 'enum'"
         v-model="input.value"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :class="input.type"
         :menu-props="{
             contentClass: 'mariadb-select-v-menu',
@@ -63,7 +63,7 @@
     <v-text-field
         v-else
         v-model="input.value"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
         :class="`${input.type}`"
         single-line
         outlined

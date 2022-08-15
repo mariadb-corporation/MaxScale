@@ -1,5 +1,5 @@
 <template>
-    <v-card class="v-card-custom" style="max-width: 463px; z-index: 2;border-radius: 10px;">
+    <v-card class="v-card--custom" style="max-width: 463px; z-index: 2;border-radius: 10px;">
         <v-card-text style="padding:60px 80px 0px" align-center>
             <div class="">
                 <h1 align="left" class="pb-4 color text-deep-ocean">
@@ -16,7 +16,7 @@
                         v-model="credential.username"
                         :rules="rules.username"
                         :error-messages="login_err_msg"
-                        class="std mt-5"
+                        class="vuetify-input--override mt-5"
                         name="username"
                         autocomplete="username"
                         autofocus
@@ -34,7 +34,7 @@
                         :rules="rules.password"
                         :error-messages="login_err_msg"
                         :type="isPwdVisible ? 'text' : 'password'"
-                        class="std std-password mt-5"
+                        class="vuetify-input--override vuetify-input--override-password mt-5"
                         name="password"
                         autocomplete="current-password"
                         single-line
@@ -51,10 +51,11 @@
                     </v-text-field>
                     <v-checkbox
                         v-model="rememberMe"
-                        class="small mt-2 mb-4"
+                        class="v-checkbox--custom-label mt-2 mb-4"
                         :label="$t('rememberMe')"
                         color="primary"
                         hide-details
+                        dense
                     />
                 </v-form>
             </div>

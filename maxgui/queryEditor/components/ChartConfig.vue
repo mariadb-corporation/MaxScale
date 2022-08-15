@@ -6,7 +6,7 @@
             v-model="chartOpt.type"
             :items="Object.values(chartTypes)"
             outlined
-            class="std mariadb-select-input error--text__bottom"
+            class="vuetify-input--override mariadb-select-input error--text__bottom"
             :menu-props="{
                 contentClass: 'mariadb-select-v-menu',
                 bottom: true,
@@ -24,7 +24,7 @@
                 v-model="resSet"
                 :items="resultSets"
                 outlined
-                class="std mariadb-select-input error--text__bottom"
+                class="vuetify-input--override mariadb-select-input error--text__bottom"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -54,7 +54,7 @@
                                 v-model="scaleLabels[axisId]"
                                 :items="axisFields"
                                 outlined
-                                class="std mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override mariadb-select-input error--text__bottom"
                                 :menu-props="{
                                     contentClass: 'mariadb-select-v-menu',
                                     bottom: true,
@@ -75,7 +75,7 @@
                                 v-model="axesType[axisId]"
                                 :items="Object.values(axisTypes)"
                                 outlined
-                                class="std mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override mariadb-select-input error--text__bottom"
                                 :menu-props="{
                                     contentClass: 'mariadb-select-v-menu',
                                     bottom: true,

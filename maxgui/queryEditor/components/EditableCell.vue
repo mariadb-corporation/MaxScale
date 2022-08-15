@@ -3,7 +3,7 @@
         :id="targetCell.id"
         v-model.trim="targetCell.value"
         :name="targetCell.id"
-        class="std fill-height align-center"
+        class="vuetify-input--override fill-height align-center"
         single-line
         outlined
         dense

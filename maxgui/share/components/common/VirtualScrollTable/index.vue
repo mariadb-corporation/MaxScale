@@ -535,7 +535,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .virtual-table {
     width: 100%;
     .tbody {

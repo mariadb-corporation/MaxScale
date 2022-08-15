@@ -12,7 +12,7 @@
         @input="$emit('input', $event)"
     >
         <v-card
-            class="v-card-custom"
+            class="v-card--custom"
             :min-width="minBodyWidth"
             :max-width="isDynamicWidth ? 'unset' : minBodyWidth"
         >

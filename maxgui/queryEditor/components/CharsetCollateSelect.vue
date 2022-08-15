@@ -2,7 +2,7 @@
     <v-combobox
         v-bind="{ ...$attrs }"
         outlined
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :menu-props="{
             contentClass: 'mariadb-select-v-menu',
             bottom: true,

@@ -80,10 +80,11 @@
                 <template v-if="dialogType === 'maintain'" v-slot:body-append>
                     <v-checkbox
                         v-model="forceClosing"
-                        class="small mt-2 mb-4"
+                        class="v-checkbox--custom-label mt-2 mb-4"
                         :label="$t('forceClosing')"
                         color="primary"
                         hide-details
+                        dense
                     />
                 </template>
             </confirm-dialog>

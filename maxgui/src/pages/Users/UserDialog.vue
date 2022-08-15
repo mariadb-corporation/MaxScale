@@ -24,7 +24,7 @@
                     v-if="type === USER_ADMIN_ACTIONS.ADD"
                     v-model="currUser.id"
                     :rules="rule($t('username'))"
-                    class="std error--text__bottom mb-4"
+                    class="vuetify-input--override error--text__bottom mb-4"
                     autofocus
                     dense
                     :height="36"
@@ -45,7 +45,7 @@
                     v-model="currUser.password"
                     :rules="rule($t('password'))"
                     :type="isPwdVisible ? 'text' : 'password'"
-                    class="std std-password error--text__bottom"
+                    class="vuetify-input--override vuetify-input--override-password error--text__bottom"
                     autocomplete="new-password"
                     :autofocus="type === USER_ADMIN_ACTIONS.UPDATE"
                     single-line
@@ -66,7 +66,7 @@
                         v-model="currUser.role"
                         :items="Object.values(USER_ROLES)"
                         outlined
-                        class="std mariadb-select-input error--text__bottom mt-4"
+                        class="vuetify-input--override mariadb-select-input error--text__bottom mt-4"
                         :menu-props="{
                             contentClass: 'mariadb-select-v-menu',
                             bottom: true,

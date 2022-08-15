@@ -8,7 +8,7 @@
                 dense
                 outlined
                 height="28"
-                class="std filter-result mr-2"
+                class="vuetify-input--override filter-result mr-2"
                 :placeholder="$t('filterResult')"
                 hide-details
             />
@@ -407,7 +407,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.std.filter-result {
+.vuetify-input--override.filter-result {
     max-width: 250px;
 }
 .table-tools {
