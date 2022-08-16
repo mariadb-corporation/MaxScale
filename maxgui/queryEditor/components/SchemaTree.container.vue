@@ -62,7 +62,7 @@
             content-class="shadow-drop"
             :activator="`#node-tooltip-activator-${hoveredItem.key}`"
         >
-            <table class="node-tooltip color text-text py-2 px-4">
+            <table class="node-tooltip mxs-color-helper text-text py-2 px-4">
                 <tbody>
                     <tr v-for="(value, key) in hoveredItem.data" :key="key">
                         <td class="font-weight-bold pr-2">{{ key }}:</td>

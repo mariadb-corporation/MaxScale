@@ -13,7 +13,7 @@
             </template>
             <template v-slot:card-body>
                 <span
-                    class="detail-overview__card__name text-caption text-uppercase font-weight-bold color text-deep-ocean"
+                    class="detail-overview__card__name text-caption text-uppercase font-weight-bold mxs-color-helper text-deep-ocean"
                 >
                     {{ name.replace('_', ' ') }}
                 </span>
@@ -43,15 +43,19 @@
 
                 <span v-else-if="name === 'state'" :class="valueClass">
                     <template v-if="value.indexOf(',') > 0">
-                        <span class="color font-weight-bold" :class="[serverStateClass]">
+                        <span class="mxs-color-helper font-weight-bold" :class="[serverStateClass]">
                             {{ value.slice(0, value.indexOf(',')) }}
                         </span>
                         /
-                        <span class="color font-weight-bold" :class="[serverStateClass]">
+                        <span class="mxs-color-helper font-weight-bold" :class="[serverStateClass]">
                             {{ value.slice(value.indexOf(',') + 1) }}
                         </span>
                     </template>
-                    <span v-else class="color font-weight-bold" :class="[serverStateClass]">
+                    <span
+                        v-else
+                        class="mxs-color-helper font-weight-bold"
+                        :class="[serverStateClass]"
+                    >
                         {{ value }}
                     </span>
                 </span>

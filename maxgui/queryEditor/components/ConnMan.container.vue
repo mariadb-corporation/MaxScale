@@ -43,7 +43,7 @@
                     <v-tooltip
                         top
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
@@ -70,7 +70,7 @@
                 <v-list-item
                     ripple
                     link
-                    class="text-decoration-underline color text-primary"
+                    class="text-decoration-underline mxs-color-helper text-primary"
                     @click="openConnDialog"
                 >
                     {{ $t('newConnection') }}

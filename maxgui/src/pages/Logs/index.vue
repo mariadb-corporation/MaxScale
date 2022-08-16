@@ -8,7 +8,10 @@
         >
             <div ref="pageContent" class="fill-height">
                 <log-header ref="logHeader" class="pb-4 pt-2" />
-                <div v-if="logViewHeight" class="log-lines-container pa-4 color bg-separator">
+                <div
+                    v-if="logViewHeight"
+                    class="log-lines-container pa-4 mxs-color-helper bg-separator"
+                >
                     <log-container :logViewHeight="logViewHeight" />
                 </div>
             </div>

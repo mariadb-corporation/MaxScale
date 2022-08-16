@@ -1,12 +1,12 @@
 <template>
     <div
-        class="d-flex align-center color border-bottom-table-border"
+        class="d-flex align-center mxs-color-helper border-bottom-table-border"
         :style="{ height: `${height}px` }"
     >
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn
@@ -29,7 +29,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn

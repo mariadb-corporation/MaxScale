@@ -2,7 +2,7 @@
     <v-navigation-drawer
         :mini-variant.sync="isMini"
         color="navigation"
-        class="main-nav color bg-navigation"
+        class="main-nav mxs-color-helper bg-navigation"
         width="250"
         mini-variant-width="50"
         fixed

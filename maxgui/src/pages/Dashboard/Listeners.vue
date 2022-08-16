@@ -24,7 +24,7 @@
         </template>
 
         <template v-slot:header-append-serviceIds>
-            <span class="ml-1 color text-grayed-out"> ({{ servicesLength }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ servicesLength }}) </span>
         </template>
 
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">

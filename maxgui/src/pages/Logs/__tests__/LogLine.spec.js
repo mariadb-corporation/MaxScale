@@ -29,13 +29,13 @@ describe('LogLine', () => {
     beforeEach(() => {
         wrapper = mountFactory()
     })
-    it(`Should return accurate color classes for log level section`, async () => {
+    it(`Should return accurate mxs-color-helper classes for log level section`, async () => {
         dummy_log_data.forEach(async log => {
             await wrapper.setProps({ log })
             const logLevelEle = wrapper.find('.log-level')
             const classes = logLevelEle.classes().join(' ')
             expect(classes).to.be.equals(
-                `log-level d-inline-flex justify-start color text-${log.priority} ${
+                `log-level d-inline-flex justify-start mxs-color-helper text-${log.priority} ${
                     log.priority === 'alert' ? 'font-weight-bold' : ''
                 }`
             )
@@ -47,7 +47,7 @@ describe('LogLine', () => {
             const logMsg = wrapper.find('.text-wrap')
             const classes = logMsg.classes().join(' ')
             expect(classes).to.be.equals(
-                `text-wrap color text-${log.priority} ${
+                `text-wrap mxs-color-helper text-${log.priority} ${
                     log.priority === 'alert' ? 'font-weight-bold' : ''
                 }`
             )

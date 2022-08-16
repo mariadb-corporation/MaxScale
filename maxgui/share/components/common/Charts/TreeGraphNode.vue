@@ -6,7 +6,7 @@
             <div
                 v-if="$slots['node-body'] || hasExtraInfo"
                 :class="
-                    `color text-navigation d-flex justify-center flex-column px-3 py-1 ${bodyWrapperClass}`
+                    `mxs-color-helper text-navigation d-flex justify-center flex-column px-3 py-1 ${bodyWrapperClass}`
                 "
             >
                 <slot name="node-body"></slot>

@@ -43,7 +43,7 @@
                 />
             </template>
             <template v-if="selectedForm" v-slot:form-body>
-                <label class="field__label color text-small-text d-block">
+                <label class="field__label mxs-color-helper text-small-text d-block">
                     {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
                 </label>
                 <v-text-field

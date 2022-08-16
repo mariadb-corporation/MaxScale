@@ -5,7 +5,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn small icon depressed color="accent-dark" v-on="on" @click="exportToJpeg">
@@ -19,7 +19,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
@@ -39,7 +39,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn

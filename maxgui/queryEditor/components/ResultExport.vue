@@ -2,7 +2,7 @@
     <v-tooltip
         top
         transition="slide-y-transition"
-        content-class="shadow-drop color text-navigation py-1 px-4"
+        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
     >
         <template v-slot:activator="{ on }">
             <v-btn
@@ -31,7 +31,9 @@
                     <v-container class="pa-1">
                         <v-row class="my-0 mx-n1">
                             <v-col cols="12" md="12" class="pa-1">
-                                <label class="field__label color text-small-text label-required">
+                                <label
+                                    class="field__label mxs-color-helper text-small-text label-required"
+                                >
                                     {{ $t('fileName') }}
                                 </label>
                                 <v-text-field
@@ -52,7 +54,9 @@
                             </v-col>
 
                             <v-col cols="12" md="12" class="pa-1">
-                                <label class="field__label color text-small-text label-required">
+                                <label
+                                    class="field__label mxs-color-helper text-small-text label-required"
+                                >
                                     {{ $t('fileFormat') }}
                                 </label>
                                 <v-select
@@ -108,7 +112,7 @@
                             </v-col>
 
                             <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
-                                <label class="field__label color text-small-text">
+                                <label class="field__label mxs-color-helper text-small-text">
                                     {{ $t('delimiter') }}
                                 </label>
                                 <v-select
@@ -138,7 +142,7 @@
                                 />
                             </v-col>
                             <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
-                                <label class="field__label color text-small-text">
+                                <label class="field__label mxs-color-helper text-small-text">
                                     {{ $t('custdelimiter') }}
                                 </label>
                                 <v-text-field

@@ -39,7 +39,7 @@
             :handleVisFilters="handleVisFilters"
         />
         <div
-            class="color text-navigation d-flex justify-center flex-column px-3 py-1"
+            class="mxs-color-helper text-navigation d-flex justify-center flex-column px-3 py-1"
             :class="{ 'mx-5': isShowingFilterNodes }"
             :style="{ border: isShowingFilterNodes ? `1px solid ${headingColor.bg}` : 'unset' }"
         >
@@ -77,7 +77,7 @@
                     v-if="key === 'filters'"
                     top
                     transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
+                    content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                 >
                     <template v-slot:activator="{ on }">
                         <v-btn

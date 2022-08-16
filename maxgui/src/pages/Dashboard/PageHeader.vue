@@ -3,14 +3,14 @@
         <portal to="page-header">
             <h4
                 style="margin-bottom: 0px; line-height: normal;"
-                class="color text-navigation text-h4 text-capitalize"
+                class="mxs-color-helper text-navigation text-h4 text-capitalize"
             >
                 {{ pageTitle }}
             </h4>
 
             <span
                 style="position:relative;top:-15px"
-                class="grayed-out-info color text-grayed-out text-capitalize"
+                class="grayed-out-info mxs-color-helper text-grayed-out text-capitalize"
             >
                 {{ $t('uptime') }}
                 {{
@@ -55,7 +55,7 @@
                                 :key="copyState"
                                 transition="slide-y-reverse-transition"
                                 top
-                                content-class="shadow-drop color text-navigation py-1 px-4"
+                                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                             >
                                 <template v-slot:activator="{ on }">
                                     <div

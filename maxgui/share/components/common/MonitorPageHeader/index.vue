@@ -26,7 +26,7 @@
                         @click="onChooseOp(op)"
                     >
                         <v-list-item-title
-                            class="d-flex color text-text align-center op-item font-weight-regular"
+                            class="d-flex mxs-color-helper text-text align-center op-item font-weight-regular"
                             :class="{ 'op-item--disabled': op.disabled }"
                         >
                             <div class="d-inline-block text-center mr-2" style="width:24px">
@@ -67,10 +67,10 @@
                 >
                     monitors
                 </icon-sprite-sheet>
-                <span class="resource-state color text-navigation text-body-2">
+                <span class="resource-state mxs-color-helper text-navigation text-body-2">
                     {{ state }}
                 </span>
-                <span class="color text-grayed-out text-body-2">
+                <span class="mxs-color-helper text-grayed-out text-body-2">
                     |
                     <span class="resource-module">{{ monitorModule }}</span>
                 </span>
@@ -92,7 +92,7 @@
                                 confDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE
                         "
                     >
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ $t('hostname/IP') }}
                         </label>
                         <v-combobox

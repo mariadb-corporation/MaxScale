@@ -4,7 +4,7 @@
         transition="slide-y-transition"
         :close-on-content-click="false"
         open-on-hover
-        content-class="shadow-drop color text-navigation"
+        content-class="shadow-drop mxs-color-helper text-navigation"
         allow-overflow
         :max-height="350"
         v-bind="{ ...$attrs }"
@@ -17,7 +17,7 @@
             <div class="px-1 py-1 font-weight-bold ">
                 {{ isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
             </div>
-            <v-divider class="color border-separator" />
+            <v-divider class="mxs-color-helper border-separator" />
 
             <template v-if="isMaster">
                 <table class="rep-table px-1">
@@ -39,7 +39,7 @@
                                     :nudgeTop="10"
                                     :maxWidth="300"
                                 />
-                                <span class="ml-1 color text-grayed-out">
+                                <span class="ml-1 mxs-color-helper text-grayed-out">
                                     (+{{ slaveStat.overall_seconds_behind_master }}s)
                                 </span>
                             </div>

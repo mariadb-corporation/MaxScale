@@ -4,7 +4,7 @@
         class="d-block mariadb-code-style text-wrap"
         :class="logPriorityColorClasses(source.priority)"
     >
-        <span class="color text-grayed-out">{{ source.timestamp }}&nbsp;&nbsp;</span>
+        <span class="mxs-color-helper text-grayed-out">{{ source.timestamp }}&nbsp;&nbsp;</span>
         <span class="log-level d-inline-block">
             <icon-sprite-sheet size="13" :frame="source.priority">
                 logPriorities
@@ -13,7 +13,7 @@
             <span>{{ source.priority }}</span>
         </span>
         <span v-html="logLevelNbspGen(source.priority)" />
-        <span class="log-level-divider color text-code-color">:</span>
+        <span class="log-level-divider mxs-color-helper text-code-color">:</span>
         <span>&nbsp;</span>
         <span>{{ source.message }}</span>
     </code>
@@ -49,7 +49,7 @@ export default {
     },
     methods: {
         logPriorityColorClasses: level =>
-            `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
+            `mxs-color-helper text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
         logLevelNbspGen(level) {
             switch (level) {
                 case 'error':

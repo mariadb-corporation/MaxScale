@@ -1,13 +1,13 @@
 <template>
     <div
-        class="txt-editor-toolbar color border-bottom-table-border d-flex align-center"
+        class="txt-editor-toolbar mxs-color-helper border-bottom-table-border d-flex align-center"
         :style="{ height: `${height}px` }"
     >
         <!-- Run/Stop buttons-->
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             :disabled="getLoadingQueryResultBySessionId(session.id)"
         >
             <template v-slot:activator="{ on }">
@@ -55,7 +55,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn
@@ -84,7 +84,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn
@@ -114,7 +114,7 @@
                 @change="SET_QUERY_ROW_LIMIT($event)"
             >
                 <template v-slot:prepend-inner>
-                    <label class="field__label color text-small-text">
+                    <label class="field__label mxs-color-helper text-small-text">
                         {{ $t('rowLimit') }}
                     </label>
                 </template>
@@ -144,7 +144,7 @@
                 </div>
                 <template v-if="confDlg.isCreatingSnippet">
                     <label
-                        class="field__label color text-small-text label-required text-capitalize"
+                        class="field__label mxs-color-helper text-small-text label-required text-capitalize"
                     >
                         {{ $t('prefix') }}
                     </label>

@@ -125,10 +125,10 @@ export function objectTooltip({
                 }`
                 innerHtml += `
                 <tr>
-                    <td class="color text-small-text ${boldClass}">
+                    <td class="mxs-color-helper text-small-text ${boldClass}">
                      ${key}
                      </td>
-                    <td class="color text-navigation ${boldClass}">
+                    <td class="mxs-color-helper text-navigation ${boldClass}">
                         ${dataPoint.dataPointObj[key]}
                     </td>
                 </tr>`

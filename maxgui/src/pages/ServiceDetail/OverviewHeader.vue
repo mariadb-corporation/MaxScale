@@ -7,7 +7,7 @@
                 </template>
                 <template v-slot:card-body>
                     <span
-                        class="text-caption text-uppercase font-weight-bold color text-deep-ocean"
+                        class="text-caption text-uppercase font-weight-bold mxs-color-helper text-deep-ocean"
                     >
                         ROUTER
                     </span>
@@ -19,7 +19,7 @@
             <outlined-overview-card wrapperClass="mt-5">
                 <template v-slot:card-body>
                     <span
-                        class="text-caption text-uppercase font-weight-bold color text-deep-ocean"
+                        class="text-caption text-uppercase font-weight-bold mxs-color-helper text-deep-ocean"
                     >
                         STARTED AT
                     </span>

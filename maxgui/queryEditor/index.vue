@@ -3,7 +3,7 @@
         ref="queryViewCtr"
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="query-editor color all-border-table-border fill-height"
+        class="query-editor mxs-color-helper all-border-table-border fill-height"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
         <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />

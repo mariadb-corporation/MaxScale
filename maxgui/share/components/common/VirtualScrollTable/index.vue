@@ -182,7 +182,7 @@
                     <div
                         v-if="!isYOverflowed"
                         :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
-                        class="dummy-cell color border-right-table-border border-bottom-table-border"
+                        class="dummy-cell mxs-color-helper border-right-table-border border-bottom-table-border"
                     />
                 </div>
             </template>

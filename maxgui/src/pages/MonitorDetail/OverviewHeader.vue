@@ -9,7 +9,9 @@
             @card-hover="showEditBtn = $event"
         >
             <template v-slot:card-body>
-                <span class="text-caption text-uppercase font-weight-bold color text-deep-ocean">
+                <span
+                    class="text-caption text-uppercase font-weight-bold mxs-color-helper text-deep-ocean"
+                >
                     {{ name.replace('_', ' ') }}
                 </span>
 
@@ -37,7 +39,7 @@
                     <v-tooltip
                         bottom
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                         activator=".switchover-edit-btn"
                     >
                         <span>{{ switchoverOp.text }} </span>

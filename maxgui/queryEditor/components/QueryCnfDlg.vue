@@ -11,7 +11,7 @@
             <v-container class="pa-1">
                 <v-row class="my-0 mx-n1">
                     <v-col cols="12" class="pa-1">
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ $t('rowLimit') }}
                         </label>
                         <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
@@ -28,7 +28,7 @@
                         <small v-html="$t('info.rowLimit')" />
                     </v-col>
                     <v-col cols="12" class="pa-1 mb-3">
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ $t('queryHistoryRetentionPeriod') }} ({{ $t('inDays') }})
                         </label>
                         <v-text-field

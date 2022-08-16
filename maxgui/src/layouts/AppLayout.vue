@@ -11,13 +11,13 @@
             </div>
         </v-main>
         <v-footer
-            class="pl-2 d-flex color white border-top-separator justify-center"
+            class="pl-2 d-flex mxs-color-helper white border-top-separator justify-center"
             padless
             app
             height="40"
             inset
         >
-            <span class="footer-text color text-code-color align-center text-truncate">
+            <span class="footer-text mxs-color-helper text-code-color align-center text-truncate">
                 MariaDB Corporation <span class="footer__separator" />
                 Copyright © 2020 MariaDB ab. All rights reserved.
                 <span class="footer__separator" />

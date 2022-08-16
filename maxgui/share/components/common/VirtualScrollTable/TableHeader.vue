@@ -48,7 +48,7 @@
                     >
                         <template v-if="header.text === '#'">
                             <span> {{ header.text }}</span>
-                            <span class="ml-1 color text-grayed-out">
+                            <span class="ml-1 mxs-color-helper text-grayed-out">
                                 ({{ curr2dRowsLength }})
                             </span>
                         </template>

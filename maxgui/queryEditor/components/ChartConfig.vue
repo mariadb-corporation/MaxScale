@@ -1,7 +1,9 @@
 <template>
     <div class="pa-4">
         <h5 class="mb-4">{{ $t('visualization') }}</h5>
-        <label class="field__label color text-small-text label-required"> {{ $t('graph') }}</label>
+        <label class="field__label mxs-color-helper text-small-text label-required">
+            {{ $t('graph') }}</label
+        >
         <v-select
             v-model="chartOpt.type"
             :items="Object.values(chartTypes)"
@@ -17,7 +19,7 @@
             hide-details="auto"
         />
         <div v-if="chartOpt.type" class="mt-4">
-            <label class="field__label color text-small-text label-required">
+            <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $t('selectResultSet') }}
             </label>
             <v-select
@@ -39,14 +41,17 @@
             />
             <template v-if="resSet">
                 <!-- Don't show scaleLabels inputs if result set is empty -->
-                <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 color text-small-text">
+                <div
+                    v-if="$typy(resSet, 'data').isEmptyArray"
+                    class="mt-4 mxs-color-helper text-small-text"
+                >
                     {{ $t('emptySet') }}
                 </div>
                 <template v-else>
                     <div v-for="(_, axisId) in scaleLabels" :key="axisId">
                         <div class="mt-2">
                             <label
-                                class="field__label color text-small-text text-capitalize label-required"
+                                class="field__label mxs-color-helper text-small-text text-capitalize label-required"
                             >
                                 {{ axisId }} axis
                             </label>
@@ -67,7 +72,7 @@
                         </div>
                         <div class="mt-2">
                             <label
-                                class="field__label color text-small-text text-capitalize label-required"
+                                class="field__label mxs-color-helper text-small-text text-capitalize label-required"
                             >
                                 {{ axisId }} axis type
                             </label>
@@ -108,7 +113,7 @@
                         <v-tooltip
                             top
                             transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation py-1 px-4"
+                            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                         >
                             <template v-slot:activator="{ on }">
                                 <v-icon

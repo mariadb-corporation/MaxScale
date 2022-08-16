@@ -10,7 +10,7 @@
             v-if="draggable"
             v-show="showDragIcon"
             :class="{ 'drag-handle move': draggable }"
-            class="color text-grayed-out"
+            class="mxs-color-helper text-grayed-out"
             size="16"
         >
             mdi-drag-horizontal-variant
@@ -115,7 +115,7 @@ export default {
         },
         tdClasses() {
             return [
-                'color border-bottom-table-border text-navigation',
+                'mxs-color-helper border-bottom-table-border text-navigation',
                 // for showing index number columns from item
                 this.hasOrderNumber &&
                     this.cellIndex === 0 &&

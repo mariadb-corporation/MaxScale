@@ -11,7 +11,7 @@
                         :key="op.text"
                         bottom
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
@@ -37,7 +37,7 @@
                     <v-tooltip
                         bottom
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
@@ -91,10 +91,10 @@
             <icon-sprite-sheet size="16" class="server-state-icon mr-1" :frame="stateIconFrame">
                 servers
             </icon-sprite-sheet>
-            <span class="color text-navigation text-body-2 server-healthy">
+            <span class="mxs-color-helper text-navigation text-body-2 server-healthy">
                 {{ serverHealthy }}
             </span>
-            <span v-if="version_string" class="color text-grayed-out text-body-2">
+            <span v-if="version_string" class="mxs-color-helper text-grayed-out text-body-2">
                 |
                 <span class="version-string">{{ $t('version') }} {{ version_string }}</span>
             </span>

@@ -19,7 +19,7 @@
         <v-container fluid class="py-0 px-1 pb-3">
             <v-row class="ma-0">
                 <v-col cols="12" md="6" class="py-0 px-1">
-                    <label class="field__label color text-small-text label-required">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $t('name') }}
                     </label>
                     <v-text-field
@@ -36,7 +36,7 @@
                     />
                 </v-col>
                 <v-col cols="12" md="6" class="py-0 px-1">
-                    <label class="field__label color text-small-text">
+                    <label class="field__label mxs-color-helper text-small-text">
                         {{ $t('comment') }}
                     </label>
                     <v-text-field
@@ -52,7 +52,7 @@
             </v-row>
             <v-row class="ma-0">
                 <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label color text-small-text label-required">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $t('engine') }}
                     </label>
                     <v-select
@@ -72,7 +72,7 @@
                     />
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label color text-small-text label-required">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $t('charset') }}
                     </label>
                     <charset-collate-select
@@ -84,7 +84,7 @@
                     />
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
-                    <label class="field__label color text-small-text label-required">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $t('collation') }}
                     </label>
                     <charset-collate-select

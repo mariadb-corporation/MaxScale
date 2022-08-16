@@ -2,7 +2,7 @@
     <v-tooltip
         right
         transition="slide-x-transition"
-        content-class="shadow-drop color text-navigation"
+        content-class="shadow-drop mxs-color-helper text-navigation"
         :activator="activator"
         max-width="300"
     >

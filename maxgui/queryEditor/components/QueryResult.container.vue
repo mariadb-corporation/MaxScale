@@ -1,5 +1,5 @@
 <template>
-    <div class="fill-height color border-top-table-border">
+    <div class="fill-height mxs-color-helper border-top-table-border">
         <v-tabs v-model="activeTab" :height="24" class="v-tabs--mariadb-style">
             <v-tab
                 :disabled="getIsConnBusy && isLoading"
@@ -103,7 +103,7 @@ export default {
     },
     data() {
         return {
-            tabItemClass: 'pt-2 px-5 query-result-ctr-fontStyle color text-small-text',
+            tabItemClass: 'pt-2 px-5 query-result-ctr-fontStyle mxs-color-helper text-small-text',
         }
     },
     computed: {

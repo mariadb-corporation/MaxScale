@@ -1,5 +1,7 @@
 <template>
-    <div class="wke-toolbar d-flex align-center flex-grow-1 color border-bottom-table-border px-2">
+    <div
+        class="wke-toolbar d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border px-2"
+    >
         <div ref="leftBtns" class="d-flex align-center left-buttons fill-height">
             <v-btn
                 :disabled="isAddWkeDisabled"
@@ -17,7 +19,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
@@ -37,7 +39,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn

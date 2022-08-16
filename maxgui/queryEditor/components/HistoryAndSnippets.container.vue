@@ -79,7 +79,7 @@
                         <v-tooltip
                             top
                             transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation pa-2 pb-4"
+                            content-class="shadow-drop mxs-color-helper text-navigation pa-2 pb-4"
                         >
                             <template v-slot:activator="{ on }">
                                 <span
@@ -95,7 +95,7 @@
                                     {{
                                         $t('queryResInfo')
                                     }}
-                                    <v-divider class="color border-separator" />
+                                    <v-divider class="mxs-color-helper border-separator" />
                                 </caption>
 
                                 <tr v-for="(value, key) in cell" :key="`${key}`">

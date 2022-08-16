@@ -1,13 +1,13 @@
 <template>
     <div
-        class="sidebar-wrapper d-flex flex-column fill-height color border-right-table-border"
+        class="sidebar-wrapper d-flex flex-column fill-height mxs-color-helper border-right-table-border"
         :class="{ 'not-allowed': disabled }"
     >
         <div class="sidebar-toolbar" :class="[isCollapsed ? 'pa-1' : 'pa-3']">
             <div class="d-flex align-center justify-center">
                 <span
                     v-if="!isCollapsed"
-                    class="color text-small-text sidebar-toolbar__title d-inline-block text-truncate text-uppercase"
+                    class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-uppercase"
                 >
                     {{ $t('schemas') }}
                 </span>
@@ -15,7 +15,7 @@
                     v-if="!isCollapsed"
                     top
                     transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
+                    content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                 >
                     <template v-slot:activator="{ on }">
                         <v-btn
@@ -36,7 +36,7 @@
                 <v-tooltip
                     top
                     transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
+                    content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                 >
                     <template v-slot:activator="{ on }">
                         <v-btn

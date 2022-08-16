@@ -71,7 +71,7 @@ describe('ModuleParameters.vue', () => {
         const arrayClasses = wrapper.find('.field__label').classes()
         const strClasses = arrayClasses.toString().replace(/,/g, ' ')
         expect(strClasses).to.be.equals(
-            'text-capitalize field__label color text-small-text d-block'
+            'text-capitalize field__label mxs-color-helper text-small-text d-block'
         )
         expect(wrapper.find('.field__label').text()).to.be.equals('router')
     })

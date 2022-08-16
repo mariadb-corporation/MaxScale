@@ -30,7 +30,7 @@
                 </router-link>
                 <v-spacer />
                 <span
-                    class="readonly-val ml-1 color text-grayed-out font-weight-medium text-no-wrap"
+                    class="readonly-val ml-1 mxs-color-helper text-grayed-out font-weight-medium text-no-wrap"
                 >
                     {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
                 </span>
@@ -38,7 +38,7 @@
                     <v-tooltip
                         top
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
@@ -82,7 +82,7 @@
                                     @click="$emit('on-choose-op', { op, target: node })"
                                 >
                                     <v-list-item-title
-                                        class="color text-text align-center node-op-item"
+                                        class="mxs-color-helper text-text align-center node-op-item"
                                         :class="{ 'node-op-item--disabled': op.disabled }"
                                     >
                                         <div

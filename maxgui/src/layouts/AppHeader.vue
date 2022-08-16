@@ -46,7 +46,7 @@
                 </v-btn>
             </template>
 
-            <v-list dark class="color bg-navigation">
+            <v-list dark class="mxs-color-helper bg-navigation">
                 <v-list-item @click="logout">
                     <v-list-item-title>{{ $t('logout') }}</v-list-item-title>
                 </v-list-item>

@@ -69,7 +69,7 @@
             <v-container class="pa-1">
                 <v-row class="my-0 mx-n1">
                     <v-col v-if="resourceType" cols="12" md="12" class="pa-1">
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{
                                 $t('resourceLabelName', {
                                     resourceName: $help.resourceTxtTransform(resourceType),
@@ -89,7 +89,7 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ $t('username') }}
                         </label>
                         <v-text-field
@@ -108,7 +108,7 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label color text-small-text label-required">
+                        <label class="field__label mxs-color-helper text-small-text label-required">
                             {{ $t('password') }}
                         </label>
                         <v-text-field
@@ -131,7 +131,7 @@
                         </v-text-field>
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label color text-small-text">
+                        <label class="field__label mxs-color-helper text-small-text">
                             {{ $t('database') }}
                         </label>
                         <v-text-field
@@ -146,7 +146,7 @@
                         />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label color text-small-text">
+                        <label class="field__label mxs-color-helper text-small-text">
                             {{ $t('timeout') }}
                         </label>
                         <v-text-field

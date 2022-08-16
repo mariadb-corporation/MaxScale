@@ -1,7 +1,7 @@
 <template>
     <div class="tr tr--group" :style="{ lineHeight }">
         <div
-            class="d-flex align-center td pl-1 pr-3 color border-right-table-border"
+            class="d-flex align-center td pl-1 pr-3 mxs-color-helper border-right-table-border"
             :style="{
                 height: lineHeight,
                 width: '100%',
@@ -33,7 +33,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <v-btn

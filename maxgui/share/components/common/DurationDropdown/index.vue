@@ -2,7 +2,7 @@
     <div class="duration-dropdown d-inline-block">
         <label
             v-if="label"
-            class="d-block field__label color text-small-text label-required"
+            class="d-block field__label mxs-color-helper text-small-text label-required"
             :class="{ 'label-required': required }"
         >
             {{ label }}

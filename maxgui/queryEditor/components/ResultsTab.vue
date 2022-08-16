@@ -9,16 +9,16 @@
                     top
                     transition="slide-y-transition"
                     :close-on-content-click="false"
-                    content-class="shadow-drop color text-navigation "
+                    content-class="shadow-drop mxs-color-helper text-navigation "
                     open-on-hover
                     nudge-left="16"
                 >
                     <template v-slot:activator="{ on }">
-                        <span class="mr-4 pointer color text-anchor " v-on="on">
+                        <span class="mr-4 pointer mxs-color-helper text-anchor " v-on="on">
                             {{ $t('queryTxt') }}
                         </span>
                     </template>
-                    <v-sheet class="text-body-2 py-2 px-4 color text-navigation">
+                    <v-sheet class="text-body-2 py-2 px-4 mxs-color-helper text-navigation">
                         {{ queryTxt }}
                     </v-sheet>
                 </v-menu>
@@ -61,7 +61,7 @@
                 "
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <div class="ml-4 d-flex align-center" v-on="on">

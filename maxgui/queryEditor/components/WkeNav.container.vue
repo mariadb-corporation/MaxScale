@@ -68,7 +68,7 @@
                             </v-btn>
                         </div>
                     </template>
-                    <span class="color text-text py-2 px-4">
+                    <span class="mxs-color-helper text-text py-2 px-4">
                         {{ $t('connectedTo') }}
                         {{ $typy(getWkeConnByWkeId(wke.id), 'name').safeString }}
                     </span>

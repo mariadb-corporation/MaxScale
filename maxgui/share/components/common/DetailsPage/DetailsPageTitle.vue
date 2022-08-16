@@ -14,7 +14,7 @@
                 </v-btn>
                 <div class="d-inline-flex align-center">
                     <truncate-string :text="$route.params.id" :maxWidth="600">
-                        <span class="ml-1 mb-0 color text-navigation text-h4 page-title">
+                        <span class="ml-1 mb-0 mxs-color-helper text-navigation text-h4 page-title">
                             <slot name="page-title" :pageId="$route.params.id">
                                 {{ $route.params.id }}
                             </slot>

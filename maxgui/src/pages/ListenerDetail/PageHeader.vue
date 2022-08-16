@@ -6,7 +6,7 @@
                     <v-tooltip
                         bottom
                         transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
@@ -45,7 +45,7 @@
             >
                 listeners
             </icon-sprite-sheet>
-            <span class="resource-state color text-navigation text-body-2">
+            <span class="resource-state mxs-color-helper text-navigation text-body-2">
                 {{ currentListener.attributes.state }}
             </span>
         </template>
