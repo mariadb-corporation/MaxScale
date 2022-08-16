@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <map>
+#include <maxsql/mariadb.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>
@@ -444,6 +445,7 @@ vector<uint8_t> UserManager::UserInfo::salted_pwd_sha256() const
 
 UserManager::~UserManager()
 {
+    cancel_dcalls();
 }
 
 UserManager::AddUser UserManager::get_add_user_data(const string& db,
@@ -492,6 +494,138 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
     rv.uuid = zUuid;
 
     return rv;
+}
+
+void UserManager::ensure_initial_user()
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    const SERVER* pMaster = get_master();
+
+    if (pMaster)
+    {
+        check_initial_user(pMaster);
+    }
+    else
+    {
+        MXB_INFO("Master not yet available, checking shortly again.");
+
+        dcall(1s, [this]() {
+                const SERVER* pMaster = get_master();
+
+                if (pMaster)
+                {
+                    check_initial_user(pMaster);
+                }
+                else
+                {
+                    MXB_INFO("Master still not available, checking shortly again.");
+                }
+
+                return !pMaster;
+            });
+    }
+}
+
+const SERVER* UserManager::get_master() const
+{
+    const SERVER* pMaster = nullptr;
+    auto servers = m_service.reachable_servers();
+
+    for (const auto* pServer : servers)
+    {
+        if (status_is_master(pServer->status()))
+        {
+            pMaster = pServer;
+            break;
+        }
+    }
+
+    return pMaster;
+}
+
+void UserManager::check_initial_user(const SERVER* pMaster)
+{
+    auto infos = get_infos();
+
+    if (infos.empty())
+    {
+        MXB_INFO("No existing NoSQL user. Assuming first startup, creating initial user.");
+
+        if (!m_config.user.empty())
+        {
+            create_initial_user(pMaster);
+        }
+        else
+        {
+            MXB_ERROR("Initial NoSQL user should be created, but 'user' is empty. Cannot create user.");
+        }
+    }
+    else
+    {
+        MXB_INFO("At least one NoSQL user exists, no need to create one.");
+    }
+}
+
+void UserManager::create_initial_user(const SERVER* pMaster)
+{
+    MYSQL* pMysql = mysql_init(nullptr);
+
+    if (pMaster->proxy_protocol())
+    {
+        mxq::set_proxy_header(pMysql);
+    }
+
+    if (mysql_real_connect(pMysql, pMaster->address(),
+                           m_config.user.c_str(), m_config.password.c_str(),
+                           nullptr, pMaster->port(), nullptr, 0))
+    {
+        bool grants_obtained = true;
+        vector<string> grants;
+
+        if (mysql_query(pMysql, "SHOW GRANTS") == 0)
+        {
+            mxb_assert(mysql_field_count(pMysql) == 1);
+
+            MYSQL_RES* pResult = mysql_store_result(pMysql);
+
+            while (MYSQL_ROW row = mysql_fetch_row(pResult))
+            {
+                grants.push_back(row[0]);
+            }
+
+            mysql_free_result(pResult);
+        }
+        else
+        {
+            MXB_ERROR("SHOW GRANTS for '%s' failed: %s",
+                      m_config.user.c_str(), mysql_error(pMysql));
+            grants_obtained = false;
+        }
+
+        mysql_close(pMysql);
+
+        if (grants_obtained)
+        {
+            create_initial_user(grants);
+        }
+    }
+    else
+    {
+        MXB_ERROR("Could not connect to %s:%d as %s. Cannot create initial NoSQL user.",
+                  pMaster->address(), (int)pMaster->port(), m_config.user.c_str());
+    }
+}
+
+void UserManager::create_initial_user(const vector<string>& grants)
+{
+    // TODO: - Parse grants and transform them into equivalent NoSQL roles.
+    // TODO: - If m_config.user contains a ".", use everything before the "."
+    // TODO:   as the database and everything after the "." as the user.
+    // TODO:   Otherwise use m_config.user as the user and "mariadb" as db.
+
+    MXB_NOTICE("Not implemented yet. Now should create user '%s' with grants %s",
+               m_config.user.c_str(), mxb::join(grants, ", ", "'").c_str());
 }
 
 /**
@@ -678,8 +812,12 @@ sqlite3* open_or_create_db(const string& path)
 
 }
 
-UserManagerSqlite3::UserManagerSqlite3(string path, sqlite3* pDb)
-    : m_path(std::move(path))
+UserManagerSqlite3::UserManagerSqlite3(string path,
+                                       sqlite3* pDb,
+                                       SERVICE* pService,
+                                       const Configuration* pConfig)
+    : UserManager(pService, pConfig)
+    , m_path(std::move(path))
     , m_db(*pDb)
 {
 }
@@ -710,7 +848,9 @@ bool is_accessible_by_others(const string& path)
 }
 
 //static
-unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
+unique_ptr<UserManager> UserManagerSqlite3::create(const string& name,
+                                                   SERVICE* pService,
+                                                   const Configuration* pConfig)
 {
     nosql::UserManager* pThis = nullptr;
 
@@ -752,7 +892,7 @@ unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
                     // provide a file mask to sqlite3, it's simpler to just do it always.
                     if (chmod(path.c_str(), S_IRUSR | S_IWUSR) == 0)
                     {
-                        pThis = new UserManagerSqlite3(std::move(path), pDb);
+                        pThis = new UserManagerSqlite3(std::move(path), pDb, pService, pConfig);
                     }
                     else
                     {
@@ -1103,10 +1243,9 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
 constexpr char MARIADB_ENCRYPTION_VERSION_DELIMITER[] = ":";
 
 UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
-    : m_name(name)
+    : UserManager(pService, pConfig)
+    , m_name(name)
     , m_table("`" + pConfig->authentication_db + "`.`" + m_name + "`")
-    , m_service(*pService)
-    , m_config(*pConfig)
 {
     auto& settings = m_db.connection_settings();
 
