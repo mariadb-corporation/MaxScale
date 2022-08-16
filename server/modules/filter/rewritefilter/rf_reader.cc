@@ -90,23 +90,51 @@ const std::string option_what_if = "what_if:";
 const std::string option_continue_if_matched = "continue_if_matched:";
 const std::string option_ignore_whitespace = "ignore_whitespace:";
 const std::string option_regex_grammar = "regex_grammar:";
+const std::string option_unit_test_input = "unit_test_input:";
+const std::string option_unit_test_output = "unit_test_output:";
 
-const std::array<std::string, 5> options
+enum class Option
 {
-    option_case_sensitive,
-    option_what_if,
-    option_continue_if_matched,
-    option_ignore_whitespace,
-    option_regex_grammar
+    NONE,
+    CASE_SENSITIVE,
+    WHAT_IF,
+    CONTINUE_IF_MATCHED,
+    IGNORE_WHITESPACE,
+    REGEX_GRAMMAR,
+    UNIT_TEST_INPUT,
+    UNIT_TEST_OUTPUT,
 };
 
-std::pair<std::string, std::string> find_option(std::string line)
+struct OptionDefinition
+{
+    Option      option;
+    std::string name;
+};
+
+struct OptionValue
+{
+    OptionDefinition def;
+    std::string      value;
+};
+
+const std::array<OptionDefinition, 7> options
+{{
+    {Option::CASE_SENSITIVE, option_case_sensitive},
+    {Option::WHAT_IF, option_what_if},
+    {Option::CONTINUE_IF_MATCHED, option_continue_if_matched},
+    {Option::IGNORE_WHITESPACE, option_ignore_whitespace},
+    {Option::REGEX_GRAMMAR, option_regex_grammar},
+    {Option::UNIT_TEST_INPUT, option_unit_test_input},
+    {Option::UNIT_TEST_OUTPUT, option_unit_test_output}
+}};
+
+OptionValue find_option(std::string line)
 {
     maxbase::trim(line);
-    auto ite = std::find_if(begin(options), end(options), [&line](const std::string& option){
+    auto ite = std::find_if(begin(options), end(options), [&line](const OptionDefinition& option_def){
         for (const auto& s : options)
         {
-            return starts_with(line, option);
+            return starts_with(line, option_def.name);
         }
 
         return false;
@@ -114,14 +142,14 @@ std::pair<std::string, std::string> find_option(std::string line)
 
     if (ite != end(options))
     {
-        auto value = line.substr(ite->length());
+        auto value = line.substr(ite->name.length());
         maxbase::trim(value);
 
         return {*ite, value};
     }
     else
     {
-        return {""s, ""s};
+        return {Option::NONE, ""s};
     }
 }
 
@@ -194,7 +222,7 @@ RfReader::RfReader(const std::string& path, const TemplateDef& default_def)
 
         case State::ReplaceTemplate:
             def.replace_template = read_template(in, line, "%%");
-            check_template_def(def);
+            validate_template_def(def);
             m_templates.push_back(def);
             def = default_def;
             state = State::Options;
@@ -204,47 +232,60 @@ RfReader::RfReader(const std::string& path, const TemplateDef& default_def)
 
 RfReader::State RfReader::set_option(TemplateDef& def, const std::string& line, const std::string& end_line)
 {
-    auto [option, value] = find_option(line);
-
-    if (option == option_case_sensitive)
-    {
-        def.case_sensitive = to_bool(value, line);
-    }
-    else if (option == option_what_if)
-    {
-        def.what_if = to_bool(value, line);
-    }
-    else if (option == option_continue_if_matched)
-    {
-        def.continue_if_matched = to_bool(value, line);
-    }
-    else if (option == option_ignore_whitespace)
-    {
-        def.ignore_whitespace = to_bool(value, line);
-    }
-    else if (option == option_regex_grammar)
-    {
-        auto grammar = grammar_from_string(value);
-        if (grammar != RegexGrammar::END)
-        {
-            def.regex_grammar = grammar;
-        }
-        else
-        {
-            MXB_THROW(RewriteError, "Invalid regex_grammar value '"
-                      << value << "' " << m_path << ':' << m_line_no
-                      << " Valid values are '" << valid_grammar_values()
-                      << '\'');
-        }
-    }
-    else if (line == end_line)
+    if (line == end_line)
     {
         return State::MatchTemplate;
     }
-    else
+
+    OptionValue opt = find_option(line);
+
+    switch (opt.def.option)
     {
+    case Option::CASE_SENSITIVE:
+        def.case_sensitive = to_bool(opt.value, line);
+        break;
+
+    case Option::WHAT_IF:
+        def.what_if = to_bool(opt.value, line);
+        break;
+
+    case Option::CONTINUE_IF_MATCHED:
+        def.continue_if_matched = to_bool(opt.value, line);
+        break;
+
+    case Option::IGNORE_WHITESPACE:
+        def.ignore_whitespace = to_bool(opt.value, line);
+        break;
+
+    case Option::REGEX_GRAMMAR:
+        {
+            auto grammar = grammar_from_string(opt.value);
+            if (grammar != RegexGrammar::END)
+            {
+                def.regex_grammar = grammar;
+            }
+            else
+            {
+                MXB_THROW(RewriteError, "Invalid regex_grammar value '"
+                          << opt.value << "' " << m_path << ':' << m_line_no
+                          << " Valid values are '" << valid_grammar_values()
+                          << '\'');
+            }
+        }
+        break;
+
+    case Option::UNIT_TEST_INPUT:
+        def.unit_test_input.push_back(opt.value);
+        break;
+
+    case Option::UNIT_TEST_OUTPUT:
+        def.unit_test_output.push_back(opt.value);
+        break;
+
+    case Option::NONE:
         MXB_THROW(RewriteError, "Invalid option '"
                   << line << "' " << m_path << ':' << m_line_no);
+        break;
     }
 
     return State::Options;
@@ -272,11 +313,11 @@ std::string RfReader::read_template(std::ifstream& in,
             break;
         }
 
-        auto p = find_option(line);
-        if (!p.first.empty())
+        auto opt = find_option(line);
+        if (opt.def.option != Option::NONE)
         {
             MXB_THROW(RewriteError, "Error option "
-                      << p.first << " in template section "
+                      << opt.def.name << " in template section "
                       << m_path << ':' << m_line_no);
         }
 

@@ -114,7 +114,7 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
         {
             TemplateReader reader(m_settings.template_file, default_template);
             m_settings.templates = reader.templates();
-            create_rewriters(&rewriters);
+            rewriters = create_rewriters(m_settings.templates);
         }
 
         m_filter.set_session_data(std::make_unique<SessionData>(m_settings, std::move(rewriters)));
@@ -133,24 +133,6 @@ bool RewriteFilter::Config::post_configure(const std::map<std::string, maxscale:
     }
 
     return ok;
-}
-
-void RewriteFilter::Config::create_rewriters(std::vector<std::unique_ptr<SqlRewriter>>* rewriters)
-{
-    for (auto& def : m_settings.templates)
-    {
-        std::unique_ptr<SqlRewriter> sRewriter;
-        if (def.regex_grammar == RegexGrammar::Native)
-        {
-            sRewriter.reset(new NativeRewriter(def));
-        }
-        else
-        {
-            sRewriter.reset(new RegexRewriter(def));
-        }
-
-        rewriters->push_back(std::move(sRewriter));
-    }
 }
 
 RewriteFilter::RewriteFilter(const std::string& name)

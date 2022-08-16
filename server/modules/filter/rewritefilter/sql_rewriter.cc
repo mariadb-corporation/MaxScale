@@ -12,6 +12,8 @@
  */
 
 #include "sql_rewriter.hh"
+#include "native_rewriter.hh"
+#include "regex_rewriter.hh"
 
 SqlRewriter::SqlRewriter(const TemplateDef& template_def)
     : m_template_def(template_def)
@@ -62,4 +64,26 @@ std::string ignore_whitespace_in_regex(const std::string& regex)
     }
 
     return new_regex;
+}
+
+std::vector<std::unique_ptr<SqlRewriter>> create_rewriters(const std::vector<TemplateDef>& templates)
+{
+    std::vector<std::unique_ptr<SqlRewriter>> rewriters;
+
+    for (const auto& def : templates)
+    {
+        std::unique_ptr<SqlRewriter> sRewriter;
+        if (def.regex_grammar == RegexGrammar::Native)
+        {
+            sRewriter.reset(new NativeRewriter(def));
+        }
+        else
+        {
+            sRewriter.reset(new RegexRewriter(def));
+        }
+
+        rewriters.push_back(std::move(sRewriter));
+    }
+
+    return rewriters;
 }
