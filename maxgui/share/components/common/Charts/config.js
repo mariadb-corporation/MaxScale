@@ -11,7 +11,6 @@
  * Public License.
  */
 import Chart from 'chart.js'
-import './customTooltip.scss'
 import 'chartjs-plugin-trendline'
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
 Chart.defaults.global.defaultFontColor = '#424F62'
