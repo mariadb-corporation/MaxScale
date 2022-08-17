@@ -415,6 +415,124 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+namespace
+{
+
+bool contains(const set<string>& heystack, const set<string>& needles)
+{
+    set<string> found;
+    std::set_intersection(heystack.begin(), heystack.end(),
+                          needles.begin(), needles.end(),
+                          std::inserter(found, found.begin()));
+
+    return found == needles;
+}
+
+}
+
+vector<role::Role> role::from_grants(const set<string>& priv_types,
+                                     string on,
+                                     bool with_grant_option)
+{
+    vector<role::Role> roles;
+
+    bool is_admin = (on == "*.*");
+    bool has_all = (priv_types.count("ALL") != 0);
+    string db;
+
+    if (is_admin)
+    {
+        db = "admin";
+    }
+    else
+    {
+        bool back_tick = (on.front() == '`');
+        int b = back_tick ? 1 : 0;
+        int e;
+        int t; // Position of table name.
+
+        if (back_tick)
+        {
+            e = on.find(b, '`');
+            t = e + 2;
+        }
+        else
+        {
+            e = on.find(b, '.');
+            t = e + 1;
+        }
+
+        db = on.substr(b, e);
+
+        auto table = on.substr(t);
+
+        if (table != "*")
+        {
+            MXB_WARNING("Grant is ON specific table %s and not on generic `%s`.*. "
+                        "The NoSQL role will be created as if the grant had been ON `%s`.*.",
+                        on.c_str(), db.c_str(), db.c_str());
+        }
+    }
+
+    set<string> required;
+
+    // DB_ADMIN, DB_ADMIN_ANY_DATABASE
+    bool has_dbAdmin = false;
+    required = {"ALTER", "CREATE", "DROP", "SELECT"};
+
+    if (is_admin)
+    {
+        required.insert("SHOW DATABASES");
+    }
+
+    if (has_all || contains(priv_types, required))
+    {
+        roles.push_back({db, is_admin ? role::Id::DB_ADMIN_ANY_DATABASE : role::Id::DB_ADMIN});
+        has_dbAdmin = true;
+    }
+
+    // READ, READ_ANY_DATABASE
+    required = {"SELECT"};
+
+    if (has_all || contains(priv_types, required))
+    {
+        roles.push_back({db, is_admin ? role::Id::READ_ANY_DATABASE : role::Id::READ});
+    }
+
+    // READ_WRITE, READ_WRITE_ANY_DATABASE
+    bool has_readWrite = false;
+    required = {"CREATE", "DELETE", "INDEX", "INSERT", "SELECT", "UPDATE"};
+
+    if (has_all || contains(priv_types, required))
+    {
+        roles.push_back({db, is_admin ? role::Id::READ_WRITE_ANY_DATABASE : role::Id::READ_WRITE});
+        has_readWrite = true;
+    }
+
+    // USER_ADMIN
+    bool has_userAdmin = false;
+
+    if (with_grant_option)
+    {
+        roles.push_back({db, role::Id::USER_ADMIN });
+        has_userAdmin = true;
+    }
+
+    // DB_OWNER
+    if (has_dbAdmin && has_readWrite && has_userAdmin)
+    {
+        roles.push_back({db, role::Id::DB_OWNER });
+    }
+
+    // ROOT
+    if (is_admin && has_dbAdmin && has_readWrite && has_userAdmin)
+    {
+        roles.push_back({db, role::Id::ROOT });
+    }
+
+    return roles;
+}
+
 /**
  * UserManager
  */

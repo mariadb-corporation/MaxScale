@@ -79,6 +79,20 @@ void from_bson(const bsoncxx::array::view& bson,
                const std::string& default_db,
                std::vector<Role>* pRoles);
 
+/**
+ * Convert MariaDB privileges to equivalent Roles
+ *
+ * The parameters refer to data returned by SHOW GRANTS.
+ *
+ * @param priv_types        Privileges such as "SELECT", "UPDATE", etc.
+ * @param on                The table in question, e.g. "*.*", "test.*".
+ * @param with_gran_option  If the user has "WITH GRANT OPTION".
+ *
+ * @return The equivalent NoSQL roles.
+ */
+std::vector<Role> from_grants(const std::set<std::string>& priv_types,
+                              std::string on,
+                              bool with_grant_option);
 }
 
 /**
