@@ -430,50 +430,18 @@ bool contains(const set<string>& heystack, const set<string>& needles)
 
 }
 
-vector<role::Role> role::from_grants(const set<string>& priv_types,
-                                     string on,
-                                     bool with_grant_option)
+namespace
+{
+
+vector<role::Role> from_grants(bool is_admin,
+                               bool has_all,
+                               bool is_any,
+                               string db,
+                               const set<string>& priv_types,
+                               string on,
+                               bool with_grant_option)
 {
     vector<role::Role> roles;
-
-    bool is_admin = (on == "*.*");
-    bool has_all = (priv_types.count("ALL") != 0);
-    string db;
-
-    if (is_admin)
-    {
-        db = "admin";
-    }
-    else
-    {
-        bool back_tick = (on.front() == '`');
-        int b = back_tick ? 1 : 0;
-        int e;
-        int t; // Position of table name.
-
-        if (back_tick)
-        {
-            e = on.find(b, '`');
-            t = e + 2;
-        }
-        else
-        {
-            e = on.find(b, '.');
-            t = e + 1;
-        }
-
-        db = on.substr(b, e);
-
-        auto table = on.substr(t);
-
-        if (table != "*")
-        {
-            MXB_WARNING("Grant is ON specific table %s and not on generic `%s`.*. "
-                        "The NoSQL role will be created as if the grant had been ON `%s`.*.",
-                        on.c_str(), db.c_str(), db.c_str());
-        }
-    }
-
     set<string> required;
 
     // DB_ADMIN, DB_ADMIN_ANY_DATABASE
@@ -487,7 +455,7 @@ vector<role::Role> role::from_grants(const set<string>& priv_types,
 
     if (has_all || contains(priv_types, required))
     {
-        roles.push_back({db, is_admin ? role::Id::DB_ADMIN_ANY_DATABASE : role::Id::DB_ADMIN});
+        roles.push_back({db, is_any ? role::Id::DB_ADMIN_ANY_DATABASE : role::Id::DB_ADMIN});
         has_dbAdmin = true;
     }
 
@@ -496,7 +464,7 @@ vector<role::Role> role::from_grants(const set<string>& priv_types,
 
     if (has_all || contains(priv_types, required))
     {
-        roles.push_back({db, is_admin ? role::Id::READ_ANY_DATABASE : role::Id::READ});
+        roles.push_back({db, is_any ? role::Id::READ_ANY_DATABASE : role::Id::READ});
     }
 
     // READ_WRITE, READ_WRITE_ANY_DATABASE
@@ -505,7 +473,7 @@ vector<role::Role> role::from_grants(const set<string>& priv_types,
 
     if (has_all || contains(priv_types, required))
     {
-        roles.push_back({db, is_admin ? role::Id::READ_WRITE_ANY_DATABASE : role::Id::READ_WRITE});
+        roles.push_back({db, is_any ? role::Id::READ_WRITE_ANY_DATABASE : role::Id::READ_WRITE});
         has_readWrite = true;
     }
 
@@ -531,6 +499,73 @@ vector<role::Role> role::from_grants(const set<string>& priv_types,
     }
 
     return roles;
+}
+
+}
+
+bool role::from_grants(bool is_admin,
+                       const set<string>& priv_types,
+                       string on,
+                       bool with_grant_option,
+                       vector<role::Role>* pRoles)
+{
+    bool rv = true;
+
+    bool is_any = (on == "*.*");
+
+    if (is_any && !is_admin)
+    {
+        MXB_ERROR("A grant ON *.* can only be assigned to a user in the 'admin' database.");
+        rv = false;
+    }
+    else
+    {
+        vector<role::Role> roles;
+
+        bool has_all = (priv_types.count("ALL PRIVILEGES") != 0);
+        string db;
+
+        if (is_admin)
+        {
+            db = "admin";
+        }
+        else
+        {
+            bool back_tick = (on.front() == '`');
+            int b = back_tick ? 1 : 0;
+            int e;
+            int t; // Position of table name.
+
+            if (back_tick)
+            {
+                e = on.find(b, '`');
+                t = e + 2;
+            }
+            else
+            {
+                e = on.find(b, '.');
+                t = e + 1;
+            }
+
+            db = on.substr(b, e);
+
+            auto table = on.substr(t);
+
+            if (table != "*")
+            {
+                MXB_ERROR("Grants must be is ON generic `%s`.* and not on a specific table `%s`.%s.",
+                          db.c_str(), db.c_str(), table.c_str());
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            *pRoles = ::from_grants(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
+        }
+    }
+
+    return rv;
 }
 
 /**
@@ -753,7 +788,7 @@ bool get_grant_characteristics(string grant,
 
         if (i != string::npos)
         {
-            auto priv_types = grant.substr(0, i);
+            auto priv_types_string = grant.substr(0, i);
             grant = grant.substr(i + 4); // strlen(" ON ");
 
             auto j = grant.find(" TO ");
@@ -763,7 +798,7 @@ bool get_grant_characteristics(string grant,
                 auto on = grant.substr(0, j);
                 grant = grant.substr(j + 4); // strlen(" TO ");
 
-                vector<string> tmp = mxb::strtok(priv_types, ",");
+                vector<string> tmp = mxb::strtok(priv_types_string, ",");
                 set<string> priv_types;
 
                 std::for_each(tmp.begin(), tmp.end(), [&priv_types](string s) {
@@ -788,7 +823,9 @@ bool get_grant_characteristics(string grant,
 void UserManager::create_initial_user(const vector<string>& grants)
 {
     vector<role::Role> roles;
+    bool is_admin = m_config.user.find("admin.") == 0;
 
+    bool converted = true;
     for (auto grant : grants)
     {
         bool success = true;
@@ -799,42 +836,64 @@ void UserManager::create_initial_user(const vector<string>& grants)
 
         if (get_grant_characteristics(grant, &priv_types, &on, &with_grant_option))
         {
-            vector<role::Role> some_roles = role::from_grants(priv_types, on, with_grant_option);
-
-            roles.insert(roles.end(),
-                         std::move_iterator(some_roles.begin()), std::move_iterator(some_roles.end()));
+            vector<role::Role> some_roles;
+            if (role::from_grants(is_admin, priv_types, on, with_grant_option, &some_roles))
+            {
+                roles.insert(roles.end(),
+                             std::move_iterator(some_roles.begin()), std::move_iterator(some_roles.end()));
+            }
+            else
+            {
+                MXB_ERROR("Could not convert '%s' into equivalent NoSQL roles. See above for more details.",
+                          grant.c_str());
+                converted = false;
+            }
         }
         else
         {
-            MXB_WARNING("SHOW GRANTS returned '%s', which does not look like a GRANT.", grant.c_str());
+            MXB_ERROR("SHOW GRANTS returned '%s', which does not look like a GRANT.", grant.c_str());
+            converted = false;
+        }
+
+        if (!converted)
+        {
+            break;
         }
     }
 
-    // As NoSQL users are specific to a certain database, a convention for
-    // dealing with that is needed.
-    //
-    // - If the user looks like "db.bob", a NoSQL user "bob" will be created
-    //   in the NoSQL database "db".
-    // - If the user looks like "bob", a NoSQL user "bob" will be created
-    //   in the NoSQL database "mariadb".
-    //
-    // The "mariadb" database is specific in the sense, that when the NoSQL
-    // user "bob" authenticates in the context of the NoSQL database "mariadb",
-    // then the user name, i.e. "bob", will not be prefixed by the database
-    // name, i.e. "mariadb", when authenticating against MariaDB.
-    //
-    // The purpose of the NoSQL database "mariadb" is to make convenient usage
-    // with the same user from both MariaDB and NoSQL possible.
-
-    auto i = m_config.user.find(".");
-
-    string db = (i != string::npos ? m_config.user.substr(0, i - 1) : "mariadb");
-    string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
-
-    vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
-    if (!add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+    if (converted)
     {
-        MXB_ERROR("Could not create default NoSQL user %s.%s.", db.c_str(), user.c_str());
+        // As NoSQL users are specific to a certain database, a convention for
+        // dealing with that is needed.
+        //
+        // - If the user looks like "db.bob", a NoSQL user "bob" will be created
+        //   in the NoSQL database "db".
+        // - If the user looks like "bob", a NoSQL user "bob" will be created
+        //   in the NoSQL database "mariadb".
+        //
+        // The "mariadb" database is specific in the sense, that when the NoSQL
+        // user "bob" authenticates in the context of the NoSQL database "mariadb",
+        // then the user name, i.e. "bob", will not be prefixed by the database
+        // name, i.e. "mariadb", when authenticating against MariaDB.
+        //
+        // The purpose of the NoSQL database "mariadb" is to make convenient usage
+        // with the same user from both MariaDB and NoSQL possible.
+
+        auto i = m_config.user.find(".");
+
+        string db = (i != string::npos ? m_config.user.substr(0, i) : "mariadb");
+        string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
+
+        vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
+        if (!add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+        {
+            MXB_ERROR("Could not create default NoSQL user %s.%s.", db.c_str(), user.c_str());
+        }
+    }
+    else
+    {
+        MXB_ERROR("The grants of %s could not be converted into equivalent NoSQL roles. "
+                  "Initial NoSQL user could not be created.", m_config.user.c_str());
     }
 }
 
