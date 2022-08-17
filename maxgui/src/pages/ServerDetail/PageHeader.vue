@@ -94,7 +94,7 @@
             <span class="color text-navigation text-body-2 server-healthy">
                 {{ serverHealthy }}
             </span>
-            <span v-if="version_string" class="color text-field-text text-body-2">
+            <span v-if="version_string" class="color text-grayed-out text-body-2">
                 |
                 <span class="version-string">{{ $t('version') }} {{ version_string }}</span>
             </span>

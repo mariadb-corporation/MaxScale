@@ -4,7 +4,7 @@
         class="d-block mariadb-code-style text-wrap"
         :class="logPriorityColorClasses(source.priority)"
     >
-        <span class="color text-field-text">{{ source.timestamp }}&nbsp;&nbsp;</span>
+        <span class="color text-grayed-out">{{ source.timestamp }}&nbsp;&nbsp;</span>
         <span class="log-level d-inline-block">
             <icon-sprite-sheet size="13" :frame="source.priority">
                 logPriorities

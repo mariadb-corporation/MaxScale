@@ -24,7 +24,7 @@
                 @cell-hover="onCellHover"
             >
                 <template v-slot:header-append-id>
-                    <span class="ml-1 color text-field-text total-row">
+                    <span class="ml-1 color text-grayed-out total-row">
                         ({{ parametersTableRow.length }})
                     </span>
                 </template>

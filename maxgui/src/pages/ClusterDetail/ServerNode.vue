@@ -15,7 +15,7 @@
                 <v-icon
                     size="16"
                     class="mr-1 server-state-icon"
-                    :color="isDroppableNode ? 'background' : isMaster ? 'navigation' : 'accent'"
+                    :color="isDroppableNode ? 'white' : isMaster ? 'navigation' : 'accent'"
                 >
                     {{
                         isMaster ? '$vuetify.icons.primaryServer' : '$vuetify.icons.secondaryServer'
@@ -30,7 +30,7 @@
                 </router-link>
                 <v-spacer />
                 <span
-                    class="readonly-val ml-1 color text-field-text font-weight-medium text-no-wrap"
+                    class="readonly-val ml-1 color text-grayed-out font-weight-medium text-no-wrap"
                 >
                     {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
                 </span>
@@ -69,7 +69,7 @@
                             </v-btn>
                         </template>
 
-                        <v-list class="color bg-color-background">
+                        <v-list>
                             <template v-for="(op, i) in nodeOps">
                                 <v-divider v-if="op.divider" :key="`divider-${i}`" />
                                 <v-list-item
@@ -184,7 +184,7 @@ export default {
             return this.droppableTargets.includes(this.node.id)
         },
         iconColor() {
-            return this.isDroppableNode ? 'background' : 'primary'
+            return this.isDroppableNode ? 'white' : 'primary'
         },
         lineHeight() {
             return `18px`
@@ -282,12 +282,12 @@ export default {
 .node-heading {
     &__droppable {
         background: $success;
-        color: $background;
+        color: white;
         .rsrc-link {
-            color: $background;
+            color: white;
         }
         .readonly-val {
-            color: $background !important;
+            color: white !important;
         }
     }
 }

@@ -10,49 +10,37 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-@import './constants.scss';
-
 $colors: (
-    'error': $error,
-    'alert': $error,
-    'notice': $code-color,
-    'debug': $accent,
-    'warning': $warning,
-    'success': $success,
-    'info': $info,
+    'primary': $primary,
     'accent': $accent,
     'accent-dark': $accent-dark,
-    'table-border': $table-border,
+    'anchor': $anchor,
     'text': $text,
     'small-text': $small-text,
     'text-subtle': $text-subtle,
     'navigation': $navigation,
-    'links': $links,
-    'primary': $primary,
-    'background': $background,
-    'deep-ocean': $deep-ocean,
-    'separator': $separator,
-    'reflection': $reflection,
-    'blue-azure': $blue-azure,
     'code-color': $code-color,
+    'success': $success,
+    'error': $error,
+    'warning': $warning,
+    'info': $info,
+    'alert': $alert,
+    'notice': $notice,
+    'debug': $debug,
+    'separator': $separator,
+    'grayed-out': $grayed-out,
+    'table-border': $table-border,
+    'tr-hovered-color': $tr-hovered-color,
+    'selected-tr-color': $selected-tr-color,
+    'deep-ocean': $deep-ocean,
+    'blue-azure': $blue-azure,
     'electric-ele': $electric-ele,
-    'field-text': $field-text,
-    'hovered-row': $table-row-hover,
-    'black': $black,
 );
 
 .color {
     @each $name, $value in $colors {
-        &.bg-color-#{$name} {
-            background-color: $value !important;
-        }
         &.bg-#{$name} {
             background: $value !important;
-        }
-        &.bg-#{$name}__hovering {
-            &:hover {
-                background: $value !important;
-            }
         }
         &.text-#{$name} {
             color: $value !important;
@@ -60,20 +48,20 @@ $colors: (
         &.border-#{$name} {
             border-color: $value !important;
         }
-        &.border-all-#{$name} {
+        &.all-border-#{$name} {
             border: thin solid $value !important;
-        }
-        &.border-bottom-#{$name} {
-            border-bottom: thin solid $value !important;
         }
         &.border-top-#{$name} {
             border-top: thin solid $value !important;
         }
-        &.border-left-#{$name} {
-            border-left: thin solid $value !important;
-        }
         &.border-right-#{$name} {
             border-right: thin solid $value !important;
+        }
+        &.border-bottom-#{$name} {
+            border-bottom: thin solid $value !important;
+        }
+        &.border-left-#{$name} {
+            border-left: thin solid $value !important;
         }
     }
 }

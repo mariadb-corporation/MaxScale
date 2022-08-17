@@ -48,7 +48,7 @@
                     >
                         <template v-if="header.text === '#'">
                             <span> {{ header.text }}</span>
-                            <span class="ml-1 color text-field-text">
+                            <span class="ml-1 color text-grayed-out">
                                 ({{ curr2dRowsLength }})
                             </span>
                         </template>
@@ -371,7 +371,6 @@ export default {
 .virtual-table__header {
     height: 30px;
     overflow: hidden;
-    background-color: $table-border;
     .tr {
         display: flex;
         flex-direction: row;
@@ -401,7 +400,7 @@ export default {
                 visibility: hidden;
             }
             &.sort--active {
-                color: $black;
+                color: black;
             }
             &.sort--active .sort-icon {
                 color: inherit;
@@ -425,29 +424,29 @@ export default {
                 }
             }
             .group--active {
-                color: $black;
+                color: black;
                 opacity: 1;
             }
             .header__resizer {
                 position: absolute;
                 right: 0px;
                 width: 11px;
-                border-right: 1px solid $background;
+                border-right: 1px solid white;
                 // disabled by default
                 cursor: initial;
                 &--hovered,
                 &:hover {
-                    border-right: 1px solid $background;
+                    border-right: 1px solid white;
                 }
             }
             // Enable when have th--resizable class
             &--resizable {
                 .header__resizer {
                     cursor: ew-resize;
-                    border-right: 1px solid $background;
+                    border-right: 1px solid white;
                     &--hovered,
                     &:hover {
-                        border-right: 3px solid $background;
+                        border-right: 3px solid white;
                     }
                 }
             }

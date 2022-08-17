@@ -5,7 +5,7 @@
             <slot :name="slot" v-bind="props" />
         </template>
         <template v-slot:setting-menu>
-            <v-list class="color bg-color-background py-0">
+            <v-list class="py-0">
                 <template v-for="(op, i) in monitorOps">
                     <v-divider v-if="op.divider" :key="`divider-${i}`" />
                     <v-subheader
@@ -70,7 +70,7 @@
                 <span class="resource-state color text-navigation text-body-2">
                     {{ state }}
                 </span>
-                <span class="color text-field-text text-body-2">
+                <span class="color text-grayed-out text-body-2">
                     |
                     <span class="resource-module">{{ monitorModule }}</span>
                 </span>

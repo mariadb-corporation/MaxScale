@@ -547,7 +547,7 @@ export default {
                 color: $navigation;
                 border-bottom: thin solid $table-border;
                 border-right: thin solid $table-border;
-                background: $background;
+                background: white;
                 &:first-of-type {
                     border-left: thin solid $table-border;
                 }
@@ -558,7 +558,7 @@ export default {
             &:hover {
                 .td,
                 .dummy-cell {
-                    background: $table-row-hover;
+                    background: $tr-hovered-color;
                 }
             }
             &:active,
@@ -571,7 +571,7 @@ export default {
             &--selected {
                 .td,
                 .dummy-cell {
-                    background: $selected-row !important;
+                    background: $selected-tr-color !important;
                 }
             }
         }

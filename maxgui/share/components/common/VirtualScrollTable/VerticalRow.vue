@@ -109,7 +109,7 @@ export default {
 .tr-vertical-group {
     .tr:last-of-type {
         .td {
-            border-bottom: thin solid $separator !important;
+            border-bottom: thin solid $table-border !important;
         }
     }
 }

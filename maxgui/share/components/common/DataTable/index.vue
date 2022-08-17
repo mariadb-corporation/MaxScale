@@ -538,7 +538,7 @@ export default {
                     font-size: 11px;
                     white-space: nowrap;
                     &.active * {
-                        color: $black !important;
+                        color: black !important;
                     }
                     &:first-child {
                         border-radius: 5px 0 0 0;

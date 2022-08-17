@@ -68,7 +68,7 @@
     pointer-events: none !important;
 }
 
-.field-text-info {
+.grayed-out-info {
     padding-left: 2px;
     font-size: 14px;
     line-height: 46px;
@@ -150,7 +150,7 @@ tooltip needs to be disabled.
 
 .tbl-code {
     width: 100%;
-    background-color: $reflection;
+    background-color: $separator;
     td {
         color: $code-color;
         vertical-align: top;
@@ -190,7 +190,7 @@ tooltip needs to be disabled.
         position: absolute;
         pointer-events: none;
         border-color: rgba(255, 255, 255, 0);
-        border-top-color: $background;
+        border-top-color: white;
         border-width: 8px;
         border-top-width: 8px;
     }

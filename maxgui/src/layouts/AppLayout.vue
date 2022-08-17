@@ -11,7 +11,7 @@
             </div>
         </v-main>
         <v-footer
-            class="pl-2 d-flex color bg-color-background justify-center color border-top-reflection"
+            class="pl-2 d-flex color white border-top-separator justify-center"
             padless
             app
             height="40"

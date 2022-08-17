@@ -32,7 +32,7 @@ export default {
     min-height: 36px;
     // padding: 0px 12px;
     &:not(:last-of-type) {
-        border-right: 1px solid $field-text;
+        border-right: 1px solid $grayed-out;
     }
     ::v-deep .v-btn {
         min-width: unset !important;

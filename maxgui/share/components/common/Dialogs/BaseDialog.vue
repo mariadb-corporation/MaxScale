@@ -41,7 +41,7 @@
                     <slot name="form-body"></slot>
                 </v-form>
             </v-card-text>
-            <v-card-actions class="v-card-actions_padding color border-top-reflection">
+            <v-card-actions class="v-card-actions_padding color border-top-separator">
                 <slot
                     :cancel="cancel"
                     :save="save"

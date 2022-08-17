@@ -36,17 +36,11 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <v-list
-                            v-if="$slots['setting-menu-list-item']"
-                            class="color bg-color-background"
-                        >
+                        <v-list v-if="$slots['setting-menu-list-item']">
                             <slot name="setting-menu-list-item"></slot>
                         </v-list>
 
-                        <div
-                            v-if="$slots['setting-menu']"
-                            class="color bg-color-background d-inline-flex icon-wrapper-list"
-                        >
+                        <div v-if="$slots['setting-menu']" class="d-inline-flex icon-wrapper-list">
                             <slot name="setting-menu"></slot>
                         </div>
                     </v-menu>
@@ -71,9 +65,10 @@ export default {
 <style lang="scss" scoped>
 .setting-menu {
     border-radius: 4px;
-    border: 1px solid $field-text;
+    border: 1px solid $grayed-out;
     box-shadow: none;
     margin-top: 4px;
+    background: white;
     .icon-wrapper-list {
         min-height: 36px;
         border-radius: 4px;

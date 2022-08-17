@@ -39,7 +39,7 @@
                                     :nudgeTop="10"
                                     :maxWidth="300"
                                 />
-                                <span class="ml-1 color text-field-text">
+                                <span class="ml-1 color text-grayed-out">
                                     (+{{ slaveStat.overall_seconds_behind_master }}s)
                                 </span>
                             </div>

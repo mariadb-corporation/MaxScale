@@ -137,7 +137,7 @@ export default {
                 case 1:
                     return 'text-success'
                 default:
-                    return 'text-field-text'
+                    return 'text-grayed-out'
             }
         },
         getTopOverviewInfo: function() {

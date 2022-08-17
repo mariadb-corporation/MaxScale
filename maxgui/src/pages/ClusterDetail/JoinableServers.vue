@@ -1,7 +1,7 @@
 <template>
-    <v-card class="joinable-card color border-all-warning">
+    <v-card class="joinable-card color all-border-warning">
         <div class="d-flex align-center justify-center flex-row px-3 py-1 color bg-warning">
-            <span class="card-title font-weight-medium text-uppercase color text-background">
+            <span class="card-title font-weight-medium text-uppercase color white--text">
                 {{ $t('rejoinableNodes') }}
             </span>
         </div>

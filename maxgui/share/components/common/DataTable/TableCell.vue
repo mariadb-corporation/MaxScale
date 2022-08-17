@@ -10,7 +10,7 @@
             v-if="draggable"
             v-show="showDragIcon"
             :class="{ 'drag-handle move': draggable }"
-            class="color text-field-text"
+            class="color text-grayed-out"
             size="16"
         >
             mdi-drag-horizontal-variant
@@ -119,7 +119,7 @@ export default {
                 // for showing index number columns from item
                 this.hasOrderNumber &&
                     this.cellIndex === 0 &&
-                    'text-overline px-2 border-right-table-border text-field-text',
+                    'text-overline px-2 border-right-table-border text-grayed-out',
                 // for rowspan feature
                 this.item.hidden && this.cellIndex < this.colsHasRowSpan && 'hide',
                 this.colsHasRowSpan &&

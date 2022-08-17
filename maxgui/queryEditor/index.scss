@@ -11,7 +11,7 @@
  * Public License.
  */
 .readonly-sql-code-wrapper {
-    background-color: $reflection;
+    background-color: $separator;
     height: 300px;
 }
 .readonly-editor {
@@ -25,7 +25,7 @@
             background-color: #e8eef1;
         }
         .view-line {
-            background-color: $reflection;
+            background-color: $separator;
         }
     }
 }

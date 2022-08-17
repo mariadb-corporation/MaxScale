@@ -49,11 +49,12 @@
             v-if="hasExtraInfo"
             x-small
             height="16"
-            class="arrow-toggle mx-auto text-capitalize font-weight-medium px-2 color bg-background"
+            class="arrow-toggle mx-auto px-2"
             style="box-sizing: content-box;"
             depressed
             outlined
             color="#e3e6ea"
+            :style="{ backgroundColor: 'white' }"
             @click="toggleExpand(node)"
         >
             <v-icon :class="[isExpanded ? 'rotate-up' : 'rotate-down']" size="20" color="primary">
@@ -156,7 +157,7 @@ export default {
 .node-card {
     font-size: 12px;
     .node-text--expanded-content {
-        background: $reflection;
+        background: $separator;
         box-sizing: content-box;
         ::v-deep .extra-info-carousel {
             .v-carousel__controls {

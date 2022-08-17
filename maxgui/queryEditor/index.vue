@@ -3,7 +3,7 @@
         ref="queryViewCtr"
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="query-editor color border-all-table-border fill-height"
+        class="query-editor color all-border-table-border fill-height"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
         <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
@@ -261,7 +261,7 @@ export default {
 <style lang="scss" scoped>
 .query-editor {
     &--fullscreen {
-        background: #ffffff;
+        background: white;
         z-index: 7;
         position: fixed;
         top: 0px;

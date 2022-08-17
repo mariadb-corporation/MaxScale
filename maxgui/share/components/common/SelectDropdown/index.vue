@@ -35,7 +35,7 @@
             </span>
             <span
                 v-if="index === 1"
-                class="v-select__selection v-select__selection--comma color text-caption text-field-text "
+                class="v-select__selection v-select__selection--comma color text-caption text-grayed-out "
             >
                 (+{{ selectedItems.length - 1 }} {{ $t('others') }})
             </span>

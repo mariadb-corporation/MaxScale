@@ -1,9 +1,8 @@
 .chartjs-tooltip {
     opacity: 1;
     z-index: 9999;
-    background-color: #ffffff;
-    border-color: #ffffff;
-    color: rgba(0, 0, 0, 0.87);
+    background: white;
+    color: $text;
     border-radius: 10px;
     transition: all 0.3s ease;
     pointer-events: none;

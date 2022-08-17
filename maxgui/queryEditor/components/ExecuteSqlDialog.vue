@@ -26,7 +26,7 @@
 
             <div
                 v-else
-                class="mb-4 pt-2 pl-2 color border-all-table-border"
+                class="mb-4 pt-2 pl-2 color all-border-table-border"
                 :style="{ height: `${editorHeight}px` }"
             >
                 <!-- Workaround: assign true to skipRegCompleters props when getIsTxtEditor is TXT_EDITOR

@@ -72,7 +72,7 @@ export default {
     methods: {
         thClasses(header) {
             return [
-                'color bg-color-table-border text-small-text border-bottom-none',
+                'color bg-table-border text-small-text border-bottom-none',
                 header.align && `text-${header.align}`,
                 header.sortable !== false ? 'pointer sortable' : 'not-sortable',
                 this.sortDesc ? 'desc' : 'asc',

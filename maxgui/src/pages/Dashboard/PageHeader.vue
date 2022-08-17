@@ -10,7 +10,7 @@
 
             <span
                 style="position:relative;top:-15px"
-                class="field-text-info color text-field-text text-capitalize"
+                class="grayed-out-info color text-grayed-out text-capitalize"
             >
                 {{ $t('uptime') }}
                 {{

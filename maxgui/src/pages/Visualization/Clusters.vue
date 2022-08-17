@@ -20,7 +20,7 @@
                                 <truncate-string :text="cluster.id" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
-                                <span class="field-text">
+                                <span class="grayed-out">
                                     {{ cluster.module }}
                                 </span>
                             </v-list-item-subtitle>
@@ -170,7 +170,7 @@ export default {
                 case 1:
                     return 'success'
                 case 2:
-                    return 'field-text' // color for maintenance state
+                    return 'grayed-out' // color for maintenance state
             }
         },
         labellingStateType(stateType) {
@@ -179,8 +179,8 @@ export default {
                     return 'down'
                 case 'success':
                     return 'up'
-                // field-text when server is in maintenance state
-                case 'field-text':
+                // grayed-out when server is in maintenance state
+                case 'grayed-out':
                     return 'maintenance'
             }
         },

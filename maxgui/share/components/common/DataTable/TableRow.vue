@@ -56,7 +56,6 @@ export default {
                 'v-data-table__editable-cell-mode': this.editableCell,
                 // for row draggble feature
                 'draggable-row': this.draggable,
-                'color bg-hovered-row__hovering': true,
             }
         },
         onRowHover(e, index) {
@@ -85,3 +84,9 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+tr:hover {
+    background: $tr-hovered-color !important;
+}
+</style>

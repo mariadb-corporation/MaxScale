@@ -50,7 +50,7 @@
         </div>
         <div v-else class="d-flex flex-column align-center justify-center mt-2">
             <v-progress-circular color="primary" indeterminate size="24" />
-            <p class="mt-1 loading-logs-text-indicator color text-field-text">
+            <p class="mt-1 loading-logs-text-indicator color text-grayed-out">
                 {{ $t('loadingLogs') }}...
             </p>
         </div>
