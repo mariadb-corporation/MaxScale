@@ -11,7 +11,7 @@
  * Public License.
  */
 import { immutableUpdate } from '@share/utils/helpers'
-import { SQL_NODE_TYPES, SQL_EDITOR_MODES } from '@queryEditor/config'
+import { SQL_NODE_TYPES, SQL_EDITOR_MODES } from '../config'
 
 /**
  * @private

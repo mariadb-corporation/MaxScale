@@ -11,7 +11,7 @@
  * Public License.
  */
 
-import * as config from '@queryEditor/config'
+import * as config from '../config'
 export default {
     namespaced: true,
     state: {

@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import QueryEditor from '../index.vue'
+import QueryEditor from '../QueryEditor.vue'
 import { lodash } from '@share/utils/helpers'
 
 const sql_conns_mock = {

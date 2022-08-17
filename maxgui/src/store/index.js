@@ -22,7 +22,7 @@ import listener from './listener'
 import persisted from './persisted'
 import visualization from './visualization'
 import appNotifier from '@share/store/appNotifier'
-import queryEditorModules from '@queryEditor/store/modules'
+import queryEditorModules from '@queryEditor/src/store/modules'
 import { APP_CONFIG } from 'utils/constants'
 import plugins from './plugins'
 
