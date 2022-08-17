@@ -735,15 +735,107 @@ void UserManager::create_initial_user(const SERVER* pMaster)
     }
 }
 
+namespace
+{
+
+bool get_grant_characteristics(string grant,
+                               set<string>* pPriv_types,
+                               string* pOn,
+                               bool* pWith_grant_option)
+{
+    bool rv = false;
+
+    if (grant.find("GRANT ") == 0)
+    {
+        grant = grant.substr(6); // strlen("GRANT ");
+
+        auto i = grant.find(" ON ");
+
+        if (i != string::npos)
+        {
+            auto priv_types = grant.substr(0, i);
+            grant = grant.substr(i + 4); // strlen(" ON ");
+
+            auto j = grant.find(" TO ");
+
+            if (j != string::npos)
+            {
+                auto on = grant.substr(0, j);
+                grant = grant.substr(j + 4); // strlen(" TO ");
+
+                vector<string> tmp = mxb::strtok(priv_types, ",");
+                set<string> priv_types;
+
+                std::for_each(tmp.begin(), tmp.end(), [&priv_types](string s) {
+                        mxb::trim(s);
+                        priv_types.insert(s);
+                    });
+
+                *pPriv_types = std::move(priv_types);
+                *pOn = std::move(on);
+                *pWith_grant_option = (grant.find("WITH GRANT OPTION") != string::npos);
+
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
+}
+
 void UserManager::create_initial_user(const vector<string>& grants)
 {
-    // TODO: - Parse grants and transform them into equivalent NoSQL roles.
-    // TODO: - If m_config.user contains a ".", use everything before the "."
-    // TODO:   as the database and everything after the "." as the user.
-    // TODO:   Otherwise use m_config.user as the user and "mariadb" as db.
+    vector<role::Role> roles;
 
-    MXB_NOTICE("Not implemented yet. Now should create user '%s' with grants %s",
-               m_config.user.c_str(), mxb::join(grants, ", ", "'").c_str());
+    for (auto grant : grants)
+    {
+        bool success = true;
+
+        set<string> priv_types;
+        string on;
+        bool with_grant_option;
+
+        if (get_grant_characteristics(grant, &priv_types, &on, &with_grant_option))
+        {
+            vector<role::Role> some_roles = role::from_grants(priv_types, on, with_grant_option);
+
+            roles.insert(roles.end(),
+                         std::move_iterator(some_roles.begin()), std::move_iterator(some_roles.end()));
+        }
+        else
+        {
+            MXB_WARNING("SHOW GRANTS returned '%s', which does not look like a GRANT.", grant.c_str());
+        }
+    }
+
+    // As NoSQL users are specific to a certain database, a convention for
+    // dealing with that is needed.
+    //
+    // - If the user looks like "db.bob", a NoSQL user "bob" will be created
+    //   in the NoSQL database "db".
+    // - If the user looks like "bob", a NoSQL user "bob" will be created
+    //   in the NoSQL database "mariadb".
+    //
+    // The "mariadb" database is specific in the sense, that when the NoSQL
+    // user "bob" authenticates in the context of the NoSQL database "mariadb",
+    // then the user name, i.e. "bob", will not be prefixed by the database
+    // name, i.e. "mariadb", when authenticating against MariaDB.
+    //
+    // The purpose of the NoSQL database "mariadb" is to make convenient usage
+    // with the same user from both MariaDB and NoSQL possible.
+
+    auto i = m_config.user.find(".");
+
+    string db = (i != string::npos ? m_config.user.substr(0, i - 1) : "mariadb");
+    string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
+
+    vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
+    if (!add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+    {
+        MXB_ERROR("Could not create default NoSQL user %s.%s.", db.c_str(), user.c_str());
+    }
 }
 
 /**
