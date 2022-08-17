@@ -75,41 +75,40 @@ export default {
             await dispatch('queryConn/disconnectAll', {}, { root: true })
             await this.$abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
-            commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-
+            commit('appNotifier/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
+            const { appNotifier, queryPersisted, wke, querySession, persisted } = rootState
             // hide snackbar snackbar_message if it is on
-            if (rootState.snackbar_message.status) {
+            if (appNotifier.snackbar_message.status) {
                 commit(
-                    'SET_SNACK_BAR_MESSAGE',
+                    'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: rootState.snackbar_message.text,
-                        type: rootState.snackbar_message.type,
+                        text: appNotifier.snackbar_message.text,
+                        type: appNotifier.snackbar_message.type,
                         status: false,
                     },
                     { root: true }
                 )
             }
             await this.vue.$help.delay(1500).then(() => {
-                commit('SET_OVERLAY_TYPE', null, { root: true })
+                commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
 
             // Clear all but persist some states of some modules
 
             const queryEditorPersistedState = this.vue.$help.lodash.cloneDeep({
-                queryPersisted: rootState.queryPersisted,
+                queryPersisted,
                 wke: {
-                    worksheets_arr: rootState.wke.worksheets_arr,
-                    active_wke_id: rootState.wke.active_wke_id,
+                    worksheets_arr: wke.worksheets_arr,
+                    active_wke_id: wke.active_wke_id,
                 },
                 querySession: {
-                    active_session_by_wke_id_map:
-                        rootState.querySession.active_session_by_wke_id_map,
-                    query_sessions: rootState.querySession.query_sessions,
+                    active_session_by_wke_id_map: querySession.active_session_by_wke_id_map,
+                    query_sessions: querySession.query_sessions,
                 },
             })
             const maxguiPersistedState = this.vue.$help.lodash.cloneDeep({
-                persisted: rootState.persisted,
+                persisted: persisted,
             })
             await localForage.clear()
             this.vue.$help.deleteAllCookies()
@@ -179,7 +178,7 @@ export default {
                 }
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         { text: message, type: 'success' },
                         { root: true }
                     )

@@ -2,7 +2,7 @@
     <div class="fill-height">
         <app-header />
         <navigation />
-        <snackbars :msgObj="$store.state.snackbar_message" />
+        <snackbars :msgObj="snackbar_message" />
         <v-main class="fill-height">
             <div class="fill-height py-6 px-9">
                 <transition name="fade" mode="out-in">
@@ -59,13 +59,16 @@
 import Navigation from './Navigation'
 import AppHeader from './AppHeader'
 import Snackbars from '@share/components/Snackbars'
-
+import { mapState } from 'vuex'
 export default {
     name: 'app-layout',
     components: {
         navigation: Navigation,
         'app-header': AppHeader,
         snackbars: Snackbars,
+    },
+    computed: {
+        ...mapState({ snackbar_message: state => state.appNotifier.snackbar_message }),
     },
 }
 </script>

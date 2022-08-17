@@ -97,10 +97,14 @@ export default function queryHttp(store) {
                     break
                 case 404:
                 case 503:
-                    store.commit('SET_SNACK_BAR_MESSAGE', {
-                        text: [...getErrorsArr(error), 'Please reconnect'],
-                        type: 'error',
-                    })
+                    store.commit(
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [...getErrorsArr(error), 'Please reconnect'],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
                     break
                 default:
                     defErrStatusHandler({ store, error })

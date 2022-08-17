@@ -38,9 +38,7 @@ export default {
         'loading-transparent-overlay': LoadingTransparentOverlay,
     },
     computed: {
-        ...mapState({
-            overlay_type: 'overlay_type',
-        }),
+        ...mapState({ overlay_type: state => state.appNotifier.overlay_type }),
         transparentLoading() {
             return this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },

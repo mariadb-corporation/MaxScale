@@ -145,9 +145,9 @@ export default {
     },
     methods: {
         ...mapMutations({
+            SET_SNACK_BAR_MESSAGE: 'appNotifier/SET_SNACK_BAR_MESSAGE',
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
             UPDATE_SESSION: 'querySession/UPDATE_SESSION',
-            SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
         }),
         /**

@@ -425,7 +425,7 @@ export default {
                     queryAction = this.i18n.t('info.exeActionSuccessfully', { action })
                     if (showSnackbar)
                         commit(
-                            'SET_SNACK_BAR_MESSAGE',
+                            'appNotifier/SET_SNACK_BAR_MESSAGE',
                             { text: [queryAction], type: 'success' },
                             { root: true }
                         )

@@ -115,7 +115,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -150,7 +150,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Monitor ${payload.id} is updated`],
                             type: 'success',
@@ -268,7 +268,7 @@ export default {
                         default:
                             if (showSnackbar)
                                 commit(
-                                    'SET_SNACK_BAR_MESSAGE',
+                                    'appNotifier/SET_SNACK_BAR_MESSAGE',
                                     { text: message, type: 'success' },
                                     { root: true }
                                 )
@@ -324,7 +324,7 @@ export default {
         async handleAsyncCmdDone({ commit }, { meta, successCb, showSnackbar }) {
             if (showSnackbar)
                 commit(
-                    'SET_SNACK_BAR_MESSAGE',
+                    'appNotifier/SET_SNACK_BAR_MESSAGE',
                     { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
                     { root: true }
                 )
@@ -348,7 +348,7 @@ export default {
             if (isRunning && !isCancelled) {
                 if (showSnackbar)
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         // Remove `No manual commands are available`, shows only the latter part.
                         {
                             text: meta.errors.map(e =>
@@ -370,7 +370,11 @@ export default {
             } else {
                 const errArr = meta.errors.map(error => error.detail)
                 if (showSnackbar)
-                    commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
+                    commit(
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        { text: errArr, type: 'error' },
+                        { root: true }
+                    )
                 await this.vue.$typy(asyncCmdErrCb).safeFunction(errArr)
             }
         },
@@ -435,7 +439,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',

@@ -153,7 +153,7 @@ export default {
                     payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
                 })
                 commit(
-                    'SET_SNACK_BAR_MESSAGE',
+                    'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
                         text: this.vue.$help.getErrorsArr(e),
                         type: 'error',

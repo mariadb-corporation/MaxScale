@@ -70,7 +70,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -104,7 +104,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Parameters of ${payload.id} is updated`],
                             type: 'success',
@@ -125,7 +125,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllFilters')
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Filter ${id} is destroyed`],
                             type: 'success',

@@ -186,7 +186,7 @@ export default {
                 })
                 if (results.length && results[0].errno)
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [
                                 'Failed to stop the query',

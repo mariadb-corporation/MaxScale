@@ -191,7 +191,7 @@ export default {
                 const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.i18n.t('info.connSuccessfully')],
                             type: 'success',
@@ -357,7 +357,7 @@ export default {
 
                     if (allRes.every(promise => promise.status === 204) && showSnackbar)
                         commit(
-                            'SET_SNACK_BAR_MESSAGE',
+                            'appNotifier/SET_SNACK_BAR_MESSAGE',
                             {
                                 text: [this.i18n.t('info.disconnSuccessfully')],
                                 type: 'success',
@@ -383,7 +383,7 @@ export default {
                 const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
                 if (res.status === 204) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.i18n.t('info.reconnSuccessfully')],
                             type: 'success',
@@ -395,7 +395,7 @@ export default {
                     })
                 } else
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.i18n.t('errors.reconnFailed')],
                             type: 'error',
@@ -456,7 +456,7 @@ export default {
                 if (res.data.data.attributes.results[0].errno) {
                     const errObj = res.data.data.attributes.results[0]
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
                             text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
                             type: 'error',

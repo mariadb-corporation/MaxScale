@@ -169,7 +169,7 @@ export default {
     },
     computed: {
         ...mapState({
-            overlay_type: 'overlay_type',
+            overlay_type: state => state.appNotifier.overlay_type,
             module_parameters: 'module_parameters',
             search_keyword: 'search_keyword',
         }),

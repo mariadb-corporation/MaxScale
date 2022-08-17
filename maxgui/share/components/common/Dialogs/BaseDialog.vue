@@ -157,7 +157,7 @@ export default {
         },
     },
     methods: {
-        ...mapMutations(['SET_OVERLAY_TYPE']),
+        ...mapMutations({ SET_OVERLAY_TYPE: 'appNotifier/SET_OVERLAY_TYPE' }),
         async closeDialog() {
             this.$emit('input', false)
             /** Workaround to ensure dialog is closed completely to emit after close events

@@ -72,7 +72,7 @@ export default {
                 const res = await this.$http.delete(`/sessions/${id}`)
                 if (res.status === 200) {
                     commit(
-                        'SET_SNACK_BAR_MESSAGE',
+                        'appNotifier/SET_SNACK_BAR_MESSAGE',
                         { text: [this.i18n.t('info.killSessionSuccessfully')], type: 'success' },
                         { root: true }
                     )

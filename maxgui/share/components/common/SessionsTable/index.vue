@@ -132,7 +132,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({ overlay_type: 'overlay_type' }),
+        ...mapState({ overlay_type: state => state.appNotifier.overlay_type }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
         isLoading() {
             if (!this.delayLoading) return false

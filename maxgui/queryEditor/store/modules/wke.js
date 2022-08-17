@@ -99,7 +99,7 @@ export default {
             } catch (e) {
                 this.vue.$logger('store-wke-addNewWs').error(e)
                 commit(
-                    'SET_SNACK_BAR_MESSAGE',
+                    'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
                         text: [this.i18n.t('errors.persistentStorage')],
                         type: 'error',
