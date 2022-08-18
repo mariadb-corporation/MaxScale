@@ -152,7 +152,7 @@
                         v-model="snippet.name"
                         type="text"
                         :rules="rules.snippetName"
-                        class="std error--text__bottom mb-2"
+                        class="vuetify-input--override error--text__bottom mb-2"
                         dense
                         :height="36"
                         hide-details="auto"
@@ -168,6 +168,7 @@
                     :label="$t('dontAskMeAgain')"
                     color="primary"
                     hide-details
+                    dense
                 />
                 <v-spacer />
             </template>

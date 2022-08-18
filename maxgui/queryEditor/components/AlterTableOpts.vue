@@ -29,7 +29,7 @@
                         required
                         name="table_name"
                         :height="28"
-                        class="std error--text__bottom"
+                        class="vuetify-input--override error--text__bottom"
                         hide-details="auto"
                         dense
                         outlined
@@ -41,7 +41,7 @@
                     </label>
                     <v-text-field
                         v-model="tableOptsData.table_comment"
-                        class="std error--text__bottom error--text__bottom--no-margin"
+                        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
                         single-line
                         outlined
                         dense
@@ -60,7 +60,7 @@
                         :items="engines"
                         name="table_engine"
                         outlined
-                        class="std mariadb-select-input error--text__bottom"
+                        class="vuetify-input--override mariadb-select-input error--text__bottom"
                         :menu-props="{
                             contentClass: 'mariadb-select-v-menu',
                             bottom: true,

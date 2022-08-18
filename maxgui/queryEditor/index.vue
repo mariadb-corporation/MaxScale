@@ -1,14 +1,16 @@
 <template>
-    <div class="query-editor color border-all-table-border">
-        <v-card
-            ref="queryViewCtr"
-            v-resize.quiet="setDim"
-            v-shortkey="QUERY_SHORTCUT_KEYS"
-            class="query-view fill-height d-flex flex-column"
-            :class="{ 'query-view--fullscreen': is_fullscreen }"
-            tile
-            :loading="is_validating_conn"
-            @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
+    <div
+        ref="queryViewCtr"
+        v-resize.quiet="setDim"
+        v-shortkey="QUERY_SHORTCUT_KEYS"
+        class="query-editor color border-all-table-border fill-height"
+        @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
+    >
+        <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
+        <div
+            v-else
+            class="fill-height d-flex flex-column"
+            :class="{ 'query-editor--fullscreen': is_fullscreen }"
         >
             <template v-if="!is_validating_conn">
                 <wke-nav-ctr :height="wkeNavCtrHeight" />
@@ -26,7 +28,7 @@
                     />
                 </keep-alive>
             </template>
-        </v-card>
+        </div>
         <confirm-dialog
             v-model="isConfDlgOpened"
             :title="$t('confirmations.leavePage')"
@@ -42,9 +44,10 @@
             <template v-slot:body-append>
                 <v-checkbox
                     v-model="confirmDelAll"
-                    class="small"
+                    class="v-checkbox--custom-label"
                     :label="$t('disconnectAll')"
                     color="primary"
+                    dense
                     hide-details
                 />
             </template>
@@ -69,6 +72,7 @@
  * @leave-page: v:Object. `to` object of beforeRouteLeave hook
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
+import './index.scss'
 import Wke from './components/Wke.container.vue'
 import WkeNav from './components/WkeNav.container.vue'
 
@@ -185,7 +189,7 @@ export default {
             this.to = null
         },
         setDim() {
-            const { width, height } = this.$refs.queryViewCtr.$el.getBoundingClientRect()
+            const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
         },
         async wkeShortKeyHandler(e) {
@@ -256,19 +260,14 @@ export default {
 </script>
 <style lang="scss" scoped>
 .query-editor {
-    background: #ffffff;
-    width: 100%;
-    height: 100%;
-    .query-view {
-        box-shadow: none !important;
-        &--fullscreen {
-            z-index: 7;
-            position: fixed;
-            top: 0px;
-            right: 0px;
-            bottom: 0px;
-            left: 0px;
-        }
+    &--fullscreen {
+        background: #ffffff;
+        z-index: 7;
+        position: fixed;
+        top: 0px;
+        right: 0px;
+        bottom: 0px;
+        left: 0px;
     }
 }
 </style>

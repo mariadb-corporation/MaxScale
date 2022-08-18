@@ -5,7 +5,7 @@
             :items="connOptions"
             outlined
             dense
-            class="std mariadb-select-input conn-dropdown"
+            class="vuetify-input--override mariadb-select-input conn-dropdown"
             :menu-props="{
                 contentClass: 'mariadb-select-v-menu',
                 bottom: true,

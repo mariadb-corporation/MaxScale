@@ -6,7 +6,7 @@
             v-model="chartOpt.type"
             :items="Object.values(chartTypes)"
             outlined
-            class="std mariadb-select-input error--text__bottom"
+            class="vuetify-input--override mariadb-select-input error--text__bottom"
             :menu-props="{
                 contentClass: 'mariadb-select-v-menu',
                 bottom: true,
@@ -24,7 +24,7 @@
                 v-model="resSet"
                 :items="resultSets"
                 outlined
-                class="std mariadb-select-input error--text__bottom"
+                class="vuetify-input--override mariadb-select-input error--text__bottom"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -54,7 +54,7 @@
                                 v-model="scaleLabels[axisId]"
                                 :items="axisFields"
                                 outlined
-                                class="std mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override mariadb-select-input error--text__bottom"
                                 :menu-props="{
                                     contentClass: 'mariadb-select-v-menu',
                                     bottom: true,
@@ -75,7 +75,7 @@
                                 v-model="axesType[axisId]"
                                 :items="Object.values(axisTypes)"
                                 outlined
-                                class="std mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override mariadb-select-input error--text__bottom"
                                 :menu-props="{
                                     contentClass: 'mariadb-select-v-menu',
                                     bottom: true,
@@ -100,7 +100,7 @@
                     v-model="showTrendline"
                     dense
                     color="primary"
-                    class="mt-2 show-trendline"
+                    class="mt-2 v-checkbox--custom-label"
                     hide-details
                 >
                     <template v-slot:label>
@@ -376,11 +376,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.show-trendline label {
-    font-size: $label-control-size;
-    color: $small-text;
-    font-weight: 400;
-}
-</style>

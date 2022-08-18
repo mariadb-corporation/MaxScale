@@ -8,7 +8,7 @@
                 dense
                 outlined
                 height="28"
-                class="std filter-result mr-2"
+                class="vuetify-input--override filter-result mr-2"
                 :placeholder="$t('filterResult')"
                 hide-details
             />
@@ -85,7 +85,7 @@
                         <v-icon
                             size="14"
                             color="accent-dark"
-                            :class="{ 'rotate-icon__vert': !isVertTable }"
+                            :class="{ 'rotate-left': !isVertTable }"
                         >
                             mdi-format-rotate-90
                         </v-icon>
@@ -407,7 +407,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.std.filter-result {
+.vuetify-input--override.filter-result {
     max-width: 250px;
 }
 .table-tools {

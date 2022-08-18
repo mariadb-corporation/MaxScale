@@ -10,7 +10,7 @@
         outlined
         dense
         :height="36"
-        class="std mariadb-select-input"
+        class="vuetify-input--override mariadb-select-input"
         :class="[required && 'error--text__bottom']"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :placeholder="

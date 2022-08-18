@@ -14,7 +14,7 @@
                 :refreshRate="refreshRate"
             />
 
-            <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
+            <v-tabs v-model="currentActiveTab" class="v-tabs--mariadb-style">
                 <v-tab v-for="tab in tabs" :key="tab.name">
                     {{ tab.name }}
                 </v-tab>
@@ -22,8 +22,8 @@
                 <v-tabs-items v-model="currentActiveTab">
                     <!-- Parameters & relationships tab -->
                     <v-tab-item class="pt-5">
-                        <v-row class="my-0">
-                            <v-col class="py-0 ma-0" cols="8">
+                        <v-row>
+                            <v-col cols="8">
                                 <details-parameters-table
                                     :resourceId="current_service.id"
                                     :parameters="current_service.attributes.parameters"
@@ -31,9 +31,9 @@
                                     :onEditSucceeded="fetchService"
                                 />
                             </v-col>
-                            <v-col class="py-0 my-0" cols="4">
-                                <v-row class="my-0 pa-0 ma-0">
-                                    <v-col cols="12" class="pa-0 ma-0">
+                            <v-col cols="4">
+                                <v-row>
+                                    <v-col cols="12">
                                         <relationship-table
                                             ref="servers-relationship-table"
                                             relationshipType="servers"
@@ -42,7 +42,7 @@
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
-                                    <v-col cols="12" class="pa-0 mt-4">
+                                    <v-col cols="12">
                                         <relationship-table
                                             ref="filters-relationship-table"
                                             relationshipType="filters"
@@ -51,7 +51,7 @@
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
-                                    <v-col cols="12" class="pa-0 mt-4">
+                                    <v-col cols="12">
                                         <relationship-table
                                             ref="listeners-relationship-table"
                                             relationshipType="listeners"
@@ -69,7 +69,7 @@
                     <!-- Sessions & Diagnostics tab -->
                     <v-tab-item class="pt-5">
                         <v-row>
-                            <v-col class="py-0 my-0" cols="5">
+                            <v-col cols="5">
                                 <details-readonly-table
                                     ref="diagnostics-table"
                                     :title="`${$t('routerDiagnostics')}`"
@@ -78,7 +78,7 @@
                                     isTree
                                 />
                             </v-col>
-                            <v-col class="py-0 my-0" cols="7">
+                            <v-col cols="7">
                                 <sessions-table
                                     :search="search_keyword"
                                     :collapsible="true"

@@ -117,7 +117,7 @@
                         <v-checkbox
                             :input-value="isRowSelected(row)"
                             dense
-                            class="checkbox--scale-reduce ma-0 pa-0"
+                            class="v-checkbox--scale-reduce ma-0 pa-0"
                             primary
                             hide-details
                             @change="
@@ -535,7 +535,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .virtual-table {
     width: 100%;
     .tbody {

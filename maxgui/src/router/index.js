@@ -13,7 +13,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import { routes } from './routes'
-import { OVERLAY_LOADING } from '@share/overlayTypes'
+import { OVERLAY_LOGGING, OVERLAY_LOGOUT } from '@share/overlayTypes'
 import store from 'store'
 
 Vue.use(Router)
@@ -39,11 +39,11 @@ router.beforeEach(async (to, from, next) => {
 export default router
 
 /**
- * @param {Number} duration - duration time for showing overlay loading
+ * @param {Number} param.duration - duration time for showing overlay loading
  */
-async function showLoadingOverlay(duration) {
-    store.commit('SET_OVERLAY_TYPE', OVERLAY_LOADING)
-    await store.vue.$help.delay(duration).then(() => store.commit('SET_OVERLAY_TYPE', null))
+async function showLoadingOverlay(overlay_type) {
+    store.commit('SET_OVERLAY_TYPE', overlay_type)
+    await store.vue.$help.delay(400).then(() => store.commit('SET_OVERLAY_TYPE', null))
 }
 /**
  *
@@ -64,11 +64,11 @@ async function resolvingGuardedRoutes(to, from, next) {
     if (isAuthenticated) {
         // show overlay loading screen after successfully authenticating
         if (from.name === 'login') {
-            await showLoadingOverlay(1500)
+            await showLoadingOverlay(OVERLAY_LOGGING)
         }
         next()
     } else {
-        await showLoadingOverlay(600)
+        await showLoadingOverlay(OVERLAY_LOGOUT)
         next({
             path: '/login',
             query: { redirect: to.path },

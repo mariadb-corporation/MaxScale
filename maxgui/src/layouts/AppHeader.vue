@@ -47,7 +47,7 @@
             </template>
 
             <v-list dark class="color bg-color-navigation">
-                <v-list-item @shareclick="handleLogout">
+                <v-list-item @click="logout">
                     <v-list-item-title>{{ $t('logout') }}</v-list-item-title>
                 </v-list-item>
             </v-list>
@@ -85,9 +85,6 @@ export default {
     },
     methods: {
         ...mapActions('user', ['logout']),
-        handleLogout() {
-            this.logout()
-        },
     },
 }
 </script>

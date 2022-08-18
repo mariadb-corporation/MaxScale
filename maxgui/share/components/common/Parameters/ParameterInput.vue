@@ -8,7 +8,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         single-line
         outlined
@@ -25,7 +25,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         single-line
         outlined
@@ -42,7 +42,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         single-line
         outlined
@@ -61,7 +61,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="[true, false]"
@@ -78,7 +78,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
-        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
         :items="targetItem.enum_values"
@@ -114,7 +114,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
-        class="std suffix-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override suffix-select-input error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         single-line
         outlined
@@ -135,7 +135,7 @@
             <v-select
                 v-model="chosenSuffix"
                 :name="targetItem.id"
-                class="std mariadb-select-input suffix-select"
+                class="vuetify-input--override mariadb-select-input suffix-select"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -156,7 +156,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std std-password error--text__bottom error--text__bottom--no-margin password-string"
+        class="vuetify-input--override vuetify-input--override-password error--text__bottom error--text__bottom--no-margin password-string"
         outlined
         dense
         :height="36"
@@ -178,7 +178,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override error--text__bottom error--text__bottom--no-margin"
         :class="`${targetItem.type} string`"
         single-line
         outlined
@@ -532,24 +532,24 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.std.v-input.v-text-field.error--text.error--text__bottom--no-margin {
+.vuetify-input--override.v-input.v-text-field.error--text.error--text__bottom--no-margin {
     margin: 14px 0px 6px;
     ::v-deep .v-text-field__details {
         margin: 0px;
     }
 }
-.std ::v-deep .v-input__control {
+.vuetify-input--override ::v-deep .v-input__control {
     min-width: 160px;
     .v-input__slot {
         margin: 0;
     }
 }
-.std ::v-deep .v-messages__message {
+.vuetify-input--override ::v-deep .v-messages__message {
     white-space: normal;
     line-height: 16px;
 }
 .suffix-select ::v-deep .v-select__selections input,
-.std ::v-deep .v-select__selections input {
+.vuetify-input--override ::v-deep .v-select__selections input {
     display: none;
 }
 .suffix-select-input {
@@ -580,11 +580,6 @@ export default {
                     margin: 0px 2px;
                     .v-icon {
                         font-size: 16px !important;
-                        color: $error !important;
-                        opacity: 0.7;
-                        &:hover {
-                            opacity: 1;
-                        }
                     }
                 }
             }

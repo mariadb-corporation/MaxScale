@@ -6,7 +6,7 @@
         v-model.number="rowLimit"
         outlined
         dense
-        class="std mariadb-select-input row-limit-dropdown row-limit-dropdown--fieldset-border"
+        class="vuetify-input--override mariadb-select-input row-limit-dropdown row-limit-dropdown--fieldset-border"
         :menu-props="{
             contentClass: 'mariadb-select-v-menu',
             bottom: true,

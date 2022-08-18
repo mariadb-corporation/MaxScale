@@ -39,7 +39,7 @@
                     dense
                     outlined
                     height="36"
-                    class="std filter-list__search"
+                    class="vuetify-input--override filter-list__search"
                     :placeholder="$t('search')"
                     hide-details
                 />

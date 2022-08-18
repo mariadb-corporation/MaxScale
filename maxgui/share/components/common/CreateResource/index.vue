@@ -30,7 +30,7 @@
                     outlined
                     dense
                     :height="36"
-                    class="mt-4 resource-select std mariadb-select-input error--text__bottom"
+                    class="mt-4 resource-select vuetify-input--override mariadb-select-input error--text__bottom"
                     :menu-props="{
                         contentClass: 'mariadb-select-v-menu',
                         bottom: true,
@@ -52,7 +52,7 @@
                     :rules="rules.resourceId"
                     name="id"
                     required
-                    class="resource-id std error--text__bottom"
+                    class="resource-id vuetify-input--override error--text__bottom"
                     dense
                     :height="36"
                     outlined

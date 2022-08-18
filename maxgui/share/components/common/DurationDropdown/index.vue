@@ -9,7 +9,7 @@
         </label>
         <v-text-field
             v-model.trim="input.value"
-            class="std error--text__bottom duration-dropdown__num-input v-text-field--with-bottom-details"
+            class="vuetify-input--override error--text__bottom duration-dropdown__num-input v-text-field--with-bottom-details"
             type="text"
             single-line
             outlined
@@ -23,7 +23,7 @@
             <template v-slot:append>
                 <v-select
                     v-model="input.suffix"
-                    class="std mariadb-select-input duration-dropdown__num-input--select"
+                    class="vuetify-input--override mariadb-select-input duration-dropdown__num-input--select"
                     :height="$attrs.height"
                     :menu-props="{
                         contentClass: 'mariadb-select-v-menu',

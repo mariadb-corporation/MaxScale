@@ -104,7 +104,7 @@
                             "
                             outlined
                             dense
-                            class="std mariadb-select-input error--text__bottom mb-3"
+                            class="vuetify-input--override mariadb-select-input error--text__bottom mb-3"
                             :menu-props="{
                                 contentClass: 'mariadb-select-v-menu',
                                 bottom: true,

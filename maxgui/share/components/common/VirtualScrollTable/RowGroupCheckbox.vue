@@ -2,7 +2,7 @@
     <v-checkbox
         :input-value="isRowGroupSelected"
         dense
-        class="checkbox--scale-reduce ma-0 pa-0"
+        class="v-checkbox--scale-reduce ma-0 pa-0"
         primary
         hide-details
         @change="handleSelectRowGroup"

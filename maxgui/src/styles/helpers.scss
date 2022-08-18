@@ -103,14 +103,6 @@
     left: 0;
 }
 
-.checkbox--scale-reduce {
-    transform: scale(0.75);
-    transform-origin: 50% 50%;
-    .v-input--selection-controls__input {
-        margin-right: 0 !important;
-    }
-}
-
 .override-td--padding {
     width: calc(100% + 48px);
     margin: 0px -24px;
@@ -138,5 +130,101 @@ tooltip needs to be disabled.
     border-radius: 0px !important;
     &:hover {
         border-radius: 0px !important;
+    }
+}
+
+.rotate {
+    &-left {
+        transform: rotate(90deg);
+    }
+    &-up {
+        transform: rotate(180deg);
+    }
+    &-right {
+        transform: rotate(-90deg);
+    }
+    &-down {
+        transform: rotate(0deg);
+    }
+}
+
+.tbl-code {
+    width: 100%;
+    background-color: $reflection;
+    td {
+        color: $code-color;
+        vertical-align: top;
+        padding-bottom: 4px;
+        width: auto;
+        &:first-of-type {
+            width: 1px;
+            padding-right: 16px;
+        }
+    }
+}
+
+.mariadb-code-style {
+    white-space: nowrap !important;
+    background-color: transparent !important;
+    color: $code-color !important;
+    box-shadow: none;
+    line-height: 1.5rem;
+    font-weight: 900 !important;
+    padding: 0px 5px 0 10px !important;
+    &::before,
+    &::after {
+        content: none;
+    }
+}
+
+.field__label {
+    font-size: 0.625rem !important;
+}
+
+.v-menu--with-arrow {
+    contain: initial;
+    overflow: visible;
+    &:after {
+        border: solid transparent;
+        content: '';
+        position: absolute;
+        pointer-events: none;
+        border-color: rgba(255, 255, 255, 0);
+        border-top-color: $background;
+        border-width: 8px;
+        border-top-width: 8px;
+    }
+    &::before {
+        content: '';
+        background: rgba(255, 255, 255, 0);
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        z-index: -1;
+        box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4);
+    }
+    &--top-left {
+        &:after {
+            transform: rotate(180deg);
+            bottom: 100%;
+            left: 21px;
+        }
+        &::before {
+            top: -4px;
+            left: 20px;
+            transform: rotate(45deg);
+        }
+    }
+    &--top-right {
+        &:after {
+            transform: rotate(180deg);
+            bottom: 100%;
+            right: 21px;
+        }
+        &::before {
+            top: -4px;
+            right: 20px;
+            transform: rotate(45deg);
+        }
     }
 }

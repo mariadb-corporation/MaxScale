@@ -1,33 +1,36 @@
 <template>
     <div class="fill-height">
-        <div ref="header" class="pb-2 result-header d-flex align-center">
-            <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
-            <v-menu
-                v-else
-                offset-y
-                top
-                transition="slide-y-transition"
-                :close-on-content-click="false"
-                content-class="shadow-drop color text-navigation "
-                open-on-hover
-                nudge-left="16"
-            >
-                <template v-slot:activator="{ on }">
-                    <span class="mr-4 pointer color text-links " v-on="on">
-                        {{ $t('queryTxt') }}
-                    </span>
-                </template>
-                <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
-                    {{ queryTxt }}
-                </v-sheet>
-            </v-menu>
-
+        <div ref="header" class="pb-2 result-header d-flex align-center d-flex flex-row">
+            <template v-if="!isLoading">
+                <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
+                <v-menu
+                    v-else
+                    offset-y
+                    top
+                    transition="slide-y-transition"
+                    :close-on-content-click="false"
+                    content-class="shadow-drop color text-navigation "
+                    open-on-hover
+                    nudge-left="16"
+                >
+                    <template v-slot:activator="{ on }">
+                        <span class="mr-4 pointer color text-links " v-on="on">
+                            {{ $t('queryTxt') }}
+                        </span>
+                    </template>
+                    <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
+                        {{ queryTxt }}
+                    </v-sheet>
+                </v-menu>
+            </template>
+            <!-- TODO: Get dynamic width instead of hard-code value (200) -->
             <v-tabs
                 v-model="activeResSet"
                 show-arrows
                 hide-slider
                 :height="20"
-                class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
+                class="v-tabs--query-editor-style v-tabs--custom-small-pagination-btn"
+                :style="{ maxWidth: `calc(100% - ${200}px)` }"
                 center-active
             >
                 <v-tab
@@ -196,9 +199,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.tab-navigation--btn-style--custom-max-width {
-    max-width: calc(100% - 330px);
-}
-</style>
