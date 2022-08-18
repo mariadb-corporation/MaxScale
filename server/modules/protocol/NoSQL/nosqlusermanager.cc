@@ -557,7 +557,7 @@ bool role::from_grant(bool is_admin,
 
             if (table != "*")
             {
-                MXB_ERROR("Grants must be ON generic `%s`.* and not on a specific table `%s`.%s.",
+                MXB_ERROR("Grants must be ON generic `%s`.* and not ON a specific table `%s`.%s.",
                           db.c_str(), db.c_str(), table.c_str());
                 rv = false;
             }
@@ -565,7 +565,15 @@ bool role::from_grant(bool is_admin,
 
         if (rv)
         {
-            *pRoles = ::from_grant(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
+            if (is_admin && (on != "*.*"))
+            {
+                MXB_ERROR("Grants for admin users must be ON *.*, not ON e.g. %s.", on.c_str());
+                rv = false;
+            }
+            else
+            {
+                *pRoles = ::from_grant(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
+            }
         }
     }
 
