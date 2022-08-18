@@ -89,15 +89,33 @@ void from_bson(const bsoncxx::array::view& bson,
  * @param priv_types        Privileges such as "SELECT", "UPDATE", etc.
  * @param on                The table in question, e.g. "*.*", "test.*".
  * @param with_gran_option  If the user has "WITH GRANT OPTION".
- * @param pRoles            On output the roles, if `true` was returned.
+ * @param pRoles            On return the roles, if @c true was returned.
  *
  * @return True, if the grants could be converted, false otherwise.
  */
-bool from_grants(bool is_admin,
-                 const std::set<std::string>& priv_types,
-                 std::string on,
-                 bool with_grant_option,
-                 std::vector<Role>* pRoles);
+bool from_grant(bool is_admin,
+                const std::set<std::string>& priv_types,
+                std::string on,
+                bool with_grant_option,
+                std::vector<Role>* pRoles);
+
+/**
+ * Get the essential information from a row returned by "SHOW GRANTS".
+ *
+ * @param grant               A row returned by "SHOW GRANTS".
+ * @param pPriv_types         On return output the privilege types (i.e. "SELECT",
+ *                            "UPDATE", etc.), if @c true was returned.
+ * @param pOn                 On return the object (i.e. "*.*", "db.*", etc.),
+ *                            if @c true was returned.
+ * @param pWith_grant_option  On return whether WITH GRANT OPTION was present,
+ *                            if @c true was returned.
+ *
+ * @return True, if @c grant could be deciphered, false otherwise.
+ */
+bool get_grant_characteristics(std::string grant,
+                               std::set<std::string>* pPriv_types,
+                               std::string* pOn,
+                               bool* pWith_grant_option);
 }
 
 /**

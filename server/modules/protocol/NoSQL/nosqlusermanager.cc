@@ -433,13 +433,13 @@ bool contains(const set<string>& heystack, const set<string>& needles)
 namespace
 {
 
-vector<role::Role> from_grants(bool is_admin,
-                               bool has_all,
-                               bool is_any,
-                               string db,
-                               const set<string>& priv_types,
-                               string on,
-                               bool with_grant_option)
+vector<role::Role> from_grant(bool is_admin,
+                              bool has_all,
+                              bool is_any,
+                              string db,
+                              const set<string>& priv_types,
+                              string on,
+                              bool with_grant_option)
 {
     vector<role::Role> roles;
     set<string> required;
@@ -503,11 +503,11 @@ vector<role::Role> from_grants(bool is_admin,
 
 }
 
-bool role::from_grants(bool is_admin,
-                       const set<string>& priv_types,
-                       string on,
-                       bool with_grant_option,
-                       vector<role::Role>* pRoles)
+bool role::from_grant(bool is_admin,
+                      const set<string>& priv_types,
+                      string on,
+                      bool with_grant_option,
+                      vector<role::Role>* pRoles)
 {
     bool rv = true;
 
@@ -553,7 +553,7 @@ bool role::from_grants(bool is_admin,
 
             if (table != "*")
             {
-                MXB_ERROR("Grants must be is ON generic `%s`.* and not on a specific table `%s`.%s.",
+                MXB_ERROR("Grants must be ON generic `%s`.* and not on a specific table `%s`.%s.",
                           db.c_str(), db.c_str(), table.c_str());
                 rv = false;
             }
@@ -561,12 +561,58 @@ bool role::from_grants(bool is_admin,
 
         if (rv)
         {
-            *pRoles = ::from_grants(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
+            *pRoles = ::from_grant(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
         }
     }
 
     return rv;
 }
+
+bool role::get_grant_characteristics(string grant,
+                                     set<string>* pPriv_types,
+                                     string* pOn,
+                                     bool* pWith_grant_option)
+{
+    bool rv = false;
+
+    if (grant.find("GRANT ") == 0)
+    {
+        grant = grant.substr(6); // strlen("GRANT ");
+
+        auto i = grant.find(" ON ");
+
+        if (i != string::npos)
+        {
+            auto priv_types_string = grant.substr(0, i);
+            grant = grant.substr(i + 4); // strlen(" ON ");
+
+            auto j = grant.find(" TO ");
+
+            if (j != string::npos)
+            {
+                auto on = grant.substr(0, j);
+                grant = grant.substr(j + 4); // strlen(" TO ");
+
+                vector<string> tmp = mxb::strtok(priv_types_string, ",");
+                set<string> priv_types;
+
+                std::for_each(tmp.begin(), tmp.end(), [&priv_types](string s) {
+                        mxb::trim(s);
+                        priv_types.insert(s);
+                    });
+
+                *pPriv_types = std::move(priv_types);
+                *pOn = std::move(on);
+                *pWith_grant_option = (grant.find("WITH GRANT OPTION") != string::npos);
+
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
 
 /**
  * UserManager
@@ -770,56 +816,6 @@ void UserManager::create_initial_user(const SERVER* pMaster)
     }
 }
 
-namespace
-{
-
-bool get_grant_characteristics(string grant,
-                               set<string>* pPriv_types,
-                               string* pOn,
-                               bool* pWith_grant_option)
-{
-    bool rv = false;
-
-    if (grant.find("GRANT ") == 0)
-    {
-        grant = grant.substr(6); // strlen("GRANT ");
-
-        auto i = grant.find(" ON ");
-
-        if (i != string::npos)
-        {
-            auto priv_types_string = grant.substr(0, i);
-            grant = grant.substr(i + 4); // strlen(" ON ");
-
-            auto j = grant.find(" TO ");
-
-            if (j != string::npos)
-            {
-                auto on = grant.substr(0, j);
-                grant = grant.substr(j + 4); // strlen(" TO ");
-
-                vector<string> tmp = mxb::strtok(priv_types_string, ",");
-                set<string> priv_types;
-
-                std::for_each(tmp.begin(), tmp.end(), [&priv_types](string s) {
-                        mxb::trim(s);
-                        priv_types.insert(s);
-                    });
-
-                *pPriv_types = std::move(priv_types);
-                *pOn = std::move(on);
-                *pWith_grant_option = (grant.find("WITH GRANT OPTION") != string::npos);
-
-                rv = true;
-            }
-        }
-    }
-
-    return rv;
-}
-
-}
-
 void UserManager::create_initial_user(const vector<string>& grants)
 {
     vector<role::Role> roles;
@@ -834,10 +830,10 @@ void UserManager::create_initial_user(const vector<string>& grants)
         string on;
         bool with_grant_option;
 
-        if (get_grant_characteristics(grant, &priv_types, &on, &with_grant_option))
+        if (role::get_grant_characteristics(grant, &priv_types, &on, &with_grant_option))
         {
             vector<role::Role> some_roles;
-            if (role::from_grants(is_admin, priv_types, on, with_grant_option, &some_roles))
+            if (role::from_grant(is_admin, priv_types, on, with_grant_option, &some_roles))
             {
                 roles.insert(roles.end(),
                              std::move_iterator(some_roles.begin()), std::move_iterator(some_roles.end()));
