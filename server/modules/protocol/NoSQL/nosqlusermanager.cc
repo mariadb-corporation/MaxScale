@@ -459,14 +459,6 @@ vector<role::Role> from_grant(bool is_admin,
         has_dbAdmin = true;
     }
 
-    // READ, READ_ANY_DATABASE
-    required = {"SELECT"};
-
-    if (has_all || contains(priv_types, required))
-    {
-        roles.push_back({db, is_any ? role::Id::READ_ANY_DATABASE : role::Id::READ});
-    }
-
     // READ_WRITE, READ_WRITE_ANY_DATABASE
     bool has_readWrite = false;
     required = {"CREATE", "DELETE", "INDEX", "INSERT", "SELECT", "UPDATE"};
@@ -477,25 +469,30 @@ vector<role::Role> from_grant(bool is_admin,
         has_readWrite = true;
     }
 
-    // USER_ADMIN
+    if (!has_readWrite)
+    {
+        // READ, READ_ANY_DATABASE
+        required = {"SELECT"};
+
+        if (has_all || contains(priv_types, required))
+        {
+            roles.push_back({db, is_any ? role::Id::READ_ANY_DATABASE : role::Id::READ});
+        }
+    }
+
+    // USER_ADMIN, USER_ADMIN_ANY_DATABASE
     bool has_userAdmin = false;
 
     if (with_grant_option)
     {
-        roles.push_back({db, role::Id::USER_ADMIN });
+        roles.push_back({db, is_any ? role::Id::USER_ADMIN_ANY_DATABASE : role::Id::USER_ADMIN });
         has_userAdmin = true;
     }
 
-    // DB_OWNER
+    // DB_OWNER, ROOT
     if (has_dbAdmin && has_readWrite && has_userAdmin)
     {
-        roles.push_back({db, role::Id::DB_OWNER });
-    }
-
-    // ROOT
-    if (is_admin && has_dbAdmin && has_readWrite && has_userAdmin)
-    {
-        roles.push_back({db, role::Id::ROOT });
+        roles.push_back({db, is_admin ? role::Id::ROOT : role::Id::DB_OWNER });
     }
 
     return roles;
@@ -513,7 +510,14 @@ bool role::from_grant(bool is_admin,
 
     bool is_any = (on == "*.*");
 
-    if (is_any && !is_admin)
+    if (is_any && (priv_types.size() == 1 && priv_types.count("USAGE") == 1))
+    {
+        // 'ON *.*' is accepted if "USAGE" is alone. That basically
+        // only tells the user exists.
+        pRoles->clear();
+        rv = true;
+    }
+    else if (is_any && !is_admin)
     {
         MXB_ERROR("A grant ON *.* can only be assigned to a user in the 'admin' database.");
         rv = false;
@@ -538,7 +542,7 @@ bool role::from_grant(bool is_admin,
 
             if (back_tick)
             {
-                e = on.find(b, '`');
+                e = on.find('`', b);
                 t = e + 2;
             }
             else
@@ -547,7 +551,7 @@ bool role::from_grant(bool is_admin,
                 t = e + 1;
             }
 
-            db = on.substr(b, e);
+            db = on.substr(b, e - b);
 
             auto table = on.substr(t);
 

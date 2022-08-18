@@ -46,6 +46,16 @@ struct Role
     Id          id;
 };
 
+inline bool operator == (const Role& lhs, const Role& rhs)
+{
+    return lhs.db == rhs.db && lhs.id == rhs.id;
+}
+
+inline bool operator != (const Role& lhs, const Role& rhs)
+{
+    return !(lhs == rhs);
+}
+
 std::unordered_map<std::string, uint32_t> to_bitmasks(const std::vector<Role>& roles);
 
 std::string to_string(Id id);
