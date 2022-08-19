@@ -16,7 +16,6 @@ import i18n from '@share/plugins/i18n'
 import { authHttp, http, abortRequests } from 'utils/axios'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-import queryEditorStorePlugins from '@queryEditor/src/store/plugins'
 
 const plugins = store => {
     store.router = router
@@ -37,4 +36,4 @@ const appPersistConfig = new VuexPersistence({
     }),
 })
 
-export default [plugins, appPersistConfig.plugin, ...queryEditorStorePlugins]
+export default [plugins, appPersistConfig.plugin]

@@ -11,7 +11,7 @@
  * Public License.
  */
 import Vuex from 'vuex'
-import user from 'store/user'
+import user from './user'
 import maxscale from './maxscale'
 import server from './server'
 import service from './service'
@@ -22,7 +22,6 @@ import listener from './listener'
 import persisted from './persisted'
 import visualization from './visualization'
 import appNotifier from '@share/store/appNotifier'
-import queryEditorModules from '@queryEditor/src/store/modules'
 import { APP_CONFIG } from 'utils/constants'
 import plugins from './plugins'
 
@@ -135,7 +134,6 @@ const store = new Vuex.Store({
         service,
         session,
         user,
-        ...queryEditorModules,
         persisted,
         visualization,
     },
