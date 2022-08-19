@@ -72,9 +72,9 @@
  * @leave-page: v:Object. `to` object of beforeRouteLeave hook
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
-import './styles/queryEditor.scss'
-import Wke from './components/Wke.container.vue'
-import WkeNav from './components/WkeNav.container.vue'
+import '@queryEditorSrc/styles/queryEditor.scss'
+import Wke from '@queryEditorSrc/components/Wke.container.vue'
+import WkeNav from '@queryEditorSrc/components/WkeNav.container.vue'
 
 export default {
     name: 'query-editor',

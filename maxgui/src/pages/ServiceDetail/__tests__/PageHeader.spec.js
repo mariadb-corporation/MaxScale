@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@/pages/ServiceDetail/PageHeader'
+import PageHeader from '@rootSrc/pages/ServiceDetail/PageHeader'
 
 import {
     dummy_all_services,

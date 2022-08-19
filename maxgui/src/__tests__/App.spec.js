@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import App from 'App.vue'
+import App from '@rootSrc/App.vue'
 import { routeChangesMock } from '@tests/unit/utils'
 
 describe('App.vue', () => {

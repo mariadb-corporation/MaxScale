@@ -3,9 +3,12 @@
         "baseUrl": ".",
         "allowSyntheticDefaultImports": false,
         "paths": {
-            "*": ["src/*"]
+            "@rootSrc/*": ["src/*"],
+            "@queryEditorSrc/*": ["queryEditor/src/*"],
+            "@share/*": ["share/*"],
+            "@tests/*": ["tests/*"]
         }
     },
-    "include": ["src/**/*", "queryEditor/**/*"],
+    "include": ["src/**/*", "queryEditor/**/*", "share/**/*", "tests/**/*"],
     "exclude": ["node_modules"]
 }

@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from 'store'
+import store from '@rootSrc/store'
 import mount, { router } from '@tests/unit/setup'
-import ServerDetail from '@/pages/ServerDetail'
+import ServerDetail from '@rootSrc/pages/ServerDetail'
 import { dummy_all_servers, dummy_all_sessions, testRelationshipUpdate } from '@tests/unit/utils'
 
 const dummy_monitor_diagnostics = {

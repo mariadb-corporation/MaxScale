@@ -11,18 +11,8 @@
  * Public License.
  */
 import Vuex from 'vuex'
-import user from './user'
-import maxscale from './maxscale'
-import server from './server'
-import service from './service'
-import monitor from './monitor'
-import filter from './filter'
-import session from './session'
-import listener from './listener'
-import persisted from './persisted'
-import visualization from './visualization'
-import appNotifier from '@share/store/appNotifier'
-import { APP_CONFIG } from 'utils/constants'
+import { APP_CONFIG } from '@rootSrc/utils/constants'
+import modules from './modules'
 import plugins from './plugins'
 
 const store = new Vuex.Store({
@@ -124,18 +114,6 @@ const store = new Vuex.Store({
             }
         },
     },
-    modules: {
-        appNotifier,
-        filter,
-        listener,
-        maxscale,
-        monitor,
-        server,
-        service,
-        session,
-        user,
-        persisted,
-        visualization,
-    },
+    modules,
 })
 export default store

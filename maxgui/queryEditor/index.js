@@ -11,10 +11,10 @@
  * Public License.
  */
 import { Resize } from 'vuetify/lib/directives'
-import MaxScaleQueryEditor from './src/MaxScaleQueryEditor.vue'
-import queryEditorModules from './src/store/modules'
-import commonComponents from './src/components/common'
-import queryEditorStorePlugins from './src/store/plugins'
+import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
+import queryEditorModules from '@queryEditorSrc/store/modules'
+import commonComponents from '@queryEditorSrc/components/common'
+import queryEditorStorePlugins from '@queryEditorSrc/store/plugins'
 
 export default {
     /**

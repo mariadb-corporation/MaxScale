@@ -12,13 +12,12 @@
  */
 import Vue from 'vue'
 import { mount, shallowMount, createLocalVue } from '@vue/test-utils'
-import '@/pluginReg'
-import '@share/utils/helpers'
+import '@rootSrc/pluginReg'
 import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
-import store from 'store'
+import store from '@rootSrc/store'
 import Router from 'vue-router'
-import { routes } from '@/router/routes'
+import { routes } from '@rootSrc/router/routes'
 import commonComponents from '@share/components/common'
 
 function doMount(isShallow, component, options) {

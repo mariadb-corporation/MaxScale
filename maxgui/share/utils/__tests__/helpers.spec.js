@@ -13,7 +13,7 @@
 import Vue from 'vue'
 
 import mount from '@tests/unit/setup'
-import App from '@/App'
+import App from '@rootSrc/App'
 
 const dummyValues = {
     undefined: undefined,

@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import OverviewHeader from '@/pages/ServerDetail/OverviewHeader'
+import OverviewHeader from '@rootSrc/pages/ServerDetail/OverviewHeader'
 import {
     dummy_all_servers,
     dummy_all_monitors,

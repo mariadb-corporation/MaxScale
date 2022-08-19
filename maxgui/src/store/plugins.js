@@ -11,9 +11,9 @@
  * Public License.
  */
 import Vue from 'vue'
-import router from 'router'
+import router from '@rootSrc/router'
 import i18n from '@share/plugins/i18n'
-import { authHttp, http, abortRequests } from 'utils/axios'
+import { authHttp, http, abortRequests } from '@rootSrc/utils/axios'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 

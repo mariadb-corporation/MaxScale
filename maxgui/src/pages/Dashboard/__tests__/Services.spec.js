@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Services from '@/pages/Dashboard/Services'
+import Services from '@rootSrc/pages/Dashboard/Services'
 
 import {
     dummy_all_services,

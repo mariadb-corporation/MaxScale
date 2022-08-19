@@ -20,10 +20,10 @@
  * Public License.
  */
 
-import './styles/main.scss'
+import '@queryEditorSrc/styles/main.scss'
 import Overlay from '@share/components/overlay'
 import Snackbars from '@share/components/Snackbars'
-import QueryEditor from './QueryEditor.vue'
+import QueryEditor from '@queryEditorSrc/QueryEditor.vue'
 import { mapState } from 'vuex'
 
 export default /*#__PURE__*/ {

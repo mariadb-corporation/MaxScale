@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@/pages/ListenerDetail/PageHeader'
+import PageHeader from '@rootSrc/pages/ListenerDetail/PageHeader'
 
 import { dummy_all_listeners, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 

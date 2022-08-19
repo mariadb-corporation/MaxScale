@@ -10,10 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from 'store'
+import store from '@rootSrc/store'
 
 import mount, { router } from '@tests/unit/setup'
-import ListenerDetail from '@/pages/ListenerDetail'
+import ListenerDetail from '@rootSrc/pages/ListenerDetail'
 
 import { dummy_all_listeners } from '@tests/unit/utils'
 

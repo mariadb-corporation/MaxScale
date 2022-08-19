@@ -12,10 +12,10 @@
  */
 
 import mount, { router } from '@tests/unit/setup'
-import FilterDetail from '@/pages/FilterDetail'
+import FilterDetail from '@rootSrc/pages/FilterDetail'
 
 import { dummy_all_filters } from '@tests/unit/utils'
-import store from 'store'
+import store from '@rootSrc/store'
 
 describe('FilterDetail index', () => {
     let wrapper, axiosStub

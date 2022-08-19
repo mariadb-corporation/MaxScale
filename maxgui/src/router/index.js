@@ -14,7 +14,7 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import { routes } from './routes'
 import { OVERLAY_LOGGING, OVERLAY_LOGOUT } from '@share/overlayTypes'
-import store from 'store'
+import store from '@rootSrc/store'
 
 Vue.use(Router)
 

@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Listeners from '@/pages/Dashboard/Listeners'
+import Listeners from '@rootSrc/pages/Dashboard/Listeners'
 
 import {
     dummy_all_listeners,

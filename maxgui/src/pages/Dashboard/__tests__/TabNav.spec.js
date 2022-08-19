@@ -12,8 +12,8 @@
  */
 
 import mount from '@tests/unit/setup'
-import TabNav from '@/pages/Dashboard/TabNav'
-import { dashboardTabRoutes } from 'router/routes'
+import TabNav from '@rootSrc/pages/Dashboard/TabNav'
+import { dashboardTabRoutes } from '@rootSrc/router/routes'
 
 import {
     dummy_all_sessions,

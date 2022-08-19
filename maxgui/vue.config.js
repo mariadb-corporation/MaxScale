@@ -31,13 +31,13 @@ module.exports = {
 
         config.resolve.modules
             .add(path.resolve(__dirname, 'src'), 'node_modules')
-            //TODO: Once the queryEditor has its own node_modules for monaco package, this won't be needed anymore
             .add(path.resolve(__dirname, 'queryEditor'), 'node_modules')
 
         config.resolve.alias
-            .set('@', path.resolve(__dirname, 'src'))
+            .set('@rootSrc', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
             .set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
+            .set('@queryEditorSrc', path.resolve(__dirname, 'queryEditor/src'))
             .set('@share', path.resolve(__dirname, 'share'))
 
         const key = process.env.httpsKey

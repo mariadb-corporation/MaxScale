@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Servers from '@/pages/Dashboard/Servers'
+import Servers from '@rootSrc/pages/Dashboard/Servers'
 import { findAnchorLinkInTable, getUniqueResourceNamesStub } from '@tests/unit/utils'
 import { makeServer } from '@tests/unit/mirage/api'
 import { initAllServers } from '@tests/unit/mirage/servers'

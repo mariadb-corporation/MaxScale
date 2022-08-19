@@ -25,9 +25,9 @@
  * of this software will be governed by version 2 or later of the General
  *  Public License.
  */
-import store from 'store'
-import AppLayout from 'layouts/AppLayout'
-import NoLayout from 'layouts/NoLayout'
+import store from '@rootSrc/store'
+import AppLayout from '@rootSrc/layouts/AppLayout'
+import NoLayout from '@rootSrc/layouts/NoLayout'
 import Overlay from '@share/components/overlay'
 import { mapState, mapMutations } from 'vuex'
 

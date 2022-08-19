@@ -13,9 +13,9 @@
 import Vue from 'vue'
 Vue.use(Vuex)
 import Vuex from 'vuex'
-import store from 'store'
+import store from '@rootSrc/store'
 import mount from '@tests/unit/setup'
-import LogContainer from '@/pages/Logs/LogContainer'
+import LogContainer from '@rootSrc/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
 
 const dummyChosenLogLevels = ['warning']

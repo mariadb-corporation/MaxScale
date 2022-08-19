@@ -11,7 +11,7 @@
  * Public License.
  */
 import { v1 } from 'uuid'
-import sqlFormatter from '@queryEditor/src/components/SqlEditor/formatter'
+import sqlFormatter from '@queryEditorSrc/components/SqlEditor/formatter'
 
 export const uuidv1 = v1
 
