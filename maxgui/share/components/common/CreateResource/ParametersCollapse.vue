@@ -104,7 +104,7 @@ export default {
 
             parameterTooltip: null,
             // this is needed when using custom activator in v-tooltip.
-            componentId: this.$help.lodash.uniqueId('component_tooltip_'),
+            componentId: this.$helpers.lodash.uniqueId('component_tooltip_'),
         }
     },
     computed: {
@@ -112,7 +112,7 @@ export default {
             const parameters = this.parameters
             let arr = []
             parameters.forEach(param => {
-                let paramObj = this.$help.lodash.cloneDeep(param)
+                let paramObj = this.$helpers.lodash.cloneDeep(param)
                 /* this ensure 0 default_value could be assigned,
                    undefined default_value property will fallback to null to make the input visibled
                  */

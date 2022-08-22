@@ -39,7 +39,7 @@ export default {
     computed: {
         //Detect if the cell value has been modified
         hasChanged() {
-            return !this.$help.lodash.isEqual(this.targetCell, this.cellItem)
+            return !this.$helpers.lodash.isEqual(this.targetCell, this.cellItem)
         },
     },
     watch: {
@@ -47,14 +47,14 @@ export default {
             deep: true,
             immediate: true,
             handler(n, o) {
-                if (!this.$help.lodash.isEqual(n, o))
-                    this.targetCell = this.$help.lodash.cloneDeep(n)
+                if (!this.$helpers.lodash.isEqual(n, o))
+                    this.targetCell = this.$helpers.lodash.cloneDeep(n)
             },
         },
     },
     methods: {
         onInput() {
-            let changedCells = this.$help.lodash.cloneDeep(this.changedCells)
+            let changedCells = this.$helpers.lodash.cloneDeep(this.changedCells)
             const targetIndex = changedCells.findIndex(c => c.id === this.targetCell.id)
             if (this.hasChanged) {
                 // if this.targetCell is not included in changedCells

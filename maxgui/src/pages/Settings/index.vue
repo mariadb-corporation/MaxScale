@@ -82,7 +82,7 @@ export default {
             updateMaxScaleParameters: 'maxscale/updateMaxScaleParameters',
         }),
         processModuleParams() {
-            const parameters = this.$help.lodash.cloneDeep(this.module_parameters)
+            const parameters = this.$helpers.lodash.cloneDeep(this.module_parameters)
             // hard code type for child parameter of log_throttling
             const log_throttingIndex = parameters.findIndex(
                 param => param.name === 'log_throttling'

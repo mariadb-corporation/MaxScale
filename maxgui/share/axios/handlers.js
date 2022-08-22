@@ -15,7 +15,7 @@ const CANCEL_MESSAGE = 'canceled'
  * Default handler for error response status codes
  */
 export async function defErrStatusHandler({ store, error }) {
-    const { getErrorsArr, delay } = store.vue.$help
+    const { getErrorsArr, delay } = store.vue.$helpers
     store.commit(
         'appNotifier/SET_SNACK_BAR_MESSAGE',
         {

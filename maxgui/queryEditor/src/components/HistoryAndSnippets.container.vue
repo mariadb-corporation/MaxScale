@@ -66,7 +66,7 @@
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
                             :text="
-                                `${$help.dateFormat({
+                                `${$helpers.dateFormat({
                                     moment: $moment,
                                     value: cell,
                                     formatType: 'ddd, DD MMM YYYY',
@@ -363,7 +363,7 @@ export default {
                 case 'date': {
                     let map = new Map()
                     rows.forEach(row => {
-                        const key = this.$help.dateFormat({
+                        const key = this.$helpers.dateFormat({
                             moment: this.$moment,
                             value: row[idx],
                             formatType: 'ddd, DD MMM YYYY',
@@ -381,13 +381,13 @@ export default {
             this.isConfDlgOpened = true
         },
         deleteSelectedRows() {
-            const { cloneDeep, xorWith, isEqual } = this.$help.lodash
+            const { cloneDeep, xorWith, isEqual } = this.$helpers.lodash
             let targetMatrices = cloneDeep(this.itemsToBeDeleted).map(
                 row => row.filter((_, i) => i !== 0) // Remove # col
             )
             const newMaxtrices = xorWith(this.rows, targetMatrices, isEqual)
             // Convert to array of objects
-            const newData = this.$help.getObjectRows({
+            const newData = this.$helpers.getObjectRows({
                 columns: this.headers.map(h => h.text),
                 rows: newMaxtrices,
             })
@@ -395,7 +395,7 @@ export default {
             this[`SET_QUERY_${this.activeView}`](newData)
         },
         txtOptHandler({ opt, data }) {
-            let rowData = this.$help.getObjectRows({
+            let rowData = this.$helpers.getObjectRows({
                 columns: this.headers.map(h => h.text),
                 rows: [data.row.filter((_, i) => i !== 0)], // Remove # col
             })
@@ -417,7 +417,7 @@ export default {
             let sqlTxt = sql ? sql : name
             switch (opt.type) {
                 case CLIPBOARD:
-                    this.$help.copyTextToClipboard(sqlTxt)
+                    this.$helpers.copyTextToClipboard(sqlTxt)
                     break
                 case INSERT:
                     this.$emit('place-to-editor', sqlTxt)
@@ -425,7 +425,7 @@ export default {
             }
         },
         onDoneEditingSnippets(changedCells) {
-            const { cloneDeep, isEqual } = this.$help.lodash
+            const { cloneDeep, isEqual } = this.$helpers.lodash
             let cells = cloneDeep(changedCells)
             let snippets = cloneDeep(this.query_snippets)
             cells.forEach(c => {

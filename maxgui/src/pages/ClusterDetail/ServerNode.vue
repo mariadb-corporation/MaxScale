@@ -115,7 +115,7 @@
                 <icon-sprite-sheet
                     size="16"
                     class="mr-1 server-state-icon"
-                    :frame="$help.serverStateIcon(nodeAttrs.state)"
+                    :frame="$helpers.serverStateIcon(nodeAttrs.state)"
                 >
                     servers
                 </icon-sprite-sheet>
@@ -138,7 +138,7 @@
                 <span class="text-capitalize font-weight-bold mr-2">
                     {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
                 </span>
-                <truncate-string :text="$help.getAddress(nodeAttrs.parameters)" />
+                <truncate-string :text="$helpers.getAddress(nodeAttrs.parameters)" />
             </div>
         </template>
     </tree-graph-node>
@@ -204,7 +204,7 @@ export default {
             return this.$typy(this.node.data, 'server_info.slave_connections').safeArray
         },
         sbm() {
-            return this.$help.getMin({
+            return this.$helpers.getMin({
                 arr: this.slave_connections,
                 pickBy: 'seconds_behind_master',
             })
@@ -236,11 +236,11 @@ export default {
             return [
                 {
                     ...this.firstSlideCommonInfo,
-                    slave_io_running: this.$help.getMostFreq({
+                    slave_io_running: this.$helpers.getMostFreq({
                         arr: this.slave_connections,
                         pickBy: 'slave_io_running',
                     }),
-                    slave_sql_running: this.$help.getMostFreq({
+                    slave_sql_running: this.$helpers.getMostFreq({
                         arr: this.slave_connections,
                         pickBy: 'slave_sql_running',
                     }),

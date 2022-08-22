@@ -131,7 +131,7 @@ export default {
     },
     data() {
         return {
-            uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
+            uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
             dataPoint: null,
             chartToolHeight: 0,
         }
@@ -324,7 +324,7 @@ export default {
             return v
         },
         getDefFileName() {
-            return `MaxScale ${this.type} Chart - ${this.$help.dateFormat({
+            return `MaxScale ${this.type} Chart - ${this.$helpers.dateFormat({
                 moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',

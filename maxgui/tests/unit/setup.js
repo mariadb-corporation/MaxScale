@@ -43,7 +43,7 @@ export default options => {
         localVue.component(name, commonComponents[name])
     })
 
-    const opts = Vue.prototype.$help.lodash.pickBy(
+    const opts = Vue.prototype.$helpers.lodash.pickBy(
         options,
         (v, key) => !['shallow', 'component'].includes(key)
     )

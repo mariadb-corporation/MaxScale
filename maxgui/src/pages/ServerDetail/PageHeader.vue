@@ -156,7 +156,7 @@ export default {
          * @returns {Number} returns a number: 0,1,2
          */
         stateIconFrame() {
-            return this.$help.serverStateIcon(this.serverState)
+            return this.$helpers.serverStateIcon(this.serverState)
         },
         serverHealthy() {
             switch (this.stateIconFrame) {

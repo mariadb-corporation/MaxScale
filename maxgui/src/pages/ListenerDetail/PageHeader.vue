@@ -41,7 +41,7 @@
             <icon-sprite-sheet
                 size="16"
                 class="listener-state-icon mr-1"
-                :frame="$help.listenerStateIcon(currentListener.attributes.state)"
+                :frame="$helpers.listenerStateIcon(currentListener.attributes.state)"
             >
                 listeners
             </icon-sprite-sheet>

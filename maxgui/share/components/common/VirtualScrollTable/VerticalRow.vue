@@ -12,7 +12,7 @@
                     :key="`${h.text}_${headerWidthMap[0]}_0`"
                     class="td border-bottom-none px-3"
                     :style="{
-                        minWidth: $help.handleAddPxUnit(headerWidthMap[0]),
+                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[0]),
                         lineHeight,
                         height: lineHeight,
                     }"
@@ -45,7 +45,7 @@
                     :key="`${h.text}_${headerWidthMap[1]}_1`"
                     class="td no-border px-3"
                     :style="{
-                        minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
+                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[1]),
                         lineHeight,
                         height: lineHeight,
                     }"

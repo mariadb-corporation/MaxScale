@@ -140,7 +140,7 @@ export default {
     },
     methods: {
         setDefDraggingStates() {
-            this.draggingStates = this.$help.lodash.cloneDeep(this.defDraggingStates)
+            this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
         },
         /**
          * compute dag layout
@@ -211,7 +211,7 @@ export default {
             const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
             let heightMap = {}
             rectNode.forEach(node => (heightMap[node.getAttribute('node_id')] = node.clientHeight))
-            if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
+            if (!this.$helpers.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
         },
         // Repositioning nodes and links by mutating x,y value
@@ -355,7 +355,7 @@ export default {
             return `M ${srcX} ${srcY} ${midPoint} H ${h} L ${targetX} ${targetY}`
         },
         getPoints(data) {
-            let points = this.$help.lodash.cloneDeep(data.points)
+            let points = this.$helpers.lodash.cloneDeep(data.points)
             let shouldRevert = this.handleRevertDiagonal(data)
             if (shouldRevert) points = points.reverse()
             return points
@@ -370,7 +370,7 @@ export default {
         renderNodeDivs(nodes) {
             this.nodeDivData = nodes
             // compute node height after nodes are rendered
-            if (this.dynNodeHeight) this.$help.doubleRAF(() => this.computeDynNodeHeight())
+            if (this.dynNodeHeight) this.$helpers.doubleRAF(() => this.computeDynNodeHeight())
         },
         /**
          * @param {Object} d - link data or node data

@@ -126,7 +126,7 @@ export default {
                 primary,
             }
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$helpers.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },

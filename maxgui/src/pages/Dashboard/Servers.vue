@@ -41,7 +41,7 @@
                     v-if="monitorState"
                     size="16"
                     class="monitor-state-icon mr-1"
-                    :frame="$help.monitorStateIcon(monitorState)"
+                    :frame="$helpers.monitorStateIcon(monitorState)"
                 >
                     monitors
                 </icon-sprite-sheet>
@@ -110,7 +110,7 @@
                         <icon-sprite-sheet
                             size="16"
                             class="mr-1 server-state-icon"
-                            :frame="$help.serverStateIcon(serverState)"
+                            :frame="$helpers.serverStateIcon(serverState)"
                         >
                             servers
                         </icon-sprite-sheet>
@@ -225,7 +225,7 @@ export default {
             if (this.all_servers.length) {
                 let allServiceIds = []
                 let allMonitorIds = []
-                let allMonitorsMapClone = this.$help.lodash.cloneDeep(this.getAllMonitorsMap)
+                let allMonitorsMapClone = this.$helpers.lodash.cloneDeep(this.getAllMonitorsMap)
                 this.all_servers.forEach(server => {
                     const {
                         id,
@@ -347,7 +347,7 @@ export default {
                     arr.push({
                         ...item,
                         // Keep only connections to master
-                        slave_connections: this.$help.filterSlaveConn({
+                        slave_connections: this.$helpers.filterSlaveConn({
                             slave_connections: item.slave_connections,
                             masterName,
                         }),
@@ -367,7 +367,7 @@ export default {
                 if (item.name === slaveName)
                     arr.push({
                         ...item,
-                        slave_connections: this.$help.filterSlaveConn({
+                        slave_connections: this.$helpers.filterSlaveConn({
                             slave_connections: item.slave_connections,
                             masterName,
                         }),

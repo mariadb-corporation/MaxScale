@@ -60,7 +60,7 @@ export default {
             return [...keywordCmplItems, ...builtinFunctionCmplItems]
         },
         custCmplList() {
-            const dist = this.$help.lodash.cloneDeep(this.cmplList)
+            const dist = this.$helpers.lodash.cloneDeep(this.cmplList)
             const { SCHEMA, TABLE, SP, TRIGGER, COL } = this.SQL_NODE_TYPES
             for (const item of dist) {
                 switch (item.type) {
@@ -154,7 +154,7 @@ export default {
             })
 
             this.editor = monaco.editor.create(this.$el, {
-                value: this.$help.formatSQL(this.value),
+                value: this.$helpers.formatSQL(this.value),
                 theme: 'mariadb-theme',
                 language: this.language,
                 automaticLayout: true,
@@ -184,7 +184,7 @@ export default {
                 provideDocumentFormattingEdits: model => [
                     {
                         range: model.getFullModelRange(),
-                        text: scope.$help.formatSQL(model.getValue()),
+                        text: scope.$helpers.formatSQL(model.getValue()),
                     },
                 ],
             })
@@ -274,7 +274,7 @@ export default {
             ]
             for (const item of actionDescriptors) {
                 this.editor.addAction({
-                    id: this.$help.lodash.uniqueId('monaco_action_id_'),
+                    id: this.$helpers.lodash.uniqueId('monaco_action_id_'),
                     precondition: null,
                     keybindingContext: null,
                     contextMenuGroupId: 'navigation',

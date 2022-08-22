@@ -91,7 +91,7 @@ describe('ServiceDetail - OverviewHeader', () => {
             expect(cardBody.text()).to.be.equals(router)
         })
         it(`Should show started time in the second outlined-overview-card`, () => {
-            const { dateFormat } = wrapper.vm.$help
+            const { dateFormat } = wrapper.vm.$helpers
             const cardTitle = outlineOverviewCards[1].find('.text-caption')
             const cardBody = outlineOverviewCards[1].find('.started')
             expect(cardTitle.text()).to.be.equals('STARTED AT')

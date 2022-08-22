@@ -64,7 +64,7 @@ export default {
             if (this.resourceModules.length) {
                 const {
                     attributes: { parameters = [] },
-                } = this.$help.lodash.cloneDeep(this.resourceModules[0]) // always 0
+                } = this.$helpers.lodash.cloneDeep(this.resourceModules[0]) // always 0
                 return parameters.filter(item => item.name !== 'type')
             }
             return []
@@ -78,7 +78,8 @@ export default {
         },
         isMonitorDefaultItems: function() {
             return (
-                this.$help.isNotEmptyObj(this.defaultItems) && this.defaultItems.type === 'monitors'
+                this.$helpers.isNotEmptyObj(this.defaultItems) &&
+                this.defaultItems.type === 'monitors'
             )
         },
     },

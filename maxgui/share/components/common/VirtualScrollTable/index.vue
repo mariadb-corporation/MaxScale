@@ -101,7 +101,7 @@
                     class="tr"
                     :class="{
                         'tr--selected': isRowSelected(row),
-                        'tr--active': $help.lodash.isEqual(activeRow, row),
+                        'tr--active': $helpers.lodash.isEqual(activeRow, row),
                     }"
                     :style="{ lineHeight }"
                 >
@@ -143,7 +143,7 @@
                             ]"
                             :style="{
                                 height: lineHeight,
-                                minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
+                                minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
                             }"
                             v-on="
                                 draggableCell && h.draggable
@@ -272,7 +272,7 @@ export default {
     },
     computed: {
         scrollBarThicknessOffset() {
-            return this.$help.getScrollbarWidth()
+            return this.$helpers.getScrollbarWidth()
         },
         lineHeight() {
             return `${this.itemHeight}px`
@@ -308,7 +308,7 @@ export default {
             return this.currRows.length
         },
         tableRows() {
-            let rows = this.$help.stringifyClone(this.rows)
+            let rows = this.$helpers.stringifyClone(this.rows)
             if (this.idxOfSortingCol !== -1) this.handleSort(rows)
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
@@ -345,7 +345,7 @@ export default {
             deep: true,
             handler(v, oV) {
                 // Clear selectedItems once rows value changes
-                if (!this.$help.lodash.isEqual(v, oV)) this.selectedItems = []
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.selectedItems = []
             },
         },
         isVertTable(v) {
@@ -469,7 +469,7 @@ export default {
          */
         isRowGroupCollapsed(row) {
             const targetIdx = this.collapsedRowGroups.findIndex(r =>
-                this.$help.lodash.isEqual(row, r)
+                this.$helpers.lodash.isEqual(row, r)
             )
             return targetIdx === -1 ? false : true
         },
@@ -500,7 +500,7 @@ export default {
          * @returns {Number} - returns index of row array in selectedItems
          */
         getSelectedRowIdx(row) {
-            return this.selectedItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
+            return this.selectedItems.findIndex(ele => this.$helpers.lodash.isEqual(ele, row))
         },
 
         /**

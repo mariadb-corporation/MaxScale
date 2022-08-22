@@ -159,8 +159,8 @@ export default {
             },
         },
         itemsList() {
-            let list = this.$help.lodash.cloneDeep(this.items)
-            return list.filter(obj => this.$help.ciStrIncludes(`${obj.text}`, this.filterTxt))
+            let list = this.$helpers.lodash.cloneDeep(this.items)
+            return list.filter(obj => this.$helpers.ciStrIncludes(`${obj.text}`, this.filterTxt))
         },
         isAllSelected() {
             return this.selectedItems.length === this.items.length

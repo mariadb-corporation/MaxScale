@@ -219,7 +219,7 @@ export default {
         watch_resultSets() {
             // store watcher to unwatch_resultSets and use it for removing the watcher
             this.unwatch_resultSets = this.$watch('resultSets', (v, oV) => {
-                if (!this.$help.lodash.isEqual(v, oV)) {
+                if (!this.$helpers.lodash.isEqual(v, oV)) {
                     this.clearAxes()
                     this.resSet = null
                     this.genChartData()
@@ -242,12 +242,12 @@ export default {
             }
         },
         genDataset({ colorIndex, data }) {
-            const lineColor = this.$help.dynamicColors(colorIndex)
+            const lineColor = this.$helpers.dynamicColors(colorIndex)
             let dataset = {
                 data,
             }
             const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-            const backgroundColor = this.$help.strReplaceAt({
+            const backgroundColor = this.$helpers.strReplaceAt({
                 str: lineColor,
                 index: indexOfOpacity,
                 newChar: '0.2',
@@ -339,7 +339,7 @@ export default {
                 }
             if (scaleLabels.x && scaleLabels.y && axesType.x && axesType.y) {
                 let dataPoints = []
-                const dataRows = this.$help.getObjectRows({
+                const dataRows = this.$helpers.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })

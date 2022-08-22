@@ -38,7 +38,7 @@ export default {
             state.query_sessions = state.query_sessions.filter(s => s.id !== id)
         },
         UPDATE_SESSION(state, { idx, session }) {
-            state.query_sessions = this.vue.$help.immutableUpdate(state.query_sessions, {
+            state.query_sessions = this.vue.$helpers.immutableUpdate(state.query_sessions, {
                 [idx]: { $set: session },
             })
         },
@@ -57,16 +57,16 @@ export default {
          */
         REFRESH_SESSION_OF_A_WKE(state, session) {
             const idx = state.query_sessions.indexOf(session)
-            let s = { ...this.vue.$help.lodash.cloneDeep(session) }
+            let s = { ...this.vue.$helpers.lodash.cloneDeep(session) }
             // Reset the name except the session having blob_file
             if (this.vue.$typy(s, 'blob_file').isEmptyObject) s.name = `Query Tab ${s.count}`
             // Keys that won't have its value refreshed
             const reservedKeys = ['id', 'name', 'count', 'blob_file', 'query_txt']
-            state.query_sessions = this.vue.$help.immutableUpdate(state.query_sessions, {
+            state.query_sessions = this.vue.$helpers.immutableUpdate(state.query_sessions, {
                 [idx]: {
                     $set: {
                         ...s,
-                        ...this.vue.$help.lodash.pickBy(
+                        ...this.vue.$helpers.lodash.pickBy(
                             defSessionState(s.wke_id_fk),
                             (v, key) => !reservedKeys.includes(key)
                         ),

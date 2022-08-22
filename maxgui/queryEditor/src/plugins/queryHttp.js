@@ -89,7 +89,7 @@ function queryHttp(store) {
             return response
         },
         async error => {
-            const { getErrorsArr } = store.vue.$help
+            const { getErrorsArr } = store.vue.$helpers
             const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
             switch (status) {
                 case null:

@@ -491,7 +491,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                         expect(wrapper.emitted()).to.have.property('place-to-editor')
                         if (text.includes('(Quoted)'))
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
-                                wrapper.vm.$help.escapeIdentifiers(prvw_node.id)
+                                wrapper.vm.$helpers.escapeIdentifiers(prvw_node.id)
                             )
                         else
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(

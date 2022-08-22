@@ -251,7 +251,7 @@ export default {
                 return
             } else await this.fetchPrevLog()
             const ids = this.getIds(this.prevLogData)
-            this.allLogData = this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
+            this.allLogData = this.$helpers.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
             if (ids.length) this.$nextTick(() => this.preserveScrollHeight(ids))
             this.prevLogData = [] // clear logs as it has been prepended to allLogData
         },
@@ -263,7 +263,7 @@ export default {
             if (this.prev_filtered_log_link || this.prev_log_link) {
                 await this.fetchPrevFilteredLog()
                 this.filteredLogData = Object.freeze(
-                    this.$help.lodash.unionBy(
+                    this.$helpers.lodash.unionBy(
                         this.prev_filtered_log_data,
                         this.filteredLogData,
                         'id'

@@ -18,7 +18,7 @@
             :rules="rules"
             :disabled="disabled"
             v-bind="{ ...$attrs }"
-            @keypress="$help.preventNonNumericalVal($event)"
+            @keypress="$helpers.preventNonNumericalVal($event)"
         >
             <template v-slot:append>
                 <v-select

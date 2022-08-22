@@ -43,7 +43,7 @@ export default router
  */
 async function showLoadingOverlay(overlay_type) {
     store.commit('appNotifier/SET_OVERLAY_TYPE', overlay_type, { root: true })
-    await store.vue.$help
+    await store.vue.$helpers
         .delay(400)
         .then(() => store.commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true }))
 }
@@ -57,11 +57,12 @@ async function showLoadingOverlay(overlay_type) {
 async function resolvingGuardedRoutes(to, from, next) {
     // Check if user is logged in
     const {
-        vue: { $help, $typy },
+        vue: { $helpers, $typy },
         state,
     } = store
     const user = $typy(state, 'user.logged_in_user').safeObjectOrEmpty
-    const isAuthenticated = $help.getCookie('token_body') && $typy(user, 'isLoggedIn').safeBoolean
+    const isAuthenticated =
+        $helpers.getCookie('token_body') && $typy(user, 'isLoggedIn').safeBoolean
 
     if (isAuthenticated) {
         // show overlay loading screen after successfully authenticating

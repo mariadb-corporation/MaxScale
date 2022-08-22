@@ -31,16 +31,16 @@ const dummyValues = {
 }
 
 describe('helpers unit tests', () => {
-    it('Should add $help to vue prototype methods', () => {
+    it('Should add $helpers to vue prototype methods', () => {
         let wrapper = mount({
             shallow: false,
             component: App,
         })
-        expect(wrapper.vm.$help).to.be.not.undefined
+        expect(wrapper.vm.$helpers).to.be.not.undefined
         wrapper.destroy()
     })
 
-    const helper = Vue.prototype.$help
+    const helper = Vue.prototype.$helpers
 
     describe('isNotEmptyObj assertions', () => {
         for (const [key, value] of Object.entries(dummyValues)) {

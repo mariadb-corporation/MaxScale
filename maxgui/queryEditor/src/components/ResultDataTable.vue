@@ -246,7 +246,7 @@ export default {
                 for (const [i, cell] of row.entries()) {
                     if (
                         (this.filterHeaderIdxs.includes(i) || !this.filterHeaderIdxs.length) &&
-                        this.$help.ciStrIncludes(`${cell}`, this.filterKeyword)
+                        this.$helpers.ciStrIncludes(`${cell}`, this.filterKeyword)
                     ) {
                         match = true
                         break
@@ -291,7 +291,7 @@ export default {
         menuItems() {
             if (this.menuOpts.length) {
                 // Deep merge of menuOpts with baseOpts
-                const { mergeWith, keyBy, values } = this.$help.lodash
+                const { mergeWith, keyBy, values } = this.$helpers.lodash
                 const merged = values(
                     mergeWith(
                         keyBy(this.baseOpts, 'text'),
@@ -367,7 +367,7 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$t('fieldQuoted'):
-                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
+                    v = this.$helpers.escapeIdentifiers(this.processField(data.cell))
                     break
                 case this.$t('field'):
                     v = this.processField(data.cell)
@@ -378,7 +378,7 @@ export default {
                     this.$emit('place-to-editor', v)
                     break
                 case CLIPBOARD:
-                    this.$help.copyTextToClipboard(v)
+                    this.$helpers.copyTextToClipboard(v)
                     break
             }
         },

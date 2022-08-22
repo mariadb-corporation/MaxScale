@@ -92,7 +92,7 @@ export default {
          */
         toggleRowGroup() {
             const targetIdx = this.collapsedRowGroups.findIndex(r =>
-                this.$help.lodash.isEqual(this.row, r)
+                this.$helpers.lodash.isEqual(this.row, r)
             )
             if (targetIdx >= 0)
                 this.$emit('update-collapsed-row-groups', [

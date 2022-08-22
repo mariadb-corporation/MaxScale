@@ -47,7 +47,7 @@ describe('TableHeader.vue', () => {
     })
 
     it('Last column has not-sortable class and other columns have sortable class', async () => {
-        let newHeaders = wrapper.vm.$help.lodash.cloneDeep(headers)
+        let newHeaders = wrapper.vm.$helpers.lodash.cloneDeep(headers)
         newHeaders[newHeaders.length - 1].sortable = false
         await wrapper.setProps({
             headers: newHeaders,

@@ -163,7 +163,7 @@ export default {
 
             parameterTooltip: null,
             // this is needed when using custom activator in v-tooltip.
-            componentId: this.$help.lodash.uniqueId('component_tooltip_'),
+            componentId: this.$helpers.lodash.uniqueId('component_tooltip_'),
             isMounting: true,
         }
     },
@@ -181,7 +181,7 @@ export default {
             const {
                 lodash: { cloneDeep },
                 objToTree,
-            } = this.$help
+            } = this.$helpers
             const parameters = cloneDeep(this.parameters)
             return objToTree({
                 obj: parameters,
@@ -193,7 +193,7 @@ export default {
         parametersTableRow() {
             const {
                 lodash: { cloneDeep },
-            } = this.$help
+            } = this.$helpers
             // treeParamsClone will be mutated by processingTableRow method
             let treeParamsClone = cloneDeep(this.treeParams)
             if (this.moduleParams.length) this.processingTableRow(treeParamsClone)
@@ -219,7 +219,7 @@ export default {
         },
     },
     async mounted() {
-        await this.$help.delay(400).then(() => (this.isMounting = false))
+        await this.$helpers.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
         /**
@@ -282,7 +282,7 @@ export default {
                         if (unit) {
                             let hasAppendedSuffix = false
                             if (typeof resourceParam.value === 'string') {
-                                let suffixInfo = this.$help.getSuffixFromValue(resourceParam, [
+                                let suffixInfo = this.$helpers.getSuffixFromValue(resourceParam, [
                                     'ms',
                                     's',
                                     'm',
@@ -323,7 +323,7 @@ export default {
          * @return {String} the key name of its ancestor. e.g. rootProp.childProp.grandChildProp
          */
         keyifyChangedParams(node) {
-            const changedObj = this.$help.treeToObj({
+            const changedObj = this.$helpers.treeToObj({
                 changedNodes: [node],
                 tree: this.treeParams,
             })
@@ -362,7 +362,7 @@ export default {
         },
 
         async acceptEdit() {
-            const parameters = this.$help.treeToObj({
+            const parameters = this.$helpers.treeToObj({
                 changedNodes: this.changedParams,
                 tree: this.treeParams,
             })

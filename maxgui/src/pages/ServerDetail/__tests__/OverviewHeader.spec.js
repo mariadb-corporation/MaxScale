@@ -63,7 +63,7 @@ describe('ServerDetail - OverviewHeader', () => {
             if (count === 6) des += 'if server is using port'
             else des += 'if server is using socket'
             it(des, () => {
-                let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
+                let currentServer = wrapper.vm.$helpers.lodash.cloneDeep(dummy_all_servers[0])
                 currentServer.attributes.parameters = {
                     address: '127.0.0.1',
                     port: count === 6 ? 4001 : null,
@@ -82,7 +82,7 @@ describe('ServerDetail - OverviewHeader', () => {
     })
 
     it(`Should automatically assign 'undefined' string if attribute is not defined`, () => {
-        let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
+        let currentServer = wrapper.vm.$helpers.lodash.cloneDeep(dummy_all_servers[0])
         delete currentServer.attributes.last_event
         delete currentServer.attributes.triggered_at
 
@@ -111,7 +111,7 @@ describe('ServerDetail - OverviewHeader', () => {
             des += expectKeys.join(', ')
 
             it(des, () => {
-                let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
+                let currentServer = wrapper.vm.$helpers.lodash.cloneDeep(dummy_all_servers[0])
                 currentServer.attributes.parameters = {
                     address: '127.0.0.1',
                     port: count === 6 ? 4001 : null,

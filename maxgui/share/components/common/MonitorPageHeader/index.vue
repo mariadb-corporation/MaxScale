@@ -63,7 +63,7 @@
                 <icon-sprite-sheet
                     size="16"
                     class="monitor-state-icon mr-1"
-                    :frame="$help.monitorStateIcon(state)"
+                    :frame="$helpers.monitorStateIcon(state)"
                 >
                     monitors
                 </icon-sprite-sheet>

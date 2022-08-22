@@ -55,12 +55,12 @@
             >
                 <template v-slot:selection="{ item }">
                     <div class="v-select__selection v-select__selection--comma">
-                        {{ $help.resourceTxtTransform(item) }}
+                        {{ $helpers.resourceTxtTransform(item) }}
                     </div>
                 </template>
                 <template v-slot:item="{ item, on, attrs }">
                     <div class="v-list-item__title" v-bind="attrs" v-on="on">
-                        {{ $help.resourceTxtTransform(item) }}
+                        {{ $helpers.resourceTxtTransform(item) }}
                     </div>
                 </template>
             </v-select>
@@ -72,7 +72,7 @@
                         <label class="field__label mxs-color-helper text-small-text label-required">
                             {{
                                 $t('resourceLabelName', {
-                                    resourceName: $help.resourceTxtTransform(resourceType),
+                                    resourceName: $helpers.resourceTxtTransform(resourceType),
                                 })
                             }}
                         </label>

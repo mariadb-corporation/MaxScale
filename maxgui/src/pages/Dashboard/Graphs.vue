@@ -53,7 +53,7 @@
                                 datasets: threads_datasets,
                             }"
                             :options="
-                                $help.lodash.merge(streamOpts, {
+                                $helpers.lodash.merge(streamOpts, {
                                     scales: {
                                         yAxes: [
                                             {
@@ -136,7 +136,7 @@ export default {
             const {
                 genLineStreamDataset,
                 lodash: { xorWith, isEqual, cloneDeep },
-            } = this.$help
+            } = this.$helpers
 
             const connectionsChartDataSets = connectionsChart.chartData.datasets
 
@@ -206,7 +206,7 @@ export default {
         },
 
         updateThreadsDatasets(threadsChart, timestamp) {
-            const { genLineStreamDataset } = this.$help
+            const { genLineStreamDataset } = this.$helpers
             const threadChartDataSets = threadsChart.chartData.datasets
             this.thread_stats.forEach((thread, i) => {
                 const {

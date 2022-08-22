@@ -71,7 +71,7 @@ describe('BaseDialog.vue', () => {
             ++count
         })
         await wrapper.find('.save').trigger('click')
-        await wrapper.vm.$help.delay(600) // stub waitClose
+        await wrapper.vm.$helpers.delay(600) // stub waitClose
         expect(count).to.be.equals(1)
     })
 

@@ -45,7 +45,7 @@ describe('OverviewHeader index', () => {
     })
 
     it(`Should automatically assign 'undefined' string if attribute is not defined`, async () => {
-        let currentMonitor = wrapper.vm.$help.lodash.cloneDeep(dummy_all_monitors[0])
+        let currentMonitor = wrapper.vm.$helpers.lodash.cloneDeep(dummy_all_monitors[0])
         currentMonitor.attributes.monitor_diagnostics = {}
         await wrapper.setProps({
             currentMonitor: currentMonitor,

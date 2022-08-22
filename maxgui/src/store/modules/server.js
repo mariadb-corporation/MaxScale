@@ -165,7 +165,7 @@ export default {
                 )
 
                 message = [
-                    `${this.vue.$help.capitalizeFirstLetter(payload.type)} relationships of ${
+                    `${this.vue.$helpers.capitalizeFirstLetter(payload.type)} relationships of ${
                         payload.id
                     } is updated`,
                 ]
@@ -250,7 +250,7 @@ export default {
          */
         genDataSets({ commit, state }) {
             const { all_servers } = state
-            const { genLineStreamDataset } = this.vue.$help
+            const { genLineStreamDataset } = this.vue.$helpers
 
             if (all_servers.length) {
                 let dataSets = []

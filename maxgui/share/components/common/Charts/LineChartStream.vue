@@ -23,7 +23,7 @@ export default {
     },
     data() {
         return {
-            uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
+            uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
         }
     },
     watch: {
@@ -115,7 +115,7 @@ export default {
                     ],
                 },
             }
-            this.renderChart(this.chartData, this.$help.lodash.merge(chartOption, this.options))
+            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
         },
     },
 }

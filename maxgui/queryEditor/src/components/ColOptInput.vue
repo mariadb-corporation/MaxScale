@@ -135,7 +135,7 @@ export default {
     },
     computed: {
         hasChanged() {
-            return !this.$help.lodash.isEqual(this.input, this.data)
+            return !this.$helpers.lodash.isEqual(this.input, this.data)
         },
         columnCharset() {
             return this.$typy(this.input, 'rowObj.charset').safeString
@@ -191,7 +191,7 @@ export default {
         data: {
             deep: true,
             handler(v, oV) {
-                if (!this.$help.lodash.isEqual(v, oV)) this.initInputType(v)
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.initInputType(v)
             },
         },
     },
@@ -210,7 +210,7 @@ export default {
          * appropriate input type
          */
         handleAddType(data) {
-            const input = this.$help.lodash.cloneDeep(data)
+            const input = this.$helpers.lodash.cloneDeep(data)
             switch (input.field) {
                 case 'column_name':
                     input.type = 'string'
@@ -259,7 +259,7 @@ export default {
          * @returns {Object} - returns input object with same properties as data props
          */
         handleRemoveType() {
-            const newInput = this.$help.lodash.cloneDeep(this.input)
+            const newInput = this.$helpers.lodash.cloneDeep(this.input)
             delete newInput.type
             delete newInput.enum_values
             return newInput

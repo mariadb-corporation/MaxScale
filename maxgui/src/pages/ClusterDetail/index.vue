@@ -123,7 +123,7 @@ export default {
     data() {
         return {
             // a key for triggering a re-render on server-node
-            uniqueKey: this.$help.uuidv1(),
+            uniqueKey: this.$helpers.uuidv1(),
             ctrDim: {},
             // states for controlling drag behaviors
             defDraggingStates: {
@@ -235,7 +235,7 @@ export default {
             }))
         },
         standaloneNodeHash() {
-            return this.$help.lodash.keyBy(this.joinableServerNodes, 'id')
+            return this.$helpers.lodash.keyBy(this.joinableServerNodes, 'id')
         },
     },
     async created() {
@@ -275,10 +275,10 @@ export default {
             this.$set(this.clusterNodeHeightMap, nodeId, height)
         },
         resetDraggingStates() {
-            this.draggingStates = this.$help.lodash.cloneDeep(this.defDraggingStates)
+            this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
         },
         resetConfDlgStates() {
-            this.confDlg = this.$help.lodash.cloneDeep(this.defConfDlg)
+            this.confDlg = this.$helpers.lodash.cloneDeep(this.defConfDlg)
         },
         /**
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
@@ -422,7 +422,7 @@ export default {
          * is not re-rendered.
          */
         triggerRerenderNodes() {
-            this.uniqueKey = this.$help.uuidv1()
+            this.uniqueKey = this.$helpers.uuidv1()
         },
         //Reset graph after confirming an action
         async handleResetGraph(opType) {

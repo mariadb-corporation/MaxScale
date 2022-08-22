@@ -70,7 +70,7 @@ describe('DetailsReadonlyTable.vue', () => {
         // spy on processTableRows after mounting occurs
         const processTableRowsSpy = sinon.spy(wrapper.vm, 'processTableRows')
         // mockup props changes
-        const tableData = wrapper.vm.$help.lodash.cloneDeep(wrapper.vm.$props.tableData)
+        const tableData = wrapper.vm.$helpers.lodash.cloneDeep(wrapper.vm.$props.tableData)
         tableData.connections = 100
         await wrapper.setProps({
             tableData: tableData,

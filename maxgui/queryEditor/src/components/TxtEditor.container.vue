@@ -182,7 +182,7 @@ export default {
             return (this.panesDim.height * this.editorPct) / 100
         },
         maxVisSidebarPct() {
-            return this.$help.pxToPct({
+            return this.$helpers.pxToPct({
                 px: this.maxVisSidebarPx,
                 containerPx: this.panesDim.width,
             })
@@ -211,7 +211,7 @@ export default {
         showVisChart(v) {
             if (v) {
                 this.queryPanePct = 50
-                this.minQueryPanePct = this.$help.pxToPct({
+                this.minQueryPanePct = this.$helpers.pxToPct({
                     px: 32,
                     containerPx: this.panesDim.width,
                 })
@@ -236,10 +236,10 @@ export default {
             SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
         }),
         setDefChartOptState() {
-            this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)
+            this.chartOpt = this.$helpers.lodash.cloneDeep(this.defChartOpt)
         },
         handleSetMinEditorPct() {
-            this.minEditorPct = this.$help.pxToPct({
+            this.minEditorPct = this.$helpers.pxToPct({
                 px: 26,
                 containerPx: this.panesDim.height,
             })

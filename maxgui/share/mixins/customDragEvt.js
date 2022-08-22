@@ -44,8 +44,8 @@ export default {
         onDragging(e) {
             e.preventDefault()
             if (this.isDragging) {
-                this.$help.removeTargetDragEle(this.dragTargetId)
-                this.$help.addDragTargetEle({
+                this.$helpers.removeTargetDragEle(this.dragTargetId)
+                this.$helpers.addDragTargetEle({
                     e,
                     dragTarget: this.dragTarget,
                     dragTargetId: this.dragTargetId,
@@ -56,7 +56,7 @@ export default {
         onDragEnd(e) {
             e.preventDefault()
             if (this.isDragging) {
-                this.$help.removeTargetDragEle(this.dragTargetId)
+                this.$helpers.removeTargetDragEle(this.dragTargetId)
                 this.$emit('on-dragend', e)
                 this.isDragging = false
             }

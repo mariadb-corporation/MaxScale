@@ -228,7 +228,7 @@ export default {
             hasValidChild: false,
             nodeActiveIds: [],
             // this is needed when using custom activator in v-menu.
-            componentId: this.$help.lodash.uniqueId('component_v-menu_'),
+            componentId: this.$helpers.lodash.uniqueId('component_v-menu_'),
             processedData: [],
         }
     },
@@ -255,11 +255,11 @@ export default {
         data: {
             handler(v) {
                 // processing data from data props to whether keepPrimitiveValue or not
-                let data = this.$help.lodash.cloneDeep(v)
+                let data = this.$helpers.lodash.cloneDeep(v)
                 if (!this.keepPrimitiveValue) {
                     data = data.map(obj => {
                         Object.keys(obj).forEach(
-                            key => (obj[key] = this.$help.convertType(obj[key]))
+                            key => (obj[key] = this.$helpers.convertType(obj[key]))
                         )
                         return obj
                     })
@@ -272,7 +272,7 @@ export default {
         processedData: {
             handler(newV, oV) {
                 if (this.isTree && this.hasValidChild && this.expandAll)
-                    if (!this.$help.lodash.isEqual(newV, oV))
+                    if (!this.$helpers.lodash.isEqual(newV, oV))
                         // keep all nodes expanding when data props changes
                         this.expandAllNodes(this.tableRows)
             },
@@ -314,7 +314,7 @@ export default {
             // if isTree, create a hash map for hierarchySort
             if (sortBy.length) {
                 if (this.isTree) {
-                    let hashMap = this.$help.hashMapByPath({ arr: items, path: 'parentNodeId' })
+                    let hashMap = this.$helpers.hashMapByPath({ arr: items, path: 'parentNodeId' })
                     const firstKey = Object.keys(hashMap)[0]
                     result = this.hierarchySort({
                         hashMap,
@@ -386,7 +386,7 @@ export default {
          */
         processingRowspanTable(data, mode) {
             if (mode === 'mutate') this.handleDisplayRowspan(data)
-            else return this.handleDisplayRowspan(this.$help.lodash.cloneDeep(data))
+            else return this.handleDisplayRowspan(this.$helpers.lodash.cloneDeep(data))
         },
 
         /**
@@ -399,7 +399,7 @@ export default {
             let uniqueSet = new Set(target.map(item => item.groupId))
             let itemsId = [...uniqueSet]
 
-            let groupedId = this.$help.hashMapByPath({ arr: target, path: 'groupId' })
+            let groupedId = this.$helpers.hashMapByPath({ arr: target, path: 'groupId' })
             let result = []
             for (let i = 0; i < itemsId.length; ++i) {
                 let group = groupedId[`${itemsId[i]}`]

@@ -140,7 +140,7 @@ export default {
         },
     },
     async mounted() {
-        await this.$help.delay(this.delayLoading ? 400 : 0).then(() => (this.isMounting = false))
+        await this.$helpers.delay(this.delayLoading ? 400 : 0).then(() => (this.isMounting = false))
     },
     methods: {
         onKillSession(item) {

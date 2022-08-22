@@ -155,7 +155,7 @@ export default {
                 commit(
                     'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: this.vue.$help.getErrorsArr(e),
+                        text: this.vue.$helpers.getErrorsArr(e),
                         type: 'error',
                     },
                     { root: true }

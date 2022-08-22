@@ -232,7 +232,7 @@ export default {
             this.UPDATE_SESSION({
                 idx: this.query_sessions.indexOf(this.getActiveSession),
                 session: {
-                    ...this.$help.lodash.cloneDeep(this.getActiveSession),
+                    ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
                     name: blob.handle.name,
                 },
             })
@@ -341,7 +341,7 @@ export default {
                 this.UPDATE_SESSION({
                     idx: this.query_sessions.indexOf(this.getActiveSession),
                     session: {
-                        ...this.$help.lodash.cloneDeep(this.getActiveSession),
+                        ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
                         name: fileHandle.name,
                     },
                 })

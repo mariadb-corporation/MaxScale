@@ -325,7 +325,7 @@ export default {
             if (showSnackbar)
                 commit(
                     'appNotifier/SET_SNACK_BAR_MESSAGE',
-                    { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
+                    { text: [this.vue.$helpers.capitalizeFirstLetter(meta)], type: 'success' },
                     { root: true }
                 )
             await this.vue.$typy(successCb).safeFunction(meta)
@@ -352,7 +352,7 @@ export default {
                         // Remove `No manual commands are available`, shows only the latter part.
                         {
                             text: meta.errors.map(e =>
-                                this.vue.$help.capitalizeFirstLetter(
+                                this.vue.$helpers.capitalizeFirstLetter(
                                     e.detail.replace(
                                         'No manual command results are available, ',
                                         ''
@@ -364,7 +364,7 @@ export default {
                         { root: true }
                     )
                 // loop fetch until receive success meta
-                await this.vue.$help
+                await this.vue.$helpers
                     .delay(pollingResInterval)
                     .then(async () => await dispatch('checkAsyncCmdRes', param))
             } else {

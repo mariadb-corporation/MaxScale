@@ -13,6 +13,6 @@
 import * as helpers from '@share/utils/helpers'
 export default {
     install: Vue => {
-        Vue.prototype.$help = helpers
+        Vue.prototype.$helpers = helpers
     },
 }

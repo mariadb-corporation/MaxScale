@@ -41,7 +41,7 @@ export default {
         },
         getSelectedRowGroupIdx() {
             return this.selectedGroupItems.findIndex(ele =>
-                this.$help.lodash.isEqual(ele, this.row)
+                this.$helpers.lodash.isEqual(ele, this.row)
             )
         },
         isRowGroupSelected() {
@@ -60,7 +60,7 @@ export default {
          * @returns {Array} - returns 2d array
          */
         getGroupItems() {
-            const { isEqual } = this.$help.lodash
+            const { isEqual } = this.$helpers.lodash
             const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, this.row))
             let items = []
             let i = targetIdx + 1
@@ -78,7 +78,7 @@ export default {
          * @emits update-selected-items - Emits event with new data for selectedItems
          */
         handleSelectGroupItems(v) {
-            const { isEqual, xorWith, differenceWith } = this.$help.lodash
+            const { isEqual, xorWith, differenceWith } = this.$helpers.lodash
             let groupItems = this.getGroupItems()
             let newSelectedItems = []
             if (v) newSelectedItems = xorWith(this.selectedItems, groupItems, isEqual)

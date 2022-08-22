@@ -168,7 +168,7 @@ export default {
     },
     async mounted() {
         this.assignTableHeaders(this.relationshipType)
-        await this.$help.delay(400).then(() => (this.isMounting = false))
+        await this.$helpers.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
         assignTableHeaders(relationshipType) {
@@ -202,7 +202,7 @@ export default {
                 this.tableRowsData.splice(newIndex, 0, moved)
                 const isFilterDrag = true
 
-                const clonedTableRowsData = this.$help.lodash.cloneDeep(this.tableRowsData)
+                const clonedTableRowsData = this.$helpers.lodash.cloneDeep(this.tableRowsData)
                 clonedTableRowsData.forEach(item => {
                     delete item.index
                 })
@@ -217,11 +217,11 @@ export default {
         getStatusIcon(state) {
             switch (this.relationshipType) {
                 case 'services':
-                    return this.$help.serviceStateIcon(state)
+                    return this.$helpers.serviceStateIcon(state)
                 case 'servers':
-                    return this.$help.serverStateIcon(state)
+                    return this.$helpers.serverStateIcon(state)
                 case 'listeners':
-                    return this.$help.listenerStateIcon(state)
+                    return this.$helpers.listenerStateIcon(state)
             }
         },
         // -------------- Delete handle
@@ -233,7 +233,7 @@ export default {
         },
 
         async confirmDelete() {
-            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
+            const rows = this.$helpers.lodash.cloneDeep(this.tableRowsData)
             let relationship = []
             rows.forEach(item => {
                 if (item.id !== this.targetItem.id) {
@@ -257,7 +257,7 @@ export default {
                 this.itemsList = this.selectItems
             } else {
                 const all = await this.getRelationshipData(this.relationshipType)
-                const availableEntities = this.$help.lodash.xorWith(
+                const availableEntities = this.$helpers.lodash.xorWith(
                     all,
                     this.tableRowsData,
                     (a, b) => a.id === b.id
@@ -277,7 +277,7 @@ export default {
         },
 
         async confirmAdd() {
-            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
+            const rows = this.$helpers.lodash.cloneDeep(this.tableRowsData)
             let relationship = [...rows, ...this.targetItem]
             relationship.forEach(item => {
                 delete item.state

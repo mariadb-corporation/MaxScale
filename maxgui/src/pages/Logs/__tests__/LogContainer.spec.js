@@ -58,7 +58,7 @@ describe('LogContainer', () => {
          * This is a workaround to delay 350ms after mounted hook is called,
          * so allLogData will be assigned with dummy_log_data
          */
-        await wrapper.vm.$help.delay(350)
+        await wrapper.vm.$helpers.delay(350)
     })
     afterEach(function() {
         axiosStub.restore()

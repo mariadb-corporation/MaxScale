@@ -15,6 +15,8 @@ import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryEditorStorePlugins from '@queryEditorSrc/store/plugins'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
+import helpers from '@share/plugins/helpers'
+import logger from '@share/plugins/logger'
 
 export default {
     /**
@@ -34,6 +36,8 @@ export default {
             )
             // Register maxscale-query-editor components
             Vue.component('maxscale-query-editor', MaxScaleQueryEditor)
+            Vue.use(helpers)
+            Vue.use(logger)
         }
 
         // Register query editor vuex modules

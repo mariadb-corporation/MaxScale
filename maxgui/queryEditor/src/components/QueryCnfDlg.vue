@@ -41,11 +41,11 @@
                             hide-details="auto"
                             outlined
                             required
-                            @keypress="$help.preventNonNumericalVal($event)"
+                            @keypress="$helpers.preventNonNumericalVal($event)"
                         />
                     </v-col>
                     <v-col
-                        v-for="(value, key) in $help.lodash.pick(config, [
+                        v-for="(value, key) in $helpers.lodash.pick(config, [
                             'showQueryConfirm',
                             'showSysSchemas',
                         ])"
@@ -138,7 +138,7 @@ export default {
             return {
                 rowLimit: this.cnf.query_row_limit,
                 showQueryConfirm: Boolean(this.cnf.query_confirm_flag),
-                queryHistoryRetentionPeriod: this.$help.daysDiff({
+                queryHistoryRetentionPeriod: this.$helpers.daysDiff({
                     moment: this.$moment,
                     timestamp: this.cnf.query_history_expired_time,
                 }),
@@ -146,14 +146,14 @@ export default {
             }
         },
         hasChanged() {
-            return !this.$help.lodash.isEqual(this.defCnf, this.config)
+            return !this.$helpers.lodash.isEqual(this.defCnf, this.config)
         },
     },
     watch: {
         isOpened: {
             immediate: true,
             handler(v) {
-                if (v) this.config = this.$help.lodash.cloneDeep(this.defCnf)
+                if (v) this.config = this.$helpers.lodash.cloneDeep(this.defCnf)
             },
         },
     },
@@ -169,7 +169,7 @@ export default {
             this.$emit('confirm-save', {
                 query_row_limit: this.config.rowLimit,
                 query_confirm_flag: Number(this.config.showQueryConfirm),
-                query_history_expired_time: this.$help.addDaysToNow(
+                query_history_expired_time: this.$helpers.addDaysToNow(
                     this.config.queryHistoryRetentionPeriod
                 ),
                 query_show_sys_schemas_flag: Number(this.config.showSysSchemas),

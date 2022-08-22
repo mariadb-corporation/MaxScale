@@ -29,8 +29,8 @@
                         :ref="`header__${i}`"
                         :style="{
                             ...headerStyle,
-                            maxWidth: $help.handleAddPxUnit(headerWidthMap[i]),
-                            minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
+                            maxWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
+                            minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
                         }"
                         class="th d-flex align-center px-3"
                         :class="{
@@ -193,7 +193,7 @@ export default {
         tableHeaders: {
             deep: true,
             handler(v, oV) {
-                if (!this.$help.lodash.isEqual(v, oV)) this.recalculateWidth()
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.recalculateWidth()
             },
         },
         boundingWidth() {

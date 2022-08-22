@@ -120,7 +120,7 @@ export default {
                     width: document.body.clientWidth,
                     height: document.body.clientHeight,
                 }
-            else this.$help.doubleRAF(() => this.setDim())
+            else this.$helpers.doubleRAF(() => this.setDim())
         },
     },
     async created() {

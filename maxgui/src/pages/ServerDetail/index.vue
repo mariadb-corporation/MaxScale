@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="pl-6">
+        <v-sheet v-if="!$helpers.lodash.isEmpty(current_server)" class="pl-6">
             <page-header
                 :currentServer="current_server"
                 :onEditSucceeded="dispatchFetchServer"
@@ -157,7 +157,7 @@ export default {
                     tableRows.push({
                         id: id,
                         user: `${user}@${remote}`,
-                        connected: this.$help.dateFormat({
+                        connected: this.$helpers.dateFormat({
                             moment: this.$moment,
                             value: connected,
                         }),

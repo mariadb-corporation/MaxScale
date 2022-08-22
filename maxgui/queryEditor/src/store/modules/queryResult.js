@@ -49,7 +49,7 @@ export default {
                     },
                 })
                 let sql, queryName
-                const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
+                const escapedTblId = this.vue.$helpers.escapeIdentifiers(tblId)
                 switch (prvwMode) {
                     case rootState.queryEditorConfig.config.SQL_QUERY_MODES.PRVW_DATA:
                         sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
@@ -280,7 +280,7 @@ export default {
         getChartResultSets: (state, getters, rootState, rootGetters) => ({ scope }) => {
             let resSets = []
             // user query result data
-            const userQueryResults = scope.$help.stringifyClone(
+            const userQueryResults = scope.$helpers.stringifyClone(
                 scope.$typy(getters.getUserQueryRes, 'data.attributes.results').safeArray
             )
             let resSetCount = 0
@@ -297,7 +297,7 @@ export default {
             } = rootState.queryEditorConfig.config.SQL_QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
             for (const mode of prvwModes) {
-                const data = scope.$help.stringifyClone(
+                const data = scope.$helpers.stringifyClone(
                     scope.$typy(getters.getPrvwData(mode), 'data.attributes.results[0]')
                         .safeObjectOrEmpty
                 )

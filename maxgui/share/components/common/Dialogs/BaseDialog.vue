@@ -163,7 +163,7 @@ export default {
             /** Workaround to ensure dialog is closed completely to emit after close events
              * https://github.com/vuetifyjs/vuetify/blob/master/packages/vuetify/src/components/VDialog/VDialog.sass
              */
-            await this.$help.delay(300) // wait until dialog transition is done
+            await this.$helpers.delay(300) // wait until dialog transition is done
         },
         async cancel() {
             this.$emit('on-cancel')
@@ -187,7 +187,7 @@ export default {
         },
         async waitClose() {
             // wait time out for loading animation
-            await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
+            await this.$helpers.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
             this.cleanUp()
             await this.closeDialog()
         },

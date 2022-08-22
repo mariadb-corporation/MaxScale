@@ -63,7 +63,7 @@
                     <template>
                         {{
                             name === 'triggered_at' && value !== 'undefined'
-                                ? $help.dateFormat({
+                                ? $helpers.dateFormat({
                                       moment: $moment,
                                       value,
                                       formatType: 'DATE_RFC2822',
@@ -135,7 +135,7 @@ export default {
 
     computed: {
         serverStateClass: function() {
-            switch (this.$help.serverStateIcon(this.getTopOverviewInfo.state)) {
+            switch (this.$helpers.serverStateIcon(this.getTopOverviewInfo.state)) {
                 case 0:
                     return 'text-error'
                 case 1:
@@ -171,7 +171,7 @@ export default {
             } else delete overviewInfo.socket
 
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$helpers.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },

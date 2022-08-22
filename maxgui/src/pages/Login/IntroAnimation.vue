@@ -123,7 +123,7 @@ export default {
                     })
                     this.createCircle()
                 }
-            }, this.$help.range(2.5, 5) * 1000)
+            }, this.$helpers.range(2.5, 5) * 1000)
         },
     },
 }

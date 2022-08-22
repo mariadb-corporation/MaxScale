@@ -73,7 +73,7 @@ export default {
          * @param {Boolean} changed Detect whether the input has been modified
          */
         handleItemChange(newItem, changed) {
-            let changedParams = this.$help.lodash.cloneDeep(this.changedParametersArr)
+            let changedParams = this.$helpers.lodash.cloneDeep(this.changedParametersArr)
 
             let targetIndex = changedParams.findIndex(o => {
                 return newItem.nodeId !== undefined

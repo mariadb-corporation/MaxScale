@@ -26,7 +26,7 @@
                             <icon-sprite-sheet
                                 size="13"
                                 class="mr-1 rep-icon"
-                                :frame="$help.repStateIcon(slaveStat.overall_replication_state)"
+                                :frame="$helpers.repStateIcon(slaveStat.overall_replication_state)"
                             >
                                 replication
                             </icon-sprite-sheet>
@@ -50,7 +50,7 @@
             <!-- Slave server replication status, serverInfo length is always <= 1 -->
             <table v-else class="rep-table px-1">
                 <tbody
-                    v-for="(stat, i) in $help.getRepStats(serverInfo[0])"
+                    v-for="(stat, i) in $helpers.getRepStats(serverInfo[0])"
                     :key="`${i}`"
                     :class="{ 'tbody-src-replication': !isMaster }"
                 >
@@ -64,7 +64,7 @@
                                     v-if="key === 'replication_state'"
                                     size="13"
                                     class="mr-1 rep-icon"
-                                    :frame="$help.repStateIcon(value)"
+                                    :frame="$helpers.repStateIcon(value)"
                                 >
                                     replication
                                 </icon-sprite-sheet>
@@ -111,14 +111,14 @@ export default {
             if (!this.serverInfo.length) return []
             const slaveStats = []
             this.serverInfo.forEach(item => {
-                const repStats = this.$help.getRepStats(item)
+                const repStats = this.$helpers.getRepStats(item)
                 slaveStats.push({
                     id: item.name,
-                    overall_replication_state: this.$help.getMostFreq({
+                    overall_replication_state: this.$helpers.getMostFreq({
                         arr: repStats,
                         pickBy: 'replication_state',
                     }),
-                    overall_seconds_behind_master: this.$help.getMin({
+                    overall_seconds_behind_master: this.$helpers.getMin({
                         arr: repStats,
                         pickBy: 'seconds_behind_master',
                     }),

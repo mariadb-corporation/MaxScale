@@ -16,7 +16,7 @@
             <icon-sprite-sheet
                 size="16"
                 class="service-state-icon mr-1"
-                :frame="$help.serviceStateIcon(state)"
+                :frame="$helpers.serviceStateIcon(state)"
             >
                 services
             </icon-sprite-sheet>

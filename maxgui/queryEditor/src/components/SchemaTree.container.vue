@@ -276,7 +276,7 @@ export default {
                 (v, oV) => {
                     const oldNodeIds = oV.map(node => node.id)
                     const newNodeIds = v.map(node => node.id)
-                    if (!this.$help.lodash.isEqual(newNodeIds, oldNodeIds)) {
+                    if (!this.$helpers.lodash.isEqual(newNodeIds, oldNodeIds)) {
                         let nodes = this.minimizeNodes(v)
                         //   The order is important which is used to reload the schema and update the tree
                         //   Sort expandedNodes by level property
@@ -310,7 +310,7 @@ export default {
         },
         handleOpenCtxMenu({ e, item }) {
             e.stopPropagation()
-            if (this.$help.lodash.isEqual(this.activeCtxItem, item)) {
+            if (this.$helpers.lodash.isEqual(this.activeCtxItem, item)) {
                 this.showCtxMenu = false
                 this.activeCtxItem = null
             } else {
@@ -372,13 +372,13 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$t('qualifiedNameQuoted'):
-                    v = this.$help.escapeIdentifiers(item.id)
+                    v = this.$helpers.escapeIdentifiers(item.id)
                     break
                 case this.$t('qualifiedName'):
                     v = item.id
                     break
                 case this.$t('nameQuoted'):
-                    v = this.$help.escapeIdentifiers(item.name)
+                    v = this.$helpers.escapeIdentifiers(item.name)
                     break
                 case this.$t('name'):
                     v = item.name
@@ -389,7 +389,7 @@ export default {
                     this.$emit('place-to-editor', v)
                     break
                 case CLIPBOARD:
-                    this.$help.copyTextToClipboard(v)
+                    this.$helpers.copyTextToClipboard(v)
                     break
             }
         },

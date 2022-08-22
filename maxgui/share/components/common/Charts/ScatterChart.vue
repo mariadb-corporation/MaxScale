@@ -61,7 +61,7 @@ export default {
                     ],
                 },
             }
-            this.renderChart(this.chartData, this.$help.lodash.merge(chartOption, this.options))
+            this.renderChart(this.chartData, this.$helpers.lodash.merge(chartOption, this.options))
         },
     },
 }
