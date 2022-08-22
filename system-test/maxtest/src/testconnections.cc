@@ -2092,13 +2092,13 @@ mxt::CmdResult TestConnections::run_shell_cmd_output(const string& cmd, const st
     return rval;
 }
 
-mxt::MariaDBServer* TestConnections::get_repl_master()
+int TestConnections::get_repl_master_idx()
 {
-    mxt::MariaDBServer* rval = nullptr;
+    int rval = -1;
     if (repl)
     {
         auto server_info = maxscale->get_servers();
-        for (size_t i = 0; i < server_info.size() && !rval; i++)
+        for (size_t i = 0; i < server_info.size() && rval >= 0; i++)
         {
             auto& info = server_info.get(i);
             if (info.status & mxt::ServerInfo::MASTER)
@@ -2108,12 +2108,29 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
                     auto* be = repl->backend(j);
                     if (be->status().server_id == info.server_id)
                     {
-                        rval = be;
+                        rval = j;
                         break;
                     }
                 }
             }
         }
+    }
+    return rval;
+}
+
+mxt::MariaDBServer* TestConnections::get_repl_master()
+{
+    int idx = get_repl_master_idx();
+    return idx >= 0 ? repl->backend(idx) : nullptr;
+}
+
+bool TestConnections::sync_repl_slaves()
+{
+    bool rval = false;
+    int idx = get_repl_master_idx();
+    if (idx >= 0)
+    {
+        rval = repl->sync_slaves(idx, 10);
     }
     return rval;
 }

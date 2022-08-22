@@ -44,6 +44,10 @@ public:
     std::unique_ptr<mxq::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
     std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
 
+    std::unique_ptr<mxq::QueryResult> query_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+    std::unique_ptr<mxq::QueryResult>
+    try_query_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+
     /**
      * Perform a simple query. The first column of the first row is returned as string. Query fail or
      * no valid result is a test error.
@@ -100,7 +104,7 @@ public:
     ~ScopedUser();
 
     void grant(const std::string& grant);
-    void grant_f(const char* grant_fmt, ...) mxb_attribute((format (printf, 2, 3)));;
+    void grant_f(const char* grant_fmt, ...) mxb_attribute((format (printf, 2, 3)));
 
 private:
     std::string   m_user_host;      /**< user@host */
