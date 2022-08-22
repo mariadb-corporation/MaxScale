@@ -1589,17 +1589,20 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/
-class UsersInfo final : public UserAdminAuthorize<ImmediateCommand>
+class UsersInfo final : public ImmediateCommand
 {
 public:
     static constexpr const char* const KEY = "usersInfo";
     static constexpr const char* const HELP = "";
 
-    using Base = UserAdminAuthorize<ImmediateCommand>;
-    using Base::Base;
+    using ImmediateCommand::ImmediateCommand;
 
     void populate_response(DocumentBuilder& doc) override
     {
+        auto role_mask = m_database.context().role_mask_of("admin");
+
+        m_user_admin_any_database = (role_mask & role::USER_ADMIN_ANY_DATABASE) != 0;
+
         auto element = m_doc[KEY];
 
         switch (element.type())
@@ -1634,6 +1637,30 @@ public:
     }
 
 private:
+    void authorize(const std::string& db, const std::string& user) const
+    {
+        // A user with the role userAdminAnyDatabase can always query user information.
+        if (!m_user_admin_any_database)
+        {
+            const auto& c = m_database.context();
+
+            // A user can always query its own information.
+            if (c.authentication_db() != db || c.user() != user)
+            {
+                // Otherwise the user must have the role userAdmin for the db in question.
+                auto role_mask = m_database.context().role_mask_of(db);
+
+                if ((role_mask & role::USER_ADMIN) == 0)
+                {
+                    std::ostringstream ss;
+                    ss << "not authorized on db to execute command " << this->to_json();
+
+                    throw SoftError(ss.str(), error::UNAUTHORIZED);
+                }
+            }
+        }
+    }
+
     void get_users(DocumentBuilder& doc, const UserManager& um, const string_view& user_name)
     {
         get_users(doc, um, m_database.name(), string(user_name.data(), user_name.length()));
@@ -1654,9 +1681,13 @@ private:
             {
             case bsoncxx::type::k_utf8:
                 {
+                    string db = m_database.name();
                     string_view user = element.get_utf8();
+
+                    authorize(db, string(user));
+
                     ostringstream ss;
-                    ss << m_database.name() << "." << user;
+                    ss << db << "." << user;
                     auto mariadb_user = ss.str();
 
                     mariadb_users.push_back(mariadb_user);
@@ -1667,8 +1698,10 @@ private:
                 {
                     bsoncxx::document::view doc = element.get_document();
 
-                    string user = get_string(doc, key::USER);
                     string db = get_string(doc, key::DB);
+                    string user = get_string(doc, key::USER);
+
+                    authorize(db, user);
 
                     auto mariadb_user = db + "." + user;
 
@@ -1708,6 +1741,8 @@ private:
                    const string& db,
                    const string& user) const
     {
+        authorize(db, user);
+
         ArrayBuilder users;
 
         UserInfo info;
@@ -1807,6 +1842,8 @@ private:
 
         return s;
     }
+
+    bool m_user_admin_any_database { false };
 };
 
 }
