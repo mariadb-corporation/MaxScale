@@ -10,8 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from '@rootSrc/store'
-
 import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@rootSrc/pages/ListenerDetail'
 
@@ -26,11 +24,6 @@ describe('ListenerDetail index', () => {
     })
 
     beforeEach(async () => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
         wrapper = mount({
             shallow: false,
             component: ListenerDetail,
@@ -38,6 +31,7 @@ describe('ListenerDetail index', () => {
                 current_listener: () => dummy_all_listeners[0],
             },
         })
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').returns(Promise.resolve({ data: {} }))
     })
     afterEach(() => {
         axiosStub.restore()

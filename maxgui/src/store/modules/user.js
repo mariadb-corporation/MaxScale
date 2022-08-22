@@ -11,7 +11,10 @@
  * Public License.
  */
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
+import router from '@rootSrc/router'
 import localForage from 'localforage'
+import { authHttp, abortRequests } from '@rootSrc/utils/axios'
+
 export default {
     namespaced: true,
     state: {
@@ -42,9 +45,8 @@ export default {
     actions: {
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
-                /* Using $authHttp instance, instead of using $http as it's configured to have global interceptor*/
                 let url = '/auth?persist=yes'
-                let res = await this.$authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
+                let res = await authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
                     auth,
                 })
                 if (res.status === 204) {
@@ -53,7 +55,7 @@ export default {
                         rememberMe: rememberMe,
                         isLoggedIn: Boolean(this.vue.$help.getCookie('token_body')),
                     })
-                    this.router.push(this.router.app.$route.query.redirect || '/dashboard/servers')
+                    router.push(router.app.$route.query.redirect || '/dashboard/servers')
                     await dispatch('fetchLoggedInUserAttrs')
                 }
             } catch (e) {
@@ -73,7 +75,7 @@ export default {
         },
         async logout({ commit, dispatch, rootState }) {
             await dispatch('queryConn/disconnectAll', {}, { root: true })
-            await this.$abortRequests() // abort all previous requests before logging out
+            abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('appNotifier/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             const { appNotifier, queryPersisted, wke, querySession, persisted } = rootState
@@ -91,7 +93,7 @@ export default {
             }
             await this.vue.$help.delay(1500).then(() => {
                 commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true })
-                if (this.router.app.$route.name !== 'login') this.router.push('/login')
+                if (router.app.$route.name !== 'login') router.push('/login')
             })
 
             // Clear all but persist some states of some modules
@@ -118,7 +120,7 @@ export default {
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {
             try {
-                const res = await this.$http.get(`/users/inet/${state.logged_in_user.name}`)
+                const res = await this.vue.$http.get(`/users/inet/${state.logged_in_user.name}`)
                 // response ok
                 if (res.status === 200)
                     commit('SET_LOGGED_IN_USER', {
@@ -132,7 +134,7 @@ export default {
         },
         async fetchAllNetworkUsers({ commit }) {
             try {
-                const res = await this.$http.get(`/users/inet`)
+                const res = await this.vue.$http.get(`/users/inet`)
                 // response ok
                 if (res.status === 200) commit('SET_ALL_INET_USERS', res.data.data)
             } catch (e) {
@@ -154,7 +156,7 @@ export default {
                 const { ADD, UPDATE, DELETE } = rootState.app_config.USER_ADMIN_ACTIONS
                 switch (payload.mode) {
                     case ADD:
-                        res = await this.$http.post(`/users/inet`, {
+                        res = await this.vue.$http.post(`/users/inet`, {
                             data: {
                                 id: payload.id,
                                 type: 'inet',
@@ -164,7 +166,7 @@ export default {
                         message = [`Network User ${payload.id} is created`]
                         break
                     case UPDATE:
-                        res = await this.$http.patch(`/users/inet/${payload.id}`, {
+                        res = await this.vue.$http.patch(`/users/inet/${payload.id}`, {
                             data: {
                                 attributes: { password: payload.password },
                             },
@@ -172,7 +174,7 @@ export default {
                         message = [`Network User ${payload.id} is updated`]
                         break
                     case DELETE:
-                        res = await this.$http.delete(`/users/inet/${payload.id}`)
+                        res = await this.vue.$http.delete(`/users/inet/${payload.id}`)
                         message = [`Network user ${payload.id} is deleted`]
                         break
                 }

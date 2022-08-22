@@ -24,4 +24,5 @@ Vue.use(VueMoment)
 momentDurationFormatSetup(Vue.moment)
 // store only available after Vue.use(Vuex), so here use require for importing es module
 const store = require('./store/index').default
+Vue.use(require('@share/plugins/http').default, { store })
 Vue.use(MaxScaleQueryEditor, { store, isExternal: false })

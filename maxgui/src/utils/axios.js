@@ -12,9 +12,10 @@
  */
 import ax from 'axios'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
+import router from '@rootSrc/router'
 
 let controller = new AbortController()
-export const abortRequests = () => {
+const abortRequests = () => {
     controller.abort()
     // refresh the controller
     controller = new AbortController()
@@ -32,17 +33,14 @@ function baseConf() {
 }
 
 // axios instance for `/auth` endpoint
-export function authHttp() {
-    let authHttp = baseConf()
-    authHttp.interceptors.request.use(
-        config => ({ ...config }),
-        error => Promise.reject(error)
-    )
-    return authHttp
-}
+const authHttp = baseConf()
+authHttp.interceptors.request.use(
+    config => ({ ...config }),
+    error => Promise.reject(error)
+)
 
 // axios instance for all endpoints except `/sql`
-export function http(store) {
+function http(store) {
     let http = baseConf()
 
     http.interceptors.request.use(
@@ -60,7 +58,7 @@ export function http(store) {
                     await store.dispatch('user/logout')
                     break
                 case 404:
-                    await store.router.push('/404')
+                    await router.push('/404')
                     break
                 case null:
                     handleNullStatusCode({ store, error })
@@ -72,3 +70,5 @@ export function http(store) {
     )
     return http
 }
+
+export { authHttp, http, abortRequests }

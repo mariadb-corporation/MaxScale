@@ -10,11 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-Vue.use(Vuex)
-import Vuex from 'vuex'
-import store from '@rootSrc/store'
 import mount from '@tests/unit/setup'
+import store from '@rootSrc/store'
 import LogContainer from '@rootSrc/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
 
@@ -49,13 +46,9 @@ describe('LogContainer', () => {
     let wrapper, axiosStub, wsStub
     beforeEach(async () => {
         wsStub = sinon.stub(window, 'WebSocket')
-        axiosStub = sinon.stub(store.$http, 'get').returns(
+        axiosStub = sinon.stub(store.vue.$http, 'get').returns(
             Promise.resolve({
-                data: {
-                    data: {
-                        attributes: { log: dummy_log_data, log_source: 'syslog' },
-                    },
-                },
+                data: { data: { attributes: { log: dummy_log_data, log_source: 'syslog' } } },
             })
         )
         wrapper = mountFactory()

@@ -200,8 +200,8 @@ describe('ServerDetail - PageHeader: Action tests', () => {
             },
         })
 
-        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
-        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
+        axiosDeleteStub = sinon.stub(wrapper.vm.$http, 'delete').returns(Promise.resolve())
+        axiosPutStub = sinon.stub(wrapper.vm.$http, 'put').returns(Promise.resolve())
     })
 
     afterEach(async () => {

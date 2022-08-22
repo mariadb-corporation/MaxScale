@@ -27,7 +27,7 @@ describe('FilterDetail - PageHeader', () => {
                 currentFilter: dummy_all_filters[0],
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
+        axiosStub = sinon.stub(wrapper.vm.$http, 'delete').returns(Promise.resolve())
     })
 
     afterEach(() => {

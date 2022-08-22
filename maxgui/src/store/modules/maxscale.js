@@ -71,7 +71,7 @@ export default {
     actions: {
         async fetchMaxScaleParameters({ commit }) {
             try {
-                let res = await this.$http.get(`/maxscale?fields[maxscale]=parameters`)
+                let res = await this.vue.$http.get(`/maxscale?fields[maxscale]=parameters`)
                 if (res.data.data.attributes.parameters)
                     commit('SET_MAXSCALE_PARAMETERS', res.data.data.attributes.parameters)
             } catch (e) {
@@ -82,7 +82,7 @@ export default {
 
         async fetchMaxScaleOverviewInfo({ commit }) {
             try {
-                let res = await this.$http.get(
+                let res = await this.vue.$http.get(
                     `/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime`
                 )
                 if (res.data.data.attributes)
@@ -94,7 +94,7 @@ export default {
         },
         async fetchAllModules({ commit }) {
             try {
-                let res = await this.$http.get(`/maxscale/modules?load=all`)
+                let res = await this.vue.$http.get(`/maxscale/modules?load=all`)
                 if (res.data.data) {
                     const allModules = res.data.data
 
@@ -113,7 +113,7 @@ export default {
 
         async fetchThreadStats({ commit }) {
             try {
-                let res = await this.$http.get(`/maxscale/threads?fields[threads]=stats`)
+                let res = await this.vue.$http.get(`/maxscale/threads?fields[threads]=stats`)
                 if (res.data.data) commit('SET_THREAD_STATS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-maxscale-fetchThreadStats')
@@ -144,7 +144,7 @@ export default {
         },
         async fetchLatestLogs({ commit, state }) {
             try {
-                const res = await this.$http.get(
+                const res = await this.vue.$http.get(
                     `/maxscale/logs/data?page[size]=${state.logs_page_size}`
                 )
                 const {
@@ -169,7 +169,7 @@ export default {
             try {
                 const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
                 const endpoint = state.prev_log_link.slice(indexOfEndpoint)
-                const res = await this.$http.get(endpoint)
+                const res = await this.vue.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
                     links: { prev = null },
@@ -197,7 +197,7 @@ export default {
                     // add current priority
                     endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
                 } else endpoint = `${prevEndPoint}&priority=${currPriority}`
-                const res = await this.$http.get(endpoint)
+                const res = await this.vue.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
                     links: { prev = null },
@@ -224,7 +224,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.$http.patch(`/maxscale`, body)
+                let res = await this.vue.$http.patch(`/maxscale`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(

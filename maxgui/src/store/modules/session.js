@@ -32,7 +32,7 @@ export default {
     actions: {
         async fetchAllSessions({ commit }) {
             try {
-                let res = await this.$http.get(`/sessions`)
+                let res = await this.vue.$http.get(`/sessions`)
                 if (res.data.data) commit('SET_ALL_SESSIONS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-sessions-fetchAllSessions')
@@ -53,7 +53,7 @@ export default {
 
         async fetchSessionsFilterByService({ commit }, id) {
             try {
-                let res = await this.$http.get(
+                let res = await this.vue.$http.get(
                     `/sessions?filter=/relationships/services/data/0/id="${id}"`
                 )
                 if (res.data.data) commit('SET_SESSIONS_BY_SERVICE', res.data.data)
@@ -69,7 +69,7 @@ export default {
          */
         async killSession({ commit }, { id, callback }) {
             try {
-                const res = await this.$http.delete(`/sessions/${id}`)
+                const res = await this.vue.$http.delete(`/sessions/${id}`)
                 if (res.status === 200) {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',

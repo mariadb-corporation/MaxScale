@@ -32,7 +32,7 @@ export default {
     actions: {
         async fetchServiceById({ commit }, id) {
             try {
-                let res = await this.$http.get(`/services/${id}`)
+                let res = await this.vue.$http.get(`/services/${id}`)
                 if (res.data.data) {
                     commit('SET_CURRENT_SERVICE', res.data.data)
                 }
@@ -58,7 +58,7 @@ export default {
 
         async fetchAllServices({ commit }) {
             try {
-                let res = await this.$http.get(`/services`)
+                let res = await this.vue.$http.get(`/services`)
                 if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-services-fetchAllServices')
@@ -90,7 +90,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.$http.post(`/services/`, body)
+                let res = await this.vue.$http.post(`/services/`, body)
 
                 // response ok
                 if (res.status === 204) {
@@ -125,7 +125,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.$http.patch(`/services/${payload.id}`, body)
+                let res = await this.vue.$http.patch(`/services/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -158,7 +158,7 @@ export default {
                 let res
                 let message
 
-                res = await this.$http.patch(
+                res = await this.vue.$http.patch(
                     `/services/${payload.id}/relationships/${payload.type}`,
                     {
                         data: payload.type === 'servers' ? payload.servers : payload.filters,
@@ -190,7 +190,7 @@ export default {
 
         async destroyService({ dispatch, commit }, id) {
             try {
-                let res = await this.$http.delete(`/services/${id}?force=yes`)
+                let res = await this.vue.$http.delete(`/services/${id}?force=yes`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllServices')
@@ -217,7 +217,7 @@ export default {
          */
         async stopOrStartService({ commit }, { id, mode, callback }) {
             try {
-                let res = await this.$http.put(`/services/${id}/${mode}`)
+                let res = await this.vue.$http.put(`/services/${id}/${mode}`)
                 let message
                 switch (mode) {
                     case 'start':

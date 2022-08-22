@@ -10,8 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from '@rootSrc/store'
-
 import mount from '@tests/unit/setup'
 import Settings from '@rootSrc/pages/Settings'
 
@@ -76,11 +74,6 @@ describe('Settings index', () => {
     let wrapper, axiosStub
 
     before(() => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
         wrapper = mount({
             shallow: false,
             component: Settings,
@@ -91,6 +84,7 @@ describe('Settings index', () => {
                 maxscale_parameters: () => dummy_maxscale_parameters,
             },
         })
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').returns(Promise.resolve({ data: {} }))
     })
 
     after(() => {

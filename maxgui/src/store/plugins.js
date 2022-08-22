@@ -11,20 +11,9 @@
  * Public License.
  */
 import Vue from 'vue'
-import router from '@rootSrc/router'
 import i18n from '@share/plugins/i18n'
-import { authHttp, http, abortRequests } from '@rootSrc/utils/axios'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-
-const plugins = store => {
-    store.router = router
-    store.vue = Vue.prototype
-    store.i18n = i18n
-    store.$authHttp = authHttp()
-    store.$http = http(store)
-    store.$abortRequests = abortRequests
-}
 
 const appPersistConfig = new VuexPersistence({
     key: 'maxgui-app',
@@ -36,4 +25,11 @@ const appPersistConfig = new VuexPersistence({
     }),
 })
 
-export default [plugins, appPersistConfig.plugin]
+export default [
+    store => {
+        store.vue = Vue.prototype
+        //TODO: Resolve i18n
+        store.i18n = i18n
+    },
+    appPersistConfig.plugin,
+]

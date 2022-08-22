@@ -57,7 +57,7 @@ const store = new Vuex.Store({
          */
         async checkingForUpdate({ commit }) {
             const logger = this.vue.$logger('index-store')
-            const res = await this.$http.get(`/`)
+            const res = await this.vue.$http.get(`/`)
             logger.info('Checking for update')
             const resDoc = new DOMParser().parseFromString(res.data, 'text/html')
             const newCommitId = resDoc.getElementsByName('commitId')[0].content
@@ -84,10 +84,11 @@ const store = new Vuex.Store({
                 let data = []
                 let res
                 if (resourceId) {
-                    res = await this.$http.get(
+                    res = await this.vue.$http.get(
                         `/${resourceType}/${resourceId}?fields[${resourceType}]=state`
                     )
-                } else res = await this.$http.get(`/${resourceType}?fields[${resourceType}]=state`)
+                } else
+                    res = await this.vue.$http.get(`/${resourceType}?fields[${resourceType}]=state`)
 
                 if (res.data.data) data = res.data.data
                 return data
@@ -100,7 +101,7 @@ const store = new Vuex.Store({
         async fetchModuleParameters({ commit }, moduleId) {
             try {
                 let data = []
-                let res = await this.$http.get(
+                let res = await this.vue.$http.get(
                     `/maxscale/modules/${moduleId}?fields[modules]=parameters`
                 )
                 if (res.data.data) {
