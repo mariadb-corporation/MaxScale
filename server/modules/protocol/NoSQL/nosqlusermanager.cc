@@ -814,8 +814,6 @@ void UserManager::create_initial_user(const SERVER* pMaster)
             grants_obtained = false;
         }
 
-        mysql_close(pMysql);
-
         if (grants_obtained)
         {
             create_initial_user(grants);
@@ -826,6 +824,8 @@ void UserManager::create_initial_user(const SERVER* pMaster)
         MXB_ERROR("Could not connect to %s:%d as %s. Cannot create initial NoSQL user.",
                   pMaster->address(), (int)pMaster->port(), m_config.user.c_str());
     }
+
+    mysql_close(pMysql);
 }
 
 void UserManager::create_initial_user(const vector<string>& grants)
@@ -893,9 +893,13 @@ void UserManager::create_initial_user(const vector<string>& grants)
         string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
 
         vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
-        if (!add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+        if (add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
         {
-            MXB_ERROR("Could not create default NoSQL user %s.%s.", db.c_str(), user.c_str());
+            MXB_NOTICE("Created initial NoSQL user '%s.%s'.", db.c_str(), user.c_str());
+        }
+        else
+        {
+            MXB_ERROR("Could not create default NoSQL user '%s.%s'.", db.c_str(), user.c_str());
         }
     }
     else
