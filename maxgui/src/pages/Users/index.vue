@@ -5,7 +5,7 @@
                 <div class="d-inline-flex align-center">
                     <h4
                         style="line-height: normal;"
-                        class="mb-0 color text-navigation text-h4 text-capitalize"
+                        class="mb-0 mxs-color-helper text-navigation text-h4 text-capitalize"
                     >
                         {{ $route.name }}
                     </h4>
@@ -54,7 +54,7 @@
                             :key="action.text"
                             top
                             transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation py-1 px-4"
+                            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                         >
                             <template v-slot:activator="{ on }">
                                 <v-btn

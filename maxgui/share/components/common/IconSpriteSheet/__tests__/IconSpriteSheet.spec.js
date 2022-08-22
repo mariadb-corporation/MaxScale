@@ -50,13 +50,13 @@ describe('IconSpriteSheet.vue', () => {
         expect(wrapper.vm.icon).to.be.equals('mdi-bug')
     })
 
-    it(`Should ignore frame color class if color props is defined`, () => {
+    it(`Should ignore frame mxs-color-helper class if color: props is defined`, () => {
         const indexOfFrame = sheets.servers.frames.length - 1
         wrapper = mockupSlotDefining({ propsData: { frame: indexOfFrame, color: 'blue' } })
         expect(wrapper.vm.iconClass).to.be.equals('')
     })
 
-    it(`Should assign accurate color to v-icon component when color props is defined`, () => {
+    it(`Should assign accurate color: to v-icon component when color: props is defined`, () => {
         wrapper = mockupSlotDefining({
             shallow: false,
             propsData: { frame: sheets.servers.frames.length - 1, color: 'blue' },
@@ -75,7 +75,7 @@ describe('IconSpriteSheet.vue', () => {
         wrapper.vm.$nextTick(() => {
             const vIcon = wrapper.findComponent({ name: 'v-icon' })
             expect(vIcon.vm.$props.class).to.be.undefined
-            expect(wrapper.vm.iconClass).to.be.equals('') // as color props is defined
+            expect(wrapper.vm.iconClass).to.be.equals('') // as mxs-color-helper props is defined
             expect(vIcon.vm.$props.size).to.be.deep.equals(passedProps.size)
             expect(vIcon.vm.$props.color).to.be.deep.equals(passedProps.color)
         })
@@ -90,7 +90,7 @@ Object.keys(sheets).forEach(sheetName => {
             wrapper.destroy()
         })
 
-        it(`Should choose accurately frame and color classes when
+        it(`Should choose accurately frame and mxs-color-helper classes when
         'default' slot is defined`, () => {
             wrapper = mockupSlotDefining({ slots: { default: sheetName } })
             expect(wrapper.vm.sheet).to.be.deep.equals(sheets[sheetName])
@@ -117,7 +117,7 @@ Object.keys(sheets).forEach(sheetName => {
                     const expectResult =
                         key === 'icon'
                             ? Object.values(sheet.frames)[i]
-                            : `color ${Object.values(sheet.colorClasses)[i]}`
+                            : `mxs-color-helper ${Object.values(sheet.colorClasses)[i]}`
                     expect(wrapper.vm[key]).to.be.equals(expectResult)
                 }
             })

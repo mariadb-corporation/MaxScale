@@ -19,7 +19,7 @@ import vuetify from '@share/plugins/vuetify'
 import store from 'store'
 import Router from 'vue-router'
 import { routes } from '@/router/routes'
-import commonComponents from 'components/common'
+import commonComponents from '@share/components/common'
 
 function doMount(isShallow, component, options) {
     if (isShallow) {

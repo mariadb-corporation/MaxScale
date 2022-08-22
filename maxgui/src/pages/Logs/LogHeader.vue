@@ -1,6 +1,8 @@
 <template>
     <div class="d-flex flex-row align-center">
-        <span class="color text-field-text d-block mr-2"> log_source: {{ log_source }} </span>
+        <span class="mxs-color-helper text-grayed-out d-block mr-2">
+            log_source: {{ log_source }}
+        </span>
         <v-spacer />
         <filter-list
             v-model="chosenLogLevels"

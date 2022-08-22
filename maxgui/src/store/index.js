@@ -21,7 +21,8 @@ import session from './session'
 import listener from './listener'
 import persisted from './persisted'
 import visualization from './visualization'
-import queryEditorModules from '@queryEditor/store/modules'
+import appNotifier from '@share/store/appNotifier'
+import queryEditorModules from '@queryEditor/src/store/modules'
 import { APP_CONFIG } from 'utils/constants'
 import plugins from './plugins'
 
@@ -29,13 +30,7 @@ const store = new Vuex.Store({
     plugins,
     state: {
         app_config: APP_CONFIG,
-        snackbar_message: {
-            status: false,
-            text: '',
-            type: 'info',
-        },
         search_keyword: '',
-        overlay_type: false,
         update_availability: false,
         prev_route: null,
         module_parameters: [],
@@ -43,20 +38,6 @@ const store = new Vuex.Store({
         should_refresh_resource: false,
     },
     mutations: {
-        SET_OVERLAY_TYPE(state, type) {
-            state.overlay_type = type
-        },
-        /**
-         * @param {Object} obj Object snackbar_message
-         * @param {Array} obj.text An array of string
-         * @param {String} obj.type Type of response
-         */
-        SET_SNACK_BAR_MESSAGE(state, obj) {
-            const { text, type, status = true } = obj
-            state.snackbar_message.status = status
-            state.snackbar_message.text = text
-            state.snackbar_message.type = type
-        },
         /**
          * @param {String} keyword global search keyword
          */
@@ -145,6 +126,7 @@ const store = new Vuex.Store({
         },
     },
     modules: {
+        appNotifier,
         filter,
         listener,
         maxscale,

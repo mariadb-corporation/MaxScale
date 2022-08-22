@@ -56,10 +56,10 @@ export default {
             return this.sheet.frames[this.frame]
         },
         iconClass() {
-            // NOTE: if the color is set trough color property color classes are ignored
+            // NOTE: if the mxs-color-helper is set trough color: property mxs-color-helper classes are ignored
             if (this.color || !this.sheet.colorClasses[this.frame]) return ''
 
-            return 'color ' + this.sheet.colorClasses[this.frame]
+            return 'mxs-color-helper ' + this.sheet.colorClasses[this.frame]
         },
     },
 }

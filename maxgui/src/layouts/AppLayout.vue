@@ -2,7 +2,7 @@
     <div class="fill-height">
         <app-header />
         <navigation />
-        <snackbars :msgObj="$store.state.snackbar_message" />
+        <snackbars :msgObj="snackbar_message" />
         <v-main class="fill-height">
             <div class="fill-height py-6 px-9">
                 <transition name="fade" mode="out-in">
@@ -11,13 +11,13 @@
             </div>
         </v-main>
         <v-footer
-            class="pl-2 d-flex color bg-color-background justify-center color border-top-reflection"
+            class="pl-2 d-flex mxs-color-helper white border-top-separator justify-center"
             padless
             app
             height="40"
             inset
         >
-            <span class="footer-text color text-code-color align-center text-truncate">
+            <span class="footer-text mxs-color-helper text-code-color align-center text-truncate">
                 MariaDB Corporation <span class="footer__separator" />
                 Copyright © 2020 MariaDB ab. All rights reserved.
                 <span class="footer__separator" />
@@ -59,13 +59,16 @@
 import Navigation from './Navigation'
 import AppHeader from './AppHeader'
 import Snackbars from '@share/components/Snackbars'
-
+import { mapState } from 'vuex'
 export default {
     name: 'app-layout',
     components: {
         navigation: Navigation,
         'app-header': AppHeader,
         snackbars: Snackbars,
+    },
+    computed: {
+        ...mapState({ snackbar_message: state => state.appNotifier.snackbar_message }),
     },
 }
 </script>

@@ -9,7 +9,7 @@
             <v-tooltip
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on: tooltip }">
                     <v-btn
@@ -23,7 +23,7 @@
                         <v-icon class="mr-1" size="12" color="primary">
                             $vuetify.icons.reload
                         </v-icon>
-                        <span class="mr-1 color text-navigation">
+                        <span class="mr-1 mxs-color-helper text-navigation">
                             {{ $t('refreshRate') }}:
                             <template v-if="refreshCount >= 0">
                                 {{
@@ -47,7 +47,7 @@
                 link
                 @click="onSelectRefreshRate(item)"
             >
-                <v-list-item-title class="color text-text">
+                <v-list-item-title class="mxs-color-helper text-text">
                     {{ item.label }}
                 </v-list-item-title>
             </v-list-item>

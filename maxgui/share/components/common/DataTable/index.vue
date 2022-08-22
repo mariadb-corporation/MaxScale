@@ -101,7 +101,7 @@
             :close-on-content-click="false"
             open-on-hover
             offset-y
-            content-class="shadow-drop color text-navigation"
+            content-class="shadow-drop mxs-color-helper text-navigation"
             :max-height="600"
             :activator="
                 `.row-${truncatedMenu.rowIndex}_cell-${truncatedMenu.cellIndex}_${componentId}`
@@ -415,7 +415,7 @@ export default {
         },
 
         /**
-         * This function set background color to rows when a cell or a row is hovered
+         * This function set background mxs-color-helper to rows when a cell or a row is hovered
          * It is used when rowspan feature is enabled
          * @param {Object} e event object
          * @param {Object} item object
@@ -538,7 +538,7 @@ export default {
                     font-size: 11px;
                     white-space: nowrap;
                     &.active * {
-                        color: $black !important;
+                        color: black !important;
                     }
                     &:first-child {
                         border-radius: 5px 0 0 0;

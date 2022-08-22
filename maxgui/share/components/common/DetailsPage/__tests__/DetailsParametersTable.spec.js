@@ -271,10 +271,13 @@ describe('DetailsParametersTable.vue', () => {
         })
     })
 
-    it(`Should have the following classes 'color border-left-table-border'`, () => {
+    it(`Should have the following classes 'mxs-color-helper border-left-table-border'`, () => {
         const { wrappers: tds } = wrapper.findAll('td')
         tds.forEach(td =>
-            expect(td.classes()).to.include.members(['color', 'border-left-table-border'])
+            expect(td.classes()).to.include.members([
+                'mxs-color-helper',
+                'border-left-table-border',
+            ])
         )
     })
 

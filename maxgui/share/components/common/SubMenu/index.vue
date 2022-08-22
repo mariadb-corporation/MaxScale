@@ -18,10 +18,10 @@
         <template v-if="!activator" v-slot:activator="{ on }">
             <v-list-item
                 v-if="isSubMenu"
-                class="d-flex justify-space-between color text-text"
+                class="d-flex justify-space-between mxs-color-helper text-text"
                 v-on="on"
             >
-                <v-list-item-title class="color text-text" v-text="text" />
+                <v-list-item-title class="mxs-color-helper text-text" v-text="text" />
                 <v-icon size="24">
                     mdi-menu-right
                 </v-icon>
@@ -29,7 +29,7 @@
             <div v-else v-on="on" @click="activator ? (isOpened = true) : (menuOpen = true)">
                 <slot name="activator">
                     <v-list-item link dense>
-                        <v-list-item-title class="color text-text" v-text="text" />
+                        <v-list-item-title class="mxs-color-helper text-text" v-text="text" />
                     </v-list-item>
                 </slot>
             </div>
@@ -57,7 +57,7 @@
                     link
                     @click="emitClickEvent(item)"
                 >
-                    <v-list-item-title class="color text-text" v-text="item.text" />
+                    <v-list-item-title class="mxs-color-helper text-text" v-text="item.text" />
                 </v-list-item>
             </template>
         </v-list>

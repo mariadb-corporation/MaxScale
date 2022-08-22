@@ -14,6 +14,7 @@
 import Vuetify from 'vuetify/lib'
 import icons from '@share/icons'
 import i18n from './i18n'
+import vuetifyTheme from './vuetifyTheme'
 import '@mdi/font/css/materialdesignicons.css'
 
 export default new Vuetify({
@@ -21,25 +22,7 @@ export default new Vuetify({
         iconfont: 'mdi',
         values: icons,
     },
-    theme: {
-        themes: {
-            light: {
-                primary: '#0e9bc0',
-                secondary: '#E6EEF1',
-                accent: '#2f99a3',
-                ['accent-dark']: '#0b718c',
-                success: '#7dd012',
-                error: '#eb5757',
-                warning: '#f59d34',
-                info: '#2d9cdb',
-                anchor: '#2d9cdb',
-                navigation: '#424F62',
-                ['deep-ocean']: '#003545',
-                background: '#ffffff',
-                ['blue-azure']: '#0e6488',
-            },
-        },
-    },
+    theme: vuetifyTheme,
     lang: {
         t: (key, ...params) => i18n.t(key, params),
     },

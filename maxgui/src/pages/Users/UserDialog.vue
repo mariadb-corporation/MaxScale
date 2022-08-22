@@ -37,7 +37,7 @@
                 />
                 <label
                     v-if="type === USER_ADMIN_ACTIONS.UPDATE"
-                    class="field__label color text-small-text label-required"
+                    class="field__label mxs-color-helper text-small-text label-required"
                 >
                     {{ $t('newPass') }}
                 </label>

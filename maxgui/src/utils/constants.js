@@ -22,15 +22,15 @@ export const APP_CONFIG = Object.freeze({
     ICON_SHEETS: {
         monitors: {
             frames: ['$vuetify.icons.stopped', '$vuetify.icons.good'],
-            colorClasses: ['text-field-text', 'text-success'],
+            colorClasses: ['text-grayed-out', 'text-success'],
         },
         services: {
             frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
-            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+            colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         listeners: {
             frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
-            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+            colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         servers: {
             frames: [
@@ -38,7 +38,7 @@ export const APP_CONFIG = Object.freeze({
                 '$vuetify.icons.goodServer',
                 '$vuetify.icons.maintenance',
             ],
-            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+            colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         replication: {
             frames: [
@@ -46,7 +46,7 @@ export const APP_CONFIG = Object.freeze({
                 '$vuetify.icons.good',
                 '$vuetify.icons.statusWarning',
             ],
-            colorClasses: ['text-field-text', 'text-success', 'text-warning'],
+            colorClasses: ['text-grayed-out', 'text-success', 'text-warning'],
         },
         logPriorities: {
             frames: {

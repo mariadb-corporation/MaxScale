@@ -5,6 +5,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <array>
 
 void test_one_stmt(TestConnections& test, Connection& conn, MYSQL_STMT* stmt, int i)
 {

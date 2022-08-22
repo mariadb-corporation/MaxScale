@@ -15,12 +15,12 @@
                         </v-list-item-avatar>
                         <v-list-item-content class="py-4">
                             <v-list-item-title
-                                class="tk-azo-sans-web text-h5 color font-weight-medium text-blue-azure"
+                                class="tk-azo-sans-web text-h5 mxs-color-helper font-weight-medium text-blue-azure"
                             >
                                 <truncate-string :text="cluster.id" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
-                                <span class="field-text">
+                                <span class="grayed-out">
                                     {{ cluster.module }}
                                 </span>
                             </v-list-item-subtitle>
@@ -29,7 +29,9 @@
                     <v-divider />
                     <v-list class="px-7">
                         <v-list-item>
-                            <v-list-item-title class="text-subtitle-2 color text-navigation">
+                            <v-list-item-title
+                                class="text-subtitle-2 mxs-color-helper text-navigation"
+                            >
                                 <span class="text-uppercase">{{ $t('master') }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
@@ -60,7 +62,9 @@
                             </v-list-item-subtitle>
                         </v-list-item>
                         <v-list-item>
-                            <v-list-item-title class="text-subtitle-2 color text-navigation">
+                            <v-list-item-title
+                                class="text-subtitle-2 mxs-color-helper text-navigation"
+                            >
                                 <span class="text-uppercase">{{ $tc('slaves', 2) }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
@@ -79,7 +83,7 @@
                                             <div v-on="on">
                                                 <v-avatar
                                                     style="margin-left: -12px; border-radius: 50% 0 0;"
-                                                    :class="`color bg-${stateType}`"
+                                                    :class="`mxs-color-helper bg-${stateType}`"
                                                     left
                                                 >
                                                     <strong>{{ item.servers.length }}</strong>
@@ -170,7 +174,7 @@ export default {
                 case 1:
                     return 'success'
                 case 2:
-                    return 'field-text' // color for maintenance state
+                    return 'grayed-out' // mxs-color-helper for maintenance state
             }
         },
         labellingStateType(stateType) {
@@ -179,8 +183,8 @@ export default {
                     return 'down'
                 case 'success':
                     return 'up'
-                // field-text when server is in maintenance state
-                case 'field-text':
+                // grayed-out when server is in maintenance state
+                case 'grayed-out':
                     return 'maintenance'
             }
         },

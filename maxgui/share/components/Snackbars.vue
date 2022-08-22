@@ -12,14 +12,14 @@
                 v-if="msgObj.type === 'info'"
                 class="mr-4 material-icons"
                 size="22"
-                color="background"
+                color="white"
             >
                 $vuetify.icons.statusInfo
             </v-icon>
-            <v-icon v-else-if="msgObj.type === 'error'" class="mr-4" size="22" color="background">
+            <v-icon v-else-if="msgObj.type === 'error'" class="mr-4" size="22" color="white">
                 $vuetify.icons.alertError
             </v-icon>
-            <v-icon v-else-if="msgObj.type === 'warning'" class="mr-4" size="22" color="background">
+            <v-icon v-else-if="msgObj.type === 'warning'" class="mr-4" size="22" color="white">
                 $vuetify.icons.alertWarning
             </v-icon>
             <v-icon v-else class="mr-4" size="22" :color="msgObj.type">

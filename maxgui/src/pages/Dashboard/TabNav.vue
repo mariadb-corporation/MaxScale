@@ -2,7 +2,7 @@
     <v-tabs v-model="activeTab" class="v-tabs--mariadb-style">
         <v-tab v-for="route in dashboardTabRoutes" :key="route.path" :to="route.path">
             {{ $tc(route.text, 2) }}
-            <span class="field-text-info color text-field-text">
+            <span class="grayed-out-info mxs-color-helper text-grayed-out">
                 ({{ getTotal(route.name) }})
             </span>
         </v-tab>

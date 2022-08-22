@@ -8,13 +8,13 @@
         :itemsPerPage="-1"
     >
         <template v-slot:header-append-groupId>
-            <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ monitorsLength }}) </span>
         </template>
         <template v-slot:header-append-id>
-            <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ all_servers.length }}) </span>
         </template>
         <template v-slot:header-append-serviceIds>
-            <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ servicesLength }}) </span>
         </template>
 
         <template v-slot:groupId="{ data: { item: { groupId } } }">
@@ -30,7 +30,7 @@
         <template v-slot:groupId-append="{ data: { item: { groupId } } }">
             <span
                 v-if="isCooperative(groupId)"
-                class="ml-1 color text-success cooperative-indicator"
+                class="ml-1 mxs-color-helper text-success cooperative-indicator"
             >
                 Primary
             </span>
@@ -146,7 +146,7 @@
             >
                 <template v-slot:activator="{ on }">
                     <div
-                        class="pointer color text-links override-td--padding disable-auto-truncate"
+                        class="pointer mxs-color-helper text-anchor override-td--padding disable-auto-truncate"
                         v-on="on"
                     >
                         {{ serviceIds.length }}

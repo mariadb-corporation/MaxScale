@@ -1,6 +1,6 @@
 <template>
     <div>
-        <label class="text-capitalize field__label color text-small-text d-block">
+        <label class="text-capitalize field__label mxs-color-helper text-small-text d-block">
             {{ $tc(moduleName, 1) }}
         </label>
         <v-select

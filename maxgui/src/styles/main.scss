@@ -10,12 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-@import 'constants.scss';
-@import 'class_colors';
-@import 'helpers.scss';
-// Vuetify helper variables
-@import 'variables.scss';
-@import 'override.scss';
+@import '@share/styles/color_helper';
+@import '@share/styles/helpers.scss';
+@import '@share/styles/override.scss';
+@import '@share/styles/chartTooltip.scss';
 // layout
 html,
 body,
@@ -40,7 +38,7 @@ main.v-main {
     background: #f1f1f1;
 }
 ::-webkit-scrollbar-thumb {
-    background: $field-text;
+    background: $grayed-out;
     border-radius: 4px;
     height: 30px;
 }

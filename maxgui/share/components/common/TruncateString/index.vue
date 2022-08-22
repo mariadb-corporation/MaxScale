@@ -26,8 +26,10 @@
             </div>
         </template>
         <v-sheet :class="['truncate-string-menu-content', contentClass]">
-            <pre v-if="!wrap" class="truncated-text-pre color text-navigation">{{ text }}</pre>
-            <div v-else class="text-body-2 color text-navigation">{{ text }}</div>
+            <pre v-if="!wrap" class="truncated-text-pre mxs-color-helper text-navigation">{{
+                text
+            }}</pre>
+            <div v-else class="text-body-2 mxs-color-helper text-navigation">{{ text }}</div>
         </v-sheet>
     </v-menu>
     <div

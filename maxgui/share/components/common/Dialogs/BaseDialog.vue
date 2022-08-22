@@ -17,7 +17,7 @@
             :max-width="isDynamicWidth ? 'unset' : minBodyWidth"
         >
             <v-card-title class="v-card-title_padding">
-                <h3 class="font-weight-light color text-deep-ocean">
+                <h3 class="font-weight-light mxs-color-helper text-deep-ocean">
                     {{ title }}
                 </h3>
                 <v-btn v-if="!isForceAccept && showCloseIcon" class="close" icon @click="close">
@@ -41,7 +41,7 @@
                     <slot name="form-body"></slot>
                 </v-form>
             </v-card-text>
-            <v-card-actions class="v-card-actions_padding color border-top-reflection">
+            <v-card-actions class="v-card-actions_padding mxs-color-helper border-top-separator">
                 <slot
                     :cancel="cancel"
                     :save="save"
@@ -157,7 +157,7 @@ export default {
         },
     },
     methods: {
-        ...mapMutations(['SET_OVERLAY_TYPE']),
+        ...mapMutations({ SET_OVERLAY_TYPE: 'appNotifier/SET_OVERLAY_TYPE' }),
         async closeDialog() {
             this.$emit('input', false)
             /** Workaround to ensure dialog is closed completely to emit after close events

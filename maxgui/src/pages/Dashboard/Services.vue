@@ -24,7 +24,7 @@
         </template>
 
         <template v-slot:header-append-serverIds>
-            <span class="ml-1 color text-field-text"> ({{ serversLength }}) </span>
+            <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ serversLength }}) </span>
         </template>
         <template v-slot:serverIds="{ data: { item: { serverIds } } }">
             <span v-if="typeof serverIds === 'string'">{{ serverIds }} </span>
@@ -52,7 +52,7 @@
             >
                 <template v-slot:activator="{ on }">
                     <div
-                        class="pointer color text-links override-td--padding disable-auto-truncate"
+                        class="pointer mxs-color-helper text-anchor override-td--padding disable-auto-truncate"
                         v-on="on"
                     >
                         {{ serverIds.length }}

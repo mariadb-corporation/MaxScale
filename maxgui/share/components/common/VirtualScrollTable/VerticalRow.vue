@@ -64,7 +64,7 @@
                 <div
                     v-if="!isYOverflowed"
                     :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
-                    class="dummy-cell color border-right-table-border"
+                    class="dummy-cell mxs-color-helper border-right-table-border"
                 />
             </div>
         </template>
@@ -109,7 +109,7 @@ export default {
 .tr-vertical-group {
     .tr:last-of-type {
         .td {
-            border-bottom: thin solid $separator !important;
+            border-bottom: thin solid $table-border !important;
         }
     }
 }
