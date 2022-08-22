@@ -9,7 +9,7 @@ import PortalVue from 'portal-vue'
 import VueMoment from 'vue-moment'
 import momentDurationFormatSetup from 'moment-duration-format'
 import VueI18n from 'vue-i18n'
-import MaxScaleQueryEditor from '@queryEditor/index.js'
+import MaxScaleQueryEditor from '@queryEditorSrc/maxscale-query-editor.esm.js'
 
 Vue.use(VueI18n)
 Vue.use(Vuetify)
