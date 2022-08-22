@@ -733,7 +733,7 @@ protected:
 //
 // Authorize
 //
-template<class BaseCommand, uint32_t ROLE_MASK>
+template<class BaseCommand, uint32_t ROLE_MASK, uint32_t ROLE_MASK_ADMIN>
 class Authorize : public BaseCommand
 {
 public:
@@ -741,12 +741,19 @@ public:
 
     void authorize(uint32_t role_mask) override
     {
-        if ((role_mask & ROLE_MASK) != ROLE_MASK)
-        {
-            std::ostringstream ss;
-            ss << "command " << this->m_name << " requires authentication";
+        bool has_specific_rights = (role_mask & ROLE_MASK) == ROLE_MASK;
 
-            throw SoftError(ss.str(), error::UNAUTHORIZED);
+        if (!has_specific_rights)
+        {
+            bool has_admin_rights = (role_mask & ROLE_MASK_ADMIN) == ROLE_MASK_ADMIN;
+
+            if (!has_admin_rights)
+            {
+                std::ostringstream ss;
+                ss << "command " << this->m_name << " requires authentication";
+
+                throw SoftError(ss.str(), error::UNAUTHORIZED);
+            }
         }
     }
 };
@@ -758,10 +765,12 @@ public:
 // it may create users in any database.
 //
 template<class BaseCommand>
-class UserAdminAuthorize : public Authorize<BaseCommand, role::USER_ADMIN>
+class UserAdminAuthorize : public Authorize<BaseCommand,
+                                            role::USER_ADMIN,
+                                            role::USER_ADMIN_ANY_DATABASE>
 {
 public:
-    using Base = Authorize<BaseCommand, role::USER_ADMIN>;
+    using Base = Authorize<BaseCommand, role::USER_ADMIN, role::USER_ADMIN_ANY_DATABASE>;
 
     using Base::Base;
 

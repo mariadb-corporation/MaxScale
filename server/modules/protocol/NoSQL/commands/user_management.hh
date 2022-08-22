@@ -165,12 +165,19 @@ vector<string> create_grant_or_revoke_statements(const string& user,
         add_privileges::userAdmin(user, command, preposition, privileges, statements);
         break;
 
-    case role::Id::USER_ADMIN:
+    case role::Id::USER_ADMIN_ANY_DATABASE:
         if (is_on_admin)
         {
             db = "*";
         }
-
+        else
+        {
+            ostringstream ss;
+            ss << "No role names userAdminAnyDatabase@" << role.db;
+            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+        }
+        // [[fallthrough]]
+    case role::Id::USER_ADMIN:
         add_privileges::userAdmin(user, command, preposition, privileges, statements);
         break;
 
@@ -179,9 +186,12 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                     role::to_string(role.id).c_str(), user.c_str());
     }
 
-    string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
+    if (!privileges.empty()) // Will be empty if we end up in 'default'
+    {
+        string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
 
-    statements.push_back(statement);
+        statements.push_back(statement);
+    }
 
     return statements;
 }
