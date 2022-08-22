@@ -15,6 +15,7 @@ import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryEditorStorePlugins from '@queryEditorSrc/store/plugins'
+import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 
 export default {
     /**
@@ -28,7 +29,6 @@ export default {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
 
         //TODO: Prevent duplicated vuex module names, store plugin names, common components
-
         if (isExternal) {
             Vue.use(Vuetify, { directives: { Resize } })
             //Register common components
@@ -46,6 +46,7 @@ export default {
         })
 
         // Register store plugins
+        Vue.use(queryHttp, { store })
         queryEditorStorePlugins.forEach(plugin => plugin(store))
     },
 }

@@ -62,7 +62,9 @@ export default {
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             try {
-                const res = await this.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
+                const res = await this.vue.$queryHttp.get(
+                    `/${resourceType}?fields[${resourceType}]=id`
+                )
                 if (res.data.data) {
                     const names = res.data.data.map(({ id, type }) => ({ id, type }))
                     commit('SET_RC_TARGET_NAMES_MAP', {
@@ -85,7 +87,7 @@ export default {
             try {
                 const active_session_id = rootGetters['querySession/getActiveSessionId']
                 const active_session = rootGetters['querySession/getActiveSession']
-                const res = await this.$queryHttp.get(`/sql/`)
+                const res = await this.vue.$queryHttp.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -134,7 +136,7 @@ export default {
 
                     let wkeIdsToBeReset = []
                     for (const conn of leftoverConns) {
-                        await this.$queryHttp.delete(`/sql/${conn.id}`)
+                        await this.vue.$queryHttp.delete(`/sql/${conn.id}`)
                         const { wke_id_fk } = rootGetters['querySession/getSessionByConnId'](
                             conn.id
                         )
@@ -188,7 +190,7 @@ export default {
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 // create the connection
-                const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
+                const res = await this.vue.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
@@ -290,7 +292,7 @@ export default {
             { conn_to_be_cloned, binding_type, session_id_fk, getCloneObjRes }
         ) {
             try {
-                const res = await this.$queryHttp.post(
+                const res = await this.vue.$queryHttp.post(
                     `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=86400`
                 )
                 if (res.status === 201) {
@@ -317,7 +319,7 @@ export default {
          */
         async disconnectClone({ state, commit }, { id }) {
             try {
-                const res = await this.$queryHttp.delete(`/sql/${id}`)
+                const res = await this.vue.$queryHttp.delete(`/sql/${id}`)
                 if (res.status === 204) commit('DELETE_SQL_CONN', state.sql_conns[id])
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnectClone').error(e)
@@ -351,7 +353,7 @@ export default {
                                 { conn_id: id },
                                 { root: true }
                             )
-                            return this.$queryHttp.delete(`/sql/${id}`)
+                            return this.vue.$queryHttp.delete(`/sql/${id}`)
                         })
                     )
 
@@ -380,7 +382,7 @@ export default {
         async reconnect({ state, commit, dispatch }) {
             const active_sql_conn = state.active_sql_conn
             try {
-                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
+                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
                 if (res.status === 204) {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
@@ -425,7 +427,7 @@ export default {
             const { active_sql_conn, active_db } = state
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT DATABASE()',
                 })
                 const resActiveDb = this.vue
@@ -449,7 +451,7 @@ export default {
                 const now = new Date().valueOf()
                 const escapedDb = this.vue.$help.escapeIdentifiers(db)
                 const sql = `USE ${escapedDb};`
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let queryName = `Change default database to ${escapedDb}`

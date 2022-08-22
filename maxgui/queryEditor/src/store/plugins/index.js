@@ -12,10 +12,5 @@
  */
 
 import persistConfig from './persistConfig'
-import queryHttp from './axios'
 
-const plugin = store => {
-    store.$queryHttp = queryHttp(store)
-}
-
-export default [plugin, persistConfig.plugin]
+export default [persistConfig.plugin]
