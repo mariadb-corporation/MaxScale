@@ -750,7 +750,7 @@ public:
             if (!has_admin_rights)
             {
                 std::ostringstream ss;
-                ss << "command " << this->m_name << " requires authentication";
+                ss << "not authorized on db to execute command " << this->to_json();
 
                 throw SoftError(ss.str(), error::UNAUTHORIZED);
             }
