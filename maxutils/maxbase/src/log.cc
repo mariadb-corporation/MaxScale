@@ -260,7 +260,7 @@ public:
 
         for (i = 0; i < sizeof(key2); ++i)
         {
-            hash_value += (key1 >> i * 8) & 0xff;
+            hash_value += (key2 >> i * 8) & 0xff;
             hash_value += (hash_value << 10);
             hash_value ^= (hash_value >> 6);
         }
