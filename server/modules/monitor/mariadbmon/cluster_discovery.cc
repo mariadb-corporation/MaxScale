@@ -538,14 +538,16 @@ void MariaDBMonitor::assign_server_roles()
                 bool slave_found = false;
                 for (const auto slave : m_master->m_node.children)
                 {
-                    bool is_connected =
-                        (slave->slave_connection_status(m_master)->slave_io_running
-                         == SlaveStatus::SLAVE_IO_YES);
+                    auto* slave_conn = slave->slave_connection_status(m_master);
+                    bool is_connected = (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES);
                     bool is_running = slave->is_running();
+                    // If slave is not connected, check that the failure is not due to credentials failure.
+                    bool user_ok = is_connected
+                        || !mxs::MonitorServer::is_access_denied_error(slave_conn->last_io_errno);
 
                     // req_connecting_slave is always met by m_node->children
-                    bool slave_is_ok = !((req_connected_slave && !is_connected)
-                                         || (req_running_slave && !is_running));
+                    bool slave_is_ok = user_ok && !((req_connected_slave && !is_connected)
+                        || (req_running_slave && !is_running));
                     if (slave_is_ok)
                     {
                         slave_found = true;
@@ -673,7 +675,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
                     // Perhaps, if the slave is slow to update the connection status.
                     conn_is_live = parent_has_live_link && slave->is_running();
                 }
-                else if (sstatus->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING)
+                else if (sstatus->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING
+                         && !mxs::MonitorServer::is_access_denied_error(sstatus->last_io_errno))
                 {
                     found_slave_conn = true;
                 }
