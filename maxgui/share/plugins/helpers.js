@@ -12,7 +12,11 @@
  */
 import * as helpers from '@share/utils/helpers'
 export default {
-    install: Vue => {
-        Vue.prototype.$helpers = helpers
+    /**
+     *
+     * @param {Object} param.addon - more helpers to be merged
+     */
+    install: (Vue, { addon = {} }) => {
+        Vue.prototype.$helpers = { ...helpers, ...addon }
     },
 }

@@ -14,7 +14,8 @@ import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
-import helpers from '@share/plugins/helpers'
+import helpersPlugin from '@share/plugins/helpers'
+import * as helpers from '@queryEditorSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 
 export default /*#__PURE__*/ (() => {
@@ -42,7 +43,7 @@ export default /*#__PURE__*/ (() => {
 
         // Register utilities .i.e. Add instance properties to Vue.prototype
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
-        Vue.use(helpers) // Vue.prototype.$helpers
+        Vue.use(helpersPlugin, { addon: helpers }) // Vue.prototype.$helpers
         Vue.use(logger) // Vue.prototype.$logger
     }
     return installable

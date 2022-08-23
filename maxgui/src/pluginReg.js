@@ -1,9 +1,11 @@
 import Vue from 'vue'
 import Vuetify from 'vuetify/lib'
-import helpers from '@share/plugins/helpers'
+import helpersPlugin from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'
 import typy from '@share/plugins/typy'
 import shortkey from '@share/plugins/shortkey'
+import * as maxguiHelpers from '@rootSrc/utils/helpers'
+import * as queryEditorHelpers from '@queryEditorSrc/utils/helpers'
 import Vuex from 'vuex'
 import PortalVue from 'portal-vue'
 import VueMoment from 'vue-moment'
@@ -13,7 +15,7 @@ import MaxScaleQueryEditor from '@queryEditorSrc/index.js'
 
 Vue.use(VueI18n)
 Vue.use(Vuetify)
-Vue.use(helpers)
+Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...queryEditorHelpers } })
 Vue.use(typy)
 Vue.use(shortkey)
 Vue.use(logger)

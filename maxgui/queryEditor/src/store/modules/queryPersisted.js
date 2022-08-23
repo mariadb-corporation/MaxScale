@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { addDaysToNow } from '@share/utils/helpers'
+import { addDaysToNow } from '@queryEditorSrc/utils/helpers'
 
 // Place here any query editor states need to be persisted without being cleared when logging out
 export default {
