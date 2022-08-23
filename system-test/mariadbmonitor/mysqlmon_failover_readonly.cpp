@@ -12,139 +12,97 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
-#include <iostream>
+#include "mariadbmon_utils.hh"
 #include <string>
 #include <vector>
 
 using std::string;
 using std::cout;
 
+void test_main(TestConnections& test);
+
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
+
+void test_main(TestConnections& test)
+{
     // Test uses 2 slaves, stop the last one to prevent it from replicating anything.
     test.repl->stop_node(3);
-    // Set up test table
-    basic_test(test);
-    // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
-    generate_traffic_and_check(test, maxconn, 1);
-    test.repl->sync_slaves();
-    get_output(test);
-    print_gtids(test);
 
-    auto expect_server_status = [&test](const string& server_name, const string& status) {
-            bool found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 1);
-            test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
-        };
-
-    string server_names[] = {"server1", "server2", "server3"};
-    auto expect_server_status_multi =
-        [&test, &expect_server_status, &server_names](std::vector<string> expected) {
-            int expected_size = expected.size();
-            test.expect(expected_size <= test.repl->N && expected_size <= 3, "Too many expected values.");
-            int tests = (expected_size < test.repl->N) ? expected_size : test.repl->N;
-            for (int node = 0; node < tests; node++)
-            {
-                expect_server_status(server_names[node], expected[node]);
-            }
-        };
-
-    auto expect_read_only = [&test](int node, bool expected) {
-            test.expect(test.repl->connect(node) == 0, "Connection to node %i failed.", node);
-            char result[2];
-            const char query[] = "SELECT @@read_only;";
-            if (find_field(test.repl->nodes[node], query, "@@read_only", result) == 0)
-            {
-                char expected_result = expected ? '1' : '0';
-                test.expect(result[0] == expected_result, "read_only on node %i was %c when %c was expected.",
-                            node, result[0], expected_result);
-            }
-            else
-            {
-                test.expect(false, "Query '%s' failed on node %i.", query, node);
-            }
-        };
-
-    auto expect_read_only_multi = [&test, &expect_read_only](std::vector<bool> expected) {
-            int expected_size = expected.size();
-            test.expect(expected_size <= test.repl->N, "Too many expected values.");
-            int tests = (expected_size < test.repl->N) ? expected_size : test.repl->N;
-            for (int node = 0; node < tests; node++)
-            {
-                expect_read_only(node, expected[node]);
-            }
-        };
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
     auto mon_wait = [&test](int ticks) {
-            test.maxscale->wait_for_monitor(ticks);
-        };
+        test.maxscale->wait_for_monitor(ticks);
+    };
 
     auto crash_node = [&test](int node) {
-            test.repl->ssh_node(node, "kill -s 11 `pidof mysqld`", true);
-            test.repl->stop_node(node); // To prevent autostart.
-        };
+        auto rc = test.repl->ssh_node(node, "kill -s 11 `pidof mariadbd`", true);
+        test.repl->stop_node(node);     // To prevent autostart.
+        test.expect(rc == 0, "Kill failed.");
+    };
 
-    string master = "Master";
-    string slave = "Slave";
-    string down = "Down";
+    auto expect_status = [&mxs](const std::vector<mxt::ServerInfo::bitfield>& expected_status,
+                                const std::vector<bool>& expected_ro){
+        auto status = mxs.get_servers();
+        status.print();
+        status.check_servers_status(expected_status);
+        status.check_read_only(expected_ro);
+    };
 
-    cout << "Step 1: All should be cool.\n";
-    get_output(test);
-    expect_server_status_multi({master, slave, slave});
-    expect_read_only_multi({false, true, true});
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto down = mxt::ServerInfo::DOWN;
+
+    // Advance gtid:s a bit to so gtid variables are updated.
+    auto maxconn = mxs.open_rwsplit_connection2("test");
+    generate_traffic_and_check(test, maxconn.get(), 1);
+
+    test.tprintf("Step 1: All should be cool.");
+    expect_status({master, slave, slave}, {false, true, true});
 
     if (test.ok())
     {
-        cout << "Step 2: Crash slave 2.\n";
+        test.tprintf("Step 2: Crash slave 2.");
         crash_node(2);
         mon_wait(1);
-        get_output(test);
-        expect_server_status_multi({master, slave, down});
-        expect_read_only_multi({false, true});
-        generate_traffic_and_check(test, maxconn, 2);
+        expect_status({master, slave, down}, {false, true});
+        generate_traffic_and_check(test, maxconn.get(), 1);
 
-        cout << "Step 2.1: Slave 2 comes back up, check that read_only is set.\n";
-        test.repl->start_node(2, "");
+        test.tprintf("Step 2.1: Slave 2 comes back up, check that read_only is set.");
+        repl.start_node(2);
         mon_wait(2);
-        get_output(test);
-        expect_server_status_multi({master, slave, slave});
-        expect_read_only_multi({false, true, true});
-        generate_traffic_and_check(test, maxconn, 3);
+        expect_status({master, slave, slave}, {false, true, true});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 3: Slave 1 crashes.\n";
+        test.tprintf("Step 3: Slave 1 crashes.");
         crash_node(1);
         mon_wait(1);
-        get_output(test);
-        expect_server_status_multi({master, down, slave});
-        expect_read_only(2, true);
-        generate_traffic_and_check(test, maxconn, 4);
+        expect_status({master, down, slave}, {false, true, true});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 4: Slave 2 goes down again, this time normally.\n";
-        test.repl->stop_node(2);
+        test.tprintf("Step 4: Slave 2 goes down again, this time normally.");
+        repl.stop_node(2);
         mon_wait(1);
-        get_output(test);
-        expect_server_status_multi({master, down, down});
-        generate_traffic_and_check(test, maxconn, 5);
+        mxs.check_print_servers_status({master, down, down});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 4.1: Slave 1 comes back up, check that read_only is set.\n";
-        test.repl->start_node(1, "");
+        test.tprintf("Step 4.1: Slave 1 comes back up, check that read_only is set.");
+        repl.start_node(1);
         mon_wait(2);
-        get_output(test);
-        expect_server_status_multi({master, slave, down});
-        expect_read_only_multi({false, true});
-        generate_traffic_and_check(test, maxconn, 6);
+        expect_status({master, slave, down}, {false, true});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 4.2: Slave 2 is back up, all should be well.\n";
-        test.repl->start_node(2, "");
+        test.tprintf("Step 4.2: Slave 2 is back up, all should be well.");
+        repl.start_node(2);
         mon_wait(2);
-        get_output(test);
-        expect_server_status_multi({master, slave, slave});
-        expect_read_only_multi({false, true, true});
-        generate_traffic_and_check(test, maxconn, 5);
+        expect_status({master, slave, slave}, {false, true, true});
+        generate_traffic_and_check(test, maxconn.get(), 2);
     }
-    mysql_close(maxconn);
+    maxconn.reset();
 
     // Intermission, quit if a test step failed.
     if (test.ok())
@@ -152,68 +110,58 @@ int main(int argc, char** argv)
         // Some of the following tests depend on manipulating backends during the same monitor tick or
         // between ticks. Slow down the monitor to make this more likely. Not fool-proof in the slightest.
         test.check_maxctrl("alter monitor MariaDB-Monitor monitor_interval 4000ms");
-    }
 
-    if (test.ok())
-    {
-        cout << "Step 5: Master crashes but comes back during the next loop,"
-                " slave 1 should be promoted, old master rejoined.\n";
+        test.tprintf("Step 5: Master crashes but comes back during the next loop,"
+                     " slave 1 should be promoted, old master rejoined.");
         crash_node(0);
         mon_wait(1);    // The timing is probably a bit iffy here.
-        expect_server_status(server_names[0], down);
-        get_output(test);
-        test.repl->start_node(0, "");
+        mxs.check_print_servers_status({down});
+        repl.start_node(0);
         mon_wait(2);
-        get_output(test);
         // Slave 2 could be promoted as well, but in this case there is no reason to choose it.
-        expect_server_status_multi({slave, master, slave});
-        expect_read_only_multi({true, false, true});
-        maxconn = test.maxscale->open_rwsplit_connection();
-        generate_traffic_and_check(test, maxconn, 4);
+        expect_status({slave, master, slave}, {true, false, true});
+        maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 6: Servers 1 & 3 go down. Server 2 should remain as master.\n";
-        test.repl->stop_node(0);
-        test.repl->stop_node(2);
+        test.tprintf("Step 6: Servers 1 & 3 go down. Server 2 should remain as master.");
+        repl.stop_node(0);
+        repl.stop_node(2);
         mon_wait(1);
-        get_output(test);
-        expect_server_status_multi({down, master, down});
-        generate_traffic_and_check(test, maxconn, 3);
+        mxs.check_print_servers_status({down, master, down});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 6.1: Servers 1 & 3 come back. Check that read_only is set.\n";
-        test.repl->start_node(2, "");
-        test.repl->start_node(0, "");
+        test.tprintf("Step 6.1: Servers 1 & 3 come back. Check that read_only is set.");
+        repl.start_node(2);
+        repl.start_node(0);
         mon_wait(2);
-        get_output(test);
-        expect_server_status_multi({slave, master, slave});
-        expect_read_only_multi({true, false, true});
-        generate_traffic_and_check(test, maxconn, 2);
+        expect_status({slave, master, slave}, {true, false, true});
+        generate_traffic_and_check(test, maxconn.get(), 2);
 
-        cout << "Step 7: Servers 1 & 2 go down. Check that 3 is promoted.\n";
-        mysql_close(maxconn);
-        test.repl->stop_node(0);
-        test.repl->stop_node(1);
+        test.tprintf("Step 7: Servers 1 & 2 go down. Check that 3 is promoted.");
+        repl.stop_node(0);
+        repl.stop_node(1);
         mon_wait(2);
-        get_output(test);
-        expect_server_status_multi({down, down, master});
-        maxconn = test.maxscale->open_rwsplit_connection();
-        generate_traffic_and_check(test, maxconn, 1);
-        mysql_close(maxconn);
+        mxs.check_print_servers_status({down, down, master});
+        maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 2);
     }
 
-    
+
     // Start the servers, in case they weren't on already.
     for (int i = 0; i < 3; i++)
     {
-        test.repl->start_node(i);
+        repl.start_node(i);
     }
     sleep(1);
-    test.repl->connect();
+
     // Delete the test table from all databases, reset replication.
-    const char drop_query[] = "DROP TABLE IF EXISTS test.t1;";
+    const string drop_query = "DROP TABLE IF EXISTS test.t1;";
+    repl.ping_or_open_admin_connections();
     for (int i = 0; i < 3; i++)
     {
-        test.try_query(test.repl->nodes[i], drop_query);
+        auto conn = repl.backend(i)->open_connection();
+        repl.backend(i)->admin_connection()->cmd(drop_query);
     }
     test.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
-    return test.global_result;
+    mxs.check_print_servers_status({master, slave, slave});
 }
