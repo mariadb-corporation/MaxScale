@@ -1,6 +1,7 @@
 #include <string>
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
+#include "maxbase/format.hh"
 
 using std::string;
 using std::vector;
@@ -55,6 +56,27 @@ int main(int argc, char* argv[])
                 test.expect(ok, "Slave_IO_Running of '%s' is not 'Connecting'", srv_info.name.c_str());
             }
         };
+
+    auto set_wrong_repl_pw = [&test](int slave, int master) {
+        bool rval = false;
+        auto be_slave = test.repl->backend(slave);
+        if (be_slave->ping_or_open_admin_connection())
+        {
+            auto conn = be_slave->admin_connection();
+            conn->cmd("STOP SLAVE;");
+            string change_master = "CHANGE MASTER TO MASTER_PASSWORD = 'repll'";
+            conn->cmd(change_master);
+            if (conn->cmd_f("START SLAVE;"))
+            {
+                rval = true;
+            }
+        }
+        else
+        {
+            test.add_failure("Connection to slave failed.");
+        }
+        return rval;
+    };
 
     mxs.check_servers_status(master_3slaves);
     const int master_ind = 0;
@@ -116,6 +138,15 @@ int main(int argc, char* argv[])
         status.check_servers_status({master_st, slave_st});
         mxs.check_servers_status({master_st, slave_st});
 
+        test.tprintf("Try replication with wrong credentials. Should not get [Master].");
+        if (set_wrong_repl_pw(slave_ind, master_ind))
+        {
+            mxs.wait_for_monitor(2);
+            status = mxs.get_servers();
+            check_io_connecting(status.get(slave_ind));
+            status.check_servers_status({slave_st, running_st});
+        }
+
         reset();
     }
 
@@ -143,8 +174,22 @@ int main(int argc, char* argv[])
         test.try_query(test.repl->nodes[slave_ind], "STOP SLAVE;");
         mxs.wait_for_monitor();
         mxs.check_servers_status(master_3running);
+
+        test.tprintf("Start the slave connection with wrong pw, should not get [Slave]");
+        if (set_wrong_repl_pw(slave_ind, master_ind))
+        {
+            mxs.wait_for_monitor(2);
+            auto status = mxs.get_servers();
+            check_io_connecting(status.get(slave_ind));
+            status.check_servers_status({master_st, running_st, running_st, running_st});
+        }
+
+        test.tprintf("Restore correct credentials, should regain [Slave]");
+        test.try_query(test.repl->nodes[slave_ind], "STOP SLAVE;");
+        test.try_query(test.repl->nodes[slave_ind], "CHANGE MASTER TO MASTER_PASSWORD = 'repl'");
         test.try_query(test.repl->nodes[slave_ind], "START SLAVE;");
-        mxs.wait_for_monitor();
+        mxs.wait_for_monitor(2);
+        mxs.check_servers_status(master_slave_chain);
 
         test.tprintf("Shut down a relay, should keep [Slave]");
         test.repl->stop_node(slave_ind);

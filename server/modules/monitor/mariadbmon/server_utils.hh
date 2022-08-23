@@ -252,6 +252,7 @@ public:
                                                          * "Connecting" or "No" */
     bool        slave_sql_running = false;              /* Slave SQL thread running state, true if "Yes" */
     GtidList    gtid_io_pos;                            /* Gtid I/O position of the slave thread. */
+    int64_t     last_io_errno {0};                      /* Last I/O error number */
     std::string last_io_error;                          /* Last IO error encountered. */
     std::string last_sql_error;                         /* Last SQL error encountered. */
     int64_t     received_heartbeats = 0;                /* How many heartbeats the connection has

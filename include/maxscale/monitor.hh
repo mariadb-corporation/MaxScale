@@ -319,6 +319,8 @@ public:
 
     const ConnectionSettings& conn_settings() const;
 
+    static bool is_access_denied_error(int64_t errornum);
+
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */
     int     mon_err_count = 0;
