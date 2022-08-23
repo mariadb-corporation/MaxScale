@@ -10,13 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
+import QueryEditor from '@queryEditorSrc/QueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
-import commonComponents from '@queryEditorSrc/components/common'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
-import helpers from '@share/plugins/helpers'
-import logger from '@share/plugins/logger'
 
+/**
+ * Notice: To make query-editor work in maxgui,
+ * '@queryEditorSrc/store/persistPlugin' needs to be registered manually because it can not be registered
+ * with the `store` object dynamically like `registerModule`.
+ */
 export default {
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
@@ -24,22 +26,15 @@ export default {
      */
     install: (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
-
-        //TODO: Prevent duplicated vuex module names, store plugin names, common components
-
-        //Register common components
-        Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
-        // Register maxscale-query-editor component
-        Vue.component('maxscale-query-editor', MaxScaleQueryEditor)
-
+        // Register query-editor component
+        Vue.component('query-editor', QueryEditor)
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {
-            store.registerModule(key, queryEditorModules[key])
+            // appNotifier exists in maxgui already
+            if (key === 'appNotifier') null
+            else store.registerModule(key, queryEditorModules[key])
         })
-
-        // Register utilities .i.e. Add instance properties to Vue.prototype
-        Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
-        Vue.use(helpers) // Vue.prototype.$helpers
-        Vue.use(logger) // Vue.prototype.$logger
+        // Register store plugins
+        Vue.use(queryHttp, { store })
     },
 }
