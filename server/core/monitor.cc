@@ -1198,7 +1198,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             auto err = mysql_errno(pConn);
             mysql_close(pConn);
             pConn = nullptr;
-            if (err == ER_ACCESS_DENIED_ERROR || err == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+            if (is_access_denied_error(err))
             {
                 conn_result = ConnectResult::ACCESS_DENIED;
             }
@@ -2382,8 +2382,12 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
 {
     return m_shared.conn_settings;
 }
-}
 
+bool MonitorServer::is_access_denied_error(int64_t errornum)
+{
+    return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
+}
+}
 
 mxs::Monitor::Test::Test(mxs::Monitor* monitor)
     : m_monitor(monitor)

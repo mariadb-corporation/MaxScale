@@ -332,7 +332,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         SlaveStatus new_row(name());
         new_row.settings.master_endpoint = EndPoint(result->get_string(i_master_host),
                                                     result->get_int(i_master_port));
-
+        new_row.last_io_errno = result->get_int(i_last_io_errno);
         new_row.last_io_error = result->get_string(i_last_io_error);
         new_row.last_sql_error = result->get_string(i_last_sql_error);
 

@@ -190,8 +190,9 @@ The available conditions are:
 1. none : No additional conditions
 2. connecting_slave : At least one immediate slave (not behind relay) is
 attempting to replicate or is replicating from the master (Slave_IO_Running is
-'Yes' or 'Connecting', Slave_SQL_Running is 'Yes'). If the slave is currently
-down, results from the last successful monitor tick are used.
+'Yes' or 'Connecting', Slave_SQL_Running is 'Yes'). A slave with incorrect
+replication credentials does not count. If the slave is currently down, results
+from the last successful monitor tick are used.
 3. connected_slave : Same as above, with the difference that the replication
 connection must be up (Slave_IO_Running is 'Yes'). If the slave is currently
 down, results from the last successful monitor tick are used.
@@ -218,10 +219,12 @@ Enum, default: *none*. Designate additional conditions for *Slave*-status,
 i.e qualified for read queries.
 
 Normally, a server is *Slave* if it is at least attempting to replicate from the
-master candidate or a relay. The master candidate does not necessarily need to
-be writable, e.g. if it fails its *master_conditions*. *slave_conditions* sets
-additional conditions for a slave server. This setting is an enum, allowing
-multiple conditions to be set simultaneously.
+master candidate or a relay (Slave_IO_Running is 'Yes' or 'Connecting',
+Slave_SQL_Running is 'Yes', valid replication credentials). The master candidate
+does not necessarily need to be writable, e.g. if it fails its
+*master_conditions*. *slave_conditions* sets additional conditions for a slave
+server. This setting is an enum, allowing multiple conditions to be set
+simultaneously.
 
 The available conditions are:
 
