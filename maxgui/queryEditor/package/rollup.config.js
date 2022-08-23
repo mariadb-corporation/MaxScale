@@ -85,7 +85,7 @@ const esConfig = {
             babelHelpers: 'bundled',
             presets: [['@babel/preset-env', { targets: esbrowserslist }]],
         }),
-        PostCSS({ modules: true, extract: false, sourceMap: true, minimize: true }),
+        PostCSS({ sourceMap: false, minimize: true }),
     ],
 }
 buildFormats.push(esConfig)

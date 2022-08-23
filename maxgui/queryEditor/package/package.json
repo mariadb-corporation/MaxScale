@@ -3,8 +3,8 @@
     "version": "1.0.0",
     "description": "MaxGUI query editor",
     "author": "MariaDB Corporation Ab",
-    "main": "../src/dist/maxscale-query-editor.esm.js",
-    "module": "../src/dist/maxscale-query-editor.esm.js",
+    "main": "./dist/maxscale-query-editor.esm.js",
+    "module": "./dist/maxscale-query-editor.esm.js",
     "scripts": {
         "prebuild": "rimraf ./maxscale-query-editor-1.0.0.tgz",
         "pack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js && npm pack && rimraf ./dist"

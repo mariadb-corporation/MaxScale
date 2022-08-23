@@ -17,12 +17,15 @@ import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 import helpers from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'
 
-export default {
+export default /*#__PURE__*/ (() => {
+    // Get component instance
+    const installable = MaxScaleQueryEditor
+
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
      * @param {Object} options.store - vuex store
      */
-    install: (Vue, { store }) => {
+    installable.install = (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
 
         //TODO: Prevent duplicated vuex module names, store plugin names, common components
@@ -41,5 +44,6 @@ export default {
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
         Vue.use(helpers) // Vue.prototype.$helpers
         Vue.use(logger) // Vue.prototype.$logger
-    },
-}
+    }
+    return installable
+})()
