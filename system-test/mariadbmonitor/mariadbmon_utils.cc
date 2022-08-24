@@ -13,6 +13,17 @@
 
 #include "mariadbmon_utils.hh"
 
+namespace
+{
+enum class SyncMxs
+{
+    YES,
+    NO
+};
+
+bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int insert_count, SyncMxs sync);
+}
+
 /**
  * Do inserts, check that results are as expected.
  *
@@ -23,6 +34,19 @@
  */
 bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int insert_count)
 {
+    return generate_traffic_and_check(test, conn, insert_count, SyncMxs::YES);
+}
+
+bool generate_traffic_and_check_nosync(TestConnections& test, mxt::MariaDB* conn, int insert_count)
+{
+    return generate_traffic_and_check(test, conn, insert_count, SyncMxs::NO);
+}
+
+namespace
+{
+bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int insert_count, SyncMxs sync)
+{
+    const bool wait_sync = (sync == SyncMxs::YES);
     const char table[] = "test.t1";
     int inserts_start = 1;
 
@@ -44,7 +68,6 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
     if (test.ok())
     {
         int inserts_end = inserts_start + insert_count;
-        conn->cmd("BEGIN;");
 
         ok = true;
         for (int i = inserts_start; i <= inserts_end && ok; i++)
@@ -54,8 +77,11 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
 
         if (ok)
         {
-            conn->cmd("COMMIT;");
-            test.sync_repl_slaves();
+            if (wait_sync)
+            {
+                test.sync_repl_slaves();
+            }
+
             auto res = conn->query_f("SELECT * FROM %s;", table);
             if (res)
             {
@@ -79,7 +105,7 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
                     ok = false;
                 }
 
-                if (ok)
+                if (ok && wait_sync)
                 {
                     // Wait for monitor to detect gtid change.
                     test.maxscale->wait_for_monitor();
@@ -90,10 +116,7 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
                 ok = false;
             }
         }
-        else
-        {
-            conn->cmd("ROLLBACK;");
-        }
     }
     return ok;
+}
 }
