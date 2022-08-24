@@ -91,6 +91,7 @@ const esConfig = {
             targets: [
                 { src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' },
                 { src: `${sharePath}/icons`, dest: 'dist' },
+                { src: `${sharePath}/plugins/vuetifyTheme.js`, dest: 'dist' },
             ],
         }),
     ],
