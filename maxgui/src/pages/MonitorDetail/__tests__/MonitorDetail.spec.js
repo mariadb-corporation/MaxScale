@@ -10,10 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from 'store'
-
 import mount, { router } from '@tests/unit/setup'
-import MonitorDetail from '@/pages/MonitorDetail'
+import store from '@rootSrc/store'
+import MonitorDetail from '@rootSrc/pages/MonitorDetail'
 
 import {
     dummy_all_monitors,
@@ -57,13 +56,9 @@ describe('MonitorDetail index', () => {
     before(async () => {
         const monitorPath = `/dashboard/monitors/${dummy_all_monitors[0].id}`
         if (router.history.current.path !== monitorPath) await router.push(monitorPath)
-        axiosGetStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosGetStub = sinon.stub(store.vue.$http, 'get').returns(Promise.resolve({ data: {} }))
         wrapper = computedFactory()
-        axiosPatchStub = sinon.stub(store.$http, 'patch').returns(Promise.resolve())
+        axiosPatchStub = sinon.stub(wrapper.vm.$http, 'patch').returns(Promise.resolve())
     })
 
     after(() => {
@@ -137,7 +132,7 @@ describe('MonitorDetail index', () => {
             manipulateMonitorSpy = sinon.spy(MonitorDetail.methods, 'manipulateMonitor')
 
             wrapper = computedFactory()
-            axiosPostStub = sinon.stub(store.$http, 'post').returns(
+            axiosPostStub = sinon.stub(wrapper.vm.$http, 'post').returns(
                 Promise.resolve({
                     status: 204,
                 })

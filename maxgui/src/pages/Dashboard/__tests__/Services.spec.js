@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Services from '@/pages/Dashboard/Services'
+import Services from '@rootSrc/pages/Dashboard/Services'
 
 import {
     dummy_all_services,
@@ -59,7 +59,7 @@ describe('Dashboard Services tab', () => {
                 all_services: () => dummy_all_services,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

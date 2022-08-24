@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import LoginForm from '@/pages/Login/LoginForm'
+import LoginForm from '@rootSrc/pages/Login/LoginForm'
 import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
 
 import { makeServer } from '@tests/unit/mirage/api'

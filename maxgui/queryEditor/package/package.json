@@ -1,0 +1,50 @@
+{
+    "name": "maxscale-query-editor",
+    "version": "1.0.0",
+    "description": "MaxGUI query editor",
+    "author": "MariaDB Corporation Ab",
+    "main": "../src/dist/maxscale-query-editor.esm.js",
+    "module": "../src/dist/maxscale-query-editor.esm.js",
+    "scripts": {
+        "prebuild": "rimraf ./maxscale-query-editor-1.0.0.tgz",
+        "pack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js && npm pack && rimraf ./dist"
+    },
+    "optionalDependencies": {
+        "prettier": "^1.19.1"
+    },
+    "peerDependencies": {
+        "@mdi/font": "^7.0.96",
+        "axios": "^0.27.2",
+        "chart.js": "^2.9.4",
+        "lodash": "^4.17.21",
+        "monaco-editor": "^0.33.0",
+        "typy": "^3.3.0",
+        "uuid": "^8.3.2",
+        "vue": "^2.6.14",
+        "vue-chartjs": "^3.5.1",
+        "vue-i18n": "^8.27.0",
+        "vue-moment": "^4.1.0",
+        "vue-shortkey": "^3.1.7",
+        "vuetify": "^2.6.7",
+        "vuex": "^3.6.2",
+        "vuex-persist": "^3.1.3"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.14.6",
+        "@babel/preset-env": "^7.14.7",
+        "@rollup/plugin-alias": "^3.1.2",
+        "@rollup/plugin-babel": "^5.3.0",
+        "@rollup/plugin-commonjs": "^14.0.0",
+        "@rollup/plugin-json": "^4.1.0",
+        "@rollup/plugin-node-resolve": "^9.0.0",
+        "@rollup/plugin-replace": "^2.4.2",
+        "cross-env": "^7.0.2",
+        "rimraf": "^3.0.2",
+        "rollup": "^2.52.8",
+        "rollup-plugin-monaco-editor": "^0.2.1",
+        "rollup-plugin-postcss": "^4.0.1",
+        "rollup-plugin-scss": "^3.0.0",
+        "rollup-plugin-vue": "^5.1.9",
+        "rollup-plugin-vuetify": "^0.2.4"
+    }
+}

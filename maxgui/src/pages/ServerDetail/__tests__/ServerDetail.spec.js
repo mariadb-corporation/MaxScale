@@ -10,9 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from 'store'
 import mount, { router } from '@tests/unit/setup'
-import ServerDetail from '@/pages/ServerDetail'
+import ServerDetail from '@rootSrc/pages/ServerDetail'
 import { dummy_all_servers, dummy_all_sessions, testRelationshipUpdate } from '@tests/unit/utils'
 
 const dummy_monitor_diagnostics = {
@@ -121,15 +120,9 @@ describe('ServerDetail index', () => {
 
     before(async () => {
         await toServerPage()
-        axiosGetStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
-
         wrapper = mount(mountOptions)
-
-        axiosPatchStub = sinon.stub(store.$http, 'patch').returns(Promise.resolve())
+        axiosGetStub = sinon.stub(wrapper.vm.$http, 'get').returns(Promise.resolve({ data: {} }))
+        axiosPatchStub = sinon.stub(wrapper.vm.$http, 'patch').returns(Promise.resolve())
     })
 
     after(async () => {

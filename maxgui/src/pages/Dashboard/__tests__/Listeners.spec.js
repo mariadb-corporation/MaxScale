@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Listeners from '@/pages/Dashboard/Listeners'
+import Listeners from '@rootSrc/pages/Dashboard/Listeners'
 
 import {
     dummy_all_listeners,
@@ -63,11 +63,7 @@ describe('Dashboard Listeners tab', () => {
                 all_listeners: () => dummy_all_listeners,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
 
     afterEach(() => {

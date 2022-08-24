@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@/pages/ServiceDetail/PageHeader'
+import PageHeader from '@rootSrc/pages/ServiceDetail/PageHeader'
 
 import {
     dummy_all_services,
@@ -69,8 +69,8 @@ describe('ServiceDetail - PageHeader', () => {
             },
         })
 
-        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
-        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
+        axiosDeleteStub = sinon.stub(wrapper.vm.$http, 'delete').returns(Promise.resolve())
+        axiosPutStub = sinon.stub(wrapper.vm.$http, 'put').returns(Promise.resolve())
     })
 
     afterEach(() => {

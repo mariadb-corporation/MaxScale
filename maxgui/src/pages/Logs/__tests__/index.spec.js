@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Logs from '@/pages/Logs'
+import Logs from '@rootSrc/pages/Logs'
 
 describe('Logs index', () => {
     let wrapper

@@ -12,8 +12,8 @@
  */
 
 import mount from '@tests/unit/setup'
-import TabNav from '@/pages/Dashboard/TabNav'
-import { dashboardTabRoutes } from 'router/routes'
+import TabNav from '@rootSrc/pages/Dashboard/TabNav'
+import { dashboardTabRoutes } from '@rootSrc/router/routes'
 
 import {
     dummy_all_sessions,
@@ -54,11 +54,7 @@ describe('Dashboard TabNav', () => {
                 'refresh-rate': "<div class='refresh-rate'></div>",
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
     afterEach(() => {
         axiosStub.restore()

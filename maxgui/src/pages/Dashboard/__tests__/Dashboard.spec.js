@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Dashboard from '@/pages/Dashboard'
+import Dashboard from '@rootSrc/pages/Dashboard'
 
 describe('Dashboard', () => {
     it(`Should call fetchMaxScaleOverviewInfo and fetchAll`, () => {

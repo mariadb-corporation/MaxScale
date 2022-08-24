@@ -23,11 +23,7 @@ describe('DetailsPageTitle.vue', () => {
             shallow: false,
             component: DetailsPageTitle,
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
     afterEach(() => {
         axiosStub.restore()

@@ -34,7 +34,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import { dashboardTabRoutes } from 'router/routes'
+import { dashboardTabRoutes } from '@rootSrc/router/routes'
 
 export default {
     name: 'tab-nav',

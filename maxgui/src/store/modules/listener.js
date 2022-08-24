@@ -14,59 +14,59 @@
 export default {
     namespaced: true,
     state: {
-        all_filters: [],
-        current_filter: {},
+        all_listeners: [],
+        current_listener: {},
     },
     mutations: {
-        SET_ALL_FILTERS(state, payload) {
-            state.all_filters = payload
+        SET_ALL_LISTENERS(state, payload) {
+            state.all_listeners = payload
         },
-        SET_CURRENT_FILTER(state, payload) {
-            state.current_filter = payload
+        SET_CURRENT_LISTENER(state, payload) {
+            state.current_listener = payload
         },
     },
     actions: {
-        async fetchAllFilters({ commit }) {
+        async fetchAllListeners({ commit }) {
             try {
-                let res = await this.$http.get(`/filters`)
-                if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
+                let res = await this.vue.$http.get(`/listeners`)
+                if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-fetchAllFilters')
+                const logger = this.vue.$logger('store-listener-fetchAllListeners')
                 logger.error(e)
             }
         },
 
-        async fetchFilterById({ commit }, id) {
+        async fetchListenerById({ commit }, id) {
             try {
-                let res = await this.$http.get(`/filters/${id}`)
-                if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
+                let res = await this.vue.$http.get(`/listeners/${id}`)
+                if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-fetchFilterById')
+                const logger = this.vue.$logger('store-listener-fetchListenerById')
                 logger.error(e)
             }
         },
-
         /**
-         * @param {Object} payload payload object for creating filter
-         * @param {String} payload.id Name of the filter
-         * @param {String} payload.module The filter module to use
-         * @param {Object} payload.parameters Parameters for the filter
+         * @param {Object} payload payload object for creating listener
+         * @param {String} payload.id Name of the listener
+         * @param {Object} payload.parameters listener parameters
+         * @param {Object} payload.relationships feed a service
          * @param {Function} payload.callback callback function after successfully updated
          */
-        async createFilter({ commit }, payload) {
+        async createListener({ commit }, payload) {
             try {
                 const body = {
                     data: {
                         id: payload.id,
-                        type: 'filters',
+                        type: 'listeners',
                         attributes: {
-                            module: payload.module,
                             parameters: payload.parameters,
                         },
+                        relationships: payload.relationships,
                     },
                 }
-                let res = await this.$http.post(`/filters`, body)
-                let message = [`Filter ${payload.id} is created`]
+
+                let res = await this.vue.$http.post(`/listeners`, body)
+                let message = [`Listener ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -80,27 +80,26 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-createFilter')
+                const logger = this.vue.$logger('store-listener-createListener')
                 logger.error(e)
             }
         },
-
         /**
          * @param {Object} payload payload object
-         * @param {String} payload.id Name of the filter
-         * @param {Object} payload.parameters Parameters for the filter
+         * @param {String} payload.id Name of the listener
+         * @param {Object} payload.parameters Parameters for the listener
          * @param {Function} payload.callback callback function after successfully updated
          */
-        async updateFilterParameters({ commit }, payload) {
+        async updateListenerParameters({ commit }, payload) {
             try {
                 const body = {
                     data: {
                         id: payload.id,
-                        type: 'filters',
+                        type: 'listeners',
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.$http.patch(`/filters/${payload.id}`, body)
+                let res = await this.vue.$http.patch(`/listeners/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -114,44 +113,43 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-updateFilterParameters')
+                const logger = this.vue.$logger('store-listener-updateListenerParameters')
                 logger.error(e)
             }
         },
-
-        async destroyFilter({ dispatch, commit }, id) {
+        async destroyListener({ dispatch, commit }, id) {
             try {
-                let res = await this.$http.delete(`/filters/${id}?force=yes`)
+                let res = await this.vue.$http.delete(`/listeners/${id}`)
                 if (res.status === 204) {
-                    await dispatch('fetchAllFilters')
+                    await dispatch('fetchAllListeners')
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [`Filter ${id} is destroyed`],
+                            text: [`Listeners ${id} is destroyed`],
                             type: 'success',
                         },
                         { root: true }
                     )
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-destroyFilter')
+                const logger = this.vue.$logger('store-listener-destroyListener')
                 logger.error(e)
             }
         },
     },
     getters: {
-        // -------------- below getters are available only when fetchAllFilters has been dispatched
-        getAllFiltersMap: state => {
+        // -------------- below getters are available only when fetchAllListeners has been dispatched
+        getAllListenersMap: state => {
             let map = new Map()
-            state.all_filters.forEach(ele => {
+            state.all_listeners.forEach(ele => {
                 map.set(ele.id, ele)
             })
             return map
         },
 
-        getAllFiltersInfo: state => {
+        getAllListenersInfo: state => {
             let idArr = []
-            return state.all_filters.reduce((accumulator, _, index, array) => {
+            return state.all_listeners.reduce((accumulator, _, index, array) => {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])

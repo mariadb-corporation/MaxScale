@@ -12,10 +12,8 @@
  */
 
 import mount, { router } from '@tests/unit/setup'
-import FilterDetail from '@/pages/FilterDetail'
-
+import FilterDetail from '@rootSrc/pages/FilterDetail'
 import { dummy_all_filters } from '@tests/unit/utils'
-import store from 'store'
 
 describe('FilterDetail index', () => {
     let wrapper, axiosStub
@@ -26,11 +24,6 @@ describe('FilterDetail index', () => {
     })
 
     beforeEach(() => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
         wrapper = mount({
             shallow: false,
             component: FilterDetail,
@@ -38,6 +31,7 @@ describe('FilterDetail index', () => {
                 current_filter: () => dummy_all_filters[0],
             },
         })
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').returns(Promise.resolve({ data: {} }))
     })
     afterEach(() => {
         axiosStub.restore()

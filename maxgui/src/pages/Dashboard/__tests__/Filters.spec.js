@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Filters from '@/pages/Dashboard/Filters'
+import Filters from '@rootSrc/pages/Dashboard/Filters'
 
 import {
     dummy_all_filters,
@@ -50,11 +50,7 @@ describe('Dashboard Filters tab', () => {
                 all_filters: () => dummy_all_filters,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
 
     afterEach(() => {

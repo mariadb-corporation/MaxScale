@@ -53,7 +53,7 @@ export default {
                 if (!rootState.queryPersisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
                 sql += ' ORDER BY SCHEMA_NAME;'
-                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let cmpList = []
@@ -139,7 +139,7 @@ export default {
                         break
                 }
                 query += ` ORDER BY ${rowName};`
-                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
                 const dataRows = this.vue.$help.getObjectRows({
@@ -228,7 +228,7 @@ export default {
                         break
                 }
                 query += ` ORDER BY ${rowName};`
-                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
 
@@ -403,7 +403,7 @@ export default {
             const request_sent_time = new Date().valueOf()
             try {
                 let stmt_err_msg_obj = {}
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,
                 })

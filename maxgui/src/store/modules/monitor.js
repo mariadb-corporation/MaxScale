@@ -61,7 +61,7 @@ export default {
     actions: {
         async fetchAllMonitors({ commit }) {
             try {
-                let res = await this.$http.get(`/monitors`)
+                let res = await this.vue.$http.get(`/monitors`)
                 if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
@@ -70,7 +70,7 @@ export default {
         },
         async fetchMonitorById({ commit }, id) {
             try {
-                let res = await this.$http.get(`/monitors/${id}`)
+                let res = await this.vue.$http.get(`/monitors/${id}`)
                 if (res.data.data) commit('SET_CURRENT_MONITOR', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-fetchMonitorById')
@@ -79,7 +79,7 @@ export default {
         },
         async fetchMonitorDiagnosticsById({ commit }, id) {
             try {
-                let res = await this.$http.get(
+                let res = await this.vue.$http.get(
                     `/monitors/${id}?fields[monitors]=monitor_diagnostics`
                 )
                 if (res.data.data) commit('SET_MONITOR_DIAGNOSTICS', res.data.data)
@@ -110,7 +110,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.$http.post(`/monitors/`, body)
+                let res = await this.vue.$http.post(`/monitors/`, body)
                 let message = [`Monitor ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -146,7 +146,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.$http.patch(`/monitors/${payload.id}`, body)
+                let res = await this.vue.$http.patch(`/monitors/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -238,7 +238,7 @@ export default {
                         break
                     }
                 }
-                const res = await this.$http[method](url)
+                const res = await this.vue.$http[method](url)
                 // response ok
                 if (res.status === 204) {
                     switch (type) {
@@ -302,7 +302,7 @@ export default {
                     showSnackbar,
                     custAsyncCmdDone,
                 } = param
-                const { status, data: { meta } = {} } = await this.$http.get(
+                const { status, data: { meta } = {} } = await this.vue.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-result?${monitorId}`
                 )
                 // response ok
@@ -431,7 +431,7 @@ export default {
                 let res
                 let message
 
-                res = await this.$http.patch(`/monitors/${payload.id}/relationships/servers`, {
+                res = await this.vue.$http.patch(`/monitors/${payload.id}/relationships/servers`, {
                     data: payload.servers,
                 })
                 message = [`Servers relationships of ${payload.id} is updated`]

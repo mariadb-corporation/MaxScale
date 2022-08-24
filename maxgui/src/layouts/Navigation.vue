@@ -54,7 +54,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { sideBarRoutes } from 'router/routes'
+import { sideBarRoutes } from '@rootSrc/router/routes'
 export default {
     name: 'navigation',
     data() {

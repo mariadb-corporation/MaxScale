@@ -10,12 +10,25 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import VuexPersistence from 'vuex-persist'
+import localForage from 'localforage'
 
-import persistConfig from './persistConfig'
-import queryHttp from './axios'
-
-const plugin = store => {
-    store.$queryHttp = queryHttp(store)
-}
-
-export default [plugin, persistConfig.plugin]
+export default [
+    new VuexPersistence({
+        key: 'query-editor',
+        storage: localForage,
+        asyncStorage: true,
+        reducer: state => ({
+            queryPersisted: state.queryPersisted,
+            wke: {
+                worksheets_arr: state.wke.worksheets_arr,
+                active_wke_id: state.wke.active_wke_id,
+            },
+            queryConn: { sql_conns: state.queryConn.sql_conns },
+            querySession: {
+                query_sessions: state.querySession.query_sessions,
+                active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
+            },
+        }),
+    }).plugin,
+]

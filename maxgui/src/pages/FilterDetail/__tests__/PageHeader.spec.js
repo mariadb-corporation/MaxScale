@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@/pages/FilterDetail/PageHeader'
+import PageHeader from '@rootSrc/pages/FilterDetail/PageHeader'
 
 import { dummy_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
@@ -27,7 +27,7 @@ describe('FilterDetail - PageHeader', () => {
                 currentFilter: dummy_all_filters[0],
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
+        axiosStub = sinon.stub(wrapper.vm.$http, 'delete').returns(Promise.resolve())
     })
 
     afterEach(() => {

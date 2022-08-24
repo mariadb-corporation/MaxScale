@@ -174,9 +174,7 @@ describe('MonitorPageHeader', () => {
                 switch (op) {
                     case 'stop':
                     case 'start': {
-                        axiosStub = sinon
-                            .stub(wrapper.vm.$store.$http, 'put')
-                            .returns(Promise.resolve())
+                        axiosStub = sinon.stub(wrapper.vm.$http, 'put').returns(Promise.resolve())
                         await assertSendingRequest({
                             wrapper,
                             cssSelector,
@@ -189,7 +187,7 @@ describe('MonitorPageHeader', () => {
                     }
                     case 'destroy': {
                         axiosStub = sinon
-                            .stub(wrapper.vm.$store.$http, 'delete')
+                            .stub(wrapper.vm.$http, 'delete')
                             .returns(Promise.resolve())
                         await assertSendingRequest({
                             wrapper,
@@ -203,9 +201,7 @@ describe('MonitorPageHeader', () => {
                     case 'async-reset-replication':
                     case 'async-release-locks':
                     case 'async-failover': {
-                        axiosStub = sinon
-                            .stub(wrapper.vm.$store.$http, 'post')
-                            .returns(Promise.resolve())
+                        axiosStub = sinon.stub(wrapper.vm.$http, 'post').returns(Promise.resolve())
                         await assertSendingRequest({
                             wrapper,
                             cssSelector,

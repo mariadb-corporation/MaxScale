@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+const monacoConfig = require('./share/buildConfig/monaco')
 const path = require('path')
 const { gitDescribeSync } = require('git-describe')
 const fs = require('fs')
@@ -31,13 +31,13 @@ module.exports = {
 
         config.resolve.modules
             .add(path.resolve(__dirname, 'src'), 'node_modules')
-            //TODO: Once the queryEditor has its own node_modules for monaco package, this won't be needed anymore
             .add(path.resolve(__dirname, 'queryEditor'), 'node_modules')
 
         config.resolve.alias
-            .set('@', path.resolve(__dirname, 'src'))
+            .set('@rootSrc', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
             .set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
+            .set('@queryEditorSrc', path.resolve(__dirname, 'queryEditor/src'))
             .set('@share', path.resolve(__dirname, 'share'))
 
         const key = process.env.httpsKey
@@ -111,66 +111,9 @@ module.exports = {
                 localesToKeep: [], //e.g. 'ru', 'vi'
             },
         ])
-        config.plugin('MonacoWebpackPlugin').use(require('monaco-editor-webpack-plugin'), [
-            {
-                languages: ['mariadb'],
-                /**
-                 * Monaco features
-                 * Only use necessary features to reduce bundle size,
-                 */
-                // https://github.com/microsoft/monaco-editor-webpack-plugin/blob/main/src/features.ts
-                features: [
-                    '!accessibilityHelp',
-                    '!anchorSelect',
-                    '!bracketMatching',
-                    '!caretOperations',
-                    'clipboard',
-                    '!codeAction',
-                    '!codelens',
-                    '!colorPicker',
-                    'comment',
-                    'contextmenu',
-                    'coreCommands',
-                    '!cursorUndo',
-                    'dnd',
-                    'documentSymbols',
-                    'find',
-                    'folding',
-                    'fontZoom',
-                    'format',
-                    '!gotoError',
-                    '!gotoLine',
-                    '!gotoSymbol',
-                    '!hover',
-                    '!iPadShowKeyboard',
-                    '!inPlaceReplace',
-                    '!indentation',
-                    '!inlineHints',
-                    '!inspectTokens',
-                    '!linesOperations',
-                    '!linkedEditing',
-                    '!links',
-                    'multicursor',
-                    '!parameterHints',
-                    'quickCommand',
-                    '!quickHelp',
-                    '!quickOutline',
-                    '!referenceSearch',
-                    '!rename',
-                    '!smartSelect',
-                    '!snippets',
-                    'suggest',
-                    '!toggleHighContrast',
-                    '!toggleTabFocusMode',
-                    '!transpose',
-                    '!unusualLineTerminators',
-                    '!viewportSemanticTokens',
-                    '!wordHighlighter',
-                    '!wordOperations',
-                    '!wordPartOperations',
-                ],
-            },
-        ])
+        config
+            .plugin('MonacoWebpackPlugin')
+            .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
     },
 
     transpileDependencies: ['vuetify', 'vuex-persist'],

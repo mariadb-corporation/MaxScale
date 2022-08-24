@@ -6,8 +6,10 @@ import queryResult from './queryResult'
 import querySession from './querySession'
 import queryPersisted from './queryPersisted'
 import queryEditorConfig from './queryEditorConfig'
+import appNotifier from '@share/store/appNotifier'
 
 export default {
+    appNotifier,
     wke,
     queryConn,
     editor,

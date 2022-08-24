@@ -61,7 +61,7 @@ function getSqlConnId(url) {
  * @param {Object} store -vuex store
  * @returns {Object} axios instance
  */
-export default function queryHttp(store) {
+function queryHttp(store) {
     //TODO: Make baseURL and perhaps headers configurable
     let queryHttp = ax.create({
         baseURL: '/',
@@ -113,4 +113,10 @@ export default function queryHttp(store) {
         }
     )
     return queryHttp
+}
+
+export default {
+    install: (Vue, { store }) => {
+        Vue.prototype.$queryHttp = queryHttp(store)
+    },
 }

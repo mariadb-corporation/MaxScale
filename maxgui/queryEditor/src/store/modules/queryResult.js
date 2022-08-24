@@ -61,7 +61,7 @@ export default {
                         break
                 }
 
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,
                 })
@@ -130,7 +130,7 @@ export default {
                     { root: true }
                 )
 
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                     max_rows: rootState.queryPersisted.query_row_limit,
                 })
@@ -181,7 +181,7 @@ export default {
                 })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
-                } = await this.$queryHttp.post(`/sql/${bgConn.id}/queries`, {
+                } = await this.vue.$queryHttp.post(`/sql/${bgConn.id}/queries`, {
                     sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
                 })
                 if (results.length && results[0].errno)

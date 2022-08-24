@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Graphs from '@/pages/Dashboard/Graphs'
+import Graphs from '@rootSrc/pages/Dashboard/Graphs'
 
 import { dummy_all_servers } from '@tests/unit/utils'
 describe('Graphs index', () => {

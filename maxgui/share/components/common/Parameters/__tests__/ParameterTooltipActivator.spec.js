@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ParameterTooltipActivator from '@share/components/common/Parameters/ParameterTooltipActivator'
+import Activator from '@share/components/common/Parameters/ParameterTooltipActivator'
 
 describe('ParameterTooltipActivator.vue', () => {
     let wrapper
@@ -33,7 +33,7 @@ describe('ParameterTooltipActivator.vue', () => {
     beforeEach(() => {
         wrapper = mount({
             shallow: false,
-            component: ParameterTooltipActivator,
+            component: Activator,
             propsData: {
                 /*
                 'type' in item || 'description' in item || 'unit' in item || 'default_value' in item

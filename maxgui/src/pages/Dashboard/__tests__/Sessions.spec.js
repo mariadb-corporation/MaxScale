@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Sessions from '@/pages/Dashboard/Sessions'
+import Sessions from '@rootSrc/pages/Dashboard/Sessions'
 
 import {
     dummy_all_sessions,
@@ -40,11 +40,7 @@ describe('Dashboard Sessions tab', () => {
                 all_sessions: () => dummy_all_sessions,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
     })
 
     afterEach(() => {

@@ -36,7 +36,7 @@ export default {
     actions: {
         async fetchAllServers({ commit }) {
             try {
-                let res = await this.$http.get(`/servers`)
+                let res = await this.vue.$http.get(`/servers`)
                 if (res.data.data) commit('SET_ALL_SERVERS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-server-fetchAllServers')
@@ -46,7 +46,7 @@ export default {
 
         async fetchAllServerNames({ commit }) {
             try {
-                let res = await this.$http.get(`/servers?fields[servers]=name`)
+                let res = await this.vue.$http.get(`/servers?fields[servers]=name`)
                 if (res.data.data)
                     commit(
                         'SET_ALL_SERVER_NAMES',
@@ -59,7 +59,7 @@ export default {
 
         async fetchServerById({ commit }, id) {
             try {
-                let res = await this.$http.get(`/servers/${id}`)
+                let res = await this.vue.$http.get(`/servers/${id}`)
                 if (res.data.data) commit('SET_CURRENT_SERVER', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-server-fetchServerById')
@@ -88,7 +88,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.$http.post(`/servers/`, body)
+                let res = await this.vue.$http.post(`/servers/`, body)
                 let message = [`Server ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -124,7 +124,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.$http.patch(`/servers/${payload.id}`, body)
+                let res = await this.vue.$http.patch(`/servers/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -157,7 +157,7 @@ export default {
                 let res
                 let message
 
-                res = await this.$http.patch(
+                res = await this.vue.$http.patch(
                     `/servers/${payload.id}/relationships/${payload.type}`,
                     {
                         data: payload.type === 'services' ? payload.services : payload.monitors,
@@ -190,7 +190,7 @@ export default {
 
         async destroyServer({ commit }, id) {
             try {
-                let res = await this.$http.delete(`/servers/${id}?force=yes`)
+                let res = await this.vue.$http.delete(`/servers/${id}?force=yes`)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -229,7 +229,7 @@ export default {
                         message = [`State '${nextStateMode}' of server ${id} is cleared`]
                         break
                 }
-                const res = await this.$http.put(url)
+                const res = await this.vue.$http.put(url)
                 // response ok
                 if (res.status === 204) {
                     commit(

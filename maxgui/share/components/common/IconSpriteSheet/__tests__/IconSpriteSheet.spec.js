@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import IconSpriteSheet from '@share/components/common/IconSpriteSheet'
 import { lodash } from '@share/utils/helpers'
-import { APP_CONFIG } from 'utils/constants'
+import { APP_CONFIG } from '@rootSrc/utils/constants'
 
 const sheets = APP_CONFIG.ICON_SHEETS
 /**

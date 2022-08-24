@@ -51,7 +51,7 @@ export default {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let charsetCollationMap = {}
@@ -78,7 +78,7 @@ export default {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let defDbCharsetMap = {}
@@ -96,7 +96,7 @@ export default {
         async queryEngines({ rootState, commit }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })
                 commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
@@ -129,12 +129,12 @@ export default {
                     active_sql_conn,
                     nodeId: node.id,
                     vue: this.vue,
-                    $queryHttp: this.$queryHttp,
+                    $queryHttp: this.vue.$queryHttp,
                 })
                 const colsOptsData = await queryHelper.queryColsOptsData({
                     active_sql_conn,
                     nodeId: node.id,
-                    $queryHttp: this.$queryHttp,
+                    $queryHttp: this.vue.$queryHttp,
                 })
                 commit(`SET_TBL_CREATION_INFO`, {
                     id: active_session_id,
