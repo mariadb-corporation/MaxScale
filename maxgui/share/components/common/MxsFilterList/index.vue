@@ -19,7 +19,7 @@
                     v-on="on"
                 >
                     <v-icon size="12" color="accent-dark" class="mr-1">
-                        $vuetify.icons.filter
+                        $vuetify.icons.mxs_filter
                     </v-icon>
                     {{ label }}
                     <v-icon

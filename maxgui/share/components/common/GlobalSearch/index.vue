@@ -14,7 +14,7 @@
         rounded
         @keyup.enter="create"
     >
-        <v-icon slot="append" size="16" class="search-icon">$vuetify.icons.search</v-icon>
+        <v-icon slot="append" size="16" class="search-icon">$vuetify.icons.mxs_search</v-icon>
     </v-text-field>
 </template>
 

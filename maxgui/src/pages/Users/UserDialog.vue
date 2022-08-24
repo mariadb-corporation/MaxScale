@@ -7,7 +7,7 @@
                 v-html="$t(`confirmations.${USER_ADMIN_ACTIONS.DELETE}`, { targetId: currUser.id })"
             />
             <div v-if="type === USER_ADMIN_ACTIONS.UPDATE" class="d-flex align-center mb-2">
-                <v-icon size="20" class="mr-1">$vuetify.icons.user </v-icon>
+                <v-icon size="20" class="mr-1">$vuetify.icons.mxs_user </v-icon>
                 <span>{{ currUser.id }}</span>
             </div>
             <template v-if="type === USER_ADMIN_ACTIONS.UPDATE || type === USER_ADMIN_ACTIONS.ADD">

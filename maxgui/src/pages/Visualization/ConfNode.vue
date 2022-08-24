@@ -89,7 +89,7 @@
                             @click="handleVisFilters"
                         >
                             <v-icon color="primary" size="14">
-                                $vuetify.icons.reports
+                                $vuetify.icons.mxs_reports
                             </v-icon>
                         </v-btn>
                     </template>

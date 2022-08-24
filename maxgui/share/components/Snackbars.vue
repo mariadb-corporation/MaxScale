@@ -14,16 +14,16 @@
                 size="22"
                 color="white"
             >
-                $vuetify.icons.statusInfo
+                $vuetify.icons.mxs_statusInfo
             </v-icon>
             <v-icon v-else-if="msgObj.type === 'error'" class="mr-4" size="22" color="white">
-                $vuetify.icons.alertError
+                $vuetify.icons.mxs_alertError
             </v-icon>
             <v-icon v-else-if="msgObj.type === 'warning'" class="mr-4" size="22" color="white">
-                $vuetify.icons.alertWarning
+                $vuetify.icons.mxs_alertWarning
             </v-icon>
             <v-icon v-else class="mr-4" size="22" :color="msgObj.type">
-                $vuetify.icons.alertSuccess
+                $vuetify.icons.mxs_alertSuccess
             </v-icon>
 
             <div class="d-flex flex-column">

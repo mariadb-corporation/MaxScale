@@ -21,7 +21,7 @@
                         v-on="{ ...tooltip, ...menu }"
                     >
                         <v-icon class="mr-1" size="12" color="primary">
-                            $vuetify.icons.reload
+                            $vuetify.icons.mxs_reload
                         </v-icon>
                         <span class="mr-1 mxs-color-helper text-navigation">
                             {{ $t('refreshRate') }}:

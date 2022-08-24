@@ -32,7 +32,7 @@
                 >
                     <v-icon size="16">
                         {{
-                            `$vuetify.icons.${
+                            `$vuetify.icons.mxs_${
                                 getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
                             }`
                         }}
@@ -69,7 +69,7 @@
                         SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
                     "
                 >
-                    <v-icon size="16"> $vuetify.icons.reports </v-icon>
+                    <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
                 </v-btn>
             </template>
             <span class="text-capitalize">

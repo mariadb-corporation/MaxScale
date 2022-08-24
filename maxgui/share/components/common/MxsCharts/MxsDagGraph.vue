@@ -1,6 +1,6 @@
 <template>
     <div class="mxs-dag-graph-container fill-height" :style="revertGraphStyle">
-        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.gridBg</v-icon>
+        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
         <svg ref="svg" class="mxs-dag-graph" :width="dim.width" height="100%">
             <g id="dag-node-group" :style="{ transform: nodeGroupTransformStyle }" />
         </svg>

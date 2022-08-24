@@ -44,7 +44,7 @@
                         v-on="on"
                         @click="handleUngroup"
                     >
-                        <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
+                        <v-icon size="10" color="deep-ocean"> $vuetify.icons.mxs_close</v-icon>
                     </v-btn>
                 </template>
                 <span>{{ $t('ungroup') }}</span>

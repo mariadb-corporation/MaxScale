@@ -23,7 +23,7 @@
                             @change="config.rowLimit = $event"
                         />
                         <v-icon size="16" color="warning" class="mr-2">
-                            $vuetify.icons.alertWarning
+                            $vuetify.icons.mxs_alertWarning
                         </v-icon>
                         <small v-html="$t('info.rowLimit')" />
                     </v-col>

@@ -41,7 +41,7 @@
                 <v-fade-transition>
                     <v-btn v-if="showEditBtn || isEditing" icon class="edit-btn" @click="onEdit">
                         <v-icon color="primary" size="18">
-                            $vuetify.icons.edit
+                            $vuetify.icons.mxs_edit
                         </v-icon>
                     </v-btn>
                 </v-fade-transition>

@@ -36,7 +36,7 @@
                         @click="() => onEdit('monitors')"
                     >
                         <v-icon size="18" color="primary">
-                            $vuetify.icons.edit
+                            $vuetify.icons.mxs_edit
                         </v-icon>
                     </v-btn>
                 </template>

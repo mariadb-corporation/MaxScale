@@ -18,7 +18,7 @@
                     @click="$emit('on-revert')"
                 >
                     <v-icon size="16">
-                        $vuetify.icons.reload
+                        $vuetify.icons.mxs_reload
                     </v-icon>
                 </v-btn>
             </template>
@@ -41,7 +41,7 @@
                     @click="$emit('on-apply')"
                 >
                     <v-icon size="16">
-                        $vuetify.icons.running
+                        $vuetify.icons.mxs_running
                     </v-icon>
                 </v-btn>
             </template>

@@ -207,14 +207,14 @@ export default {
                 [UPDATE]: {
                     text: scope.$t(`userOps.actions.${UPDATE}`),
                     type: UPDATE,
-                    icon: '$vuetify.icons.edit',
+                    icon: '$vuetify.icons.mxs_edit',
                     iconSize: 18,
                     color: 'primary',
                 },
                 [DELETE]: {
                     text: scope.$t(`userOps.actions.${DELETE}`),
                     type: DELETE,
-                    icon: ' $vuetify.icons.delete',
+                    icon: ' $vuetify.icons.mxs_delete',
                     iconSize: 18,
                     color: 'error',
                 },

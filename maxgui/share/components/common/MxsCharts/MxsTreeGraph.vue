@@ -1,6 +1,6 @@
 <template>
     <div class="mxs-tree-graph-container fill-height">
-        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.gridBg</v-icon>
+        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.mxs_gridBg</v-icon>
         <svg ref="svg" class="mxs-tree-graph" :width="dim.width" height="100%">
             <g
                 id="node-group"

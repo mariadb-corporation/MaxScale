@@ -21,7 +21,7 @@
                     {{ title }}
                 </h3>
                 <v-btn v-if="!isForceAccept && showCloseIcon" class="close" icon @click="close">
-                    <v-icon size="20" color="navigation"> $vuetify.icons.close</v-icon>
+                    <v-icon size="20" color="navigation"> $vuetify.icons.mxs_close</v-icon>
                 </v-btn>
             </v-card-title>
             <v-card-text class="px-0 pb-12">

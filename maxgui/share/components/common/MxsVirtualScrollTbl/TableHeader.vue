@@ -70,7 +70,7 @@
                             size="14"
                             class="sort-icon ml-2"
                         >
-                            $vuetify.icons.arrowDown
+                            $vuetify.icons.mxs_arrowDown
                         </v-icon>
                         <span
                             v-if="enableGrouping && $typy(header, 'groupable').safeBoolean"

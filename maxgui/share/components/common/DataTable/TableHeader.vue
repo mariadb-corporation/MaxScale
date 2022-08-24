@@ -19,7 +19,7 @@
                         size="14"
                         class="ml-3 v-data-table-header__icon"
                     >
-                        $vuetify.icons.arrowDown
+                        $vuetify.icons.mxs_arrowDown
                     </v-icon>
                 </div>
             </th>

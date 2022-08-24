@@ -37,7 +37,7 @@
             <template v-if="isAdmin && !readOnly" v-slot:actions="{ data: { item } }">
                 <v-btn icon @click="onDelete(item)">
                     <v-icon size="20" color="error">
-                        $vuetify.icons.unlink
+                        $vuetify.icons.mxs_unlink
                     </v-icon>
                 </v-btn>
             </template>

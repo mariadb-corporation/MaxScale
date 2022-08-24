@@ -29,7 +29,7 @@
             <template v-slot:activator="{ on }">
                 <v-btn dark class="mr-0 arrow-toggle" text tile v-on="on">
                     <v-icon class="mr-1 " size="30">
-                        $vuetify.icons.user
+                        $vuetify.icons.mxs_user
                     </v-icon>
                     <span class="user-name tk-adrianna text-capitalize font-weight-regular">
                         {{ logged_in_user ? logged_in_user.name : '' }}
@@ -41,7 +41,7 @@
                         class="mr-0 ml-1 "
                         left
                     >
-                        $vuetify.icons.arrowDown
+                        $vuetify.icons.mxs_arrowDown
                     </v-icon>
                 </v-btn>
             </template>

@@ -18,7 +18,7 @@
                                 @click="actionHandle('stop')"
                             >
                                 <v-icon size="22">
-                                    $vuetify.icons.stopped
+                                    $vuetify.icons.mxs_stopped
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -39,7 +39,7 @@
                                 @click="actionHandle('start')"
                             >
                                 <v-icon size="22">
-                                    $vuetify.icons.running
+                                    $vuetify.icons.mxs_running
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -63,7 +63,7 @@
                                 @click="actionHandle('destroy')"
                             >
                                 <v-icon size="18">
-                                    $vuetify.icons.delete
+                                    $vuetify.icons.mxs_delete
                                 </v-icon>
                             </v-btn>
                         </template>

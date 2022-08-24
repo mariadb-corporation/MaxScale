@@ -309,7 +309,7 @@ export default {
                 [MAINTAIN]: {
                     text: scope.$t('serverOps.actions.maintain'),
                     type: MAINTAIN,
-                    icon: '$vuetify.icons.maintenance',
+                    icon: '$vuetify.icons.mxs_maintenance',
                     iconSize: 22,
                     color: 'primary',
                     info: scope.$t(`serverOps.info.maintain`),
@@ -319,7 +319,7 @@ export default {
                 [CLEAR]: {
                     text: scope.$t('serverOps.actions.clear'),
                     type: CLEAR,
-                    icon: '$vuetify.icons.restart',
+                    icon: '$vuetify.icons.mxs_restart',
                     iconSize: 22,
                     color: 'primary',
                     info: '',
@@ -329,7 +329,7 @@ export default {
                 [DRAIN]: {
                     text: scope.$t('serverOps.actions.drain'),
                     type: DRAIN,
-                    icon: '$vuetify.icons.drain',
+                    icon: '$vuetify.icons.mxs_drain',
                     iconSize: 22,
                     color: 'primary',
                     info: scope.$t(`serverOps.info.drain`),
@@ -339,7 +339,7 @@ export default {
                 [DELETE]: {
                     text: scope.$t('serverOps.actions.delete'),
                     type: DELETE,
-                    icon: '$vuetify.icons.delete',
+                    icon: '$vuetify.icons.mxs_delete',
                     iconSize: 18,
                     color: 'error',
                     info: '',

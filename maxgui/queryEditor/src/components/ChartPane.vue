@@ -51,7 +51,7 @@
                         v-on="on"
                         @click="$emit('close-chart')"
                     >
-                        <v-icon size="12" color="accent-dark"> $vuetify.icons.close</v-icon>
+                        <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
                     </v-btn>
                 </template>
                 <span>{{ $t('close') }}</span>

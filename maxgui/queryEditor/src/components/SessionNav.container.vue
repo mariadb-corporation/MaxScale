@@ -59,7 +59,7 @@
                                     : 'error'
                             "
                         >
-                            $vuetify.icons.close
+                            $vuetify.icons.mxs_close
                         </v-icon>
                     </v-btn>
                 </div>

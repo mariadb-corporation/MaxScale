@@ -470,12 +470,12 @@ export default {
             const { SCHEMA, TABLES, SPS } = this.SQL_NODE_TYPES
             switch (item.type) {
                 case SCHEMA:
-                    return '$vuetify.icons.database'
+                    return '$vuetify.icons.mxs_database'
                 //TODO: a separate icon for Tables
                 case TABLES:
-                    return '$vuetify.icons.table'
+                    return '$vuetify.icons.mxs_table'
                 case SPS:
-                    return '$vuetify.icons.storedProcedures'
+                    return '$vuetify.icons.mxs_storedProcedures'
                 //TODO: an icon for Column
             }
         },

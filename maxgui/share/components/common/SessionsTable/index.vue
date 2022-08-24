@@ -34,7 +34,7 @@
                     <template v-slot:activator="{ on }">
                         <v-btn icon v-on="on" @click="onKillSession(item)">
                             <v-icon size="18" color="error">
-                                $vuetify.icons.unlink
+                                $vuetify.icons.mxs_unlink
                             </v-icon>
                         </v-btn>
                     </template>

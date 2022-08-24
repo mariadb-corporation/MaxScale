@@ -17,7 +17,7 @@
                                 @click="handleDelete"
                             >
                                 <v-icon size="18">
-                                    $vuetify.icons.delete
+                                    $vuetify.icons.mxs_delete
                                 </v-icon>
                             </v-btn>
                         </template>

@@ -18,7 +18,9 @@
                     :color="isDroppableNode ? 'white' : isMaster ? 'navigation' : 'accent'"
                 >
                     {{
-                        isMaster ? '$vuetify.icons.primaryServer' : '$vuetify.icons.secondaryServer'
+                        isMaster
+                            ? '$vuetify.icons.mxs_primaryServer'
+                            : '$vuetify.icons.mxs_secondaryServer'
                     }}
                 </v-icon>
                 <router-link
@@ -48,7 +50,7 @@
                                 v-on="on"
                             >
                                 <v-icon size="16" :color="iconColor">
-                                    $vuetify.icons.queryEditor
+                                    $vuetify.icons.mxs_queryEditor
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -64,7 +66,7 @@
                         <template v-slot:activator="{ on }">
                             <v-btn small class="gear-btn" icon v-on="on">
                                 <v-icon size="16" :color="iconColor">
-                                    $vuetify.icons.settings
+                                    $vuetify.icons.mxs_settings
                                 </v-icon>
                             </v-btn>
                         </template>

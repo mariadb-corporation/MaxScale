@@ -21,40 +21,48 @@ export const APP_CONFIG = Object.freeze({
 `,
     ICON_SHEETS: {
         monitors: {
-            frames: ['$vuetify.icons.stopped', '$vuetify.icons.good'],
+            frames: ['$vuetify.icons.mxs_stopped', '$vuetify.icons.mxs_good'],
             colorClasses: ['text-grayed-out', 'text-success'],
         },
         services: {
-            frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
+            frames: [
+                '$vuetify.icons.mxs_critical',
+                '$vuetify.icons.mxs_good',
+                '$vuetify.icons.mxs_stopped',
+            ],
             colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         listeners: {
-            frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
+            frames: [
+                '$vuetify.icons.mxs_critical',
+                '$vuetify.icons.mxs_good',
+                '$vuetify.icons.mxs_stopped',
+            ],
             colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         servers: {
             frames: [
-                '$vuetify.icons.criticalServer',
-                '$vuetify.icons.goodServer',
-                '$vuetify.icons.maintenance',
+                '$vuetify.icons.mxs_criticalServer',
+                '$vuetify.icons.mxs_goodServer',
+                '$vuetify.icons.mxs_maintenance',
             ],
             colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
         },
         replication: {
             frames: [
-                '$vuetify.icons.stopped',
-                '$vuetify.icons.good',
-                '$vuetify.icons.statusWarning',
+                '$vuetify.icons.mxs_stopped',
+                '$vuetify.icons.mxs_good',
+                '$vuetify.icons.mxs_statusWarning',
             ],
             colorClasses: ['text-grayed-out', 'text-success', 'text-warning'],
         },
         logPriorities: {
             frames: {
-                alert: '$vuetify.icons.alertWarning',
-                error: '$vuetify.icons.critical',
-                warning: '$vuetify.icons.statusInfo',
-                notice: '$vuetify.icons.reports',
-                info: '$vuetify.icons.statusInfo',
+                alert: '$vuetify.icons.mxs_alertWarning',
+                error: '$vuetify.icons.mxs_critical',
+                warning: '$vuetify.icons.mxs_statusInfo',
+                notice: '$vuetify.icons.mxs_reports',
+                info: '$vuetify.icons.mxs_statusInfo',
                 debug: 'mdi-bug',
             },
             colorClasses: {

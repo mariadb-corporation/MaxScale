@@ -9,7 +9,7 @@
                         size="28"
                         color="deep-ocean"
                     >
-                        $vuetify.icons.arrowDown
+                        $vuetify.icons.mxs_arrowDown
                     </v-icon>
                 </v-btn>
                 <div class="d-inline-flex align-center">
@@ -32,7 +32,7 @@
                         <template v-slot:activator="{ on }">
                             <v-btn class="ml-2 gear-btn" icon v-on="on">
                                 <v-icon size="18" color="primary">
-                                    $vuetify.icons.settings
+                                    $vuetify.icons.mxs_settings
                                 </v-icon>
                             </v-btn>
                         </template>

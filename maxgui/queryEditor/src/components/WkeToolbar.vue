@@ -30,7 +30,7 @@
                         @click="queryConfigDialog = !queryConfigDialog"
                     >
                         <v-icon size="16" color="accent-dark">
-                            $vuetify.icons.settings
+                            $vuetify.icons.mxs_settings
                         </v-icon>
                     </v-btn>
                 </template>
