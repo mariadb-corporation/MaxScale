@@ -88,7 +88,10 @@ const esConfig = {
         }),
         PostCSS({ sourceMap: false, minimize: true }),
         copy({
-            targets: [{ src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' }],
+            targets: [
+                { src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' },
+                { src: `${sharePath}/icons`, dest: 'dist' },
+            ],
         }),
     ],
 }
