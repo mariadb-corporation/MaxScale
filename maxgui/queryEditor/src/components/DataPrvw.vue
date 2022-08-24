@@ -4,7 +4,7 @@
             <template v-if="activePrvwTblNodeId">
                 <div class="d-flex align-center mr-4">
                     <b class="mr-1">Table:</b>
-                    <truncate-string :maxWidth="260" :nudgeLeft="16" :text="activePrvwTblNodeId" />
+                    <mxs-truncate-str :maxWidth="260" :nudgeLeft="16" :text="activePrvwTblNodeId" />
                 </div>
                 <data-prvw-nav-ctr :isLoading="isLoading" :resultData="resultData" />
                 <v-spacer />

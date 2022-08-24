@@ -2,7 +2,7 @@
     <div class="d-flex flex-column fill-height">
         <page-header-right showCreateNew @on-count-done="fetchConfigData" />
         <v-card ref="wrapper" v-resize.quiet="setCtrDim" class="fill-height graph-card" outlined>
-            <dag-graph
+            <mxs-dag-graph
                 v-if="ctrDim.height && config_graph_data.length"
                 :data="config_graph_data"
                 :dim="ctrDim"
@@ -22,7 +22,7 @@
                         :recompute="recompute"
                     />
                 </template>
-            </dag-graph>
+            </mxs-dag-graph>
         </v-card>
     </div>
 </template>
@@ -51,7 +51,7 @@ export default {
     },
     data() {
         return {
-            //states for tree-graph
+            //states for mxs-dag-graph
             ctrDim: {},
             nodeWidth: 220,
             dynNodeHeightMap: {},

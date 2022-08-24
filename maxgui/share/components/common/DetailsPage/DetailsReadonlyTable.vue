@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         :toggleOnClick="() => (showTable = !showTable)"
         :isContentVisible="showTable"
         :title="title"
@@ -21,7 +21,7 @@
                 <slot :name="header.value" :cellProps="cellProps"> </slot>
             </template>
         </data-table>
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>

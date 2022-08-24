@@ -102,14 +102,14 @@ const dummy_db_tree_data = [
         ],
     },
 ]
-describe(`schema-tree-ctr - m-treeview tests`, () => {
+describe(`schema-tree-ctr - mxs-treeview tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
-    it(`Should not render m-treeview component if there is no data`, () => {
+    it(`Should not render mxs-treeview component if there is no data`, () => {
         wrapper = mountFactory({ computed: { getDbTreeData: () => [] } })
-        expect(wrapper.find('.m-treeview').exists()).to.be.false
+        expect(wrapper.find('.mxs-treeview').exists()).to.be.false
     })
-    it(`Should pass accurate data to m-treeview via props`, () => {
+    it(`Should pass accurate data to mxs-treeview via props`, () => {
         wrapper = mountFactory()
         const {
             items,
@@ -121,7 +121,7 @@ describe(`schema-tree-ctr - m-treeview tests`, () => {
             active,
             open,
             returnObject,
-        } = wrapper.find('.m-treeview').vm.$props
+        } = wrapper.find('.mxs-treeview').vm.$props
         expect(items).to.be.deep.equals(dummy_db_tree_data)
         expect(search).to.be.equals(wrapper.vm.search_schema)
         expect(filter).to.be.equals(wrapper.vm.filter)
@@ -139,13 +139,13 @@ describe(`schema-tree-ctr - m-treeview tests`, () => {
     }
     Object.keys(fnEvtMap).forEach(fn => {
         it(`Should call ${fn} when ${fnEvtMap[fn]} event is emitted
-          from m-treeview component`, () => {
+          from mxs-treeview component`, () => {
             let fnSpy = sinon.spy(SchemaTree.methods, fn)
             wrapper = mountFactory({ methods: { handleOpenCtxMenu: () => null } })
             let param = dummy_db_tree_data[0]
             if (fnEvtMap[fn] === 'item:contextmenu')
                 param = { e: 'Event', item: dummy_db_tree_data[0] }
-            wrapper.find('.m-treeview').vm.$emit(fnEvtMap[fn], param)
+            wrapper.find('.mxs-treeview').vm.$emit(fnEvtMap[fn], param)
             fnSpy.should.have.been.calledOnceWith(param)
             fnSpy.restore()
         })
@@ -159,7 +159,7 @@ describe(`schema-tree-ctr - m-treeview tests`, () => {
             },
         })
         const schemaNodeNameEle = wrapper
-            .find('.m-treeview')
+            .find('.mxs-treeview')
             .find(`#node-tooltip-activator-${schemaNode.key}`)
             .find('.node-name')
         expect(schemaNodeNameEle.classes()).to.include.members(['font-weight-bold'])
@@ -185,16 +185,16 @@ describe(`schema-tree-ctr - node tooltip tests`, () => {
         nodeKeys.forEach(key => {
             expect(
                 wrapper
-                    .find('.m-treeview')
+                    .find('.mxs-treeview')
                     .find(`#node-tooltip-activator-${key}`)
                     .exists()
             ).to.be.true
         })
     })
     it(`Should assign hovered item to hoveredItem when item:hovered event is emitted
-    from m-treeview component`, () => {
+    from mxs-treeview component`, () => {
         wrapper = mountFactory()
-        wrapper.find('.m-treeview').vm.$emit('item:hovered', dummy_db_tree_data[0])
+        wrapper.find('.mxs-treeview').vm.$emit('item:hovered', dummy_db_tree_data[0])
         expect(wrapper.vm.$data.hoveredItem).to.be.deep.equals(dummy_db_tree_data[0])
     })
 })
@@ -210,7 +210,7 @@ describe(`schema-tree-ctr - draggable node tests`, () => {
         sinon.spy(wrapper.vm, 'onNodeDragStart')
         const draggableNode = dummy_db_tree_data.find(node => node.draggable)
         const draggableNodeEle = wrapper
-            .find('.m-treeview')
+            .find('.mxs-treeview')
             .find(`#node-tooltip-activator-${draggableNode.key}`)
         draggableNodeEle.trigger('mousedown')
         wrapper.vm.onNodeDragStart.should.have.been.calledOnceWith(evtParam)
@@ -230,9 +230,9 @@ describe(`schema-tree-ctr - context menu tests`, () => {
         return wrapper.find(`#ctx-menu-activator-${node.key}`)
     }
     afterEach(() => wrapper.destroy())
-    it(`Should pass accurate data to sub-menu via props`, () => {
+    it(`Should pass accurate data to mxs-sub-menu via props`, () => {
         wrapper = mountFactory({ data: () => ({ activeCtxItem }) }) // condition to render the menu
-        const menu = wrapper.findComponent({ name: 'sub-menu' })
+        const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const { value, left, items, activator } = menu.vm.$props
         expect(value).to.be.equals(wrapper.vm.showCtxMenu)
         expect(left).to.be.true
@@ -240,10 +240,10 @@ describe(`schema-tree-ctr - context menu tests`, () => {
         expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxItem.key}`)
         expect(menu.vm.$vnode.key).to.be.equals(activeCtxItem.key)
     })
-    it(`Should handle @item-click event emitted from sub-menu`, async () => {
+    it(`Should handle @item-click event emitted from mxs-sub-menu`, async () => {
         wrapper = mountFactory({ data: () => ({ activeCtxItem }) })
         const fnSpy = sinon.spy(wrapper.vm, 'optionHandler')
-        const menu = wrapper.findComponent({ name: 'sub-menu' })
+        const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const mockOpt = { text: 'Qualified Name', type: 'INSERT' }
         await menu.vm.$emit('item-click', mockOpt)
         fnSpy.should.have.been.calledOnceWithExactly({ item: activeCtxItem, opt: mockOpt })

@@ -43,7 +43,7 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
-            <filter-list
+            <mxs-filter-list
                 v-model="selectedColSpecs"
                 returnObject
                 :label="$t('alterSpecs')"
@@ -79,7 +79,7 @@
             </v-tooltip>
         </div>
 
-        <virtual-scroll-table
+        <mxs-virtual-scroll-tbl
             :headers="visHeaders"
             :rows="rows"
             :itemHeight="40"
@@ -120,9 +120,9 @@
                     />
                 </div>
             </template>
-            <!-- Add :key so that truncate-string rerender to evaluate truncation and fallback text-truncate class  -->
+            <!-- Add :key so that mxs-truncate-str rerender to evaluate truncation and fallback text-truncate class  -->
             <template v-slot:header-column_name="{ data: { maxWidth } }">
-                <truncate-string
+                <mxs-truncate-str
                     :key="maxWidth"
                     class="text-truncate"
                     text="Column Name"
@@ -130,7 +130,7 @@
                 />
             </template>
             <template v-slot:header-column_type="{ data: { maxWidth } }">
-                <truncate-string
+                <mxs-truncate-str
                     :key="maxWidth"
                     class="text-truncate"
                     text="Column Type"
@@ -160,7 +160,7 @@
                     <span>{{ value }}</span>
                 </v-tooltip>
             </template>
-        </virtual-scroll-table>
+        </mxs-virtual-scroll-tbl>
     </div>
 </template>
 

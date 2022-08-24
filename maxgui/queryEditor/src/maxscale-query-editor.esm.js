@@ -29,7 +29,7 @@ export default /*#__PURE__*/ (() => {
     installable.install = (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
 
-        //TODO: Prevent duplicated vuex module names, store plugin names, common components
+        //TODO: Prevent duplicated vuex module names, instance properties name
 
         //Register common components
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))

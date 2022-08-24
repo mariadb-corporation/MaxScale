@@ -4,7 +4,7 @@
             log_source: {{ log_source }}
         </span>
         <v-spacer />
-        <filter-list
+        <mxs-filter-list
             v-model="chosenLogLevels"
             returnObject
             :label="$t('filterBy')"
@@ -34,7 +34,7 @@
                     </v-icon>
                 </v-btn>
             </template>
-        </filter-list>
+        </mxs-filter-list>
     </div>
 </template>
 

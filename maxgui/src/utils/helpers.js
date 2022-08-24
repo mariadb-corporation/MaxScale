@@ -351,7 +351,7 @@ export function getSuffixFromValue(param, suffixes) {
 }
 
 /**
- * This export function creates dataset object for line-chart-stream
+ * This export function creates dataset object for mxs-line-chart-stream
  * @param {String} payload.label - label for dataset
  * @param {Number} payload.value - value for dataset
  * @param {Number} payload.colorIndex - index of color from color palette of dynamicColors helper

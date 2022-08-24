@@ -31,7 +31,7 @@
                 <global-search class="d-inline-block" />
                 <create-resource class="ml-4 d-inline-block" />
             </portal>
-            <confirm-dialog
+            <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"

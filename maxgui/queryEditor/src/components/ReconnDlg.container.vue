@@ -1,5 +1,5 @@
 <template>
-    <base-dialog
+    <mxs-dlg
         v-model="showReconnDialog"
         :title="queryErrMsg"
         minBodyWidth="624px"
@@ -19,7 +19,7 @@
                 </tr>
             </table>
         </template>
-    </base-dialog>
+    </mxs-dlg>
 </template>
 
 <script>

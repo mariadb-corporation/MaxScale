@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
         :title="`${$tc('parameters', 2)}`"
@@ -57,7 +57,7 @@
             :activator="`#param-${parameterTooltip.id}_${componentId}`"
         />
 
-        <base-dialog
+        <mxs-dlg
             v-model="showConfirmDialog"
             :onSave="acceptEdit"
             :title="`${$t('implementChanges')}`"
@@ -90,8 +90,8 @@
                     </p>
                 </div>
             </template>
-        </base-dialog>
-    </collapse>
+        </mxs-dlg>
+    </mxs-collapse>
 </template>
 
 <script>

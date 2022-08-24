@@ -2,7 +2,7 @@
     <v-app>
         <overlay />
         <component :is="$route.meta.layout"> </component>
-        <base-dialog
+        <mxs-dlg
             v-model="updateExists"
             :onSave="confirmUpdate"
             :title="`${$t('newUpdateAvailable')}`"

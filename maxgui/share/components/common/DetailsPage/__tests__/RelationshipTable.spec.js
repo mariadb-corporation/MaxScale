@@ -32,13 +32,13 @@ async function mockupOpenConfirmDeletingDialog(wrapper, id) {
 }
 
 /**
- * This function mockups opening select-dialog when clicking
- * add button in collapse component
+ * This function mockups opening mxs-sel-dlg when clicking
+ * add button in mxs-collapse component
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
  */
 async function mockupOpenSelectDialog(wrapper) {
-    const collapse = wrapper.findComponent({ name: 'collapse' })
-    let addBtn = collapse.find('.add-btn')
+    const mxsCollapse = wrapper.findComponent({ name: 'mxs-collapse' })
+    let addBtn = mxsCollapse.find('.add-btn')
     await addBtn.trigger('click')
 }
 /**
@@ -112,10 +112,10 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         expect(wrapper.find('.add-btn').exists()).to.be.false
     })
 
-    it(`Should not render confirm-dialog and select-dialog components if
+    it(`Should not render mxs-conf-dlg and mxs-sel-dlg components if
       readOnly is true and addable is false`, () => {
-        expect(wrapper.findComponent({ name: 'confirm-dialog' }).exists()).to.be.false
-        expect(wrapper.findComponent({ name: 'select-dialog' }).exists()).to.be.false
+        expect(wrapper.findComponent({ name: 'mxs-conf-dlg' }).exists()).to.be.false
+        expect(wrapper.findComponent({ name: 'mxs-sel-dlg' }).exists()).to.be.false
     })
 
     it(`Should render router-link components and assign accurate target location`, () => {
@@ -207,9 +207,9 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         loggerSpy.should.have.been.calledOnce
     })
 
-    it(`Should open confirm-dialog when delete button is clicked`, async () => {
+    it(`Should open mxs-conf-dlg when delete button is clicked`, async () => {
         await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRowsStub[0].id)
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
         expect(confirmDialog.vm.$attrs.value).to.be.true
     })
 
@@ -237,15 +237,15 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             ++count
         })
         await mockupOpenConfirmDeletingDialog(wrapper, idToBeDeleted)
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
         const saveBtn = confirmDialog.find('.save')
         await saveBtn.trigger('click')
         expect(count).to.be.equals(1)
     })
 
-    it(`Should open select-dialog when add button is clicked`, async () => {
+    it(`Should open mxs-sel-dlg when add button is clicked`, async () => {
         await mockupOpenSelectDialog(wrapper)
-        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
         expect(selectDialog.vm.isDlgOpened).to.be.true
     })
 
@@ -301,7 +301,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             ++count
         })
 
-        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
         await itemSelectMock(selectDialog, itemToBeAdded)
         const saveBtn = selectDialog.find('.save')
         await saveBtn.trigger('click')

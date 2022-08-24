@@ -25,7 +25,7 @@
                     <v-icon class="mr-2" size="16" color="accent-dark">
                         $vuetify.icons.server
                     </v-icon>
-                    <truncate-string :text="item.name" :maxWidth="145" :nudgeLeft="32" />
+                    <mxs-truncate-str :text="item.name" :maxWidth="145" :nudgeLeft="32" />
                 </div>
             </template>
             <template v-slot:item="{ item }">
@@ -33,7 +33,7 @@
                     <v-icon class="mr-2" size="16" :color="item.disabled ? '' : 'accent-dark'">
                         $vuetify.icons.server
                     </v-icon>
-                    <truncate-string
+                    <mxs-truncate-str
                         class="text-truncate"
                         :text="item.name"
                         :maxWidth="135"
@@ -82,7 +82,7 @@
             :connOptions="connOptions"
             :handleSave="handleOpenConn"
         />
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="$t('disconnectConn')"
             type="disconnect"

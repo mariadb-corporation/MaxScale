@@ -1,6 +1,6 @@
 <template>
     <component
-        :is="collapsible ? 'collapse' : 'div'"
+        :is="collapsible ? 'mxs-collapse' : 'div'"
         v-bind="
             collapsible
                 ? {
@@ -70,7 +70,7 @@
                 </v-menu>
             </template>
         </data-table>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="$t('killSession')"
             type="kill"
@@ -88,7 +88,7 @@
                     </tr>
                 </table>
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </component>
 </template>
 

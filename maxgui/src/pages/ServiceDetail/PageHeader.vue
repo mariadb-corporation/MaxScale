@@ -85,7 +85,7 @@
                     }"
                 />
             </portal>
-            <confirm-dialog
+            <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"

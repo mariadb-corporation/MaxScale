@@ -29,7 +29,7 @@
                 </keep-alive>
             </template>
         </div>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="$t('confirmations.leavePage')"
             type="thatsRight"
@@ -51,7 +51,7 @@
                     hide-details
                 />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </div>
 </template>
 

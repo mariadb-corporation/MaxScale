@@ -1,8 +1,8 @@
 <template>
     <!-- TODO: Virtual scroll treeview -->
     <div v-if="getDbTreeData.length">
-        <m-treeview
-            class="m-treeview"
+        <mxs-treeview
+            class="mxs-treeview"
             :items="getDbTreeData"
             :search="search_schema"
             :filter="filter"
@@ -51,7 +51,7 @@
                     <v-icon size="12" color="deep-ocean">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
-        </m-treeview>
+        </mxs-treeview>
         <v-tooltip
             v-if="hoveredItem && nodesHaveCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
@@ -71,7 +71,7 @@
                 </tbody>
             </table>
         </v-tooltip>
-        <sub-menu
+        <mxs-sub-menu
             v-if="activeCtxItem"
             :key="activeCtxItem.key"
             v-model="showCtxMenu"
@@ -518,7 +518,7 @@ export default {
 }
 </style>
 <style lang="scss">
-.m-treeview {
+.mxs-treeview {
     .v-treeview-node__toggle {
         width: 16px;
         height: 16px;

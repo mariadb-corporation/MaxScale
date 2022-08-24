@@ -53,7 +53,7 @@
                     v-on="$listeners"
                 >
                     <template v-slot:header-connection_name="{ data: { maxWidth } }">
-                        <truncate-string
+                        <mxs-truncate-str
                             :key="maxWidth"
                             class="text-truncate"
                             text="Connection Name"
@@ -64,7 +64,7 @@
                         {{ $t('prefix') }}
                     </template>
                     <template v-slot:date="{ data: { cell, maxWidth } }">
-                        <truncate-string
+                        <mxs-truncate-str
                             :text="
                                 `${$helpers.dateFormat({
                                     moment: $moment,
@@ -125,7 +125,7 @@
                         v-slot:left-table-tools-append
                     >
                         <div class="ml-2">
-                            <filter-list
+                            <mxs-filter-list
                                 v-model="selectedLogTypes"
                                 selectAllOnActivated
                                 :label="$t('logTypes')"
@@ -146,7 +146,7 @@
                 "
             />
         </keep-alive>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="
                 activeView === SQL_QUERY_MODES.HISTORY
@@ -174,7 +174,7 @@
                     }}
                 </p>
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </div>
 </template>
 

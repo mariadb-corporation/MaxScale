@@ -33,7 +33,7 @@
                         </td>
                         <td>
                             <div class="d-flex align-center fill-height">
-                                <truncate-string
+                                <mxs-truncate-str
                                     wrap
                                     :text="slaveStat.id"
                                     :nudgeTop="10"
@@ -68,7 +68,7 @@
                                 >
                                     replication
                                 </icon-sprite-sheet>
-                                <truncate-string
+                                <mxs-truncate-str
                                     wrap
                                     :text="`${value}`"
                                     :maxWidth="400"

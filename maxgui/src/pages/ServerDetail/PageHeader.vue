@@ -68,7 +68,7 @@
                     }"
                 />
             </portal>
-            <confirm-dialog
+            <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
@@ -87,7 +87,7 @@
                         dense
                     />
                 </template>
-            </confirm-dialog>
+            </mxs-conf-dlg>
             <icon-sprite-sheet size="16" class="server-state-icon mr-1" :frame="stateIconFrame">
                 servers
             </icon-sprite-sheet>

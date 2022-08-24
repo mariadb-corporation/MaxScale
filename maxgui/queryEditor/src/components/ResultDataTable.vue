@@ -12,7 +12,7 @@
                 :placeholder="$t('filterResult')"
                 hide-details
             />
-            <filter-list
+            <mxs-filter-list
                 v-model="filterHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('filterBy')"
@@ -59,7 +59,7 @@
                 :headers="visHeaders_wo_idx"
                 :defExportFileName="defExportFileName"
             />
-            <filter-list
+            <mxs-filter-list
                 v-model="visHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('columns')"
@@ -97,7 +97,7 @@
         </div>
         <!-- Keep it in memory, negative height crashes v-virtual-scroll -->
         <keep-alive>
-            <virtual-scroll-table
+            <mxs-virtual-scroll-tbl
                 v-if="tableHeight > 0"
                 class="pb-2"
                 :headers="visibleHeaders"
@@ -130,9 +130,9 @@
                 <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
                     <slot :name="`header-${h.text}`" :data="data" />
                 </template>
-            </virtual-scroll-table>
+            </mxs-virtual-scroll-tbl>
         </keep-alive>
-        <sub-menu
+        <mxs-sub-menu
             v-if="!$typy(ctxMenuData).isEmptyObject"
             :key="ctxMenuActivator"
             v-model="showCtxMenu"
@@ -161,7 +161,7 @@
 /*
 @on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
 @on-done-editing: changedCells:[].  cells have its value changed
-Also emits other events from virtual-scroll-table via v-on="$listeners"
+Also emits other events from mxs-virtual-scroll-tbl via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
 import EditableCell from './EditableCell'

@@ -121,7 +121,7 @@
             </row-limit-ctr>
         </v-form>
 
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
@@ -172,7 +172,7 @@
                 />
                 <v-spacer />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </div>
 </template>
 <script>

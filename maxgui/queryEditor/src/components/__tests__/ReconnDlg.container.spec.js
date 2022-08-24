@@ -43,8 +43,8 @@ describe('ReconnDlg', () => {
         })
         expect(wrapper.vm.showReconnDialog).to.be.true
     })
-    it('Should pass accurate data to base-dialog via props', () => {
-        const baseDialog = wrapper.findComponent({ name: 'base-dialog' })
+    it('Should pass accurate data to mxs-dlg via props', () => {
+        const baseDialog = wrapper.findComponent({ name: 'mxs-dlg' })
         const { value, title, cancelText, saveText, onSave, showCloseIcon } = baseDialog.vm.$props
         expect(title).to.be.equals(wrapper.vm.queryErrMsg)
         expect(value).to.be.equals(wrapper.vm.showReconnDialog)

@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         wrapperClass="mt-4 d-inline-flex flex-column"
         titleWrapperClass="mx-n9"
         :toggleOnClick="() => (showParameters = !showParameters)"
@@ -43,7 +43,7 @@
             :parameterTooltip="parameterTooltip"
             :activator="`#param-${parameterTooltip.id}_${componentId}`"
         />
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>

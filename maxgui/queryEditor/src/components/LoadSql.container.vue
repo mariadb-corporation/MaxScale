@@ -1,6 +1,6 @@
 <template>
     <div>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
@@ -15,7 +15,7 @@
             <template v-slot:form-body>
                 <p v-html="confDlg.confirmMsg" />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
         <v-tooltip
             top
             transition="slide-y-transition"

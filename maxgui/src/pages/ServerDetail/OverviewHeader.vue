@@ -75,7 +75,7 @@
             </template>
         </outlined-overview-card>
 
-        <select-dialog
+        <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
             mode="change"
@@ -190,7 +190,7 @@ export default {
             this.isSelectDlgOpened = true
         },
         // -------------------------------------------- Changes handle
-        // get available entities and set default item when select-dialog is opened
+        // get available entities and set default item when mxs-sel-dlg is opened
         async getAllEntities() {
             switch (this.targetSelectItemType) {
                 case 'monitors':

@@ -1,5 +1,5 @@
 <template>
-    <tree-graph-node
+    <mxs-tree-graph-node
         :node="node"
         :lineHeight="lineHeight"
         :bodyWrapperClass="bodyWrapperClass"
@@ -119,7 +119,7 @@
                 >
                     servers
                 </icon-sprite-sheet>
-                <truncate-string :text="`${nodeAttrs.state}`" />
+                <mxs-truncate-str :text="`${nodeAttrs.state}`" />
                 <v-spacer />
                 <span v-if="!node.data.isMaster" class="ml-1">
                     <span class="font-weight-bold text-capitalize">
@@ -138,10 +138,10 @@
                 <span class="text-capitalize font-weight-bold mr-2">
                     {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
                 </span>
-                <truncate-string :text="$helpers.getAddress(nodeAttrs.parameters)" />
+                <mxs-truncate-str :text="$helpers.getAddress(nodeAttrs.parameters)" />
             </div>
         </template>
-    </tree-graph-node>
+    </mxs-tree-graph-node>
 </template>
 
 <script>
@@ -159,8 +159,8 @@
  */
 import { mapState, mapGetters, mapActions } from 'vuex'
 /*
-@node-height: v: Number. Cluster node height. Emit from <tree-graph-node/>
-@get-expanded-node: v: String. Id of expanded node. Emit from <tree-graph-node/>
+@node-height: v: Number. Cluster node height. Emit from <mxs-tree-graph-node/>
+@get-expanded-node: v: String. Id of expanded node. Emit from <mxs-tree-graph-node/>
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {

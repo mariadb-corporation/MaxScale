@@ -46,7 +46,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart-stream
+                        <mxs-line-chart-stream
                             v-if="serviceConnectionsDatasets.length"
                             ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"

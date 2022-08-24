@@ -1,5 +1,5 @@
 <template>
-    <base-dialog
+    <mxs-dlg
         v-model="isOpened"
         :onSave="onSave"
         :title="$t('queryConfig')"
@@ -66,7 +66,7 @@
                 </v-row>
             </v-container>
         </template>
-    </base-dialog>
+    </mxs-dlg>
 </template>
 
 <script>

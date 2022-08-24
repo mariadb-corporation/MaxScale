@@ -59,7 +59,7 @@
         </div>
 
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
-            <line-chart
+            <mxs-line-chart
                 v-if="type === chartTypes.LINE"
                 id="query-chart"
                 :style="{
@@ -70,7 +70,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <scatter-chart
+            <mxs-scatter-chart
                 v-else-if="type === chartTypes.SCATTER"
                 id="query-chart"
                 :style="{
@@ -80,7 +80,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <vert-bar-chart
+            <mxs-vert-bar-chart
                 v-else-if="type === chartTypes.BAR_VERT"
                 id="query-chart"
                 :style="{
@@ -90,7 +90,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <horiz-bar-chart
+            <mxs-horiz-bar-chart
                 v-else-if="type === chartTypes.BAR_HORIZ"
                 id="query-chart"
                 :style="{
@@ -120,7 +120,7 @@
 /*
 @close-chart. Emit when close-chart button is clicked
 */
-import { objectTooltip } from '@share/components/common/Charts/customTooltips.js'
+import { objectTooltip } from '@share/components/common/MxsCharts/customTooltips.js'
 export default {
     name: 'chart-pane',
     props: {

@@ -1,5 +1,5 @@
 <template>
-    <base-dialog
+    <mxs-dlg
         v-model="isOpened"
         :onSave="onSave"
         :title="`${$t('connectTo')}...`"
@@ -76,7 +76,7 @@
                                 })
                             }}
                         </label>
-                        <select-dropdown
+                        <mxs-select
                             v-model="selectedResource"
                             class="resource-dropdown"
                             :items="resourceItems"
@@ -164,7 +164,7 @@
                 </v-row>
             </v-container>
         </template>
-    </base-dialog>
+    </mxs-dlg>
 </template>
 
 <script>

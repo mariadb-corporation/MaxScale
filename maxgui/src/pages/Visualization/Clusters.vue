@@ -17,7 +17,7 @@
                             <v-list-item-title
                                 class="tk-azo-sans-web text-h5 mxs-color-helper font-weight-medium text-blue-azure"
                             >
-                                <truncate-string :text="cluster.id" />
+                                <mxs-truncate-str :text="cluster.id" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
                                 <span class="grayed-out">
@@ -55,7 +55,7 @@
                                             >
                                                 servers
                                             </icon-sprite-sheet>
-                                            <truncate-string :text="cluster.children[0].name" />
+                                            <mxs-truncate-str :text="cluster.children[0].name" />
                                         </span>
                                     </template>
                                 </cluster-server-tooltip>

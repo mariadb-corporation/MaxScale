@@ -1,5 +1,5 @@
 <template>
-    <base-dialog v-bind="{ ...$attrs }" :saveText="type" v-on="$listeners">
+    <mxs-dlg v-bind="{ ...$attrs }" :saveText="type" v-on="$listeners">
         <template v-slot:form-body>
             <p
                 v-if="type === USER_ADMIN_ACTIONS.DELETE"
@@ -81,7 +81,7 @@
                 </template>
             </template>
         </template>
-    </base-dialog>
+    </mxs-dlg>
 </template>
 
 <script>

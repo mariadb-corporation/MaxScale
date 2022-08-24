@@ -13,7 +13,7 @@
         >
             + {{ $t('createNew') }}
         </v-btn>
-        <base-dialog
+        <mxs-dlg
             ref="baseDialog"
             v-model="isDlgOpened"
             :onSave="onSave"
@@ -96,7 +96,7 @@
                     :defaultItems="defaultRelationshipItems"
                 />
             </template>
-        </base-dialog>
+        </mxs-dlg>
     </div>
 </template>
 

@@ -18,7 +18,7 @@
                     mdi-download
                 </v-icon>
             </v-btn>
-            <base-dialog
+            <mxs-dlg
                 v-model="isConfigDialogOpened"
                 :onSave="onExport"
                 :title="$t('exportResults')"
@@ -165,7 +165,7 @@
                         </v-row>
                     </v-container>
                 </template>
-            </base-dialog>
+            </mxs-dlg>
         </template>
         <span>{{ $t('exportResults') }}</span>
     </v-tooltip>

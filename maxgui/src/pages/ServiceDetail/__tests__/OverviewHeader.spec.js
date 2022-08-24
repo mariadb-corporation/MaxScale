@@ -46,7 +46,7 @@ describe('ServiceDetail - OverviewHeader', () => {
     afterEach(async () => {
         await clock.restore()
         await updateChartSpy.restore()
-        // this prevent fetch loop in line-chart-stream
+        // this prevent fetch loop in mxs-line-chart-stream
         await wrapper.setData({
             options: null,
         })
@@ -110,7 +110,9 @@ describe('ServiceDetail - OverviewHeader', () => {
             )
         })
         it(`Should show connections chart in the last outlined-overview-card`, () => {
-            const lineChart = outlineOverviewCards[2].findComponent({ name: 'line-chart-stream' })
+            const lineChart = outlineOverviewCards[2].findComponent({
+                name: 'mxs-line-chart-stream',
+            })
             expect(lineChart.exists()).to.be.true
         })
     })

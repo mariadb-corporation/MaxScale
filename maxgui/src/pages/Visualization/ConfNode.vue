@@ -71,7 +71,7 @@
                     {{ nodeType }}
                 </icon-sprite-sheet>
 
-                <truncate-string :text="`${value}`" />
+                <mxs-truncate-str :text="`${value}`" />
 
                 <v-tooltip
                     v-if="key === 'filters'"

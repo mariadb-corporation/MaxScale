@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         :toggleOnClick="() => (showTable = !showTable)"
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
@@ -43,7 +43,7 @@
             </template>
         </data-table>
         <!-- Avaiable dialogs for editable table -->
-        <confirm-dialog
+        <mxs-conf-dlg
             v-if="!readOnly"
             v-model="isConfDlgOpened"
             :title="dialogTitle"
@@ -51,7 +51,7 @@
             :item="Array.isArray(targetItem) ? {} : targetItem"
             :onSave="confirmDelete"
         />
-        <select-dialog
+        <mxs-sel-dlg
             v-if="!readOnly"
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
@@ -63,7 +63,7 @@
             @selected-items="targetItem = $event"
             @on-open="getAllEntities"
         />
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>

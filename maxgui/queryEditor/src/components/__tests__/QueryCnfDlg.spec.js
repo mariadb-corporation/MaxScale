@@ -43,10 +43,10 @@ async function mockChangingConfig({ wrapper, key, value }) {
 }
 
 describe(`QueryCnfDlg - child component's data communication tests `, () => {
-    it(`Should pass accurate data to base-dialog via props`, () => {
+    it(`Should pass accurate data to mxs-dlg via props`, () => {
         let wrapper = mountFactory()
         const { value, title, onSave, lazyValidation, hasChanged } = wrapper.findComponent({
-            name: 'base-dialog',
+            name: 'mxs-dlg',
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isOpened)
         expect(title).to.be.equals(wrapper.vm.$t('queryConfig'))
@@ -95,7 +95,7 @@ describe(`QueryCnfDlg - form input tests`, () => {
     const intFields = ['queryHistoryRetentionPeriod']
     intFields.forEach(field => {
         it(`Should parse value as number for ${field} field`, async () => {
-            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
+            const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.${field}`)
             await inputChangeMock(inputComponent, '10')
             expect(wrapper.vm.config[field]).to.be.equals(10)
         })
@@ -105,7 +105,7 @@ describe(`QueryCnfDlg - form input tests`, () => {
     boolFields.forEach(field => {
         it(`Should parse value as boolean for ${field} checkbox`, async () => {
             const checkboxComponent = wrapper
-                .findComponent({ name: 'base-dialog' })
+                .findComponent({ name: 'mxs-dlg' })
                 .find(`.${field}`)
                 .find('input')
             const curVal = wrapper.vm.defCnf[field]
@@ -116,14 +116,14 @@ describe(`QueryCnfDlg - form input tests`, () => {
 
     intFields.forEach(field => {
         it(`Should show accurate error message when ${field} value is 0`, async () => {
-            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
+            const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.${field}`)
             await inputChangeMock(inputComponent, 0)
             expect(getErrMsgEle(inputComponent).text()).to.be.equals(
                 wrapper.vm.$t('errors.largerThanZero', { inputName: wrapper.vm.$t(field) })
             )
         })
         it(`Should show accurate error message when ${field} value is empty`, async () => {
-            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
+            const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.${field}`)
             await inputChangeMock(inputComponent, '')
             expect(getErrMsgEle(inputComponent).text()).to.be.equals(
                 wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t(field) })

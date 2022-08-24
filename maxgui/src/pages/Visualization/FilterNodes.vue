@@ -35,7 +35,7 @@
                     >
                         {{ filter.id }}
                     </router-link>
-                    <truncate-string class="float-right" :text="`${getFilterModule(filter.id)}`" />
+                    <mxs-truncate-str class="float-right" :text="`${getFilterModule(filter.id)}`" />
                 </div>
 
                 <div class="dashed-arrow d-flex justify-center">

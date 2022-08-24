@@ -56,10 +56,10 @@ describe('MonitorPageHeader', () => {
         expect(span.text()).to.be.equals(dummy_all_monitors[0].attributes.module)
     })
 
-    it(`Should pass necessary props to confirm-dialog`, () => {
+    it(`Should pass necessary props to mxs-conf-dlg`, () => {
         wrapper = computedFactory()
         const confirmDialog = wrapper.findComponent({
-            name: 'confirm-dialog',
+            name: 'mxs-conf-dlg',
         })
         expect(confirmDialog.exists()).to.be.true
         const { value, title, saveText, onSave } = confirmDialog.vm.$attrs

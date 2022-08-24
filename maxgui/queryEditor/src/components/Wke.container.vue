@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <split-pane
+        <mxs-split-pane
             v-model="sidebarPct"
             class="query-view__content"
             :minPercent="minSidebarPct"
@@ -44,7 +44,7 @@
                     </keep-alive>
                 </div>
             </template>
-        </split-pane>
+        </mxs-split-pane>
         <execute-sql-dialog
             v-model="execSqlDlg.isOpened"
             :title="
@@ -100,7 +100,7 @@ export default {
     },
     data() {
         return {
-            sidebarPct: 0, // split-pane states
+            sidebarPct: 0, // mxs-split-pane states
             sessTabCtrHeight: 30,
             execSqlDlg: {
                 isOpened: false,
