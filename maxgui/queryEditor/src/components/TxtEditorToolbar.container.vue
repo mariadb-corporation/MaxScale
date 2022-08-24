@@ -39,16 +39,17 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{
-                    selected_query_txt
-                        ? `${$t('runStatements', {
-                              quantity: $t('selected'),
-                          })}\nCmd/Ctrl + Enter`
-                        : `${$t('runStatements', {
-                              quantity: $t('all'),
-                          })}\nCmd/Ctrl + Shift + Enter`
-                }}
+            <span class="d-inline-block text-center">
+                <template v-if="selected_query_txt">
+                    {{ $t('runStatements', { quantity: $t('selected') }) }}
+                    <br />
+                    Cmd/Ctrl + Enter
+                </template>
+                <template v-else>
+                    {{ $t('runStatements', { quantity: $t('all') }) }}
+                    <br />
+                    Cmd/Ctrl + Shift + Enter
+                </template>
             </span>
         </v-tooltip>
         <!-- Visualize button-->
@@ -98,8 +99,10 @@
                     <v-icon size="19"> mdi-star-plus-outline </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
+            <span class="d-inline-block text-center">
+                {{ $t('createQuerySnippet') }}
+                <br />
+                Cmd/Ctrl + D
             </span>
         </v-tooltip>
         <load-sql-ctr ref="loadSqlCtr" />

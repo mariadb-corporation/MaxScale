@@ -22,7 +22,7 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
+            <span class="d-inline-block text-center">
                 {{ $t('revertChanges') }}
             </span>
         </v-tooltip>
@@ -45,7 +45,7 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
+            <span class="d-inline-block text-center">
                 {{ $t('applyChanges') }}
             </span>
         </v-tooltip>
