@@ -2,9 +2,8 @@
     <div>
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
-            :title="confDlg.title"
-            :type="confDlg.type"
             minBodyWidth="768px"
+            :title="confDlg.title"
             :closeImmediate="true"
             :lazyValidation="false"
             :onSave="confDlg.onSave"
@@ -117,7 +116,6 @@ export default {
             confDlg: {
                 isOpened: false,
                 title: this.$t('openScript'),
-                type: 'openScript',
                 confirmMsg: '',
                 onSave: () => null,
                 dontSave: () => null,
@@ -196,7 +194,6 @@ export default {
                 ...this.confDlg,
                 isOpened: true,
                 title: this.$t('openScript'),
-                type: 'openScript',
                 confirmMsg: this.$t('confirmations.openScript', {
                     targetId: this.getActiveSession.name,
                     fileNameToBeOpened: blob.handle.name,

@@ -88,6 +88,7 @@
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
+                :saveText="dialogType"
                 :type="dialogType"
                 :item="currentService"
                 :onSave="confirmSave"

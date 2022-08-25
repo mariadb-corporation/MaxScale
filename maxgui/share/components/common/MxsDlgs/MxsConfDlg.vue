@@ -1,20 +1,13 @@
 <template>
-    <!-- Confirmation type may have different text for save button,
-    so it will use `saveText` in $attrs if it's provided-->
-    <mxs-dlg
-        v-bind="{ ...$attrs }"
-        :saveText="$attrs.saveText ? $attrs.saveText : type"
-        v-on="$listeners"
-    >
+    <mxs-dlg v-bind="{ ...$attrs }" v-on="$listeners">
         <template v-slot:form-body>
             <slot name="confirm-text">
                 <p
-                    v-if="!$typy(item).isNull"
+                    v-if="!$typy(item).isNull && type"
                     class="confirmations-text"
                     v-html="$t(`confirmations.${type}`, { targetId: item.id })"
-                ></p>
+                />
             </slot>
-
             <slot name="body-prepend"></slot>
             <small> {{ smallInfo }} </small>
             <slot name="body-append"></slot>
@@ -43,8 +36,8 @@ export default {
     name: 'mxs-conf-dlg',
     inheritAttrs: false,
     props: {
-        type: { type: String, required: true }, //check confirmations in en.json
-        item: { type: Object, default: null },
+        type: { type: String, default: '' }, //check confirmations in en.json
+        item: { type: Object, default: null }, // required when type is defined
         smallInfo: { type: String, default: '' },
     },
 }

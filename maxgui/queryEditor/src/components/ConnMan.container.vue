@@ -85,6 +85,7 @@
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="$t('disconnectConn')"
+            saveText="disconnect"
             type="disconnect"
             :closeImmediate="true"
             :item="connToBeDel"

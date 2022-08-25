@@ -76,8 +76,8 @@
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
-            :type="confDlg.type"
             :saveText="confDlgSaveTxt"
+            :type="confDlg.type"
             :item="confDlg.targetNode"
             :smallInfo="confDlg.smallInfo"
             :closeImmediate="true"
@@ -86,8 +86,7 @@
             <template v-if="confDlg.type === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
                 <v-checkbox
                     v-model="confDlg.forceClosing"
-                    class="v-checkbox--custom-label mt-2
-                mb-4"
+                    class="v-checkbox--custom-label mt-2 mb-4"
                     :label="$t('forceClosing')"
                     color="primary"
                     dense

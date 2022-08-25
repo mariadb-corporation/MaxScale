@@ -127,7 +127,7 @@
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
-            :type="confDlg.type"
+            :saveText="confDlg.type"
             minBodyWidth="768px"
             :closeImmediate="true"
             :lazyValidation="false"

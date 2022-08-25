@@ -42,11 +42,12 @@
                 </v-btn>
             </template>
         </data-table>
-        <!-- Avaiable dialogs for editable table -->
+        <!-- Available dialogs for editable table -->
         <mxs-conf-dlg
             v-if="!readOnly"
             v-model="isConfDlgOpened"
             :title="dialogTitle"
+            :saveText="deleteDialogType"
             :type="deleteDialogType"
             :item="Array.isArray(targetItem) ? {} : targetItem"
             :onSave="confirmDelete"

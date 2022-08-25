@@ -34,6 +34,7 @@
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
+                :saveText="dialogType"
                 :type="dialogType"
                 :item="currentListener"
                 :onSave="confirmSave"

@@ -73,7 +73,7 @@
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="$t('killSession')"
-            type="kill"
+            saveText="kill"
             minBodyWidth="512px"
             :onSave="confirmKill"
         >

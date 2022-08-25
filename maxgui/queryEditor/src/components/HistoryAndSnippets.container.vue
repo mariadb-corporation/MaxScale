@@ -155,7 +155,7 @@
                       })
                     : $t('deleteSnippets')
             "
-            type="delete"
+            saveText="delete"
             minBodyWidth="624px"
             :onSave="deleteSelectedRows"
         >

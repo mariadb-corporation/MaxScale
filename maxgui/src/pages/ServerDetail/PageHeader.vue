@@ -71,10 +71,10 @@
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
-                :type="dialogType"
-                :smallInfo="smallInfo"
-                :item="currentServer"
                 :saveText="confDlgSaveTxt"
+                :type="dialogType"
+                :item="currentServer"
+                :smallInfo="smallInfo"
                 :onSave="confirmSave"
             >
                 <template v-if="dialogType === 'maintain'" v-slot:body-append>
@@ -180,7 +180,7 @@ export default {
                 case MAINTAIN:
                     return 'set'
                 default:
-                    return this.confDlgType
+                    return this.dialogType
             }
         },
     },

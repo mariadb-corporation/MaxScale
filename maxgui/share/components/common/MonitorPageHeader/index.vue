@@ -78,8 +78,8 @@
             <mxs-conf-dlg
                 v-model="confDlg.isOpened"
                 :title="confDlg.title"
-                :type="confDlg.type"
                 :saveText="confDlgSaveTxt"
+                :type="confDlg.type"
                 :item="confDlg.targetNode"
                 :smallInfo="confDlg.smallInfo"
                 :onSave="onConfirm"

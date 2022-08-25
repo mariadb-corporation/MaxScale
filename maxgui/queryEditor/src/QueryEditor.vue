@@ -32,7 +32,7 @@
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="$t('confirmations.leavePage')"
-            type="thatsRight"
+            saveText="thatsRight"
             minBodyWidth="624px"
             :onSave="onLeave"
             @on-close="cancelLeave"
