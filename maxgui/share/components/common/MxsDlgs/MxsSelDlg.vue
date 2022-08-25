@@ -1,19 +1,10 @@
 <template>
-    <mxs-dlg
-        v-model="isDlgOpened"
-        :title="title"
-        :saveText="mode"
-        :hasChanged="hasChanged"
-        :onSave="onSave"
-        v-on="$listeners"
-    >
+    <mxs-dlg :hasChanged="hasChanged" v-bind="{ ...$attrs }" v-on="$listeners">
         <template v-slot:form-body>
             <p class="select-label">
                 {{ $tc('specify', multiple ? 2 : 1) }}
-
                 {{ $tc(entityName, multiple ? 2 : 1) }}
             </p>
-
             <mxs-select
                 ref="selectDropdown"
                 v-model="selectedItems"
@@ -50,13 +41,10 @@ This component emits two events
 */
 export default {
     name: 'mxs-sel-dlg',
+    inheritAttrs: false,
     props: {
-        value: { type: Boolean, required: true },
-        mode: { type: String, required: true }, // change or add
-        title: { type: String, required: true },
         entityName: { type: String, required: true },
         clearable: { type: Boolean, default: false },
-        onSave: { type: Function, required: true },
         multiple: { type: Boolean, default: false },
         itemsList: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
@@ -67,19 +55,9 @@ export default {
             hasChanged: false,
         }
     },
-    computed: {
-        isDlgOpened: {
-            get() {
-                return this.value
-            },
-            set(value) {
-                this.$emit('input', value)
-            },
-        },
-    },
     watch: {
-        isDlgOpened: function(val) {
-            if (val) {
+        '$attrs.value'(v) {
+            if (v) {
                 this.$emit('on-open')
                 // set default hasChanged data
                 this.hasChanged = this.$refs.selectDropdown.hasChanged

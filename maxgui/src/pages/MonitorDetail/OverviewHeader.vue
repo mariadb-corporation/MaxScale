@@ -55,7 +55,7 @@
         <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
-            mode="swap"
+            saveText="swap"
             :entityName="targetSelectItemType"
             :itemsList="itemsList"
             :defaultItems="defaultItems"

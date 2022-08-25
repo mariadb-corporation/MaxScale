@@ -55,7 +55,7 @@
             v-if="!readOnly"
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
-            mode="add"
+            saveText="add"
             multiple
             :entityName="relationshipType"
             :itemsList="itemsList"

@@ -78,7 +78,7 @@
         <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
-            mode="change"
+            saveText="change"
             :entityName="targetSelectItemType"
             clearable
             :itemsList="itemsList"
