@@ -1,5 +1,9 @@
 <template>
-    <query-editor ref="queryEditor" class="query-editor-page" @leave-page="$router.push($event)" />
+    <query-editor
+        ref="queryEditor"
+        class="query-editor-page fill-height"
+        @leave-page="$router.push($event)"
+    />
 </template>
 
 <script>
@@ -22,12 +26,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.query-editor-page {
-    // ignore root padding
-    margin-left: -36px;
-    margin-top: -24px;
-    width: calc(100% + 72px);
-    height: calc(100% + 48px);
-}
-</style>

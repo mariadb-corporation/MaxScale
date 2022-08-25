@@ -1,5 +1,5 @@
 <template>
-    <page-wrapper fluid>
+    <page-wrapper fluid class="fill-height">
         <monitor-page-header
             :targetMonitor="{
                 id: current_cluster.id,

@@ -35,14 +35,14 @@ describe('PageWrapper.vue', () => {
         expect(wrapper.find('.dashboard-page').text()).to.be.equal('dashboard-page')
     })
 
-    it(`Should not add 'wrapper-container' class when fluid props is enabled`, async () => {
+    it(`Should not add 'page-wrapper__container' class when fluid props is enabled`, async () => {
         wrapper = mount({
             shallow: true,
             component: PageWrapper,
         })
-        expect(wrapper.find('.wrapper-container').exists()).to.be.true
+        expect(wrapper.find('.page-wrapper__container').exists()).to.be.true
         await wrapper.setProps({ fluid: true })
-        expect(wrapper.find('.wrapper-container').exists()).to.be.false
+        expect(wrapper.find('.page-wrapper__container').exists()).to.be.false
     })
 
     it(`Should add style to v-spacer when spacerStyle props has value`, () => {
