@@ -1599,6 +1599,8 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        optional(key::SHOW_CREDENTIALS, &m_show_credentials);
+
         auto role_mask = m_database.context().role_mask_of("admin");
 
         m_user_admin_any_database = (role_mask & role::USER_ADMIN_ANY_DATABASE) != 0;
@@ -1755,7 +1757,7 @@ private:
         doc.append(kvp(key::OK, 1));
     }
 
-    static void add_users(DocumentBuilder& doc, const vector<UserInfo>& infos)
+    void add_users(DocumentBuilder& doc, const vector<UserInfo>& infos) const
     {
         ArrayBuilder users;
 
@@ -1767,7 +1769,7 @@ private:
         doc.append(kvp(key::USERS, users.extract()));
     }
 
-    static void add_user(ArrayBuilder& users, const UserInfo& info)
+    void add_user(ArrayBuilder& users, const UserInfo& info) const
     {
         ArrayBuilder roles;
         for (const auto& r : info.roles)
@@ -1812,10 +1814,40 @@ private:
 
         user.append(kvp(key::USER, info.user));
         user.append(kvp(key::DB, info.db));
+        if (m_show_credentials)
+        {
+            add_credentials(user, info);
+        }
         user.append(kvp(key::ROLES, roles.extract()));
         user.append(kvp(key::MECHANISMS, mechanisms.extract()));
 
         users.append(user.extract());
+    }
+
+    static void add_credentials(DocumentBuilder& user, const UserInfo& info)
+    {
+        DocumentBuilder credentials;
+        for (const scram::Mechanism mechanism : info.mechanisms)
+        {
+            DocumentBuilder credential;
+
+            // TODO: These should not be calculated, but stored.
+            const scram::Scram& scram = scram::get(mechanism);
+            vector<uint8_t> salted_password = info.salted_pwd(mechanism);
+            vector<uint8_t> client_key = scram.HMAC(salted_password, "Client Key");
+            vector<uint8_t> stored_key = scram.H(client_key);
+            vector<uint8_t> server_key = scram.HMAC(salted_password, "Server Key");
+
+            credential.append(kvp(key::ITERATION_COUNT, scram::ITERATIONS));
+            credential.append(kvp(key::SALT, info.salt_b64(mechanism)));
+            credential.append(kvp(key::STORED_KEY, mxs::to_base64(stored_key)));
+            credential.append(kvp(key::SERVER_KEY, mxs::to_base64(server_key)));
+
+            const string_view key(scram::to_string(mechanism));
+            credentials.append(kvp(key, credential.extract()));
+        }
+
+        user.append(kvp(key::CREDENTIALS, credentials.extract()));
     }
 
     string get_string(const bsoncxx::document::view& doc, const char* zKey)
@@ -1844,6 +1876,7 @@ private:
     }
 
     bool m_user_admin_any_database { false };
+    bool m_show_credentials { false };
 };
 
 }
