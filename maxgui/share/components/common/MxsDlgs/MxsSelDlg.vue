@@ -2,8 +2,8 @@
     <mxs-dlg :hasChanged="hasChanged" v-bind="{ ...$attrs }" v-on="$listeners">
         <template v-slot:form-body>
             <p class="select-label">
-                {{ $tc('specify', multiple ? 2 : 1) }}
-                {{ $tc(entityName, multiple ? 2 : 1) }}
+                {{ $mxs_tc('specify', multiple ? 2 : 1) }}
+                {{ $mxs_tc(entityName, multiple ? 2 : 1) }}
             </p>
             <mxs-select
                 ref="selectDropdown"

@@ -2,7 +2,7 @@
     <mxs-dlg
         v-model="isOpened"
         :onSave="onSave"
-        :title="$t('queryConfig')"
+        :title="$mxs_t('queryConfig')"
         :lazyValidation="false"
         minBodyWidth="512px"
         :hasChanged="hasChanged"
@@ -12,7 +12,7 @@
                 <v-row class="my-0 mx-n1">
                     <v-col cols="12" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $t('rowLimit') }}
+                            {{ $mxs_t('rowLimit') }}
                         </label>
                         <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
                         <row-limit-ctr
@@ -25,11 +25,11 @@
                         <v-icon size="16" color="warning" class="mr-2">
                             $vuetify.icons.mxs_alertWarning
                         </v-icon>
-                        <small v-html="$t('info.rowLimit')" />
+                        <small v-html="$mxs_t('info.rowLimit')" />
                     </v-col>
                     <v-col cols="12" class="pa-1 mb-3">
                         <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $t('queryHistoryRetentionPeriod') }} ({{ $t('inDays') }})
+                            {{ $mxs_t('queryHistoryRetentionPeriod') }} ({{ $mxs_t('inDays') }})
                         </label>
                         <v-text-field
                             v-model.number="config.queryHistoryRetentionPeriod"
@@ -58,7 +58,7 @@
                             class="v-checkbox--custom-label pa-0 ma-0"
                             dense
                             :class="[key]"
-                            :label="$t(key)"
+                            :label="$mxs_t(key)"
                             color="primary"
                             hide-details="auto"
                         />
@@ -118,7 +118,7 @@ export default {
                     v =>
                         this.validatePositiveNumber({
                             v,
-                            inputName: this.$t('queryHistoryRetentionPeriod'),
+                            inputName: this.$mxs_t('queryHistoryRetentionPeriod'),
                         }),
                 ],
             },
@@ -159,8 +159,9 @@ export default {
     },
     methods: {
         validatePositiveNumber({ v, inputName }) {
-            if (this.$typy(v).isEmptyString) return this.$t('errors.requiredInput', { inputName })
-            if (v <= 0) return this.$t('errors.largerThanZero', { inputName })
+            if (this.$typy(v).isEmptyString)
+                return this.$mxs_t('errors.requiredInput', { inputName })
+            if (v <= 0) return this.$mxs_t('errors.largerThanZero', { inputName })
             if (v > 0) return true
             return false
         },

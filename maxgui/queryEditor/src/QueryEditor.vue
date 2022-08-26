@@ -31,7 +31,7 @@
         </div>
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
-            :title="$t('confirmations.leavePage')"
+            :title="$mxs_t('confirmations.leavePage')"
             saveText="thatsRight"
             minBodyWidth="624px"
             :onSave="onLeave"
@@ -39,13 +39,13 @@
             @on-cancel="cancelLeave"
         >
             <template v-slot:confirm-text>
-                <p>{{ $t('info.disconnectAll') }}</p>
+                <p>{{ $mxs_t('info.disconnectAll') }}</p>
             </template>
             <template v-slot:body-append>
                 <v-checkbox
                     v-model="confirmDelAll"
                     class="v-checkbox--custom-label"
-                    :label="$t('disconnectAll')"
+                    :label="$mxs_t('disconnectAll')"
                     color="primary"
                     dense
                     hide-details
@@ -165,7 +165,7 @@ export default {
                             break
                         case '/404':
                             this.SET_SNACK_BAR_MESSAGE({
-                                text: [this.$t('info.notFoundConn')],
+                                text: [this.$mxs_t('info.notFoundConn')],
                                 type: 'error',
                             })
                             this.cancelLeave()

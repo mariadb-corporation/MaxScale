@@ -32,7 +32,7 @@
                             <v-list-item-title
                                 class="text-subtitle-2 mxs-color-helper text-navigation"
                             >
-                                <span class="text-uppercase">{{ $t('master') }} </span>:
+                                <span class="text-uppercase">{{ $mxs_t('master') }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
                                 <cluster-server-tooltip
@@ -65,7 +65,7 @@
                             <v-list-item-title
                                 class="text-subtitle-2 mxs-color-helper text-navigation"
                             >
-                                <span class="text-uppercase">{{ $tc('slaves', 2) }} </span>:
+                                <span class="text-uppercase">{{ $mxs_tc('slaves', 2) }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
                                 <v-chip
@@ -89,7 +89,7 @@
                                                     <strong>{{ item.servers.length }}</strong>
                                                 </v-avatar>
                                                 <span class="text-lowercase">
-                                                    {{ $t(item.label) }}
+                                                    {{ $mxs_t(item.label) }}
                                                 </span>
                                             </div>
                                         </template>

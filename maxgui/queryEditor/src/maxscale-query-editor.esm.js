@@ -17,6 +17,7 @@ import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 import helpersPlugin from '@share/plugins/helpers'
 import * as helpers from '@queryEditorSrc/utils/helpers'
 import logger from '@share/plugins/logger'
+import scopingI18n from '@share/plugins/scopingI18n'
 
 export default /*#__PURE__*/ (() => {
     // Get component instance
@@ -25,11 +26,11 @@ export default /*#__PURE__*/ (() => {
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
      * @param {Object} options.store - vuex store
+     * @param {Object} options.i18n - vue-i18n instance
      */
-    installable.install = (Vue, { store }) => {
+    installable.install = (Vue, { store, i18n }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
-
-        //TODO: Prevent duplicated vuex module names, instance properties name
+        Vue.use(scopingI18n, { i18n })
 
         //Register common components
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))

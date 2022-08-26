@@ -12,7 +12,6 @@
  */
 import Vue from 'vue'
 import '@rootSrc/pluginReg'
-import '@rootSrc/styles/main.scss'
 import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
 import App from '@rootSrc/App.vue'

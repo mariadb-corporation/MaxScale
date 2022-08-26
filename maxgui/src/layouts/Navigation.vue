@@ -29,8 +29,8 @@
                         <v-list-item-title class="text-capitalize">
                             {{
                                 item.label === 'dashboards'
-                                    ? $tc(`${item.label}`, 1)
-                                    : $tc(`${item.label}`, 2)
+                                    ? $mxs_tc(`${item.label}`, 1)
+                                    : $mxs_tc(`${item.label}`, 2)
                             }}
                         </v-list-item-title>
                     </v-list-item-content>

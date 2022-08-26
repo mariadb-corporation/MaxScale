@@ -203,7 +203,7 @@ export default {
             this.userDlg = {
                 isOpened: true,
                 type,
-                title: this.$t(`userOps.actions.${type}`),
+                title: this.$mxs_t(`userOps.actions.${type}`),
                 user: { ...this.userDlg.user, ...user },
             }
         },

@@ -68,6 +68,11 @@ Create a json file in `share/locales`. For example: `es.json` Copy everything in
 `share/locales/en.json` file and paste to `es.json` then translate it. Change the
 value of VUE_APP_I18N_LOCALE in `.env` file to the desire locale.
 
+To use vue-i18n instance methods, add `VUE_APP_I18N_SCOPE_PREFIX` before each method.
+e.g. `$t('newConnection')` is now `$mxs_t('newConnection')`
+This is because, these custom instance methods is configured to automatically add the
+`VUE_APP_I18N_SCOPE_PREFIX` to each argument.
+
 #### browserslist
 
 Using default configuration

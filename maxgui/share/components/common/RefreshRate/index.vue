@@ -24,19 +24,19 @@
                             $vuetify.icons.mxs_reload
                         </v-icon>
                         <span class="mr-1 mxs-color-helper text-navigation">
-                            {{ $t('refreshRate') }}:
+                            {{ $mxs_t('refreshRate') }}:
                             <template v-if="refreshCount >= 0">
                                 {{
-                                    $tc('seconds', refreshCount === 1 ? 1 : 2, {
+                                    $mxs_tc('seconds', refreshCount === 1 ? 1 : 2, {
                                         value: refreshCount,
                                     })
                                 }}
                             </template>
-                            <template v-else>{{ $t('noRefresh') }} </template>
+                            <template v-else>{{ $mxs_t('noRefresh') }} </template>
                         </span>
                     </v-btn>
                 </template>
-                <span>{{ $t('info.refreshRate') }}</span>
+                <span>{{ $mxs_t('info.refreshRate') }}</span>
             </v-tooltip>
         </template>
         <v-list>
@@ -99,10 +99,10 @@ export default {
         refreshRateOpts() {
             return [
                 ...this.seconds.map(s => ({
-                    label: this.$tc('seconds', 2, { value: s }),
+                    label: this.$mxs_tc('seconds', 2, { value: s }),
                     value: s,
                 })),
-                { label: this.$t('noRefresh'), value: -1 },
+                { label: this.$mxs_t('noRefresh'), value: -1 },
             ]
         },
     },

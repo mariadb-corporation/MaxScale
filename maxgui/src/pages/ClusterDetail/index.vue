@@ -87,7 +87,7 @@
                 <v-checkbox
                     v-model="confDlg.forceClosing"
                     class="v-checkbox--custom-label mt-2 mb-4"
-                    :label="$t('forceClosing')"
+                    :label="$mxs_t('forceClosing')"
                     color="primary"
                     dense
                     hide-details
@@ -320,7 +320,7 @@ export default {
                 switch (type) {
                     case SWITCHOVER:
                     case REJOIN:
-                        nodeTxtWrapper[0].innerHTML = this.$t(`monitorOps.info.${type}`)
+                        nodeTxtWrapper[0].innerHTML = this.$mxs_t(`monitorOps.info.${type}`)
                         break
                     default:
                         nodeTxtWrapper[0].innerHTML = this.draggingStates.initialNodeInnerHTML
@@ -402,7 +402,9 @@ export default {
                     case SWITCHOVER:
                     case REJOIN:
                         this.confDlg.type = this.confDlg.opType
-                        this.confDlg.title = this.$t(`monitorOps.actions.${this.confDlg.opType}`)
+                        this.confDlg.title = this.$mxs_t(
+                            `monitorOps.actions.${this.confDlg.opType}`
+                        )
                         this.confDlg.targetNode = { id: this.draggingStates.draggingNodeId }
                         break
                 }

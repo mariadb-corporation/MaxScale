@@ -23,7 +23,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('revertChanges') }}
+                {{ $mxs_t('revertChanges') }}
             </span>
         </v-tooltip>
         <v-tooltip
@@ -46,7 +46,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('applyChanges') }}
+                {{ $mxs_t('applyChanges') }}
             </span>
         </v-tooltip>
     </div>

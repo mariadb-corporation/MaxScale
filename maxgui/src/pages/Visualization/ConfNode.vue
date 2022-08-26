@@ -93,7 +93,7 @@
                             </v-icon>
                         </v-btn>
                     </template>
-                    <span> {{ $t('visFilters') }}</span>
+                    <span> {{ $mxs_t('visFilters') }}</span>
                 </v-tooltip>
             </div>
         </div>

@@ -34,7 +34,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
+                <span class="text-capitalize"> {{ $mxs_tc('settings', 2) }}</span>
             </v-tooltip>
             <v-tooltip
                 top
@@ -54,7 +54,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
+                <span>{{ isFullscreen ? $mxs_t('minimize') : $mxs_t('maximize') }}</span>
             </v-tooltip>
         </div>
 

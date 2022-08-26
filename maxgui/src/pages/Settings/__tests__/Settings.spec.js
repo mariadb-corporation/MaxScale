@@ -93,7 +93,7 @@ describe('Settings index', () => {
 
     it(`Should send request to get maxscale and module parameters`, async () => {
         await wrapper.setData({
-            currentActiveTab: wrapper.vm.$t('maxScaleParameters'),
+            currentActiveTab: wrapper.vm.$mxs_t('maxScaleParameters'),
         })
         await axiosStub.should.have.been.calledWith('/maxscale?fields[maxscale]=parameters')
         await axiosStub.should.have.been.calledWith(

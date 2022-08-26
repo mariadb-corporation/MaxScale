@@ -40,7 +40,7 @@
                     outlined
                     height="36"
                     class="vuetify-input--override filter-list__search"
-                    :placeholder="$t('search')"
+                    :placeholder="$mxs_t('search')"
                     hide-details
                 />
             </v-list-item>
@@ -52,7 +52,7 @@
                     color="primary"
                     class="pa-0 ma-0 filter-list__checkbox d-flex align-center"
                     hide-details
-                    :label="$t('selectAll')"
+                    :label="$mxs_t('selectAll')"
                     :input-value="isAllSelected"
                     @change="toggleAll"
                 />

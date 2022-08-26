@@ -4,7 +4,7 @@
             class="d-flex align-center justify-center flex-row px-3 py-1 mxs-color-helper bg-warning"
         >
             <span class="card-title font-weight-medium text-uppercase mxs-color-helper white--text">
-                {{ $t('rejoinableNodes') }}
+                {{ $mxs_t('rejoinableNodes') }}
             </span>
         </div>
         <v-divider />

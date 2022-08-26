@@ -13,7 +13,7 @@
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
-                    {{ $t('history') }}
+                    {{ $mxs_t('history') }}
                 </v-tab>
                 <v-tab
                     :key="SQL_QUERY_MODES.SNIPPETS"
@@ -21,7 +21,7 @@
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
-                    {{ $t('snippets') }}
+                    {{ $mxs_t('snippets') }}
                 </v-tab>
             </v-tabs>
         </div>
@@ -61,7 +61,7 @@
                         />
                     </template>
                     <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
-                        {{ $t('prefix') }}
+                        {{ $mxs_t('prefix') }}
                     </template>
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <mxs-truncate-str
@@ -93,7 +93,7 @@
                             <table class="action-table-tooltip px-1">
                                 <caption class="text-left font-weight-bold mb-3 pl-1">
                                     {{
-                                        $t('queryResInfo')
+                                        $mxs_t('queryResInfo')
                                     }}
                                     <v-divider class="mxs-color-helper border-separator" />
                                 </caption>
@@ -128,7 +128,7 @@
                             <mxs-filter-list
                                 v-model="selectedLogTypes"
                                 selectAllOnActivated
-                                :label="$t('logTypes')"
+                                :label="$mxs_t('logTypes')"
                                 :items="queryLogTypes"
                                 returnObject
                                 :maxHeight="200"
@@ -141,8 +141,8 @@
                 v-else
                 v-html="
                     activeView === SQL_QUERY_MODES.HISTORY
-                        ? $t('historyTabGuide')
-                        : $t('snippetTabGuide')
+                        ? $mxs_t('historyTabGuide')
+                        : $mxs_t('snippetTabGuide')
                 "
             />
         </keep-alive>
@@ -150,10 +150,10 @@
             v-model="isConfDlgOpened"
             :title="
                 activeView === SQL_QUERY_MODES.HISTORY
-                    ? $t('clearSelectedQueries', {
-                          targetType: $t('queryHistory'),
+                    ? $mxs_t('clearSelectedQueries', {
+                          targetType: $mxs_t('queryHistory'),
                       })
-                    : $t('deleteSnippets')
+                    : $mxs_t('deleteSnippets')
             "
             saveText="delete"
             minBodyWidth="624px"
@@ -162,12 +162,12 @@
             <template v-slot:confirm-text>
                 <p>
                     {{
-                        $t('info.clearSelectedQueries', {
+                        $mxs_t('info.clearSelectedQueries', {
                             quantity:
                                 itemsToBeDeleted.length === rows.length
-                                    ? $t('entire')
-                                    : $t('selected'),
-                            targetType: $t(
+                                    ? $mxs_t('entire')
+                                    : $mxs_t('selected'),
+                            targetType: $mxs_t(
                                 activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
                             ),
                         })
@@ -316,7 +316,7 @@ export default {
             } = this.SQL_RES_TBL_CTX_OPT_TYPES
             return [
                 {
-                    text: this.$t('copyToClipboard'),
+                    text: this.$mxs_t('copyToClipboard'),
                     children: [
                         {
                             text: 'SQL',
@@ -326,7 +326,7 @@ export default {
                     ],
                 },
                 {
-                    text: this.$t('placeToEditor'),
+                    text: this.$mxs_t('placeToEditor'),
                     children: [
                         {
                             text: 'SQL',

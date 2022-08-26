@@ -41,12 +41,12 @@
             </template>
             <span class="d-inline-block text-center">
                 <template v-if="selected_query_txt">
-                    {{ $t('runStatements', { quantity: $t('selected') }) }}
+                    {{ $mxs_t('runStatements', { quantity: $mxs_t('selected') }) }}
                     <br />
                     Cmd/Ctrl + Enter
                 </template>
                 <template v-else>
-                    {{ $t('runStatements', { quantity: $t('all') }) }}
+                    {{ $mxs_t('runStatements', { quantity: $mxs_t('all') }) }}
                     <br />
                     Cmd/Ctrl + Shift + Enter
                 </template>
@@ -75,8 +75,8 @@
             </template>
             <span class="text-capitalize">
                 {{
-                    $t('visualizedConfig', {
-                        action: show_vis_sidebar ? $t('hide') : $t('show'),
+                    $mxs_t('visualizedConfig', {
+                        action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
                     })
                 }}
             </span>
@@ -100,7 +100,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('createQuerySnippet') }}
+                {{ $mxs_t('createQuerySnippet') }}
                 <br />
                 Cmd/Ctrl + D
             </span>
@@ -113,12 +113,12 @@
                 :style="{ maxWidth: '190px' }"
                 :height="26"
                 hide-details="auto"
-                :prefix="$t('rowLimit')"
+                :prefix="$mxs_t('rowLimit')"
                 @change="SET_QUERY_ROW_LIMIT($event)"
             >
                 <template v-slot:prepend-inner>
                     <label class="field__label mxs-color-helper text-small-text">
-                        {{ $t('rowLimit') }}
+                        {{ $mxs_t('rowLimit') }}
                     </label>
                 </template>
             </row-limit-ctr>
@@ -149,7 +149,7 @@
                     <label
                         class="field__label mxs-color-helper text-small-text label-required text-capitalize"
                     >
-                        {{ $t('prefix') }}
+                        {{ $mxs_t('prefix') }}
                     </label>
                     <v-text-field
                         v-model="snippet.name"
@@ -168,7 +168,7 @@
                 <v-checkbox
                     v-model="dontShowConfirm"
                     class="pa-0 ma-0"
-                    :label="$t('dontAskMeAgain')"
+                    :label="$mxs_t('dontAskMeAgain')"
                     color="primary"
                     hide-details
                     dense
@@ -214,7 +214,7 @@ export default {
             activeRunMode: 'all',
             confDlg: {
                 isOpened: false,
-                title: this.$t('confirmations.runQuery'),
+                title: this.$mxs_t('confirmations.runQuery'),
                 type: 'run',
                 sqlTxt: '',
                 isCreatingSnippet: false,
@@ -306,7 +306,7 @@ export default {
                     this.confDlg = {
                         ...this.confDlg,
                         isOpened: true,
-                        title: this.$t('confirmations.runQuery'),
+                        title: this.$mxs_t('confirmations.runQuery'),
                         type: 'run',
                         isCreatingSnippet: false,
                         sqlTxt:
@@ -346,7 +346,7 @@ export default {
                 this.confDlg = {
                     ...this.confDlg,
                     isOpened: true,
-                    title: this.$t('confirmations.createSnippet'),
+                    title: this.$mxs_t('confirmations.createSnippet'),
                     type: 'create',
                     isCreatingSnippet: true,
                     sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
@@ -364,8 +364,9 @@ export default {
         },
         validateSnippetName(v) {
             const names = this.query_snippets.map(q => q.name)
-            if (!v) return this.$t('errors.requiredInput', { inputName: this.$t('prefix') })
-            else if (names.includes(v)) return this.$t('errors.duplicatedValue', { inputValue: v })
+            if (!v) return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('prefix') })
+            else if (names.includes(v))
+                return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
             return true
         },
     },

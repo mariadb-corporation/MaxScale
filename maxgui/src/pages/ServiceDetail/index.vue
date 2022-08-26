@@ -72,7 +72,7 @@
                             <v-col cols="5">
                                 <details-readonly-table
                                     ref="diagnostics-table"
-                                    :title="`${$t('routerDiagnostics')}`"
+                                    :title="`${$mxs_t('routerDiagnostics')}`"
                                     :tableData="routerDiagnostics"
                                     expandAll
                                     isTree
@@ -132,8 +132,10 @@ export default {
         return {
             currentActiveTab: null,
             tabs: [
-                { name: `${this.$tc('parameters', 2)} & ${this.$tc('relationships', 2)}` },
-                { name: `${this.$tc('sessions', 2)} & ${this.$tc('diagnostics', 2)}` },
+                {
+                    name: `${this.$mxs_tc('parameters', 2)} & ${this.$mxs_tc('relationships', 2)}`,
+                },
+                { name: `${this.$mxs_tc('sessions', 2)} & ${this.$mxs_tc('diagnostics', 2)}` },
             ],
             serversTableRows: [],
             listenersTableRows: [],

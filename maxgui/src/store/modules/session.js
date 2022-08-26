@@ -73,7 +73,10 @@ export default {
                 if (res.status === 200) {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
-                        { text: [this.i18n.t('info.killSessionSuccessfully')], type: 'success' },
+                        {
+                            text: [this.vue.$mxs_t('info.killSessionSuccessfully')],
+                            type: 'success',
+                        },
                         { root: true }
                     )
                     await this.vue.$typy(callback).safeFunction()

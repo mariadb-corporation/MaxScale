@@ -19,7 +19,7 @@
                 v-on="on"
             >
                 {{ item }}
-                {{ item === defItem ? `(${$t('default')})` : '' }}
+                {{ item === defItem ? `(${$mxs_t('default')})` : '' }}
             </div>
         </template>
     </v-combobox>

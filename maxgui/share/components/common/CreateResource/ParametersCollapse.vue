@@ -4,7 +4,7 @@
         titleWrapperClass="mx-n9"
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
-        :title="`${$tc('parameters', 2)}`"
+        :title="`${$mxs_tc('parameters', 2)}`"
     >
         <data-table
             :headers="variableValueTableHeaders"

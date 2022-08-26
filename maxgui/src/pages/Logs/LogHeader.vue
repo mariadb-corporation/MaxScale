@@ -7,7 +7,7 @@
         <mxs-filter-list
             v-model="chosenLogLevels"
             returnObject
-            :label="$t('filterBy')"
+            :label="$mxs_t('filterBy')"
             :items="allLogLevels"
             :maxHeight="400"
         >

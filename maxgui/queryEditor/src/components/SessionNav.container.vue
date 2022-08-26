@@ -153,9 +153,9 @@ export default {
             loadSqlCtr.confDlg = {
                 ...loadSqlCtr.confDlg,
                 isOpened: true,
-                title: this.$t('deleteSession'),
+                title: this.$mxs_t('deleteSession'),
                 type: 'deleteSession',
-                confirmMsg: this.$t('confirmations.deleteSession', { targetId: session.name }),
+                confirmMsg: this.$mxs_t('confirmations.deleteSession', { targetId: session.name }),
                 onSave: async () => {
                     await loadSqlCtr.handleSaveFile()
                     await this.handleDeleteSessTab(session)

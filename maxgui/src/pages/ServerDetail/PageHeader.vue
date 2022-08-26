@@ -81,7 +81,7 @@
                     <v-checkbox
                         v-model="forceClosing"
                         class="v-checkbox--custom-label mt-2 mb-4"
-                        :label="$t('forceClosing')"
+                        :label="$mxs_t('forceClosing')"
                         color="primary"
                         hide-details
                         dense
@@ -96,7 +96,7 @@
             </span>
             <span v-if="version_string" class="mxs-color-helper text-grayed-out text-body-2">
                 |
-                <span class="version-string">{{ $t('version') }} {{ version_string }}</span>
+                <span class="version-string">{{ $mxs_t('version') }} {{ version_string }}</span>
             </span>
         </template>
     </details-page-title>
@@ -161,11 +161,11 @@ export default {
         serverHealthy() {
             switch (this.stateIconFrame) {
                 case 0:
-                    return this.$t('unHealthy')
+                    return this.$mxs_t('unHealthy')
                 case 1:
-                    return this.$t('healthy')
+                    return this.$mxs_t('healthy')
                 default:
-                    return this.$t('maintenance')
+                    return this.$mxs_t('maintenance')
             }
         },
         currStateMode() {

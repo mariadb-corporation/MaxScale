@@ -489,10 +489,10 @@ export default {
                 CS_ADD_NODE,
                 CS_REMOVE_NODE,
             } = rootState.app_config.MONITOR_OP_TYPES
-            // scope is needed to access $t
+            // scope is needed to access $mxs_t
             return ({ currState, scope }) => ({
                 [STOP]: {
-                    text: scope.$t('monitorOps.actions.stop'),
+                    text: scope.$mxs_t('monitorOps.actions.stop'),
                     type: STOP,
                     icon: '$vuetify.icons.mxs_stopped',
                     iconSize: 22,
@@ -501,7 +501,7 @@ export default {
                     disabled: currState === 'Stopped',
                 },
                 [START]: {
-                    text: scope.$t('monitorOps.actions.start'),
+                    text: scope.$mxs_t('monitorOps.actions.start'),
                     type: START,
                     icon: '$vuetify.icons.mxs_running',
                     iconSize: 22,
@@ -510,7 +510,7 @@ export default {
                     disabled: currState === 'Running',
                 },
                 [DESTROY]: {
-                    text: scope.$t('monitorOps.actions.destroy'),
+                    text: scope.$mxs_t('monitorOps.actions.destroy'),
                     type: DESTROY,
                     icon: '$vuetify.icons.mxs_delete',
                     iconSize: 18,
@@ -518,7 +518,7 @@ export default {
                     disabled: false,
                 },
                 [SWITCHOVER]: {
-                    text: scope.$t(`monitorOps.actions.${SWITCHOVER}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${SWITCHOVER}`),
                     type: SWITCHOVER,
                     icon: '$vuetify.icons.mxs_switchover',
                     iconSize: 24,
@@ -526,7 +526,7 @@ export default {
                     disabled: false,
                 },
                 [RESET_REP]: {
-                    text: scope.$t(`monitorOps.actions.${RESET_REP}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${RESET_REP}`),
                     type: RESET_REP,
                     icon: '$vuetify.icons.mxs_reload',
                     iconSize: 20,
@@ -534,7 +534,7 @@ export default {
                     disabled: false,
                 },
                 [RELEASE_LOCKS]: {
-                    text: scope.$t(`monitorOps.actions.${RELEASE_LOCKS}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${RELEASE_LOCKS}`),
                     type: RELEASE_LOCKS,
                     icon: 'mdi-lock-open-outline',
                     iconSize: 24,
@@ -542,21 +542,21 @@ export default {
                     disabled: false,
                 },
                 [FAILOVER]: {
-                    text: scope.$t(`monitorOps.actions.${FAILOVER}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${FAILOVER}`),
                     type: FAILOVER,
                     icon: '$vuetify.icons.mxs_failover',
                     iconSize: 24,
                     disabled: false,
                 },
                 [REJOIN]: {
-                    text: scope.$t(`monitorOps.actions.${REJOIN}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${REJOIN}`),
                     type: REJOIN,
                     //TODO: Add rejoin icon
                     disabled: false,
                 },
                 [CS_GET_STATUS]: { type: CS_GET_STATUS, disabled: false },
                 [CS_STOP_CLUSTER]: {
-                    text: scope.$t(`monitorOps.actions.${CS_STOP_CLUSTER}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_STOP_CLUSTER}`),
                     type: CS_STOP_CLUSTER,
                     icon: '$vuetify.icons.mxs_stopped',
                     iconSize: 22,
@@ -564,7 +564,7 @@ export default {
                     disabled: false,
                 },
                 [CS_START_CLUSTER]: {
-                    text: scope.$t(`monitorOps.actions.${CS_START_CLUSTER}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_START_CLUSTER}`),
                     type: CS_START_CLUSTER,
                     icon: '$vuetify.icons.mxs_running',
                     iconSize: 22,
@@ -573,7 +573,7 @@ export default {
                 },
                 [CS_SET_READONLY]: {
                     type: CS_SET_READONLY,
-                    text: scope.$t(`monitorOps.actions.${CS_SET_READONLY}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_SET_READONLY}`),
                     icon: 'mdi-database-eye-outline',
                     iconSize: 24,
                     color: 'primary',
@@ -581,7 +581,7 @@ export default {
                 },
                 [CS_SET_READWRITE]: {
                     type: CS_SET_READWRITE,
-                    text: scope.$t(`monitorOps.actions.${CS_SET_READWRITE}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_SET_READWRITE}`),
                     icon: 'mdi-database-edit-outline',
                     iconSize: 24,
                     color: 'primary',
@@ -589,7 +589,7 @@ export default {
                 },
                 [CS_ADD_NODE]: {
                     type: CS_ADD_NODE,
-                    text: scope.$t(`monitorOps.actions.${CS_ADD_NODE}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_ADD_NODE}`),
                     icon: 'mdi-plus',
                     iconSize: 24,
                     color: 'primary',
@@ -597,7 +597,7 @@ export default {
                 },
                 [CS_REMOVE_NODE]: {
                     type: CS_REMOVE_NODE,
-                    text: scope.$t(`monitorOps.actions.${CS_REMOVE_NODE}`),
+                    text: scope.$mxs_t(`monitorOps.actions.${CS_REMOVE_NODE}`),
                     icon: '$vuetify.icons.mxs_delete',
                     iconSize: 18,
                     color: 'error',

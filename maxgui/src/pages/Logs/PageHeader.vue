@@ -6,7 +6,7 @@
                     style="line-height: normal;"
                     class="mb-0 mxs-color-helper text-navigation text-h4 text-capitalize"
                 >
-                    {{ $t($route.name) }}
+                    {{ $mxs_t($route.name) }}
                 </h4>
             </div>
         </div>

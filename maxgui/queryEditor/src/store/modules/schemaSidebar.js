@@ -420,9 +420,9 @@ export default {
                 })
                 let queryAction
                 if (!this.vue.$typy(stmt_err_msg_obj).isEmptyObject)
-                    queryAction = this.i18n.t('errors.failedToExeAction', { action })
+                    queryAction = this.vue.$mxs_t('errors.failedToExeAction', { action })
                 else {
-                    queryAction = this.i18n.t('info.exeActionSuccessfully', { action })
+                    queryAction = this.vue.$mxs_t('info.exeActionSuccessfully', { action })
                     if (showSnackbar)
                         commit(
                             'appNotifier/SET_SNACK_BAR_MESSAGE',

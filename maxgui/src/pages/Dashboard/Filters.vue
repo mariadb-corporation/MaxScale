@@ -48,7 +48,7 @@
                         v-on="on"
                     >
                         {{ serviceIds.length }}
-                        {{ $tc('services', 2).toLowerCase() }}
+                        {{ $mxs_tc('services', 2).toLowerCase() }}
                     </div>
                 </template>
 
@@ -118,7 +118,7 @@ export default {
 
                 const serviceIds = associatedServices.length
                     ? associatedServices.map(item => `${item.id}`)
-                    : this.$t('noEntity', { entityName: 'services' })
+                    : this.$mxs_t('noEntity', { entityName: 'services' })
 
                 if (typeof serviceIds !== 'string')
                     allServiceIds = [...allServiceIds, ...serviceIds]

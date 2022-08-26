@@ -14,7 +14,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ $t('exportChart') }}</span>
+                <span>{{ $mxs_t('exportChart') }}</span>
             </v-tooltip>
             <v-tooltip
                 top
@@ -34,7 +34,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ chartOpt.isMaximized ? $t('minimize') : $t('maximize') }}</span>
+                <span>{{ chartOpt.isMaximized ? $mxs_t('minimize') : $mxs_t('maximize') }}</span>
             </v-tooltip>
             <v-tooltip
                 top
@@ -54,7 +54,7 @@
                         <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
                     </v-btn>
                 </template>
-                <span>{{ $t('close') }}</span>
+                <span>{{ $mxs_t('close') }}</span>
             </v-tooltip>
         </div>
 

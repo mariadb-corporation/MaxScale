@@ -69,7 +69,7 @@
                         </div>
                     </template>
                     <span class="mxs-color-helper text-text py-2 px-4">
-                        {{ $t('connectedTo') }}
+                        {{ $mxs_t('connectedTo') }}
                         {{ $typy(getWkeConnByWkeId(wke.id), 'name').safeString }}
                     </span>
                 </v-tooltip>

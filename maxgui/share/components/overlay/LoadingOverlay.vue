@@ -2,8 +2,8 @@
     <v-overlay z-index="9999">
         <div class="overlay-wrapper d-flex flex-column justify-center align-center fill-height">
             <div class="welcome-txt text-center mxs-color-helper text-text-subtle">
-                <div v-if="showWelcomeTxt">{{ $t('welcomeTo') }}</div>
-                <div class="font-weight-medium">{{ $t('mariaDbMaxScale') }}</div>
+                <div v-if="showWelcomeTxt">{{ $mxs_t('welcomeTo') }}</div>
+                <div class="font-weight-medium">{{ $mxs_t('mariaDbMaxScale') }}</div>
             </div>
             <div class="loading-icon">
                 <img src="@share/assets/icon-globe.svg" alt="MariaDB" />

@@ -305,10 +305,10 @@ export default {
                     let resName = ''
                     switch (mode) {
                         case PRVW_DATA:
-                            resName = scope.$t('previewData')
+                            resName = scope.$mxs_t('previewData')
                             break
                         case PRVW_DATA_DETAILS:
-                            resName = scope.$t('viewDetails')
+                            resName = scope.$mxs_t('viewDetails')
                             break
                     }
                     resSets.push({

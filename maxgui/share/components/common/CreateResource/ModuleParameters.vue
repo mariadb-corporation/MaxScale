@@ -1,7 +1,7 @@
 <template>
     <div>
         <label class="text-capitalize field__label mxs-color-helper text-small-text d-block">
-            {{ $tc(moduleName, 1) }}
+            {{ $mxs_tc(moduleName, 1) }}
         </label>
         <v-select
             id="module-select"
@@ -15,8 +15,10 @@
             :height="36"
             class="vuetify-input--override mariadb-select-input error--text__bottom"
             :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
-            :placeholder="$tc('select', 1, { entityName: $tc(moduleName, 1) })"
-            :rules="[v => !!v || $t('errors.requiredInput', { inputName: $tc(moduleName, 1) })]"
+            :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(moduleName, 1) })"
+            :rules="[
+                v => !!v || $mxs_t('errors.requiredInput', { inputName: $mxs_tc(moduleName, 1) }),
+            ]"
         />
 
         <parameters-collapse

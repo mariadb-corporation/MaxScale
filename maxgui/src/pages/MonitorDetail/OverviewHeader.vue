@@ -65,7 +65,7 @@
         >
             <template v-if="smallInfo" v-slot:body-append>
                 <small class="d-inline-block mt-4">
-                    {{ $t(smallInfo) }}
+                    {{ $mxs_t(smallInfo) }}
                 </small>
             </template>
         </mxs-sel-dlg>

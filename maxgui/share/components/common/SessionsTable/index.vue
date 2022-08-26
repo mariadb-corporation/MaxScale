@@ -6,7 +6,7 @@
                 ? {
                       toggleOnClick: () => (showTable = !showTable),
                       isContentVisible: showTable,
-                      title: `${$tc('currentSessions', 2)}`,
+                      title: `${$mxs_tc('currentSessions', 2)}`,
                       titleInfo: rows.length,
                   }
                 : null
@@ -16,7 +16,7 @@
             :headers="headers"
             :data="rows"
             :loading="isLoading"
-            :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
+            :noDataText="$mxs_t('noEntity', { entityName: $mxs_tc('sessions', 2) })"
             showAll
             showActionsOnHover
             v-bind="{ ...$attrs }"
@@ -38,7 +38,7 @@
                             </v-icon>
                         </v-btn>
                     </template>
-                    <span>{{ $t('killSession') }}</span>
+                    <span>{{ $mxs_t('killSession') }}</span>
                 </v-tooltip>
             </template>
             <template
@@ -72,13 +72,13 @@
         </data-table>
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
-            :title="$t('killSession')"
+            :title="$mxs_t('killSession')"
             saveText="kill"
             minBodyWidth="512px"
             :onSave="confirmKill"
         >
             <template v-if="confDlg.item" v-slot:body-prepend>
-                <p class="confirmations-text" v-html="$t(`confirmations.killSession`)" />
+                <p class="confirmations-text" v-html="$mxs_t(`confirmations.killSession`)" />
                 <table class="tbl-code pa-4">
                     <tr v-for="(v, key) in confDlg.item" :key="key">
                         <td>

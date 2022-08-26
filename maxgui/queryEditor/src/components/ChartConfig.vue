@@ -1,8 +1,8 @@
 <template>
     <div class="pa-4">
-        <h5 class="mb-4">{{ $t('visualization') }}</h5>
+        <h5 class="mb-4">{{ $mxs_t('visualization') }}</h5>
         <label class="field__label mxs-color-helper text-small-text label-required">
-            {{ $t('graph') }}</label
+            {{ $mxs_t('graph') }}</label
         >
         <v-select
             v-model="chartOpt.type"
@@ -20,7 +20,7 @@
         />
         <div v-if="chartOpt.type" class="mt-4">
             <label class="field__label mxs-color-helper text-small-text label-required">
-                {{ $t('selectResultSet') }}
+                {{ $mxs_t('selectResultSet') }}
             </label>
             <v-select
                 v-model="resSet"
@@ -45,7 +45,7 @@
                     v-if="$typy(resSet, 'data').isEmptyArray"
                     class="mt-4 mxs-color-helper text-small-text"
                 >
-                    {{ $t('emptySet') }}
+                    {{ $mxs_t('emptySet') }}
                 </div>
                 <template v-else>
                     <div v-for="(_, axisId) in scaleLabels" :key="axisId">
@@ -109,7 +109,7 @@
                     hide-details
                 >
                     <template v-slot:label>
-                        <label class="v-label">{{ $t('showTrendline') }}</label>
+                        <label class="v-label">{{ $mxs_t('showTrendline') }}</label>
                         <v-tooltip
                             top
                             transition="slide-y-transition"
@@ -125,7 +125,7 @@
                                     mdi-information-outline
                                 </v-icon>
                             </template>
-                            <span>{{ $t('info.showTrendline') }}</span>
+                            <span>{{ $mxs_t('info.showTrendline') }}</span>
                         </v-tooltip>
                     </template>
                 </v-checkbox>

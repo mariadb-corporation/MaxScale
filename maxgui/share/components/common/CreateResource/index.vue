@@ -11,13 +11,13 @@
             color="accent-dark"
             @click.native="onCreate"
         >
-            + {{ $t('createNew') }}
+            + {{ $mxs_t('createNew') }}
         </v-btn>
         <mxs-dlg
             ref="baseDialog"
             v-model="isDlgOpened"
             :onSave="onSave"
-            :title="`${$t('createANew')}...`"
+            :title="`${$mxs_t('createANew')}...`"
             isDynamicWidth
             hasFormDivider
         >
@@ -37,14 +37,16 @@
                         offsetY: true,
                     }"
                     hide-details
-                    :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
+                    :rules="[
+                        v => !!v || $mxs_t('errors.requiredInput', { inputName: 'This field' }),
+                    ]"
                     required
                     @input="handleFormSelection"
                 />
             </template>
             <template v-if="selectedForm" v-slot:form-body>
                 <label class="field__label mxs-color-helper text-small-text d-block">
-                    {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
+                    {{ $mxs_t('resourceLabelName', { resourceName: selectedForm }) }}
                 </label>
                 <v-text-field
                     id="id"
@@ -56,7 +58,7 @@
                     dense
                     :height="36"
                     outlined
-                    :placeholder="$t('nameYour', { resourceName: selectedForm.toLowerCase() })"
+                    :placeholder="$mxs_t('nameYour', { resourceName: selectedForm.toLowerCase() })"
                 />
                 <service-form-input
                     v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
@@ -378,9 +380,9 @@ export default {
 
         validateResourceId(val) {
             const { idArr = [] } = this.validateInfo || {}
-            if (!val) return this.$t('errors.requiredInput', { inputName: 'id' })
+            if (!val) return this.$mxs_t('errors.requiredInput', { inputName: 'id' })
             else if (idArr.includes(val))
-                return this.$t('errors.duplicatedValue', { inputValue: val })
+                return this.$mxs_t('errors.duplicatedValue', { inputValue: val })
             return true
         },
     },

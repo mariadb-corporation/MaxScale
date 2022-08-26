@@ -2,7 +2,7 @@
     <mxs-collapse
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
-        :title="`${$tc('parameters', 2)}`"
+        :title="`${$mxs_tc('parameters', 2)}`"
         :editable="isAdmin && isTableEditable"
         :isEditing="editableCell"
         :onEdit="() => (editableCell = true)"
@@ -60,7 +60,7 @@
         <mxs-dlg
             v-model="showConfirmDialog"
             :onSave="acceptEdit"
-            :title="`${$t('implementChanges')}`"
+            :title="`${$mxs_t('implementChanges')}`"
             saveText="thatsRight"
             :hasChanged="hasChanged"
             @on-cancel="cancelEdit"
@@ -68,7 +68,7 @@
             <template v-slot:form-body>
                 <span class="d-block confirmation-text mb-4">
                     {{
-                        $tc('changeTheFollowingParameter', changedParams.length > 1 ? 2 : 1, {
+                        $mxs_tc('changeTheFollowingParameter', changedParams.length > 1 ? 2 : 1, {
                             quantity: changedParams.length,
                         })
                     }}

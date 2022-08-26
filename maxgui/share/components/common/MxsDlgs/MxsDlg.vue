@@ -62,7 +62,7 @@
                         depressed
                         @click="cancel"
                     >
-                        {{ $t(cancelText) }}
+                        {{ $mxs_t(cancelText) }}
                     </v-btn>
                     <v-btn
                         small
@@ -74,7 +74,7 @@
                         :disabled="isSaveDisabled"
                         @click="save"
                     >
-                        {{ $t(saveText) }}
+                        {{ $mxs_t(saveText) }}
                     </v-btn>
                 </slot>
             </v-card-actions>

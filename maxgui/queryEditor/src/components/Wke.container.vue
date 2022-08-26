@@ -49,10 +49,12 @@
             v-model="execSqlDlg.isOpened"
             :title="
                 isExecFailed
-                    ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
-                    : $tc('confirmations.exeStatements', stmtI18nPluralization)
+                    ? $mxs_tc('errors.failedToExeStatements', stmtI18nPluralization)
+                    : $mxs_tc('confirmations.exeStatements', stmtI18nPluralization)
             "
-            :smallInfo="isExecFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)"
+            :smallInfo="
+                isExecFailed ? '' : $mxs_tc('info.exeStatementsInfo', stmtI18nPluralization)
+            "
             :hasSavingErr="isExecFailed"
             :errMsgObj="stmtErrMsgObj"
             :sqlTobeExecuted.sync="execSqlDlg.sql"

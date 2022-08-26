@@ -9,7 +9,7 @@
             @card-hover="showEditBtn = $event"
         >
             <template v-if="index === 0" v-slot:title>
-                {{ $t('overview') }}
+                {{ $mxs_t('overview') }}
             </template>
             <template v-slot:card-body>
                 <span
@@ -178,8 +178,8 @@ export default {
     },
     methods: {
         onEdit(type) {
-            this.dialogTitle = `${this.$t(`changeEntity`, {
-                entityName: this.$tc(type, 1),
+            this.dialogTitle = `${this.$mxs_t(`changeEntity`, {
+                entityName: this.$mxs_tc(type, 1),
             })}`
 
             switch (type) {

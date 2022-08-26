@@ -21,7 +21,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('destroy') }} {{ $tc('listeners', 1) }} </span>
+                        <span>{{ $mxs_t('destroy') }} {{ $mxs_tc('listeners', 1) }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -103,7 +103,7 @@ export default {
 
         handleDelete() {
             this.dialogType = 'destroy'
-            this.dialogTitle = `${this.$t('destroy')} ${this.$tc('listeners', 1)}`
+            this.dialogTitle = `${this.$mxs_t('destroy')} ${this.$mxs_tc('listeners', 1)}`
             this.isConfDlgOpened = true
         },
     },

@@ -18,10 +18,10 @@
                         v-on="on"
                         @click="deleteSelectedRows(selectedItems)"
                     >
-                        {{ $t('drop') }} ({{ selectedItems.length }})
+                        {{ $mxs_t('drop') }} ({{ selectedItems.length }})
                     </v-btn>
                 </template>
-                <span>{{ $t('dropSelectedCols') }}</span>
+                <span>{{ $mxs_t('dropSelectedCols') }}</span>
             </v-tooltip>
             <v-tooltip
                 top
@@ -38,15 +38,15 @@
                         v-on="on"
                         @click="addNewCol"
                     >
-                        {{ $t('add') }}
+                        {{ $mxs_t('add') }}
                     </v-btn>
                 </template>
-                <span>{{ $t('addNewCol') }}</span>
+                <span>{{ $mxs_t('addNewCol') }}</span>
             </v-tooltip>
             <mxs-filter-list
                 v-model="selectedColSpecs"
                 returnObject
-                :label="$t('alterSpecs')"
+                :label="$mxs_t('alterSpecs')"
                 :items="colSpecs"
                 :maxHeight="tableMaxHeight - 20"
             />
@@ -75,7 +75,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
+                <span>{{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
         </div>
 

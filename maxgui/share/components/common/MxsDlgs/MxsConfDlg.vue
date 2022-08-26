@@ -5,7 +5,7 @@
                 <p
                     v-if="!$typy(item).isNull && type"
                     class="confirmations-text"
-                    v-html="$t(`confirmations.${type}`, { targetId: item.id })"
+                    v-html="$mxs_t(`confirmations.${type}`, { targetId: item.id })"
                 />
             </slot>
             <slot name="body-prepend"></slot>

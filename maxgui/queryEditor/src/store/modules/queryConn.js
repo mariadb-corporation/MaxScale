@@ -195,7 +195,7 @@ export default {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.i18n.t('info.connSuccessfully')],
+                            text: [this.vue.$mxs_t('info.connSuccessfully')],
                             type: 'success',
                         },
                         { root: true }
@@ -361,7 +361,7 @@ export default {
                         commit(
                             'appNotifier/SET_SNACK_BAR_MESSAGE',
                             {
-                                text: [this.i18n.t('info.disconnSuccessfully')],
+                                text: [this.vue.$mxs_t('info.disconnSuccessfully')],
                                 type: 'success',
                             },
                             { root: true }
@@ -387,7 +387,7 @@ export default {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.i18n.t('info.reconnSuccessfully')],
+                            text: [this.vue.$mxs_t('info.reconnSuccessfully')],
                             type: 'success',
                         },
                         { root: true }
@@ -399,7 +399,7 @@ export default {
                     commit(
                         'appNotifier/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.i18n.t('errors.reconnFailed')],
+                            text: [this.vue.$mxs_t('errors.reconnFailed')],
                             type: 'error',
                         },
                         { root: true }

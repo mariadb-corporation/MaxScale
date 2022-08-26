@@ -56,7 +56,7 @@
                     class="done-editing-btn text-capitalize"
                     @click="doneEditingCb"
                 >
-                    {{ $t('doneEditing') }}
+                    {{ $mxs_t('doneEditing') }}
                 </v-btn>
             </v-fade-transition>
 

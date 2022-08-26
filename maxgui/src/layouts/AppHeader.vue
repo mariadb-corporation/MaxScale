@@ -48,7 +48,7 @@
 
             <v-list dark class="mxs-color-helper bg-navigation">
                 <v-list-item @click="logout">
-                    <v-list-item-title>{{ $t('logout') }}</v-list-item-title>
+                    <v-list-item-title>{{ $mxs_t('logout') }}</v-list-item-title>
                 </v-list-item>
             </v-list>
         </v-menu>

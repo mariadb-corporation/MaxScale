@@ -41,11 +41,11 @@
                         </v-col>
                         <v-col v-if="isColumnStoreCluster && isAdmin" cols="12">
                             <details-readonly-table
-                                :title="`${$t('csStatus')}`"
+                                :title="`${$mxs_t('csStatus')}`"
                                 :tableData="curr_cs_status"
                                 isTree
                                 expandAll
-                                :noDataText="cs_no_data_txt || $t('$vuetify.noDataText')"
+                                :noDataText="cs_no_data_txt || $mxs_t('$vuetify.noDataText')"
                                 :isLoadingData="isFirstFetch && is_loading_cs_status"
                             />
                         </v-col>

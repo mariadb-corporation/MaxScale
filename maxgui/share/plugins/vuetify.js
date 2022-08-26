@@ -24,6 +24,8 @@ export default new Vuetify({
     },
     theme: vuetifyTheme,
     lang: {
-        t: (key, ...params) => i18n.t(key, params),
+        t: (key, ...params) => {
+            return i18n.t(`${process.env.VUE_APP_I18N_SCOPE_PREFIX}.${key}`, params)
+        },
     },
 })

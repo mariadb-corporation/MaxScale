@@ -67,10 +67,10 @@ describe('wke-ctr', () => {
             }).vm.$props
             expect(value).to.be.equals(wrapper.vm.$data.execSqlDlg.isOpened)
             expect(title).to.be.equals(
-                wrapper.vm.$tc('confirmations.exeStatements', wrapper.vm.stmtI18nPluralization)
+                wrapper.vm.$mxs_tc('confirmations.exeStatements', wrapper.vm.stmtI18nPluralization)
             )
             expect(smallInfo).to.be.equals(
-                wrapper.vm.$tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
+                wrapper.vm.$mxs_tc('info.exeStatementsInfo', wrapper.vm.stmtI18nPluralization)
             )
             expect(hasSavingErr).to.be.equals(wrapper.vm.isExecFailed)
             expect(errMsgObj).to.be.deep.equals(wrapper.vm.stmtErrMsgObj)

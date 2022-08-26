@@ -22,7 +22,7 @@
             </icon-sprite-sheet>
             <span>{{ server.id }}</span>
             <span class="ml-1 mxs-color-helper text-text-subtle">
-                {{ $t('uptime') }}
+                {{ $mxs_t('uptime') }}
                 {{
                     [$typy(server, 'serverData.attributes.uptime').safeNumber, 'seconds']
                         | duration('format', 'Y [years] M [months] D [days] h [hours] m [minutes]')
