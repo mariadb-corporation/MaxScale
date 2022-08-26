@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="mxs-query-editor">
         <query-editor ref="queryEditor" />
         <v-fade-transition>
             <loading-transparent-overlay
@@ -39,7 +39,10 @@ export default /*#__PURE__*/ {
     name: 'maxscale-query-editor',
     components: { QueryEditor, LoadingTransparentOverlay, Snackbars },
     computed: {
-        ...mapState({ snackbar_message: state => state.appNotifier.snackbar_message }),
+        ...mapState({
+            snackbar_message: state => state.appNotifier.snackbar_message,
+            overlay_type: state => state.appNotifier.overlay_type,
+        }),
         transparentLoading() {
             return this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
