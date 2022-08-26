@@ -12,15 +12,12 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeToolbar from '../WkeToolbar'
+import WkeToolbar from '../WkeToolbar.vue'
 
 const mountFactory = opts =>
     mount({
         shallow: false,
         component: WkeToolbar,
-        stubs: {
-            'readonly-sql-editor': "<div class='stub'></div>",
-        },
         ...opts,
     })
 
@@ -29,38 +26,14 @@ describe(`wke-toolbar - mounted hook and child component's interaction tests`, (
     beforeEach(() => {
         wrapper = mountFactory()
     })
-    it('Should emit get-total-btn-width evt in the next tick after component is mounted', () => {
-        wrapper.vm.$nextTick(() => {
-            expect(wrapper.emitted()).to.have.property('get-total-btn-width')
+    it('Should emit get-total-btn-width evt', () => {
+        expect(wrapper.emitted()).to.have.property('get-total-btn-width')
+    })
+    const childComps = ['wke-toolbar-left-btns-ctr', 'wke-toolbar-right-btns-ctr']
+    childComps.forEach(name => {
+        it(`Should render ${name}`, () => {
+            const comp = wrapper.findComponent({ name })
+            expect(comp.exists()).to.be.true
         })
-    })
-    it('Should pass accurate data to query-cnf-dlg-ctr via attrs', () => {
-        const cnfDlg = wrapper.findComponent({ name: 'query-cnf-dlg-ctr' })
-        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.queryConfigDialog)
-    })
-    it(`Should emit on-fullscreen-click event`, () => {
-        let wrapper = mountFactory()
-        const btn = wrapper.find('.min-max-btn')
-        btn.trigger('click')
-        expect(wrapper.emitted()).to.have.property('on-fullscreen-click')
-    })
-
-    it(`Should popup query setting dialog`, () => {
-        let wrapper = mountFactory()
-        expect(wrapper.vm.queryConfigDialog).to.be.false
-        wrapper.find('.query-setting-btn').trigger('click')
-        expect(wrapper.vm.queryConfigDialog).to.be.true
-    })
-
-    it(`Should emit on-add-wke event`, async () => {
-        let isEmitted = false
-        let wrapper = mountFactory({
-            propsData: { isAddWkeDisabled: false },
-            listeners: {
-                'on-add-wke': () => (isEmitted = true),
-            },
-        })
-        await wrapper.find('.add-wke-btn').trigger('click')
-        expect(isEmitted).to.be.true
     })
 })

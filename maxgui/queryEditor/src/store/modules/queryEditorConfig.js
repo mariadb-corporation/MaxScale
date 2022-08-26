@@ -16,7 +16,7 @@ export default {
     namespaced: true,
     state: {
         config,
-        hidden_comp: [],
+        hidden_comp: [''],
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
