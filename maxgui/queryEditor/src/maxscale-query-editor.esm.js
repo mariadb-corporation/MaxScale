@@ -27,8 +27,9 @@ export default /*#__PURE__*/ (() => {
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
      * @param {Object} options.store - vuex store
      * @param {Object} options.i18n - vue-i18n instance
+     * @param {Array} options.hidden_comp - a list of component name to be hidden. e.g. wke-nav-ctr
      */
-    installable.install = (Vue, { store, i18n }) => {
+    installable.install = (Vue, { store, i18n, hidden_comp = [] }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
         Vue.use(scopingI18n, { i18n })
 
@@ -41,6 +42,7 @@ export default /*#__PURE__*/ (() => {
         Object.keys(queryEditorModules).forEach(key => {
             store.registerModule(key, queryEditorModules[key])
         })
+        if (hidden_comp.length) store.commit('queryEditorConfig/SET_HIDDEN_COMP', hidden_comp)
 
         // Register utilities .i.e. Add instance properties to Vue.prototype
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp

@@ -13,7 +13,10 @@
             :class="{ 'query-editor--fullscreen': is_fullscreen }"
         >
             <template v-if="!is_validating_conn">
-                <wke-nav-ctr :height="wkeNavCtrHeight" />
+                <wke-nav-ctr
+                    v-if="!hidden_comp.includes('wke-nav-ctr')"
+                    :height="wkeNavCtrHeight"
+                />
                 <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
                     <wke-ctr
                         v-if="active_wke_id === wke.id && ctrDim.height"
@@ -86,7 +89,6 @@ export default {
         return {
             confirmDelAll: true,
             isConfDlgOpened: false,
-            wkeNavCtrHeight: 32,
             dim: {},
         }
     },
@@ -98,11 +100,15 @@ export default {
             is_validating_conn: state => state.queryConn.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
             worksheets_arr: state => state.wke.worksheets_arr,
+            hidden_comp: state => state.queryEditorConfig.hidden_comp,
         }),
         ...mapGetters({
             getActiveWke: 'wke/getActiveWke',
             getIsTxtEditor: 'editor/getIsTxtEditor',
         }),
+        wkeNavCtrHeight() {
+            return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
+        },
         ctrDim() {
             return { width: this.dim.width, height: this.dim.height - this.wkeNavCtrHeight }
         },
