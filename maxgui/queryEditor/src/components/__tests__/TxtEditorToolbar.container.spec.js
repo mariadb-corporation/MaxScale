@@ -42,11 +42,10 @@ describe(`txt-editor-toolbar-ctr`, () => {
             // shallow mount so that mxs-conf-dlg in connection-manager will be stubbed
             wrapper = mountFactory({ shallow: true, computed: { query_confirm_flag: () => 1 } })
             const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
-            const { value, title, onSave, closeImmediate } = confirmDialog.vm.$attrs
-            const { type } = confirmDialog.vm.$props
+            const { value, title, onSave, closeImmediate, saveText } = confirmDialog.vm.$attrs
             expect(value).to.be.equals(wrapper.vm.confDlg.isOpened)
             expect(title).to.be.equals(wrapper.vm.confDlg.title)
-            expect(type).to.be.equals(wrapper.vm.confDlg.type)
+            expect(saveText).to.be.equals(wrapper.vm.confDlg.type)
             expect(onSave).to.be.equals(wrapper.vm.confDlg.onSave)
             expect(closeImmediate).to.be.true
         })

@@ -246,7 +246,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     it(`Should open mxs-sel-dlg when add button is clicked`, async () => {
         await mockupOpenSelectDialog(wrapper)
         const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
-        expect(selectDialog.vm.isDlgOpened).to.be.true
+        expect(selectDialog.vm.$attrs.value).to.be.true
     })
 
     it(`Should display accurate select dialog title`, async () => {
