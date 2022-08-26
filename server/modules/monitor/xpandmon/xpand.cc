@@ -22,6 +22,7 @@ namespace
 {
 
 const char CN_DYNAMIC[] = "dynamic";
+const char CN_LATE[] = "late";
 const char CN_NORMAL[] = "normal";
 const char CN_QUORUM[] = "quorum";
 const char CN_STATIC[] = "static";
@@ -74,6 +75,9 @@ std::string xpand::to_string(xpand::SubState substate)
 {
     switch (substate)
     {
+    case SubState::LATE:
+        return CN_LATE;
+
     case SubState::NORMAL:
         return CN_NORMAL;
 
@@ -87,13 +91,17 @@ std::string xpand::to_string(xpand::SubState substate)
 
 xpand::SubState xpand::substate_from_string(const std::string& substate)
 {
-    if (substate == CN_NORMAL)
+    if (substate == CN_LATE)
+    {
+        return SubState::LATE;
+    }
+    else if (substate == CN_NORMAL)
     {
         return SubState::NORMAL;
     }
     else
     {
-        MXB_WARNING("'%s' is an unknown sub-state for a Xpand node.", substate.c_str());
+        MXB_INFO("'%s' is an unknown sub-state for a Xpand node.", substate.c_str());
         return SubState::UNKNOWN;
     }
 }

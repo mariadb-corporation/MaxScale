@@ -33,6 +33,7 @@ std::string to_string(Status status);
 
 enum class SubState
 {
+    LATE,
     NORMAL,
     UNKNOWN
 };
