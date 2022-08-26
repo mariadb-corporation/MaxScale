@@ -14,12 +14,7 @@
 import mount from '@tests/unit/setup'
 import WkeToolbar from '../WkeToolbar.vue'
 
-const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: WkeToolbar,
-        ...opts,
-    })
+const mountFactory = opts => mount({ shallow: false, component: WkeToolbar, ...opts })
 
 describe(`wke-toolbar - mounted hook and child component's interaction tests`, () => {
     let wrapper
@@ -29,7 +24,7 @@ describe(`wke-toolbar - mounted hook and child component's interaction tests`, (
     it('Should emit get-total-btn-width evt', () => {
         expect(wrapper.emitted()).to.have.property('get-total-btn-width')
     })
-    const childComps = ['wke-toolbar-left-btns-ctr', 'wke-toolbar-right-btns-ctr']
+    const childComps = ['wke-toolbar-left-btns-ctr', 'wke-toolbar-right-btns']
     childComps.forEach(name => {
         it(`Should render ${name}`, () => {
             const comp = wrapper.findComponent({ name })

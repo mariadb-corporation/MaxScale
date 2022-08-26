@@ -14,12 +14,7 @@
 import mount from '@tests/unit/setup'
 import WkeToolbarLeftBtns from '../WkeToolbarLeftBtns.container.vue'
 
-const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: WkeToolbarLeftBtns,
-        ...opts,
-    })
+const mountFactory = opts => mount({ shallow: false, component: WkeToolbarLeftBtns, ...opts })
 
 describe(`wke-toolbar-left-btns-ctr`, () => {
     let wrapper

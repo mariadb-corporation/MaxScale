@@ -12,19 +12,11 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeToolbarRightBtns from '../WkeToolbarRightBtns.container.vue'
+import WkeToolbarRightBtns from '../WkeToolbarRightBtns.vue'
 
-const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: WkeToolbarRightBtns,
-        stubs: {
-            'readonly-sql-editor': "<div class='stub'></div>",
-        },
-        ...opts,
-    })
+const mountFactory = opts => mount({ shallow: false, component: WkeToolbarRightBtns, ...opts })
 
-describe(`wke-toolbar-left-btns-ctr`, () => {
+describe(`wke-toolbar-right-btns`, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()
@@ -34,22 +26,11 @@ describe(`wke-toolbar-left-btns-ctr`, () => {
             expect(wrapper.emitted()).to.have.property('get-total-width')
         })
     })
-    it('Should pass accurate data to query-cnf-dlg-ctr via attrs', () => {
-        const cnfDlg = wrapper.findComponent({ name: 'query-cnf-dlg-ctr' })
-        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.queryConfigDialog)
-    })
-    it(`Should call SET_FULLSCREEN mutation`, () => {
-        let wrapper = mountFactory()
-        const spy = sinon.spy(wrapper.vm, 'SET_FULLSCREEN')
-        const btn = wrapper.find('.min-max-btn')
-        btn.trigger('click')
-        spy.should.have.been.calledOnce
-    })
-
-    it(`Should popup query setting dialog`, () => {
-        let wrapper = mountFactory()
-        expect(wrapper.vm.queryConfigDialog).to.be.false
-        wrapper.find('.query-setting-btn').trigger('click')
-        expect(wrapper.vm.queryConfigDialog).to.be.true
+    const childComps = ['query-cnf-gear-btn', 'min-max-btn-ctr']
+    childComps.forEach(name => {
+        it(`Should render ${name}`, () => {
+            const comp = wrapper.findComponent({ name })
+            expect(comp.exists()).to.be.true
+        })
     })
 })

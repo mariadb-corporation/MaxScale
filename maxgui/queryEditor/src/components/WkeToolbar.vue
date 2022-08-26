@@ -4,7 +4,7 @@
     >
         <wke-toolbar-left-btns-ctr @get-total-width="leftBtnsWidth = $event" />
         <v-spacer />
-        <wke-toolbar-right-btns-ctr @get-total-width="rightBtnsWidth = $event" />
+        <wke-toolbar-right-btns @get-total-width="rightBtnsWidth = $event" />
     </div>
 </template>
 <script>
@@ -26,13 +26,13 @@
  * $emit('get-total-btn-width', v:number)
  */
 import WkeToolbarLeftBtns from './WkeToolbarLeftBtns.container.vue'
-import WkeToolbarRightBtns from './WkeToolbarRightBtns.container.vue'
+import WkeToolbarRightBtns from './WkeToolbarRightBtns.vue'
 
 export default {
     name: 'wke-toolbar',
     components: {
         'wke-toolbar-left-btns-ctr': WkeToolbarLeftBtns,
-        'wke-toolbar-right-btns-ctr': WkeToolbarRightBtns,
+        'wke-toolbar-right-btns': WkeToolbarRightBtns,
     },
     data() {
         return {
