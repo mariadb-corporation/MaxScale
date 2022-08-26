@@ -19,18 +19,8 @@ Rewriter native syntax uses placeholders to grab and replace parts of text.
 
 The syntax for a plain placeholder is `@{N}` where N is a positive integer.
 
-A placeholder regex is written `@{N:regex}`. It allows more control when needed.
-Anchoring matching to the start `@{N:^}` or end `@{N:$}` of the sql to be
-matched should be done when possible. This is especially important for the
-start-anchor as it makes matching much faster. Under the hood the Native syntax
-creates ECMAScript regular expressions so a placeholder regex must use
-that grammar.
-
-In a a placeholder regex, all escaped characters are un-escaped. This means
-that special escape sequences like `\s` (space) must be written as `\\s`.
-Prefer character classes `[[:space:]]` as they work for all supported
-grammars. Plain parenthesis, on the other hand, are automatically escaped
-and matched literally.
+The syntax for a placeholder regex is `@{N:regex}`. It allows more control
+when needed.
 
 The below is a valid entry in rf format. For demonstration, all options are set.
 This entry is a do-nothing entry, but illustrates placeholders.
@@ -75,7 +65,7 @@ Matching the whole input also means that Native syntax does not support
 of the above `from mytable` can be modified in the replace template.
 However, one can selectively choose to modify e.g. the first through
 third occurrance of `from mytable` by writing
-`from mytable @{1} from mytable @{2} from mytable`.
+`from mytable @{1} from mytable @{2} from mytable @{3}`.
 
 For scan and replace use a different regex_grammar (see below).
 
@@ -119,7 +109,7 @@ Rewritten: select name from mytable force index (myindex) where id=42
 ```
 That works, but because the match lacks specific detail about the
 expected sql, things are likely to break. In this case
-`show indexes from any_table` would no longer work.
+`show indexes from my_table` would no longer work.
 
 The minimum detail in this case could be:
 ```
@@ -132,14 +122,15 @@ select @{2} from mytable force index (myindex)
 but if more detail is known, like something specific in the where clause,
 that too should be added.
 
-##### Plaholder regex
+##### Placeholder Regex
 
 Syntax: @{N:regex}
 
-Parenthesis and the right brace '}' have special meaning in the
-rewriter processing. They can only be matched literally, and
-if added to the regex, they must be escaped.
-For example, match X exactly 5 times @{1:X{5\\}}.
+In a placeholder regex the character `}` must be escaped to `\}`
+(for literal matching). In a regex, plain parenthesis "()" indicate groups,
+which are internally used by the Native grammar. Thus plain parentheses
+in the placeholder regex will break matching. To match a literal parenthesis
+use an escape, e.g. `\(`.
 
 Suppose an application is misbehaving after an upgrade and a quick fix is needed.
 This query `select zip from address_book where str_id = "AZ-124"` is correct,
@@ -147,9 +138,9 @@ but if the id is an integer the where clause should be `id = 1234`.
 ```
 %%
 %
-@{1:^}select zip_code from address_book where str_id = ["]@{1:[[:digit:]]+}["]
+@{1:^}select zip_code from address_book where str_id = @{1:["]}@{2:[[:digit:]]+}@{3:["]}
 %
-select zip_code from address_book where id = @{1}
+select zip_code from address_book where id = @{2}
 
 Input: select zip_code from address_book where str_id = "1234"
 
@@ -290,6 +281,9 @@ first character on a line.
 
 Empty lines are ignored.
 
+The rf format does not need any additional escaping to what the basic
+format requires (see Placeholder Regex).
+
 Options are specified as follows:
 ```
 case_sensitive: true
@@ -304,16 +298,14 @@ matter as long as `ignore_whitespace = true`. Always use space
 where space is allowed to maximize the utility of
 `ignore_whitespace`.
 
-Nothing needs to be escaped in rf, except when a placeholder
-regex is defined, where the characters "}()" must be escaped.
-For example, match X exactly 5 times @{1:X{5\\}}.
-
 Example
 ```
 %%
 case_sensitive: false
 %
-@{1:^}select @{2} from mytable where user = @{3}
+@{1:^}select @{2}
+from mytable
+where user = @{3}
 %
 select @{2} from mytable where user = @{3}
 and @{3} in (select user from approved_users)
@@ -324,7 +316,8 @@ The json file format is harder to read and edit manually.
 It will be needed if support for editing of rewrite templates
 is added to the GUI.
 
-All double quotes in the templates have to be escaped.
+All double quotes and escape characters have to be escaped in json,
+i.e `\"` and '\\\\'.
 
 The same example as above is:
 ```
@@ -346,3 +339,11 @@ even if the value does not change.
 ```
 maxctrl alter filter Rewrite log_replacement=false
 ```
+## Reference
+
+- ECMAScript  https://cplusplus.com/reference/regex/ECMAScript
+- Posix       http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_03
+- EPosix      http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04
+- Awk         http://pubs.opengroup.org/onlinepubs/9699919799/utilities/awk.html#tag_20_06_13_04
+- Grep        Same as Posix with the addition of newline '\n' as an alternation separator.
+- EGrep       Same as EPosix with the addition of newline '\n' as an alternation separator in addition to '|'.

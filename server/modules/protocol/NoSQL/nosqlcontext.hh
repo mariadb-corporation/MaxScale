@@ -125,14 +125,21 @@ public:
         return m_authentication_db;
     }
 
-    void set_authenticated(const std::string& authentication_db)
+    const std::string& user() const
+    {
+        return m_user;
+    }
+
+    void set_authenticated(const std::string& authentication_db, const std::string& user)
     {
         m_authentication_db = authentication_db;
+        m_user = user;
     }
 
     void set_unauthenticated()
     {
         m_authentication_db.clear();
+        m_user.clear();
     }
 
 private:
@@ -149,6 +156,7 @@ private:
     std::unique_ptr<Sasl>      m_sSasl;
     Roles                      m_roles;
     std::string                m_authentication_db;
+    std::string                m_user;
 
     static std::atomic<int64_t> s_connection_id;
 };

@@ -16,6 +16,7 @@
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/service.hh>
 #include "../MariaDB/user_data.hh"
 #include "../../../core/internal/listener.hh"
 #include "clientconnection.hh"
@@ -38,11 +39,16 @@ bool ProtocolModule::post_configure()
     }
     else
     {
-        m_sUm = nosql::UserManagerSqlite3::create(m_config.name());
+        m_sUm = nosql::UserManagerSqlite3::create(m_config.name(), &m_service, &m_config);
     }
 
     if (m_sUm)
     {
+        if (m_config.authentication_required && m_config.authorization_enabled)
+        {
+            m_sUm->ensure_initial_user();
+        }
+
         nosql::NoSQLCursor::start_purging_idle_cursors(m_config.cursor_timeout);
     }
 

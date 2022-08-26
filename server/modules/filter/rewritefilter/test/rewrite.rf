@@ -37,9 +37,9 @@ select @{1}, count(*) from mydb.@{2} group by @{1}
 unit_test_input:  select zip_code from address_book where str_id = "1234"
 unit_test_output: select zip_code from address_book where id = 1234
 %
-select zip_code from address_book where str_id = ["]@{1:[[:digit:]]+}["]
+select zip_code from address_book where str_id = @{1:"}@{2:[[:digit:]]+}@{3:"}
 %
-select zip_code from address_book where id = @{1}
+select zip_code from address_book where id = @{2}
 
 
 ##### The first match should be replaced
@@ -101,3 +101,13 @@ unit_test_output:
 select id from case
 %
 select id from case
+
+## Special characters. All special characters should be
+#  treated literally.
+%%
+unit_test_input: special .* Hello $World! .?+{}/[x]
+unit_test_output: special .* Hello $World! .?+{}/[x]
+%
+special .* @{1} $@{2} .?+{}/[x]
+%
+special .* @{1} $@{2} .?+{}/[x]

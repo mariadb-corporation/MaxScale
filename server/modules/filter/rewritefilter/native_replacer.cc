@@ -36,17 +36,6 @@ void NativeReplacer::set_replace_template(const std::string& replace_template,
     {
         switch (*ite)
         {
-        case '\\':
-            {
-                current_sql_part += *ite;
-                if (ite + 1 != last)
-                {
-                    ++ite;
-                    current_sql_part += *ite;
-                }
-            }
-            break;
-
         case PLACEHOLDER_CHAR:
             {
                 ++m_nreplacements;

@@ -23,16 +23,13 @@ namespace
 {
 void write_regex_char(std::string* str, char ch)
 {
-    const std::string special_chars = "$().?+{}\\";
+    const std::string special_chars = R"($().?+{}\[*)";
     if (special_chars.find(ch) != std::string::npos)
     {
-        auto argh = "["s + ch + ']';
-        *str += argh;
+        *str += '\\';
     }
-    else
-    {
-        *str += ch;
-    }
+
+    *str += ch;
 }
 }
 
@@ -53,16 +50,6 @@ NativeRewriter::NativeRewriter(const TemplateDef& def)
         {
             switch (*ite)
             {
-            case '\\':
-                {
-                    m_regex_str += *ite;
-                    if (ite + 1 != last)
-                    {
-                        m_regex_str += *++ite;
-                    }
-                }
-                break;
-
             case PLACEHOLDER_CHAR:
                 {
                     ++m_nreplacements;

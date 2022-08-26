@@ -184,7 +184,7 @@ MongoDB®, but not all of them are translated into GRANT privileges.
 The following table shows what privilege(s) a particular role is
 converted to.
 
-Role | Privilege
+Role | Privileges
 -----|------
 dbAdmin|ALTER, CREATE, DROP, SHOW DATABASES, SELECT
 read|SELECT
@@ -301,6 +301,12 @@ altered directly and not via nosqlprotocol.
 
 ## Bootstrapping the Authentication/Authorization
 
+The authentication/authorization can be bootstrapped explicitly
+or implicitly. Bootstrapping explicitly provides more control, while
+bootstrapping implicitly is much more convenient.
+
+### Explicit bootstrapping
+
 In order to enable authorization you need to have NoSQL users and
 those can be created with [createUser](#createUser) or added
 with [mxsAddUser](#addUser).
@@ -373,6 +379,294 @@ However, when a user is created or added (or the password is changed),
 the password will be transferred in _cleartext_. To prevent eavesdropping,
 create/add users when connecting over a domain socket, or use
 [TLS/SSL](#tlsssl)
+
+### Implicit bootstrapping
+
+With implicit bootstrapping, you should first create the MariaDB
+user that should appear as the initial NoSQL user. As explained
+[here](#nosql-and-mariadb-users), the concept of a user is somewhat
+different in MariaDB and NoSQL, which means that certain factors
+must be taken into account when creating the MariaDB user. Then
+at first startup, nosqlprotocol will create the corresponding
+NoSQL user, which will enable the authenticated and authorized
+use of nosqlprotocol.
+
+When MaxScale is started, if the following hold
+
+* `nosqlprotocol.authentication_required` and
+  `nosqlprotocol.authorization_enabled` are true in the configuration
+  section of the nosqlprotocol listener,
+* `nosqlprotocol.user` and `nosqlprotocol.password` are provided, and
+* there are **no** NoSQL users in the NoSQL account database.
+
+then, MaxScale will
+
+* wait until the _master_ of the service pointed to by the listener
+  is available,
+* connect using the credentials specified in `nosqlprotocol.user`
+  and `nosqlprotocol.password`,
+* execute `SHOW GRANTS`,
+* translate the privileges into the equivalent NoSQL roles, and
+* create a corresponding NoSQL user into the NoSQL account database.
+
+Immediately thereafter it is possible to connect to the nosqlprotocol
+port with a MongoDB® client using the specified credentials.
+
+Note that after the bootstrapping, nosqlprotocol will not use
+the `user` and `password` settings and they can be removed.
+
+#### Grants
+
+When a NoSQL user is created using [createUser](#createUser)
+the MariaDB grants are obtained from the specified NoSQL roles
+as explained [here](#Roles_and_privileges).
+
+When implicitly creating a NoSQL user from an existing user in
+MariaDB, the inverse operation must be performed. There are
+many factors that affect what NoSQL roles the grants of a user
+are translated into:
+
+* whether the user is a _regular_ or _admin_ user,
+* whether the privileges are _on_ `*.*` or some specific `db.*`, and
+* the privileges themselves, e.g. `SELECT`, `DELETE`, etc.
+
+In NoSQL, every user resides in a specific database. Note that
+this does **not** mean that that database would have to exist
+in MariaDB.
+
+When it comes to users, the database effectively means a scope,
+which in the case of nosqlprotocol is handled by prefixing the
+corresponding MariaDB user name with the database/scope name.
+
+When creating a user to be used from NoSQL, there are three
+options for the user's name:
+
+* The name can be of the format `some_db.user_name` where
+  `some_db` can be anything (subject to the naming rules of
+  MariaDB), except `admin` or `mariadb`. In this case, the
+  user will be a _regular_ user, who can access data in
+  databases that she has been granted access to.
+* The name can be of the format `admin.user_name` where `admin`
+  is exactly just that. In this case, the user will be an
+  _admin_ user, who can access any database.
+* The name can be of the format `user_name`. In this case, the
+  user will be a _regular_ user that from the NoSQL side appears
+  to reside in the `mariadb` database. The primary purpose of
+  this alternative is to enable the use of existing users from
+  the NoSQL side.
+
+What database the privileges can be specified `ON` depends on
+what kind of user is being created.
+
+* If it is a regular user, the privileges **must** be granted on a
+  specific database, such as `\`dbA\``.*`. Note that there is no
+  dependency between this database and the (conceptual) database
+  the user resides in.
+* If it is an admin user, the privileges **must** be granted on
+  the `*.*` database.
+
+In NoSQL, a role can be database specific or generic. However,
+a generic role can _only_ be assigned to a user in the _admin_
+database. In practice this means that if the privileges are
+on `*.*`, then the user must reside in the _admin_ database
+(e.g. `admin.bob`) or it is treated as an error.
+
+The following table shows what privileges are required for a
+role to be assigned. Note that `ALL PRIVILEGES` can be used as
+well.
+
+|`ALTER`|`CREATE`|`CREATE USER`|`DROP`|`DELETE`|`INDEX`|`INSERT`|`SHOW DATABASES`(1)|`SELECT`|`UPDATE`|`WITH GRANT OPTION`| Role                  |
+|-------|--------|-------------|------|--------|-------|--------|-------------------|--------|--------|-------------------|-----------------------|
+|   X   |   X    |             |  X   |        |       |        |       X           |   X    |        |                   | dbAdmin[AnyDatabase]  |
+|       |        |             |      |        |       |        |                   |   X    |        |                   | read[AnyDatabase]     |
+|       |   X    |             |      |   X    |   X   |   X    |                   |   X    |   X    |                   | readWrite[AnyDatabase]|
+|       |        |     X       |      |        |       |        |                   |        |        |         X         | userAdmin[AnyDatabase]|
+
+1. Only required if the user is an _admin_ user.
+
+The `AnyDatabase` version will be assigned, if the user is
+an _admin_ user.
+
+If certain roles are assigned, then other roles will be
+assigned as well.
+
+* If the roles `dbAdmin`, `readWrite` and `userAdmin` are
+  assigned, then `dbOwner` will be assigned as well.
+* If the roles `dbAdminAnyDatabase`, `readWriteAnyDatabase`
+  and `userAdminAnyDatabase` are assigned, then `root` will
+  be assigned as well.
+
+Once the user has been created and the desired privileges have
+been granted, the NoSQL listener should be configured as follows:
+```
+[NoSQL-Listener]
+...
+nosqlprotocol.user=db.the_user
+nosqlprotocol.password=the_password
+nosqlprotocol.authentication_required=true
+nosqlprotocol.authorization_enabled=true
+...
+```
+At MaxScale startup, the NoSQL user will then be created.
+
+#### Examples
+
+##### Admin User
+
+We want the initial NoSQL user to be an administrator, with
+full rights.
+```
+CREATE USER 'admin.nosql_admin'@'%' IDENTIFIED BY 'nosql_password';
+GRANT ALL PRIVILEGES ON *.* TO 'admin.nosql_admin'@'%' WITH GRANT OPTION;
+```
+As we want an admin user, the name is prefixed with `admin`,
+which will have that effect. And since it is an admin user, the
+privileges are granted ON `*.*`.
+
+Thereafter, we specify the following in the configuration file,
+```
+[NoSQL-Listener]
+type=listener
+service=...
+protocol=nosqlprotocol
+nosqlprotocol.user=admin.nosql_admin
+nosqlprotocol.password=nosql_password
+nosqlprotocol.authentication_required=true
+nosqlprotocol.authorization_enabled=true
+```
+and start MaxScale.
+
+As the creation of the initial user can be made only after the
+monitor for the listener's service has marked one server as master,
+whether the creation succeeded or not must be checked from MaxScale'
+log file:
+```
+... notice : [nosqlprotocol] Created initial NoSQL user 'admin.nosql_admin'.
+```
+Under normal conditions, the bootstrapping will be almost
+instantaneous.
+
+It is now possible to connect using any MongoDB® client application.
+```
+$ mongo --quiet --port 17017 -u nosql_admin -p nosql_password admin
+>
+```
+Note that when connecting the user is passed as `nosql_admin` and *not*
+as `admin.nosql_admin`. The fact that we want to authenticate against
+the `admin` database is expressed by passing the database as the last
+argument.
+```
+> db.runCommand({usersInfo: 1});
+{
+	"users" : [
+		{
+			"_id" : "admin.nosql_admin",
+			"userId" : UUID("7d921459-3099-42a7-ad06-ed37ac002161"),
+			"user" : "nosql_admin",
+			"db" : "admin",
+			"roles" : [
+				{
+					"db" : "admin",
+					"role" : "dbAdminAnyDatabase"
+				},
+				{
+					"db" : "admin",
+					"role" : "readWriteAnyDatabase"
+				},
+				{
+					"db" : "admin",
+					"role" : "userAdminAnyDatabase"
+				},
+				{
+					"db" : "admin",
+					"role" : "root"
+				}
+			],
+			"mechanisms" : [
+				"SCRAM-SHA-256"
+			]
+		}
+	],
+	"ok" : 1
+}
+```
+As can be seen, the user has the _any_ roles on the `admin`
+database, which means that all databases can be accessed and
+modified, and that new users can be created.
+
+##### Test User
+
+We want the initial NoSQL user to be a user with limited rights,
+intended to be used for testing.
+```
+CREATE USER 'test.test_user'@'%' IDENTIFIED BY 'test_password';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX ON `test`.* TO 'test.test_user'@'%';
+```
+As we want a user with limited rights, the name is *not* prefixed
+with `admin`. The privileges are granted specifically on database
+`test.*`. Indeed, if `*.*` had been used, the creation of the initial
+NoSQL user would have failed with an error. Here, the user is created
+in the same database that the user is given access to, but it could
+have been another one. Further, several `GRANT` statements could have
+been used, had we wanted to give access to several databases.
+
+Thereafter, we specify the following in the configuration file,
+```
+[NoSQL-Listener]
+type=listener
+service=...
+protocol=nosqlprotocol
+nosqlprotocol.user=test.test_user
+nosqlprotocol.password=test_password
+nosqlprotocol.authentication_required=true
+nosqlprotocol.authorization_enabled=true
+```
+and start MaxScale.
+
+As the creation of the initial user can be made only after the
+monitor for the listener's service has marked one server as master,
+whether the creation succeeded or not must be checked from MaxScale'
+log file:
+```
+... notice : [nosqlprotocol] Created initial NoSQL user 'test.test_user'.
+```
+Under normal conditions, the bootstrapping will be almost
+instantaneous.
+
+It is now possible to connect using any MongoDB® client application.
+```
+$ mongo --quiet --port 17017 -u test_user -p test_password test
+>
+```
+Note that when connecting the user is passed as `test_user` and *not*
+as `test.test_user`. The fact that we want to authenticate against
+the `test` database is expressed by passing the database as the last
+argument.
+```
+> db.runCommand({usersInfo: 1});
+{
+	"users" : [
+		{
+			"_id" : "test.test_user",
+			"userId" : UUID("714f35e7-4276-45af-863c-0be4d1f5dd74"),
+			"user" : "test_user",
+			"db" : "test",
+			"roles" : [
+				{
+					"db" : "test",
+					"role" : "readWrite"
+				}
+			],
+			"mechanisms" : [
+				"SCRAM-SHA-256"
+			]
+		}
+	],
+	"ok" : 1
+}
+```
+As can be seen, the user has the `readWrite` role on the `test` database,
+which means that only the `test` database can be accessed and modified.
 
 ### TLS/SSL
 

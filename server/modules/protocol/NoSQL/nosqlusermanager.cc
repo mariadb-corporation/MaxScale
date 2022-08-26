@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <map>
+#include <maxsql/mariadb.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>
@@ -414,6 +415,217 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+namespace
+{
+
+bool contains(const set<string>& heystack, const set<string>& needles)
+{
+    set<string> found;
+    std::set_intersection(heystack.begin(), heystack.end(),
+                          needles.begin(), needles.end(),
+                          std::inserter(found, found.begin()));
+
+    return found == needles;
+}
+
+}
+
+namespace
+{
+
+vector<role::Role> from_grant(bool is_admin,
+                              bool has_all,
+                              bool is_any,
+                              string db,
+                              const set<string>& priv_types,
+                              string on,
+                              bool with_grant_option)
+{
+    vector<role::Role> roles;
+    set<string> required;
+
+    // DB_ADMIN, DB_ADMIN_ANY_DATABASE
+    bool has_dbAdmin = false;
+    required = {"ALTER", "CREATE", "DROP", "SELECT"};
+
+    if (is_admin)
+    {
+        required.insert("SHOW DATABASES");
+    }
+
+    if (has_all || contains(priv_types, required))
+    {
+        roles.push_back({db, is_any ? role::Id::DB_ADMIN_ANY_DATABASE : role::Id::DB_ADMIN});
+        has_dbAdmin = true;
+    }
+
+    // READ_WRITE, READ_WRITE_ANY_DATABASE
+    bool has_readWrite = false;
+    required = {"CREATE", "DELETE", "INDEX", "INSERT", "SELECT", "UPDATE"};
+
+    if (has_all || contains(priv_types, required))
+    {
+        roles.push_back({db, is_any ? role::Id::READ_WRITE_ANY_DATABASE : role::Id::READ_WRITE});
+        has_readWrite = true;
+    }
+
+    if (!has_readWrite)
+    {
+        // READ, READ_ANY_DATABASE
+        required = {"SELECT"};
+
+        if (has_all || contains(priv_types, required))
+        {
+            roles.push_back({db, is_any ? role::Id::READ_ANY_DATABASE : role::Id::READ});
+        }
+    }
+
+    // USER_ADMIN, USER_ADMIN_ANY_DATABASE
+    bool has_userAdmin = false;
+
+    if (with_grant_option)
+    {
+        roles.push_back({db, is_any ? role::Id::USER_ADMIN_ANY_DATABASE : role::Id::USER_ADMIN });
+        has_userAdmin = true;
+    }
+
+    // DB_OWNER, ROOT
+    if (has_dbAdmin && has_readWrite && has_userAdmin)
+    {
+        roles.push_back({db, is_admin ? role::Id::ROOT : role::Id::DB_OWNER });
+    }
+
+    return roles;
+}
+
+}
+
+bool role::from_grant(bool is_admin,
+                      const set<string>& priv_types,
+                      string on,
+                      bool with_grant_option,
+                      vector<role::Role>* pRoles)
+{
+    bool rv = true;
+
+    bool is_any = (on == "*.*");
+
+    if (is_any && (priv_types.size() == 1 && priv_types.count("USAGE") == 1))
+    {
+        // 'ON *.*' is accepted if "USAGE" is alone. That basically
+        // only tells the user exists.
+        pRoles->clear();
+        rv = true;
+    }
+    else if (is_any && !is_admin)
+    {
+        MXB_ERROR("A grant ON *.* can only be assigned to a user in the 'admin' database.");
+        rv = false;
+    }
+    else
+    {
+        vector<role::Role> roles;
+
+        bool has_all = (priv_types.count("ALL PRIVILEGES") != 0);
+        string db;
+
+        if (is_admin)
+        {
+            db = "admin";
+        }
+        else
+        {
+            bool back_tick = (on.front() == '`');
+            int b = back_tick ? 1 : 0;
+            int e;
+            int t; // Position of table name.
+
+            if (back_tick)
+            {
+                e = on.find('`', b);
+                t = e + 2;
+            }
+            else
+            {
+                e = on.find(b, '.');
+                t = e + 1;
+            }
+
+            db = on.substr(b, e - b);
+
+            auto table = on.substr(t);
+
+            if (table != "*")
+            {
+                MXB_ERROR("Grants must be ON generic `%s`.* and not ON a specific table `%s`.%s.",
+                          db.c_str(), db.c_str(), table.c_str());
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            if (is_admin && (on != "*.*"))
+            {
+                MXB_ERROR("Grants for admin users must be ON *.*, not ON e.g. %s.", on.c_str());
+                rv = false;
+            }
+            else
+            {
+                *pRoles = ::from_grant(is_admin, has_all, is_any, db, priv_types, on, with_grant_option);
+            }
+        }
+    }
+
+    return rv;
+}
+
+bool role::get_grant_characteristics(string grant,
+                                     set<string>* pPriv_types,
+                                     string* pOn,
+                                     bool* pWith_grant_option)
+{
+    bool rv = false;
+
+    if (grant.find("GRANT ") == 0)
+    {
+        grant = grant.substr(6); // strlen("GRANT ");
+
+        auto i = grant.find(" ON ");
+
+        if (i != string::npos)
+        {
+            auto priv_types_string = grant.substr(0, i);
+            grant = grant.substr(i + 4); // strlen(" ON ");
+
+            auto j = grant.find(" TO ");
+
+            if (j != string::npos)
+            {
+                auto on = grant.substr(0, j);
+                grant = grant.substr(j + 4); // strlen(" TO ");
+
+                vector<string> tmp = mxb::strtok(priv_types_string, ",");
+                set<string> priv_types;
+
+                std::for_each(tmp.begin(), tmp.end(), [&priv_types](string s) {
+                        mxb::trim(s);
+                        priv_types.insert(s);
+                    });
+
+                *pPriv_types = std::move(priv_types);
+                *pOn = std::move(on);
+                *pWith_grant_option = (grant.find("WITH GRANT OPTION") != string::npos);
+
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
+
 /**
  * UserManager
  */
@@ -444,6 +656,7 @@ vector<uint8_t> UserManager::UserInfo::salted_pwd_sha256() const
 
 UserManager::~UserManager()
 {
+    cancel_dcalls();
 }
 
 UserManager::AddUser UserManager::get_add_user_data(const string& db,
@@ -492,6 +705,208 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
     rv.uuid = zUuid;
 
     return rv;
+}
+
+void UserManager::ensure_initial_user()
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    const SERVER* pMaster = get_master();
+
+    if (pMaster)
+    {
+        check_initial_user(pMaster);
+    }
+    else
+    {
+        MXB_INFO("Master not yet available, checking shortly again.");
+
+        dcall(1s, [this]() {
+                const SERVER* pMaster = get_master();
+
+                if (pMaster)
+                {
+                    check_initial_user(pMaster);
+                }
+                else
+                {
+                    MXB_INFO("Master still not available, checking shortly again.");
+                }
+
+                return !pMaster;
+            });
+    }
+}
+
+const SERVER* UserManager::get_master() const
+{
+    const SERVER* pMaster = nullptr;
+    auto servers = m_service.reachable_servers();
+
+    for (const auto* pServer : servers)
+    {
+        if (status_is_master(pServer->status()))
+        {
+            pMaster = pServer;
+            break;
+        }
+    }
+
+    return pMaster;
+}
+
+void UserManager::check_initial_user(const SERVER* pMaster)
+{
+    auto infos = get_infos();
+
+    if (infos.empty())
+    {
+        MXB_INFO("No existing NoSQL user. Assuming first startup, creating initial user.");
+
+        if (!m_config.user.empty())
+        {
+            create_initial_user(pMaster);
+        }
+        else
+        {
+            MXB_ERROR("Initial NoSQL user should be created, but 'user' is empty. Cannot create user.");
+        }
+    }
+    else
+    {
+        MXB_INFO("At least one NoSQL user exists, no need to create one.");
+    }
+}
+
+void UserManager::create_initial_user(const SERVER* pMaster)
+{
+    MYSQL* pMysql = mysql_init(nullptr);
+
+    if (pMaster->proxy_protocol())
+    {
+        mxq::set_proxy_header(pMysql);
+    }
+
+    if (mysql_real_connect(pMysql, pMaster->address(),
+                           m_config.user.c_str(), m_config.password.c_str(),
+                           nullptr, pMaster->port(), nullptr, 0))
+    {
+        bool grants_obtained = true;
+        vector<string> grants;
+
+        if (mysql_query(pMysql, "SHOW GRANTS") == 0)
+        {
+            mxb_assert(mysql_field_count(pMysql) == 1);
+
+            MYSQL_RES* pResult = mysql_store_result(pMysql);
+
+            while (MYSQL_ROW row = mysql_fetch_row(pResult))
+            {
+                grants.push_back(row[0]);
+            }
+
+            mysql_free_result(pResult);
+        }
+        else
+        {
+            MXB_ERROR("SHOW GRANTS for '%s' failed: %s",
+                      m_config.user.c_str(), mysql_error(pMysql));
+            grants_obtained = false;
+        }
+
+        if (grants_obtained)
+        {
+            create_initial_user(grants);
+        }
+    }
+    else
+    {
+        MXB_ERROR("Could not connect to %s:%d as %s. Cannot create initial NoSQL user.",
+                  pMaster->address(), (int)pMaster->port(), m_config.user.c_str());
+    }
+
+    mysql_close(pMysql);
+}
+
+void UserManager::create_initial_user(const vector<string>& grants)
+{
+    vector<role::Role> roles;
+    bool is_admin = m_config.user.find("admin.") == 0;
+
+    bool converted = true;
+    for (auto grant : grants)
+    {
+        bool success = true;
+
+        set<string> priv_types;
+        string on;
+        bool with_grant_option;
+
+        if (role::get_grant_characteristics(grant, &priv_types, &on, &with_grant_option))
+        {
+            vector<role::Role> some_roles;
+            if (role::from_grant(is_admin, priv_types, on, with_grant_option, &some_roles))
+            {
+                roles.insert(roles.end(),
+                             std::move_iterator(some_roles.begin()), std::move_iterator(some_roles.end()));
+            }
+            else
+            {
+                MXB_ERROR("Could not convert '%s' into equivalent NoSQL roles. See above for more details.",
+                          grant.c_str());
+                converted = false;
+            }
+        }
+        else
+        {
+            MXB_ERROR("SHOW GRANTS returned '%s', which does not look like a GRANT.", grant.c_str());
+            converted = false;
+        }
+
+        if (!converted)
+        {
+            break;
+        }
+    }
+
+    if (converted)
+    {
+        // As NoSQL users are specific to a certain database, a convention for
+        // dealing with that is needed.
+        //
+        // - If the user looks like "db.bob", a NoSQL user "bob" will be created
+        //   in the NoSQL database "db".
+        // - If the user looks like "bob", a NoSQL user "bob" will be created
+        //   in the NoSQL database "mariadb".
+        //
+        // The "mariadb" database is specific in the sense, that when the NoSQL
+        // user "bob" authenticates in the context of the NoSQL database "mariadb",
+        // then the user name, i.e. "bob", will not be prefixed by the database
+        // name, i.e. "mariadb", when authenticating against MariaDB.
+        //
+        // The purpose of the NoSQL database "mariadb" is to make convenient usage
+        // with the same user from both MariaDB and NoSQL possible.
+
+        auto i = m_config.user.find(".");
+
+        string db = (i != string::npos ? m_config.user.substr(0, i) : "mariadb");
+        string user = (i != string::npos ? m_config.user.substr(i + 1) : m_config.user);
+
+        vector<scram::Mechanism> mechanisms = { scram::Mechanism::SHA_256 };
+        if (add_user(db, user, m_config.password, m_config.host, "", mechanisms, roles))
+        {
+            MXB_NOTICE("Created initial NoSQL user '%s.%s'.", db.c_str(), user.c_str());
+        }
+        else
+        {
+            MXB_ERROR("Could not create default NoSQL user '%s.%s'.", db.c_str(), user.c_str());
+        }
+    }
+    else
+    {
+        MXB_ERROR("The grants of %s could not be converted into equivalent NoSQL roles. "
+                  "Initial NoSQL user could not be created.", m_config.user.c_str());
+    }
 }
 
 /**
@@ -678,8 +1093,12 @@ sqlite3* open_or_create_db(const string& path)
 
 }
 
-UserManagerSqlite3::UserManagerSqlite3(string path, sqlite3* pDb)
-    : m_path(std::move(path))
+UserManagerSqlite3::UserManagerSqlite3(string path,
+                                       sqlite3* pDb,
+                                       SERVICE* pService,
+                                       const Configuration* pConfig)
+    : UserManager(pService, pConfig)
+    , m_path(std::move(path))
     , m_db(*pDb)
 {
 }
@@ -710,7 +1129,9 @@ bool is_accessible_by_others(const string& path)
 }
 
 //static
-unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
+unique_ptr<UserManager> UserManagerSqlite3::create(const string& name,
+                                                   SERVICE* pService,
+                                                   const Configuration* pConfig)
 {
     nosql::UserManager* pThis = nullptr;
 
@@ -752,7 +1173,7 @@ unique_ptr<UserManager> UserManagerSqlite3::create(const string& name)
                     // provide a file mask to sqlite3, it's simpler to just do it always.
                     if (chmod(path.c_str(), S_IRUSR | S_IWUSR) == 0)
                     {
-                        pThis = new UserManagerSqlite3(std::move(path), pDb);
+                        pThis = new UserManagerSqlite3(std::move(path), pDb, pService, pConfig);
                     }
                     else
                     {
@@ -1103,10 +1524,9 @@ bool UserManagerSqlite3::update(const string& db, const string& user, uint32_t w
 constexpr char MARIADB_ENCRYPTION_VERSION_DELIMITER[] = ":";
 
 UserManagerMariaDB::UserManagerMariaDB(string name, SERVICE* pService, const Configuration* pConfig)
-    : m_name(name)
+    : UserManager(pService, pConfig)
+    , m_name(name)
     , m_table("`" + pConfig->authentication_db + "`.`" + m_name + "`")
-    , m_service(*pService)
-    , m_config(*pConfig)
 {
     auto& settings = m_db.connection_settings();
 

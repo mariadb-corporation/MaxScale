@@ -1023,7 +1023,12 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
                                  uint32_t events,
                                  Pollable::Context context)
 {
-    mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == this);
+    // The polling worker can be nullptr, if epoll_wait() returned more events than
+    // one and an event other than the last one caused the high watermark to be hit,
+    // which will cause events for the DCB to be disabled => polling worker set to nullptr.
+    mxb_assert(pPollable->is_shared()
+               || pPollable->polling_worker() == this
+               || pPollable->polling_worker() == nullptr);
 
     /** Calculate event queue statistics */
     int64_t started = time_in_100ms_ticks(loop_now);

@@ -18,6 +18,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <maxbase/json.hh>
+#include <maxbase/worker.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/sqlite3.hh>
 #include "nosqlscram.hh"
@@ -44,6 +45,16 @@ struct Role
     std::string db;
     Id          id;
 };
+
+inline bool operator == (const Role& lhs, const Role& rhs)
+{
+    return lhs.db == rhs.db && lhs.id == rhs.id;
+}
+
+inline bool operator != (const Role& lhs, const Role& rhs)
+{
+    return !(lhs == rhs);
+}
 
 std::unordered_map<std::string, uint32_t> to_bitmasks(const std::vector<Role>& roles);
 
@@ -78,12 +89,49 @@ void from_bson(const bsoncxx::array::view& bson,
                const std::string& default_db,
                std::vector<Role>* pRoles);
 
+/**
+ * Convert MariaDB privileges to equivalent Roles
+ *
+ * The parameters refer to data returned by SHOW GRANTS.
+ *
+ * @param is_admin          True, if the roles are to be created for an
+ *                          admin user, false otherwise.
+ * @param priv_types        Privileges such as "SELECT", "UPDATE", etc.
+ * @param on                The table in question, e.g. "*.*", "test.*".
+ * @param with_gran_option  If the user has "WITH GRANT OPTION".
+ * @param pRoles            On return the roles, if @c true was returned.
+ *
+ * @return True, if the grants could be converted, false otherwise.
+ */
+bool from_grant(bool is_admin,
+                const std::set<std::string>& priv_types,
+                std::string on,
+                bool with_grant_option,
+                std::vector<Role>* pRoles);
+
+/**
+ * Get the essential information from a row returned by "SHOW GRANTS".
+ *
+ * @param grant               A row returned by "SHOW GRANTS".
+ * @param pPriv_types         On return output the privilege types (i.e. "SELECT",
+ *                            "UPDATE", etc.), if @c true was returned.
+ * @param pOn                 On return the object (i.e. "*.*", "db.*", etc.),
+ *                            if @c true was returned.
+ * @param pWith_grant_option  On return whether WITH GRANT OPTION was present,
+ *                            if @c true was returned.
+ *
+ * @return True, if @c grant could be deciphered, false otherwise.
+ */
+bool get_grant_characteristics(std::string grant,
+                               std::set<std::string>* pPriv_types,
+                               std::string* pOn,
+                               bool* pWith_grant_option);
 }
 
 /**
  * UserManager
  */
-class UserManager
+class UserManager : private mxb::Worker::Callable
 {
 public:
     UserManager(const UserManager&) = delete;
@@ -264,8 +312,14 @@ public:
         return db + "." + std::string(user.data(), user.length());
     }
 
+    // To be called on Main worker.
+    void ensure_initial_user();
+
 protected:
-    UserManager()
+    UserManager(SERVICE* pService, const Configuration* pConfig)
+        : Callable(mxb::Worker::get_current())
+        , m_service(*pService)
+        , m_config(*pConfig)
     {
     }
 
@@ -289,6 +343,16 @@ protected:
                               std::string pwd,
                               const std::string& host,
                               const std::vector<scram::Mechanism>& mechanisms);
+
+    const SERVER* get_master() const;
+
+    SERVICE&             m_service;
+    const Configuration& m_config;
+
+private:
+    void check_initial_user(const SERVER* pMaster);
+    void create_initial_user(const SERVER* pMaster);
+    void create_initial_user(const std::vector<std::string>& grants);
 };
 
 /**
@@ -299,7 +363,9 @@ class UserManagerSqlite3 : public UserManager
 public:
     ~UserManagerSqlite3();
 
-    static std::unique_ptr<UserManager> create(const std::string& name);
+    static std::unique_ptr<UserManager> create(const std::string& name,
+                                               SERVICE* pService,
+                                               const Configuration* pConfig);
 
     const std::string& path() const
     {
@@ -335,7 +401,10 @@ public:
                 const Update& data) const override;
 
 private:
-    UserManagerSqlite3(std::string path, sqlite3* pDb);
+    UserManagerSqlite3(std::string path,
+                       sqlite3* pDb,
+                       SERVICE* pService,
+                       const Configuration* pConfig);
 
     std::string m_path;
     sqlite3&    m_db;
@@ -420,8 +489,6 @@ private:
 
     std::string             m_name;
     std::string             m_table;
-    SERVICE&                m_service;
-    const Configuration&    m_config;
     mutable SERVER*         m_pServer { nullptr };
     mutable maxsql::MariaDB m_db;
     mutable std::mutex      m_mutex;
