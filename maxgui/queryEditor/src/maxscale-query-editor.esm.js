@@ -19,6 +19,10 @@ import * as helpers from '@queryEditorSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
 
+//TODO: Add more if needed
+export { default as QueryCnfGearBtn } from '@queryEditorSrc/components/QueryCnfGearBtn.vue'
+export { default as MinMaxBtn } from '@queryEditorSrc/components/MinMaxBtn.container.vue'
+
 export default /*#__PURE__*/ (() => {
     // Get component instance
     const installable = MaxScaleQueryEditor
