@@ -466,6 +466,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     {
         backend->ack_write();
         m_expected_responses--;
+        m_wait_gtid = NONE;
         m_pSession->reset_server_bookkeeping();
         backend->close();
     }
@@ -963,15 +964,19 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
     {
         MXS_INFO("Slave '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
+        if (backend->is_waiting_result())
+        {
+            // Slaves should never have more than one response waiting
+            mxb_assert(m_expected_responses == 1);
+            m_expected_responses--;
+
+            // Reset causal read state so that the next read starts from the correct one.
+            m_wait_gtid = NONE;
+        }
+
         if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
             mxb_assert(!m_config.transaction_replay || m_trx.target() == backend);
-
-            if (backend->is_waiting_result())
-            {
-                mxb_assert(m_expected_responses == 1);
-                m_expected_responses--;
-            }
 
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
@@ -995,12 +1000,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
              * be closed. We can safely start retrying the transaction
              * on the master.
              */
-
-            if (backend->is_waiting_result())
-            {
-                mxb_assert(m_expected_responses == 1);
-                m_expected_responses--;
-            }
 
             mxb_assert(trx_is_open());
             can_continue = start_trx_replay();
@@ -1049,13 +1048,6 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
     if (backend->is_waiting_result())
     {
-        // Slaves should never have more than one response waiting
-        mxb_assert(m_expected_responses == 1);
-        m_expected_responses--;
-
-        // Reset causal read state so that the next read starts from the correct one.
-        m_wait_gtid = NONE;
-
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)
         {
