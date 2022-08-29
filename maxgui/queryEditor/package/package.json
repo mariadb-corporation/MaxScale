@@ -18,6 +18,7 @@
         "chart.js": "^2.9.4",
         "deep-diff": "^1.0.2",
         "immutability-helper": "^3.1.1",
+        "localforage": "^1.10.0",
         "lodash": "^4.17.21",
         "monaco-editor": "^0.33.0",
         "stacktrace-parser": "^0.1.10",
