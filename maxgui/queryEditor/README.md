@@ -223,6 +223,18 @@ export default {
 </style>
 ```
 
+## Slots of `maxscale-query-editor` component
+
+The `maxscale-query-editor` component has the following slots:
+
+-   `query-editor-top`: Slot for placing content at the top of the query editor
+    that is above the worksheet navigation tabs.
+-   `txt-editor-toolbar-right-slot`: Slot for placing content on the right side
+    of the toolbar below the query navigation tabs in TXT_EDITOR mode (default
+    editor mode).
+-   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
+    but this is for DDL_EDITOR mode (editor for altering table).
+
 ## Reserved keywords
 
 Certain keywords are reserved in order to make the query editor work properly.

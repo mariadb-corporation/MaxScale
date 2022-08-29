@@ -30,7 +30,9 @@
                         @onCtrlO="onCtrlO"
                         @onCtrlS="onCtrlS"
                         @onCtrlShiftS="onCtrlShiftS"
-                    />
+                    >
+                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                    </wke-ctr>
                 </keep-alive>
             </template>
         </div>

@@ -6,7 +6,9 @@
             class="d-flex"
             :height="txtEditorToolbarHeight"
             :session="session"
-        />
+        >
+            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+        </txt-editor-toolbar-ctr>
         <!-- Main panel contains editor pane and chart-config -->
         <mxs-split-pane
             v-model="mainPanePct"

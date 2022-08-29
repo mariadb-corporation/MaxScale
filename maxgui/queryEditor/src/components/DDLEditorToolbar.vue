@@ -49,6 +49,7 @@
                 {{ $mxs_t('applyChanges') }}
             </span>
         </v-tooltip>
+        <slot name="ddl-editor-toolbar-right-slot" />
     </div>
 </template>
 

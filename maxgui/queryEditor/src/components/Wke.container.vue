@@ -32,14 +32,18 @@
                                 :session="session"
                                 :dim="editorDim"
                                 v-on="$listeners"
-                            />
+                            >
+                                <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                            </txt-editor-ctr>
                             <ddl-editor-ctr
                                 v-else
                                 ref="editor"
                                 :dim="editorDim"
                                 :execSqlDlg.sync="execSqlDlg"
                                 :isExecFailed="isExecFailed"
-                            />
+                            >
+                                <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                            </ddl-editor-ctr>
                         </template>
                     </keep-alive>
                 </div>
