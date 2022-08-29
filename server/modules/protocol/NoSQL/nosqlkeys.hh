@@ -139,6 +139,7 @@ const char ORDERED[]                         = "ordered";
 const char OS[]                              = "os";
 const char PARSED[]                          = "parsed";
 const char PARSED_QUERY[]                    = "parsedQuery";
+const char PASSWORD[]                        = "password";
 const char PAYLOAD[]                         = "payload";
 const char PID[]                             = "pid";
 const char PLANNER_VERSION[]                 = "plannerVersion";

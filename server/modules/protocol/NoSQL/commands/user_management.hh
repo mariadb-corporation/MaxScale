@@ -1848,6 +1848,16 @@ private:
         }
 
         user.append(kvp(key::CREDENTIALS, credentials.extract()));
+
+        vector<uint8_t> pwd_sha1 = info.pwd_sha1();
+        vector<uint8_t> pwd_sha1_sha1 = crypto::sha_1(pwd_sha1);
+        string pwd_sha1_sha1_hex {"*"};
+        pwd_sha1_sha1_hex += mxs::to_hex(pwd_sha1_sha1.begin(), pwd_sha1_sha1.end());
+
+        DocumentBuilder mariadb;
+        mariadb.append(kvp(key::PASSWORD, pwd_sha1_sha1_hex));
+
+        user.append(kvp(key::MARIADB, mariadb.extract()));
     }
 
     string get_string(const bsoncxx::document::view& doc, const char* zKey)
