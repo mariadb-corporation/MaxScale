@@ -13,7 +13,9 @@
                 size="16"
                 class="server-state-icon mr-1"
                 :frame="
-                    $help.serverStateIcon($typy(server, 'serverData.attributes.state').safeString)
+                    $helpers.serverStateIcon(
+                        $typy(server, 'serverData.attributes.state').safeString
+                    )
                 "
             >
                 servers

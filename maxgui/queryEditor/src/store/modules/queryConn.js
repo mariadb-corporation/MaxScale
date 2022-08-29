@@ -45,7 +45,7 @@ export default {
             this.vue.$set(state.sql_conns, payload.id, payload)
         },
         UPDATE_SQL_CONN(state, payload) {
-            state.sql_conns = this.vue.$help.immutableUpdate(state.sql_conns, {
+            state.sql_conns = this.vue.$helpers.immutableUpdate(state.sql_conns, {
                 [payload.id]: { $set: payload },
             })
         },
@@ -88,7 +88,7 @@ export default {
                 const active_session_id = rootGetters['querySession/getActiveSessionId']
                 const active_session = rootGetters['querySession/getActiveSession']
                 const res = await this.vue.$queryHttp.get(`/sql/`)
-                const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
+                const resConnMap = this.vue.$helpers.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
@@ -113,7 +113,7 @@ export default {
                     )
                     //delete cookies and reset sessions bound those invalid connections
                     invalidCnctIds.forEach(id => {
-                        this.vue.$help.deleteCookie(`conn_id_body_${id}`)
+                        this.vue.$helpers.deleteCookie(`conn_id_body_${id}`)
                         dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                     })
 
@@ -449,7 +449,7 @@ export default {
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 const now = new Date().valueOf()
-                const escapedDb = this.vue.$help.escapeIdentifiers(db)
+                const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
                 const sql = `USE ${escapedDb};`
                 let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,

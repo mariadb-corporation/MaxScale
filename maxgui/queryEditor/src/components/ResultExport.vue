@@ -18,7 +18,7 @@
                     mdi-download
                 </v-icon>
             </v-btn>
-            <base-dialog
+            <mxs-dlg
                 v-model="isConfigDialogOpened"
                 :onSave="onExport"
                 :title="$t('exportResults')"
@@ -165,7 +165,7 @@
                         </v-row>
                     </v-container>
                 </template>
-            </base-dialog>
+            </mxs-dlg>
         </template>
         <span>{{ $t('exportResults') }}</span>
     </v-tooltip>
@@ -278,7 +278,7 @@ export default {
             }
         },
         getDefFileName() {
-            return `${this.defExportFileName} - ${this.$help.dateFormat({
+            return `${this.defExportFileName} - ${this.$helpers.dateFormat({
                 moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',

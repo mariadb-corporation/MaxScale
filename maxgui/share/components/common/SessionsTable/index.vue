@@ -1,6 +1,6 @@
 <template>
     <component
-        :is="collapsible ? 'collapse' : 'div'"
+        :is="collapsible ? 'mxs-collapse' : 'div'"
         v-bind="
             collapsible
                 ? {
@@ -34,7 +34,7 @@
                     <template v-slot:activator="{ on }">
                         <v-btn icon v-on="on" @click="onKillSession(item)">
                             <v-icon size="18" color="error">
-                                $vuetify.icons.unlink
+                                $vuetify.icons.mxs_unlink
                             </v-icon>
                         </v-btn>
                     </template>
@@ -70,7 +70,7 @@
                 </v-menu>
             </template>
         </data-table>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="$t('killSession')"
             type="kill"
@@ -88,7 +88,7 @@
                     </tr>
                 </table>
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </component>
 </template>
 
@@ -140,7 +140,7 @@ export default {
         },
     },
     async mounted() {
-        await this.$help.delay(this.delayLoading ? 400 : 0).then(() => (this.isMounting = false))
+        await this.$helpers.delay(this.delayLoading ? 400 : 0).then(() => (this.isMounting = false))
     },
     methods: {
         onKillSession(item) {

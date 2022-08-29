@@ -65,7 +65,7 @@ describe(`ConnDlg - child component's data communication tests `, () => {
             computed: { rc_target_names_map: () => dummy_rc_target_names_map },
         })
     })
-    it(`Should pass accurate data to base-dialog via props`, () => {
+    it(`Should pass accurate data to mxs-dlg via props`, () => {
         const {
             value,
             onSave,
@@ -74,7 +74,7 @@ describe(`ConnDlg - child component's data communication tests `, () => {
             hasSavingErr,
             hasFormDivider,
         } = wrapper.findComponent({
-            name: 'base-dialog',
+            name: 'mxs-dlg',
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isOpened)
         expect(onSave).to.be.equals(wrapper.vm.onSave)
@@ -85,7 +85,7 @@ describe(`ConnDlg - child component's data communication tests `, () => {
     })
     it(`Should pass accurate data to resource-type-dropdown via props`, () => {
         const { value, items, hideDetails } = wrapper
-            .findComponent({ name: 'base-dialog' })
+            .findComponent({ name: 'mxs-dlg' })
             .find('.resource-type-dropdown').vm.$props
         expect(value).to.be.equals(wrapper.vm.$data.resourceType)
         expect(items).to.be.equals(wrapper.vm.$data.resourceTypes)
@@ -100,7 +100,7 @@ describe(`ConnDlg - child component's data communication tests `, () => {
             showPlaceHolder,
             required,
             errorMessages,
-        } = wrapper.findComponent({ name: 'base-dialog' }).find('.resource-dropdown').vm.$props
+        } = wrapper.findComponent({ name: 'mxs-dlg' }).find('.resource-dropdown').vm.$props
         expect(value).to.be.deep.equals(wrapper.vm.$data.selectedResource)
         expect(items).to.be.deep.equals(wrapper.vm.resourceItems)
         expect(entityName).to.be.equals(wrapper.vm.$data.resourceType)
@@ -249,7 +249,7 @@ describe(`ConnDlg - form input tests`, () => {
     let wrapper
     it(`Should parse value as number for timeout field`, async () => {
         wrapper = mountFactory({ shallow: false })
-        const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.timeout`)
+        const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.timeout`)
         await inputChangeMock(inputComponent, '300')
         expect(wrapper.vm.body.timeout).to.be.equals(300)
     })
@@ -270,7 +270,7 @@ describe(`ConnDlg - form input tests`, () => {
                     },
                 }),
             })
-            const dlg = wrapper.findComponent({ name: 'base-dialog' })
+            const dlg = wrapper.findComponent({ name: 'mxs-dlg' })
             switch (field) {
                 case 'user':
                 case 'password': {

@@ -1,8 +1,8 @@
 <template>
     <!-- TODO: Virtual scroll treeview -->
     <div v-if="getDbTreeData.length">
-        <m-treeview
-            class="m-treeview"
+        <mxs-treeview
+            class="mxs-treeview"
             :items="getDbTreeData"
             :search="search_schema"
             :filter="filter"
@@ -51,7 +51,7 @@
                     <v-icon size="12" color="deep-ocean">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
-        </m-treeview>
+        </mxs-treeview>
         <v-tooltip
             v-if="hoveredItem && nodesHaveCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
@@ -71,7 +71,7 @@
                 </tbody>
             </table>
         </v-tooltip>
-        <sub-menu
+        <mxs-sub-menu
             v-if="activeCtxItem"
             :key="activeCtxItem.key"
             v-model="showCtxMenu"
@@ -276,7 +276,7 @@ export default {
                 (v, oV) => {
                     const oldNodeIds = oV.map(node => node.id)
                     const newNodeIds = v.map(node => node.id)
-                    if (!this.$help.lodash.isEqual(newNodeIds, oldNodeIds)) {
+                    if (!this.$helpers.lodash.isEqual(newNodeIds, oldNodeIds)) {
                         let nodes = this.minimizeNodes(v)
                         //   The order is important which is used to reload the schema and update the tree
                         //   Sort expandedNodes by level property
@@ -310,7 +310,7 @@ export default {
         },
         handleOpenCtxMenu({ e, item }) {
             e.stopPropagation()
-            if (this.$help.lodash.isEqual(this.activeCtxItem, item)) {
+            if (this.$helpers.lodash.isEqual(this.activeCtxItem, item)) {
                 this.showCtxMenu = false
                 this.activeCtxItem = null
             } else {
@@ -372,13 +372,13 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$t('qualifiedNameQuoted'):
-                    v = this.$help.escapeIdentifiers(item.id)
+                    v = this.$helpers.escapeIdentifiers(item.id)
                     break
                 case this.$t('qualifiedName'):
                     v = item.id
                     break
                 case this.$t('nameQuoted'):
-                    v = this.$help.escapeIdentifiers(item.name)
+                    v = this.$helpers.escapeIdentifiers(item.name)
                     break
                 case this.$t('name'):
                     v = item.name
@@ -389,7 +389,7 @@ export default {
                     this.$emit('place-to-editor', v)
                     break
                 case CLIPBOARD:
-                    this.$help.copyTextToClipboard(v)
+                    this.$helpers.copyTextToClipboard(v)
                     break
             }
         },
@@ -470,12 +470,12 @@ export default {
             const { SCHEMA, TABLES, SPS } = this.SQL_NODE_TYPES
             switch (item.type) {
                 case SCHEMA:
-                    return '$vuetify.icons.database'
+                    return '$vuetify.icons.mxs_database'
                 //TODO: a separate icon for Tables
                 case TABLES:
-                    return '$vuetify.icons.table'
+                    return '$vuetify.icons.mxs_table'
                 case SPS:
-                    return '$vuetify.icons.storedProcedures'
+                    return '$vuetify.icons.mxs_storedProcedures'
                 //TODO: an icon for Column
             }
         },
@@ -518,7 +518,7 @@ export default {
 }
 </style>
 <style lang="scss">
-.m-treeview {
+.mxs-treeview {
     .v-treeview-node__toggle {
         width: 16px;
         height: 16px;

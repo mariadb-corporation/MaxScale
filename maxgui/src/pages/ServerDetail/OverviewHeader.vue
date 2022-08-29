@@ -36,7 +36,7 @@
                         @click="() => onEdit('monitors')"
                     >
                         <v-icon size="18" color="primary">
-                            $vuetify.icons.edit
+                            $vuetify.icons.mxs_edit
                         </v-icon>
                     </v-btn>
                 </template>
@@ -63,7 +63,7 @@
                     <template>
                         {{
                             name === 'triggered_at' && value !== 'undefined'
-                                ? $help.dateFormat({
+                                ? $helpers.dateFormat({
                                       moment: $moment,
                                       value,
                                       formatType: 'DATE_RFC2822',
@@ -75,7 +75,7 @@
             </template>
         </outlined-overview-card>
 
-        <select-dialog
+        <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
             mode="change"
@@ -135,7 +135,7 @@ export default {
 
     computed: {
         serverStateClass: function() {
-            switch (this.$help.serverStateIcon(this.getTopOverviewInfo.state)) {
+            switch (this.$helpers.serverStateIcon(this.getTopOverviewInfo.state)) {
                 case 0:
                     return 'text-error'
                 case 1:
@@ -171,7 +171,7 @@ export default {
             } else delete overviewInfo.socket
 
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$helpers.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },
@@ -190,7 +190,7 @@ export default {
             this.isSelectDlgOpened = true
         },
         // -------------------------------------------- Changes handle
-        // get available entities and set default item when select-dialog is opened
+        // get available entities and set default item when mxs-sel-dlg is opened
         async getAllEntities() {
             switch (this.targetSelectItemType) {
                 case 'monitors':

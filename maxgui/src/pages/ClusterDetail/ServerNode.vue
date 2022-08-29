@@ -1,5 +1,5 @@
 <template>
-    <tree-graph-node
+    <mxs-tree-graph-node
         :node="node"
         :lineHeight="lineHeight"
         :bodyWrapperClass="bodyWrapperClass"
@@ -18,7 +18,9 @@
                     :color="isDroppableNode ? 'white' : isMaster ? 'navigation' : 'accent'"
                 >
                     {{
-                        isMaster ? '$vuetify.icons.primaryServer' : '$vuetify.icons.secondaryServer'
+                        isMaster
+                            ? '$vuetify.icons.mxs_primaryServer'
+                            : '$vuetify.icons.mxs_secondaryServer'
                     }}
                 </v-icon>
                 <router-link
@@ -48,7 +50,7 @@
                                 v-on="on"
                             >
                                 <v-icon size="16" :color="iconColor">
-                                    $vuetify.icons.queryEditor
+                                    $vuetify.icons.mxs_queryEditor
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -64,7 +66,7 @@
                         <template v-slot:activator="{ on }">
                             <v-btn small class="gear-btn" icon v-on="on">
                                 <v-icon size="16" :color="iconColor">
-                                    $vuetify.icons.settings
+                                    $vuetify.icons.mxs_settings
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -115,11 +117,11 @@
                 <icon-sprite-sheet
                     size="16"
                     class="mr-1 server-state-icon"
-                    :frame="$help.serverStateIcon(nodeAttrs.state)"
+                    :frame="$helpers.serverStateIcon(nodeAttrs.state)"
                 >
                     servers
                 </icon-sprite-sheet>
-                <truncate-string :text="`${nodeAttrs.state}`" />
+                <mxs-truncate-str :text="`${nodeAttrs.state}`" />
                 <v-spacer />
                 <span v-if="!node.data.isMaster" class="ml-1">
                     <span class="font-weight-bold text-capitalize">
@@ -138,10 +140,10 @@
                 <span class="text-capitalize font-weight-bold mr-2">
                     {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
                 </span>
-                <truncate-string :text="$help.getAddress(nodeAttrs.parameters)" />
+                <mxs-truncate-str :text="$helpers.getAddress(nodeAttrs.parameters)" />
             </div>
         </template>
-    </tree-graph-node>
+    </mxs-tree-graph-node>
 </template>
 
 <script>
@@ -159,8 +161,8 @@
  */
 import { mapState, mapGetters, mapActions } from 'vuex'
 /*
-@node-height: v: Number. Cluster node height. Emit from <tree-graph-node/>
-@get-expanded-node: v: String. Id of expanded node. Emit from <tree-graph-node/>
+@node-height: v: Number. Cluster node height. Emit from <mxs-tree-graph-node/>
+@get-expanded-node: v: String. Id of expanded node. Emit from <mxs-tree-graph-node/>
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
@@ -204,7 +206,7 @@ export default {
             return this.$typy(this.node.data, 'server_info.slave_connections').safeArray
         },
         sbm() {
-            return this.$help.getMin({
+            return this.$helpers.getMin({
                 arr: this.slave_connections,
                 pickBy: 'seconds_behind_master',
             })
@@ -236,11 +238,11 @@ export default {
             return [
                 {
                     ...this.firstSlideCommonInfo,
-                    slave_io_running: this.$help.getMostFreq({
+                    slave_io_running: this.$helpers.getMostFreq({
                         arr: this.slave_connections,
                         pickBy: 'slave_io_running',
                     }),
-                    slave_sql_running: this.$help.getMostFreq({
+                    slave_sql_running: this.$helpers.getMostFreq({
                         arr: this.slave_connections,
                         pickBy: 'slave_sql_running',
                     }),

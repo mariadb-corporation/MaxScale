@@ -7,7 +7,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart-stream
+                        <mxs-line-chart-stream
                             v-if="sessions_datasets.length"
                             ref="sessionsChart"
                             :styles="chartStyle"
@@ -25,7 +25,7 @@
                 </template>
                 <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart-stream
+                        <mxs-line-chart-stream
                             v-if="server_connections_datasets.length"
                             ref="connectionsChart"
                             :styles="chartStyle"
@@ -45,7 +45,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart-stream
+                        <mxs-line-chart-stream
                             v-if="threads_datasets.length"
                             ref="threadsChart"
                             :styles="chartStyle"
@@ -53,7 +53,7 @@
                                 datasets: threads_datasets,
                             }"
                             :options="
-                                $help.lodash.merge(streamOpts, {
+                                $helpers.lodash.merge(streamOpts, {
                                     scales: {
                                         yAxes: [
                                             {
@@ -136,7 +136,7 @@ export default {
             const {
                 genLineStreamDataset,
                 lodash: { xorWith, isEqual, cloneDeep },
-            } = this.$help
+            } = this.$helpers
 
             const connectionsChartDataSets = connectionsChart.chartData.datasets
 
@@ -206,7 +206,7 @@ export default {
         },
 
         updateThreadsDatasets(threadsChart, timestamp) {
-            const { genLineStreamDataset } = this.$help
+            const { genLineStreamDataset } = this.$helpers
             const threadChartDataSets = threadsChart.chartData.datasets
             this.thread_stats.forEach((thread, i) => {
                 const {

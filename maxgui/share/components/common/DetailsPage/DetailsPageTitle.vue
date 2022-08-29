@@ -9,17 +9,17 @@
                         size="28"
                         color="deep-ocean"
                     >
-                        $vuetify.icons.arrowDown
+                        $vuetify.icons.mxs_arrowDown
                     </v-icon>
                 </v-btn>
                 <div class="d-inline-flex align-center">
-                    <truncate-string :text="$route.params.id" :maxWidth="600">
+                    <mxs-truncate-str :text="$route.params.id" :maxWidth="600">
                         <span class="ml-1 mb-0 mxs-color-helper text-navigation text-h4 page-title">
                             <slot name="page-title" :pageId="$route.params.id">
                                 {{ $route.params.id }}
                             </slot>
                         </span>
-                    </truncate-string>
+                    </mxs-truncate-str>
 
                     <v-menu
                         v-if="
@@ -32,7 +32,7 @@
                         <template v-slot:activator="{ on }">
                             <v-btn class="ml-2 gear-btn" icon v-on="on">
                                 <v-icon size="18" color="primary">
-                                    $vuetify.icons.settings
+                                    $vuetify.icons.mxs_settings
                                 </v-icon>
                             </v-btn>
                         </template>

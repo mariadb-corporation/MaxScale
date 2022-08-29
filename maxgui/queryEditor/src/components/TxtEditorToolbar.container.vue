@@ -32,23 +32,24 @@
                 >
                     <v-icon size="16">
                         {{
-                            `$vuetify.icons.${
+                            `$vuetify.icons.mxs_${
                                 getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
                             }`
                         }}
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{
-                    selected_query_txt
-                        ? `${$t('runStatements', {
-                              quantity: $t('selected'),
-                          })}\nCmd/Ctrl + Enter`
-                        : `${$t('runStatements', {
-                              quantity: $t('all'),
-                          })}\nCmd/Ctrl + Shift + Enter`
-                }}
+            <span class="d-inline-block text-center">
+                <template v-if="selected_query_txt">
+                    {{ $t('runStatements', { quantity: $t('selected') }) }}
+                    <br />
+                    Cmd/Ctrl + Enter
+                </template>
+                <template v-else>
+                    {{ $t('runStatements', { quantity: $t('all') }) }}
+                    <br />
+                    Cmd/Ctrl + Shift + Enter
+                </template>
             </span>
         </v-tooltip>
         <!-- Visualize button-->
@@ -69,7 +70,7 @@
                         SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
                     "
                 >
-                    <v-icon size="16"> $vuetify.icons.reports </v-icon>
+                    <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
                 </v-btn>
             </template>
             <span class="text-capitalize">
@@ -98,8 +99,10 @@
                     <v-icon size="19"> mdi-star-plus-outline </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ `${$t('createQuerySnippet')}\nCmd/Ctrl + D` }}
+            <span class="d-inline-block text-center">
+                {{ $t('createQuerySnippet') }}
+                <br />
+                Cmd/Ctrl + D
             </span>
         </v-tooltip>
         <load-sql-ctr ref="loadSqlCtr" />
@@ -121,7 +124,7 @@
             </row-limit-ctr>
         </v-form>
 
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
@@ -172,7 +175,7 @@
                 />
                 <v-spacer />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </div>
 </template>
 <script>

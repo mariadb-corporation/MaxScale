@@ -10,6 +10,7 @@ import babel from '@rollup/plugin-babel'
 import vuetify from 'rollup-plugin-vuetify'
 import PostCSS from 'rollup-plugin-postcss'
 import monaco from 'rollup-plugin-monaco-editor'
+import copy from 'rollup-plugin-copy'
 
 const projectRoot = path.resolve(__dirname, '../../')
 const rootSrcPath = path.resolve(projectRoot, 'src')
@@ -85,7 +86,13 @@ const esConfig = {
             babelHelpers: 'bundled',
             presets: [['@babel/preset-env', { targets: esbrowserslist }]],
         }),
-        PostCSS({ modules: true, extract: false, sourceMap: true, minimize: true }),
+        PostCSS({ sourceMap: false, minimize: true }),
+        copy({
+            targets: [
+                { src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' },
+                { src: `${sharePath}/icons`, dest: 'dist' },
+            ],
+        }),
     ],
 }
 buildFormats.push(esConfig)

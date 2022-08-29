@@ -27,7 +27,7 @@
                             @click="$emit('reload-schemas')"
                         >
                             <v-icon size="12" :color="reloadDisabled ? '' : 'deep-ocean'">
-                                $vuetify.icons.reload
+                                $vuetify.icons.mxs_reload
                             </v-icon>
                         </v-btn>
                     </template>

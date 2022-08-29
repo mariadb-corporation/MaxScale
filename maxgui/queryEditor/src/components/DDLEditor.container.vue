@@ -84,7 +84,7 @@ export default {
             return this.$typy(this.tbl_creation_info, 'data').safeObjectOrEmpty
         },
         hasChanged() {
-            return !this.$help.lodash.isEqual(
+            return !this.$helpers.lodash.isEqual(
                 this.$typy(this.initialData).safeObject,
                 this.$typy(this.formData).safeObject
             )
@@ -93,13 +93,13 @@ export default {
             return this.isFormValid && this.hasChanged
         },
         isTblOptsChanged() {
-            return !this.$help.lodash.isEqual(
+            return !this.$helpers.lodash.isEqual(
                 this.$typy(this.initialData, 'table_opts_data').safeObject,
                 this.$typy(this.formData, 'table_opts_data').safeObject
             )
         },
         isColsOptsChanged() {
-            return !this.$help.lodash.isEqual(
+            return !this.$helpers.lodash.isEqual(
                 this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
                 this.$typy(this.formData, 'cols_opts_data.data').safeArray
             )
@@ -134,15 +134,15 @@ export default {
             this.unwatch_initialData = this.$watch(
                 'initialData',
                 v => {
-                    if (v && !this.$help.lodash.isEqual(this.formData, v)) {
-                        this.formData = this.$help.lodash.cloneDeep(v)
+                    if (v && !this.$helpers.lodash.isEqual(this.formData, v)) {
+                        this.formData = this.$helpers.lodash.cloneDeep(v)
                     }
                 },
                 { deep: true, immediate: true }
             )
         },
         revertChanges() {
-            this.formData = this.$help.lodash.cloneDeep(this.initialData)
+            this.formData = this.$helpers.lodash.cloneDeep(this.initialData)
         },
         getPKCols(colsData) {
             const headers = this.$typy(this.formData, 'cols_opts_data.fields').safeArray
@@ -166,7 +166,7 @@ export default {
          */
         buildTblOptSql({ dbName }) {
             let sql = ''
-            const { escapeIdentifiers: escape, deepDiff } = this.$help
+            const { escapeIdentifiers: escape, deepDiff } = this.$helpers
             const diffs = deepDiff(this.initialData.table_opts_data, this.formData.table_opts_data)
             diffs.forEach((diff, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
@@ -198,7 +198,7 @@ export default {
          */
         buildDropColSql({ removedCols }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             removedCols.forEach((row, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 sql += `DROP COLUMN ${escape(row.column_name)}`
@@ -213,7 +213,7 @@ export default {
          */
         buildColsDfnSQL({ cols, isChanging }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             cols.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const colObj = isChanging ? this.$typy(col, 'newObj').safeObject : col
@@ -255,7 +255,7 @@ export default {
          * @returns {String} - returns ADD COLUMN sql
          */
         buildAddColSQL({ addedCols }) {
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             let sql = ''
             sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
             addedCols.forEach(({ UQ, column_name }) => {
@@ -273,7 +273,7 @@ export default {
          */
         buildPKSQL() {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             const dropPKSQL = 'DROP PRIMARY KEY'
             const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
             const isAddingPK = this.currPkCols.length > 0
@@ -294,7 +294,7 @@ export default {
          */
         buildUQSQL({ uqColsChanged }) {
             let sql = ''
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             uqColsChanged.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const { column_name } = col.newObj
@@ -354,7 +354,7 @@ export default {
                 arrOfObjsDiff,
                 getObjectRows,
                 lodash: { isEqual },
-            } = this.$help
+            } = this.$helpers
             const base = getObjectRows({
                 columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
                 rows: this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
@@ -392,7 +392,7 @@ export default {
             return sql
         },
         applyChanges() {
-            const { escapeIdentifiers: escape, formatSQL } = this.$help
+            const { escapeIdentifiers: escape, formatSQL } = this.$helpers
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
             let tblOptSql = '',
@@ -414,7 +414,7 @@ export default {
             })
         },
         async confirmAlter() {
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             const { dbName, table_name } = this.formData.table_opts_data
             await this.exeStmtAction({
                 sql: this.execSqlDlg.sql,
@@ -425,7 +425,7 @@ export default {
                     id: this.getActiveSessionId,
                     payload: {
                         ...this.tbl_creation_info,
-                        data: this.$help.lodash.cloneDeep(this.formData),
+                        data: this.$helpers.lodash.cloneDeep(this.formData),
                     },
                 })
         },

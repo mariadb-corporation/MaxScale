@@ -143,7 +143,7 @@ WHERE table_schema = "${db}" AND table_name = "${tblName}";`
     let tblOptsRes = await $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
         sql,
     })
-    const tblOptsRows = vue.$help.getObjectRows({
+    const tblOptsRows = vue.$helpers.getObjectRows({
         columns: tblOptsRes.data.data.attributes.results[0].fields,
         rows: tblOptsRes.data.data.attributes.results[0].data,
     })
@@ -239,7 +239,7 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
     const {
         state,
         vue: {
-            $help: {
+            $helpers: {
                 lodash: { set },
                 immutableUpdate,
             },
@@ -358,7 +358,7 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
         SYNC_WITH_PERSISTED_OBJ: function(state, persistedObj) {
             mutate_flat_states({
                 moduleState: state,
-                data: this.vue.$help.lodash.pickBy(persistedObj, (v, key) =>
+                data: this.vue.$helpers.lodash.pickBy(persistedObj, (v, key) =>
                     Object.keys(statesToBeSynced).includes(key)
                 ),
             })

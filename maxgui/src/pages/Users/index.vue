@@ -155,13 +155,13 @@ export default {
                     role: account,
                     type,
                     created: created
-                        ? this.$help.dateFormat({ moment: this.$moment, value: created })
+                        ? this.$helpers.dateFormat({ moment: this.$moment, value: created })
                         : '',
                     last_update: last_update
-                        ? this.$help.dateFormat({ moment: this.$moment, value: last_update })
+                        ? this.$helpers.dateFormat({ moment: this.$moment, value: last_update })
                         : '',
                     last_login: last_login
-                        ? this.$help.dateFormat({ moment: this.$moment, value: last_login })
+                        ? this.$helpers.dateFormat({ moment: this.$moment, value: last_login })
                         : '',
                 })
             }

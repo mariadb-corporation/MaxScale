@@ -8,7 +8,7 @@
             :session="session"
         />
         <!-- Main panel contains editor pane and chart-config -->
-        <split-pane
+        <mxs-split-pane
             v-model="mainPanePct"
             class="main-pane__content d-flex"
             :minPercent="minMainPanePct"
@@ -17,14 +17,14 @@
         >
             <template slot="pane-left">
                 <!-- Editor pane contains editor and result pane -->
-                <split-pane
+                <mxs-split-pane
                     ref="editorResultPane"
                     v-model="editorPct"
                     split="horiz"
                     :minPercent="minEditorPct"
                 >
                     <template slot="pane-left">
-                        <split-pane
+                        <mxs-split-pane
                             v-model="queryPanePct"
                             class="editor__content"
                             :minPercent="minQueryPanePct"
@@ -53,7 +53,7 @@
                                     @close-chart="setDefChartOptState"
                                 />
                             </template>
-                        </split-pane>
+                        </mxs-split-pane>
                     </template>
                     <template slot="pane-right">
                         <query-result-ctr
@@ -65,7 +65,7 @@
                             @on-dragend="dropTxtToEditor"
                         />
                     </template>
-                </split-pane>
+                </mxs-split-pane>
             </template>
             <template slot="pane-right">
                 <chart-config
@@ -77,7 +77,7 @@
                     class="chart-config"
                 />
             </template>
-        </split-pane>
+        </mxs-split-pane>
     </div>
 </template>
 
@@ -116,7 +116,7 @@ export default {
     },
     data() {
         return {
-            // split-pane states
+            // mxs-split-pane states
             mainPanePct: 100,
             minMainPanePct: 0,
             editorPct: 60,
@@ -182,7 +182,7 @@ export default {
             return (this.panesDim.height * this.editorPct) / 100
         },
         maxVisSidebarPct() {
-            return this.$help.pxToPct({
+            return this.$helpers.pxToPct({
                 px: this.maxVisSidebarPx,
                 containerPx: this.panesDim.width,
             })
@@ -211,7 +211,7 @@ export default {
         showVisChart(v) {
             if (v) {
                 this.queryPanePct = 50
-                this.minQueryPanePct = this.$help.pxToPct({
+                this.minQueryPanePct = this.$helpers.pxToPct({
                     px: 32,
                     containerPx: this.panesDim.width,
                 })
@@ -236,10 +236,10 @@ export default {
             SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
         }),
         setDefChartOptState() {
-            this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)
+            this.chartOpt = this.$helpers.lodash.cloneDeep(this.defChartOpt)
         },
         handleSetMinEditorPct() {
-            this.minEditorPct = this.$help.pxToPct({
+            this.minEditorPct = this.$helpers.pxToPct({
                 px: 26,
                 containerPx: this.panesDim.height,
             })

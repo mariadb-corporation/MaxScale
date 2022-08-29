@@ -25,7 +25,7 @@
                     </span>
                     <span class="started text-no-wrap text-body-2">
                         {{
-                            $help.dateFormat({
+                            $helpers.dateFormat({
                                 moment: $moment,
                                 value: currentService.attributes.started,
                             })
@@ -46,7 +46,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart-stream
+                        <mxs-line-chart-stream
                             v-if="serviceConnectionsDatasets.length"
                             ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"

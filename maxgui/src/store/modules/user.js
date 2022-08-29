@@ -53,7 +53,7 @@ export default {
                     commit('SET_LOGGED_IN_USER', {
                         name: auth.username,
                         rememberMe: rememberMe,
-                        isLoggedIn: Boolean(this.vue.$help.getCookie('token_body')),
+                        isLoggedIn: Boolean(this.vue.$helpers.getCookie('token_body')),
                     })
                     router.push(router.app.$route.query.redirect || '/dashboard/servers')
                     await dispatch('fetchLoggedInUserAttrs')
@@ -91,14 +91,14 @@ export default {
                     { root: true }
                 )
             }
-            await this.vue.$help.delay(1500).then(() => {
+            await this.vue.$helpers.delay(1500).then(() => {
                 commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true })
                 if (router.app.$route.name !== 'login') router.push('/login')
             })
 
             // Clear all but persist some states of some modules
 
-            const queryEditorPersistedState = this.vue.$help.lodash.cloneDeep({
+            const queryEditorPersistedState = this.vue.$helpers.lodash.cloneDeep({
                 queryPersisted,
                 wke: {
                     worksheets_arr: wke.worksheets_arr,
@@ -109,11 +109,11 @@ export default {
                     query_sessions: querySession.query_sessions,
                 },
             })
-            const maxguiPersistedState = this.vue.$help.lodash.cloneDeep({
+            const maxguiPersistedState = this.vue.$helpers.lodash.cloneDeep({
                 persisted: persisted,
             })
             await localForage.clear()
-            this.vue.$help.deleteAllCookies()
+            this.vue.$helpers.deleteAllCookies()
             await localForage.setItem('query-editor', queryEditorPersistedState)
             await localForage.setItem('maxgui-app', maxguiPersistedState)
         },
@@ -207,14 +207,14 @@ export default {
                 [UPDATE]: {
                     text: scope.$t(`userOps.actions.${UPDATE}`),
                     type: UPDATE,
-                    icon: '$vuetify.icons.edit',
+                    icon: '$vuetify.icons.mxs_edit',
                     iconSize: 18,
                     color: 'primary',
                 },
                 [DELETE]: {
                     text: scope.$t(`userOps.actions.${DELETE}`),
                     type: DELETE,
-                    icon: ' $vuetify.icons.delete',
+                    icon: ' $vuetify.icons.mxs_delete',
                     iconSize: 18,
                     color: 'error',
                 },

@@ -74,7 +74,7 @@ function mockupTreeData() {
             node_child_1: 'node_child_1 value',
         },
     }
-    return Vue.prototype.$help.objToTree({
+    return Vue.prototype.$helpers.objToTree({
         obj: DUMMY_OBJ_PARAMS,
         keepPrimitiveValue: true,
         level: 0,

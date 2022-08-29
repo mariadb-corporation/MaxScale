@@ -282,12 +282,12 @@ describe('DetailsParametersTable.vue', () => {
     })
 
     it(`Should show edit button when component is hovered`, async () => {
-        await wrapper.find('.collapse-wrapper').trigger('mouseenter')
+        await wrapper.find('.mxs-collapse-wrapper').trigger('mouseenter')
         expect(wrapper.find('.edit-btn').exists()).to.be.true
     })
 
     it(`Should enable editable mode when edit icon is clicked`, async () => {
-        await wrapper.find('.collapse-wrapper').trigger('mouseenter')
+        await wrapper.find('.mxs-collapse-wrapper').trigger('mouseenter')
         let editBtn = wrapper.find('.edit-btn')
         expect(editBtn.exists()).to.be.true
 
@@ -396,7 +396,7 @@ describe('DetailsParametersTable.vue', () => {
         expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
     })
 
-    it(`Should close base-dialog when click "That's Right" button`, async () => {
+    it(`Should close mxs-dlg when click "That's Right" button`, async () => {
         await mockupParametersChange(wrapper)
         // click "That's Right" button
         await wrapper.find('.save').trigger('click')

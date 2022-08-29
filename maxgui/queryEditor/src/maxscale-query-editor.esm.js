@@ -13,41 +13,38 @@
 import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
-import queryEditorStorePlugins from '@queryEditorSrc/store/plugins'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
+import helpersPlugin from '@share/plugins/helpers'
+import * as helpers from '@queryEditorSrc/utils/helpers'
+import logger from '@share/plugins/logger'
 
-export default {
+export default /*#__PURE__*/ (() => {
+    // Get component instance
+    const installable = MaxScaleQueryEditor
+
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
      * @param {Object} options.store - vuex store
-     * @param {Boolean} options.isExternal - default value is true. MaxGUI has it as false because
-     * appNotifier state module and other components already used by MaxGUI
      */
-    install: (Vue, { store, isExternal = true }) => {
+    installable.install = (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
 
-        //TODO: Prevent duplicated vuex module names, store plugin names, common components
-        if (isExternal) {
-            //Register common components
-            Object.keys(commonComponents).forEach(name =>
-                Vue.component(name, commonComponents[name])
-            )
-            // Register maxscale-query-editor components
-            Vue.component('maxscale-query-editor', MaxScaleQueryEditor)
-        }
+        //TODO: Prevent duplicated vuex module names, instance properties name
+
+        //Register common components
+        Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
+        // Register maxscale-query-editor component
+        Vue.component('maxscale-query-editor', MaxScaleQueryEditor)
 
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {
-            if (!isExternal && key === 'appNotifier') null
-            else store.registerModule(key, queryEditorModules[key])
+            store.registerModule(key, queryEditorModules[key])
         })
 
-        // Register store plugins
-        Vue.use(queryHttp, { store })
-        /**
-         * TODO: Replace this with another other approach, the query editor persistConfig plugin
-         * can not be registered this way.Otherwise, after pressing f5, it loses all its states.
-         */
-        queryEditorStorePlugins.forEach(plugin => plugin(store))
-    },
-}
+        // Register utilities .i.e. Add instance properties to Vue.prototype
+        Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
+        Vue.use(helpersPlugin, { addon: helpers }) // Vue.prototype.$helpers
+        Vue.use(logger) // Vue.prototype.$logger
+    }
+    return installable
+})()

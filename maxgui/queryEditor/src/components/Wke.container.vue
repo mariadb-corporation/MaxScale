@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <split-pane
+        <mxs-split-pane
             v-model="sidebarPct"
             class="query-view__content"
             :minPercent="minSidebarPct"
@@ -44,7 +44,7 @@
                     </keep-alive>
                 </div>
             </template>
-        </split-pane>
+        </mxs-split-pane>
         <execute-sql-dialog
             v-model="execSqlDlg.isOpened"
             :title="
@@ -100,7 +100,7 @@ export default {
     },
     data() {
         return {
-            sidebarPct: 0, // split-pane states
+            sidebarPct: 0, // mxs-split-pane states
             sessTabCtrHeight: 30,
             execSqlDlg: {
                 isOpened: false,
@@ -127,8 +127,8 @@ export default {
         }),
         minSidebarPct() {
             if (this.is_sidebar_collapsed)
-                return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
-            else return this.$help.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+                return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
+            else return this.$helpers.pxToPct({ px: 200, containerPx: this.ctrDim.width })
         },
         stmtI18nPluralization() {
             const statementCounts = (this.execSqlDlg.sql.match(/;/g) || []).length
@@ -191,7 +191,8 @@ export default {
         // panes dimension/percentages calculation functions
         handleSetSidebarPct() {
             if (this.is_sidebar_collapsed) this.sidebarPct = this.minSidebarPct
-            else this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: this.ctrDim.width })
+            else
+                this.sidebarPct = this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty

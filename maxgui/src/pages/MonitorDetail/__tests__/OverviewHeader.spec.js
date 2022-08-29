@@ -45,7 +45,7 @@ describe('OverviewHeader index', () => {
     })
 
     it(`Should automatically assign 'undefined' string if attribute is not defined`, async () => {
-        let currentMonitor = wrapper.vm.$help.lodash.cloneDeep(dummy_all_monitors[0])
+        let currentMonitor = wrapper.vm.$helpers.lodash.cloneDeep(dummy_all_monitors[0])
         currentMonitor.attributes.monitor_diagnostics = {}
         await wrapper.setProps({
             currentMonitor: currentMonitor,
@@ -67,15 +67,15 @@ describe('OverviewHeader index', () => {
         expect(wrapper.vm.$data.showEditBtn).to.be.true
     })
 
-    it(`Should open select-dialog when switchover-edit-btn is clicked`, async () => {
-        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+    it(`Should open mxs-sel-dlg when switchover-edit-btn is clicked`, async () => {
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
         expect(selectDialog.vm.isDlgOpened).to.be.false
         await mockOpenSwitchOverDialog(wrapper)
         expect(selectDialog.vm.isDlgOpened).to.be.true
     })
 
-    it(`Should pass necessary props to select-dialog`, () => {
-        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+    it(`Should pass necessary props to mxs-sel-dlg`, () => {
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
 
         const { title, mode, entityName, onSave, itemsList, defaultItems } = selectDialog.vm.$props
         const {
@@ -95,15 +95,15 @@ describe('OverviewHeader index', () => {
         expect(defaultItems).to.be.deep.equals(defaultItemsData)
     })
 
-    it(`Should pass event handler for @on-open event of select-dialog`, async () => {
+    it(`Should pass event handler for @on-open event of mxs-sel-dlg`, async () => {
         let getAllEntitiesSpy = sinon.spy(wrapper.vm, 'getAllEntities')
         await mockOpenSwitchOverDialog(wrapper)
         getAllEntitiesSpy.should.have.been.calledOnce
     })
 
-    it(`Should update targetItem data when @selected-items event of select-dialog
+    it(`Should update targetItem data when @selected-items event of mxs-sel-dlg
       is emitted`, async () => {
-        const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
         await mockOpenSwitchOverDialog(wrapper)
 
         selectDialog.vm.$emit('selected-items', selectedItemsStub)

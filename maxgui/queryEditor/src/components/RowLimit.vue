@@ -15,7 +15,7 @@
         :rules="[v => validate(v)]"
         v-bind="{ ...$attrs }"
         @input.native="onInput"
-        @keypress="$help.preventNonNumericalVal($event)"
+        @keypress="$helpers.preventNonNumericalVal($event)"
     >
         <template v-slot:prepend-inner>
             <slot name="prepend-inner" />

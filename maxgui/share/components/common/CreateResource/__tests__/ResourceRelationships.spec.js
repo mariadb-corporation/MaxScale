@@ -39,7 +39,7 @@ describe('ResourceRelationships.vue', () => {
 
     it(`Should render relationship name as singular word accurately
       when multiple props is false`, () => {
-        const label = wrapper.find('.collapse-title').text()
+        const label = wrapper.find('.mxs-collapse-title').text()
         expect(label).to.be.equals('server')
     })
 
@@ -49,17 +49,19 @@ describe('ResourceRelationships.vue', () => {
             multiple: true,
             relationshipsType: 'services',
         })
-        const label = wrapper.find('.collapse-title').text()
+        const label = wrapper.find('.mxs-collapse-title').text()
         expect(label).to.be.equals('services')
     })
 
-    it(`Should show select-dropdown by default`, () => {
-        expect(wrapper.find('.collapse-content').attributes().style).to.be.undefined
+    it(`Should show mxs-select by default`, () => {
+        expect(wrapper.find('.mxs-collapse-content').attributes().style).to.be.undefined
     })
 
-    it(`Should not show select-dropdown when arrow-toggle is clicked`, async () => {
+    it(`Should not show mxs-select when arrow-toggle is clicked`, async () => {
         await wrapper.find('.arrow-toggle').trigger('click')
-        expect(wrapper.find('.collapse-content').attributes().style).to.be.equals('display: none;')
+        expect(wrapper.find('.mxs-collapse-content').attributes().style).to.be.equals(
+            'display: none;'
+        )
     })
 
     it(`Multiple mode off: Should return selectedItems as an array
@@ -83,8 +85,8 @@ describe('ResourceRelationships.vue', () => {
         expect(wrapper.vm.getSelectedItems()).to.be.deep.equals(mockupResourceItems)
     })
 
-    it(`Should pass the following props to select-dropdown`, () => {
-        const selectDropdown = wrapper.findComponent({ name: 'select-dropdown' })
+    it(`Should pass the following props to mxs-select`, () => {
+        const selectDropdown = wrapper.findComponent({ name: 'mxs-select' })
         const {
             entityName,
             items,

@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@share/utils/helpers'
 let icons = {}
 const req = require.context(
     // The relative path of the components folder
@@ -20,13 +19,12 @@ const req = require.context(
     /\.(vue)$/i
 )
 req.keys().forEach(fileName => {
-    const name = lodash.camelCase(
-        fileName
-            .split('/')
-            .pop()
-            .replace(/\.\w+$/, '')
-    )
-    icons[name] = { component: req(fileName).default }
+    const name = fileName
+        .split('/')
+        .pop()
+        .replace(/\.\w+$/, '')
+
+    icons[[`mxs_${name}`]] = { component: req(fileName).default }
 })
 
 export default icons

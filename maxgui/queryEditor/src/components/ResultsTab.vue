@@ -66,7 +66,7 @@
                 <template v-slot:activator="{ on }">
                     <div class="ml-4 d-flex align-center" v-on="on">
                         <v-icon size="16" color="error" class="mr-2">
-                            $vuetify.icons.alertWarning
+                            $vuetify.icons.mxs_alertWarning
                         </v-icon>
                         {{ $t('incomplete') }}
                     </div>

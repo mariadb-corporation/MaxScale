@@ -14,6 +14,7 @@ import Vue from 'vue'
 import i18n from '@share/plugins/i18n'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
+import queryEditorPersistPlugin from '@queryEditorSrc/store/persistPlugin'
 
 const appPersistConfig = new VuexPersistence({
     key: 'maxgui-app',
@@ -32,4 +33,5 @@ export default [
         store.i18n = i18n
     },
     appPersistConfig.plugin,
+    queryEditorPersistPlugin,
 ]

@@ -17,7 +17,7 @@ const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 
 const memStates = queryHelper.memStateCreator('schemaSidebar')
 function genNodeKey(scope) {
-    return scope.vue.$help.lodash.uniqueId('node_key_')
+    return scope.vue.$helpers.lodash.uniqueId('node_key_')
 }
 export default {
     namespaced: true,
@@ -59,7 +59,7 @@ export default {
                 let cmpList = []
                 let db_tree = []
                 if (res.data.data.attributes.results[0].data) {
-                    const dataRows = this.vue.$help.getObjectRows({
+                    const dataRows = this.vue.$helpers.getObjectRows({
                         columns: res.data.data.attributes.results[0].fields,
                         rows: res.data.data.attributes.results[0].data,
                     })
@@ -142,7 +142,7 @@ export default {
                 const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
-                const dataRows = this.vue.$help.getObjectRows({
+                const dataRows = this.vue.$helpers.getObjectRows({
                     columns: res.data.data.attributes.results[0].fields,
                     rows: res.data.data.attributes.results[0].data,
                 })
@@ -232,7 +232,7 @@ export default {
                     sql: query,
                 })
 
-                const dataRows = this.vue.$help.getObjectRows({
+                const dataRows = this.vue.$helpers.getObjectRows({
                     columns: res.data.data.attributes.results[0].fields,
                     rows: res.data.data.attributes.results[0].data,
                 })
@@ -335,7 +335,7 @@ export default {
         async fetchSchemas({ commit, dispatch, state, rootState }) {
             const active_wke_id = rootState.wke.active_wke_id
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
+            const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
 
             try {
                 commit('PATCH_DB_TREE_MAP', {

@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         :toggleOnClick="() => (showInputs = !showInputs)"
         :isContentVisible="showInputs"
         wrapperClass="tbl-opts px-1 pt-2"
@@ -101,7 +101,7 @@
                 </v-col>
             </v-row>
         </v-container>
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>
@@ -166,7 +166,7 @@ export default {
 
 <style lang="scss">
 .tbl-opts {
-    .collapse-title {
+    .mxs-collapse-title {
         font-size: 0.75rem !important;
     }
 }

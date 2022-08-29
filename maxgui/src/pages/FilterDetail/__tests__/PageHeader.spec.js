@@ -34,8 +34,8 @@ describe('FilterDetail - PageHeader', () => {
         axiosStub.restore()
     })
 
-    it(`Should pass necessary props & attrs to confirm-dialog`, () => {
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+    it(`Should pass necessary props & attrs to mxs-conf-dlg`, () => {
+        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
         expect(confirmDialog.exists()).to.be.true
         const { type, item } = confirmDialog.vm.$props
         const { title, onSave, value } = confirmDialog.vm.$attrs
@@ -47,15 +47,15 @@ describe('FilterDetail - PageHeader', () => {
         expect(onSave).to.be.equals(wrapper.vm.confirmSave)
     })
 
-    it(`Should open confirm-dialog when delete button is clicked`, async () => {
+    it(`Should open mxs-conf-dlg when delete button is clicked`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
         expect(confirmDialog.vm.$attrs.value).to.be.true
     })
 
     it(`Should send delete request after confirming delete`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
-        const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
+        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
         await triggerBtnClick(confirmDialog, '.save')
 
         await axiosStub.should.have.been.calledWith(`/filters/${dummy_all_filters[0].id}?force=yes`)

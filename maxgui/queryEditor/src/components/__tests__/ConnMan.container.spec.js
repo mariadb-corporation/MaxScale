@@ -84,8 +84,8 @@ describe(`ConnMan - child component's data communication tests `, () => {
         expect(connOptions).to.be.deep.equals(wrapper.vm.connOptions)
         expect(handleSave).to.be.equals(wrapper.vm.handleOpenConn)
     })
-    it(`Should pass accurate data to confirm-dialog via props`, () => {
-        const confirmDlg = wrapper.findComponent({ name: 'confirm-dialog' }).vm
+    it(`Should pass accurate data to mxs-conf-dlg via props`, () => {
+        const confirmDlg = wrapper.findComponent({ name: 'mxs-conf-dlg' }).vm
         const { type, item } = confirmDlg.$props
         const { value, title, closeImmediate, onSave } = confirmDlg.$attrs
         expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)

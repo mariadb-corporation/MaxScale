@@ -1,6 +1,6 @@
 <template>
     <div>
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
@@ -15,7 +15,7 @@
             <template v-slot:form-body>
                 <p v-html="confDlg.confirmMsg" />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -35,8 +35,10 @@
                     <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ `${$t('openScript')}\nCmd/Ctrl + O` }}
+            <span class="d-inline-block text-center">
+                {{ $t('openScript') }}
+                <br />
+                Cmd/Ctrl + O
             </span>
         </v-tooltip>
         <v-tooltip
@@ -59,8 +61,10 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ `${$t('saveScript')}\nCmd/Ctrl + S` }}
+            <span class="d-inline-block text-center">
+                {{ $t('saveScript') }}
+                <br />
+                Cmd/Ctrl + S
             </span>
         </v-tooltip>
         <v-tooltip
@@ -82,8 +86,10 @@
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ `${$t('saveScriptAs')}\nCmd/Ctrl + Shift + S` }}
+            <span class="d-inline-block text-center">
+                {{ $t('saveScriptAs') }}
+                <br />
+                Cmd/Ctrl + Shift + S
             </span>
         </v-tooltip>
     </div>
@@ -232,7 +238,7 @@ export default {
             this.UPDATE_SESSION({
                 idx: this.query_sessions.indexOf(this.getActiveSession),
                 session: {
-                    ...this.$help.lodash.cloneDeep(this.getActiveSession),
+                    ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
                     name: blob.handle.name,
                 },
             })
@@ -341,7 +347,7 @@ export default {
                 this.UPDATE_SESSION({
                     idx: this.query_sessions.indexOf(this.getActiveSession),
                     session: {
-                        ...this.$help.lodash.cloneDeep(this.getActiveSession),
+                        ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
                         name: fileHandle.name,
                     },
                 })

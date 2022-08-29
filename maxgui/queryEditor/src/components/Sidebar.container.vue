@@ -142,7 +142,7 @@ export default {
          * @param {String} payload.type - db tree node type
          */
         onDropAction({ id, type }) {
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             let sql = 'DROP'
             const { SCHEMA, TABLE, SP, TRIGGER } = this.SQL_NODE_TYPES
             switch (type) {
@@ -167,7 +167,7 @@ export default {
          * @param {String} id - identifier
          */
         onTruncateTbl(id) {
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape } = this.$helpers
             const sql = `truncate ${escape(id)};`
             this.handleOpenExecSqlDlg(sql)
         },

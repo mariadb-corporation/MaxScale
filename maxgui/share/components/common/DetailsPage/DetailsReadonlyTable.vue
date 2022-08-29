@@ -1,5 +1,5 @@
 <template>
-    <collapse
+    <mxs-collapse
         :toggleOnClick="() => (showTable = !showTable)"
         :isContentVisible="showTable"
         :title="title"
@@ -21,7 +21,7 @@
                 <slot :name="header.value" :cellProps="cellProps"> </slot>
             </template>
         </data-table>
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>
@@ -92,7 +92,7 @@ export default {
     watch: {
         tableData: {
             handler: function(val, oldVal) {
-                if (!this.$help.lodash.isEqual(val, oldVal)) {
+                if (!this.$helpers.lodash.isEqual(val, oldVal)) {
                     this.processTableRows(val)
                 }
             },
@@ -101,7 +101,7 @@ export default {
     },
     async mounted() {
         this.processTableRows(this.tableData)
-        await this.$help.delay(400).then(() => (this.isMounting = false))
+        await this.$helpers.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
         /**
@@ -112,7 +112,7 @@ export default {
             if (Array.isArray(data)) {
                 this.tableRows = data
             } else {
-                this.tableRows = this.$help.objToTree({
+                this.tableRows = this.$helpers.objToTree({
                     obj: data,
                     keepPrimitiveValue: true,
                     level: 0,

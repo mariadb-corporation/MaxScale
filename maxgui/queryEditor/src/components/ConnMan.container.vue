@@ -23,17 +23,17 @@
             <template v-slot:selection="{ item }">
                 <div class="d-flex align-center pl-1">
                     <v-icon class="mr-2" size="16" color="accent-dark">
-                        $vuetify.icons.server
+                        $vuetify.icons.mxs_server
                     </v-icon>
-                    <truncate-string :text="item.name" :maxWidth="145" :nudgeLeft="32" />
+                    <mxs-truncate-str :text="item.name" :maxWidth="145" :nudgeLeft="32" />
                 </div>
             </template>
             <template v-slot:item="{ item }">
                 <div class="v-list-item__title d-flex align-center flex-row flex-grow-1">
                     <v-icon class="mr-2" size="16" :color="item.disabled ? '' : 'accent-dark'">
-                        $vuetify.icons.server
+                        $vuetify.icons.mxs_server
                     </v-icon>
-                    <truncate-string
+                    <mxs-truncate-str
                         class="text-truncate"
                         :text="item.name"
                         :maxWidth="135"
@@ -57,7 +57,7 @@
                                 @click.stop="unlinkConn(item)"
                             >
                                 <v-icon size="18" color="error">
-                                    $vuetify.icons.unlink
+                                    $vuetify.icons.mxs_unlink
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -82,7 +82,7 @@
             :connOptions="connOptions"
             :handleSave="handleOpenConn"
         />
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="$t('disconnectConn')"
             type="disconnect"

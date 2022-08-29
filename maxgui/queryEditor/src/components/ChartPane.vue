@@ -51,7 +51,7 @@
                         v-on="on"
                         @click="$emit('close-chart')"
                     >
-                        <v-icon size="12" color="accent-dark"> $vuetify.icons.close</v-icon>
+                        <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
                     </v-btn>
                 </template>
                 <span>{{ $t('close') }}</span>
@@ -59,7 +59,7 @@
         </div>
 
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
-            <line-chart
+            <mxs-line-chart
                 v-if="type === chartTypes.LINE"
                 id="query-chart"
                 :style="{
@@ -70,7 +70,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <scatter-chart
+            <mxs-scatter-chart
                 v-else-if="type === chartTypes.SCATTER"
                 id="query-chart"
                 :style="{
@@ -80,7 +80,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <vert-bar-chart
+            <mxs-vert-bar-chart
                 v-else-if="type === chartTypes.BAR_VERT"
                 id="query-chart"
                 :style="{
@@ -90,7 +90,7 @@
                 :chartData="chartData"
                 :options="chartOptions"
             />
-            <horiz-bar-chart
+            <mxs-horiz-bar-chart
                 v-else-if="type === chartTypes.BAR_HORIZ"
                 id="query-chart"
                 :style="{
@@ -120,7 +120,7 @@
 /*
 @close-chart. Emit when close-chart button is clicked
 */
-import { objectTooltip } from '@share/components/common/Charts/customTooltips.js'
+import { objectTooltip } from '@share/components/common/MxsCharts/customTooltips.js'
 export default {
     name: 'chart-pane',
     props: {
@@ -131,7 +131,7 @@ export default {
     },
     data() {
         return {
-            uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
+            uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
             dataPoint: null,
             chartToolHeight: 0,
         }
@@ -324,7 +324,7 @@ export default {
             return v
         },
         getDefFileName() {
-            return `MaxScale ${this.type} Chart - ${this.$help.dateFormat({
+            return `MaxScale ${this.type} Chart - ${this.$helpers.dateFormat({
                 moment: this.$moment,
                 value: new Date(),
                 formatType: 'DATE_RFC2822',

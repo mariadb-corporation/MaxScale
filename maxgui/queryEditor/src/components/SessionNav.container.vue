@@ -21,7 +21,7 @@
                     class="fill-height d-flex align-center justify-space-between px-3"
                 >
                     <div class="d-inline-flex align-center">
-                        <truncate-string
+                        <mxs-truncate-str
                             :key="`${session.name}`"
                             :text="`${session.name}`"
                             :maxWidth="112"
@@ -59,7 +59,7 @@
                                     : 'error'
                             "
                         >
-                            $vuetify.icons.close
+                            $vuetify.icons.mxs_close
                         </v-icon>
                     </v-btn>
                 </div>

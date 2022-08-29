@@ -28,7 +28,7 @@
                 class="node-type font-weight-medium text-no-wrap text-uppercase"
                 :style="{ color: headingColor.txt }"
             >
-                {{ $help.resourceTxtTransform(nodeType) }}
+                {{ $helpers.resourceTxtTransform(nodeType) }}
             </span>
         </div>
         <filter-nodes
@@ -71,7 +71,7 @@
                     {{ nodeType }}
                 </icon-sprite-sheet>
 
-                <truncate-string :text="`${value}`" />
+                <mxs-truncate-str :text="`${value}`" />
 
                 <v-tooltip
                     v-if="key === 'filters'"
@@ -89,7 +89,7 @@
                             @click="handleVisFilters"
                         >
                             <v-icon color="primary" size="14">
-                                $vuetify.icons.reports
+                                $vuetify.icons.mxs_reports
                             </v-icon>
                         </v-btn>
                     </template>
@@ -186,7 +186,7 @@ export default {
                     let data = {
                         state,
                         connections,
-                        [parameters.socket ? 'socket' : 'address']: this.$help.getAddress(
+                        [parameters.socket ? 'socket' : 'address']: this.$helpers.getAddress(
                             parameters
                         ),
                     }
@@ -209,7 +209,7 @@ export default {
                     const { state, parameters } = this.nodeData.attributes
                     return {
                         state,
-                        address: this.$help.getAddress(parameters),
+                        address: this.$helpers.getAddress(parameters),
                         protocol: parameters.protocol,
                         authenticator: parameters.authenticator,
                     }
@@ -227,13 +227,13 @@ export default {
             const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
             switch (this.nodeType) {
                 case MONITORS:
-                    return this.$help.monitorStateIcon(value)
+                    return this.$helpers.monitorStateIcon(value)
                 case SERVERS:
-                    return this.$help.serverStateIcon(value)
+                    return this.$helpers.serverStateIcon(value)
                 case SERVICES:
-                    return this.$help.serviceStateIcon(value)
+                    return this.$helpers.serviceStateIcon(value)
                 case LISTENERS:
-                    return this.$help.listenerStateIcon(value)
+                    return this.$helpers.listenerStateIcon(value)
             }
         },
         getFilterModule(id) {

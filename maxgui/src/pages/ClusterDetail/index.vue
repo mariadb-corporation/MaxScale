@@ -22,14 +22,14 @@
             class="ml-6 mt-9 fill-height graph-card"
             outlined
         >
-            <tree-graph
+            <mxs-tree-graph
                 v-if="ctrDim.height && !$typy(graphData).isEmptyObject"
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
                 :draggable="isAdmin"
                 :draggableGroup="{
-                    name: 'tree-graph',
+                    name: 'mxs-tree-graph',
                     put: ['joinable-servers'], // allow nodes on joinable-servers to be dragged here
                 }"
                 :noDragNodes="noDragNodes"
@@ -41,7 +41,7 @@
                 @on-node-drag-end="onNodeDragEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
-                    <!-- Render server-node only when `data` object is passed from tree-graph -->
+                    <!-- Render server-node only when `data` object is passed from mxs-tree-graph -->
                     <server-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :key="`${uniqueKey}-${node.id}`"
@@ -56,7 +56,7 @@
                         @on-choose-op="onChooseOp"
                     />
                 </template>
-            </tree-graph>
+            </mxs-tree-graph>
             <joinable-servers
                 v-if="joinableServerNodes.length"
                 :data="joinableServerNodes"
@@ -73,7 +73,7 @@
             />
         </v-card>
         <!-- Dialog for drag/drop actions and server operations -->
-        <confirm-dialog
+        <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :type="confDlg.type"
@@ -94,7 +94,7 @@
                     hide-details
                 />
             </template>
-        </confirm-dialog>
+        </mxs-conf-dlg>
     </page-wrapper>
 </template>
 
@@ -123,7 +123,7 @@ export default {
     data() {
         return {
             // a key for triggering a re-render on server-node
-            uniqueKey: this.$help.uuidv1(),
+            uniqueKey: this.$helpers.uuidv1(),
             ctrDim: {},
             // states for controlling drag behaviors
             defDraggingStates: {
@@ -135,14 +135,14 @@ export default {
                 nodeCloneClass: 'drag-node-clone',
             },
             draggingStates: {},
-            //states for tree-graph
+            //states for mxs-tree-graph
             expandedNodes: [],
             defClusterNodeHeight: 119,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
             //states for server-node
             nodeTxtWrapperClassName: 'node-text-wrapper',
-            // states for confirm-dialog
+            // states for mxs-conf-dlg
             defConfDlg: {
                 opType: '',
                 isOpened: false,
@@ -235,7 +235,7 @@ export default {
             }))
         },
         standaloneNodeHash() {
-            return this.$help.lodash.keyBy(this.joinableServerNodes, 'id')
+            return this.$helpers.lodash.keyBy(this.joinableServerNodes, 'id')
         },
     },
     async created() {
@@ -275,10 +275,10 @@ export default {
             this.$set(this.clusterNodeHeightMap, nodeId, height)
         },
         resetDraggingStates() {
-            this.draggingStates = this.$help.lodash.cloneDeep(this.defDraggingStates)
+            this.draggingStates = this.$helpers.lodash.cloneDeep(this.defDraggingStates)
         },
         resetConfDlgStates() {
-            this.confDlg = this.$help.lodash.cloneDeep(this.defConfDlg)
+            this.confDlg = this.$helpers.lodash.cloneDeep(this.defConfDlg)
         },
         /**
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
@@ -333,7 +333,7 @@ export default {
          *
          * @param {Object} param.draggingNode - dragging node
          * @param {Object} param.droppingNode - dropping node
-         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
          */
         detectOperationType({ draggingNode, droppingNode, from }) {
             if (draggingNode.isMaster) this.confDlg.opType = ''
@@ -362,7 +362,7 @@ export default {
         },
         /**
          * @param {Object} param.e - drag start event
-         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
          */
         onNodeDragStart({ e, from }) {
             document.body.classList.add('cursor--all-move')
@@ -373,7 +373,7 @@ export default {
         },
         /**
          * @param {Object} param.e - dragging event
-         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
          */
         onNodeDragging({ e, from }) {
             const draggingNodeId = e.dragged.getAttribute('node_id')
@@ -422,7 +422,7 @@ export default {
          * is not re-rendered.
          */
         triggerRerenderNodes() {
-            this.uniqueKey = this.$help.uuidv1()
+            this.uniqueKey = this.$helpers.uuidv1()
         },
         //Reset graph after confirming an action
         async handleResetGraph(opType) {

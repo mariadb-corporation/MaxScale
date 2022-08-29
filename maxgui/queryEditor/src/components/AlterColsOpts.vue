@@ -43,7 +43,7 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
-            <filter-list
+            <mxs-filter-list
                 v-model="selectedColSpecs"
                 returnObject
                 :label="$t('alterSpecs')"
@@ -79,7 +79,7 @@
             </v-tooltip>
         </div>
 
-        <virtual-scroll-table
+        <mxs-virtual-scroll-tbl
             :headers="visHeaders"
             :rows="rows"
             :itemHeight="40"
@@ -120,9 +120,9 @@
                     />
                 </div>
             </template>
-            <!-- Add :key so that truncate-string rerender to evaluate truncation and fallback text-truncate class  -->
+            <!-- Add :key so that mxs-truncate-str rerender to evaluate truncation and fallback text-truncate class  -->
             <template v-slot:header-column_name="{ data: { maxWidth } }">
-                <truncate-string
+                <mxs-truncate-str
                     :key="maxWidth"
                     class="text-truncate"
                     text="Column Name"
@@ -130,7 +130,7 @@
                 />
             </template>
             <template v-slot:header-column_type="{ data: { maxWidth } }">
-                <truncate-string
+                <mxs-truncate-str
                     :key="maxWidth"
                     class="text-truncate"
                     text="Column Type"
@@ -160,7 +160,7 @@
                     <span>{{ value }}</span>
                 </v-tooltip>
             </template>
-        </virtual-scroll-table>
+        </mxs-virtual-scroll-tbl>
     </div>
 </template>
 
@@ -347,7 +347,7 @@ export default {
             )
         },
         handleShowColSpecs() {
-            const colSpecs = this.$help.lodash.cloneDeep(this.colSpecs)
+            const colSpecs = this.$helpers.lodash.cloneDeep(this.colSpecs)
             if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
             else {
                 const hiddenSpecs = ['charset', 'collation', 'comment']
@@ -362,7 +362,7 @@ export default {
             if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
         deleteSelectedRows(selectedItems) {
-            const { xorWith, isEqual } = this.$help.lodash
+            const { xorWith, isEqual } = this.$helpers.lodash
             this.colsOptsData = {
                 ...this.colsOptsData,
                 data: xorWith(this.colsOptsData.data, selectedItems, isEqual),
@@ -373,7 +373,7 @@ export default {
             this.headers.forEach(h => {
                 switch (h.text) {
                     case 'id':
-                        row.push(this.$help.uuidv1())
+                        row.push(this.$helpers.uuidv1())
                         break
                     case 'NN':
                         row.push('NULL')
@@ -389,7 +389,7 @@ export default {
             this.colsOptsData.data.push(row)
         },
         rowDataToObj(rowData) {
-            const rows = this.$help.getObjectRows({
+            const rows = this.$helpers.getObjectRows({
                 columns: this.$typy(this.colsOptsData, 'fields').safeArray,
                 rows: [rowData],
             })
@@ -403,7 +403,7 @@ export default {
          * @param {Object} item - cell data
          */
         onCellInput(item) {
-            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+            this.colsOptsData = this.$helpers.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
@@ -419,7 +419,7 @@ export default {
          * @returns {Object} - returns new colsOptsData
          */
         patchCharsetCollation({ colsOptsData, alterColIdx, charset }) {
-            return this.$help.immutableUpdate(colsOptsData, {
+            return this.$helpers.immutableUpdate(colsOptsData, {
                 data: {
                     [alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
@@ -455,7 +455,7 @@ export default {
         handleUncheck_UN_ZF_AI({ colsOptsData, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
                 const idxOfZF = this.findColOptIdx('ZF')
-                return this.$help.immutableUpdate(colsOptsData, {
+                return this.$helpers.immutableUpdate(colsOptsData, {
                     data: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: '' },
@@ -480,7 +480,7 @@ export default {
                 charset = this.defTblCharset
                 collation = this.defTblCollation
             }
-            return this.$help.immutableUpdate(colsOptsData, {
+            return this.$helpers.immutableUpdate(colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [this.idxOfCharset]: { $set: charset },
@@ -500,7 +500,7 @@ export default {
                 const colOptInput = this.$refs[
                     `colOptInput-alterColIdx-${item.alterColIdx}-colOptIdx-${this.idxOfUQ}`
                 ][0]
-                return this.$help.immutableUpdate(colsOptsData, {
+                return this.$helpers.immutableUpdate(colsOptsData, {
                     data: {
                         [item.alterColIdx]: {
                             [this.idxOfUN]: { $set: 'UNSIGNED' },
@@ -520,7 +520,7 @@ export default {
          */
         onInputColumnType(item) {
             // first update column_type cell
-            let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+            let colsOptsData = this.$helpers.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
@@ -549,7 +549,7 @@ export default {
                 }
 
             if (idx >= 0)
-                return (colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                return (colsOptsData = this.$helpers.immutableUpdate(colsOptsData, {
                     data: {
                         [idx]: {
                             [this.idxOfAI]: { $set: '' },
@@ -574,7 +574,7 @@ export default {
             ).safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
             if (valueOfDefault !== null) defaultVal = valueOfDefault
-            return this.$help.immutableUpdate(colsOptsData, {
+            return this.$helpers.immutableUpdate(colsOptsData, {
                 data: {
                     [alterColIdx]: {
                         [this.idxOfNN]: { $set: valOfNN },
@@ -591,7 +591,7 @@ export default {
             if (this.hasAI)
                 colsOptsData = this.uncheckOtherAI({ colsOptsData, alterColIdx: item.alterColIdx })
             // update AI and generated cells
-            colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+            colsOptsData = this.$helpers.immutableUpdate(colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
@@ -630,7 +630,7 @@ export default {
             }
 
             // update G and its dependencies cell value
-            colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+            colsOptsData = this.$helpers.immutableUpdate(colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },
@@ -657,7 +657,7 @@ export default {
          */
         onInputPK(item) {
             // update PK and UQ value
-            let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+            let colsOptsData = this.$helpers.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.alterColIdx]: {
                         [item.colOptIdx]: { $set: item.value },

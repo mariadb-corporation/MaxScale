@@ -1,5 +1,5 @@
 <template>
-    <confirm-dialog
+    <mxs-conf-dlg
         v-model="isConfDlgOpened"
         :title="title"
         :smallInfo="smallInfo"
@@ -49,7 +49,7 @@
                 />
             </div>
         </template>
-    </confirm-dialog>
+    </mxs-conf-dlg>
 </template>
 <script>
 /*

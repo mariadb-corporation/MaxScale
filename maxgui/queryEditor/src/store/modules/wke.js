@@ -37,7 +37,7 @@ export default {
             state.worksheets_arr = state.worksheets_arr.filter(wke => wke.id !== id)
         },
         UPDATE_WKE(state, { idx, wke }) {
-            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
+            state.worksheets_arr = this.vue.$helpers.immutableUpdate(state.worksheets_arr, {
                 [idx]: { $set: wke },
             })
         },
@@ -56,7 +56,7 @@ export default {
                 ...queryHelper.syncStateCreator('schemaSidebar'),
                 name: 'WORKSHEET',
             }
-            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
+            state.worksheets_arr = this.vue.$helpers.immutableUpdate(state.worksheets_arr, {
                 [idx]: { $set: wke },
             })
         },
@@ -169,7 +169,7 @@ export default {
             }
         },
         changeWkeName({ commit, rootState, getters }, name) {
-            let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
+            let newWke = this.vue.$helpers.lodash.cloneDeep(getters.getActiveWke)
             newWke.name = name
             commit('UPDATE_WKE', {
                 idx: rootState.wke.worksheets_arr.indexOf(getters.getActiveWke),

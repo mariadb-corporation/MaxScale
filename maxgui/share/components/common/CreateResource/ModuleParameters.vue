@@ -79,7 +79,7 @@ export default {
             if (this.selectedModule) {
                 const {
                     attributes: { parameters = [] },
-                } = this.$help.lodash.cloneDeep(this.selectedModule)
+                } = this.$helpers.lodash.cloneDeep(this.selectedModule)
                 return parameters
             }
             return []

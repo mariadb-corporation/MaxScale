@@ -51,7 +51,7 @@
         :rules="rules.requiredFieldEither"
         :disabled="targetItem.disabled"
         autocomplete="off"
-        @keypress="$help.preventNonNumericalVal($event)"
+        @keypress="$helpers.preventNonNumericalVal($event)"
         @input="handleChange"
     />
 
@@ -125,8 +125,8 @@
         autocomplete="off"
         @keypress="
             targetItem.type === 'int' || targetItem.type === 'duration'
-                ? $help.preventNonInteger($event)
-                : $help.preventNonNumericalVal($event)
+                ? $helpers.preventNonInteger($event)
+                : $helpers.preventNonNumericalVal($event)
         "
         @input="handleChange"
     >
@@ -273,14 +273,14 @@ export default {
             }
         },
         item: function(newItem, oldItem) {
-            if (!this.$help.lodash.isEqual(newItem, oldItem)) {
-                this.targetItem = this.processItem(this.$help.lodash.cloneDeep(newItem))
+            if (!this.$helpers.lodash.isEqual(newItem, oldItem)) {
+                this.targetItem = this.processItem(this.$helpers.lodash.cloneDeep(newItem))
             }
         },
     },
 
     created() {
-        this.targetItem = this.processItem(this.$help.lodash.cloneDeep(this.item))
+        this.targetItem = this.processItem(this.$helpers.lodash.cloneDeep(this.item))
     },
 
     methods: {
@@ -345,7 +345,7 @@ export default {
                     : parseInt(result.value)
             } else {
                 typeof result.value !== 'string' && (result.value = result.value.toString())
-                let suffixInfo = this.$help.getSuffixFromValue(param, this.DURATION_SUFFIXES)
+                let suffixInfo = this.$helpers.getSuffixFromValue(param, this.DURATION_SUFFIXES)
                 if (suffixInfo.suffix) {
                     this.chosenSuffix = suffixInfo.suffix
                     result.value = result.value.slice(0, suffixInfo.indexOfSuffix)
@@ -379,7 +379,7 @@ export default {
                     // from IEC to SI or from SI to IEC
                     if (IECToSI || SITOIEC) {
                         // to bytes or bits
-                        currentVal = this.$help.convertSize({
+                        currentVal = this.$helpers.convertSize({
                             suffix: from,
                             isIEC: prevIsSuffixIEC,
                             val: currentVal,
@@ -387,7 +387,7 @@ export default {
                         // convert currentVal bytes to bits or bits to bytes
                         currentVal = IECToSI ? currentVal * 8 : currentVal / 8
                         // reverse from bytes or bits to target suffix
-                        value = this.$help.convertSize({
+                        value = this.$helpers.convertSize({
                             suffix: to,
                             isIEC: nextIsSuffixIEC,
                             val: currentVal,
@@ -400,13 +400,13 @@ export default {
                         (!prevIsSuffixIEC && !nextIsSuffixIEC)
                     ) {
                         // to bytes or bits
-                        currentVal = this.$help.convertSize({
+                        currentVal = this.$helpers.convertSize({
                             suffix: from,
                             isIEC: prevIsSuffixIEC,
                             val: val,
                         })
                         // reverse from bytes or bits to target suffix
-                        value = this.$help.convertSize({
+                        value = this.$helpers.convertSize({
                             suffix: to,
                             isIEC: nextIsSuffixIEC,
                             val: currentVal,
@@ -419,7 +419,7 @@ export default {
         },
 
         durationSuffixSwapper(newSuffix, oldSuffix, val) {
-            const { convertDuration } = this.$help
+            const { convertDuration } = this.$helpers
             // convert to miliseconds from oldSuffix
             const ms = convertDuration({ suffix: oldSuffix, val })
             switch (newSuffix) {
@@ -442,10 +442,10 @@ export default {
             const self = this
             /*reverse processing item to original type*/
             let targetItemCloned = this.processItem(
-                this.$help.lodash.cloneDeep(self.targetItem),
+                this.$helpers.lodash.cloneDeep(self.targetItem),
                 'reverse'
             )
-            const changed = !this.$help.lodash.isEqual(targetItemCloned, self.item)
+            const changed = !this.$helpers.lodash.isEqual(targetItemCloned, self.item)
             /*
                 _Handling edge case, either socket or port needs to be defined,
                 that leads to the issue when empty port or empty socket will be

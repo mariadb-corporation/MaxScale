@@ -46,7 +46,7 @@ export default {
                 current_service: { attributes: { connections = null } = {} },
             } = state
             if (connections !== null) {
-                const { genLineStreamDataset } = this.vue.$help
+                const { genLineStreamDataset } = this.vue.$helpers
                 const dataset = genLineStreamDataset({
                     label: 'Current connections',
                     value: connections,
@@ -165,7 +165,7 @@ export default {
                     }
                 )
                 message = [
-                    `${this.vue.$help.capitalizeFirstLetter(payload.type)} relationships of ${
+                    `${this.vue.$helpers.capitalizeFirstLetter(payload.type)} relationships of ${
                         payload.id
                     } is updated`,
                 ]

@@ -4,7 +4,7 @@
             log_source: {{ log_source }}
         </span>
         <v-spacer />
-        <filter-list
+        <mxs-filter-list
             v-model="chosenLogLevels"
             returnObject
             :label="$t('filterBy')"
@@ -22,7 +22,7 @@
                     v-on="on"
                 >
                     <v-icon size="16" color="accent-dark" class="mr-1">
-                        $vuetify.icons.filter
+                        $vuetify.icons.mxs_filter
                     </v-icon>
                     {{ label }}
                     <v-icon
@@ -34,7 +34,7 @@
                     </v-icon>
                 </v-btn>
             </template>
-        </filter-list>
+        </mxs-filter-list>
     </div>
 </template>
 

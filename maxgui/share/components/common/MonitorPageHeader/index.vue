@@ -63,7 +63,7 @@
                 <icon-sprite-sheet
                     size="16"
                     class="monitor-state-icon mr-1"
-                    :frame="$help.monitorStateIcon(state)"
+                    :frame="$helpers.monitorStateIcon(state)"
                 >
                     monitors
                 </icon-sprite-sheet>
@@ -75,7 +75,7 @@
                     <span class="resource-module">{{ monitorModule }}</span>
                 </span>
             </div>
-            <confirm-dialog
+            <mxs-conf-dlg
                 v-model="confDlg.isOpened"
                 :title="confDlg.title"
                 :type="confDlg.type"
@@ -132,7 +132,7 @@
                         />
                     </template>
                 </template>
-            </confirm-dialog>
+            </mxs-conf-dlg>
         </template>
     </details-page-title>
 </template>
@@ -168,7 +168,7 @@ export default {
     },
     data() {
         return {
-            // states for confirm-dialog
+            // states for mxs-conf-dlg
             confDlg: {
                 opType: '',
                 isOpened: false,

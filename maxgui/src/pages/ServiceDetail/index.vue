@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="pl-6">
+        <v-sheet v-if="!$helpers.lodash.isEmpty(current_service)" class="pl-6">
             <page-header :currentService="current_service" :onEditSucceeded="fetchService">
                 <template v-slot:refresh-rate>
                     <refresh-rate v-model="refreshRate" @on-count-done="onCountDone" />
@@ -178,7 +178,7 @@ export default {
                 ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
                     id,
                     user: `${user}@${remote}`,
-                    connected: this.$help.dateFormat({ moment: this.$moment, value: connected }),
+                    connected: this.$helpers.dateFormat({ moment: this.$moment, value: connected }),
                     idle,
                     memory,
                 })

@@ -33,7 +33,7 @@
                         @click="() => onEdit(switchoverOp.type)"
                     >
                         <v-icon size="18" color="primary">
-                            $vuetify.icons.edit
+                            $vuetify.icons.mxs_edit
                         </v-icon>
                     </v-btn>
                     <v-tooltip
@@ -52,7 +52,7 @@
             </template>
         </outlined-overview-card>
 
-        <select-dialog
+        <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
             mode="swap"
@@ -68,7 +68,7 @@
                     {{ $t(smallInfo) }}
                 </small>
             </template>
-        </select-dialog>
+        </mxs-sel-dlg>
     </v-sheet>
 </template>
 
@@ -126,7 +126,7 @@ export default {
                 primary,
             }
             Object.keys(overviewInfo).forEach(
-                key => (overviewInfo[key] = this.$help.convertType(overviewInfo[key]))
+                key => (overviewInfo[key] = this.$helpers.convertType(overviewInfo[key]))
             )
             return overviewInfo
         },
@@ -142,7 +142,7 @@ export default {
         },
     },
     methods: {
-        // get available entities and set default item when select-dialog is opened
+        // get available entities and set default item when mxs-sel-dlg is opened
         async getAllEntities() {
             switch (this.targetSelectItemType) {
                 case 'servers':

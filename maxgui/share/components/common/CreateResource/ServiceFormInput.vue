@@ -59,7 +59,7 @@ export default {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
         },
         isServerDefaultItems: function() {
-            const isValidArr = this.$help.isNotEmptyArray(this.defaultItems)
+            const isValidArr = this.$helpers.isNotEmptyArray(this.defaultItems)
             return isValidArr && this.defaultItems[0].type === 'servers'
         },
     },

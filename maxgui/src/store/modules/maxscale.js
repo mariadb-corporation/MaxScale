@@ -98,7 +98,7 @@ export default {
                 if (res.data.data) {
                     const allModules = res.data.data
 
-                    let hashMap = this.vue.$help.hashMapByPath({
+                    let hashMap = this.vue.$helpers.hashMapByPath({
                         arr: allModules,
                         path: 'attributes.module_type',
                     })
@@ -123,7 +123,7 @@ export default {
 
         genDataSets({ commit, state }) {
             const { thread_stats } = state
-            const { genLineStreamDataset } = this.vue.$help
+            const { genLineStreamDataset } = this.vue.$helpers
             if (thread_stats.length) {
                 let dataSets = []
                 thread_stats.forEach((thread, i) => {

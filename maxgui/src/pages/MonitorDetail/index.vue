@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="pl-6">
+        <v-sheet v-if="!$helpers.lodash.isEmpty(current_monitor)" class="pl-6">
             <monitor-page-header
                 :targetMonitor="current_monitor"
                 :successCb="successCb"
@@ -115,7 +115,7 @@ export default {
         all_servers() {
             let availableEntities = []
             this.all_servers.forEach(server => {
-                if (this.$help.lodash.isEmpty(server.relationships.monitors))
+                if (this.$helpers.lodash.isEmpty(server.relationships.monitors))
                     availableEntities.push({
                         id: server.id,
                         state: server.attributes.state,

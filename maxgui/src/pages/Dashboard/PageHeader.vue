@@ -79,7 +79,7 @@
                                 class="d-inline-block "
                             >
                                 {{
-                                    $help.dateFormat({
+                                    $helpers.dateFormat({
                                         moment: $moment,
                                         value,
                                         formatType: 'MM.DD.YYYY HH:mm:ss',
@@ -189,7 +189,7 @@ export default {
     methods: {
         //---------------------- MaxScale overview info
         copyToClipboard(txt) {
-            this.$help.copyTextToClipboard(txt)
+            this.$helpers.copyTextToClipboard(txt)
             this.isCopied = true
         },
         updateUpTime() {

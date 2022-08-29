@@ -41,10 +41,10 @@ const mountFactory = opts =>
 describe('wke-ctr', () => {
     describe(`Created hook and child component's data communication tests`, () => {
         let wrapper
-        it(`Should pass accurate data to split-pane via props`, () => {
+        it(`Should pass accurate data to mxs-split-pane via props`, () => {
             wrapper = mountFactory()
             const { value, minPercent, split, disable } = wrapper.findComponent({
-                name: 'split-pane',
+                name: 'mxs-split-pane',
             }).vm.$props
             expect(value).to.be.equals(wrapper.vm.$data.sidebarPct)
             expect(minPercent).to.be.equals(wrapper.vm.minSidebarPct)

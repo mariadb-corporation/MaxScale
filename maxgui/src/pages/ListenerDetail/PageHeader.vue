@@ -17,7 +17,7 @@
                                 @click="handleDelete"
                             >
                                 <v-icon size="18">
-                                    $vuetify.icons.delete
+                                    $vuetify.icons.mxs_delete
                                 </v-icon>
                             </v-btn>
                         </template>
@@ -31,7 +31,7 @@
                 <global-search class="d-inline-block" />
                 <create-resource class="ml-4 d-inline-block" />
             </portal>
-            <confirm-dialog
+            <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
@@ -41,7 +41,7 @@
             <icon-sprite-sheet
                 size="16"
                 class="listener-state-icon mr-1"
-                :frame="$help.listenerStateIcon(currentListener.attributes.state)"
+                :frame="$helpers.listenerStateIcon(currentListener.attributes.state)"
             >
                 listeners
             </icon-sprite-sheet>

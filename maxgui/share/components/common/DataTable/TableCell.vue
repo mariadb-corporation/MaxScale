@@ -181,12 +181,12 @@ export default {
     },
     watch: {
         item() {
-            if (this.header.autoTruncate) this.$help.doubleRAF(() => this.checkTruncated())
+            if (this.header.autoTruncate) this.$helpers.doubleRAF(() => this.checkTruncated())
         },
     },
     mounted() {
         // wait for DOM to render completely
-        if (this.header.autoTruncate) this.$help.doubleRAF(() => this.checkTruncated())
+        if (this.header.autoTruncate) this.$helpers.doubleRAF(() => this.checkTruncated())
     },
     methods: {
         //---------------------------------Cell events----------------------------------------------------------------

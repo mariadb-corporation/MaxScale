@@ -18,11 +18,11 @@
                     @click="$emit('on-revert')"
                 >
                     <v-icon size="16">
-                        $vuetify.icons.reload
+                        $vuetify.icons.mxs_reload
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
+            <span class="d-inline-block text-center">
                 {{ $t('revertChanges') }}
             </span>
         </v-tooltip>
@@ -41,11 +41,11 @@
                     @click="$emit('on-apply')"
                 >
                     <v-icon size="16">
-                        $vuetify.icons.running
+                        $vuetify.icons.mxs_running
                     </v-icon>
                 </v-btn>
             </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
+            <span class="d-inline-block text-center">
                 {{ $t('applyChanges') }}
             </span>
         </v-tooltip>

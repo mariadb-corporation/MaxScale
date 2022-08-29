@@ -1,12 +1,12 @@
 <template>
-    <collapse
+    <mxs-collapse
         wrapperClass="mt-4"
         titleWrapperClass="mx-n9"
         :toggleOnClick="() => (showContent = !showContent)"
         :isContentVisible="showContent"
         :title="`${$tc(relationshipsType, multiple ? 2 : 1)}`"
     >
-        <select-dropdown
+        <mxs-select
             v-model="selectedItems"
             :defaultItems="defaultItems"
             :items="items"
@@ -15,7 +15,7 @@
             :clearable="clearable"
             :required="required"
         />
-    </collapse>
+    </mxs-collapse>
 </template>
 
 <script>

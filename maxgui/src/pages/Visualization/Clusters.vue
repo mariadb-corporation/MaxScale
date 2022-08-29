@@ -8,7 +8,7 @@
                         <v-list-item-avatar v-show="cluster.state" class="mr-2 mt-n2" size="20">
                             <icon-sprite-sheet
                                 size="20"
-                                :frame="$help.monitorStateIcon(cluster.state)"
+                                :frame="$helpers.monitorStateIcon(cluster.state)"
                             >
                                 monitors
                             </icon-sprite-sheet>
@@ -17,7 +17,7 @@
                             <v-list-item-title
                                 class="tk-azo-sans-web text-h5 mxs-color-helper font-weight-medium text-blue-azure"
                             >
-                                <truncate-string :text="cluster.id" />
+                                <mxs-truncate-str :text="cluster.id" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
                                 <span class="grayed-out">
@@ -45,7 +45,7 @@
                                                 size="16"
                                                 class="server-state-icon mr-1"
                                                 :frame="
-                                                    $help.serverStateIcon(
+                                                    $helpers.serverStateIcon(
                                                         $typy(
                                                             cluster,
                                                             'children[0].serverData.attributes.state'
@@ -55,7 +55,7 @@
                                             >
                                                 servers
                                             </icon-sprite-sheet>
-                                            <truncate-string :text="cluster.children[0].name" />
+                                            <mxs-truncate-str :text="cluster.children[0].name" />
                                         </span>
                                     </template>
                                 </cluster-server-tooltip>
@@ -150,7 +150,7 @@ export default {
         },
         /**
          * Group servers with the same states together.
-         * The state type is determined by using $help.serverStateIcon
+         * The state type is determined by using $helpers.serverStateIcon
          * @param {Object} cluster
          * @return {Object}
          */
@@ -168,7 +168,7 @@ export default {
             return group
         },
         getServerStateType(state) {
-            switch (this.$help.serverStateIcon(state)) {
+            switch (this.$helpers.serverStateIcon(state)) {
                 case 0:
                     return 'error'
                 case 1:

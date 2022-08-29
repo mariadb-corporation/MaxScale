@@ -14,7 +14,7 @@
                     v-on="on"
                     @click="handleVisFilters"
                 >
-                    <v-icon size="10" color="error"> $vuetify.icons.close</v-icon>
+                    <v-icon size="10" color="error"> $vuetify.icons.mxs_close</v-icon>
                 </v-btn>
             </template>
             <span> {{ $t('hideFilters') }}</span>
@@ -35,13 +35,13 @@
                     >
                         {{ filter.id }}
                     </router-link>
-                    <truncate-string class="float-right" :text="`${getFilterModule(filter.id)}`" />
+                    <mxs-truncate-str class="float-right" :text="`${getFilterModule(filter.id)}`" />
                 </div>
 
                 <div class="dashed-arrow d-flex justify-center">
                     <span class="line d-inline-block"></span>
                     <v-icon color="#f59d34" size="12" class="d-block arrow">
-                        $vuetify.icons.arrowHead
+                        $vuetify.icons.mxs_arrowHead
                     </v-icon>
                 </div>
             </div>
