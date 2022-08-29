@@ -6,13 +6,15 @@
         class="query-editor mxs-color-helper all-border-table-border fill-height"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
-        <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
         <div
-            v-else
             class="fill-height d-flex flex-column"
             :class="{ 'query-editor--fullscreen': is_fullscreen }"
         >
-            <template v-if="!is_validating_conn">
+            <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
+            <template else>
+                <div v-if="$slots['query-editor-top']" ref="queryEditorTopSlot">
+                    <slot name="query-editor-top" />
+                </div>
                 <wke-nav-ctr
                     v-if="!hidden_comp.includes('wke-nav-ctr')"
                     :height="wkeNavCtrHeight"
@@ -90,6 +92,7 @@ export default {
             confirmDelAll: true,
             isConfDlgOpened: false,
             dim: {},
+            queryEditorTopSlotHeight: 0,
         }
     },
     computed: {
@@ -110,7 +113,10 @@ export default {
             return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
         },
         ctrDim() {
-            return { width: this.dim.width, height: this.dim.height - this.wkeNavCtrHeight }
+            return {
+                width: this.dim.width,
+                height: this.dim.height - this.wkeNavCtrHeight - this.queryEditorTopSlotHeight,
+            }
         },
     },
     watch: {
@@ -134,7 +140,7 @@ export default {
         await this.validatingConn()
     },
     mounted() {
-        this.$nextTick(() => this.setDim())
+        this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())
     },
 
     methods: {
@@ -197,6 +203,12 @@ export default {
         setDim() {
             const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
+        },
+        setQueryEditorTopSlotHeight() {
+            if (this.$refs.queryEditorTopSlot) {
+                const { height } = this.$refs.queryEditorTopSlot.getBoundingClientRect()
+                this.queryEditorTopSlotHeight = height
+            }
         },
         async wkeShortKeyHandler(e) {
             switch (e.srcKey) {
