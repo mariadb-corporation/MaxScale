@@ -14,7 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
-* [MXS-4239](https://jira.mariadb.org/browse/MXS-4239) Maxscale shows replication  status  as [Slave, Running] though replication is broken with Last_IO_Errno: XXXXXX
+* [MXS-4239](https://jira.mariadb.org/browse/MXS-4239) Maxscale shows replication  status  as [Slave, Running] even when replication credentials are wrong
 * [MXS-4237](https://jira.mariadb.org/browse/MXS-4237) Schemarouter duble free crash
 * [MXS-4219](https://jira.mariadb.org/browse/MXS-4219) Settings of bootstrap servers are not correctly propagated to dynamic servers
 * [MXS-4218](https://jira.mariadb.org/browse/MXS-4218) Configuration synchronization fails if static global parameters are different
