@@ -156,13 +156,22 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
     case State::AUTHSWITCH_SENT:
         {
             // Client is replying to an AuthSwitch request. The packet should contain
-            // the authentication token.
-            if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
+            // the authentication token or be empty if trying to log in without pw.
+            auto buflen = gwbuf_length(buf);
+            auto has_token = buflen == (MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
+            if (has_token || buflen == MYSQL_HEADER_LEN)
             {
                 auto& auth_token = client_data->auth_token;
-                auth_token.clear();
-                auth_token.resize(MYSQL_SCRAMBLE_LEN);
-                gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                if (has_token)
+                {
+                    auth_token.resize(MYSQL_SCRAMBLE_LEN);
+                    gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                }
+                else
+                {
+                    auth_token.clear();     // authenticating without password
+                }
+
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
                 m_state = State::CHECK_TOKEN;
