@@ -126,6 +126,24 @@ std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query(const std::string&
     return this->query(query, Expect::ANY);
 }
 
+std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query_f(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    std::string sql = mxb::string_vprintf(format, args);
+    va_end(args);
+    return query(sql);
+}
+
+std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query_f(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    std::string sql = mxb::string_vprintf(format, args);
+    va_end(args);
+    return query(sql, Expect::ANY);
+}
+
 mxt::ScopedUser
 maxtest::MariaDB::create_user(const std::string& user, const std::string& host, const std::string& pw)
 {
