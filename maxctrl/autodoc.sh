@@ -40,6 +40,10 @@ For more information about the MaxScale REST API, refer to the
 
 [TOC]
 
+# Limitations
+
+* MaxCtrl does not work when used from a SystemD unit with MemoryDenyWriteExecute=true.
+
 # Commands
 
 $COMMANDS

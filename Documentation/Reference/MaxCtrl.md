@@ -16,6 +16,10 @@ For more information about the MaxScale REST API, refer to the
 
 [TOC]
 
+# Limitations
+
+* MaxCtrl does not work when used from a SystemD unit with MemoryDenyWriteExecute=true.
+
 # Commands
 
 ## list
@@ -92,7 +96,7 @@ List all services and the servers they use.
   Router            | Router used by the service
   Connections       | Current connection count
   Total Connections | Total connection count
-  Servers           | Servers that the service uses
+  Targets           | Targets that the service uses
 ```
 
 ### list listeners
@@ -771,12 +775,13 @@ Options:
 The list of services that use this filter is show in the `Services` field.
 
 
-  Field      | Description
-  -----      | -----------
-  Filter     | Filter name
-  Module     | The module that the filter uses
-  Services   | Services that use the filter
-  Parameters | Filter parameters
+  Field       | Description
+  -----       | -----------
+  Filter      | Filter name
+  Module      | The module that the filter uses
+  Services    | Services that use the filter
+  Parameters  | Filter parameters
+  Diagnostics | Filter diagnostics
 ```
 
 ### show filters
@@ -807,12 +812,13 @@ Options:
 Show detailed information of all filters.
 
 
-  Field      | Description
-  -----      | -----------
-  Filter     | Filter name
-  Module     | The module that the filter uses
-  Services   | Services that use the filter
-  Parameters | Filter parameters
+  Field       | Description
+  -----       | -----------
+  Filter      | Filter name
+  Module      | The module that the filter uses
+  Services    | Services that use the filter
+  Parameters  | Filter parameters
+  Diagnostics | Filter diagnostics
 ```
 
 ### show listener
@@ -878,12 +884,13 @@ Options:
 Show detailed information of all filters.
 
 
-  Field      | Description
-  -----      | -----------
-  Filter     | Filter name
-  Module     | The module that the filter uses
-  Services   | Services that use the filter
-  Parameters | Filter parameters
+  Field       | Description
+  -----       | -----------
+  Filter      | Filter name
+  Module      | The module that the filter uses
+  Services    | Services that use the filter
+  Parameters  | Filter parameters
+  Diagnostics | Filter diagnostics
 ```
 
 ### show module
