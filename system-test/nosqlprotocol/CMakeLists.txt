@@ -36,3 +36,24 @@ add_dependencies(copy_compare_files copy_test_files)
 # Tests
 #
 add_test_script(nosqlprotocol nosqlprotocol.sh nosqlprotocol LABELS nosqlprotocol REPL_BACKEND)
+
+include_directories(${BSON_CXX_INCLUDE_DIR})
+include_directories(${MONGO_CXX_INCLUDE_DIR})
+
+add_test_executable_ex(
+  NAME nosqlprotocol_bootstrap_shared
+  SOURCE nosqlprotocol_bootstrap_shared.cpp
+  CONFIG nosqlprotocol_bootstrap_shared.cnf nosqlprotocol_bootstrap_shared.cnf
+  VMS repl_backend second_maxscale
+  LABELS nosqlprotocol)
+
+target_link_libraries(nosqlprotocol_bootstrap_shared
+  ${MONGO_CXX_LIBRARIES}
+  ${MONGO_C_LIBRARIES}
+  ${BSON_CXX_LIBRARIES}
+  ${BSON_C_LIBRARIES}
+  uuid
+  sasl2
+  resolv
+  icuuc
+  )
