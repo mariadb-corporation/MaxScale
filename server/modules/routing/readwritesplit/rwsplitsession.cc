@@ -1131,6 +1131,13 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     case HINT_ROUTE_TO_NAMED_SERVER:
     case HINT_ROUTE_TO_LAST_USED:
     case HINT_PARAMETER:
+        // Ignore hints inside transactions if transaction replay or causal reads is enabled. This prevents
+        // all sorts of problems (e.g. MXS-4260) that happen when the contents of the transaction are spread
+        // across multiple servers.
+        if (trx_is_open() && (m_config.transaction_replay || m_config.causal_reads != CausalReads::NONE))
+        {
+            rv = false;
+        }
         break;
 
     case HINT_ROUTE_TO_UPTODATE_SERVER:
