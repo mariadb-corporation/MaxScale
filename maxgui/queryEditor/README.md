@@ -4,6 +4,28 @@
 
 //TODO: Add this when it's published in npm
 
+Query editor requires these peer dependencies to be installed
+
+-   @mdi/font@^7.0.96
+-   axios@^0.27.2
+-   chart.js@^2.9.4
+-   deep-diff@^1.0.2
+-   immutability-helper@^3.1.1
+-   localforage@^1.10.0
+-   lodash@^4.17.21
+-   monaco-editor@^0.33.0
+-   stacktrace-parser@^0.1.10
+-   typy@^3.3.0
+-   uuid@^8.3.2
+-   vue@^2.6.14
+-   vue-chartjs@^3.5.1
+-   vue-i18n@^8.27.0
+-   vue-moment@^4.1.0
+-   vue-shortkey@^3.1.7
+-   vuetify@^2.6.7
+-   vuex@^3.6.2
+-   vuex-persist@^3.1.3
+
 ## Example of registering the plugin
 
 Registering MaxScale Query Editor plugin
