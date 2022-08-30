@@ -27,6 +27,7 @@ option(PACKAGE "Enable package building (this disables local installation of sys
 option(PROFILE "Profiling (gprof)" OFF)
 option(STATIC_EMBEDDED "Use static version of libmysqld" ON)
 option(WITH_ASAN "Enable AddressSanitizer" OFF)
+option(WITH_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(WITH_JEMALLOC "Use jemalloc as the memory allocator" OFF)
 option(WITH_MAXSCALE_CNF "Install the template maxscale.cnf file" ON)
 option(WITH_SCRIPTS "Install init.d scripts and ldconf configuration files" ON)
