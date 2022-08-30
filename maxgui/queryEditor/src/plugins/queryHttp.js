@@ -62,7 +62,6 @@ function getSqlConnId(url) {
  * @returns {Object} axios instance
  */
 function queryHttp(store) {
-    //TODO: Make baseURL and perhaps headers configurable
     let queryHttp = ax.create({
         baseURL: '/',
         headers: {
@@ -73,6 +72,7 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
+            config.baseURL = store.state.queryEditorConfig.base_url
             patchIsConnBusyMap({ store, value: true, sql_conn_id: getSqlConnId(config.url) })
             return { ...config }
         },

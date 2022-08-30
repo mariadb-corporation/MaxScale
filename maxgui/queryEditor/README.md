@@ -235,6 +235,13 @@ The `maxscale-query-editor` component has the following slots:
 -   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
     but this is for DDL_EDITOR mode (editor for altering table).
 
+## Change query editor base url
+
+Query editor base url can be changed at run time by committing the following
+mutation:
+
+`store.commit('queryEditorConfig/SET_BASE_URL', url)`
+
 ## Reserved keywords
 
 Certain keywords are reserved in order to make the query editor work properly.
