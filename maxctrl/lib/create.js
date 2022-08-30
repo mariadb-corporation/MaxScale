@@ -497,11 +497,34 @@ exports.builder = function (yargs) {
             return Promise.reject("'" + argv.port + "' is not a valid value for port");
           }
 
+          var err = validateParams(argv, argv.params);
+
+          if (err) {
+            return Promise.reject(err);
+          }
+
           var listener = {
             data: {
               id: argv.name,
               type: "listeners",
-              attributes: {},
+              attributes: {
+                parameters: {
+                  port: argv.port,
+                  address: argv.interface,
+                  protocol: argv.protocol,
+                  authenticator: argv.authenticator,
+                  authenticator_options: argv["authenticator-options"],
+                  ssl: argv["tls"],
+                  ssl_key: argv["tls-key"],
+                  ssl_cert: argv["tls-cert"],
+                  ssl_ca_cert: argv["tls-ca-cert"],
+                  ssl_version: argv["tls-version"],
+                  ssl_cert_verify_depth: argv["tls-cert-verify-depth"],
+                  ssl_verify_peer_certificate: argv["tls-verify-peer-certificate"],
+                  ssl_verify_peer_host: argv["tls-verify-peer-host"],
+                  ssl_crl: argv["tls-crl"],
+                },
+              },
               relationships: {
                 services: {
                   data: [{ id: argv.service, type: "services" }],
@@ -510,35 +533,14 @@ exports.builder = function (yargs) {
             },
           };
 
-          var err = validateParams(argv, argv.params);
-
-          if (err) {
-            return Promise.reject(err);
-          }
-
-          listener.data.attributes.parameters = argv.params.reduce(to_obj, {});
-
           var params = listener.data.attributes.parameters;
-
-          // Use the option only if the extra parameters haven't define the value already
-          params.port = params.port || argv.port;
-          params.address = params.address || argv.interface;
-          params.protocol = params.protocol || argv.protocol;
-          params.authenticator = params.authenticator || argv.authenticator;
-          params.authenticator_options = params.authenticator_options || argv["authenticator-options"];
-          params.ssl_key = params.ssl_key || argv["tls-key"];
-          params.ssl_cert = params.ssl_cert || argv["tls-cert"];
-          params.ssl_ca_cert = params.ssl_ca_cert || argv["tls-ca-cert"];
-          params.ssl_version = params.ssl_version || argv["tls-version"];
-          params.ssl_cert_verify_depth = params.ssl_cert_verify_depth || argv["tls-cert-verify-depth"];
-          params.ssl_verify_peer_certificate =
-            params.ssl_verify_peer_certificate || argv["tls-verify-peer-certificate"];
-          params.ssl_verify_peer_host = params.ssl_verify_peer_host || argv["tls-verify-peer-host"];
-          params.ssl_crl = params.ssl_crl || argv["tls-crl"];
 
           if (params.ssl_key || params.ssl_cert || params.ssl_ca_cert) {
             listener.data.attributes.parameters.ssl = true;
           }
+
+          var extra_params = argv.params.reduce(to_obj, {});
+          Object.assign(listener.data.attributes.parameters, extra_params);
 
           return doRequest(host, "listeners", { method: "POST", data: listener });
         });
