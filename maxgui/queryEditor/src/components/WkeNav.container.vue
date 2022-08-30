@@ -20,7 +20,7 @@
                     :disabled="!$typy(getWkeConnByWkeId(wke.id), 'name').safeString"
                     top
                     transition="slide-x-transition"
-                    content-class="shadow-drop"
+                    content-class="shadow-drop white"
                 >
                     <template v-slot:activator="{ on }">
                         <div

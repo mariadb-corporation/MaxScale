@@ -2,7 +2,7 @@
     <v-tooltip
         top
         transition="slide-y-transition"
-        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+        content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
     >
         <template v-slot:activator="{ on }">
             <v-btn icon small class="min-max-btn" v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">

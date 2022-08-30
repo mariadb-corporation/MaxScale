@@ -61,7 +61,7 @@
                 "
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <div class="ml-4 d-flex align-center" v-on="on">
