@@ -338,6 +338,9 @@ public:
      * @return Master server, or null if none.
      */
     mxt::MariaDBServer* get_repl_master();
+    int                 get_repl_master_idx();
+
+    bool sync_repl_slaves();
 
     void set_verbose(bool val);
     bool verbose() const;

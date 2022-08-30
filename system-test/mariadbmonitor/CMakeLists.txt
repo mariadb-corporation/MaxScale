@@ -1,3 +1,9 @@
+add_library(mariadbmon_utils SHARED mariadbmon_utils.cc)
+target_link_libraries(mariadbmon_utils maxtest)
+set_target_properties(mariadbmon_utils PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
+install(TARGETS mariadbmon_utils DESTINATION system-test/mariadbmonitor)
+add_dependencies(mariadbmon_utils maxtest)
+
 # Two-server multimaster topology
 add_test_executable_ex(NAME mariadbmon_multimaster_simple SOURCE mariadbmon_multimaster_simple.cc
         CONFIG mariadbmon_multimaster_simple.cnf VMS repl_backend LABELS mysqlmon)
@@ -55,10 +61,10 @@ add_test_executable_ex(NAME mysqlmon_rejoin_bad2 SOURCE mysqlmon_rejoin_bad2.cpp
         VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor Rejoin tests
-add_test_executable_ex(NAME mysqlmon_rejoin_manual SOURCE mysqlmon_rejoin_manual.cpp CONFIG mysqlmon_rejoin_manual.cnf
-        VMS repl_backend LABELS mysqlmon)
-add_test_executable_ex(NAME mysqlmon_rejoin_manual2 SOURCE mysqlmon_rejoin_manual2.cpp CONFIG mysqlmon_rejoin_manual.cnf
-        VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mysqlmon_rejoin_manual SOURCE mysqlmon_rejoin_manual.cpp
+        CONFIG mysqlmon_rejoin_manual.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+add_test_executable_ex(NAME mysqlmon_rejoin_manual2 SOURCE mysqlmon_rejoin_manual2.cpp
+        CONFIG mysqlmon_rejoin_manual.cnf VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor rolling master
 add_test_executable_ex(NAME mysqlmon_failover_rolling_master SOURCE mysqlmon_failover_rolling_master.cpp
