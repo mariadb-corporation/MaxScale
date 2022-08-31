@@ -1344,9 +1344,7 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     snprintf(column,
              max_column_size,
              "%s",
-             router->service->dbref->server->address ?
-             router->service->dbref->server->address :
-             "");
+             router->service->dbref->server->address);
     col_len = strlen(column);
     *ptr++ = col_len;                           // Length of result string
     memcpy((char*)ptr, column, col_len);        // Result string

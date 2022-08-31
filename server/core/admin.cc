@@ -340,7 +340,7 @@ static char* load_cert(const char* file)
 
         if (!infile.good())
         {
-            delete rval;
+            delete[] rval;
             rval = NULL;
         }
     }
@@ -382,9 +382,9 @@ static LoadResult load_ssl_certificates()
         else
         {
             rval = LoadResult::ERROR;
-            delete admin_ssl_key;
-            delete admin_ssl_cert;
-            delete admin_ssl_ca_cert;
+            delete[] admin_ssl_key;
+            delete[] admin_ssl_cert;
+            delete[] admin_ssl_ca_cert;
             admin_ssl_key = NULL;
             admin_ssl_cert = NULL;
             admin_ssl_ca_cert = NULL;

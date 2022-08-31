@@ -1413,12 +1413,9 @@ void dprintOneDCB(DCB* pdcb, DCB* dcb)
     }
     if (dcb->server)
     {
-        if (dcb->server->address)
-        {
-            dcb_printf(pdcb,
-                       "\tServer name/IP:     %s\n",
-                       dcb->server->address);
-        }
+        dcb_printf(pdcb,
+                   "\tServer name/IP:     %s\n",
+                   dcb->server->address);
         if (dcb->server->port)
         {
             dcb_printf(pdcb,

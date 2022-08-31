@@ -670,7 +670,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
 
         mxb::Worker& worker = mxs::MainWorker::get();
 
-        worker.delayed_call(5000, sendMessage, my_instance);
+        worker.dcall(5000, sendMessage, my_instance);
     }
 
     return (MXS_FILTER*)my_instance;

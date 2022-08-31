@@ -41,6 +41,8 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+
 using std::string;
 using std::vector;
 
