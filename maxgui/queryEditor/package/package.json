@@ -1,17 +1,20 @@
 {
     "name": "mxs-query-editor",
-    "version": "1.0.0",
+    "version": "1.0.0-rc1",
     "description": "MaxScale query editor UI",
     "author": "MariaDB Corporation Ab",
-    "license": "SEE LICENSE IN ../../../LICENSE.TXT",
+    "license": "https://mariadb.com/bsl11/",
     "main": "./dist/mxs-query-editor.esm.js",
     "module": "./dist/mxs-query-editor.esm.js",
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "prepack": "rimraf ./maxscale-query-editor-1.0.0.tgz",
-        "pack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js && npm pack && rimraf ./dist"
+        "prepack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js",
+        "postpublish": "rimraf ./dist"
     },
     "optionalDependencies": {
-        "prettier": "^1.19.1"
+        "prettier": "1.91.1"
     },
     "devDependencies": {
         "@babel/core": "^7.14.6",

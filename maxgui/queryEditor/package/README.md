@@ -2,7 +2,9 @@
 
 ## Installation
 
-//TODO: Add this when it's published in npm
+```bash
+npm i mxs-query-editor
+```
 
 Query editor peerDependencies
 
@@ -296,10 +298,10 @@ Certain keywords are reserved in order to make the query editor work properly.
 | \$helpers             |               Vue instance property                |
 | \$logger              |               Vue instance property                |
 
-## How to pack the package
+## How to publish the package
 
 At the root directory that is `/maxgui`
 
 ```
-npm ci && cd queryEditor/package && npm ci --force && npm run pack
+npm ci && cd queryEditor/package && npm ci --force && npm publish
 ```
