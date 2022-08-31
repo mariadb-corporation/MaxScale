@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import MxsDlg from '@share/components/common/Dialogs/MxsDlg'
+import MxsDlg from '@share/components/common/MxsDlgs/MxsDlg'
 
 /**
  * This function mockups the action of opening a dialog

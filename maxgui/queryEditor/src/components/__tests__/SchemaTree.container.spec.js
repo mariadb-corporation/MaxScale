@@ -329,15 +329,15 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     it(`Should return accurate value for queryOpts computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.queryOpts).to.eql([
-            { text: wrapper.vm.$t('previewData'), type: 'QUERY' },
-            { text: wrapper.vm.$t('viewDetails'), type: 'QUERY' },
+            { text: wrapper.vm.$mxs_t('previewData'), type: 'QUERY' },
+            { text: wrapper.vm.$mxs_t('viewDetails'), type: 'QUERY' },
         ])
     })
     it(`Should return accurate value for insertOpts computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.insertOpts).to.eql([
             {
-                text: wrapper.vm.$t('placeToEditor'),
+                text: wrapper.vm.$mxs_t('placeToEditor'),
                 children: wrapper.vm.genTxtOpts('INSERT'),
             },
         ])
@@ -346,7 +346,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.clipboardOpts).to.eql([
             {
-                text: wrapper.vm.$t('copyToClipboard'),
+                text: wrapper.vm.$mxs_t('copyToClipboard'),
                 children: wrapper.vm.genTxtOpts('CLIPBOARD'),
             },
         ])
@@ -363,7 +363,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.baseOptsMap).to.eql({
             Schema: [
-                { text: wrapper.vm.$t('useDb'), type: 'USE' },
+                { text: wrapper.vm.$mxs_t('useDb'), type: 'USE' },
                 ...wrapper.vm.insertOpts,
                 ...wrapper.vm.clipboardOpts,
             ],
@@ -376,15 +376,15 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     it(`Should return accurate value for userNodeOptsMap computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.userNodeOptsMap).to.eql({
-            Schema: [{ text: wrapper.vm.$t('dropSchema'), type: 'DD' }],
+            Schema: [{ text: wrapper.vm.$mxs_t('dropSchema'), type: 'DD' }],
             Table: [
-                { text: wrapper.vm.$t('alterTbl'), type: 'DD' },
-                { text: wrapper.vm.$t('dropTbl'), type: 'DD' },
-                { text: wrapper.vm.$t('truncateTbl'), type: 'DD' },
+                { text: wrapper.vm.$mxs_t('alterTbl'), type: 'DD' },
+                { text: wrapper.vm.$mxs_t('dropTbl'), type: 'DD' },
+                { text: wrapper.vm.$mxs_t('truncateTbl'), type: 'DD' },
             ],
-            'Stored Procedure': [{ text: wrapper.vm.$t('dropSp'), type: 'DD' }],
+            'Stored Procedure': [{ text: wrapper.vm.$mxs_t('dropSp'), type: 'DD' }],
             Column: [],
-            Trigger: [{ text: wrapper.vm.$t('dropTrigger'), type: 'DD' }],
+            Trigger: [{ text: wrapper.vm.$mxs_t('dropTrigger'), type: 'DD' }],
         })
     })
     const expectedBoolVal = [true, false]
@@ -441,10 +441,10 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         it(`Should return valid text option for type ${type} genTxtOpts is called`, () => {
             wrapper = mountFactory()
             expect(wrapper.vm.genTxtOpts(type)).to.be.eql([
-                { text: wrapper.vm.$t('qualifiedNameQuoted'), type },
-                { text: wrapper.vm.$t('qualifiedName'), type },
-                { text: wrapper.vm.$t('nameQuoted'), type },
-                { text: wrapper.vm.$t('name'), type },
+                { text: wrapper.vm.$mxs_t('qualifiedNameQuoted'), type },
+                { text: wrapper.vm.$mxs_t('qualifiedName'), type },
+                { text: wrapper.vm.$mxs_t('nameQuoted'), type },
+                { text: wrapper.vm.$mxs_t('name'), type },
             ])
         })
     })
@@ -462,13 +462,13 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             updateActiveNodeSpy.should.have.been.calledOnceWithExactly(prvw_node)
             expect(wrapper.emitted()).to.have.property('get-node-data')
             switch (opt.text) {
-                case wrapper.vm.$t('previewData'):
+                case wrapper.vm.$mxs_t('previewData'):
                     expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
                         SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA,
                         schemaId: prvw_node.id,
                     })
                     break
-                case wrapper.vm.$t('viewDetails'):
+                case wrapper.vm.$mxs_t('viewDetails'):
                     expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
                         SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
                         schemaId: prvw_node.id,

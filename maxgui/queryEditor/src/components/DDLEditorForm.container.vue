@@ -23,7 +23,7 @@
                 color="primary"
                 :href="`#${spec}`"
             >
-                <span> {{ $t(spec.toLowerCase()) }}</span>
+                <span> {{ $mxs_t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
         <div class="px-3 py-2">

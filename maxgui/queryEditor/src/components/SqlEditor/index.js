@@ -238,34 +238,34 @@ export default {
             // Add custom commands to palette list
             const actionDescriptors = [
                 {
-                    label: this.$t('runStatements', { quantity: this.$t('all') }),
+                    label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('all') }),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
                     ],
                     run: () => this.$emit('onCtrlShiftEnter'),
                 },
                 {
-                    label: this.$t('runStatements', { quantity: this.$t('selected') }),
+                    label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('selected') }),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
                     run: () => this.$emit('onCtrlEnter'),
                 },
                 {
-                    label: this.$t('createQuerySnippet'),
+                    label: this.$mxs_t('createQuerySnippet'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
                     run: () => this.$emit('onCtrlD'),
                 },
                 {
-                    label: this.$t('openScript'),
+                    label: this.$mxs_t('openScript'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO],
                     run: () => this.$emit('onCtrlO'),
                 },
                 {
-                    label: this.$t('saveScript'),
+                    label: this.$mxs_t('saveScript'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
                     run: () => this.$emit('onCtrlS'),
                 },
                 {
-                    label: this.$t('saveScriptAs'),
+                    label: this.$mxs_t('saveScriptAs'),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
                     ],

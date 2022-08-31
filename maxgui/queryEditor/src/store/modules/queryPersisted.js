@@ -119,7 +119,7 @@ export default {
                 commit(
                     'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [this.i18n.t('errors.persistentStorage')],
+                        text: [this.vue.$mxs_t('errors.persistentStorage')],
                         type: 'error',
                     },
                     { root: true }
@@ -146,7 +146,7 @@ export default {
                 commit(
                     'appNotifier/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [this.i18n.t('errors.persistentStorage')],
+                        text: [this.vue.$mxs_t('errors.persistentStorage')],
                         type: 'error',
                     },
                     { root: true }

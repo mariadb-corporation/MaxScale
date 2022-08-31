@@ -22,7 +22,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('stop') }} {{ $tc('services', 1) }} </span>
+                        <span>{{ $mxs_t('stop') }} {{ $mxs_tc('services', 1) }} </span>
                     </v-tooltip>
                     <v-tooltip
                         bottom
@@ -43,7 +43,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('start') }} {{ $tc('services', 1) }} </span>
+                        <span>{{ $mxs_t('start') }} {{ $mxs_tc('services', 1) }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -67,7 +67,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('destroy') }} {{ $tc('services', 1) }} </span>
+                        <span>{{ $mxs_t('destroy') }} {{ $mxs_tc('services', 1) }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -88,6 +88,7 @@
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
+                :saveText="dialogType"
                 :type="dialogType"
                 :item="currentService"
                 :onSave="confirmSave"
@@ -151,7 +152,7 @@ export default {
 
         actionHandle(type) {
             this.dialogType = type
-            this.dialogTitle = `${this.$t(type)} ${this.$tc('services', 1)}`
+            this.dialogTitle = `${this.$mxs_t(type)} ${this.$mxs_tc('services', 1)}`
             this.isConfDlgOpened = true
         },
 

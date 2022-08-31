@@ -89,7 +89,7 @@ describe(`ConnMan - child component's data communication tests `, () => {
         const { type, item } = confirmDlg.$props
         const { value, title, closeImmediate, onSave } = confirmDlg.$attrs
         expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)
-        expect(title).to.be.equals(wrapper.vm.$t('disconnectConn'))
+        expect(title).to.be.equals(wrapper.vm.$mxs_t('disconnectConn'))
         expect(type).to.be.equals('disconnect')
         expect(closeImmediate).to.be.true
         expect(item).to.be.deep.equals(wrapper.vm.connToBeDel)
@@ -110,8 +110,8 @@ describe(`ConnMan - child component's data communication tests `, () => {
         expect(items).to.be.deep.equals(wrapper.vm.connOptions)
         expect(itemText).to.be.equals('name')
         expect(returnObject).to.be.true
-        expect(placeholder).to.be.equals(wrapper.vm.$t('selectConnection'))
-        expect(noDataText).to.be.equals(wrapper.vm.$t('noConnAvail'))
+        expect(placeholder).to.be.equals(wrapper.vm.$mxs_t('selectConnection'))
+        expect(noDataText).to.be.equals(wrapper.vm.$mxs_t('noConnAvail'))
         expect(disabled).to.be.equals(wrapper.vm.getIsConnBusy)
     })
 })

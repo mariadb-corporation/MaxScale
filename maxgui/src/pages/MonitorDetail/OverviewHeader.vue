@@ -55,7 +55,7 @@
         <mxs-sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
-            mode="swap"
+            saveText="swap"
             :entityName="targetSelectItemType"
             :itemsList="itemsList"
             :defaultItems="defaultItems"
@@ -65,7 +65,7 @@
         >
             <template v-if="smallInfo" v-slot:body-append>
                 <small class="d-inline-block mt-4">
-                    {{ $t(smallInfo) }}
+                    {{ $mxs_t(smallInfo) }}
                 </small>
             </template>
         </mxs-sel-dlg>

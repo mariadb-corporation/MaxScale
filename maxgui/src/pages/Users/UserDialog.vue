@@ -4,7 +4,9 @@
             <p
                 v-if="type === USER_ADMIN_ACTIONS.DELETE"
                 class="confirmations-text"
-                v-html="$t(`confirmations.${USER_ADMIN_ACTIONS.DELETE}`, { targetId: currUser.id })"
+                v-html="
+                    $mxs_t(`confirmations.${USER_ADMIN_ACTIONS.DELETE}`, { targetId: currUser.id })
+                "
             />
             <div v-if="type === USER_ADMIN_ACTIONS.UPDATE" class="d-flex align-center mb-2">
                 <v-icon size="20" class="mr-1">$vuetify.icons.mxs_user </v-icon>
@@ -23,7 +25,7 @@
                 <v-text-field
                     v-if="type === USER_ADMIN_ACTIONS.ADD"
                     v-model="currUser.id"
-                    :rules="rule($t('username'))"
+                    :rules="rule($mxs_t('username'))"
                     class="vuetify-input--override error--text__bottom mb-4"
                     autofocus
                     dense
@@ -32,18 +34,18 @@
                     outlined
                     required
                     autocomplete="username"
-                    :placeholder="$t('username')"
+                    :placeholder="$mxs_t('username')"
                     hide-details="auto"
                 />
                 <label
                     v-if="type === USER_ADMIN_ACTIONS.UPDATE"
                     class="field__label mxs-color-helper text-small-text label-required"
                 >
-                    {{ $t('newPass') }}
+                    {{ $mxs_t('newPass') }}
                 </label>
                 <v-text-field
                     v-model="currUser.password"
-                    :rules="rule($t('password'))"
+                    :rules="rule($mxs_t('password'))"
                     :type="isPwdVisible ? 'text' : 'password'"
                     class="vuetify-input--override vuetify-input--override-password error--text__bottom"
                     autocomplete="new-password"
@@ -53,7 +55,7 @@
                     :height="36"
                     outlined
                     required
-                    :placeholder="$t(type === USER_ADMIN_ACTIONS.ADD ? 'password' : '')"
+                    :placeholder="$mxs_t(type === USER_ADMIN_ACTIONS.ADD ? 'password' : '')"
                     hide-details="auto"
                 >
                     <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
@@ -75,8 +77,8 @@
                         dense
                         :height="36"
                         hide-details="auto"
-                        :placeholder="$t('role')"
-                        :rules="rule($t('role'))"
+                        :placeholder="$mxs_t('role')"
+                        :rules="rule($mxs_t('role'))"
                     />
                 </template>
             </template>
@@ -126,7 +128,7 @@ export default {
     },
     methods: {
         rule(inputName) {
-            return [val => !!val || this.$t('errors.requiredInput', { inputName })]
+            return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
         },
     },
 }

@@ -78,7 +78,7 @@ describe(`ConnDlg - child component's data communication tests `, () => {
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isOpened)
         expect(onSave).to.be.equals(wrapper.vm.onSave)
-        expect(title).to.be.equals(`${wrapper.vm.$t('connectTo')}...`)
+        expect(title).to.be.equals(`${wrapper.vm.$mxs_t('connectTo')}...`)
         expect(lazyValidation).to.be.false
         expect(hasSavingErr).to.be.equals(wrapper.vm.hasSavingErr)
         expect(hasFormDivider).to.be.true
@@ -211,7 +211,7 @@ describe(`ConnDlg - methods and computed properties tests `, () => {
         })
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.$data.errRsrcMsg).to.be.equals(
-            wrapper.vm.$t('errors.existingRsrcConnection', {
+            wrapper.vm.$mxs_t('errors.existingRsrcConnection', {
                 resourceType: wrapper.vm.$data.resourceTypes[0],
             })
         )
@@ -277,8 +277,10 @@ describe(`ConnDlg - form input tests`, () => {
                     const inputComponent = dlg.find(`.${field}`)
                     await inputChangeMock(inputComponent, '')
                     expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-                        wrapper.vm.$t('errors.requiredInput', {
-                            inputName: wrapper.vm.$t(field === 'user' ? 'username' : 'password'),
+                        wrapper.vm.$mxs_t('errors.requiredInput', {
+                            inputName: wrapper.vm.$mxs_t(
+                                field === 'user' ? 'username' : 'password'
+                            ),
                         })
                     )
                     break
@@ -288,8 +290,8 @@ describe(`ConnDlg - form input tests`, () => {
                     await itemSelectMock(dropDownComponent, null)
                     await wrapper.vm.$nextTick()
                     expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
-                        wrapper.vm.$t('errors.requiredInput', {
-                            inputName: wrapper.vm.$tc(wrapper.vm.resourceType, 1),
+                        wrapper.vm.$mxs_t('errors.requiredInput', {
+                            inputName: wrapper.vm.$mxs_tc(wrapper.vm.resourceType, 1),
                         })
                     )
                     break

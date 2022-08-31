@@ -126,7 +126,7 @@ export default {
                 this.vue.$logger('store-querySession-handleAddNewSession').error(e)
                 commit(
                     'appNotifier/SET_SNACK_BAR_MESSAGE',
-                    { text: [this.i18n.t('errors.persistentStorage')], type: 'error' },
+                    { text: [this.vue.$mxs_t('errors.persistentStorage')], type: 'error' },
                     { root: true }
                 )
             }

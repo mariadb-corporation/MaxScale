@@ -304,20 +304,20 @@ export default {
         },
         getServerOps: (state, getters, rootState) => {
             const { MAINTAIN, CLEAR, DRAIN, DELETE } = rootState.app_config.SERVER_OP_TYPES
-            // scope is needed to access $t
+            // scope is needed to access $mxs_t
             return ({ currStateMode, scope }) => ({
                 [MAINTAIN]: {
-                    text: scope.$t('serverOps.actions.maintain'),
+                    text: scope.$mxs_t('serverOps.actions.maintain'),
                     type: MAINTAIN,
                     icon: '$vuetify.icons.mxs_maintenance',
                     iconSize: 22,
                     color: 'primary',
-                    info: scope.$t(`serverOps.info.maintain`),
+                    info: scope.$mxs_t(`serverOps.info.maintain`),
                     params: 'set?state=maintenance',
                     disabled: currStateMode === 'maintenance',
                 },
                 [CLEAR]: {
-                    text: scope.$t('serverOps.actions.clear'),
+                    text: scope.$mxs_t('serverOps.actions.clear'),
                     type: CLEAR,
                     icon: '$vuetify.icons.mxs_restart',
                     iconSize: 22,
@@ -327,17 +327,17 @@ export default {
                     disabled: currStateMode !== 'maintenance' && currStateMode !== 'drained',
                 },
                 [DRAIN]: {
-                    text: scope.$t('serverOps.actions.drain'),
+                    text: scope.$mxs_t('serverOps.actions.drain'),
                     type: DRAIN,
                     icon: '$vuetify.icons.mxs_drain',
                     iconSize: 22,
                     color: 'primary',
-                    info: scope.$t(`serverOps.info.drain`),
+                    info: scope.$mxs_t(`serverOps.info.drain`),
                     params: `set?state=drain`,
                     disabled: currStateMode === 'maintenance' || currStateMode === 'drained',
                 },
                 [DELETE]: {
-                    text: scope.$t('serverOps.actions.delete'),
+                    text: scope.$mxs_t('serverOps.actions.delete'),
                     type: DELETE,
                     icon: '$vuetify.icons.mxs_delete',
                     iconSize: 18,

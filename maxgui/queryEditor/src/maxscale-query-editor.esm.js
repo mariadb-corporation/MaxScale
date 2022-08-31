@@ -17,6 +17,11 @@ import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 import helpersPlugin from '@share/plugins/helpers'
 import * as helpers from '@queryEditorSrc/utils/helpers'
 import logger from '@share/plugins/logger'
+import scopingI18n from '@share/plugins/scopingI18n'
+
+//TODO: Add more if needed
+export { default as QueryCnfGearBtn } from '@queryEditorSrc/components/QueryCnfGearBtn.vue'
+export { default as MinMaxBtn } from '@queryEditorSrc/components/MinMaxBtn.container.vue'
 
 export default /*#__PURE__*/ (() => {
     // Get component instance
@@ -25,11 +30,12 @@ export default /*#__PURE__*/ (() => {
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
      * @param {Object} options.store - vuex store
+     * @param {Object} options.i18n - vue-i18n instance
+     * @param {Array} options.hidden_comp - a list of component name to be hidden. e.g. wke-nav-ctr
      */
-    installable.install = (Vue, { store }) => {
+    installable.install = (Vue, { store, i18n, hidden_comp = [] }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
-
-        //TODO: Prevent duplicated vuex module names, instance properties name
+        Vue.use(scopingI18n, { i18n })
 
         //Register common components
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
@@ -40,6 +46,7 @@ export default /*#__PURE__*/ (() => {
         Object.keys(queryEditorModules).forEach(key => {
             store.registerModule(key, queryEditorModules[key])
         })
+        if (hidden_comp.length) store.commit('queryEditorConfig/SET_HIDDEN_COMP', hidden_comp)
 
         // Register utilities .i.e. Add instance properties to Vue.prototype
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp

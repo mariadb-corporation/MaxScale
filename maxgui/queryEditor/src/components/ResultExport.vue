@@ -21,7 +21,7 @@
             <mxs-dlg
                 v-model="isConfigDialogOpened"
                 :onSave="onExport"
-                :title="$t('exportResults')"
+                :title="$mxs_t('exportResults')"
                 saveText="export"
                 minBodyWidth="512px"
                 :lazyValidation="false"
@@ -34,7 +34,7 @@
                                 <label
                                     class="field__label mxs-color-helper text-small-text label-required"
                                 >
-                                    {{ $t('fileName') }}
+                                    {{ $mxs_t('fileName') }}
                                 </label>
                                 <v-text-field
                                     v-model="fileName"
@@ -46,7 +46,9 @@
                                     :rules="[
                                         val =>
                                             !!val ||
-                                            $t('errors.requiredInput', { inputName: 'File name' }),
+                                            $mxs_t('errors.requiredInput', {
+                                                inputName: 'File name',
+                                            }),
                                     ]"
                                     required
                                     hide-details="auto"
@@ -57,7 +59,7 @@
                                 <label
                                     class="field__label mxs-color-helper text-small-text label-required"
                                 >
-                                    {{ $t('fileFormat') }}
+                                    {{ $mxs_t('fileFormat') }}
                                 </label>
                                 <v-select
                                     v-model="selectedFormat"
@@ -77,7 +79,7 @@
                                     :rules="[
                                         v =>
                                             !!v ||
-                                            $t('errors.requiredInput', {
+                                            $mxs_t('errors.requiredInput', {
                                                 inputName: 'File format',
                                             }),
                                     ]"
@@ -99,12 +101,12 @@
                                     class="ma-0 pt-0"
                                 >
                                     <v-radio
-                                        :label="$t('withHeaders')"
+                                        :label="$mxs_t('withHeaders')"
                                         :value="true"
                                         class="v-radio--custom-label"
                                     />
                                     <v-radio
-                                        :label="$t('withoutHeaders')"
+                                        :label="$mxs_t('withoutHeaders')"
                                         :value="false"
                                         class="v-radio--custom-label"
                                     />
@@ -113,7 +115,7 @@
 
                             <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
                                 <label class="field__label mxs-color-helper text-small-text">
-                                    {{ $t('delimiter') }}
+                                    {{ $mxs_t('delimiter') }}
                                 </label>
                                 <v-select
                                     v-model="chosenDelimiter"
@@ -133,7 +135,7 @@
                                     :rules="[
                                         v =>
                                             !!v ||
-                                            $t('errors.requiredInput', {
+                                            $mxs_t('errors.requiredInput', {
                                                 inputName: 'Delimiter',
                                             }),
                                     ]"
@@ -143,7 +145,7 @@
                             </v-col>
                             <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
                                 <label class="field__label mxs-color-helper text-small-text">
-                                    {{ $t('custdelimiter') }}
+                                    {{ $mxs_t('custdelimiter') }}
                                 </label>
                                 <v-text-field
                                     v-model="custDelimiter"
@@ -154,8 +156,8 @@
                                     :rules="[
                                         v =>
                                             !!v ||
-                                            $t('errors.requiredInput', {
-                                                inputName: $t('custdelimiter'),
+                                            $mxs_t('errors.requiredInput', {
+                                                inputName: $mxs_t('custdelimiter'),
                                             }),
                                     ]"
                                     hide-details="auto"
@@ -167,7 +169,7 @@
                 </template>
             </mxs-dlg>
         </template>
-        <span>{{ $t('exportResults') }}</span>
+        <span>{{ $mxs_t('exportResults') }}</span>
     </v-tooltip>
 </template>
 

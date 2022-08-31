@@ -63,7 +63,7 @@ export default {
                 if (e.response) {
                     errMsg =
                         e.response.status === 401
-                            ? this.i18n.t('errors.wrongCredentials')
+                            ? this.vue.$mxs_t('errors.wrongCredentials')
                             : e.response.statusText
                 } else {
                     const logger = this.vue.$logger('store-user-login')
@@ -202,24 +202,24 @@ export default {
         },
         getUserAdminActions: (state, getters, rootState) => {
             const { DELETE, UPDATE, ADD } = rootState.app_config.USER_ADMIN_ACTIONS
-            // scope is needed to access $t
+            // scope is needed to access $mxs_t
             return ({ scope }) => ({
                 [UPDATE]: {
-                    text: scope.$t(`userOps.actions.${UPDATE}`),
+                    text: scope.$mxs_t(`userOps.actions.${UPDATE}`),
                     type: UPDATE,
                     icon: '$vuetify.icons.mxs_edit',
                     iconSize: 18,
                     color: 'primary',
                 },
                 [DELETE]: {
-                    text: scope.$t(`userOps.actions.${DELETE}`),
+                    text: scope.$mxs_t(`userOps.actions.${DELETE}`),
                     type: DELETE,
                     icon: ' $vuetify.icons.mxs_delete',
                     iconSize: 18,
                     color: 'error',
                 },
                 [ADD]: {
-                    text: scope.$t(`userOps.actions.${ADD}`),
+                    text: scope.$mxs_t(`userOps.actions.${ADD}`),
                     type: ADD,
                     color: 'accent-dark',
                 },

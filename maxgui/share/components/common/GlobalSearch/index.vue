@@ -8,7 +8,7 @@
         :height="36"
         outlined
         required
-        :placeholder="$t('search')"
+        :placeholder="$mxs_t('search')"
         single-line
         hide-details
         rounded

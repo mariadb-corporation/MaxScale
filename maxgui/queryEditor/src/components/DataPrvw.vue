@@ -18,7 +18,7 @@
                     />
                 </keep-alive>
             </template>
-            <span v-else v-html="$t('prvwTabGuide')" />
+            <span v-else v-html="$mxs_t('prvwTabGuide')" />
         </div>
         <v-skeleton-loader
             v-if="isLoading"

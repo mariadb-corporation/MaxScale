@@ -12,7 +12,7 @@
                 style="position:relative;top:-15px"
                 class="grayed-out-info mxs-color-helper text-grayed-out text-capitalize"
             >
-                {{ $t('uptime') }}
+                {{ $mxs_t('uptime') }}
                 {{
                     [uptime, 'seconds']
                         | duration('format', 'Y [years] M [months] D [days] h:mm:ss', {
@@ -43,7 +43,7 @@
 
                 <v-sheet style="border-radius: 10px;" class="px-6 py-6" max-width="320px">
                     <span class="d-block mb-1 text-body-2 font-weight-bold text-capitalize">
-                        {{ $t('aboutMaxScale') }}
+                        {{ $mxs_t('aboutMaxScale') }}
                     </span>
                     <div v-for="(value, name) in getMaxScaleInfo" :key="name">
                         <span class="d-flex text-body-2">

@@ -189,7 +189,7 @@
         </v-virtual-scroll>
         <div v-else class="tr" :style="{ lineHeight, height: `${maxTbodyHeight}px` }">
             <div class="td px-3 d-flex justify-center flex-grow-1">
-                {{ $t('$vuetify.noDataText') }}
+                {{ $mxs_t('$vuetify.noDataText') }}
             </div>
         </div>
         <div v-if="isResizing" class="resizing-mask" />

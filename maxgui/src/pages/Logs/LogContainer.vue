@@ -10,7 +10,7 @@
             depressed
             @click="setVirtualListToBottom"
         >
-            {{ $t('newMessagesAvailable') }}!
+            {{ $mxs_t('newMessagesAvailable') }}!
             <v-icon class="rotate-down" size="32">
                 mdi-chevron-down
             </v-icon>
@@ -45,13 +45,13 @@
         </virtual-list>
         <div v-else-if="!isFetching" :style="{ height: `${logViewHeight}px` }" class="empty">
             <code class="d-block mariadb-code-style">
-                {{ $t('noLogsFound') }}
+                {{ $mxs_t('noLogsFound') }}
             </code>
         </div>
         <div v-else class="d-flex flex-column align-center justify-center mt-2">
             <v-progress-circular color="primary" indeterminate size="24" />
             <p class="mt-1 loading-logs-text-indicator mxs-color-helper text-grayed-out">
-                {{ $t('loadingLogs') }}...
+                {{ $mxs_t('loadingLogs') }}...
             </p>
         </div>
     </div>

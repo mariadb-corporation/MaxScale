@@ -1,9 +1,9 @@
 <template>
-    <page-wrapper fluid :spacerStyle="{ borderBottom: 'thin solid #e7eef1' }">
+    <page-wrapper fluid class="fill-height" :spacerStyle="{ borderBottom: 'thin solid #e7eef1' }">
         <portal to="page-header">
             <v-tabs v-model="activeTab" class="v-tabs--mariadb-style flex-grow-0">
                 <v-tab v-for="route in visTabRoutes" :key="route.path" :to="route.path">
-                    {{ $t(route.name) }}
+                    {{ $mxs_t(route.name) }}
                 </v-tab>
             </v-tabs>
         </portal>

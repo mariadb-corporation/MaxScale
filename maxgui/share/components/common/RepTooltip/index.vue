@@ -15,7 +15,7 @@
         </template>
         <v-sheet class="py-4 px-3 text-body-2">
             <div class="px-1 py-1 font-weight-bold ">
-                {{ isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
+                {{ isMaster ? $mxs_t('slaveRepStatus') : $mxs_t('replicationStatus') }}
             </div>
             <v-divider class="mxs-color-helper border-separator" />
 

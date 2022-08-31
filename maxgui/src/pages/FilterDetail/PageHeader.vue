@@ -21,7 +21,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('destroy') }} {{ $tc('filters', 1) }} </span>
+                        <span>{{ $mxs_t('destroy') }} {{ $mxs_tc('filters', 1) }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -40,6 +40,7 @@
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
+                :saveText="dialogType"
                 :type="dialogType"
                 :item="currentFilter"
                 :onSave="confirmSave"
@@ -100,7 +101,7 @@ export default {
 
         handleDelete() {
             this.dialogType = 'destroy'
-            this.dialogTitle = `${this.$t('destroy')} ${this.$tc('filters', 1)}`
+            this.dialogTitle = `${this.$mxs_t('destroy')} ${this.$mxs_tc('filters', 1)}`
             this.isConfDlgOpened = true
         },
     },

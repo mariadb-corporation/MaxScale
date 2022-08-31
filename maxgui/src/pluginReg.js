@@ -4,6 +4,7 @@ import helpersPlugin from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'
 import typy from '@share/plugins/typy'
 import shortkey from '@share/plugins/shortkey'
+import scopingI18n from '@share/plugins/scopingI18n'
 import * as maxguiHelpers from '@rootSrc/utils/helpers'
 import * as queryEditorHelpers from '@queryEditorSrc/utils/helpers'
 import Vuex from 'vuex'
@@ -14,6 +15,8 @@ import VueI18n from 'vue-i18n'
 import MaxScaleQueryEditor from '@queryEditorSrc/index.js'
 
 Vue.use(VueI18n)
+// i18n only available after Vue.use(VueI18n)
+Vue.use(scopingI18n, { i18n: require('@share/plugins/i18n').default })
 Vue.use(Vuetify)
 Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...queryEditorHelpers } })
 Vue.use(typy)

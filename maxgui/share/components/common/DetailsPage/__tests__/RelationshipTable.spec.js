@@ -217,7 +217,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRowsStub[0].id)
         const title = wrapper.find('.v-card__title>h3')
         expect(title.text()).to.be.equals(
-            `${wrapper.vm.$t('unlink')} ${wrapper.vm.$tc('services', 1)}`
+            `${wrapper.vm.$mxs_t('unlink')} ${wrapper.vm.$mxs_tc('services', 1)}`
         )
     })
 
@@ -246,15 +246,15 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     it(`Should open mxs-sel-dlg when add button is clicked`, async () => {
         await mockupOpenSelectDialog(wrapper)
         const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
-        expect(selectDialog.vm.isDlgOpened).to.be.true
+        expect(selectDialog.vm.$attrs.value).to.be.true
     })
 
     it(`Should display accurate select dialog title`, async () => {
         await mockupOpenSelectDialog(wrapper)
         const title = wrapper.find('.v-card__title>h3')
         expect(title.text()).to.be.equals(
-            `${wrapper.vm.$t(`addEntity`, {
-                entityName: wrapper.vm.$tc('services', 2),
+            `${wrapper.vm.$mxs_t(`addEntity`, {
+                entityName: wrapper.vm.$mxs_tc('services', 2),
             })}`
         )
     })

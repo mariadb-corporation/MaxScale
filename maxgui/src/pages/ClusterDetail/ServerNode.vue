@@ -34,7 +34,7 @@
                 <span
                     class="readonly-val ml-1 mxs-color-helper text-grayed-out font-weight-medium text-no-wrap"
                 >
-                    {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
+                    {{ nodeAttrs.read_only ? $mxs_t('readonly') : $mxs_t('writable') }}
                 </span>
                 <div class="ml-1 button-container text-no-wrap">
                     <v-tooltip
@@ -54,7 +54,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('openQueryEditor') }}</span>
+                        <span>{{ $mxs_t('openQueryEditor') }}</span>
                     </v-tooltip>
                     <v-menu
                         v-if="isAdmin"
@@ -112,7 +112,7 @@
         <template v-slot:node-body>
             <div class="d-flex flex-row flex-grow-1 text-capitalize" :style="{ lineHeight }">
                 <span class="sbm mr-2 font-weight-bold">
-                    {{ $t('state') }}
+                    {{ $mxs_t('state') }}
                 </span>
                 <icon-sprite-sheet
                     size="16"
@@ -125,20 +125,20 @@
                 <v-spacer />
                 <span v-if="!node.data.isMaster" class="ml-1">
                     <span class="font-weight-bold text-capitalize">
-                        {{ $t('lag') }}
+                        {{ $mxs_t('lag') }}
                     </span>
                     <span> {{ sbm }}s </span>
                 </span>
             </div>
             <div class="d-flex flex-grow-1" :style="{ lineHeight }">
                 <span class="text-capitalize font-weight-bold mr-2">
-                    {{ $tc('connections', 2) }}
+                    {{ $mxs_tc('connections', 2) }}
                 </span>
                 <span>{{ nodeAttrs.statistics.connections }} </span>
             </div>
             <div class="d-flex flex-grow-1" :style="{ lineHeight }">
                 <span class="text-capitalize font-weight-bold mr-2">
-                    {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
+                    {{ nodeAttrs.parameters.socket ? $mxs_t('socket') : $mxs_t('address') }}
                 </span>
                 <mxs-truncate-str :text="$helpers.getAddress(nodeAttrs.parameters)" />
             </div>

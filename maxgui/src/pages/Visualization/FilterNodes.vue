@@ -17,7 +17,7 @@
                     <v-icon size="10" color="error"> $vuetify.icons.mxs_close</v-icon>
                 </v-btn>
             </template>
-            <span> {{ $t('hideFilters') }}</span>
+            <span> {{ $mxs_t('hideFilters') }}</span>
         </v-tooltip>
 
         <div class="filter-node-group pt-4">

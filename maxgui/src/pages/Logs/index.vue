@@ -1,5 +1,5 @@
 <template>
-    <page-wrapper v-resize="setPageContentDim">
+    <page-wrapper v-resize="setPageContentDim" fluid class="fill-height">
         <page-header ref="pageHeader" />
         <v-sheet
             :style="{

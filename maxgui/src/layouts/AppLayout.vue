@@ -4,11 +4,9 @@
         <navigation />
         <snackbars :msgObj="snackbar_message" />
         <v-main class="fill-height">
-            <div class="fill-height py-6 px-9">
-                <transition name="fade" mode="out-in">
-                    <router-view v-if="$route.meta.requiresAuth" />
-                </transition>
-            </div>
+            <transition name="fade" mode="out-in">
+                <router-view v-if="$route.meta.requiresAuth" />
+            </transition>
         </v-main>
         <v-footer
             class="pl-2 d-flex mxs-color-helper white border-top-separator justify-center"

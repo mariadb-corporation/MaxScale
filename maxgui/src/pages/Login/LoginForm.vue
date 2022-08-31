@@ -3,7 +3,7 @@
         <v-card-text style="padding:60px 80px 0px" align-center>
             <div class="">
                 <h1 align="left" class="pb-4 mxs-color-helper text-deep-ocean">
-                    {{ $t('welcome') }}
+                    {{ $mxs_t('welcome') }}
                 </h1>
                 <v-form
                     ref="form"
@@ -25,7 +25,7 @@
                         single-line
                         outlined
                         required
-                        :placeholder="$t('username')"
+                        :placeholder="$mxs_t('username')"
                         @input="onInput"
                     />
                     <v-text-field
@@ -42,7 +42,7 @@
                         :height="36"
                         outlined
                         required
-                        :placeholder="$t('password')"
+                        :placeholder="$mxs_t('password')"
                         @input="onInput"
                     >
                         <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
@@ -52,7 +52,7 @@
                     <v-checkbox
                         v-model="rememberMe"
                         class="v-checkbox--custom-label mt-2 mb-4"
-                        :label="$t('rememberMe')"
+                        :label="$mxs_t('rememberMe')"
                         color="primary"
                         hide-details
                         dense
@@ -80,7 +80,7 @@
                     small
                     @click="handleSubmit"
                 >
-                    <span class="font-weight-bold text-capitalize">{{ $t('signIn') }}</span>
+                    <span class="font-weight-bold text-capitalize">{{ $mxs_t('signIn') }}</span>
                 </v-btn>
             </div>
         </v-card-actions>
@@ -118,10 +118,10 @@ export default {
             },
             rules: {
                 username: [
-                    val => !!val || this.$t('errors.requiredInput', { inputName: 'Username' }),
+                    val => !!val || this.$mxs_t('errors.requiredInput', { inputName: 'Username' }),
                 ],
                 password: [
-                    val => !!val || this.$t('errors.requiredInput', { inputName: 'Password' }),
+                    val => !!val || this.$mxs_t('errors.requiredInput', { inputName: 'Password' }),
                 ],
             },
         }

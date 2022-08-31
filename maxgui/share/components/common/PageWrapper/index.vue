@@ -1,11 +1,16 @@
 <template>
-    <div :class="{ 'wrapper-container': !fluid }" class="d-flex flex-column fill-height">
-        <div class="d-flex flex-wrap">
-            <portal-target name="page-header" />
-            <v-spacer :style="spacerStyle" />
-            <portal-target name="page-header--right" />
+    <div class="page-wrapper">
+        <div
+            class="page-wrapper__container d-flex flex-column"
+            :class="{ 'page-wrapper__container__fluid': fluid }"
+        >
+            <div class="d-flex flex-wrap">
+                <portal-target name="page-header" />
+                <v-spacer :style="spacerStyle" />
+                <portal-target name="page-header--right" />
+            </div>
+            <slot></slot>
         </div>
-        <slot></slot>
     </div>
 </template>
 <script>
@@ -30,3 +35,18 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+//https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
+.page-wrapper {
+    padding: 24px 36px;
+    .page-wrapper__container {
+        max-width: 1366px; // preserve ratio for larger screen
+        margin: 0 auto;
+        height: inherit;
+        &__fluid {
+            max-width: 100%;
+        }
+    }
+}
+</style>

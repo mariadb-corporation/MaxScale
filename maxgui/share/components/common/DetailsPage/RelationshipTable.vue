@@ -2,7 +2,7 @@
     <mxs-collapse
         :toggleOnClick="() => (showTable = !showTable)"
         :isContentVisible="showTable"
-        :title="`${$tc(relationshipType, 2)}`"
+        :title="`${$mxs_tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
         :onAddClick="isAdmin && !readOnly && addable ? onAdd : null"
         :addBtnText="isAdmin && !readOnly && addable ? addBtnText : ''"
@@ -11,7 +11,7 @@
             :search="search_keyword"
             :headers="tableHeader"
             :data="tableRowsData"
-            :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
+            :noDataText="$mxs_t('noEntity', { entityName: $mxs_tc(relationshipType, 2) })"
             sortBy=""
             :loading="isLoading"
             :showActionsOnHover="!readOnly"
@@ -42,11 +42,12 @@
                 </v-btn>
             </template>
         </data-table>
-        <!-- Avaiable dialogs for editable table -->
+        <!-- Available dialogs for editable table -->
         <mxs-conf-dlg
             v-if="!readOnly"
             v-model="isConfDlgOpened"
             :title="dialogTitle"
+            :saveText="deleteDialogType"
             :type="deleteDialogType"
             :item="Array.isArray(targetItem) ? {} : targetItem"
             :onSave="confirmDelete"
@@ -55,7 +56,7 @@
             v-if="!readOnly"
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
-            mode="add"
+            saveText="add"
             multiple
             :entityName="relationshipType"
             :itemsList="itemsList"
@@ -111,7 +112,7 @@ export default {
             showTable: true,
             tableHeader: [
                 {
-                    text: this.$tc(this.relationshipType, 1),
+                    text: this.$mxs_tc(this.relationshipType, 1),
                     value: 'id',
                     autoTruncate: true,
                     sortable: false,
@@ -152,8 +153,8 @@ export default {
         addBtnText() {
             let pluralizationNum = 2
             if (this.relationshipType === 'listeners') pluralizationNum = 1
-            return `${this.$t('addEntity', {
-                entityName: this.$tc(this.relationshipType, pluralizationNum),
+            return `${this.$mxs_t('addEntity', {
+                entityName: this.$mxs_tc(this.relationshipType, pluralizationNum),
             })}`
         },
     },
@@ -228,7 +229,7 @@ export default {
         onDelete(item) {
             this.targetItem = item
             this.deleteDialogType = 'unlink'
-            this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
+            this.dialogTitle = `${this.$mxs_t('unlink')} ${this.$mxs_tc(this.relationshipType, 1)}`
             this.isConfDlgOpened = true
         },
 
@@ -268,8 +269,8 @@ export default {
         },
 
         onAdd() {
-            this.dialogTitle = `${this.$t(`addEntity`, {
-                entityName: this.$tc(this.relationshipType, 2),
+            this.dialogTitle = `${this.$mxs_t(`addEntity`, {
+                entityName: this.$mxs_tc(this.relationshipType, 2),
             })}`
 
             if (this.relationshipType !== 'listeners') this.isSelectDlgOpened = true

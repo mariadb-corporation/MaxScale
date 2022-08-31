@@ -3,7 +3,7 @@
         <div class="d-flex" style="width:40%">
             <outlined-overview-card wrapperClass="mt-5">
                 <template v-slot:title>
-                    {{ $t('overview') }}
+                    {{ $mxs_t('overview') }}
                 </template>
                 <template v-slot:card-body>
                     <span
@@ -37,7 +37,7 @@
         <div style="width:60%" class="pl-3">
             <outlined-overview-card :tile="false" wrapperClass="mt-5">
                 <template v-slot:title>
-                    {{ $tc('currentConnections', 2) }}
+                    {{ $mxs_tc('currentConnections', 2) }}
                     <span class="text-lowercase font-weight-medium">
                         ({{ serviceConnectionInfo.connections }}/{{
                             serviceConnectionInfo.total_connections

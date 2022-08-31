@@ -34,7 +34,7 @@
                                     :style="{ lineHeight }"
                                 >
                                     <span class="mr-2 font-weight-bold text-capitalize">
-                                        {{ $t(key) }}
+                                        {{ $mxs_t(key) }}
                                     </span>
                                     <mxs-truncate-str :text="`${value}`" />
                                 </div>

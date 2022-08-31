@@ -1,8 +1,8 @@
 <template>
     <div class="fill-height mt-n10 d-flex flex-column justify-center align-center">
         <v-icon color="#E5E1E5" style="width:96px;height:85px">$vuetify.icons.mxs_notFound</v-icon>
-        <h1 class="font-weight-medium">{{ $t('404Error') }}</h1>
-        <p style="font-size:2.125rem" class="font-weight-light">{{ $t('404ErrorMessage') }}</p>
+        <h1 class="font-weight-medium">{{ $mxs_t('404Error') }}</h1>
+        <p style="font-size:2.125rem" class="font-weight-light">{{ $mxs_t('404ErrorMessage') }}</p>
     </div>
 </template>
 

@@ -2,7 +2,7 @@
     <mxs-dlg
         v-model="isOpened"
         :onSave="onSave"
-        :title="`${$t('connectTo')}...`"
+        :title="`${$mxs_t('connectTo')}...`"
         :lazyValidation="false"
         minBodyWidth="512px"
         :hasSavingErr="hasSavingErr"
@@ -22,7 +22,7 @@
                 depressed
                 @click="cancel"
             >
-                {{ $t('cancel') }}
+                {{ $mxs_t('cancel') }}
             </v-btn>
             <v-btn
                 small
@@ -34,7 +34,7 @@
                 :disabled="!isFormValid"
                 @click="save"
             >
-                {{ $t('connect') }}
+                {{ $mxs_t('connect') }}
             </v-btn>
         </template>
         <template v-if="isOpened" v-slot:body>
@@ -71,7 +71,7 @@
                     <v-col v-if="resourceType" cols="12" md="12" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text label-required">
                             {{
-                                $t('resourceLabelName', {
+                                $mxs_t('resourceLabelName', {
                                     resourceName: $helpers.resourceTxtTransform(resourceType),
                                 })
                             }}
@@ -90,7 +90,7 @@
 
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $t('username') }}
+                            {{ $mxs_t('username') }}
                         </label>
                         <v-text-field
                             id="db-user"
@@ -109,7 +109,7 @@
 
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $t('password') }}
+                            {{ $mxs_t('password') }}
                         </label>
                         <v-text-field
                             id="db-password"
@@ -132,7 +132,7 @@
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text">
-                            {{ $t('database') }}
+                            {{ $mxs_t('database') }}
                         </label>
                         <v-text-field
                             v-model.trim="body.db"
@@ -147,7 +147,7 @@
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text">
-                            {{ $t('timeout') }}
+                            {{ $mxs_t('timeout') }}
                         </label>
                         <v-text-field
                             v-model.number="body.timeout"
@@ -204,12 +204,16 @@ export default {
                 user: [
                     val =>
                         !!val ||
-                        this.$t('errors.requiredInput', { inputName: this.$t('username') }),
+                        this.$mxs_t('errors.requiredInput', {
+                            inputName: this.$mxs_t('username'),
+                        }),
                 ],
                 password: [
                     val =>
                         !!val ||
-                        this.$t('errors.requiredInput', { inputName: this.$t('password') }),
+                        this.$mxs_t('errors.requiredInput', {
+                            inputName: this.$mxs_t('password'),
+                        }),
                 ],
             },
             isFormValid: false,
@@ -301,7 +305,7 @@ export default {
                 if (this.pre_select_conn_rsrc) this.selectedResource = this.pre_select_conn_rsrc
                 else this.selectedResource = this.resourceItems[0]
                 this.errRsrcMsg = ''
-            } else this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType })
+            } else this.errRsrcMsg = this.$mxs_t('errors.existingRsrcConnection', { resourceType })
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource

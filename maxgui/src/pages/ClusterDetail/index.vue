@@ -1,5 +1,5 @@
 <template>
-    <page-wrapper fluid>
+    <page-wrapper fluid class="fill-height">
         <monitor-page-header
             :targetMonitor="{
                 id: current_cluster.id,
@@ -76,8 +76,8 @@
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
-            :type="confDlg.type"
             :saveText="confDlgSaveTxt"
+            :type="confDlg.type"
             :item="confDlg.targetNode"
             :smallInfo="confDlg.smallInfo"
             :closeImmediate="true"
@@ -86,9 +86,8 @@
             <template v-if="confDlg.type === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
                 <v-checkbox
                     v-model="confDlg.forceClosing"
-                    class="v-checkbox--custom-label mt-2
-                mb-4"
-                    :label="$t('forceClosing')"
+                    class="v-checkbox--custom-label mt-2 mb-4"
+                    :label="$mxs_t('forceClosing')"
                     color="primary"
                     dense
                     hide-details
@@ -321,7 +320,7 @@ export default {
                 switch (type) {
                     case SWITCHOVER:
                     case REJOIN:
-                        nodeTxtWrapper[0].innerHTML = this.$t(`monitorOps.info.${type}`)
+                        nodeTxtWrapper[0].innerHTML = this.$mxs_t(`monitorOps.info.${type}`)
                         break
                     default:
                         nodeTxtWrapper[0].innerHTML = this.draggingStates.initialNodeInnerHTML
@@ -403,7 +402,9 @@ export default {
                     case SWITCHOVER:
                     case REJOIN:
                         this.confDlg.type = this.confDlg.opType
-                        this.confDlg.title = this.$t(`monitorOps.actions.${this.confDlg.opType}`)
+                        this.confDlg.title = this.$mxs_t(
+                            `monitorOps.actions.${this.confDlg.opType}`
+                        )
                         this.confDlg.targetNode = { id: this.draggingStates.draggingNodeId }
                         break
                 }

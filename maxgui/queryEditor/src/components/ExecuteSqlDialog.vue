@@ -3,7 +3,7 @@
         v-model="isConfDlgOpened"
         :title="title"
         :smallInfo="smallInfo"
-        type="execute"
+        saveText="execute"
         minBodyWidth="768px"
         :hasSavingErr="hasSavingErr"
         :allowEnterToSubmit="false"

@@ -3,7 +3,7 @@
         <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
-                    {{ $tc('sessions', 2) }}
+                    {{ $mxs_tc('sessions', 2) }}
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
@@ -21,7 +21,7 @@
         <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
-                    {{ $tc('connections', 2) }}
+                    {{ $mxs_tc('connections', 2) }}
                 </template>
                 <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
@@ -41,7 +41,7 @@
         <v-col cols="4" class="px-2">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>
-                    {{ $t('load') }}
+                    {{ $mxs_t('load') }}
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">

@@ -51,9 +51,9 @@ export default {
         msg() {
             switch (this.overlay_type) {
                 case OVERLAY_LOGGING:
-                    return this.$t('initializing')
+                    return this.$mxs_t('initializing')
                 case OVERLAY_LOGOUT:
-                    return this.$t('loggingOut')
+                    return this.$mxs_t('loggingOut')
                 default:
                     return ''
             }

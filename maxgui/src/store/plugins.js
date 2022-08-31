@@ -11,7 +11,6 @@
  * Public License.
  */
 import Vue from 'vue'
-import i18n from '@share/plugins/i18n'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 import queryEditorPersistPlugin from '@queryEditorSrc/store/persistPlugin'
@@ -29,8 +28,6 @@ const appPersistConfig = new VuexPersistence({
 export default [
     store => {
         store.vue = Vue.prototype
-        //TODO: Resolve i18n
-        store.i18n = i18n
     },
     appPersistConfig.plugin,
     queryEditorPersistPlugin,

@@ -19,7 +19,7 @@
 
         <template v-slot:groupId="{ data: { item: { groupId } } }">
             <router-link
-                v-if="groupId !== $t('not', { action: 'monitored' })"
+                v-if="groupId !== $mxs_t('not', { action: 'monitored' })"
                 :to="`/dashboard/monitors/${groupId}`"
                 class="rsrc-link"
             >
@@ -150,7 +150,7 @@
                         v-on="on"
                     >
                         {{ serviceIds.length }}
-                        {{ $tc('services', 2).toLowerCase() }}
+                        {{ $mxs_tc('services', 2).toLowerCase() }}
                     </div>
                 </template>
 
@@ -243,7 +243,7 @@ export default {
 
                     const serviceIds = servicesData.length
                         ? servicesData.map(item => `${item.id}`)
-                        : this.$t('noEntity', { entityName: 'services' })
+                        : this.$mxs_t('noEntity', { entityName: 'services' })
 
                     if (typeof serviceIds !== 'string')
                         allServiceIds = [...allServiceIds, ...serviceIds]
@@ -293,7 +293,7 @@ export default {
                             allMonitorsMapClone.delete(monitorId)
                         }
                     } else {
-                        row.groupId = this.$t('not', { action: 'monitored' })
+                        row.groupId = this.$mxs_t('not', { action: 'monitored' })
                         row.monitorState = ''
                     }
                     rows.push(row)

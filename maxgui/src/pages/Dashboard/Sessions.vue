@@ -76,7 +76,7 @@ export default {
 
                 const serviceIds = associatedServices.length
                     ? associatedServices.map(item => `${item.id}`)
-                    : this.$t('noEntity', { entityName: 'services' })
+                    : this.$mxs_t('noEntity', { entityName: 'services' })
 
                 if (typeof serviceIds !== 'string')
                     allServiceNames = [...allServiceNames, ...serviceIds]

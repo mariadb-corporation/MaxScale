@@ -9,7 +9,7 @@
                     v-if="!isCollapsed"
                     class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-uppercase"
                 >
-                    {{ $t('schemas') }}
+                    {{ $mxs_t('schemas') }}
                 </span>
                 <v-tooltip
                     v-if="!isCollapsed"
@@ -31,7 +31,7 @@
                             </v-icon>
                         </v-btn>
                     </template>
-                    <span>{{ $t('reload') }}</span>
+                    <span>{{ $mxs_t('reload') }}</span>
                 </v-tooltip>
                 <v-tooltip
                     top
@@ -56,7 +56,7 @@
                             </v-icon>
                         </v-btn>
                     </template>
-                    <span>{{ isCollapsed ? $t('expand') : $t('collapse') }}</span>
+                    <span>{{ isCollapsed ? $mxs_t('expand') : $mxs_t('collapse') }}</span>
                 </v-tooltip>
             </div>
             <v-text-field
@@ -67,7 +67,7 @@
                 outlined
                 height="28"
                 class="vuetify-input--override filter-objects"
-                :placeholder="$t('filterSchemaObjects')"
+                :placeholder="$mxs_t('filterSchemaObjects')"
                 :disabled="!hasConn"
             />
         </div>

@@ -131,15 +131,8 @@ describe('ServerDetail - OverviewHeader', () => {
             name: 'mxs-sel-dlg',
         })
         expect(selectDialog.exists()).to.be.true
-        const {
-            title,
-            mode,
-            entityName,
-            onSave,
-            itemsList,
-            defaultItems,
-            clearable,
-        } = selectDialog.vm.$props
+        const { entityName, itemsList, defaultItems, clearable } = selectDialog.vm.$props
+        const { title, saveText, onSave } = selectDialog.vm.$attrs
         const {
             dialogTitle,
             targetSelectItemType,
@@ -148,7 +141,7 @@ describe('ServerDetail - OverviewHeader', () => {
         } = wrapper.vm.$data
 
         expect(title).to.be.equals(dialogTitle)
-        expect(mode).to.be.equals('change')
+        expect(saveText).to.be.equals('change')
         expect(entityName).to.be.equals(targetSelectItemType)
         expect(clearable).to.be.true
         expect(onSave).to.be.equals(wrapper.vm.confirmChange)
@@ -158,10 +151,8 @@ describe('ServerDetail - OverviewHeader', () => {
 
     it(`Should open 'Change monitor' dialog with accurate title and label`, async () => {
         await openSelectDialogMock(wrapper, '.monitor-edit-btn')
-        const selectDialog = wrapper.findComponent({
-            name: 'mxs-sel-dlg',
-        })
-        expect(selectDialog.vm.isDlgOpened).to.be.true
+        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
+        expect(selectDialog.vm.$attrs.value).to.be.true
         const title = selectDialog.find('h3')
         expect(title.text()).to.be.equals('Change monitor')
         const label = selectDialog.find('.select-label')

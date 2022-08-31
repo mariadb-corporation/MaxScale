@@ -78,8 +78,8 @@
             <mxs-conf-dlg
                 v-model="confDlg.isOpened"
                 :title="confDlg.title"
-                :type="confDlg.type"
                 :saveText="confDlgSaveTxt"
+                :type="confDlg.type"
                 :item="confDlg.targetNode"
                 :smallInfo="confDlg.smallInfo"
                 :onSave="onConfirm"
@@ -93,7 +93,7 @@
                         "
                     >
                         <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $t('hostname/IP') }}
+                            {{ $mxs_t('hostname/IP') }}
                         </label>
                         <v-combobox
                             v-model="confDlg.targetClusterNode"
@@ -110,12 +110,14 @@
                                 bottom: true,
                                 offsetY: true,
                             }"
-                            :placeholder="$t('selectNodeOrEnterIp')"
+                            :placeholder="$mxs_t('selectNodeOrEnterIp')"
                             :height="36"
                             :rules="[
                                 v =>
                                     !!v ||
-                                    $t('errors.requiredInput', { inputName: $t('hostname/IP') }),
+                                    $mxs_t('errors.requiredInput', {
+                                        inputName: $mxs_t('hostname/IP'),
+                                    }),
                             ]"
                             hide-details="auto"
                         />
@@ -123,7 +125,7 @@
                     <template v-if="hasTimeout">
                         <duration-dropdown
                             :duration="confDlg.timeout"
-                            :label="$t('timeout')"
+                            :label="$mxs_t('timeout')"
                             :height="36"
                             :validationHandler="validateTimeout"
                             hide-details="auto"
@@ -292,7 +294,7 @@ export default {
                     ops = [
                         ...ops,
                         { divider: true },
-                        { subheader: this.$t('csOps') },
+                        { subheader: this.$mxs_t('csOps') },
                         {
                             ...this.allOps[CS_STOP_CLUSTER],
                             disabled: this.isClusterStopped,
@@ -373,9 +375,9 @@ export default {
         },
         validateTimeout(v) {
             if (this.$typy(v).isEmptyString)
-                return this.$t('errors.requiredInput', { inputName: this.$t('timeout') })
+                return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('timeout') })
             else if (v <= 0)
-                return this.$t('errors.largerThanZero', { inputName: this.$t('timeout') })
+                return this.$mxs_t('errors.largerThanZero', { inputName: this.$mxs_t('timeout') })
             return true
         },
         async fetchCsStatus() {
@@ -496,7 +498,7 @@ export default {
                         ...payload,
                         pollingResInterval: 1000,
                         custAsyncCmdDone: async meta => {
-                            const action = this.$t(`monitorOps.actions.${payload.type}`)
+                            const action = this.$mxs_t(`monitorOps.actions.${payload.type}`)
                             await this.fetchCsStatus()
                             let msgs = [],
                                 msgType = 'success'

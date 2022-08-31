@@ -11,6 +11,7 @@ import vuetify from 'rollup-plugin-vuetify'
 import PostCSS from 'rollup-plugin-postcss'
 import monaco from 'rollup-plugin-monaco-editor'
 import copy from 'rollup-plugin-copy'
+import dotenv from 'rollup-plugin-dotenv'
 
 const projectRoot = path.resolve(__dirname, '../../')
 const rootSrcPath = path.resolve(projectRoot, 'src')
@@ -46,13 +47,13 @@ const external = [
 ]
 // Customize configs for using as SFC
 const buildFormats = []
-
 const esConfig = {
     input: `${queryEditorSrcPath}/maxscale-query-editor.esm.js`,
     treeshake: true,
     external,
     output: { file: 'dist/maxscale-query-editor.esm.js', format: 'esm', exports: 'named' },
     plugins: [
+        dotenv({ cwd: projectRoot }),
         replace({ preventAssignment: true, 'process.env.NODE_ENV': JSON.stringify('production') }),
         alias({
             entries: [
@@ -91,6 +92,8 @@ const esConfig = {
             targets: [
                 { src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' },
                 { src: `${sharePath}/icons`, dest: 'dist' },
+                { src: `${sharePath}/plugins/vuetifyTheme.js`, dest: 'dist' },
+                { src: `${sharePath}/locales`, dest: 'dist' },
             ],
         }),
     ],

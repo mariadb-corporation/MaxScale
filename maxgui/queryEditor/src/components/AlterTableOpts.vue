@@ -3,7 +3,7 @@
         :toggleOnClick="() => (showInputs = !showInputs)"
         :isContentVisible="showInputs"
         wrapperClass="tbl-opts px-1 pt-2"
-        :title="$t('alterTbl')"
+        :title="$mxs_t('alterTbl')"
     >
         <template v-slot:arrow-toggle="{ toggleOnClick, isContentVisible }">
             <v-btn icon small class="arrow-toggle" @click="toggleOnClick">
@@ -20,7 +20,7 @@
             <v-row class="ma-0">
                 <v-col cols="12" md="6" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $t('name') }}
+                        {{ $mxs_t('name') }}
                     </label>
                     <v-text-field
                         id="table_name"
@@ -37,7 +37,7 @@
                 </v-col>
                 <v-col cols="12" md="6" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text">
-                        {{ $t('comment') }}
+                        {{ $mxs_t('comment') }}
                     </label>
                     <v-text-field
                         v-model="tableOptsData.table_comment"
@@ -53,7 +53,7 @@
             <v-row class="ma-0">
                 <v-col cols="6" md="4" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $t('engine') }}
+                        {{ $mxs_t('engine') }}
                     </label>
                     <v-select
                         v-model="tableOptsData.table_engine"
@@ -73,7 +73,7 @@
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $t('charset') }}
+                        {{ $mxs_t('charset') }}
                     </label>
                     <charset-collate-select
                         v-model="tableOptsData.table_charset"
@@ -85,7 +85,7 @@
                 </v-col>
                 <v-col cols="6" md="4" class="py-0 px-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
-                        {{ $t('collation') }}
+                        {{ $mxs_t('collation') }}
                     </label>
                     <charset-collate-select
                         v-model="tableOptsData.table_collation"
@@ -133,7 +133,9 @@ export default {
         return {
             rules: {
                 table_name: [
-                    val => !!val || this.$t('errors.requiredInput', { inputName: this.$t('name') }),
+                    val =>
+                        !!val ||
+                        this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('name') }),
                 ],
             },
             showInputs: true,

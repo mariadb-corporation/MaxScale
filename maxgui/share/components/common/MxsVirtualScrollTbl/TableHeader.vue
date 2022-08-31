@@ -82,7 +82,7 @@
                             ]"
                             @click.stop="() => handleToggleGroup(header.text)"
                         >
-                            {{ $t('group') }}
+                            {{ $mxs_t('group') }}
                         </span>
                         <div
                             v-if="header.text !== $typy(lastVisHeader, 'text').safeString"

@@ -15,8 +15,8 @@
             hide-details
             item-text="name"
             return-object
-            :placeholder="$t('selectConnection')"
-            :no-data-text="$t('noConnAvail')"
+            :placeholder="$mxs_t('selectConnection')"
+            :no-data-text="$mxs_t('noConnAvail')"
             :disabled="getIsConnBusy"
             @change="onSelectConn"
         >
@@ -61,7 +61,7 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('disconnect') }}</span>
+                        <span>{{ $mxs_t('disconnect') }}</span>
                     </v-tooltip>
                 </div>
             </template>
@@ -73,7 +73,7 @@
                     class="text-decoration-underline mxs-color-helper text-primary"
                     @click="openConnDialog"
                 >
-                    {{ $t('newConnection') }}
+                    {{ $mxs_t('newConnection') }}
                 </v-list-item>
             </template>
         </v-select>
@@ -84,7 +84,8 @@
         />
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
-            :title="$t('disconnectConn')"
+            :title="$mxs_t('disconnectConn')"
+            saveText="disconnect"
             type="disconnect"
             :closeImmediate="true"
             :item="connToBeDel"

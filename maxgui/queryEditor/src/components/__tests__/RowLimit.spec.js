@@ -47,7 +47,9 @@ describe(`row-limit - created hook and data communication tests`, () => {
             await wrapper.vm.onInput({ srcElement: { value: '' } })
             wrapper.vm.$nextTick(() => {
                 expect(getErrMsgEle(dropdown).text()).to.be.equals(
-                    wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('rowLimit') })
+                    wrapper.vm.$mxs_t('errors.requiredInput', {
+                        inputName: wrapper.vm.$mxs_t('rowLimit'),
+                    })
                 )
             })
         })
@@ -55,7 +57,7 @@ describe(`row-limit - created hook and data communication tests`, () => {
             await wrapper.vm.onInput({ srcElement: { value: 'abc' } })
             wrapper.vm.$nextTick(() => {
                 expect(getErrMsgEle(dropdown).text()).to.be.equals(
-                    wrapper.vm.$t('errors.nonInteger')
+                    wrapper.vm.$mxs_t('errors.nonInteger')
                 )
             })
         })
@@ -63,7 +65,7 @@ describe(`row-limit - created hook and data communication tests`, () => {
             await wrapper.vm.onInput({ srcElement: { value: 0 } })
             wrapper.vm.$nextTick(() => {
                 expect(getErrMsgEle(dropdown).text()).to.be.equals(
-                    wrapper.vm.$t('errors.largerThanZero')
+                    wrapper.vm.$mxs_t('errors.largerThanZero')
                 )
             })
         })

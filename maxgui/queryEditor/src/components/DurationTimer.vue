@@ -7,31 +7,31 @@
     >
         <template v-slot:activator="{ on }">
             <span v-on="on">
-                {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span
+                {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span
             >
         </template>
         <v-sheet min-width="220" max-width="450" class="mxs-color-helper text-small-text">
             <div class="d-flex align-center mxs-color-helper text-navigation font-weight-bold">
-                <span>{{ $t('totalDuration') }}:</span>
+                <span>{{ $mxs_t('totalDuration') }}:</span>
                 <v-spacer />
-                <span> {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
+                <span> {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
             </div>
             <div class="d-flex align-center">
-                <span>{{ $t('networkDelay') }} </span>
+                <span>{{ $mxs_t('networkDelay') }} </span>
                 <v-spacer />
                 <span class="mxs-color-helper text-navigation">
                     {{
-                        $tc('seconds', networkDelay === 1 ? 1 : 2, {
+                        $mxs_tc('seconds', networkDelay === 1 ? 1 : 2, {
                             value: networkDelay,
                         })
                     }}
                 </span>
             </div>
             <div class="d-flex align-center">
-                <span>{{ $t('exeTime') }}: </span>
+                <span>{{ $mxs_t('exeTime') }}: </span>
                 <v-spacer />
                 <span class="mxs-color-helper text-navigation">
-                    {{ $tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
+                    {{ $mxs_tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
                 </span>
             </div>
         </v-sheet>

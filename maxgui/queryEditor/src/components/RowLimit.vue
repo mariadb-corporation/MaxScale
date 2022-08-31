@@ -56,9 +56,9 @@ export default {
     methods: {
         validate(v) {
             if (this.$typy(v).isNull)
-                return this.$t('errors.requiredInput', { inputName: this.$t('rowLimit') })
-            else if (v <= 0) return this.$t('errors.largerThanZero', { inputName: 'Value' })
-            else if (!this.$typy(v).isNumber) return this.$t('errors.nonInteger')
+                return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('rowLimit') })
+            else if (v <= 0) return this.$mxs_t('errors.largerThanZero', { inputName: 'Value' })
+            else if (!this.$typy(v).isNumber) return this.$mxs_t('errors.nonInteger')
             return true
         },
         onInput(evt) {

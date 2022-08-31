@@ -150,8 +150,8 @@ export default {
                 TXT_EDITOR: { QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
             return [
-                { text: this.$t('previewData'), type: QUERY },
-                { text: this.$t('viewDetails'), type: QUERY },
+                { text: this.$mxs_t('previewData'), type: QUERY },
+                { text: this.$mxs_t('viewDetails'), type: QUERY },
             ]
         },
         insertOpts() {
@@ -160,7 +160,7 @@ export default {
             } = this.SQL_NODE_CTX_OPT_TYPES
             return [
                 {
-                    text: this.$t('placeToEditor'),
+                    text: this.$mxs_t('placeToEditor'),
                     children: this.genTxtOpts(INSERT),
                 },
             ]
@@ -169,7 +169,7 @@ export default {
             const { CLIPBOARD } = this.SQL_NODE_CTX_OPT_TYPES
             return [
                 {
-                    text: this.$t('copyToClipboard'),
+                    text: this.$mxs_t('copyToClipboard'),
                     children: this.genTxtOpts(CLIPBOARD),
                 },
             ]
@@ -185,7 +185,7 @@ export default {
             } = this.SQL_NODE_CTX_OPT_TYPES
             return {
                 [SCHEMA]: [
-                    { text: this.$t('useDb'), type: USE },
+                    { text: this.$mxs_t('useDb'), type: USE },
                     ...this.insertOpts,
                     ...this.clipboardOpts,
                 ],
@@ -202,15 +202,15 @@ export default {
                 DDL: { DD },
             } = this.SQL_NODE_CTX_OPT_TYPES
             return {
-                [SCHEMA]: [{ text: this.$t('dropSchema'), type: DD }],
+                [SCHEMA]: [{ text: this.$mxs_t('dropSchema'), type: DD }],
                 [TABLE]: [
-                    { text: this.$t('alterTbl'), type: DD },
-                    { text: this.$t('dropTbl'), type: DD },
-                    { text: this.$t('truncateTbl'), type: DD },
+                    { text: this.$mxs_t('alterTbl'), type: DD },
+                    { text: this.$mxs_t('dropTbl'), type: DD },
+                    { text: this.$mxs_t('truncateTbl'), type: DD },
                 ],
-                [SP]: [{ text: this.$t('dropSp'), type: DD }],
+                [SP]: [{ text: this.$mxs_t('dropSp'), type: DD }],
                 [COL]: [],
-                [TRIGGER]: [{ text: this.$t('dropTrigger'), type: DD }],
+                [TRIGGER]: [{ text: this.$mxs_t('dropTrigger'), type: DD }],
             }
         },
         // Use either getActivePrvwTblNode or getAlteredActiveNode
@@ -330,10 +330,10 @@ export default {
          */
         genTxtOpts(type) {
             return [
-                { text: this.$t('qualifiedNameQuoted'), type },
-                { text: this.$t('qualifiedName'), type },
-                { text: this.$t('nameQuoted'), type },
-                { text: this.$t('name'), type },
+                { text: this.$mxs_t('qualifiedNameQuoted'), type },
+                { text: this.$mxs_t('qualifiedName'), type },
+                { text: this.$mxs_t('nameQuoted'), type },
+                { text: this.$mxs_t('name'), type },
             ]
         },
 
@@ -344,13 +344,13 @@ export default {
         handleEmitQueryOpt({ item, opt }) {
             this.updateActiveNode(item)
             switch (opt.text) {
-                case this.$t('previewData'):
+                case this.$mxs_t('previewData'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
                         schemaId: item.id,
                     })
                     break
-                case this.$t('viewDetails'):
+                case this.$mxs_t('viewDetails'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
                         schemaId: item.id,
@@ -371,16 +371,16 @@ export default {
             } = this.SQL_NODE_CTX_OPT_TYPES
             let v = ''
             switch (opt.text) {
-                case this.$t('qualifiedNameQuoted'):
+                case this.$mxs_t('qualifiedNameQuoted'):
                     v = this.$helpers.escapeIdentifiers(item.id)
                     break
-                case this.$t('qualifiedName'):
+                case this.$mxs_t('qualifiedName'):
                     v = item.id
                     break
-                case this.$t('nameQuoted'):
+                case this.$mxs_t('nameQuoted'):
                     v = this.$helpers.escapeIdentifiers(item.name)
                     break
-                case this.$t('name'):
+                case this.$mxs_t('name'):
                     v = item.name
                     break
             }
@@ -399,7 +399,7 @@ export default {
          */
         handleEmitDD_opt({ item, opt }) {
             switch (opt.text) {
-                case this.$t('alterTbl'):
+                case this.$mxs_t('alterTbl'):
                     this.$emit('alter-tbl', {
                         id: item.id,
                         type: item.type,
@@ -407,13 +407,13 @@ export default {
                         name: item.name,
                     })
                     break
-                case this.$t('dropTbl'):
-                case this.$t('dropSchema'):
-                case this.$t('dropSp'):
-                case this.$t('dropTrigger'):
+                case this.$mxs_t('dropTbl'):
+                case this.$mxs_t('dropSchema'):
+                case this.$mxs_t('dropSp'):
+                case this.$mxs_t('dropTrigger'):
                     this.$emit('drop-action', { id: item.id, type: item.type })
                     break
-                case this.$t('truncateTbl'):
+                case this.$mxs_t('truncateTbl'):
                     this.$emit('truncate-tbl', item.id)
                     break
             }

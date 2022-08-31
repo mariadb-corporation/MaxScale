@@ -23,7 +23,7 @@
                         </v-col>
                         <v-col v-if="!$typy(filter_diagnostics).isEmptyObject" cols="12">
                             <details-readonly-table
-                                :title="`${$tc('diagnostics', 2)}`"
+                                :title="`${$mxs_tc('diagnostics', 2)}`"
                                 :tableData="filter_diagnostics"
                                 isTree
                                 expandAll

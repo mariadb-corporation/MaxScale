@@ -11,7 +11,7 @@
             :headers="tableHeaders"
             :data="tableRows"
             :loading="isLoading"
-            :noDataText="noDataText === '' ? $t('$vuetify.noDataText') : noDataText"
+            :noDataText="noDataText === '' ? $mxs_t('$vuetify.noDataText') : noDataText"
             :tdBorderLeft="tdBorderLeft"
             showAll
             :expandAll="expandAll"

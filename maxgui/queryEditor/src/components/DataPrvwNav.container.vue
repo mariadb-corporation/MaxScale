@@ -6,7 +6,7 @@
             class="tab-btn px-3 text-uppercase"
             active-class="tab-btn--active font-weight-medium"
         >
-            {{ $t('data') }}
+            {{ $mxs_t('data') }}
         </v-tab>
         <v-tab
             :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
@@ -14,7 +14,7 @@
             class="tab-btn px-3 text-uppercase"
             active-class="tab-btn--active font-weight-medium"
         >
-            {{ $t('details') }}
+            {{ $mxs_t('details') }}
         </v-tab>
     </v-tabs>
 </template>

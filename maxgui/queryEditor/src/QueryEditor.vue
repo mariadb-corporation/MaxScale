@@ -6,14 +6,19 @@
         class="query-editor mxs-color-helper all-border-table-border fill-height"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
-        <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
         <div
-            v-else
             class="fill-height d-flex flex-column"
             :class="{ 'query-editor--fullscreen': is_fullscreen }"
         >
-            <template v-if="!is_validating_conn">
-                <wke-nav-ctr :height="wkeNavCtrHeight" />
+            <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
+            <template else>
+                <div v-if="$slots['query-editor-top']" ref="queryEditorTopSlot">
+                    <slot name="query-editor-top" />
+                </div>
+                <wke-nav-ctr
+                    v-if="!hidden_comp.includes('wke-nav-ctr')"
+                    :height="wkeNavCtrHeight"
+                />
                 <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
                     <wke-ctr
                         v-if="active_wke_id === wke.id && ctrDim.height"
@@ -31,21 +36,21 @@
         </div>
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
-            :title="$t('confirmations.leavePage')"
-            type="thatsRight"
+            :title="$mxs_t('confirmations.leavePage')"
+            saveText="thatsRight"
             minBodyWidth="624px"
             :onSave="onLeave"
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         >
             <template v-slot:confirm-text>
-                <p>{{ $t('info.disconnectAll') }}</p>
+                <p>{{ $mxs_t('info.disconnectAll') }}</p>
             </template>
             <template v-slot:body-append>
                 <v-checkbox
                     v-model="confirmDelAll"
                     class="v-checkbox--custom-label"
-                    :label="$t('disconnectAll')"
+                    :label="$mxs_t('disconnectAll')"
                     color="primary"
                     dense
                     hide-details
@@ -86,8 +91,8 @@ export default {
         return {
             confirmDelAll: true,
             isConfDlgOpened: false,
-            wkeNavCtrHeight: 32,
             dim: {},
+            queryEditorTopSlotHeight: 0,
         }
     },
     computed: {
@@ -98,13 +103,20 @@ export default {
             is_validating_conn: state => state.queryConn.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
             worksheets_arr: state => state.wke.worksheets_arr,
+            hidden_comp: state => state.queryEditorConfig.hidden_comp,
         }),
         ...mapGetters({
             getActiveWke: 'wke/getActiveWke',
             getIsTxtEditor: 'editor/getIsTxtEditor',
         }),
+        wkeNavCtrHeight() {
+            return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
+        },
         ctrDim() {
-            return { width: this.dim.width, height: this.dim.height - this.wkeNavCtrHeight }
+            return {
+                width: this.dim.width,
+                height: this.dim.height - this.wkeNavCtrHeight - this.queryEditorTopSlotHeight,
+            }
         },
     },
     watch: {
@@ -128,7 +140,7 @@ export default {
         await this.validatingConn()
     },
     mounted() {
-        this.$nextTick(() => this.setDim())
+        this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())
     },
 
     methods: {
@@ -165,7 +177,7 @@ export default {
                             break
                         case '/404':
                             this.SET_SNACK_BAR_MESSAGE({
-                                text: [this.$t('info.notFoundConn')],
+                                text: [this.$mxs_t('info.notFoundConn')],
                                 type: 'error',
                             })
                             this.cancelLeave()
@@ -191,6 +203,12 @@ export default {
         setDim() {
             const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
+        },
+        setQueryEditorTopSlotHeight() {
+            if (this.$refs.queryEditorTopSlot) {
+                const { height } = this.$refs.queryEditorTopSlot.getBoundingClientRect()
+                this.queryEditorTopSlotHeight = height
+            }
         },
         async wkeShortKeyHandler(e) {
             switch (e.srcKey) {

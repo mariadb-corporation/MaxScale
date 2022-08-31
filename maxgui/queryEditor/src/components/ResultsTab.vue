@@ -2,7 +2,7 @@
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center d-flex flex-row">
             <template v-if="!isLoading">
-                <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
+                <span v-if="!queryTxt" v-html="$mxs_t('resultTabGuide')" />
                 <v-menu
                     v-else
                     offset-y
@@ -15,7 +15,7 @@
                 >
                     <template v-slot:activator="{ on }">
                         <span class="mr-4 pointer mxs-color-helper text-anchor " v-on="on">
-                            {{ $t('queryTxt') }}
+                            {{ $mxs_t('queryTxt') }}
                         </span>
                     </template>
                     <v-sheet class="text-body-2 py-2 px-4 mxs-color-helper text-navigation">
@@ -68,10 +68,10 @@
                         <v-icon size="16" color="error" class="mr-2">
                             $vuetify.icons.mxs_alertWarning
                         </v-icon>
-                        {{ $t('incomplete') }}
+                        {{ $mxs_t('incomplete') }}
                     </div>
                 </template>
-                <span> {{ $t('info.queryIncomplete') }}</span>
+                <span> {{ $mxs_t('info.queryIncomplete') }}</span>
             </v-tooltip>
         </div>
         <v-skeleton-loader

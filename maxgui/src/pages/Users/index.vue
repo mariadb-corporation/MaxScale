@@ -1,5 +1,5 @@
 <template>
-    <page-wrapper>
+    <page-wrapper class="fill-height">
         <portal to="page-header">
             <div class="d-flex align-center">
                 <div class="d-inline-flex align-center">
@@ -203,7 +203,7 @@ export default {
             this.userDlg = {
                 isOpened: true,
                 type,
-                title: this.$t(`userOps.actions.${type}`),
+                title: this.$mxs_t(`userOps.actions.${type}`),
                 user: { ...this.userDlg.user, ...user },
             }
         },

@@ -4,7 +4,7 @@
         titleWrapperClass="mx-n9"
         :toggleOnClick="() => (showContent = !showContent)"
         :isContentVisible="showContent"
-        :title="`${$tc(relationshipsType, multiple ? 2 : 1)}`"
+        :title="`${$mxs_tc(relationshipsType, multiple ? 2 : 1)}`"
     >
         <mxs-select
             v-model="selectedItems"

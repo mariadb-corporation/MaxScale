@@ -51,7 +51,7 @@ export default {
     data() {
         return {
             currentActiveTab: null,
-            tabs: [this.$t('maxScaleParameters')],
+            tabs: [this.$mxs_t('maxScaleParameters')],
             overridingModuleParams: [],
         }
     },
@@ -64,7 +64,7 @@ export default {
     watch: {
         currentActiveTab: async function(val) {
             switch (val) {
-                case this.$t('maxScaleParameters'):
+                case this.$mxs_t('maxScaleParameters'):
                     await Promise.all([
                         this.fetchMaxScaleParameters(),
                         this.fetchModuleParameters('maxscale'),

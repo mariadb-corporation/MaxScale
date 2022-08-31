@@ -9,13 +9,13 @@
                 outlined
                 height="28"
                 class="vuetify-input--override filter-result mr-2"
-                :placeholder="$t('filterResult')"
+                :placeholder="$mxs_t('filterResult')"
                 hide-details
             />
             <mxs-filter-list
                 v-model="filterHeaderIdxs"
                 selectAllOnActivated
-                :label="$t('filterBy')"
+                :label="$mxs_t('filterBy')"
                 :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
@@ -31,7 +31,7 @@
                 color="accent-dark"
                 @click="handleEdit"
             >
-                {{ isEditing ? $t('doneEditing') : $t('edit') }}
+                {{ isEditing ? $mxs_t('doneEditing') : $mxs_t('edit') }}
             </v-btn>
             <v-tooltip
                 v-if="selectedItems.length"
@@ -49,10 +49,10 @@
                         v-on="on"
                         @click="$emit('on-delete-selected', selectedItems)"
                     >
-                        {{ $t('delete') }} ({{ selectedItems.length }})
+                        {{ $mxs_t('delete') }} ({{ selectedItems.length }})
                     </v-btn>
                 </template>
-                <span>{{ $t('deleteSelectedRows') }}</span>
+                <span>{{ $mxs_t('deleteSelectedRows') }}</span>
             </v-tooltip>
             <result-export
                 :rows="filteredRows_wo_idx"
@@ -62,7 +62,7 @@
             <mxs-filter-list
                 v-model="visHeaderIdxs"
                 selectAllOnActivated
-                :label="$t('columns')"
+                :label="$mxs_t('columns')"
                 :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
@@ -91,7 +91,7 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
+                <span>{{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
             <slot name="right-table-tools-append" />
         </div>
@@ -279,11 +279,11 @@ export default {
         baseOpts() {
             return [
                 {
-                    text: this.$t('placeToEditor'),
+                    text: this.$mxs_t('placeToEditor'),
                     children: this.insertOpts,
                 },
                 {
-                    text: this.$t('copyToClipboard'),
+                    text: this.$mxs_t('copyToClipboard'),
                     children: this.clipboardOpts,
                 },
             ]
@@ -342,7 +342,7 @@ export default {
          * @returns {Array} - return context options
          */
         genTxtOpts(type) {
-            return [this.$t('fieldQuoted'), this.$t('field')].map(text => ({
+            return [this.$mxs_t('fieldQuoted'), this.$mxs_t('field')].map(text => ({
                 text,
                 action: ({ opt, data }) => this.handleTxtOpt({ opt, data }),
                 type,
@@ -366,10 +366,10 @@ export default {
             } = this.SQL_RES_TBL_CTX_OPT_TYPES
             let v = ''
             switch (opt.text) {
-                case this.$t('fieldQuoted'):
+                case this.$mxs_t('fieldQuoted'):
                     v = this.$helpers.escapeIdentifiers(this.processField(data.cell))
                     break
-                case this.$t('field'):
+                case this.$mxs_t('field'):
                     v = this.processField(data.cell)
                     break
             }

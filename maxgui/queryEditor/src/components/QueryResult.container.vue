@@ -6,17 +6,17 @@
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
             >
-                <span> {{ $t('results') }} </span>
+                <span> {{ $mxs_t('results') }} </span>
             </v-tab>
             <v-tab
                 :disabled="getIsConnBusy && isLoading"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
             >
-                <span>{{ $t('dataPrvw') }} </span>
+                <span>{{ $mxs_t('dataPrvw') }} </span>
             </v-tab>
             <v-tab color="primary" :href="`#${SQL_QUERY_MODES.HISTORY}`">
-                <span>{{ $t('historyAndSnippets') }} </span>
+                <span>{{ $mxs_t('historyAndSnippets') }} </span>
             </v-tab>
         </v-tabs>
         <v-slide-x-transition>

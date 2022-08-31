@@ -49,7 +49,7 @@ describe(`QueryCnfDlg - child component's data communication tests `, () => {
             name: 'mxs-dlg',
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isOpened)
-        expect(title).to.be.equals(wrapper.vm.$t('queryConfig'))
+        expect(title).to.be.equals(wrapper.vm.$mxs_t('queryConfig'))
         expect(onSave).to.be.equals(wrapper.vm.onSave)
         expect(lazyValidation).to.be.false
         expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
@@ -119,14 +119,16 @@ describe(`QueryCnfDlg - form input tests`, () => {
             const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.${field}`)
             await inputChangeMock(inputComponent, 0)
             expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-                wrapper.vm.$t('errors.largerThanZero', { inputName: wrapper.vm.$t(field) })
+                wrapper.vm.$mxs_t('errors.largerThanZero', {
+                    inputName: wrapper.vm.$mxs_t(field),
+                })
             )
         })
         it(`Should show accurate error message when ${field} value is empty`, async () => {
             const inputComponent = wrapper.findComponent({ name: 'mxs-dlg' }).find(`.${field}`)
             await inputChangeMock(inputComponent, '')
             expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-                wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t(field) })
+                wrapper.vm.$mxs_t('errors.requiredInput', { inputName: wrapper.vm.$mxs_t(field) })
             )
         })
     })

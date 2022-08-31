@@ -2,9 +2,8 @@
     <div>
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
-            :title="confDlg.title"
-            :type="confDlg.type"
             minBodyWidth="768px"
+            :title="confDlg.title"
             :closeImmediate="true"
             :lazyValidation="false"
             :onSave="confDlg.onSave"
@@ -36,7 +35,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('openScript') }}
+                {{ $mxs_t('openScript') }}
                 <br />
                 Cmd/Ctrl + O
             </span>
@@ -62,7 +61,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('saveScript') }}
+                {{ $mxs_t('saveScript') }}
                 <br />
                 Cmd/Ctrl + S
             </span>
@@ -87,7 +86,7 @@
                 </v-btn>
             </template>
             <span class="d-inline-block text-center">
-                {{ $t('saveScriptAs') }}
+                {{ $mxs_t('saveScriptAs') }}
                 <br />
                 Cmd/Ctrl + Shift + S
             </span>
@@ -116,8 +115,7 @@ export default {
         return {
             confDlg: {
                 isOpened: false,
-                title: this.$t('openScript'),
-                type: 'openScript',
+                title: this.$mxs_t('openScript'),
                 confirmMsg: '',
                 onSave: () => null,
                 dontSave: () => null,
@@ -195,9 +193,8 @@ export default {
             this.confDlg = {
                 ...this.confDlg,
                 isOpened: true,
-                title: this.$t('openScript'),
-                type: 'openScript',
-                confirmMsg: this.$t('confirmations.openScript', {
+                title: this.$mxs_t('openScript'),
+                confirmMsg: this.$mxs_t('confirmations.openScript', {
                     targetId: this.getActiveSession.name,
                     fileNameToBeOpened: blob.handle.name,
                 }),

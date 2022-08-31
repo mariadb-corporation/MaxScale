@@ -98,7 +98,7 @@
                 v-if="index === 1"
                 class="v-select__selection v-select__selection--comma mxs-color-helper text-caption text-grayed-out "
             >
-                (+{{ targetItem.value.length - 1 }} {{ $t('others') }}))
+                (+{{ targetItem.value.length - 1 }} {{ $mxs_t('others') }}))
             </span>
         </template>
     </v-select>
@@ -469,16 +469,17 @@ export default {
             const isValidNaturalNum = /^\d*$/g.test(val)
 
             if (moduleParamRequired) {
-                return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
+                return this.$mxs_t('errors.requiredInput', { inputName: this.targetItem.id })
             } else {
                 switch (this.targetItem.type) {
                     case 'int':
                     case 'duration':
                         if ((!isValidInt && !isEmptyVal) || val === '-')
-                            return this.$t('errors.nonInteger')
+                            return this.$mxs_t('errors.nonInteger')
                         break
                     case 'count':
-                        if (!isValidNaturalNum && !isEmptyVal) return this.$t('errors.negativeNum')
+                        if (!isValidNaturalNum && !isEmptyVal)
+                            return this.$mxs_t('errors.negativeNum')
                         break
                 }
             }
@@ -489,7 +490,7 @@ export default {
             // required param validation
             let moduleParamRequired = this.isEmpty(val) && this.targetItem.mandatory
             if (moduleParamRequired) {
-                return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
+                return this.$mxs_t('errors.requiredInput', { inputName: this.targetItem.id })
             }
             return true
         },
@@ -506,7 +507,7 @@ export default {
             const bothValueExist = portExist && socketExist
 
             if (bothEmpty || bothValueExist) {
-                return this.$t('errors.portSocket')
+                return this.$mxs_t('errors.portSocket')
             } else return true
         },
 
@@ -519,9 +520,9 @@ export default {
             const isEmptyVal = this.isEmpty(val)
 
             if (isEmptyVal && portExist) {
-                return this.$t('errors.addressRequired')
+                return this.$mxs_t('errors.addressRequired')
             } else if (!isEmptyVal && socketExist && !bothExist) {
-                return this.$t('errors.addressRequiredEmpty')
+                return this.$mxs_t('errors.addressRequiredEmpty')
             }
             return true
         },

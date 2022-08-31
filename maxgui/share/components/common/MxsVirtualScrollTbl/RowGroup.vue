@@ -47,7 +47,7 @@
                         <v-icon size="10" color="deep-ocean"> $vuetify.icons.mxs_close</v-icon>
                     </v-btn>
                 </template>
-                <span>{{ $t('ungroup') }}</span>
+                <span>{{ $mxs_t('ungroup') }}</span>
             </v-tooltip>
         </div>
     </div>

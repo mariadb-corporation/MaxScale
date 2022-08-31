@@ -5,7 +5,7 @@
         <mxs-dlg
             v-model="updateExists"
             :onSave="confirmUpdate"
-            :title="`${$t('newUpdateAvailable')}`"
+            :title="`${$mxs_t('newUpdateAvailable')}`"
             saveText="update"
             isForceAccept
         />
@@ -25,6 +25,7 @@
  * of this software will be governed by version 2 or later of the General
  *  Public License.
  */
+import '@rootSrc/styles/main.scss'
 import store from '@rootSrc/store'
 import AppLayout from '@rootSrc/layouts/AppLayout'
 import NoLayout from '@rootSrc/layouts/NoLayout'

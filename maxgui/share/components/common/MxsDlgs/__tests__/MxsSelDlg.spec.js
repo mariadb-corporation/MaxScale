@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import MxsSelDlg from '@share/components/common/Dialogs/MxsSelDlg'
+import MxsSelDlg from '@share/components/common/MxsDlgs/MxsSelDlg'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const initialProps = {
