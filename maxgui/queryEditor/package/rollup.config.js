@@ -39,6 +39,7 @@ const external = [
     'browser-fs-access',
     'chart.js',
     'chartjs-plugin-trendline',
+    'localforage',
     'lodash',
     'moment',
     'sql-formatter',
@@ -51,6 +52,7 @@ const external = [
     'vuetify',
     'vuetify/lib',
     'vuex',
+    'vuex-persist',
 ]
 // Customize configs for using as SFC
 const buildFormats = []
@@ -97,7 +99,6 @@ const esConfig = {
         PostCSS({ sourceMap: false, minimize: true }),
         copy({
             targets: [
-                { src: `${queryEditorSrcPath}/store/persistPlugin.js`, dest: 'dist' },
                 { src: `${sharePath}/icons`, dest: 'dist' },
                 { src: `${sharePath}/plugins/vuetifyTheme.js`, dest: 'dist' },
                 { src: `${sharePath}/locales`, dest: 'dist' },

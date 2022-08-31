@@ -72,7 +72,7 @@ Vue.use(MxsQueryEditor, {
 new Vue({
     vuetify,
     i18n,
-    render: (h) => h(App),
+    render: h => h(App),
 }).$mount('#app')
 ```
 
@@ -85,7 +85,7 @@ import VueI18n from 'vue-i18n'
 const merge = require('lodash/merge')
 function getMsgs(locales) {
     const messages = {}
-    locales.keys().forEach((key) => {
+    locales.keys().forEach(key => {
         const matched = key.match(/([A-Za-z0-9-_]+)\./i)
         if (matched && matched.length > 1) {
             const locale = matched[1]
@@ -160,16 +160,11 @@ registered manually.
 // store/index.js
 import Vue from 'vue'
 import Vuex from 'vuex'
-import queryEditorPersistPlugin from 'mxs-query-editor/dist/persistPlugin'
+import { queryEditorStorePlugins } from 'mxs-query-editor'
 
 export default new Vuex.Store({
     namespaced: true,
-    plugins: [
-        (store) => {
-            store.vue = Vue.prototype
-        },
-        queryEditorPersistPlugin,
-    ],
+    plugins: queryEditorStorePlugins,
 })
 ```
 
