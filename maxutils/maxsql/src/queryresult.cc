@@ -213,9 +213,6 @@ QueryResult::QueryResult(std::vector<std::string>&& col_names)
     for (size_t column_index = 0; column_index < col_names.size(); column_index++)
     {
         const auto& key = col_names[column_index];
-        // TODO: Think of a way to handle duplicate names nicely. Currently this should only be used
-        // for known queries.
-        mxb_assert(m_col_indexes.count(key) == 0);
         m_col_indexes[key] = column_index;
     }
 }
