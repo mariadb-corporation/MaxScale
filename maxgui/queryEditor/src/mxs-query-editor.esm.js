@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MaxScaleQueryEditor from '@queryEditorSrc/MaxScaleQueryEditor.vue'
+import MxsQueryEditor from '@queryEditorSrc/MxsQueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
@@ -25,7 +25,7 @@ export { default as MinMaxBtn } from '@queryEditorSrc/components/MinMaxBtn.conta
 
 export default /*#__PURE__*/ (() => {
     // Get component instance
-    const installable = MaxScaleQueryEditor
+    const installable = MxsQueryEditor
 
     /**
      * @param {Object} Vue - Vue instance. Automatically pass when register the plugin with Vue.use
@@ -39,8 +39,8 @@ export default /*#__PURE__*/ (() => {
 
         //Register common components
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
-        // Register maxscale-query-editor component
-        Vue.component('maxscale-query-editor', MaxScaleQueryEditor)
+        // Register mxs-query-editor component
+        Vue.component('mxs-query-editor', MxsQueryEditor)
 
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {

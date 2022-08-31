@@ -4,16 +4,19 @@
 
 //TODO: Add this when it's published in npm
 
-Query editor requires these peer dependencies to be installed
+Query editor peerDependencies
 
 -   @mdi/font@^7.0.96
 -   axios@^0.27.2
+-   browser-fs-access@^0.30.1
 -   chart.js@^2.9.4
+-   chartjs-plugin-trendline@^0.2.2
 -   deep-diff@^1.0.2
 -   immutability-helper@^3.1.1
 -   localforage@^1.10.0
 -   lodash@^4.17.21
 -   monaco-editor@^0.33.0
+-   sql-formatter@^4.0.2
 -   stacktrace-parser@^0.1.10
 -   typy@^3.3.0
 -   uuid@^8.3.2
@@ -22,6 +25,7 @@ Query editor requires these peer dependencies to be installed
 -   vue-i18n@^8.27.0
 -   vue-moment@^4.1.0
 -   vue-shortkey@^3.1.7
+-   vue-template-compiler@^2.6.14
 -   vuetify@^2.6.7
 -   vuex@^3.6.2
 -   vuex-persist@^3.1.3
@@ -40,8 +44,8 @@ import VueI18n from 'vue-i18n'
 import Vuex from 'vuex'
 import Vuetify from 'vuetify/lib'
 import { Resize } from 'vuetify/lib/directives'
-import MaxScaleQueryEditor from 'maxscale-query-editor'
-import 'maxscale-query-editor/dist/maxscale-query-editor.esm.css'
+import MxsQueryEditor from 'mxs-query-editor'
+import 'mxs-query-editor/dist/mxs-query-editor.esm.css'
 import vuetify from '@/plugins/vuetify'
 import i18n from '@/plugins/i18n'
 import App from '@/App.vue'
@@ -56,7 +60,7 @@ Vue.use(Vuetify)
 /* store and i18n must be valid and defined.
  * e.g. Vue.use(Vuex) is called before importing store.
  */
-Vue.use(MaxScaleQueryEditor, {
+Vue.use(MxsQueryEditor, {
     store: require('./store/index').default,
     i18n: require('@/plugins/i18n').default,
     // a list of component name to be hidden
@@ -91,7 +95,7 @@ function getMsgs(locales) {
 function loadLocaleMessages() {
     // Get query editor messages.
     const queryEditorMsgs = getMsgs(
-        require.context('maxscale-query-editor/dist/locales', true, /[A-Za-z0-9-_,\s]+\.json$/i)
+        require.context('mxs-query-editor/dist/locales', true, /[A-Za-z0-9-_,\s]+\.json$/i)
     )
     const messages = getMsgs(require.context('@/locales', true, /[A-Za-z0-9-_,\s]+\.json$/i))
     return merge(messages, queryEditorMsgs)
@@ -112,7 +116,7 @@ overwritten. e.g. `$vuetify.icons.mxs_edit`
 // plugins/vuetify.js
 import Vuetify from 'vuetify/lib'
 import icons from 'icons'
-import queryEditorIcons from 'maxscale-query-editor/dist/icons'
+import queryEditorIcons from 'mxs-query-editor/dist/icons'
 import i18n from './i18n'
 import vuetifyTheme from './vuetifyTheme'
 import '@mdi/font/css/materialdesignicons.css'
@@ -154,7 +158,7 @@ registered manually.
 // store/index.js
 import Vue from 'vue'
 import Vuex from 'vuex'
-import queryEditorPersistPlugin from 'maxscale-query-editor/dist/persistPlugin'
+import queryEditorPersistPlugin from 'mxs-query-editor/dist/persistPlugin'
 
 export default new Vuex.Store({
     namespaced: true,
@@ -167,14 +171,14 @@ export default new Vuex.Store({
 })
 ```
 
-Use `maxscale-query-editor` component
+Use `mxs-query-editor` component
 
-`maxscale-query-editor` is registered at global scope.
+`mxs-query-editor` is registered at global scope.
 
 ```vue
 <!-- SkyQuery.vue -->
 <template>
-    <maxscale-query-editor
+    <mxs-query-editor
         ref="queryEditor"
         class="query-editor-page"
         @leave-page="$router.push($event)"
@@ -198,18 +202,18 @@ export default {
 </style>
 ```
 
-## Use `maxscale-query-editor` sub components
+## Use `mxs-query-editor` sub components
 
 If the `hidden_comp` option is provided when registering the plugin,
 the components in the list won't be rendered. e.g. `hidden_comp: ['wke-nav-ctr']`.
 Certain components can be manually imported and placed somewhere else outside
-the `maxscale-query-editor` component. At the moment, only `query-cnf-gear-btn`
+the `mxs-query-editor` component. At the moment, only `query-cnf-gear-btn`
 and `min-max-btn` are importable.
 
 ```vue
 <!-- SkyQuery.vue -->
 <template>
-    <maxscale-query-editor
+    <mxs-query-editor
         ref="queryEditor"
         class="query-editor-page"
         @leave-page="$router.push($event)"
@@ -221,11 +225,11 @@ and `min-max-btn` are importable.
                 <min-max-btn />
             </div>
         </template>
-    </maxscale-query-editor>
+    </mxs-query-editor>
 </template>
 
 <script>
-import { MinMaxBtn, QueryCnfGearBtn } from 'maxscale-query-editor'
+import { MinMaxBtn, QueryCnfGearBtn } from 'mxs-query-editor'
 export default {
     name: 'query-page',
     components: {
@@ -245,9 +249,9 @@ export default {
 </style>
 ```
 
-## Slots of `maxscale-query-editor` component
+## Slots of `mxs-query-editor` component
 
-The `maxscale-query-editor` component has the following slots:
+The `mxs-query-editor` component has the following slots:
 
 -   `query-editor-top`: Slot for placing content at the top of the query editor
     that is above the worksheet navigation tabs.

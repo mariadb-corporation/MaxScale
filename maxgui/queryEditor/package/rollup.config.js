@@ -35,23 +35,30 @@ const scssVariables = `@import "${sharePath}/styles/colors.scss";
 // Refer to https://rollupjs.org/guide/en/#warning-treating-module-as-external-dependency
 const external = [
     // list external dependencies, exactly the way it is written in the import statement.
+    'axios',
+    'browser-fs-access',
+    'chart.js',
+    'chartjs-plugin-trendline',
+    'lodash',
+    'moment',
+    'sql-formatter',
+    'sql-formatter/lib/core/Formatter',
+    'sql-formatter/lib/core/Tokenizer',
+    'uuid',
     'vue',
+    'vue-chartjs',
+    'vue-moment',
     'vuetify',
     'vuetify/lib',
     'vuex',
-    'lodash',
-    'vue-moment',
-    'moment',
-    'axios',
-    'uuid',
 ]
 // Customize configs for using as SFC
 const buildFormats = []
 const esConfig = {
-    input: `${queryEditorSrcPath}/maxscale-query-editor.esm.js`,
+    input: `${queryEditorSrcPath}/mxs-query-editor.esm.js`,
     treeshake: true,
     external,
-    output: { file: 'dist/maxscale-query-editor.esm.js', format: 'esm', exports: 'named' },
+    output: { file: 'dist/mxs-query-editor.esm.js', format: 'esm', exports: 'named' },
     plugins: [
         dotenv({ cwd: projectRoot }),
         replace({ preventAssignment: true, 'process.env.NODE_ENV': JSON.stringify('production') }),
