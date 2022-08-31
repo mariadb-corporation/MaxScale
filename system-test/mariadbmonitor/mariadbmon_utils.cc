@@ -78,6 +78,12 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
                                      expected_val, insert_count);
                     ok = false;
                 }
+
+                if (ok)
+                {
+                    // Wait for monitor to detect gtid change.
+                    test.maxscale->wait_for_monitor();
+                }
             }
             else
             {

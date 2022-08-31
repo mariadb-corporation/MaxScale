@@ -64,7 +64,7 @@ add_test_executable_ex(NAME mysqlmon_rejoin_bad2 SOURCE mysqlmon_rejoin_bad2.cpp
 add_test_executable_ex(NAME mysqlmon_rejoin_manual SOURCE mysqlmon_rejoin_manual.cpp
         CONFIG mysqlmon_rejoin_manual.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 add_test_executable_ex(NAME mysqlmon_rejoin_manual2 SOURCE mysqlmon_rejoin_manual2.cpp
-        CONFIG mysqlmon_rejoin_manual.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_rejoin_manual.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor rolling master
 add_test_executable_ex(NAME mysqlmon_failover_rolling_master SOURCE mysqlmon_failover_rolling_master.cpp
