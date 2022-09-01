@@ -262,7 +262,9 @@ add_test_executable(kill_query.cpp kill_query kill_query LABELS REPL_BACKEND)
 add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
 
 # MXS-2355: Try to log in using a different authentication plugin
-add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REPL_BACKEND)
+# MXS-4094: Wrong auth plugin and no pw
+add_test_executable_ex(NAME mxs2355_wrong_auth SOURCE mxs2355_wrong_auth.cpp CONFIG mxs2355_wrong_auth.cnf
+        VMS repl_backend)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)

@@ -16,29 +16,30 @@
 // Try to connect with mysql client using the plugin "mysql_clear_password". MaxScale should switch back
 // to "mysql_native_password".
 
+void test_main(TestConnections& test);
+
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
-    const char* host = test.maxscale->ip4();
-    int port = test.maxscale->ports[0];
-    const char* user = test.maxscale->user_name().c_str();
-    const char* pass = test.maxscale->password().c_str();
-    const char plugin[] = "mysql_clear_password";
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    test.tprintf("Trying to log in to [%s]:%i as %s with plugin '%s'.\n", host, port, user, plugin);
-    MYSQL* maxconn = mysql_init(NULL);
-    test.expect(maxconn, "mysql_init failed");
-    if (maxconn)
-    {
+void test_main(TestConnections& test)
+{
+    auto try_conn = [&test](const char* host, int port, const char* user, const char* pass) {
+        MYSQL* maxconn = mysql_init(NULL);
         // Need to set plugin directory so that mysql_clear_password is found.
         const char plugin_path[] = "../connector-c/install/lib/mariadb/plugin";
+        const char plugin[] = "caching_sha2_password";
         mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path);
         mysql_optionsv(maxconn, MYSQL_DEFAULT_AUTH, plugin);
+        test.tprintf("Trying to log in to [%s]:%i as %s with plugin '%s' and password '%s'.",
+                     host, port, user, plugin, pass);
         mysql_real_connect(maxconn, host, user, pass, NULL, port, NULL, 0);
         auto err = mysql_error(maxconn);
         if (*err)
         {
-            test.expect(false, "Could not log in: '%s'", err);
+            test.add_failure("Could not log in: '%s'", err);
         }
         else
         {
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
             if (test.ok())
             {
                 test.tprintf("Logged in and queried successfully.\n");
-                test.log_includes("is using an unsupported authenticator plugin 'mysql_clear_password'.");
+                test.log_includes("is using an unsupported authenticator plugin 'caching_sha2_password'.");
             }
             else
             {
@@ -54,8 +55,24 @@ int main(int argc, char** argv)
             }
         }
         mysql_close(maxconn);
+    };
+
+    auto& mxs = *test.maxscale;
+    const char* host = mxs.ip4();
+    int port = mxs.ports[0];
+    const char* user = mxs.user_name().c_str();
+    const char* pass = mxs.password().c_str();
+
+    try_conn(host, port, user, pass);
+
+    if (test.ok())
+    {
+        // Create a user with no password. Check that can log in while giving wrong auth plugin. Tests
+        // MXS-4094.
+        auto admin_conn = test.repl->backend(0)->admin_connection();
+        std::string username = "batman";
+        mxt::ScopedUser no_pw_user = admin_conn->create_user(username, "%", "");
+        no_pw_user.grant("select on test.*");
+        try_conn(host, port, username.c_str(), "");
     }
-
-
-    return test.global_result;
 }
