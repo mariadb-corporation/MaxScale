@@ -13,3 +13,8 @@ add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cpp
 # HEAVY to prevent runs on general test runs.
 add_test_executable_ex(NAME pam_authentication_2fa SOURCE pam_authentication_2fa.cpp
         CONFIG pam_authentication_2fa.cnf VMS repl_backend LABELS HEAVY)
+
+# MXS-2355: Try to log in using a different authentication plugin
+# MXS-4094: Wrong auth plugin and no pw
+add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_plugin.cc
+        CONFIG wrong_client_auth_plugin.cnf VMS repl_backend)
