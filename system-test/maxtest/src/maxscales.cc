@@ -675,6 +675,22 @@ void MaxScale::copy_fw_rules(const std::string& rules_name, const std::string& r
     ssh_node_f(true, "chmod a+r %s", dest.c_str());
 }
 
+bool MaxScale::log_matches(std::string pattern) const
+{
+    // Replace single quotes with wildcard characters, should solve most problems
+    for (auto& a : pattern)
+    {
+        if (a == '\'')
+        {
+            a = '.';
+        }
+    }
+
+    MaxScale* p = const_cast<MaxScale*>(this);
+
+    return p->ssh_node_f(true, "grep '%s' /var/log/maxscale/maxscale*.log", pattern.c_str()) == 0;
+}
+
 mxt::CmdResult MaxScale::ssh_output(const std::string& cmd, bool sudo)
 {
     using CmdPriv = mxt::VMNode::CmdPriv;
