@@ -40,6 +40,10 @@ For more information about the MaxScale REST API, refer to the
 
 [TOC]
 
+# Limitations
+
+* MaxCtrl does not work when used from a SystemD unit with MemoryDenyWriteExecute=true.
+
 # .maxctrl.cnf
 
 If the file \`~/.maxctrl.cnf\` exists, maxctrl will use any values in the
