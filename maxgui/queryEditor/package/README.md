@@ -47,7 +47,6 @@ import Vuex from 'vuex'
 import Vuetify from 'vuetify/lib'
 import { Resize } from 'vuetify/lib/directives'
 import MxsQueryEditor from 'mxs-query-editor'
-import 'mxs-query-editor/dist/mxs-query-editor.esm.css'
 import vuetify from '@/plugins/vuetify'
 import i18n from '@/plugins/i18n'
 import App from '@/App.vue'
@@ -211,7 +210,7 @@ and `min-max-btn` are importable.
 <!-- SkyQuery.vue -->
 <template>
     <mxs-query-editor
-        ref="queryEditor"
+        ref="mxsQueryEditor"
         class="query-editor-page"
         @leave-page="$router.push($event)"
     >
@@ -234,7 +233,7 @@ export default {
         MinMaxBtn,
     },
     async beforeRouteLeave(to, from, next) {
-        this.$refs.queryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
+        this.$refs.mxsQueryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
     },
 }
 </script>
@@ -269,29 +268,30 @@ mutation:
 
 Certain keywords are reserved in order to make the query editor work properly.
 
-| Keywords              |                        For                         |
-| --------------------- | :------------------------------------------------: |
-| queryEditor           |                  i18n json locale                  |
-| mxs_icon_name         | Query editor icons, they have `mxs_`as the prefix. |
-| mxs-component-name    |   Global Vue components with`mxs-`as the prefix    |
-| maxscale-query-editor |                Global Vue component                |
-| appNotifier           |                    Vuex module                     |
-| wke                   |                    Vuex module                     |
-| queryConn             |                    Vuex module                     |
-| editor                |                    Vuex module                     |
-| schemaSidebar         |                    Vuex module                     |
-| queryResult           |                    Vuex module                     |
-| querySession          |                    Vuex module                     |
-| queryPersisted        |                    Vuex module                     |
-| queryEditorConfig     |                    Vuex module                     |
-| \$mxs_t               |               Vue instance property                |
-| \$mxs_tc              |               Vue instance property                |
-| \$mxs_te              |               Vue instance property                |
-| \$mxs_d               |               Vue instance property                |
-| \$mxs_n               |               Vue instance property                |
-| \$queryHttp           |               Vue instance property                |
-| \$helpers             |               Vue instance property                |
-| \$logger              |               Vue instance property                |
+| Keywords           |                        For                         |
+| ------------------ | :------------------------------------------------: |
+| queryEditor        |                  i18n json locale                  |
+| mxs_icon_name      | Query editor icons, they have `mxs_`as the prefix. |
+| mxs-component-name |   Global Vue components with`mxs-`as the prefix    |
+| mxs-query-editor   |                Global Vue component                |
+| appNotifier        |                    Vuex module                     |
+| wke                |                    Vuex module                     |
+| queryConn          |                    Vuex module                     |
+| editor             |                    Vuex module                     |
+| schemaSidebar      |                    Vuex module                     |
+| queryResult        |                    Vuex module                     |
+| querySession       |                    Vuex module                     |
+| queryPersisted     |                    Vuex module                     |
+| queryEditorConfig  |                    Vuex module                     |
+| store.vue          |                     Vuex store                     |
+| \$mxs_t            |               Vue instance property                |
+| \$mxs_tc           |               Vue instance property                |
+| \$mxs_te           |               Vue instance property                |
+| \$mxs_d            |               Vue instance property                |
+| \$mxs_n            |               Vue instance property                |
+| \$queryHttp        |               Vue instance property                |
+| \$helpers          |               Vue instance property                |
+| \$logger           |               Vue instance property                |
 
 ## How to publish the package
 
