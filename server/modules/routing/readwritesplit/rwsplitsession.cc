@@ -477,6 +477,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     {
         backend->ack_write();
         m_expected_responses--;
+        m_wait_gtid = NONE;
         m_pSession->reset_server_bookkeeping();
         backend->close();
     }
@@ -751,13 +752,13 @@ bool RWSplitSession::start_trx_replay()
             m_current_query.copy_from(m_orig_stmt);
 
             mxb_assert(std::none_of(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
-                                        return b.get()->type_is_replayed();
-                                    }));
+                return b.get()->type_is_replayed();
+            }));
 
             // Erase all replayed queries from the query queue to prevent checksum mismatches
             m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
-                                                   return b.get()->type_is_replayed();
-                                               }), m_query_queue.end());
+                return b.get()->type_is_replayed();
+            }), m_query_queue.end());
         }
 
         if (m_trx.have_stmts() || m_current_query.get())
@@ -972,6 +973,17 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
     {
         MXB_INFO("Slave '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
+        if (backend->is_waiting_result())
+        {
+            // Slaves should never have more than one response waiting
+            mxb_assert(m_expected_responses == 1);
+            m_expected_responses--;
+
+            mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
+            // Reset causal read state so that the next read starts from the correct one.
+            m_wait_gtid = NONE;
+        }
+
         if (trx_is_read_only() && m_trx.target() == backend)
         {
             if (backend->is_waiting_result())
@@ -999,12 +1011,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
              * be closed. We can safely start retrying the transaction
              * on the master.
              */
-
-            if (backend->is_waiting_result())
-            {
-                mxb_assert(m_expected_responses == 1);
-                m_expected_responses--;
-            }
 
             mxb_assert(trx_is_open());
             can_continue = start_trx_replay();
@@ -1053,14 +1059,6 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
     if (backend->is_waiting_result())
     {
-        // Slaves should never have more than one response waiting
-        mxb_assert(m_expected_responses == 1);
-        m_expected_responses--;
-
-        mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
-        // Reset causal read state so that the next read starts from the correct one.
-        m_wait_gtid = NONE;
-
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)
         {
@@ -1139,6 +1137,13 @@ bool RWSplitSession::supports_hint(Hint::Type hint_type) const
     case Type::ROUTE_TO_NAMED_SERVER:
     case Type::ROUTE_TO_LAST_USED:
     case Type::PARAMETER:
+        // Ignore hints inside transactions if transaction replay or causal reads is enabled. This prevents
+        // all sorts of problems (e.g. MXS-4260) that happen when the contents of the transaction are spread
+        // across multiple servers.
+        if (trx_is_open() && (m_config.transaction_replay || m_config.causal_reads != CausalReads::NONE))
+        {
+            rv = false;
+        }
         break;
 
     case Type::ROUTE_TO_UPTODATE_SERVER:
