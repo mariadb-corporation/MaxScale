@@ -2,6 +2,8 @@
 
 The SQL resource represents a database connection.
 
+[TOC]
+
 ## SQL Connection Interface
 
 The following endpoints provide a simple REST API interface for executing
