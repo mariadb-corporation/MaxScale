@@ -50,7 +50,7 @@ add_test_executable_ex(NAME mysqlmon_failover_no_slaves SOURCE mysqlmon_failover
 
 # MySQL Monitor Rejoin (good) Test
 add_test_executable_ex(NAME mysqlmon_rejoin_good SOURCE mysqlmon_rejoin_good.cpp
-        CONFIG mysqlmon_rejoin_good.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_rejoin_good.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 add_test_executable_ex(NAME mysqlmon_rejoin_bad SOURCE mysqlmon_rejoin_bad.cpp
         CONFIG mysqlmon_rejoin_bad.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
