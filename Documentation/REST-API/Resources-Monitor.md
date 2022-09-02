@@ -58,6 +58,7 @@ Get a single monitor.
                                 "master_host": "127.0.0.1",
                                 "master_port": 3000,
                                 "master_server_id": 3000,
+                                "master_server_name": "server1",
                                 "seconds_behind_master": 0,
                                 "slave_io_running": "Yes",
                                 "slave_sql_running": "Yes"
@@ -72,43 +73,47 @@ Get a single monitor.
                 "auto_failover": false,
                 "auto_rejoin": false,
                 "backend_connect_attempts": 1,
-                "backend_connect_timeout": 3,
-                "backend_read_timeout": 3,
-                "backend_write_timeout": 3,
+                "backend_connect_timeout": "3000ms",
+                "backend_read_timeout": "3000ms",
+                "backend_write_timeout": "3000ms",
                 "cooperative_monitoring_locks": "none",
+                "cs_admin_api_key": null,
+                "cs_admin_base_path": "/cmapi/0.4.0",
+                "cs_admin_port": 8640,
                 "demotion_sql_file": null,
-                "detect_replication_lag": false,
-                "detect_stale_master": null,
-                "detect_stale_slave": null,
-                "detect_standalone_master": null,
-                "disk_space_check_interval": 0,
+                "disk_space_check_interval": "0ms",
                 "disk_space_threshold": null,
                 "enforce_read_only_slaves": false,
                 "enforce_simple_topology": false,
                 "enforce_writable_master": false,
-                "events": "all",
+                "events": "all,master_down,master_up,slave_down,slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,lost_master,lost_slave,lost_synced,lost_donor,new_master,new_slave,new_synced,new_donor",
                 "failcount": 5,
-                "failover_timeout": 90,
+                "failover_timeout": "90000ms",
                 "handle_events": true,
-                "ignore_external_masters": false,
-                "journal_max_age": 28800,
+                "journal_max_age": "28800000ms",
                 "maintenance_on_low_disk_space": true,
                 "master_conditions": "primary_monitor_master",
-                "master_failure_timeout": 10,
+                "master_failure_timeout": "10000ms",
                 "module": "mariadbmon",
-                "monitor_interval": 5000,
+                "monitor_interval": "5000ms",
                 "password": "*****",
                 "promotion_sql_file": null,
+                "rebuild_port": 4444,
                 "replication_master_ssl": false,
-                "replication_password": null,
-                "replication_user": null,
+                "replication_password": "*****",
+                "replication_user": "maxuser",
                 "script": null,
                 "script_max_replication_lag": -1,
-                "script_timeout": 90,
+                "script_timeout": "90000ms",
                 "servers_no_promotion": null,
-                "slave_conditions": "none",
+                "slave_conditions": "",
+                "ssh_check_host_key": true,
+                "ssh_keyfile": null,
+                "ssh_timeout": "10000ms",
+                "ssh_user": null,
                 "switchover_on_low_disk_space": false,
-                "switchover_timeout": 90,
+                "switchover_timeout": "90000ms",
+                "type": "monitor",
                 "user": "maxuser",
                 "verify_master_failure": true
             },
@@ -211,6 +216,7 @@ Get all monitors.
                                     "master_host": "127.0.0.1",
                                     "master_port": 3000,
                                     "master_server_id": 3000,
+                                    "master_server_name": "server1",
                                     "seconds_behind_master": 0,
                                     "slave_io_running": "Yes",
                                     "slave_sql_running": "Yes"
@@ -225,43 +231,47 @@ Get all monitors.
                     "auto_failover": false,
                     "auto_rejoin": false,
                     "backend_connect_attempts": 1,
-                    "backend_connect_timeout": 3,
-                    "backend_read_timeout": 3,
-                    "backend_write_timeout": 3,
+                    "backend_connect_timeout": "3000ms",
+                    "backend_read_timeout": "3000ms",
+                    "backend_write_timeout": "3000ms",
                     "cooperative_monitoring_locks": "none",
+                    "cs_admin_api_key": null,
+                    "cs_admin_base_path": "/cmapi/0.4.0",
+                    "cs_admin_port": 8640,
                     "demotion_sql_file": null,
-                    "detect_replication_lag": false,
-                    "detect_stale_master": null,
-                    "detect_stale_slave": null,
-                    "detect_standalone_master": null,
-                    "disk_space_check_interval": 0,
+                    "disk_space_check_interval": "0ms",
                     "disk_space_threshold": null,
                     "enforce_read_only_slaves": false,
                     "enforce_simple_topology": false,
                     "enforce_writable_master": false,
-                    "events": "all",
+                    "events": "all,master_down,master_up,slave_down,slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,lost_master,lost_slave,lost_synced,lost_donor,new_master,new_slave,new_synced,new_donor",
                     "failcount": 5,
-                    "failover_timeout": 90,
+                    "failover_timeout": "90000ms",
                     "handle_events": true,
-                    "ignore_external_masters": false,
-                    "journal_max_age": 28800,
+                    "journal_max_age": "28800000ms",
                     "maintenance_on_low_disk_space": true,
                     "master_conditions": "primary_monitor_master",
-                    "master_failure_timeout": 10,
+                    "master_failure_timeout": "10000ms",
                     "module": "mariadbmon",
-                    "monitor_interval": 5000,
+                    "monitor_interval": "5000ms",
                     "password": "*****",
                     "promotion_sql_file": null,
+                    "rebuild_port": 4444,
                     "replication_master_ssl": false,
-                    "replication_password": null,
-                    "replication_user": null,
+                    "replication_password": "*****",
+                    "replication_user": "maxuser",
                     "script": null,
                     "script_max_replication_lag": -1,
-                    "script_timeout": 90,
+                    "script_timeout": "90000ms",
                     "servers_no_promotion": null,
-                    "slave_conditions": "none",
+                    "slave_conditions": "",
+                    "ssh_check_host_key": true,
+                    "ssh_keyfile": null,
+                    "ssh_timeout": "10000ms",
+                    "ssh_user": null,
                     "switchover_on_low_disk_space": false,
-                    "switchover_timeout": 90,
+                    "switchover_timeout": "90000ms",
+                    "type": "monitor",
                     "user": "maxuser",
                     "verify_master_failure": true
                 },
@@ -415,7 +425,7 @@ Monitor is modified:
 
 Invalid request body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Update monitor relationships
 
@@ -460,7 +470,7 @@ Monitor relationships modified:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Destroy a monitor
 
@@ -482,7 +492,7 @@ Monitor is deleted:
 
 Monitor could not be deleted:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Stop a monitor
 

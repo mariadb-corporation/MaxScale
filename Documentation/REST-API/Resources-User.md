@@ -24,10 +24,14 @@ user name.
 {
     "data": {
         "attributes": {
-            "account": "admin"
+            "account": "admin",
+            "created": "Fri, 02 Sep 2022 06:19:08 GMT",
+            "last_login": "Fri, 02 Sep 2022 06:19:18 GMT",
+            "last_update": null,
+            "name": "admin"
         },
         "id": "admin",
-        "relationships": {
+        "links": {
             "self": "http://localhost:8989/v1/users/inet/admin/"
         },
         "type": "inet"
@@ -55,10 +59,14 @@ Get all network users.
     "data": [
         {
             "attributes": {
-                "account": "admin"
+                "account": "admin",
+                "created": "Fri, 02 Sep 2022 06:19:08 GMT",
+                "last_login": "Fri, 02 Sep 2022 06:19:18 GMT",
+                "last_update": null,
+                "name": "admin"
             },
             "id": "admin",
-            "relationships": {
+            "links": {
                 "self": "http://localhost:8989/v1/users/inet/admin/"
             },
             "type": "inet"
@@ -103,10 +111,14 @@ Get all administrative users.
     "data": [
         {
             "attributes": {
-                "account": "admin"
+                "account": "admin",
+                "created": "Fri, 02 Sep 2022 06:19:08 GMT",
+                "last_login": "Fri, 02 Sep 2022 06:19:18 GMT",
+                "last_update": null,
+                "name": "admin"
             },
             "id": "admin",
-            "relationships": {
+            "links": {
                 "self": "http://localhost:8989/v1/users/inet/admin/"
             },
             "type": "inet"

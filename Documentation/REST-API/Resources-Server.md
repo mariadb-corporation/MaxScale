@@ -47,7 +47,7 @@ Get a single server.
                 "rank": "primary",
                 "socket": null,
                 "ssl": false,
-                "ssl_ca_cert": null,
+                "ssl_ca": null,
                 "ssl_cert": null,
                 "ssl_cert_verify_depth": 9,
                 "ssl_cipher": null,
@@ -96,7 +96,7 @@ Get a single server.
                             {
                                 "count": 1,
                                 "time": "0.001000",
-                                "total": 0.00022808
+                                "total": 0.00016102900000000001
                             },
                             {
                                 "count": 0,
@@ -160,14 +160,14 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 1,
+                                "count": 0,
                                 "time": "0.001000",
-                                "total": 0.00053516399999999997
+                                "total": 0.0
                             },
                             {
-                                "count": 0,
+                                "count": 1,
                                 "time": "0.010000",
-                                "total": 0.0
+                                "total": 0.0011592760000000001
                             },
                             {
                                 "count": 0,
@@ -213,8 +213,9 @@ Get a single server.
                 "routed_packets": 2,
                 "total_connections": 1
             },
-            "triggered_at": "Thu, 17 Mar 2022 10:27:47 GMT",
-            "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+            "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
+            "uptime": 57,
+            "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
         },
         "id": "server1",
         "links": {
@@ -298,7 +299,7 @@ Response contains a resource collection with all servers.
                     "rank": "primary",
                     "socket": null,
                     "ssl": false,
-                    "ssl_ca_cert": null,
+                    "ssl_ca": null,
                     "ssl_cert": null,
                     "ssl_cert_verify_depth": 9,
                     "ssl_cipher": null,
@@ -347,7 +348,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.00022808
+                                    "total": 0.00016102900000000001
                                 },
                                 {
                                     "count": 0,
@@ -411,14 +412,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.001000",
-                                    "total": 0.00053516399999999997
+                                    "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.0
+                                    "total": 0.0011592760000000001
                                 },
                                 {
                                     "count": 0,
@@ -464,8 +465,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 2,
                     "total_connections": 1
                 },
-                "triggered_at": "Thu, 17 Mar 2022 10:27:47 GMT",
-                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+                "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
+                "uptime": 57,
+                "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
             },
             "id": "server1",
             "links": {
@@ -528,7 +530,7 @@ Response contains a resource collection with all servers.
                     "rank": "primary",
                     "socket": null,
                     "ssl": false,
-                    "ssl_ca_cert": null,
+                    "ssl_ca": null,
                     "ssl_cert": null,
                     "ssl_cert_verify_depth": 9,
                     "ssl_cipher": null,
@@ -549,6 +551,7 @@ Response contains a resource collection with all servers.
                         "master_host": "127.0.0.1",
                         "master_port": 3000,
                         "master_server_id": 3000,
+                        "master_server_name": "server1",
                         "seconds_behind_master": 0,
                         "slave_io_running": "Yes",
                         "slave_sql_running": "Yes"
@@ -588,14 +591,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.001000",
-                                    "total": 0.00065983999999999997
+                                    "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.0
+                                    "total": 0.001097462
                                 },
                                 {
                                     "count": 0,
@@ -707,8 +710,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Thu, 17 Mar 2022 10:27:47 GMT",
-                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
+                "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
+                "uptime": 57,
+                "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
             },
             "id": "server2",
             "links": {
@@ -845,7 +849,7 @@ Server created:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Update a server
 
@@ -926,7 +930,7 @@ Server modified:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Update server relationships
 
@@ -974,7 +978,7 @@ Server relationships modified:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Destroy a server
 
@@ -997,7 +1001,7 @@ Server is destroyed:
 
 Server is in use:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Set server state
 
@@ -1044,7 +1048,7 @@ Server state modified:
 
 Missing or invalid parameter:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Clear server state
 
@@ -1064,4 +1068,4 @@ Server state modified:
 
 Missing or invalid parameter:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
