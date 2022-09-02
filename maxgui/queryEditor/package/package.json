@@ -1,6 +1,6 @@
 {
     "name": "mxs-query-editor",
-    "version": "1.0.0-rc3",
+    "version": "1.0.0-rc4",
     "description": "MaxScale query editor UI",
     "author": "MariaDB Corporation Ab",
     "license": "https://mariadb.com/bsl11/",
@@ -11,7 +11,8 @@
         ".": {
             "require": "./mxs-query-editor.js",
             "default": "./mxs-query-editor.esm.js"
-        }
+        },
+        "./dist/*": "./dist/*"
     },
     "files": [
         "dist"
@@ -79,6 +80,7 @@
         "localforage": "^1.10.0",
         "lodash": "^4.17.21",
         "monaco-editor": "^0.33.0",
+        "monaco-editor-webpack-plugin": "^7.0.1",
         "sql-formatter": "^4.0.2",
         "stacktrace-parser": "^0.1.10",
         "typy": "^3.3.0",

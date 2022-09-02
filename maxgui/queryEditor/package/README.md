@@ -1,5 +1,9 @@
 # MaxScale Query Editor UI
 
+This package only supports webpack 4 and Vue.js 2.
+
+[TOC]
+
 ## Installation
 
 ```bash
@@ -18,6 +22,7 @@ Query editor peerDependencies
 -   localforage@^1.10.0
 -   lodash@^4.17.21
 -   monaco-editor@^0.33.0
+-   monaco-editor-webpack-plugin@^7.0.1
 -   sql-formatter@^4.0.2
 -   stacktrace-parser@^0.1.10
 -   typy@^3.3.0
@@ -256,6 +261,23 @@ The `mxs-query-editor` component has the following slots:
     editor mode).
 -   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
     but this is for DDL_EDITOR mode (editor for altering table).
+
+## Build the editor
+
+The query editor internally uses [monaco-editor](https://github.com/microsoft/monaco-editor)
+and it requires configuration steps from webpack.
+
+```js
+//vue.config.js
+const monacoConfig = require('mxs-query-editor/dist/buildConfig/monaco.js')
+module.exports = {
+    chainWebpack: config => {
+        config
+            .plugin('MonacoWebpackPlugin')
+            .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
+    },
+}
+```
 
 ## Change query editor base url
 

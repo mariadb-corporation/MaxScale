@@ -58,7 +58,7 @@ const copyright = fs.readFileSync(path.resolve(projectRoot, '../COPYRIGHT')).toS
 function copyrightBanner() {
     return {
         name: 'copyright-banner',
-        renderChunk(code, chunk) {
+        renderChunk(code) {
             return copyright + code
         },
     }
@@ -117,6 +117,10 @@ export default [
                     { src: `${sharePath}/icons`, dest: 'dist' },
                     { src: `${sharePath}/plugins/vuetifyTheme.js`, dest: 'dist' },
                     { src: `${sharePath}/locales`, dest: 'dist' },
+                    {
+                        src: `${sharePath}/buildConfig/monaco.js`,
+                        dest: 'dist/buildConfig',
+                    },
                 ],
             }),
             terser(),
