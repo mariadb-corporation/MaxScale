@@ -13,7 +13,6 @@
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 
-//TODO: copy this file to bundle because this needs to be registered manually by the app using query editor
 export default new VuexPersistence({
     key: 'query-editor',
     storage: localForage,

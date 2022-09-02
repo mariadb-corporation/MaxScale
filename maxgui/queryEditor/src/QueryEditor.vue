@@ -3,7 +3,7 @@
         ref="queryViewCtr"
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="query-editor mxs-color-helper all-border-table-border fill-height"
+        class="query-editor fill-height"
         @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
     >
         <div
@@ -30,7 +30,9 @@
                         @onCtrlO="onCtrlO"
                         @onCtrlS="onCtrlS"
                         @onCtrlShiftS="onCtrlShiftS"
-                    />
+                    >
+                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                    </wke-ctr>
                 </keep-alive>
             </template>
         </div>

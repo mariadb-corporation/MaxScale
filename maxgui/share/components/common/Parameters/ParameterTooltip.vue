@@ -2,11 +2,11 @@
     <v-tooltip
         right
         transition="slide-x-transition"
-        content-class="shadow-drop mxs-color-helper text-navigation"
+        content-class="shadow-drop mxs-color-helper text-navigation pa-4"
         :activator="activator"
         max-width="300"
     >
-        <v-sheet style="border-radius: 10px;overflow:auto;" class="pa-4" max-width="300">
+        <v-sheet>
             <template v-for="(value, name) in parameterTooltip">
                 <span v-if="name !== 'id'" :key="name" class="d-block text-body-2">
                     <span class="mr-1 font-weight-medium text-capitalize"> {{ name }}: </span>

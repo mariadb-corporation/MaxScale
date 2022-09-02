@@ -3,7 +3,7 @@
         :disabled="isGettingEndTime"
         top
         transition="slide-y-transition"
-        content-class="shadow-drop pa-3"
+        content-class="shadow-drop white pa-3"
     >
         <template v-slot:activator="{ on }">
             <span v-on="on">

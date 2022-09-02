@@ -17,10 +17,14 @@ export default {
     state: {
         config,
         hidden_comp: [''],
+        base_url: '/',
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
             state.hidden_comp = payload
+        },
+        SET_BASE_URL(state, payload) {
+            state.base_url = payload
         },
     },
 }

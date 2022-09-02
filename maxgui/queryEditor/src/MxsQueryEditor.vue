@@ -38,7 +38,7 @@ import QueryEditor from '@queryEditorSrc/QueryEditor.vue'
 import { mapState } from 'vuex'
 
 export default /*#__PURE__*/ {
-    name: 'maxscale-query-editor',
+    name: 'mxs-query-editor',
     components: { QueryEditor, LoadingTransparentOverlay, Snackbars },
     computed: {
         ...mapState({

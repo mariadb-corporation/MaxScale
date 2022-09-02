@@ -79,7 +79,7 @@
                         <v-tooltip
                             top
                             transition="slide-y-transition"
-                            content-class="shadow-drop mxs-color-helper text-navigation pa-2 pb-4"
+                            content-class="shadow-drop mxs-color-helper white text-navigation pa-2 pb-4"
                         >
                             <template v-slot:activator="{ on }">
                                 <span

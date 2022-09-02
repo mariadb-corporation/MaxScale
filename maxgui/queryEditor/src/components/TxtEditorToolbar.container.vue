@@ -7,7 +7,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
             :disabled="getLoadingQueryResultBySessionId(session.id)"
         >
             <template v-slot:activator="{ on }">
@@ -56,7 +56,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn
@@ -85,7 +85,7 @@
         <v-tooltip
             top
             transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
                 <v-btn
@@ -123,7 +123,7 @@
                 </template>
             </row-limit-ctr>
         </v-form>
-
+        <slot name="txt-editor-toolbar-right-slot" />
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"

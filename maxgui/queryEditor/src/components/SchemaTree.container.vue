@@ -59,10 +59,10 @@
             right
             :nudge-right="45"
             transition="slide-x-transition"
-            content-class="shadow-drop"
+            content-class="shadow-drop mxs-color-helper white text-text py-2 px-4"
             :activator="`#node-tooltip-activator-${hoveredItem.key}`"
         >
-            <table class="node-tooltip mxs-color-helper text-text py-2 px-4">
+            <table class="node-tooltip">
                 <tbody>
                     <tr v-for="(value, key) in hoveredItem.data" :key="key">
                         <td class="font-weight-bold pr-2">{{ key }}:</td>

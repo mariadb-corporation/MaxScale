@@ -12,7 +12,7 @@ import PortalVue from 'portal-vue'
 import VueMoment from 'vue-moment'
 import momentDurationFormatSetup from 'moment-duration-format'
 import VueI18n from 'vue-i18n'
-import MaxScaleQueryEditor from '@queryEditorSrc/index.js'
+import MxsQueryEditor from '@queryEditorSrc/index.js'
 
 Vue.use(VueI18n)
 // i18n only available after Vue.use(VueI18n)
@@ -30,4 +30,4 @@ momentDurationFormatSetup(Vue.moment)
 // store only available after Vue.use(Vuex), so here use require for importing es module
 const store = require('./store/index').default
 Vue.use(require('@share/plugins/http').default, { store })
-Vue.use(MaxScaleQueryEditor, { store })
+Vue.use(MxsQueryEditor, { store })
