@@ -146,7 +146,7 @@ unique_ptr<json_t> MaxRest::curl_post(const string& path) const
 unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
-    string curl_command = "curl -u admin:mariadb ";
+    string curl_command = "curl -s -u admin:mariadb ";
 
     switch (command)
     {
