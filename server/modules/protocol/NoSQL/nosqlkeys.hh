@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-08-08
+ * Change Date: 2026-08-25
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -38,6 +38,7 @@ const char CONNECTIONS[]                     = "connections";
 const char CONVERSATION_ID[]                 = "conversationId";
 const char CPU_ADDR_SIZE[]                   = "cpuAddrSize";
 const char CPU_ARCH[]                        = "cpuArch";
+const char CREDENTIALS[]                     = "credentials";
 const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
 const char CURRENT_TIME[]                    = "currentTime";
 const char CURSORS[]                         = "cursors";
@@ -86,6 +87,7 @@ const char INDEXES[]                         = "indexes";
 const char INFO[]                            = "info";
 const char INPROG[]                          = "inprog";
 const char ISMASTER[]                        = "ismaster";
+const char ITERATION_COUNT[]                 = "iterationCount";
 const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
 const char KEY_PATTERN[]                     = "keyPattern";
 const char KEY_VALUE[]                       = "keyValue";
@@ -137,6 +139,7 @@ const char ORDERED[]                         = "ordered";
 const char OS[]                              = "os";
 const char PARSED[]                          = "parsed";
 const char PARSED_QUERY[]                    = "parsedQuery";
+const char PASSWORD[]                        = "password";
 const char PAYLOAD[]                         = "payload";
 const char PID[]                             = "pid";
 const char PLANNER_VERSION[]                 = "plannerVersion";
@@ -154,8 +157,11 @@ const char REQUIRES_AUTH[]                   = "requiresAuth";
 const char ROLE[]                            = "role";
 const char ROLES[]                           = "roles";
 const char RUNNING[]                         = "running";
+const char SALT[]                            = "salt";
 const char SASL_SUPPORTED_MECHS[]            = "saslSupportedMechs";
 const char SERVER_INFO[]                     = "serverInfo";
+const char SERVER_KEY[]                      = "serverKey";
+const char SHOW_CREDENTIALS[]                = "showCredentials";
 const char SINGLE_BATCH[]                    = "singleBatch";
 const char SIZE_ON_DISK[]                    = "sizeOnDisk";
 const char SKIP[]                            = "skip";
@@ -166,6 +172,7 @@ const char STORAGE_ENGINE[]                  = "storageEngine";
 const char STAGE[]                           = "stage";
 const char STATE[]                           = "state";
 const char STORAGE_ENGINES[]                 = "storageEngines";
+const char STORED_KEY[]                      = "storedKey";
 const char SYNC_MILLIS[]                     = "syncMillis";
 const char SYSTEM[]                          = "system";
 const char TOPOLOGY_VERSION[]                = "topologyVersion";

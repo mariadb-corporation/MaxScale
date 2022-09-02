@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-08-08
+ * Change Date: 2026-08-25
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -163,13 +163,21 @@ MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, Authen
     case State::AUTHSWITCH_SENT:
         {
             // Client is replying to an AuthSwitch request. The packet should contain
-            // the authentication token.
-            if (buf.length() == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
+            // the authentication token or be empty if trying to log in without pw.
+            auto buflen = buf.length();
+            auto has_token = buflen == (MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
+            if (has_token || buflen == MYSQL_HEADER_LEN)
             {
                 auto& auth_token = auth_data.client_token;
-                auth_token.clear();
-                auth_token.resize(MYSQL_SCRAMBLE_LEN);
-                buf.copy_data(MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                if (has_token)
+                {
+                    auth_token.resize(MYSQL_SCRAMBLE_LEN);
+                    buf.copy_data(MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                }
+                else
+                {
+                    auth_token.clear();     // authenticating without password
+                }
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
                 rval.status = ExchRes::Status::READY;
