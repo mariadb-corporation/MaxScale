@@ -458,7 +458,7 @@ public:
             auto it = from_parts.begin();
             auto jt = to_parts.begin();
 
-            while (*it == *jt && it != from_parts.end())
+            while (it != from_parts.end() && *it == *jt)
             {
                 ++it;
                 ++jt;
