@@ -2098,7 +2098,7 @@ int TestConnections::get_repl_master_idx()
     if (repl)
     {
         auto server_info = maxscale->get_servers();
-        for (size_t i = 0; i < server_info.size() && rval >= 0; i++)
+        for (size_t i = 0; i < server_info.size() && rval < 0; i++)
         {
             auto& info = server_info.get(i);
             if (info.status & mxt::ServerInfo::MASTER)
