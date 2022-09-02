@@ -1601,9 +1601,16 @@ public:
     {
         optional(key::SHOW_CREDENTIALS, &m_show_credentials);
 
-        auto role_mask = m_database.context().role_mask_of("admin");
+        if (m_database.config().should_authorize())
+        {
+            auto role_mask = m_database.context().role_mask_of("admin");
 
-        m_user_admin_any_database = (role_mask & role::USER_ADMIN_ANY_DATABASE) != 0;
+            m_user_admin_any_database = (role_mask & role::USER_ADMIN_ANY_DATABASE) != 0;
+        }
+        else
+        {
+            m_user_admin_any_database = true;
+        }
 
         auto element = m_doc[KEY];
 
