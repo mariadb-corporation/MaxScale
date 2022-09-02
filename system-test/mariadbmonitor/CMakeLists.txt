@@ -56,8 +56,8 @@ add_test_executable_ex(NAME mysqlmon_rejoin_bad SOURCE mysqlmon_rejoin_bad.cpp
         CONFIG mysqlmon_rejoin_bad.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor Rejoin (bad2) Test, use template for Rejoin (good)
-add_test_executable_ex(NAME mysqlmon_rejoin_bad2 SOURCE mysqlmon_rejoin_bad2.cpp CONFIG mysqlmon_rejoin_good.cnf
-        VMS repl_backend LABELS mysqlmon)
+add_test_executable_ex(NAME mysqlmon_rejoin_bad2 SOURCE mysqlmon_rejoin_bad2.cpp
+        CONFIG mysqlmon_rejoin_bad.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor Rejoin tests
 add_test_executable_ex(NAME mysqlmon_rejoin_manual SOURCE mysqlmon_rejoin_manual.cpp

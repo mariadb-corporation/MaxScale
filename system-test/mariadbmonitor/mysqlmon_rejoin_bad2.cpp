@@ -11,137 +11,67 @@
  * Public License.
  */
 
-#include <vector>
-#include <iostream>
-#include <iterator>
-
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include "mariadbmon_utils.hh"
 
 using std::string;
 using std::cout;
 using std::endl;
 
-static void expect(TestConnections& test, const char* zServer, const StringSet& expected)
-{
-    StringSet found = test.get_server_status(zServer);
-
-    std::ostream_iterator<string> oi(cout, ", ");
-
-    cout << zServer << ", expected states: ";
-    std::copy(expected.begin(), expected.end(), oi);
-    cout << endl;
-
-    cout << zServer << ", found states   : ";
-    std::copy(found.begin(), found.end(), oi);
-    cout << endl;
-
-    if (found != expected)
-    {
-        cout << "ERROR, found states are not the same as the expected ones." << endl;
-        ++test.global_result;
-    }
-
-    cout << endl;
-}
-
-static void expect(TestConnections& test, const char* zServer, const char* zState)
-{
-    StringSet s;
-    s.insert(zState);
-    expect(test, zServer, s);
-}
-
-static void expect(TestConnections& test, const char* zServer, const char* zState1, const char* zState2)
-{
-    StringSet s;
-    s.insert(zState1);
-    s.insert(zState2);
-    expect(test, zServer, s);
-}
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
-    test.repl->connect();
-    // Set up test table
-    basic_test(test);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
-    // Advance gtid:s a bit to so gtid variables are updated.
-    generate_traffic_and_check(test, maxconn, 5);
-    test.repl->sync_slaves();
-    get_output(test);
-
-    print_gtids(test);
-    mysql_close(maxconn);
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    auto maxconn = mxs.open_rwsplit_connection2();
+    generate_traffic_and_check(test, maxconn.get(), 5);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    maxconn.reset();
 
     // Stop master, wait for failover
-    cout << "Stopping master, should auto-failover." << endl;
-    int master_id_old = get_master_server_id(test);
-    test.repl->stop_node(0);
-    test.maxscale->wait_for_monitor(2);
-    get_output(test);
-    int master_id_new = get_master_server_id(test);
-    cout << "Master server id is " << master_id_new << endl;
-    test.expect(master_id_new > 0 && master_id_new != master_id_old,
-                "Failover did not promote a new master.");
-    if (test.global_result != 0)
+    test.tprintf("Stopping master, should auto-failover.");
+    mxt::MariaDBServer* master_id_old = test.get_repl_master();
+    repl.stop_node(0);
+    mxs.wait_for_monitor(3);
+    mxs.check_print_servers_status({mxt::ServerInfo::DOWN, mxt::ServerInfo::master_st,
+                                    mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st});
+
+    if (test.ok())
     {
-        return test.global_result;
+        test.tprintf("Stopping MaxScale for a moment.");
+        // Stop maxscale to prevent an unintended rejoin.
+        mxs.stop_and_check_stopped();
+        // Restart old master. Then add some events to it.
+        test.tprintf("Restart node 0 and add more events.");
+        repl.start_node(0);
+        auto conn = repl.backend(0)->open_connection();
+        generate_traffic_and_check_nosync(test, conn.get(), 5);
+
+        test.tprintf("Starting MaxScale, node 0 should not be able to join because it has extra events.");
+        mxs.start_and_check_started();
+        mxs.sleep_and_wait_for_monitor(2, 1);
+        mxs.check_print_servers_status({mxt::ServerInfo::RUNNING, mxt::ServerInfo::master_st,
+                                        mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st});
+
+        if (test.ok())
+        {
+            test.tprintf("Setting server 2 to replicate from server 1. Server 2 should lose its master "
+                         "status and other servers should be redirected to server 1.");
+            const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "
+                                          "MASTER_USE_GTID = current_pos, "
+                                          "MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
+            conn = repl.backend(1)->open_connection();
+            conn->cmd_f(CHANGE_CMD_FMT, repl.ip(0), repl.port[0]);
+            conn->cmd("START SLAVE;");
+            mxs.wait_for_monitor(2);
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        }
     }
-
-    cout << "Stopping MaxScale for a moment.\n";
-    // Stop maxscale to prevent an unintended rejoin.
-    if (!test.maxscale->stop_and_check_stopped())
-    {
-        test.expect(false, "Could not stop MaxScale.");
-        return test.global_result;
-    }
-
-    // Restart old master. Then add some events to it.
-    test.repl->start_node(0, (char*)"");
-    test.repl->connect();
-    cout << "Adding more events to node 0.\n";
-    generate_traffic_and_check(test, test.repl->nodes[0], 5);
-    print_gtids(test);
-
-    cout << "Starting MaxScale, node 0 should not be able to join because it has extra events.\n";
-    // Restart maxscale. Should not rejoin old master.
-    if (!test.maxscale->start_and_check_started())
-    {
-        test.expect(false, "Could not start MaxScale.");
-        return test.global_result;
-    }
-    test.maxscale->wait_for_monitor(2);
-    get_output(test);
-
-    expect(test, "server1", "Running");
-    if (test.global_result != 0)
-    {
-        cout << "Old master is a member of the cluster when it should not be. \n";
-        return test.global_result;
-    }
-
-    // Set current master to replicate from the old master. The new master should lose its Master status
-    // and auto_rejoin will redirect servers 3 and 4 so that all replicate from server 1.
-    cout << "Setting server " << master_id_new << " to replicate from server 1. Server " << master_id_new
-         << " should lose its master status and other servers should be redirected to server 1.\n";
-    const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "
-                                  "MASTER_USE_GTID = current_pos, "
-                                  "MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
-    char cmd[256];
-    int ind = master_id_new - 1;
-    snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->ip_private(0), test.repl->port[0]);
-    MYSQL** nodes = test.repl->nodes;
-    mysql_query(nodes[ind], cmd);
-    mysql_query(nodes[ind], "START SLAVE;");
-    test.maxscale->wait_for_monitor(2);
-    get_output(test);
-
-    expect(test, "server1", "Master", "Running");
-    expect(test, "server2", "Slave", "Running");
-    expect(test, "server3", "Slave", "Running");
-    expect(test, "server4", "Slave", "Running");
-    return test.global_result;
 }
