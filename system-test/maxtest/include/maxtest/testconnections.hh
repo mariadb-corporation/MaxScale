@@ -224,6 +224,15 @@ public:
     int check_t1_table(bool presence, char* db);
 
     /**
+     * @brief Check whether the logs contains a pattern
+     *
+     * @param pattern  The pattern, assumed to be `grep` compatible.
+     *
+     * @return True, if the pattern is found, false otherwise.
+     */
+    bool log_matches(const char* pattern);
+
+    /**
      * @brief Check whether logs match a pattern
      *
      * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
@@ -352,7 +361,6 @@ public:
 
 private:
     bool read_test_info();
-    bool log_matches(const char* pattern);
 
     mxt::SharedData m_shared;   /**< Data shared with other objects */
 

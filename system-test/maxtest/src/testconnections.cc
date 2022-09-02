@@ -988,18 +988,7 @@ void TestConnections::revert_replicate_from_master()
 
 bool TestConnections::log_matches(const char* pattern)
 {
-
-    // Replace single quotes with wildcard characters, should solve most problems
-    std::string p = pattern;
-    for (auto& a : p)
-    {
-        if (a == '\'')
-        {
-            a = '.';
-        }
-    }
-
-    return maxscale->ssh_node_f(true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
+    return maxscale->log_matches(pattern);
 }
 
 void TestConnections::log_includes(const char* pattern)

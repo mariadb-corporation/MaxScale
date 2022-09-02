@@ -376,6 +376,21 @@ public:
      */
     void sleep_and_wait_for_monitor(int sleep_s, int intervals);
 
+    /**
+     * @brief Check whether log matches a pattern.
+     *
+     * @param pattern The `grep` compatible pattern.
+     *
+     * @return True, if the pattern is found, false otherwise.
+     *
+     */
+    bool log_matches(const char* pattern) const
+    {
+        return log_matches(std::string(pattern));
+    }
+
+    bool log_matches(std::string pattern) const;
+
     mxt::CmdResult ssh_output(const std::string& cmd, bool sudo = true);
 
     int ssh_node(const std::string& cmd, bool sudo);
