@@ -11,42 +11,95 @@
  * Public License.
  */
 
-#include <maxtest/mariadb_nodes.hh>
-#include "failover_common.cpp"
+#include <maxtest/testconnections.hh>
+#include "mariadbmon_utils.hh"
+
+// This test is effectively "mysqlmon_failover_manual" with automatic failover.
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
-    test.repl->connect();
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    test.maxscale->wait_for_monitor(2);
-    basic_test(test);
-    print_gtids(test);
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
-    // Part 1
-    int node0_id = prepare_test_1(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_1(test, node0_id);
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto down = mxt::ServerInfo::DOWN;
+    auto running = mxt::ServerInfo::RUNNING;
 
-    if (test.global_result != 0)
+    const std::string switchover = "call command mariadbmon switchover MariaDB-Monitor server1";
+
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+    if (test.ok())
     {
-        return test.global_result;
+        test.tprintf("Part 1: Stop master and wait for failover.");
+        repl.stop_node(0);
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({down, master, slave, slave});
+        auto maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 5);
+        repl.start_node(0);
+        repl.replicate_from(0, 1);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status({slave, master, slave, slave});
     }
 
-    // Part 2
-    prepare_test_2(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_2(test);
-
-    if (test.global_result != 0)
+    if (test.ok())
     {
-        return test.global_result;
+        test.tprintf("Part 2: Disable replication on server1 and stop master. Check that server3 is "
+                     "promoted.");
+        int stop_ind = 0;
+        int old_master_ind = 1;
+        auto conn = repl.backend(stop_ind)->admin_connection();
+        conn->cmd("STOP SLAVE;");
+        conn->cmd("RESET SLAVE ALL;");
+
+        repl.stop_node(old_master_ind);
+        mxs.wait_for_monitor(2);
+
+        mxs.check_print_servers_status({running, down, master, slave});
+        auto maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 5);
+
+        repl.start_node(old_master_ind);
+
+        repl.replicate_from(stop_ind, 2);
+        repl.replicate_from(old_master_ind, 2);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status({slave, slave, master, slave});
+        mxs.maxctrl(switchover);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     }
 
-    // Part 3
-    prepare_test_3(test);
-    test.maxscale->wait_for_monitor(2);
-    check_test_3(test);
+    if (test.ok())
+    {
+        test.tprintf("Part 3: Disable log_bin on server2, making it invalid for promotion. Disable "
+                     "log-slave-updates on server3. Check that server4 is promoted on master failure.");
+        prepare_log_bin_failover_test(test);
 
-    return test.global_result;
+        int old_master_ind = 0;
+        repl.stop_node(old_master_ind);
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({down, slave, slave, master});
+
+        auto maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 5);
+        repl.start_node(old_master_ind);
+
+        cleanup_log_bin_failover_test(test);
+        mxs.check_print_servers_status({running, slave, slave, master});
+        repl.replicate_from(old_master_ind, 3);
+        mxs.wait_for_monitor(1);
+        mxs.maxctrl(switchover);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    }
 }
