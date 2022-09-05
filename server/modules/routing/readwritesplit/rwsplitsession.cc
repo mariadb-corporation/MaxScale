@@ -985,12 +985,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         if (trx_is_read_only() && m_trx.target() == backend)
         {
-            if (backend->is_waiting_result())
-            {
-                mxb_assert(m_expected_responses == 1);
-                m_expected_responses--;
-            }
-
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
             backend->close(failure_type);

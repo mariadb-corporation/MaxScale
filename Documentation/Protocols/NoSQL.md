@@ -1563,7 +1563,7 @@ others do not.
 
 ### revokeRolesFromUser
 
-This command _removes roles fron an NoSQL user, which may imply
+This command _removes_ roles from an NoSQL user, which may imply
 that privileges are revoked from the corresponding MariaDB user.
 
 Field | Type | Description
@@ -1590,6 +1590,36 @@ mechanisms | array | Optional. The specific SCRAM mechanisms for user credential
 Changes to `customData` or `mechanisism` are made only to the local
 nosqlprotocol database, but changes to `pwd` or `roles` require
 the MariaDB server to be updated.
+
+### usersInfo
+
+This command returns information about one or more users.
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+usersInfo | various | Specifies what to return. See below.
+showCredentials | boolean | Optional, default `false`. Specifies whether the credentials should be returned.
+
+The returned information depends the valie of `usersInfo`:
+
+Argument | Result
+---------|-------
+`{ usersInfo: 1 }` | Returns information of all users in the database where the command is run.
+`{ usersInfo: <username> }` | Returns information about a specific user in the database where the command is run.
+`{ usersInfo: { user: <name>, db: <db> }}` | Returns information about the user specified by the name and database.
+`{ usersInfo: [{ user: <name>, db: <db> }, ...]}` | Returns information about specified users.
+`{ usersInfo: [ <username>, ... ]}` | Returns information about specified users in the database where the command is run.
+
+Note that users may always view their own information. Otherwise the user must
+have the `userAdmin` or `userAdminAnyDatabase` role.
+
+If `showCredentials` is true, the returned object(s) will contain a
+`mariadb: { password: "*..."}` field, where `password` is the
+`SHA1(SHA1())` value of the password used when logging to MariaDB.
+That is, the same string that is found in the `password` column in
+the `mysql.user` table.
 
 ## Replication Commands
 
