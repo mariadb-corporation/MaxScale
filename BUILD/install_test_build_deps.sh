@@ -1,5 +1,11 @@
 #!/bin/bash
 
+scriptdir=$(dirname $(realpath $0))
+
+# Install all build dependences
+# TODO: Remove unnecessary stuff from this script.
+${scriptdir}/install_build_deps.sh
+
 # Installs all build dependencies for system tests
 # Only Ubuntu Bionic/Xenial, CentOS 7, SLES 15 are supported
 
@@ -111,8 +117,8 @@ EOL
   fi
 fi
 
-# Install a recent cmake in case the package manager installed an old version.
+# The tests need a very new CMake in order to produce JUnit XML output. This
+# ends up installing CMake twice which isn't nice. The install_build_deps.sh
+# script could be modified to take the CMake version as an argument which could
+# then be passed down to install_cmake.sh.
 $src_dir/install_cmake.sh "3.25.1"
-
-# Install NPM for MongoDB tests
-$src_dir/install_npm.sh
