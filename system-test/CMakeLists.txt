@@ -118,7 +118,9 @@ add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrit
 # KafkaCDC tests
 add_subdirectory(kafka)
 
-add_subdirectory(nosqlprotocol)
+if(BUILD_NOSQL)
+  add_subdirectory(nosqlprotocol)
+endif()
 
 # Routing sanity check. Also acts as the regression test case the following issues:
 #
@@ -129,6 +131,7 @@ add_subdirectory(nosqlprotocol)
 # MXS-1786
 # MXS-3229
 # MXS-3915
+# MXS-4269
 add_test_executable(sanity_check.cpp sanity_check replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash

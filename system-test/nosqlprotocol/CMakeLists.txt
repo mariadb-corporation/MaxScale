@@ -46,6 +46,7 @@ add_test_executable_ex(
   CONFIG nosqlprotocol_bootstrap_shared.cnf nosqlprotocol_bootstrap_shared.cnf
   VMS repl_backend second_maxscale
   LABELS nosqlprotocol)
+add_dependencies(nosqlprotocol_bootstrap_shared mongo-cxx-driver mongo-c-driver)
 
 target_link_libraries(nosqlprotocol_bootstrap_shared
   ${MONGO_CXX_LIBRARIES}

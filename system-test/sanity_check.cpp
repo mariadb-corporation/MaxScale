@@ -172,6 +172,55 @@ void test_mxs3915(TestConnections& test)
     test.expect(id != master_id, "SELECT was routed to master after re-enabling autocommit");
 }
 
+void test_mxs4269(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+
+    auto check_contents = [&](std::string rows){
+        std::string from_slave = c.field("SELECT COUNT(*) FROM test.t1 WHERE server_id = @@server_id");
+        test.expect(from_slave == "0", "Slave should not have matching rows but found %s rows",
+                    from_slave.c_str());
+
+        from_slave = c.field("SELECT COUNT(*) FROM test.t1");
+        test.expect(from_slave == rows, "Slave should have %s rows in total but found %s rows",
+                    rows.c_str(), from_slave.c_str());
+
+        c.query("BEGIN");
+
+        std::string from_master = c.field("SELECT COUNT(*) FROM test.t1 WHERE server_id = @@server_id");
+        test.expect(from_master == rows, "Master should have %s matching rows but found %s rows",
+                    rows.c_str(), from_master.c_str());
+
+        from_master = c.field("SELECT COUNT(*) FROM test.t1");
+        test.expect(from_master == rows, "Master should have %s rows but found %s rows",
+                    rows.c_str(), from_master.c_str());
+
+        c.query("COMMIT");
+    };
+
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    c.query("CREATE OR REPLACE TABLE test.t1(id INT, server_id INT)");
+    test.repl->sync_slaves();
+
+    c.query("SET @var = 1");
+    c.query("INSERT INTO test.t1 VALUES (@var := @var + 1, @@server_id)");
+    test.repl->sync_slaves();
+
+    check_contents("1");
+
+    c.query("UPDATE test.t1 SET id = (@var := @var + 1), server_id = @@server_id");
+    test.repl->sync_slaves();
+
+    check_contents("1");
+
+    c.query("DELETE FROM test.t1 WHERE server_id = @@server_id");
+    test.repl->sync_slaves();
+
+    check_contents("0");
+
+    c.query("DROP TABLE test.t1");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -202,6 +251,9 @@ int main(int argc, char** argv)
 
     // MXS-3915: Autocommit tracking is broken
     test_mxs3915(test);
+
+    // MXS-4269: UPDATEs with user variable modifications are treated as session commands
+    test_mxs4269(test);
 
     return test.global_result;
 }

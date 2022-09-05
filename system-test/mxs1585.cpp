@@ -7,8 +7,9 @@
 
 #include <maxtest/testconnections.hh>
 #include <vector>
+#include <atomic>
 
-static bool running = true;
+static std::atomic<bool> running {true};
 
 void* query_thr(void* data)
 {
