@@ -16,59 +16,65 @@ int main(int argc, char** argv)
     Connection conn {test.maxscale->rwsplit()};
 
     auto query = [&](bool should_work, string q) {
-            test.expect(conn.query(q) == should_work,
-                        "Query '%s' should %s: %s",
-                        q.c_str(),
-                        should_work ? "work" : "fail",
-                        conn.error());
-        };
+        test.expect(conn.query(q) == should_work,
+                    "Query '%s' should %s: %s",
+                    q.c_str(),
+                    should_work ? "work" : "fail",
+                    conn.error());
+    };
 
     auto compare = [&](bool equal, string q, string res) {
-            Row row = conn.row(q);
-            test.expect(!row.empty() && (row[0] == res) == equal,
-                        "Values are %s: `%s` `%s`",
-                        equal ? "not equal" : "equal",
-                        row.empty() ? "<empty>" : row[0].c_str(),
-                        res.c_str());
-        };
+        Row row = conn.row(q);
+        test.expect(!row.empty() && (row[0] == res) == equal,
+                    "Values are %s: `%s` `%s`",
+                    equal ? "not equal" : "equal",
+                    row.empty() ? "<empty>" : row[0].c_str(),
+                    res.c_str());
+    };
 
     auto block = [&](int node) {
-            return bind([&](int i) {
-                            test.repl->block_node(i);
-                            test.maxscale->wait_for_monitor(2);
-                        },
-                        node);
-        };
+        return bind([&](int i) {
+            test.repl->block_node(i);
+            test.maxscale->wait_for_monitor(2);
+        },
+                    node);
+    };
 
     auto unblock = [&](int node) {
-            return bind([&](int i) {
-                            test.repl->unblock_node(i);
-                            test.maxscale->wait_for_monitor(2);
-                        },
-                        node);
-        };
+        return bind([&](int i) {
+            test.repl->unblock_node(i);
+            test.maxscale->wait_for_monitor(2);
+        },
+                    node);
+    };
 
     auto ok = [&](string q) {
-            return bind(query, true, q);
-        };
+        return bind(query, true, q);
+    };
 
     auto err = [&](string q) {
-            return bind(query, false, q);
-        };
+        return bind(query, false, q);
+    };
 
     auto equal = [&](string q, string res) {
-            return bind(compare, true, q, res);
-        };
+        return bind(compare, true, q, res);
+    };
 
     auto not_equal = [&](string q, string res) {
-            return bind(compare, false, q, res);
-        };
+        return bind(compare, false, q, res);
+    };
 
-    const char* trx_query = "START TRANSACTION";
+    string trx_query = "START TRANSACTION";
+    string autocommit_off = "SET AUTOCOMMIT=0";
 
     auto start_transaction = [&]() {
-                query(true, trx_query);
-        };
+        query(true, trx_query);
+
+        if (trx_query == autocommit_off)
+        {
+            sleep(1);
+        }
+    };
 
     conn.connect();
     conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
@@ -207,26 +213,26 @@ int main(int argc, char** argv)
 
 
     auto run_tests = [&](const char* extra) {
-            for (auto& a : test_cases)
+        for (auto& a : test_cases)
+        {
+            test.log_printf("%s%s", a.description, extra);
+            conn.connect();
+
+            // Helps debugging to have a distict query in the log
+            conn.query(string("SELECT '") + a.description + "'");
+
+            for (auto s : a.steps)
             {
-                test.log_printf("%s%s", a.description, extra);
-                conn.connect();
-
-                // Helps debugging to have a distict query in the log
-                conn.query(string("SELECT '") + a.description + "'");
-
-                for (auto s : a.steps)
-                {
-                    s();
-                }
-
-                conn.disconnect();
-                test.repl->sync_slaves();
+                s();
             }
-        };
+
+            conn.disconnect();
+            test.repl->sync_slaves();
+        }
+    };
 
     run_tests("");
-    trx_query = "SET AUTOCOMMIT=0";
+    trx_query = autocommit_off;
     run_tests(" (autocommit=0)");
 
     // Cleanup
