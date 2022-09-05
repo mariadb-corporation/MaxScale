@@ -2,8 +2,6 @@
 
 This package only supports webpack 4 and Vue.js 2.
 
-[TOC]
-
 ## Installation
 
 ```bash
