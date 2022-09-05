@@ -120,3 +120,42 @@ bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int i
     return ok;
 }
 }
+
+void prepare_log_bin_failover_test(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    mxs.stop_maxscale();
+
+    repl.stop_node(1);
+    repl.stash_server_settings(1);
+    repl.disable_server_setting(1, "log-bin");
+    repl.disable_server_setting(1, "log_bin");
+    repl.start_node(1);
+
+    repl.stop_node(2);
+    repl.stash_server_settings(2);
+    repl.disable_server_setting(2, "log-slave-updates");
+    repl.disable_server_setting(2, "log_slave_updates");
+    repl.start_node(2);
+
+    mxs.start_maxscale();
+    mxs.wait_for_monitor(1);
+}
+
+void cleanup_log_bin_failover_test(TestConnections& test)
+{
+    // Restore server2 and 3 settings.
+    auto& repl = *test.repl;
+    test.tprintf("Restoring server settings.");
+
+    repl.stop_node(1);
+    repl.restore_server_settings(1);
+    repl.start_node(1);
+
+    repl.stop_node(2);
+    repl.restore_server_settings(2);
+    repl.start_node(2);
+
+    test.maxscale->wait_for_monitor(1);
+}

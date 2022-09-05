@@ -12,61 +12,112 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "failover_common.cpp"
+#include "mariadbmon_utils.hh"
+
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    const char FAILOVER_CMD[] = "maxctrl call command mariadbmon failover MySQL-Monitor";
-    // interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    TestConnections test(argc, argv);
-    test.repl->connect();
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    basic_test(test);
-    print_gtids(test);
-
-    int node0_id = -1;
+void test_main(TestConnections& test)
+{
     auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
-    // Part 1
-    node0_id = prepare_test_1(test);
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto down = mxt::ServerInfo::DOWN;
+    auto running = mxt::ServerInfo::RUNNING;
 
-    mxs.ssh_output(FAILOVER_CMD);
-    mxs.wait_for_monitor();
+    const std::string failover = "call command mariadbmon failover MariaDB-Monitor";
+    const std::string switchover = "call command mariadbmon switchover MariaDB-Monitor server1";
 
-    check_test_1(test, node0_id);
-    if (test.global_result != 0)
-    {
-        return test.global_result;
-    }
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
-    // Part 2
-    prepare_test_2(test);
-
-    // Instead of normal manual failover, check that async-failover works.
-    mxs.maxctrl("call command mariadbmon async-failover MySQL-Monitor");
-    mxs.wait_for_monitor(2);
-    auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
-    test.expect(res.rc == 0, "fetch-cmd-results failed: %s", res.output.c_str());
     if (test.ok())
     {
-        // The output is a json string. Check that it includes the success-message.
-        auto found = (res.output.find("failover completed successfully") != std::string::npos);
-        test.expect(found, "Result json did not contain expected message. Result: %s",
-                    res.output.c_str());
+        test.tprintf("Part 1: Stop master and run manual failover.");
+        repl.stop_node(0);
+        mxs.wait_for_monitor(1);
+        mxs.maxctrl(failover);
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({down, master, slave, slave});
+        auto maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 5);
+        repl.start_node(0);
+        repl.replicate_from(0, 1);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status({slave, master, slave, slave});
     }
 
-    check_test_2(test);
-    if (test.global_result != 0)
+    if (test.ok())
     {
-        return test.global_result;
+        test.tprintf("Part 2: Disable replication on server1 and stop master. Run manual async-failover and "
+                     "check that server3 is promoted.");
+        int stop_ind = 0;
+        int old_master_ind = 1;
+        auto conn = repl.backend(stop_ind)->admin_connection();
+        conn->cmd("STOP SLAVE;");
+        conn->cmd("RESET SLAVE ALL;");
+
+        repl.stop_node(old_master_ind);
+        mxs.wait_for_monitor(1);
+
+        // Instead of normal manual failover, check that async-failover works.
+        mxs.maxctrl("call command mariadbmon async-failover MariaDB-Monitor");
+        mxs.wait_for_monitor(2);
+        auto res = mxs.maxctrl("call command mariadbmon fetch-cmd-results MariaDB-Monitor");
+        if (res.rc == 0)
+        {
+            // The output is a json string. Check that it includes the success-message.
+            auto found = (res.output.find("failover completed successfully") != std::string::npos);
+            test.expect(found, "Result json did not contain expected message. Result: %s",
+                        res.output.c_str());
+            mxs.check_print_servers_status({running, down, master, slave});
+            auto maxconn = mxs.open_rwsplit_connection2();
+            generate_traffic_and_check(test, maxconn.get(), 5);
+        }
+        else
+        {
+            test.add_failure("fetch-cmd-results failed: %s", res.output.c_str());
+        }
+
+        repl.start_node(old_master_ind);
+
+        repl.replicate_from(stop_ind, 2);
+        repl.replicate_from(old_master_ind, 2);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status({slave, slave, master, slave});
+        mxs.maxctrl(switchover);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     }
 
-    // Part 3
-    prepare_test_3(test);
+    if (test.ok())
+    {
+        test.tprintf("Part 3: Disable log_bin on server2, making it invalid for promotion. Disable "
+                     "log-slave-updates on server3. Check that server4 is promoted on master failure.");
+        prepare_log_bin_failover_test(test);
 
-    test.maxscale->ssh_output(FAILOVER_CMD);
-    test.maxscale->wait_for_monitor();
+        int old_master_ind = 0;
+        repl.stop_node(old_master_ind);
+        mxs.maxctrl(failover);
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({down, slave, slave, master});
 
-    check_test_3(test);
-    return test.global_result;
+        auto maxconn = mxs.open_rwsplit_connection2();
+        generate_traffic_and_check(test, maxconn.get(), 5);
+        repl.start_node(old_master_ind);
+
+        cleanup_log_bin_failover_test(test);
+        mxs.check_print_servers_status({running, slave, slave, master});
+        repl.replicate_from(old_master_ind, 3);
+        mxs.wait_for_monitor(1);
+        mxs.maxctrl(switchover);
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    }
 }
