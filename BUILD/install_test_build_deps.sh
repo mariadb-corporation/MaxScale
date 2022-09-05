@@ -1,5 +1,11 @@
 #!/bin/bash
 
+scriptdir=$(dirname $(realpath $0))
+
+# Install all build dependences
+# TODO: Remove unnecessary stuff from this script.
+${scriptdir}/install_build_deps.sh
+
 # Installs all build dependencies for system tests
 # Only Ubuntu Bionic/Xenial, CentOS 7, SLES 15 are supported
 
@@ -112,9 +118,3 @@ EOL
     echo "please run 'scl enable devtoolset-7 bash' to enable new gcc!!"
   fi
 fi
-
-# Install a recent cmake in case the package manager installed an old version.
-$src_dir/install_cmake.sh
-
-# Install NPM for MongoDB tests
-$src_dir/install_npm.sh
