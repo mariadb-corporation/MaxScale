@@ -1,6 +1,6 @@
 {
     "name": "mxs-query-editor",
-    "version": "1.0.0-rc5",
+    "version": "1.0.0-rc6",
     "description": "MaxScale query editor UI",
     "author": "MariaDB Corporation Ab",
     "license": "https://mariadb.com/bsl11/",

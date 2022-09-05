@@ -1,6 +1,6 @@
 <template>
     <div class="mxs-query-editor">
-        <query-editor ref="queryEditor">
+        <query-editor ref="queryEditor" v-on="$listeners">
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
         </query-editor>
         <v-fade-transition>
