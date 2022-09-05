@@ -1149,12 +1149,25 @@ bool mxs_admin_reload_tls()
         if (auto creds = Creds::create(cert, key))
         {
             std::lock_guard guard(this_unit.lock);
-            this_unit.next_creds = std::move(creds);
+
+            if (mxs::jwt::init())
+            {
+                this_unit.next_creds = std::move(creds);
+            }
+            else
+            {
+                rval = false;
+            }
         }
         else
         {
             rval = false;
         }
+    }
+    else
+    {
+        // TLS not enabled, just reload JWT signing keys
+        rval = mxs::jwt::init();
     }
 
     return rval;

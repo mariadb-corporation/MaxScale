@@ -215,6 +215,7 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
 
 struct ThisUnit
 {
+    std::mutex           lock;
     std::unique_ptr<Jwt> jwt;
 };
 
@@ -228,6 +229,7 @@ namespace jwt
 
 bool init()
 {
+    std::lock_guard guard(this_unit.lock);
     const auto& cnf = mxs::Config::get();
     std::unique_ptr<Jwt> jwt;
     std::string key;
@@ -348,7 +350,10 @@ bool init()
             break;
         }
 
-        this_unit.jwt = std::move(jwt);
+        if (jwt)
+        {
+            this_unit.jwt = std::move(jwt);
+        }
     }
     catch (const std::exception& e)
     {
@@ -360,11 +365,13 @@ bool init()
 
 std::string create(const std::string& issuer, const std::string& audience, int max_age)
 {
+    std::lock_guard guard(this_unit.lock);
     return this_unit.jwt->sign(issuer, audience, max_age);
 }
 
 std::pair<bool, std::string> get_audience(const std::string& issuer, const std::string& token)
 {
+    std::lock_guard guard(this_unit.lock);
     return this_unit.jwt->get_audience(issuer, token);
 }
 }
