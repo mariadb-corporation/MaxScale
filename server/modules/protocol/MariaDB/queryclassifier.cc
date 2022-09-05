@@ -502,7 +502,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     /**
      * These queries should be routed to all servers
      */
-    else if (!load_active
+    else if (!load_active && !qc_query_is_type(qtype, QUERY_TYPE_WRITE)
              && (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
                  ||     /** Configured to allow writing user variables to all nodes */
                  (m_use_sql_variables_in == TYPE_ALL

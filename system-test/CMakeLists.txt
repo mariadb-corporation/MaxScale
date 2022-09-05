@@ -126,6 +126,7 @@ add_subdirectory(nosqlprotocol)
 # MXS-1786
 # MXS-3229
 # MXS-3915
+# MXS-4269
 add_test_executable(sanity_check.cpp sanity_check replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
