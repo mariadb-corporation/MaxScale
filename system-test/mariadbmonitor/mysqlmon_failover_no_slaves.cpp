@@ -14,119 +14,110 @@
 // MXS-2652: https://jira.mariadb.org/browse/MXS-2652
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include "mariadbmon_utils.hh"
+
 using std::string;
 
 namespace
 {
-void expect_maintenance(TestConnections& test, std::string server_name, bool value);
-void expect_running(TestConnections& test, std::string server_name, bool value);
-
-const string running = "Running";
-const string down = "Down";
-const string maint = "Maintenance";
+void expect_maintenance(TestConnections& test, int node, bool expected)
+{
+    auto server_info = test.maxscale->get_servers().get(node);
+    bool in_maint = server_info.status & mxt::ServerInfo::MAINT;
+    test.expect(in_maint == expected, "Wrong maintenance status on node %i. Got %i, expected %i.",
+                node, in_maint, expected);
 }
+
+void expect_running(TestConnections& test, int node, bool expected)
+{
+    auto server_info = test.maxscale->get_servers().get(node);
+    bool running = server_info.status & mxt::ServerInfo::RUNNING;
+    test.expect(running == expected, "Wrong running status on node %i. Got %i, expected %i.",
+                node, running, expected);
+}
+}
+
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    basic_test(test);
-    MYSQL* conn = test.maxscale->open_rwsplit_connection();
-    bool success = generate_traffic_and_check(test, conn, 5);
-    mysql_close(conn);
-    if (!success)
-    {
-        return test.global_result;
-    }
-
-    // Make all three slaves ineligible for promotion in different ways.
-    test.repl->connect();
-    MYSQL** nodes = test.repl->nodes;
-    // Slave 1. Just stop slave.
-    test.try_query(nodes[1], "STOP SLAVE;");
-    // Slave 2. Disable binlog.
-    test.repl->stop_node(2);
-    test.repl->stash_server_settings(2);
-    test.repl->disable_server_setting(2, "log-bin");
-    test.repl->start_node(2, (char*) "");
-    test.maxscale->wait_for_monitor();
-
-    // Slave 3. Set node to maintenance, then shut it down. Simultaneously check issue
-    // MXS-2652: Maintenance flag should persist when server goes down & comes back up.
-    int server_ind = 3;
-    int server_num = server_ind + 1;
-    string server_name = "server" + std::to_string(server_num);
-    expect_maintenance(test, server_name, false);
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    auto conn = mxs.open_rwsplit_connection2();
+    generate_traffic_and_check(test, conn.get(), 5);
 
     if (test.ok())
     {
-        test.maxctrl("set server " + server_name + " maintenance");
-        test.maxscale->wait_for_monitor();
-        expect_running(test, server_name, true);
-        expect_maintenance(test, server_name, true);
+        // Make all three slaves ineligible for promotion in different ways.
+        int stop_slave_ind = 1;
+        int binlog_ind = 2;
+        int maint_ind = 3;
 
-        test.repl->stop_node(server_ind);
-        test.maxscale->wait_for_monitor();
-        expect_running(test, server_name, false);
-        expect_maintenance(test, server_name, true);
+        repl.ping_or_open_admin_connections();
+        // Slave 1. Just stop slave.
+        repl.backend(stop_slave_ind)->admin_connection()->cmd("STOP SLAVE;");
+        // Slave 2. Disable binlog.
 
-        test.repl->start_node(server_ind);
-        test.maxscale->wait_for_monitor();
-        expect_running(test, server_name, true);
-        expect_maintenance(test, server_name, true);
+        repl.stop_node(binlog_ind);
+        repl.stash_server_settings(binlog_ind);
+        repl.disable_server_setting(binlog_ind, "log-bin");
+        repl.start_node(binlog_ind);
+        mxs.wait_for_monitor(2);
+
+        // Slave 3. Set node to maintenance, then restart it. Check issue
+        // MXS-2652: Maintenance flag should persist when server goes down & comes back up.
+
+        string maint_srv_name = "server" + std::to_string(maint_ind + 1);
+        expect_maintenance(test, maint_ind, false);
+
+        if (test.ok())
+        {
+            mxs.maxctrl("set server " + maint_srv_name + " maintenance");
+            mxs.wait_for_monitor();
+            expect_running(test, maint_ind, true);
+            expect_maintenance(test, maint_ind, true);
+
+            repl.stop_node(maint_ind);
+            mxs.wait_for_monitor();
+            expect_running(test, maint_ind, false);
+            expect_maintenance(test, maint_ind, true);
+
+            repl.start_node(maint_ind);
+            mxs.wait_for_monitor();
+            expect_running(test, maint_ind, true);
+            expect_maintenance(test, maint_ind, true);
+
+            if (test.ok())
+            {
+                auto maint_running = mxt::ServerInfo::RUNNING | mxt::ServerInfo::MAINT;
+                mxs.check_print_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::RUNNING,
+                                                mxt::ServerInfo::slave_st,  maint_running});
+                test.tprintf("Blocking master. Failover should not happen.");
+
+                repl.block_node(0);
+                mxs.sleep_and_wait_for_monitor(2, 2);
+                mxs.check_print_servers_status({mxt::ServerInfo::DOWN, mxt::ServerInfo::RUNNING,
+                                                mxt::ServerInfo::slave_st,  maint_running});
+                repl.unblock_node(0);
+            }
+
+            // Remove maintenance.
+            mxs.maxctrl("clear server " + maint_srv_name + " maintenance");
+        }
+
+        // Restore normal settings.
+        repl.stop_node(binlog_ind);
+        repl.restore_server_settings(binlog_ind);
+        repl.start_node(binlog_ind);
+
+        repl.backend(stop_slave_ind)->admin_connection()->cmd("START SLAVE;");
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     }
-
-    get_output(test);
-
-    test.tprintf(LINE);
-    test.tprintf("Stopping master. Failover should not happen.");
-    test.repl->block_node(0);
-    test.maxscale->wait_for_monitor();
-    get_output(test);
-    int master_id = get_master_server_id(test);
-    test.expect(master_id == -1, "Master was promoted even when no slave was eligible.");
-
-    test.repl->unblock_node(0);
-
-    // Restore normal settings.
-    test.try_query(nodes[1], "START SLAVE;");
-    test.repl->stop_node(2);
-    test.repl->restore_server_settings(2);
-    test.repl->start_node(2, (char*) "");
-    test.maxctrl("clear server " + server_name + " maintenance");
-    return test.global_result;
-}
-
-namespace
-{
-void expect_running(TestConnections& test, std::string server_name, bool value)
-{
-    auto states = test.get_server_status(server_name.c_str());
-    if (value)
-    {
-        test.expect(states.count(running) == 1, "'%s' is not running when it should be.",
-                    server_name.c_str());
-    }
-    else
-    {
-        test.expect(states.count(down) == 1, "'%s' is not down when it should be.",
-                    server_name.c_str());
-    }
-}
-
-void expect_maintenance(TestConnections& test, std::string server_name, bool value)
-{
-    auto states = test.get_server_status(server_name.c_str());
-    if (value)
-    {
-        test.expect(states.count(maint) == 1, "'%s' is not in maintenance when it should be.",
-                    server_name.c_str());
-    }
-    else
-    {
-        test.expect(states.count(maint) == 0, "'%s' is in maintenance when it should not be.",
-                    server_name.c_str());
-    }
-}
 }
