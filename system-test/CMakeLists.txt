@@ -118,7 +118,9 @@ add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrit
 # KafkaCDC tests
 add_subdirectory(kafka)
 
-add_subdirectory(nosqlprotocol)
+if(BUILD_NOSQL)
+  add_subdirectory(nosqlprotocol)
+endif()
 
 # Routing sanity check. Also acts as the regression test case the following issues:
 #
