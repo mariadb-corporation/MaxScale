@@ -5,8 +5,8 @@
             "mapped_user": "delta"
         },
         {
-          "original_user": "gamma",
-          "mapped_user": "delta"
+            "original_user": "gamma",
+            "mapped_user": "delta"
         }
     ],
     "group_map": [
