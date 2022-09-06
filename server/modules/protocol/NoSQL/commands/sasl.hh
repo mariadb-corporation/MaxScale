@@ -395,6 +395,8 @@ private:
         context.client_connection().setup_session(config.user, config.password);
         context.set_roles(role::to_bitmasks(info.roles));
         context.set_authenticated(info.db, info.user);
+
+        MXB_INFO("User %s@%s authenticated.", info.user.c_str(), info.db.c_str());
     }
 };
 
