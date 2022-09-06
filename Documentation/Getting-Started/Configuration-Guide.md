@@ -3070,6 +3070,13 @@ cluster.
   only affects the MaxScale configuration. The state of objects or any external
   files (e.g. TLS certificates) are not synchronized by this mechanism.
 
+* ([MXS-4276](https://jira.mariadb.org/browse/MXS-4276)) The `--export-config`
+  option will not export the cluster configuration and instead exports only the
+  static configuration files. To start a new MaxScale based off of a clustered
+  configuration, copy the static configuration files as well as the JSON
+  configuration in `/var/lib/maxscale/maxscale-config.json` to the new MaxScale
+  instance.
+
 ## Backing Up Configuration Changes
 
 The combination of configuration files can be done either manually

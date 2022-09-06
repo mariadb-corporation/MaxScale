@@ -2077,7 +2077,7 @@ int main(int argc, char** argv)
     auto do_startup = [&]() {
             bool use_static_cnf = !manager.load_cached_config();
 
-            if (use_static_cnf)
+            if (use_static_cnf || cnf.config_check)
             {
                 if (!config_load(cnf_file_path.c_str()))
                 {
