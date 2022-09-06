@@ -27,7 +27,7 @@ In addition to request parameters, the token can be stored in cookies in which
 case they are automatically used by the REST API. For more information about
 token storage in cookies, see the documentation for `POST /v1/sql`.
 
-##  Request Parameters
+## Request Parameters
 
 All of the endpoints that operate on a single connection support the following
 request parameters. The `GET /v1/sql` and `GET /v1/sql/:id` endpoints are an
@@ -165,7 +165,7 @@ must be either given in the `token` parameter of a request or it must be stored
 in the cookies. If both a `token` parameter and a cookie exist at the same time,
 the `token` parameter will be used instead of the cookie.
 
-####  Request Parameters
+#### Request Parameters
 
 This endpoint supports the following request parameters.
 
@@ -201,6 +201,10 @@ Connection was opened:
 {
     "data": {
         "id": "5",
+        "attributes": {
+            "thread_id": 12,
+            "seconds_idle": 5
+        }
         "links": {
                  // The "related" endpoint is the URL to the query endpoint for this connection.
             "related": "http://localhost:8989/v1/sql/5/queries/",
@@ -219,7 +223,7 @@ Connection was opened:
 
 Missing or invalid payload:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Close an opened SQL connection
 
@@ -235,7 +239,7 @@ Connection was closed:
 
 Missing or invalid connection token:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Reconnect an opened SQL connection
 
@@ -264,7 +268,34 @@ Reconnection failed or connection is already in use:
 
 Missing or invalid connection token:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
+
+### Clone an existing SQL connection
+
+```
+POST /v1/sql/:id/clone
+```
+
+Clones an existing connection. This is done by opening a new connection using
+the credentials and configuration from the given connection.
+
+#### Request Parameters
+
+This endpoint supports the same request parameters as the `POST /v1/sql`
+endpoint.
+
+#### Response
+
+The response is identical to the one in the `POST /v1/sql` endpoint. In
+addition, this endpoint can return the following responses.
+
+Connection is already in use:
+
+`Status: 503 Service Unavailable`
+
+Missing or invalid connection token:
+
+`Status: 400 Bad Request`
 
 ### Execute SQL query
 
@@ -430,7 +461,7 @@ Query successfully executed:
 
 Invalid payload or missing connection token:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 Fatal connection error:
 

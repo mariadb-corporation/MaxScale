@@ -1,17 +1,28 @@
 {
     "name": "mxs-query-editor",
-    "version": "1.0.0",
+    "version": "1.0.0-rc6",
     "description": "MaxScale query editor UI",
     "author": "MariaDB Corporation Ab",
-    "license": "SEE LICENSE IN ../../../LICENSE.TXT",
-    "main": "./dist/mxs-query-editor.esm.js",
+    "license": "https://mariadb.com/bsl11/",
+    "type": "commonjs",
+    "main": "./dist/mxs-query-editor.js",
     "module": "./dist/mxs-query-editor.esm.js",
+    "exports": {
+        ".": {
+            "require": "./mxs-query-editor.js",
+            "default": "./mxs-query-editor.esm.js"
+        },
+        "./dist/*": "./dist/*"
+    },
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "prepack": "rimraf ./maxscale-query-editor-1.0.0.tgz",
-        "pack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js && npm pack && rimraf ./dist"
+        "prepack": "cross-env NODE_ENV=production rollup --config ./rollup.config.js",
+        "postpublish": "rimraf ./dist"
     },
     "optionalDependencies": {
-        "prettier": "^1.19.1"
+        "prettier": "1.91.1"
     },
     "devDependencies": {
         "@babel/core": "^7.14.6",
@@ -28,8 +39,8 @@
         "rollup-plugin-copy": "^3.4.0",
         "rollup-plugin-dotenv": "^0.3.0",
         "rollup-plugin-monaco-editor": "^0.2.1",
-        "rollup-plugin-postcss": "^4.0.1",
         "rollup-plugin-scss": "^3.0.0",
+        "rollup-plugin-terser": "^7.0.2",
         "rollup-plugin-vue": "^5.1.9",
         "rollup-plugin-vuetify": "^0.2.4"
     },
@@ -69,6 +80,7 @@
         "localforage": "^1.10.0",
         "lodash": "^4.17.21",
         "monaco-editor": "^0.33.0",
+        "monaco-editor-webpack-plugin": "^7.0.1",
         "sql-formatter": "^4.0.2",
         "stacktrace-parser": "^0.1.10",
         "typy": "^3.3.0",

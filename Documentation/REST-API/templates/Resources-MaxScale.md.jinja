@@ -275,7 +275,9 @@ POST /v1/maxscale/tls/reload
 
 Reloads all TLS certificates for listeners and servers as well as the REST API
 itself. If the reloading fails, the old certificates will remain in use for the
-objects that failed to reload.
+objects that failed to reload. This also causes the JWT signature keys to be
+reloaded if one of the asymmetric key algorithms is being used. If JWTs are
+being signed with a random symmetric keys, a new random key is created.
 
 The reloading is not transactional: if a single listener or server fails to
 reload its certificates, the remaining ones are not reloaded. This means that a

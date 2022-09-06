@@ -98,54 +98,6 @@ Get all listeners.
                     "authenticator": null,
                     "authenticator_options": null,
                     "connection_init_sql_file": null,
-                    "port": 4008,
-                    "protocol": "MariaDBProtocol",
-                    "service": "Read-Connection-Router",
-                    "socket": null,
-                    "sql_mode": "default",
-                    "ssl": false,
-                    "ssl_ca_cert": null,
-                    "ssl_cert": null,
-                    "ssl_cert_verify_depth": 9,
-                    "ssl_cipher": null,
-                    "ssl_crl": null,
-                    "ssl_key": null,
-                    "ssl_verify_peer_certificate": false,
-                    "ssl_verify_peer_host": false,
-                    "ssl_version": "MAX",
-                    "type": "listener",
-                    "user_mapping_file": null
-                },
-                "source": {
-                    "file": "/etc/maxscale.cnf",
-                    "type": "static"
-                },
-                "state": "Running"
-            },
-            "id": "Read-Connection-Listener",
-            "relationships": {
-                "services": {
-                    "data": [
-                        {
-                            "id": "Read-Connection-Router",
-                            "type": "services"
-                        }
-                    ],
-                    "links": {
-                        "related": "http://localhost:8989/v1/services/",
-                        "self": "http://localhost:8989/v1/listeners/Read-Connection-Listener/relationships/services/"
-                    }
-                }
-            },
-            "type": "listeners"
-        },
-        {
-            "attributes": {
-                "parameters": {
-                    "address": "::",
-                    "authenticator": null,
-                    "authenticator_options": null,
-                    "connection_init_sql_file": null,
                     "port": 4006,
                     "protocol": "MariaDBProtocol",
                     "service": "RW-Split-Router",
@@ -182,6 +134,54 @@ Get all listeners.
                     "links": {
                         "related": "http://localhost:8989/v1/services/",
                         "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+                    }
+                }
+            },
+            "type": "listeners"
+        },
+        {
+            "attributes": {
+                "parameters": {
+                    "address": "::",
+                    "authenticator": null,
+                    "authenticator_options": null,
+                    "connection_init_sql_file": null,
+                    "port": 4008,
+                    "protocol": "MariaDBProtocol",
+                    "service": "Read-Connection-Router",
+                    "socket": null,
+                    "sql_mode": "default",
+                    "ssl": false,
+                    "ssl_ca_cert": null,
+                    "ssl_cert": null,
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
+                    "ssl_crl": null,
+                    "ssl_key": null,
+                    "ssl_verify_peer_certificate": false,
+                    "ssl_verify_peer_host": false,
+                    "ssl_version": "MAX",
+                    "type": "listener",
+                    "user_mapping_file": null
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
+                "state": "Running"
+            },
+            "id": "Read-Connection-Listener",
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/listeners/Read-Connection-Listener/relationships/services/"
                     }
                 }
             },
@@ -288,7 +288,7 @@ Listener is destroyed:
 
 Listener cannot be deleted:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ### Stop a listener
 

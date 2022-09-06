@@ -32,7 +32,7 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Thu Mar 17 10:27:52 2022",
+            "connected": "Fri Sep  2 06:19:18 2022",
             "connections": [
                 {
                     "cipher": "",
@@ -45,14 +45,23 @@ an external server, the operation may be expensive.
                     "server": "server2"
                 }
             ],
-            "idle": 0.0,
+            "idle": 0.10000000000000001,
             "log": [],
+            "memory": {
+                "connection_buffers": 67982,
+                "exec_metadata": 0,
+                "last_queries": 0,
+                "sescmd_history": 369,
+                "total": 68351,
+                "variables": 0
+            },
             "parameters": {
                 "log_error": false,
                 "log_info": false,
                 "log_notice": false,
                 "log_warning": false
             },
+            "port": 48546,
             "queries": [],
             "remote": "::ffff:127.0.0.1",
             "state": "Session started",
@@ -104,7 +113,7 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Thu Mar 17 10:27:52 2022",
+                "connected": "Fri Sep  2 06:19:18 2022",
                 "connections": [
                     {
                         "cipher": "",
@@ -117,14 +126,23 @@ Get all sessions.
                         "server": "server2"
                     }
                 ],
-                "idle": 0.0,
+                "idle": 0.10000000000000001,
                 "log": [],
+                "memory": {
+                    "connection_buffers": 67982,
+                    "exec_metadata": 0,
+                    "last_queries": 0,
+                    "sescmd_history": 369,
+                    "total": 68351,
+                    "variables": 0
+                },
                 "parameters": {
                     "log_error": false,
                     "log_info": false,
                     "log_notice": false,
                     "log_warning": false
                 },
+                "port": 48546,
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",
                 "state": "Session started",
@@ -208,5 +226,66 @@ similar to how the filter relationship for services behaves.
 #### Response
 
 Session is modified:
+
+`Status: 204 No Content`
+
+### Restart a Session
+
+```
+POST /v1/sessions/:id/restart
+```
+
+This endpoint causes the session to re-read the configuration from the
+service. As a result of this, all backend connections will be closed and then
+opened again. All router and filter sessions will be created again which means
+that for modules that perform something whenever a new module session is opened,
+this behaves as if a new session was started.
+
+This endpoint can be used to apply configuration changes that were done after
+the session was started. This can be useful for situations where the client
+connections live for a long time and connections are not recycled often enough.
+
+#### Response
+
+Session is was restarted:
+
+`Status: 204 No Content`
+
+### Restart all Sessions
+
+```
+POST /v1/sessions/restart
+```
+
+This endpoint does the same thing as the `/v1/sessions/:id/restart` endpoint
+except that it applies to all sessions.
+
+#### Response
+
+Session is was restarted:
+
+`Status: 204 No Content`
+
+### Kill a Session
+
+```
+DELETE /v1/sessions/:id
+```
+
+This endpoint causes the session to be forcefully closed.
+
+#### Request Parameters
+
+This endpoint supports the following request parameters.
+
+- `ttl`
+
+  - The time after which the session is killed. If this parameter is not given,
+    the session is killed immediately. This can be used to give the session time
+    to finish the work it is performing before the connection is closed.
+
+#### Response
+
+Session was killed:
 
 `Status: 204 No Content`

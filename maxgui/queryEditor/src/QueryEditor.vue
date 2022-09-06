@@ -10,11 +10,11 @@
             class="fill-height d-flex flex-column"
             :class="{ 'query-editor--fullscreen': is_fullscreen }"
         >
+            <div v-if="$slots['query-editor-top']" ref="queryEditorTopSlot">
+                <slot name="query-editor-top" />
+            </div>
             <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
-            <template else>
-                <div v-if="$slots['query-editor-top']" ref="queryEditorTopSlot">
-                    <slot name="query-editor-top" />
-                </div>
+            <template v-else>
                 <wke-nav-ctr
                     v-if="!hidden_comp.includes('wke-nav-ctr')"
                     :height="wkeNavCtrHeight"

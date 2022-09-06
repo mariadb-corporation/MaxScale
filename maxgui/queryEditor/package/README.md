@@ -1,8 +1,12 @@
 # MaxScale Query Editor UI
 
+This package only supports webpack 4 and Vue.js 2.
+
 ## Installation
 
-//TODO: Add this when it's published in npm
+```bash
+npm i mxs-query-editor
+```
 
 Query editor peerDependencies
 
@@ -16,6 +20,7 @@ Query editor peerDependencies
 -   localforage@^1.10.0
 -   lodash@^4.17.21
 -   monaco-editor@^0.33.0
+-   monaco-editor-webpack-plugin@^7.0.1
 -   sql-formatter@^4.0.2
 -   stacktrace-parser@^0.1.10
 -   typy@^3.3.0
@@ -45,7 +50,6 @@ import Vuex from 'vuex'
 import Vuetify from 'vuetify/lib'
 import { Resize } from 'vuetify/lib/directives'
 import MxsQueryEditor from 'mxs-query-editor'
-import 'mxs-query-editor/dist/mxs-query-editor.esm.css'
 import vuetify from '@/plugins/vuetify'
 import i18n from '@/plugins/i18n'
 import App from '@/App.vue'
@@ -70,7 +74,7 @@ Vue.use(MxsQueryEditor, {
 new Vue({
     vuetify,
     i18n,
-    render: (h) => h(App),
+    render: h => h(App),
 }).$mount('#app')
 ```
 
@@ -83,7 +87,7 @@ import VueI18n from 'vue-i18n'
 const merge = require('lodash/merge')
 function getMsgs(locales) {
     const messages = {}
-    locales.keys().forEach((key) => {
+    locales.keys().forEach(key => {
         const matched = key.match(/([A-Za-z0-9-_]+)\./i)
         if (matched && matched.length > 1) {
             const locale = matched[1]
@@ -158,16 +162,11 @@ registered manually.
 // store/index.js
 import Vue from 'vue'
 import Vuex from 'vuex'
-import queryEditorPersistPlugin from 'mxs-query-editor/dist/persistPlugin'
+import { queryEditorStorePlugins } from 'mxs-query-editor'
 
 export default new Vuex.Store({
     namespaced: true,
-    plugins: [
-        (store) => {
-            store.vue = Vue.prototype
-        },
-        queryEditorPersistPlugin,
-    ],
+    plugins: queryEditorStorePlugins,
 })
 ```
 
@@ -214,7 +213,7 @@ and `min-max-btn` are importable.
 <!-- SkyQuery.vue -->
 <template>
     <mxs-query-editor
-        ref="queryEditor"
+        ref="mxsQueryEditor"
         class="query-editor-page"
         @leave-page="$router.push($event)"
     >
@@ -237,7 +236,7 @@ export default {
         MinMaxBtn,
     },
     async beforeRouteLeave(to, from, next) {
-        this.$refs.queryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
+        this.$refs.mxsQueryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
     },
 }
 </script>
@@ -261,6 +260,23 @@ The `mxs-query-editor` component has the following slots:
 -   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
     but this is for DDL_EDITOR mode (editor for altering table).
 
+## Build the editor
+
+The query editor internally uses [monaco-editor](https://github.com/microsoft/monaco-editor)
+and it requires configuration steps from webpack.
+
+```js
+//vue.config.js
+const monacoConfig = require('mxs-query-editor/dist/buildConfig/monaco.js')
+module.exports = {
+    chainWebpack: config => {
+        config
+            .plugin('MonacoWebpackPlugin')
+            .use(require('monaco-editor-webpack-plugin'), [monacoConfig])
+    },
+}
+```
+
 ## Change query editor base url
 
 Query editor base url can be changed at run time by committing the following
@@ -272,34 +288,35 @@ mutation:
 
 Certain keywords are reserved in order to make the query editor work properly.
 
-| Keywords              |                        For                         |
-| --------------------- | :------------------------------------------------: |
-| queryEditor           |                  i18n json locale                  |
-| mxs_icon_name         | Query editor icons, they have `mxs_`as the prefix. |
-| mxs-component-name    |   Global Vue components with`mxs-`as the prefix    |
-| maxscale-query-editor |                Global Vue component                |
-| appNotifier           |                    Vuex module                     |
-| wke                   |                    Vuex module                     |
-| queryConn             |                    Vuex module                     |
-| editor                |                    Vuex module                     |
-| schemaSidebar         |                    Vuex module                     |
-| queryResult           |                    Vuex module                     |
-| querySession          |                    Vuex module                     |
-| queryPersisted        |                    Vuex module                     |
-| queryEditorConfig     |                    Vuex module                     |
-| \$mxs_t               |               Vue instance property                |
-| \$mxs_tc              |               Vue instance property                |
-| \$mxs_te              |               Vue instance property                |
-| \$mxs_d               |               Vue instance property                |
-| \$mxs_n               |               Vue instance property                |
-| \$queryHttp           |               Vue instance property                |
-| \$helpers             |               Vue instance property                |
-| \$logger              |               Vue instance property                |
+| Keywords           |                        For                         |
+| ------------------ | :------------------------------------------------: |
+| queryEditor        |                  i18n json locale                  |
+| mxs_icon_name      | Query editor icons, they have `mxs_`as the prefix. |
+| mxs-component-name |   Global Vue components with`mxs-`as the prefix    |
+| mxs-query-editor   |                Global Vue component                |
+| appNotifier        |                    Vuex module                     |
+| wke                |                    Vuex module                     |
+| queryConn          |                    Vuex module                     |
+| editor             |                    Vuex module                     |
+| schemaSidebar      |                    Vuex module                     |
+| queryResult        |                    Vuex module                     |
+| querySession       |                    Vuex module                     |
+| queryPersisted     |                    Vuex module                     |
+| queryEditorConfig  |                    Vuex module                     |
+| store.vue          |                     Vuex store                     |
+| \$mxs_t            |               Vue instance property                |
+| \$mxs_tc           |               Vue instance property                |
+| \$mxs_te           |               Vue instance property                |
+| \$mxs_d            |               Vue instance property                |
+| \$mxs_n            |               Vue instance property                |
+| \$queryHttp        |               Vue instance property                |
+| \$helpers          |               Vue instance property                |
+| \$logger           |               Vue instance property                |
 
-## How to pack the package
+## How to publish the package
 
 At the root directory that is `/maxgui`
 
 ```
-npm ci && cd queryEditor/package && npm ci --force && npm run pack
+npm ci && cd queryEditor/package && npm ci --force && npm publish
 ```

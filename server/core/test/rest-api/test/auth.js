@@ -173,6 +173,22 @@ describe("Authentication", function () {
         headers: { Authorization: "Bearer " + bad_token },
       }).should.be.rejected;
     });
+
+    it("TLS reload invalidates tokens", async function () {
+      var res = await request.get(base_url + "/auth");
+      const token = res.meta.token;
+      jwt.decode(token).should.not.throw;
+
+      await axios.get("http://" + host + "/servers", {
+        headers: { Authorization: "Bearer " + token },
+      }).should.not.be.rejected;
+
+      await request.post(base_url + "/maxscale/tls/reload");
+
+      await axios.get("http://" + host + "/servers", {
+        headers: { Authorization: "Bearer " + token },
+      }).should.be.rejected;
+    });
   });
 
   describe("User Creation", function () {

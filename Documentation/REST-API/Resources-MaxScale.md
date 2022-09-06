@@ -24,26 +24,29 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Tue, 17 May 2022 03:24:41 GMT",
-            "commit": "cdf2dd2884c6fdcaf2b42adebe28466836aa8d83",
+            "activated_at": "Fri, 02 Sep 2022 06:19:08 GMT",
+            "commit": "e9118b83aaaca68bce91d0543230e4dd0136f1bf",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
                 "admin_enabled": true,
                 "admin_gui": true,
                 "admin_host": "127.0.0.1",
+                "admin_jwt_algorithm": "auto",
+                "admin_jwt_key": null,
                 "admin_log_auth_failures": true,
                 "admin_pam_readonly_service": null,
                 "admin_pam_readwrite_service": null,
                 "admin_port": 8989,
                 "admin_secure_gui": true,
-                "admin_ssl_ca_cert": null,
+                "admin_ssl_ca": null,
                 "admin_ssl_cert": null,
                 "admin_ssl_key": null,
                 "admin_ssl_version": "MAX",
                 "auth_connect_timeout": "10000ms",
                 "auth_read_timeout": "10000ms",
                 "auth_write_timeout": "10000ms",
+                "auto_tune": [],
                 "cachedir": "/var/cache/maxscale",
                 "config_sync_cluster": null,
                 "config_sync_interval": "5000ms",
@@ -55,6 +58,7 @@ file locations, configuration options and version information.
                 "debug": null,
                 "dump_last_statements": "never",
                 "execdir": "/usr/bin",
+                "key_manager": "none",
                 "language": "/var/lib/maxscale",
                 "libdir": "/usr/lib64/maxscale",
                 "load_persisted_configs": true,
@@ -71,15 +75,17 @@ file locations, configuration options and version information.
                 "log_warning": true,
                 "logdir": "/var/log/maxscale",
                 "max_auth_errors_until_block": 10,
+                "max_read_amount": 0,
                 "maxlog": true,
                 "module_configdir": "/etc/maxscale.modules.d",
                 "ms_timestamp": false,
                 "passive": false,
+                "persist_runtime_changes": true,
                 "persistdir": "/var/lib/maxscale/maxscale.cnf.d",
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5003807539,
+                "query_classifier_cache_size": 5004691046,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -98,9 +104,9 @@ file locations, configuration options and version information.
                 "writeq_low_water": 8192
             },
             "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Tue, 17 May 2022 03:24:41 GMT",
+            "started_at": "Fri, 02 Sep 2022 06:19:08 GMT",
             "uptime": 10,
-            "version": "6.3.0"
+            "version": "22.08.0"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -118,14 +124,9 @@ PATCH /v1/maxscale
 ```
 
 Update MaxScale parameters. The request body must define updated values for the
-`data.attributes.parameters` object. The following parameters can be altered:
-
-- [admin_auth](../Getting-Started/Configuration-Guide.md#admin_auth)
-- [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
-- [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
-- [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
-- [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
-- [passive](../Getting-Started/Configuration-Guide.md#passive)
+`data.attributes.parameters` object. The parameters that can be modified are
+listed in the `/v1/maxscale/modules/maxscale` endpoint and have the `modifiable`
+value set to `true`.
 
 #### Response
 
@@ -135,7 +136,7 @@ Parameters modified:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ## Get thread information
 
@@ -156,9 +157,9 @@ value of `threads`.
     "data": {
         "attributes": {
             "stats": {
-                "accepts": 1,
+                "accepts": 0,
                 "avg_event_queue_length": 1,
-                "current_descriptors": 7,
+                "current_descriptors": 5,
                 "errors": 0,
                 "hangups": 0,
                 "load": {
@@ -166,19 +167,19 @@ value of `threads`.
                     "last_minute": 0,
                     "last_second": 0
                 },
-                "max_event_queue_length": 2,
+                "max_event_queue_length": 1,
                 "max_exec_time": 0,
                 "max_queue_time": 0,
                 "query_classifier_cache": {
                     "evictions": 0,
                     "hits": 0,
-                    "inserts": 1,
-                    "misses": 2,
-                    "size": 368
+                    "inserts": 0,
+                    "misses": 0,
+                    "size": 0
                 },
-                "reads": 36,
-                "total_descriptors": 7,
-                "writes": 13
+                "reads": 30,
+                "total_descriptors": 5,
+                "writes": 0
             }
         },
         "id": "0",
@@ -211,9 +212,213 @@ Get the information for all threads. Returns a collection of threads resources.
         {
             "attributes": {
                 "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 31,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "0",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/0/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 30,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "1",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/1/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 29,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "2",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/2/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 29,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "3",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/3/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 29,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "4",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/4/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
+                    "accepts": 0,
+                    "avg_event_queue_length": 1,
+                    "current_descriptors": 5,
+                    "errors": 0,
+                    "hangups": 0,
+                    "load": {
+                        "last_hour": 0,
+                        "last_minute": 0,
+                        "last_second": 0
+                    },
+                    "max_event_queue_length": 1,
+                    "max_exec_time": 0,
+                    "max_queue_time": 0,
+                    "query_classifier_cache": {
+                        "evictions": 0,
+                        "hits": 0,
+                        "inserts": 0,
+                        "misses": 0,
+                        "size": 0
+                    },
+                    "reads": 30,
+                    "total_descriptors": 5,
+                    "writes": 0
+                }
+            },
+            "id": "5",
+            "links": {
+                "self": "http://localhost:8989/v1/threads/5/"
+            },
+            "type": "threads"
+        },
+        {
+            "attributes": {
+                "stats": {
                     "accepts": 1,
                     "avg_event_queue_length": 1,
-                    "current_descriptors": 7,
+                    "current_descriptors": 8,
                     "errors": 0,
                     "hangups": 0,
                     "load": {
@@ -229,215 +434,11 @@ Get the information for all threads. Returns a collection of threads resources.
                         "hits": 0,
                         "inserts": 1,
                         "misses": 2,
-                        "size": 368
+                        "size": 448
                     },
-                    "reads": 37,
-                    "total_descriptors": 7,
-                    "writes": 13
-                }
-            },
-            "id": "0",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/0/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 26,
-                    "total_descriptors": 4,
-                    "writes": 0
-                }
-            },
-            "id": "1",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/1/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 24,
-                    "total_descriptors": 4,
-                    "writes": 0
-                }
-            },
-            "id": "2",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/2/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 24,
-                    "total_descriptors": 4,
-                    "writes": 0
-                }
-            },
-            "id": "3",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/3/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 24,
-                    "total_descriptors": 4,
-                    "writes": 0
-                }
-            },
-            "id": "4",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/4/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 25,
-                    "total_descriptors": 4,
-                    "writes": 0
-                }
-            },
-            "id": "5",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/5/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 25,
-                    "total_descriptors": 4,
-                    "writes": 0
+                    "reads": 40,
+                    "total_descriptors": 8,
+                    "writes": 12
                 }
             },
             "id": "6",
@@ -451,7 +452,7 @@ Get the information for all threads. Returns a collection of threads resources.
                 "stats": {
                     "accepts": 0,
                     "avg_event_queue_length": 1,
-                    "current_descriptors": 4,
+                    "current_descriptors": 5,
                     "errors": 0,
                     "hangups": 0,
                     "load": {
@@ -469,8 +470,8 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 25,
-                    "total_descriptors": 4,
+                    "reads": 30,
+                    "total_descriptors": 5,
                     "writes": 0
                 }
             },
@@ -600,22 +601,22 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "46",
-                    "message": "Server changed state: server2[127.0.0.1:3001]: slave_up. [Down] -> [Slave, Running]",
+                    "id": "37",
+                    "message": "Service 'Read-Connection-Router' started (2/2)",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:47"
+                    "timestamp": "2022-09-02 06:19:08"
                 },
                 {
-                    "id": "47",
+                    "id": "38",
                     "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:48"
+                    "timestamp": "2022-09-02 06:19:09"
                 },
                 {
-                    "id": "48",
+                    "id": "39",
                     "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-03-17 10:27:48"
+                    "timestamp": "2022-09-02 06:19:09"
                 }
             ],
             "log_source": "maxlog"
@@ -625,8 +626,8 @@ This endpoint supports the following parameters:
     },
     "links": {
         "last": "http://localhost:8989/v1/maxscale/logs/data/?page[size]=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=43&page[size]=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=46&page[size]=3"
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=34&page[size]=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=40&page[size]=3"
     }
 }
 ```
@@ -724,7 +725,7 @@ Parameters modified:
 
 Invalid JSON body:
 
-`Status: 403 Forbidden`
+`Status: 400 Bad Request`
 
 ## Flush and rotate log files
 
@@ -739,26 +740,26 @@ message is ignored.
 
 `Status: 204 No Content`
 
-## Get task schedule
+## Reload TLS certificates
 
 ```
-GET /v1/maxscale/tasks
+POST /v1/maxscale/tls/reload
 ```
 
-Retrieve all pending tasks that are queued for execution.
+Reloads all TLS certificates for listeners and servers as well as the REST API
+itself. If the reloading fails, the old certificates will remain in use for the
+objects that failed to reload. This also causes the JWT signature keys to be
+reloaded if one of the asymmetric key algorithms is being used. If JWTs are
+being signed with a random symmetric keys, a new random key is created.
+
+The reloading is not transactional: if a single listener or server fails to
+reload its certificates, the remaining ones are not reloaded. This means that a
+failed reload can partially reload certificates. The REST API certificates are
+only reloaded if all other certificate reloads were successful.
 
 #### Response
 
-`Status: 200 OK`
-
-```javascript
-{
-    "links": {
-        "self": "http://localhost:8989/v1/maxscale/tasks/"
-    },
-    "data": [] // No tasks active
-}
-```
+`Status: 204 No Content`
 
 ## Get a loaded module
 
@@ -774,6 +775,9 @@ The `maxscale` module will display the global configuration options
 
 The `servers` module displays the server object type and the configuration
 parameters it accepts as a module.
+
+Any parameter with the `modifiable` value set to `true` can be modified
+at runtime using a PATCH command on the corresponding object endpoint.
 
 #### Response
 
@@ -802,7 +806,8 @@ parameters it accepts as a module.
                         "none",
                         "local",
                         "global",
-                        "fast"
+                        "fast",
+                        "universal"
                     ],
                     "mandatory": false,
                     "modifiable": true,
@@ -1142,6 +1147,15 @@ parameters it accepts as a module.
                     "type": "count"
                 },
                 {
+                    "default_value": "60000ms",
+                    "description": "How long a session can wait for a connection to become available",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "multiplex_timeout",
+                    "type": "duration",
+                    "unit": "ms"
+                },
+                {
                     "default_value": "0ms",
                     "description": "Network write timeout",
                     "mandatory": false,
@@ -1155,7 +1169,7 @@ parameters it accepts as a module.
                     "mandatory": true,
                     "modifiable": true,
                     "name": "password",
-                    "type": "string"
+                    "type": "password"
                 },
                 {
                     "default_value": true,
@@ -1316,6 +1330,38 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "auto",
+                        "description": "JWT signature algorithm",
+                        "enum_values": [
+                            "auto",
+                            "HS256",
+                            "HS384",
+                            "HS512",
+                            "RS256",
+                            "RS384",
+                            "RS512",
+                            "ES256",
+                            "ES384",
+                            "ES512",
+                            "PS256",
+                            "PS384",
+                            "PS512",
+                            "ED25519",
+                            "ED448"
+                        ],
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "admin_jwt_algorithm",
+                        "type": "enum"
+                    },
+                    {
+                        "description": "Encryption key ID for symmetric signature algorithms. If left empty, MaxScale will generate a random key that is used to sign the JWT.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "admin_jwt_key",
+                        "type": "string"
+                    },
+                    {
                         "default_value": true,
                         "description": "Log admin interface authentication failures.",
                         "mandatory": false,
@@ -1357,22 +1403,30 @@ one to see the parameters of a module before the object is created.
                         "description": "Admin SSL CA cert",
                         "mandatory": false,
                         "modifiable": false,
+                        "name": "admin_ssl_ca",
+                        "type": "path"
+                    },
+                    {
+                        "deprecated": true,
+                        "description": "Alias for 'admin_ssl_ca'",
+                        "mandatory": false,
+                        "modifiable": false,
                         "name": "admin_ssl_ca_cert",
-                        "type": "string"
+                        "type": "path"
                     },
                     {
                         "description": "Admin SSL cert",
                         "mandatory": false,
                         "modifiable": false,
                         "name": "admin_ssl_cert",
-                        "type": "string"
+                        "type": "path"
                     },
                     {
                         "description": "Admin SSL key",
                         "mandatory": false,
                         "modifiable": false,
                         "name": "admin_ssl_key",
-                        "type": "string"
+                        "type": "path"
                     },
                     {
                         "default_value": "MAX",
@@ -1417,6 +1471,14 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
+                        "default_value": [],
+                        "description": "Specifies whether a MaxScale parameter whose value depends on a specific global server variable, should automatically be updated to match the variable's current value.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "auto_tune",
+                        "type": "stringlist"
+                    },
+                    {
                         "description": "Cluster used for configuration synchronization. If left empty (i.e. value is \"\"), synchronization is not done.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1433,11 +1495,12 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
+                        "default_value": "*****",
                         "description": "Password for the user used for configuration synchronization.",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "config_sync_password",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "default_value": "10000ms",
@@ -1473,6 +1536,20 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "dump_last_statements",
+                        "type": "enum"
+                    },
+                    {
+                        "default_value": "none",
+                        "description": "Key manager type",
+                        "enum_values": [
+                            "none",
+                            "file",
+                            "kmip",
+                            "vault"
+                        ],
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "key_manager",
                         "type": "enum"
                     },
                     {
@@ -1551,6 +1628,14 @@ one to see the parameters of a module before the object is created.
                         "type": "int"
                     },
                     {
+                        "default_value": 0,
+                        "description": "Maximum amount of data read before return to epoll_wait.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "max_read_amount",
+                        "type": "size"
+                    },
+                    {
                         "default_value": true,
                         "description": "Log to MaxScale's own log.",
                         "mandatory": false,
@@ -1575,6 +1660,14 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
+                        "default_value": true,
+                        "description": "Persist configurations changes done at runtime.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "persist_runtime_changes",
+                        "type": "bool"
+                    },
+                    {
                         "default_value": "qc_sqlite",
                         "description": "The name of the query classifier to load.",
                         "mandatory": false,
@@ -1590,7 +1683,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5003807539,
+                        "default_value": 5004691046,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1684,7 +1777,7 @@ one to see the parameters of a module before the object is created.
                         "type": "enum"
                     },
                     {
-                        "default_value": true,
+                        "default_value": false,
                         "description": "Log to syslog.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1734,7 +1827,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "6.3.0"
+                "version": "22.08.0"
             },
             "id": "maxscale",
             "links": {
@@ -1831,7 +1924,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "priority",
-                        "type": "count"
+                        "type": "int"
                     },
                     {
                         "description": "Server protocol (deprecated)",
@@ -1877,6 +1970,14 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "description": "TLS certificate authority",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "ssl_ca",
+                        "type": "path"
+                    },
+                    {
+                        "deprecated": true,
+                        "description": "Alias for 'ssl_ca'",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "ssl_ca_cert",
@@ -1951,7 +2052,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "6.3.0"
+                "version": "22.08.0"
             },
             "id": "servers",
             "links": {
@@ -1982,7 +2083,7 @@ one to see the parameters of a module before the object is created.
                 "description": "Standard MySQL/MariaDB authentication (mysql_native_password)",
                 "maturity": "GA",
                 "module_type": "Authenticator",
-                "parameters": [],
+                "parameters": null,
                 "version": "V2.1.0"
             },
             "id": "MariaDBAuth",
@@ -1997,10 +2098,140 @@ one to see the parameters of a module before the object is created.
                 "commands": [
                     {
                         "attributes": {
+                            "arg_max": 3,
+                            "arg_min": 2,
+                            "description": "Rebuild a server with mariabackup. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Target server",
+                                    "required": true,
+                                    "type": "SERVER"
+                                },
+                                {
+                                    "description": "Source server (optional)",
+                                    "required": false,
+                                    "type": "[SERVER]"
+                                }
+                            ]
+                        },
+                        "id": "async-rebuild-server",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-rebuild-server/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 2,
+                            "description": "Set ColumnStore cluster readwrite. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-set-readwrite",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-set-readwrite/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 2,
+                            "description": "Set ColumnStore cluster read-only. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-set-readonly",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-set-readonly/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 2,
+                            "description": "Stop ColumnStore cluster. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-stop-cluster",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-stop-cluster/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 2,
+                            "description": "Start ColumnStore cluster. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-start-cluster",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-start-cluster/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
                             "arg_max": 1,
                             "arg_min": 1,
-                            "description": "Fetch result of the last scheduled command.",
-                            "method": "GET",
+                            "description": "Get ColumnStore cluster status. Does not wait for completion.",
+                            "method": "POST",
                             "parameters": [
                                 {
                                     "description": "Monitor name",
@@ -2009,9 +2240,109 @@ one to see the parameters of a module before the object is created.
                                 }
                             ]
                         },
-                        "id": "fetch-cmd-result",
+                        "id": "async-cs-get-status",
                         "links": {
-                            "self": "http://localhost:8989/v1/modules/mariadbmon/fetch-cmd-result/"
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-get-status/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 1,
+                            "arg_min": 1,
+                            "description": "Get ColumnStore cluster status.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                }
+                            ]
+                        },
+                        "id": "cs-get-status",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/cs-get-status/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 3,
+                            "arg_min": 3,
+                            "description": "Remove a node from a ColumnStore cluster. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Hostname/IP of node to remove from ColumnStore cluster",
+                                    "required": true,
+                                    "type": "STRING"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-remove-node",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-remove-node/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 3,
+                            "arg_min": 3,
+                            "description": "Add a node to a ColumnStore cluster. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Hostname/IP of node to add to ColumnStore cluster",
+                                    "required": true,
+                                    "type": "STRING"
+                                },
+                                {
+                                    "description": "Timeout",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-cs-add-node",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-cs-add-node/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 1,
+                            "arg_min": 1,
+                            "description": "Cancel the last scheduled command.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                }
+                            ]
+                        },
+                        "id": "cancel-cmd",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/cancel-cmd/"
                         },
                         "type": "module_command"
                     },
@@ -2029,9 +2360,9 @@ one to see the parameters of a module before the object is created.
                                 }
                             ]
                         },
-                        "id": "fetch-cmd-results",
+                        "id": "fetch-cmd-result",
                         "links": {
-                            "self": "http://localhost:8989/v1/modules/mariadbmon/fetch-cmd-results/"
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/fetch-cmd-result/"
                         },
                         "type": "module_command"
                     },
@@ -2281,157 +2612,132 @@ one to see the parameters of a module before the object is created.
                 "module_type": "Monitor",
                 "parameters": [
                     {
-                        "mandatory": false,
-                        "name": "detect_stale_master",
-                        "type": "bool"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "detect_stale_slave",
-                        "type": "bool"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "detect_standalone_master",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": 5,
-                        "mandatory": false,
-                        "name": "failcount",
-                        "type": "count"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "ignore_external_masters",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "auto_failover",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": "90s",
-                        "mandatory": false,
-                        "name": "failover_timeout",
-                        "type": "duration",
-                        "unit": "s"
-                    },
-                    {
-                        "default_value": "90s",
-                        "mandatory": false,
-                        "name": "switchover_timeout",
-                        "type": "duration",
-                        "unit": "s"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "replication_user",
-                        "type": "string"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "replication_password",
-                        "type": "password string"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "replication_master_ssl",
-                        "type": "bool"
-                    },
-                    {
                         "default_value": true,
+                        "description": "Assume that hostnames are unique",
                         "mandatory": false,
-                        "name": "verify_master_failure",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": "10s",
-                        "mandatory": false,
-                        "name": "master_failure_timeout",
-                        "type": "duration",
-                        "unit": "s"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "auto_rejoin",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "enforce_read_only_slaves",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "enforce_writable_master",
-                        "type": "bool"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "servers_no_promotion",
-                        "type": "serverlist"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "promotion_sql_file",
-                        "type": "path"
-                    },
-                    {
-                        "mandatory": false,
-                        "name": "demotion_sql_file",
-                        "type": "path"
-                    },
-                    {
-                        "default_value": false,
-                        "mandatory": false,
-                        "name": "switchover_on_low_disk_space",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": true,
-                        "mandatory": false,
-                        "name": "maintenance_on_low_disk_space",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": true,
-                        "mandatory": false,
-                        "name": "handle_events",
-                        "type": "bool"
-                    },
-                    {
-                        "default_value": true,
-                        "mandatory": false,
+                        "modifiable": true,
                         "name": "assume_unique_hostnames",
                         "type": "bool"
                     },
                     {
                         "default_value": false,
+                        "description": "Enable automatic server failover",
                         "mandatory": false,
-                        "name": "enforce_simple_topology",
+                        "modifiable": true,
+                        "name": "auto_failover",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Enable automatic server rejoin",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "auto_rejoin",
                         "type": "bool"
                     },
                     {
                         "default_value": "none",
+                        "description": "Cooperative monitoring type",
                         "enum_values": [
                             "none",
                             "majority_of_running",
                             "majority_of_all"
                         ],
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "cooperative_monitoring_locks",
                         "type": "enum"
                     },
                     {
+                        "description": "The API key used in communication with the ColumnStore admin daemon.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "cs_admin_api_key",
+                        "type": "string"
+                    },
+                    {
+                        "default_value": "/cmapi/0.4.0",
+                        "description": "The base path to be used when accessing the ColumnStore administrative daemon. If, for instance, a daemon URL is https://localhost:8640/cmapi/0.4.0/node/start then the admin_base_path is \"/cmapi/0.4.0\".",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "cs_admin_base_path",
+                        "type": "string"
+                    },
+                    {
+                        "default_value": 8640,
+                        "description": "Port of the ColumnStore administrative daemon.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "cs_admin_port",
+                        "type": "count"
+                    },
+                    {
+                        "description": "Path to SQL file that is executed during node demotion",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "demotion_sql_file",
+                        "type": "path"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Enable read_only on all slave servers",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "enforce_read_only_slaves",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Enforce a simple topology",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "enforce_simple_topology",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Disable read_only on the current master server",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "enforce_writable_master",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": 5,
+                        "description": "Number of failures to tolerate before failover occurs",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "failcount",
+                        "type": "count"
+                    },
+                    {
+                        "default_value": "90000ms",
+                        "description": "Timeout for failover",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "failover_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "default_value": true,
+                        "description": "Manage server-side events",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "handle_events",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": true,
+                        "description": "Put the server into maintenance mode when it runs out of disk space",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "maintenance_on_low_disk_space",
+                        "type": "bool"
+                    },
+                    {
                         "default_value": "primary_monitor_master",
+                        "description": "Conditions that the master servers must meet",
                         "enum_values": [
                             "none",
                             "connecting_slave",
@@ -2440,11 +2746,75 @@ one to see the parameters of a module before the object is created.
                             "primary_monitor_master"
                         ],
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "master_conditions",
                         "type": "enum_mask"
                     },
                     {
-                        "default_value": "none",
+                        "default_value": "10000ms",
+                        "description": "Master failure timeout",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "master_failure_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "description": "Path to SQL file that is executed during node promotion",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "promotion_sql_file",
+                        "type": "path"
+                    },
+                    {
+                        "default_value": 4444,
+                        "description": "Listen port used for transferring server backup.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "rebuild_port",
+                        "type": "count"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Enable SSL when configuring replication",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "replication_master_ssl",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": "*****",
+                        "description": "Password for the user that is used for replication",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "replication_password",
+                        "type": "password"
+                    },
+                    {
+                        "description": "User used for replication",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "replication_user",
+                        "type": "string"
+                    },
+                    {
+                        "default_value": -1,
+                        "description": "Replication lag limit at which the script is run",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "script_max_replication_lag",
+                        "type": "int"
+                    },
+                    {
+                        "description": "List of servers that are never promoted",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "servers_no_promotion",
+                        "type": "serverlist"
+                    },
+                    {
+                        "default_value": "",
+                        "description": "Conditions that the slave servers must meet",
                         "enum_values": [
                             "linked_master",
                             "running_master",
@@ -2453,92 +2823,120 @@ one to see the parameters of a module before the object is created.
                             "none"
                         ],
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "slave_conditions",
                         "type": "enum_mask"
                     },
                     {
-                        "default_value": -1,
+                        "default_value": true,
+                        "description": "Is SSH host key check enabled.",
                         "mandatory": false,
-                        "name": "script_max_replication_lag",
-                        "type": "int"
+                        "modifiable": true,
+                        "name": "ssh_check_host_key",
+                        "type": "bool"
                     },
                     {
-                        "mandatory": true,
-                        "name": "user",
-                        "type": "string"
-                    },
-                    {
-                        "mandatory": true,
-                        "name": "password",
-                        "type": "password string"
-                    },
-                    {
-                        "default_value": "2000ms",
+                        "description": "SSH keyfile. Used for accessing servers.",
                         "mandatory": false,
-                        "name": "monitor_interval",
+                        "modifiable": false,
+                        "name": "ssh_keyfile",
+                        "type": "path"
+                    },
+                    {
+                        "default_value": "10000ms",
+                        "description": "SSH connection and command timeout",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "ssh_timeout",
                         "type": "duration",
                         "unit": "ms"
                     },
                     {
-                        "default_value": "3s",
+                        "description": "SSH username. Used for accessing servers.",
                         "mandatory": false,
-                        "name": "backend_connect_timeout",
-                        "type": "duration",
-                        "unit": "s"
+                        "modifiable": false,
+                        "name": "ssh_user",
+                        "type": "string"
                     },
                     {
-                        "default_value": "3s",
+                        "default_value": false,
+                        "description": "Perform a switchover when a server runs out of disk space",
                         "mandatory": false,
-                        "name": "backend_read_timeout",
-                        "type": "duration",
-                        "unit": "s"
+                        "modifiable": true,
+                        "name": "switchover_on_low_disk_space",
+                        "type": "bool"
                     },
                     {
-                        "default_value": "3s",
+                        "default_value": "90000ms",
+                        "description": "Timeout for switchover",
                         "mandatory": false,
-                        "name": "backend_write_timeout",
+                        "modifiable": true,
+                        "name": "switchover_timeout",
                         "type": "duration",
-                        "unit": "s"
+                        "unit": "ms"
+                    },
+                    {
+                        "default_value": true,
+                        "description": "Verify master failure",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "verify_master_failure",
+                        "type": "bool"
                     },
                     {
                         "default_value": 1,
+                        "description": "Number of connection attempts to make to a server",
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "backend_connect_attempts",
                         "type": "count"
                     },
                     {
-                        "default_value": "28800s",
+                        "default_value": "3000ms",
+                        "description": "Connection timeout for monitor connections",
                         "mandatory": false,
-                        "name": "journal_max_age",
+                        "modifiable": true,
+                        "name": "backend_connect_timeout",
                         "type": "duration",
-                        "unit": "s"
+                        "unit": "ms"
                     },
                     {
+                        "default_value": "3000ms",
+                        "description": "Read timeout for monitor connections",
                         "mandatory": false,
-                        "name": "disk_space_threshold",
-                        "type": "string"
+                        "modifiable": true,
+                        "name": "backend_read_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "default_value": "3000ms",
+                        "description": "Write timeout for monitor connections",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "backend_write_timeout",
+                        "type": "duration",
+                        "unit": "ms"
                     },
                     {
                         "default_value": "0ms",
+                        "description": "How often the disk space is checked",
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "disk_space_check_interval",
                         "type": "duration",
                         "unit": "ms"
                     },
                     {
+                        "description": "Disk space threshold",
                         "mandatory": false,
-                        "name": "script",
+                        "modifiable": true,
+                        "name": "disk_space_threshold",
                         "type": "string"
                     },
                     {
-                        "default_value": "90s",
-                        "mandatory": false,
-                        "name": "script_timeout",
-                        "type": "duration",
-                        "unit": "s"
-                    },
-                    {
-                        "default_value": "all",
+                        "default_value": "all,master_down,master_up,slave_down,slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,lost_master,lost_slave,lost_synced,lost_donor,new_master,new_slave,new_synced,new_donor",
+                        "description": "Events that cause the script to be called",
                         "enum_values": [
                             "all",
                             "master_down",
@@ -2558,19 +2956,67 @@ one to see the parameters of a module before the object is created.
                             "new_master",
                             "new_slave",
                             "new_synced",
-                            "new_donor",
-                            "relay_up",
-                            "relay_down",
-                            "lost_relay",
-                            "new_relay",
-                            "blr_up",
-                            "blr_down",
-                            "lost_blr",
-                            "new_blr"
+                            "new_donor"
                         ],
                         "mandatory": false,
+                        "modifiable": true,
                         "name": "events",
                         "type": "enum_mask"
+                    },
+                    {
+                        "default_value": "28800000ms",
+                        "description": "The time the on-disk cached server states are valid for",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "journal_max_age",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "default_value": "2000ms",
+                        "description": "How often the servers are monitored",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "monitor_interval",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "description": "Password for the user used to monitor the servers",
+                        "mandatory": true,
+                        "modifiable": true,
+                        "name": "password",
+                        "type": "password"
+                    },
+                    {
+                        "description": "Script to run whenever an event occurs",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "script",
+                        "type": "string"
+                    },
+                    {
+                        "default_value": "90000ms",
+                        "description": "Timeout for the script",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "script_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
+                        "description": "List of servers to use",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "servers",
+                        "type": "serverlist"
+                    },
+                    {
+                        "description": "Username used to monitor the servers",
+                        "mandatory": true,
+                        "modifiable": true,
+                        "name": "user",
+                        "type": "string"
                     }
                 ],
                 "version": "V1.5.0"
@@ -2765,7 +3211,7 @@ one to see the parameters of a module before the object is created.
                 "description": "Query classifier using sqlite.",
                 "maturity": "GA",
                 "module_type": "QueryClassifier",
-                "parameters": [],
+                "parameters": null,
                 "version": "V1.0.0"
             },
             "id": "qc_sqlite",
@@ -2874,7 +3320,8 @@ one to see the parameters of a module before the object is created.
                             "transaction",
                             "transaction_time",
                             "num_warnings",
-                            "error_msg"
+                            "error_msg",
+                            "server"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3116,6 +3563,15 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
+                        "default_value": "60000ms",
+                        "description": "How long a session can wait for a connection to become available",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "multiplex_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
                         "default_value": "0ms",
                         "description": "Network write timeout",
                         "mandatory": false,
@@ -3129,7 +3585,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": true,
                         "modifiable": true,
                         "name": "password",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "default_value": true,
@@ -3246,7 +3702,8 @@ one to see the parameters of a module before the object is created.
                             "none",
                             "local",
                             "global",
-                            "fast"
+                            "fast",
+                            "universal"
                         ],
                         "mandatory": false,
                         "modifiable": true,
@@ -3586,6 +4043,15 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
+                        "default_value": "60000ms",
+                        "description": "How long a session can wait for a connection to become available",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "multiplex_timeout",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
                         "default_value": "0ms",
                         "description": "Network write timeout",
                         "mandatory": false,
@@ -3599,7 +4065,7 @@ one to see the parameters of a module before the object is created.
                         "mandatory": true,
                         "modifiable": true,
                         "name": "password",
-                        "type": "string"
+                        "type": "password"
                     },
                     {
                         "default_value": true,
@@ -3725,11 +4191,11 @@ The _:module_ in the URI must be a valid name of a loaded module and _:command_
 must be a valid command identifier that is exposed by that module. All
 parameters to the module commands are passed as HTTP request parameters.
 
-Here is an example POST requests to the dbfwfilter module command _reload_ with
-two parameters, the name of the filter instance and the path to a file:
+Here is an example POST requests to the mariadbmon module command _reset-replication_ with
+two parameters, the name of the monitor instance and the server name:
 
 ```
-POST /v1/maxscale/modules/dbfwfilter/reload?my-dbfwfilter-instance&/path/to/file.txt
+POST /v1/maxscale/modules/mariadbmon/reset-replication?MariaDB-Monitor&server1
 ```
 
 #### Response
@@ -3741,13 +4207,11 @@ Command with output:
 ```javascript
 {
     "links": {
-        "self": "http://localhost:8989/v1/maxscale/modules/dbfwfilter/rules/json"
+        "self": "http://localhost:8989/v1/maxscale/modules/mariadbmon/reset-replication"
     },
     "meta": [ // Output of module command (module dependent)
         {
-            "name": "test3",
-            "type": "COLUMN",
-            "times_matched": 0
+            "name": "value"
         }
     ]
 }
@@ -3781,6 +4245,7 @@ GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
 {
     "data": {
         "attributes": {
+            "canonical": "SELECT ?",
             "fields": [],
             "functions": [],
             "has_where_clause": false,

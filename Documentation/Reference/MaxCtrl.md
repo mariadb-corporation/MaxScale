@@ -237,6 +237,7 @@ List all client sessions.
   Connected | Time when the session started
   Idle      | How long the session has been idle, in seconds
   Service   | The service where the session connected
+  Memory    | Memory usage (not exhaustive)
 ```
 
 ### list filters
@@ -383,11 +384,14 @@ Options:
 List network the users that can be used to connect to the MaxScale REST API.
 
 
-  Field      | Description
-  -----      | -----------
-  Name       | User name
-  Type       | User type
-  Privileges | User privileges
+  Field        | Description
+  -----        | -----------
+  Name         | User name
+  Type         | User type
+  Privileges   | User privileges
+  Created      | When the user was created
+  Last Updated | The last time the account password was updated
+  Last Login   | The last time the user logged in
 ```
 
 ### list commands
@@ -494,10 +498,12 @@ Show detailed information about a server. The `Parameters` field contains the cu
   Field               | Description
   -----               | -----------
   Server              | Server name
+  Source              | File where the object is stored in
   Address             | Address where the server listens
   Port                | The port on which the server listens
   State               | Server state
   Version             | Server version
+  Uptime              | Server uptime in seconds
   Last Event          | The type of the latest event
   Triggered At        | Time when the latest event was triggered at
   Services            | Services that use this server
@@ -545,10 +551,12 @@ Show detailed information about all servers.
   Field               | Description
   -----               | -----------
   Server              | Server name
+  Source              | File where the object is stored in
   Address             | Address where the server listens
   Port                | The port on which the server listens
   State               | Server state
   Version             | Server version
+  Uptime              | Server uptime in seconds
   Last Event          | The type of the latest event
   Triggered At        | Time when the latest event was triggered at
   Services            | Services that use this server
@@ -596,6 +604,7 @@ Show detailed information about a service. The `Parameters` field contains the c
   Field               | Description
   -----               | -----------
   Service             | Service name
+  Source              | File where the object is stored in
   Router              | Router that the service uses
   State               | Service state
   Started At          | When the service was started
@@ -643,6 +652,7 @@ Show detailed information about all services.
   Field               | Description
   -----               | -----------
   Service             | Service name
+  Source              | File where the object is stored in
   Router              | Router that the service uses
   State               | Service state
   Started At          | When the service was started
@@ -690,6 +700,7 @@ Show detailed information about a monitor. The `Parameters` field contains the c
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Source              | File where the object is stored in
   Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
@@ -730,6 +741,7 @@ Show detailed information about all monitors.
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Source              | File where the object is stored in
   Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
@@ -777,6 +789,7 @@ The `Connections` field lists the servers to which the session is connected and 
   State             | Session state
   User              | Username
   Host              | Client host address
+  Port              | Client network port
   Database          | Current default database of the connection
   Connected         | Time when the session started
   Idle              | How long the session has been idle, in seconds
@@ -786,6 +799,7 @@ The `Connections` field lists the servers to which the session is connected and 
   Connection IDs    | Thread IDs for the backend connections
   Queries           | Query history
   Log               | Per-session log messages
+  Memory            | Memory usage (not exhaustive)
 ```
 
 ### show sessions
@@ -826,6 +840,7 @@ Show detailed information about all sessions. See `--help show session` for more
   State             | Session state
   User              | Username
   Host              | Client host address
+  Port              | Client network port
   Database          | Current default database of the connection
   Connected         | Time when the session started
   Idle              | How long the session has been idle, in seconds
@@ -835,6 +850,7 @@ Show detailed information about all sessions. See `--help show session` for more
   Connection IDs    | Thread IDs for the backend connections
   Queries           | Query history
   Log               | Per-session log messages
+  Memory            | Memory usage (not exhaustive)
 ```
 
 ### show filter
@@ -870,6 +886,7 @@ The list of services that use this filter is show in the `Services` field.
   Field       | Description
   -----       | -----------
   Filter      | Filter name
+  Source      | File where the object is stored in
   Module      | The module that the filter uses
   Services    | Services that use the filter
   Parameters  | Filter parameters
@@ -909,6 +926,7 @@ Show detailed information of all filters.
   Field       | Description
   -----       | -----------
   Filter      | Filter name
+  Source      | File where the object is stored in
   Module      | The module that the filter uses
   Services    | Services that use the filter
   Parameters  | Filter parameters
@@ -948,6 +966,7 @@ Options:
                                                            Field      | Description
                                                            -----      | -----------
                                                            Name       | Listener name
+                                                           Source     | File where the object is stored in
                                                            Service    | Services that the listener points to
                                                            Parameters | Listener parameters
 ```
@@ -985,6 +1004,7 @@ Show detailed information of all filters.
   Field       | Description
   -----       | -----------
   Filter      | Filter name
+  Source      | File where the object is stored in
   Module      | The module that the filter uses
   Services    | Services that use the filter
   Parameters  | Filter parameters
@@ -1993,6 +2013,39 @@ Options:
 The last remaining administrative user cannot be removed. Create a replacement administrative user before attempting to remove the last administrative user.
 ```
 
+### destroy session
+
+```
+Usage: destroy session <id>
+
+Destroy options:
+      --ttl  Give session this many seconds to gracefully close  [number] [default: 0]
+
+Global Options:
+  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user       Username to use  [string] [default: "admin"]
+  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv        Print tab separated output  [boolean] [default: false]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+      --version  Show version number  [boolean]
+      --help     Show help  [boolean]
+
+This causes the client session with the given ID to be closed. If the --ttl option is used, the session is given that many seconds to gracefully stop. If no TTL value is given, the session is closed immediately.
+```
+
 ## link
 
 ### link service
@@ -2816,6 +2869,96 @@ HTTPS/TLS Options:
 Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
+```
+
+### reload tls
+
+```
+Usage: reload service <service>
+
+Global Options:
+  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user       Username to use  [string] [default: "admin"]
+  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv        Print tab separated output  [boolean] [default: false]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+      --version  Show version number  [boolean]
+      --help     Show help  [boolean]
+
+This command reloads the TLS certificates for all listeners and servers as well as the REST API in MaxScale. The REST API JWT signature keys are also rotated by this command.
+```
+
+### reload session
+
+```
+Usage: reload session <id>
+
+Global Options:
+  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user       Username to use  [string] [default: "admin"]
+  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv        Print tab separated output  [boolean] [default: false]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+      --version  Show version number  [boolean]
+      --help     Show help  [boolean]
+
+This command reloads the configuration of a session. When a session is reloaded, it internally restarts the MaxScale session. This means that new connections are created and taken into use before the old connections are discarded. The session will use the latest configuration of the service the listener it used pointed to. This means that the behavior of the session can change as a result of a reload if the configuration has changed. If the reloading fails, the old configuration will remain in use. The external session ID of the connection will remain the same as well as any statistics or session level alterations that were done before the reload.
+```
+
+### reload sessions
+
+```
+Usage: reload sessions
+
+Global Options:
+  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user       Username to use  [string] [default: "admin"]
+  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv        Print tab separated output  [boolean] [default: false]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+      --version  Show version number  [boolean]
+      --help     Show help  [boolean]
+
+This command reloads the configuration of all sessions. When a session is reloaded, it internally restarts the MaxScale session. This means that new connections are created and taken into use before the old connections are discarded. The session will use the latest configuration of the service the listener it used pointed to. This means that the behavior of the session can change as a result of a reload if the configuration has changed. If the reloading fails, the old configuration will remain in use. The external session ID of the connection will remain the same as well as any statistics or session level alterations that were done before the reload.
 ```
 
 ## call
