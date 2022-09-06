@@ -183,8 +183,12 @@ export default {
          * Called by <conn-man-ctr/>
          * @param {Object} param.body - request body
          * @param {String} param.resourceType - services, servers or listeners.
+         * @param {String} param.meta - meta - connection meta
          */
-        async openConnect({ dispatch, commit, rootState, rootGetters }, { body, resourceType }) {
+        async openConnect(
+            { dispatch, commit, rootState, rootGetters },
+            { body, resourceType, meta = {} }
+        ) {
             // activeWkeSessions length always >=1 as the default session will be always created on startup
             const activeWkeSessions = rootGetters['querySession/getSessionsOfActiveWke']
             const active_session_id = rootGetters['querySession/getActiveSessionId']
@@ -209,6 +213,7 @@ export default {
                         binding_type:
                             rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                         wke_id_fk: rootState.wke.active_wke_id,
+                        meta,
                     }
                     commit('ADD_SQL_CONN', sql_conn)
 
