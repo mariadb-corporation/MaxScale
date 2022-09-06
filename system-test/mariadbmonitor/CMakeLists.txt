@@ -105,7 +105,7 @@ add_test_executable_ex(NAME mysqlmon_switchover_auto SOURCE mysqlmon_switchover_
 
 # MySQL Monitor series of failovers and rejoins
 add_test_executable_ex(NAME mysqlmon_failover_readonly SOURCE mysqlmon_failover_readonly.cpp
-        CONFIG mysqlmon_failover_readonly.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_failover_readonly.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-1493: Use replication heartbeat in mysqlmon https://jira.mariadb.org/browse/MXS-1493
 add_test_executable_ex(NAME verify_master_failure SOURCE verify_master_failure.cpp

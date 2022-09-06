@@ -784,6 +784,7 @@ mxt::ServersInfo MaxScale::get_servers()
     const string field_mgroup = "master_group";
     const string field_rlag = "replication_lag";
     const string field_serverid = "server_id";
+    const string field_readonly = "read_only";
     const string field_slave_conns = "slave_connections";
     const string field_statistics = "statistics";
     const string field_gtid = "gtid_current_pos";
@@ -800,10 +801,16 @@ mxt::ServersInfo MaxScale::get_servers()
     const string field_connections = "connections";
 
     auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
-            int64_t rval = failval;
-            json.try_get_int(key, &rval);
-            return rval;
-        };
+        int64_t rval = failval;
+        json.try_get_int(key, &rval);
+        return rval;
+    };
+
+    auto try_get_bool = [](const Json& json, const string& key, bool failval) {
+        bool rval = failval;
+        json.try_get_bool(key, &rval);
+        return rval;
+    };
 
     ServersInfo rval(&m_shared.log);
     auto res = curl_rest_api(field_servers);
@@ -825,6 +832,7 @@ mxt::ServersInfo MaxScale::get_servers()
                 info.master_group = try_get_int(attr, field_mgroup, ServerInfo::GROUP_NONE);
                 info.rlag = try_get_int(attr, field_rlag, ServerInfo::RLAG_NONE);
                 info.server_id = try_get_int(attr, field_serverid, ServerInfo::SRV_ID_NONE);
+                info.read_only = try_get_bool(attr, field_readonly, false);
                 attr.try_get_string(field_gtid, &info.gtid);
 
                 if (attr.contains(field_slave_conns))
@@ -998,6 +1006,21 @@ void ServersInfo::check_connections(const std::vector<int>& expected_conns)
         };
     check_servers_property(expected_conns.size(), tester);
 }
+
+void ServersInfo::check_read_only(const std::vector<bool>& expected_ro)
+{
+    auto tester = [&](size_t i) {
+        auto expected = expected_ro[i];
+        auto& info = m_servers[i];
+        if (expected != info.read_only)
+        {
+            m_log->add_failure("Wrong read_only for %s. Got '%i', expected '%i'.",
+                               info.name.c_str(), info.read_only, expected);
+        }
+    };
+    check_servers_property(expected_ro.size(), tester);
+}
+
 
 ServersInfo::ServersInfo(TestLogger* log)
     : m_log(log)
