@@ -807,6 +807,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
     auto token = jwt::create()
         .set_issuer("maxscale")
         .set_audience(m_user)
+        .set_subject(m_user)
         .set_issued_at(now)
         .set_expires_at(now + std::chrono::seconds {token_age})
         .sign(jwt::algorithm::hs256 {this_unit.sign_key});
@@ -856,7 +857,7 @@ bool Client::auth_with_token(const std::string& token)
         .with_issuer("maxscale")
         .verify(d);
 
-        m_user = *d.get_audience().begin();
+        m_user = *d.get_subject().begin();
         rval = true;
     }
     catch (const std::exception& e)
