@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2022 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-08-25
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
 #pragma once
 
 #include <maxtest/ccdefs.hh>
@@ -42,7 +55,7 @@ struct ServerInfo
 
     static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
-    void               status_from_string(const std::string& source);
+    void               status_from_string(const std::string& source, const std::string& details);
     std::string        to_string_short() const;
 
     std::string name {"<unknown>"}; /**< Server name */

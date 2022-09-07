@@ -120,7 +120,7 @@ add_test_executable_ex(NAME mariadbmon_enforce_writable_master SOURCE mariadbmon
 
 # MariaDB-Monitor multimaster failover/switchover
 add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_switch_multi.cpp
-        CONFIG mysqlmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MXS-3018 MariaDB-Monitor master_conditions and slave_conditions
 add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc

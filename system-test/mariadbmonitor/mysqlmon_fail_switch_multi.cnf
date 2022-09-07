@@ -8,7 +8,6 @@ servers= server1, server2
 user=mariadbmon
 password=mariadbmon
 monitor_interval=1000
-detect_standalone_master=true
 auto_failover=true
 auto_rejoin=true
 replication_user=repl
@@ -35,11 +34,8 @@ port=4006
 type=server
 address=###node_server_IP_1###
 port=###node_server_port_1###
-protocol=MySQLBackend
 
 [server2]
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
-protocol=MySQLBackend
-

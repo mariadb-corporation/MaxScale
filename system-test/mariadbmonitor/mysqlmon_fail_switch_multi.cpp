@@ -12,186 +12,183 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
-#include <iostream>
 #include <string>
-#include <vector>
-#include <maxsql/queryresult.hh>
 #include <maxsql/mariadb_connector.hh>
+#include "mariadbmon_utils.hh"
 
 // Test failover/switchover with multiple masters.
 
 using std::string;
-using std::cout;
-using mxq::MariaDBQueryResult;
 
-void change_master(TestConnections& test ,int slave, int master, const string& conn_name = "",
+namespace
+{
+void change_master(MariaDBCluster& repl, int slave, int master, const string& conn_name = "",
                    int replication_delay = 0);
-
-void reset_master(TestConnections& test ,int slave, const string& conn_name = "");
+void reset_master(MariaDBCluster& repl, int slave, const string& conn_name = "");
 void expect_replicating_from(TestConnections& test, int node, int master);
+}
 
-string server_names[] = {"server1", "server2", "server3", "server4"};
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
-    //delete_slave_binlogs(test);
-    // Set up test table
-    basic_test(test);
-    // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
-    generate_traffic_and_check(test, maxconn, 1);
-    test.repl->sync_slaves();
-    get_output(test);
-    print_gtids(test);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    auto expect_server_status = [&test](const string& server_name, const string& status) {
-        bool found = (test.maxscale->get_server_status(server_name).count(status) == 1);
-        test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
-    };
+void test_main(TestConnections& test)
+{
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto down = mxt::ServerInfo::DOWN;
+    auto running = mxt::ServerInfo::RUNNING;
+    auto ext_master = mxt::ServerInfo::SERVER_SLAVE_OF_EXT_MASTER;
 
-    auto expect_server_status_multi =
-            [&test, &expect_server_status](std::vector<string> expected) {
-                int expected_size = expected.size();
-                test.expect(expected_size <= test.repl->N && expected_size <= 3, "Too many expected values.");
-                int tests = (expected_size < test.repl->N) ? expected_size : test.repl->N;
-                for (int node = 0; node < tests; node++)
-                {
-                    expect_server_status(server_names[node], expected[node]);
-                }
-            };
+    const string secondary_slave_conn = "b";
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
     auto mon_wait = [&test](int ticks) {
         test.maxscale->wait_for_monitor(ticks);
     };
 
-    string master = "Master";
-    string slave = "Slave";
-    string down = "Down";
-    string relay = "Relay Master";
-    string running = "Running";
-    string ext_master = "Slave of External Server";
+    // Add a few events. Needs to be replicated to all servers.
+    auto maxconn = mxs.open_rwsplit_connection2();
+    generate_traffic_and_check(test, maxconn.get(), 5);
 
-    const string secondary_slave_conn = "b";
     // Only monitoring two servers for now. Stop replication to non-monitored servers.
-    reset_master(test, 2);
-    reset_master(test, 3);
+    reset_master(repl, 2);
+    reset_master(repl, 3);
 
-    cout << "Step 1: All should be cool.\n";
-    get_output(test);
-    expect_server_status_multi({master, slave});
+    test.tprintf("Step 1: All should be cool.");
+    mxs.check_print_servers_status({master, slave});
 
     if (test.ok())
     {
-        cout << "Step 2: External replication to two servers\n";
-        change_master(test, 0, 2);
-        change_master(test, 0, 3, secondary_slave_conn);
+        test.tprintf("Step 2: External replication to two servers");
+        change_master(repl, 0, 2);
+        change_master(repl, 0, 3, secondary_slave_conn);
         mon_wait(1);
-        get_output(test);
-        expect_server_status_multi({master, slave});
-        // TODO: readd
-        // expect_server_status(server_names[0], ext_master);
+
+        mxs.check_print_servers_status({master | ext_master, slave});
         expect_replicating_from(test, 0, 2);
         expect_replicating_from(test, 0, 3);
     }
 
     if (test.ok())
     {
-        cout << "Step 3: Failover. Check that new master replicates from external servers.\n";
-        test.repl->stop_node(0);
-        mon_wait(3);
-	    get_output(test);
-        expect_server_status_multi({down, master});
-        // TODO: readd
-        // expect_server_status(server_names[1], ext_master);
+        test.tprintf("Step 3: Failover. Check that new master replicates from external servers.");
+        repl.stop_node(0);
+        mon_wait(2);
+
+        mxs.check_print_servers_status({down, master | ext_master});
         expect_replicating_from(test, 1, 2);
         expect_replicating_from(test, 1, 3);
+
+        // Generate traffic and check again.
+        auto conn = repl.backend(2)->open_connection();
+        generate_traffic_and_check(test, conn.get(), 2);
+        mxs.check_print_servers_status({down, master | ext_master});
     }
 
     if (test.ok())
     {
-        cout << "Step 4: Bring up old master, allow it to rejoin, then switchover. "
-                "Check that new master replicates from external servers.\n";
-        test.repl->start_node(0);
-        mon_wait(2); // Should not rejoin since has multiple slave connections.
-        expect_server_status_multi({running, master});
-	    test.repl->connect();
-        reset_master(test, 0);
-        reset_master(test, 0, secondary_slave_conn);
+        test.tprintf("Step 4: Bring up old master, it should not rejoin.");
+        repl.start_node(0);
+        mon_wait(2);    // Should not rejoin since has multiple slave connections.
+        mxs.check_print_servers_status({running | ext_master, master | ext_master});
+
+        test.tprintf("Step 5: Remove slave connections from old master, see that it rejoins.");
+        reset_master(repl, 0);
+        reset_master(repl, 0, secondary_slave_conn);
         mon_wait(2);
-	    get_output(test);
-        expect_server_status_multi({slave, master});
-        test.maxscale->ssh_output("maxctrl call command mariadbmon switchover MariaDB-Monitor");
+        mxs.check_print_servers_status({slave, master | ext_master});
+
+        mxs.maxctrl("call command mariadbmon switchover MariaDB-Monitor");
         mon_wait(2);
+
+        // Generate traffic and check again.
+        auto conn = repl.backend(3)->open_connection();
+        generate_traffic_and_check(test, conn.get(), 2);
+
+        mxs.check_print_servers_status({master | ext_master, slave});
         expect_replicating_from(test, 0, 2);
         expect_replicating_from(test, 0, 3);
-	    get_output(test);
-
-        // TODO: Extend test later
     }
 
-
-    // Cleanup
-    mysql_close(maxconn);
-    test.repl->connect();
-    // Delete the test table from all databases, reset replication.
-    const char drop_query[] = "DROP TABLE IF EXISTS test.t1;";
-    for (int i = 0; i < 3; i++)
+    if (test.ok())
     {
-        test.try_query(test.repl->nodes[i], drop_query);
+        // Cleanup.
+        reset_master(repl, 0);
+        reset_master(repl, 0, secondary_slave_conn);
+        mon_wait(1);
+        mxs.check_print_servers_status({master, slave});
+        change_master(repl, 2, 0);
+        change_master(repl, 3, 0);
     }
-    test.maxscale->ssh_output("maxctrl call command mariadbmon reset-replication MariaDB-Monitor server1");
-    return test.global_result;
+    else
+    {
+        // If something went wrong, delete test db from all backends and reset replication.
+        repl.ping_or_open_admin_connections();
+        for (int i = 0; i < 3; i++)
+        {
+            repl.backend(i)->admin_connection()->cmd("DROP TABLE IF EXISTS test.t1;");
+        }
+        mxs.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
+    }
 }
 
-void change_master(TestConnections& test ,int slave, int master, const string& conn_name,
+namespace
+{
+void change_master(MariaDBCluster& repl, int slave, int master, const string& conn_name,
                    int replication_delay)
 {
     const char query[] = "CHANGE MASTER '%s' TO master_host='%s', master_port=%d, "
-                         "MASTER_USE_GTID = current_pos, "
-                         "master_user='repl', master_password='repl', master_delay=%d; "
-                         "START SLAVE '%s';";
-    test.try_query(test.repl->nodes[slave], query, conn_name.c_str(),
-                   test.repl->ip4(master), test.repl->port[master],
-                   replication_delay, conn_name.c_str());
+                         "MASTER_USE_GTID = current_pos, master_user='repl', master_password='repl', "
+                         "master_delay=%d;";
+    auto be = repl.backend(slave);
+    be->ping_or_open_admin_connection();
+    be->admin_connection()->cmd_f(query, conn_name.c_str(), repl.ip4(master), repl.port[master],
+                                  replication_delay);
+    be->admin_connection()->cmd_f("START SLAVE '%s';", conn_name.c_str());
 }
 
-void reset_master(TestConnections& test ,int slave, const string& conn_name)
+void reset_master(MariaDBCluster& repl, int slave, const string& conn_name)
 {
-    const char query[] = "STOP SLAVE '%s'; RESET SLAVE '%s' ALL;";
-    test.try_query(test.repl->nodes[slave], query, conn_name.c_str(), conn_name.c_str());
+    auto be = repl.backend(slave);
+    be->ping_or_open_admin_connection();
+    be->admin_connection()->cmd_f("STOP SLAVE '%s';", conn_name.c_str());
+    be->admin_connection()->cmd_f("RESET SLAVE '%s' ALL;", conn_name.c_str());
 }
 
 void expect_replicating_from(TestConnections& test, int node, int master)
 {
+    auto& repl = *test.repl;
     bool found = false;
-    auto N = test.repl->N;
+    auto N = repl.N;
     if (node < N && master < N)
     {
-        auto conn = test.repl->nodes[node];
-        if (mysql_query(conn, "SHOW ALL SLAVES STATUS;") == 0)
+        auto be = repl.backend(node);
+        be->ping_or_open_admin_connection();
+        auto conn = be->admin_connection();
+        auto res = conn->query("SHOW ALL SLAVES STATUS;");
+        if (res)
         {
-            auto res = mysql_store_result(conn);
-            if (res)
+            auto search_host = repl.ip(master);
+            auto search_port = repl.port[master];
+            while (res->next_row())
             {
-                mxq::MariaDBQueryResult q_res(res);
-                auto search_host = test.repl->ip(master);
-                auto search_port = test.repl->port[master];
-                while (q_res.next_row())
+                auto host = res->get_string("Master_Host");
+                auto port = res->get_int("Master_Port");
+                if (host == search_host && port == search_port)
                 {
-                    auto host = q_res.get_string("Master_Host");
-		            auto port = q_res.get_int("Master_Port");
-                    if (host == search_host && port == search_port)
-                    {
-                        found = true;
-                        break;
-                    }
+                    found = true;
+                    break;
                 }
             }
         }
     }
 
-    test.expect(found, "Server %s is not replicating from %s.",
-	            server_names[node].c_str(), server_names[master].c_str());
+    test.expect(found, "Server %i is not replicating from server %i.", node + 1, master + 1);
+}
 }
