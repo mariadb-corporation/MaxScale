@@ -108,7 +108,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 import ConnDlg from './ConnDlg.container.vue'
 import ReconnDlg from './ReconnDlg.container.vue'
 
@@ -133,10 +133,7 @@ export default {
         }),
         ...mapGetters({
             getWkeConns: 'queryConn/getWkeConns',
-            getClonedConnsOfWkeConn: 'queryConn/getClonedConnsOfWkeConn',
             getCurrWkeConn: 'queryConn/getCurrWkeConn',
-            getActiveSessionId: 'querySession/getActiveSessionId',
-            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getIsConnBusy: 'queryConn/getIsConnBusy',
         }),
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
@@ -179,12 +176,8 @@ export default {
     methods: {
         ...mapActions({
             openConnect: 'queryConn/openConnect',
-            syncSqlConnToSess: 'queryConn/syncSqlConnToSess',
             disconnect: 'queryConn/disconnect',
-        }),
-        ...mapMutations({
-            SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',
-            UPDATE_SQL_CONN: 'queryConn/UPDATE_SQL_CONN',
+            onChangeConn: 'queryConn/onChangeConn',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
@@ -196,41 +189,15 @@ export default {
             )
             if (conn) {
                 this.chosenWkeConn = conn
-                await this.onSelectConn(conn)
+                this.onSelectConn(conn)
             } else this.openConnDialog()
         },
-        // Unbind the connection before opening/selecting new one, so that it can be used by other wke
-        unbindConn() {
-            const currentBoundConn = this.getWkeConns.find(c => c.wke_id_fk === this.active_wke_id)
-            if (currentBoundConn) this.UPDATE_SQL_CONN({ ...currentBoundConn, wke_id_fk: '' })
-        },
-        bindConn(chosenWkeConn) {
-            // bind the chosenWkeConn
-            this.UPDATE_SQL_CONN({ ...chosenWkeConn, wke_id_fk: this.active_wke_id })
-        },
+
         /**
          * Function is called after selecting a connection
          */
-        async onSelectConn(chosenWkeConn) {
-            this.unbindConn()
-            let activeSessConn = {}
-            const active_session_id = this.getActiveSessionId
-            // Change the connection of all session tabs of the worksheet
-            const sessions = this.getSessionsOfActiveWke
-            if (sessions.length) {
-                const clonesOfChosenWkeConn = this.getClonedConnsOfWkeConn(chosenWkeConn.id)
-                // Bind the existing cloned connections
-                for (const [i, s] of sessions.entries()) {
-                    // Bind the session connection with session_id_fk
-                    this.UPDATE_SQL_CONN({ ...clonesOfChosenWkeConn[i], session_id_fk: s.id })
-                    this.syncSqlConnToSess({ sess: s, sql_conn: clonesOfChosenWkeConn[i] })
-                    if (active_session_id === s.id) activeSessConn = clonesOfChosenWkeConn[i]
-                }
-            }
-            // set active conn once sessions are bound to cloned connections to avoid concurrent query
-            this.SET_ACTIVE_SQL_CONN({ payload: activeSessConn, id: active_session_id })
-            // bind the chosenWkeConn
-            this.bindConn(chosenWkeConn)
+        onSelectConn(chosenWkeConn) {
+            this.onChangeConn(chosenWkeConn)
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
@@ -245,8 +212,6 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
-            this.unbindConn()
-            // openConnect will also bind conn
             await this.openConnect(opts)
             this.assignActiveWkeConn()
         },
