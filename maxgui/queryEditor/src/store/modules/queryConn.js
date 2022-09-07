@@ -191,26 +191,45 @@ export default {
         bindConn({ commit, rootState }, chosenWkeConn) {
             commit('UPDATE_SQL_CONN', { ...chosenWkeConn, wke_id_fk: rootState.wke.active_wke_id })
         },
-        onChangeConn({ commit, getters, dispatch, rootGetters }, chosenWkeConn) {
-            dispatch('unbindConn')
-            let activeSessConn = {}
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
-            // Change the connection of all session tabs of the worksheet
-            const sessions = rootGetters['querySession/getSessionsOfActiveWke']
-            if (sessions.length) {
-                const clonesOfChosenWkeConn = getters.getClonedConnsOfWkeConn(chosenWkeConn.id)
-                // Bind the existing cloned connections
-                for (const [i, s] of sessions.entries()) {
-                    // Bind the session connection with session_id_fk
-                    commit('UPDATE_SQL_CONN', { ...clonesOfChosenWkeConn[i], session_id_fk: s.id })
-                    dispatch('syncSqlConnToSess', { sess: s, sql_conn: clonesOfChosenWkeConn[i] })
-                    if (active_session_id === s.id) activeSessConn = clonesOfChosenWkeConn[i]
+        async onChangeConn({ commit, getters, dispatch, rootGetters }, chosenWkeConn) {
+            try {
+                dispatch('unbindConn')
+                let activeSessConn = {}
+                const active_session_id = rootGetters['querySession/getActiveSessionId']
+                // Change the connection of all session tabs of the worksheet
+                const sessions = rootGetters['querySession/getSessionsOfActiveWke']
+                if (sessions.length) {
+                    const clonesOfChosenWkeConn = getters.getClonedConnsOfWkeConn(chosenWkeConn.id)
+                    const bondableSessTabs = sessions.slice(0, clonesOfChosenWkeConn.length)
+                    const leftoverSessTabs = sessions.slice(clonesOfChosenWkeConn.length)
+                    // Bind the existing cloned connections
+                    for (const [i, s] of bondableSessTabs.entries()) {
+                        // Bind the session connection with session_id_fk
+                        commit('UPDATE_SQL_CONN', {
+                            ...clonesOfChosenWkeConn[i],
+                            session_id_fk: s.id,
+                        })
+                        dispatch('syncSqlConnToSess', {
+                            sess: s,
+                            sql_conn: clonesOfChosenWkeConn[i],
+                        })
+                        if (active_session_id === s.id) activeSessConn = clonesOfChosenWkeConn[i]
+                    }
+                    // clones the chosenWkeConn and bind them to leftover session tabs
+                    await dispatch('cloneAndSyncConnToSessions', {
+                        sessions: leftoverSessTabs,
+                        conn_to_be_cloned: chosenWkeConn,
+                        active_session_id,
+                        getActiveSessConn: sessConn => (activeSessConn = sessConn),
+                    })
                 }
+                // set active conn once sessions are bound to cloned connections to avoid concurrent query
+                commit('SET_ACTIVE_SQL_CONN', { payload: activeSessConn, id: active_session_id })
+                // bind the chosenWkeConn
+                dispatch('bindConn', chosenWkeConn)
+            } catch (e) {
+                this.vue.$logger('store-queryConn-onChangeConn').error(e)
             }
-            // set active conn once sessions are bound to cloned connections to avoid concurrent query
-            commit('SET_ACTIVE_SQL_CONN', { payload: activeSessConn, id: active_session_id })
-            // bind the chosenWkeConn
-            dispatch('bindConn', chosenWkeConn)
         },
         /**
          * Called by <conn-man-ctr/>

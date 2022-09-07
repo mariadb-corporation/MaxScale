@@ -189,15 +189,15 @@ export default {
             )
             if (conn) {
                 this.chosenWkeConn = conn
-                this.onSelectConn(conn)
+                await this.onSelectConn(conn)
             } else this.openConnDialog()
         },
 
         /**
          * Function is called after selecting a connection
          */
-        onSelectConn(chosenWkeConn) {
-            this.onChangeConn(chosenWkeConn)
+        async onSelectConn(chosenWkeConn) {
+            await this.onChangeConn(chosenWkeConn)
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
