@@ -280,7 +280,7 @@ std::tuple<bool, GWBUF> DCB::read_strict(size_t minbytes, size_t maxbytes)
 
 std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLimit limit_type)
 {
-    mxb_assert(polling_worker() == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
     mxb_assert(maxbytes >= minbytes || maxbytes == 0);
 
@@ -1288,7 +1288,7 @@ private:
 
 uint32_t DCB::process_events(uint32_t events)
 {
-    mxb_assert(polling_worker() == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
     uint32_t rc = mxb::poll_action::NOP;
 
