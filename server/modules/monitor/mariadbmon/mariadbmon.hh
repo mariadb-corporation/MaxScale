@@ -385,8 +385,6 @@ private:
 
         // Replication topology detection settings.
 
-        bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
-                                                 * TODO: requires work */
         bool assume_unique_hostnames {true};    /* Are server hostnames consistent between MaxScale and
                                                  * servers */
 

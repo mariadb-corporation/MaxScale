@@ -137,6 +137,9 @@ public:
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
         bool server_locks_enabled {true};
+
+        bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
+                                                 * TODO: remove/deprecate */
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */

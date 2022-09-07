@@ -279,7 +279,7 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         return false;
     }
 
-    m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
+    m_settings.shared.ignore_external_masters = params->get_bool("ignore_external_masters");
     m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
@@ -431,10 +431,6 @@ json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
     if (auto server = get_server(srv))
     {
         result = server->to_json();
-
-        json_object_set_new(result, "state_details",
-                            !m_settings.ignore_external_masters && !server->m_node.external_masters.empty() ?
-                            json_string("Slave of External Server") : json_null());
     }
 
     return result;

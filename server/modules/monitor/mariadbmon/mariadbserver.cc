@@ -760,6 +760,11 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result, "lock_held", (lock == ServerLock::Status::UNKNOWN) ? json_null() :
                         json_boolean(lock == ServerLock::Status::OWNED_SELF));
 
+    bool ext_master = (!m_settings.ignore_external_masters && is_running()
+        && !m_node.external_masters.empty());
+    json_object_set_new(result, "state_details",
+                        ext_master ? json_string("Slave of External Server") : json_null());
+
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)
     {
