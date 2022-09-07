@@ -2536,12 +2536,14 @@ void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
     // This needs to be executed once we return from the clientReply or the handleError callback of the
     // LocalClient. In 6.4 this can be changed to use Worker::lcall to make it execute right after the
     // function returns into epoll.
+    auto ref = session_get_ref(m_session);
     auto fn = [=]() {
         m_local_clients.erase(
             std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
             return c.get() == client;
         }), m_local_clients.end());
         maybe_send_kill_response(send_ok);
+        session_put_ref(ref);
     };
 
     m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED);
