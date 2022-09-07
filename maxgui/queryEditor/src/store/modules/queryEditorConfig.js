@@ -18,6 +18,7 @@ export default {
         config,
         hidden_comp: [''],
         base_url: '/',
+        auth_cookies_max_age: 86400,
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
@@ -25,6 +26,9 @@ export default {
         },
         SET_BASE_URL(state, payload) {
             state.base_url = payload
+        },
+        SET_AUTH_COOKIES_MAX_AGE(state, payload) {
+            state.auth_cookies_max_age = payload
         },
     },
 }
