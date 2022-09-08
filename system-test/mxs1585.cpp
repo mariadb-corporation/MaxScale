@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
+    test.log_printf("Creating tables");
     test.maxscale->connect_maxscale();
     test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS test.mxs1585");
     test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE test.mxs1585(id INT) ENGINE=MEMORY");
@@ -55,8 +56,10 @@ int main(int argc, char** argv)
     {
         for (int x = 1; x <= 2; x++)
         {
+            test.log_printf("Set maintenance on server%d", x);
             test.maxscale->ssh_node_f(true, "maxctrl set server server%d maintenance", x);
             sleep(1);
+            test.log_printf("Clear maintenance on server%d", x);
             test.maxscale->ssh_node_f(true, "maxctrl clear server server%d maintenance", x);
             sleep(2);
         }
@@ -65,12 +68,15 @@ int main(int argc, char** argv)
     running = false;
     test.reset_timeout();
 
+    test.log_printf("Waiting for threads to exit");
+
     for (auto& a : threads)
     {
         test.reset_timeout();
         pthread_join(a, NULL);
     }
 
+    test.log_printf("Cleanup");
     test.maxscale->connect_maxscale();
     test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.mxs1585");
     test.check_maxscale_alive();

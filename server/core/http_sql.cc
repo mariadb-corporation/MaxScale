@@ -73,11 +73,11 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
 
     if (!token.empty())
     {
-        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
+        std::tie(ok, aud) = mxs::jwt::get_subject(TOKEN_ISSUER, token);
     }
     else if (!cookie.empty())
     {
-        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, cookie);
+        std::tie(ok, aud) = mxs::jwt::get_subject(TOKEN_ISSUER, cookie);
     }
     else if (!requested_id.empty())
     {

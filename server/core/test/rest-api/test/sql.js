@@ -183,7 +183,7 @@ describe("Query API ", function () {
       var sig = cookies.find((cookie) => cookie.key == "conn_id_sig_" + conn.data.id).value;
 
       var webtoken = jwt.decode(body + sig);
-      expect(webtoken).to.be.an("object").that.has.keys("aud", "iss", "exp", "iat");
+      expect(webtoken).to.be.an("object").that.has.keys("aud", "iss", "exp", "iat", "sub");
       expect(webtoken.aud).to.equal(conn.data.id);
     });
 

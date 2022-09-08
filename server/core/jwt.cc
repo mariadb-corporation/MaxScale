@@ -47,22 +47,23 @@ namespace maxscale
 namespace jwt
 {
 
-std::string create(const std::string& issuer, const std::string& audience, int max_age)
+std::string create(const std::string& issuer, const std::string& subject, int max_age)
 {
     auto now = std::chrono::system_clock::now();
 
     return ::jwt::create()
            .set_issuer(issuer)
-           .set_audience(audience)
+           .set_audience(subject)
+           .set_subject(subject)
            .set_issued_at(now)
            .set_expires_at(now + std::chrono::seconds {max_age})
            .sign(::jwt::algorithm::hs256 {this_unit.sign_key});
 }
 
-std::pair<bool, std::string> get_audience(const std::string& issuer, const std::string& token)
+std::pair<bool, std::string> get_subject(const std::string& issuer, const std::string& token)
 {
     bool rval = false;
-    std::string audience;
+    std::string subject;
 
     try
     {
@@ -73,14 +74,14 @@ std::pair<bool, std::string> get_audience(const std::string& issuer, const std::
         .with_issuer(issuer)
         .verify(d);
 
-        audience = *d.get_audience().begin();
+        subject = d.get_subject();
         rval = true;
     }
     catch (const std::exception& e)
     {
     }
 
-    return {rval, audience};
+    return {rval, subject};
 }
 }
 }
