@@ -857,7 +857,7 @@ bool Client::auth_with_token(const std::string& token)
         .with_issuer("maxscale")
         .verify(d);
 
-        m_user = *d.get_subject().begin();
+        m_user = d.get_subject();
         rval = true;
     }
     catch (const std::exception& e)
