@@ -41,10 +41,10 @@ struct Jwt
 {
     virtual ~Jwt() = default;
 
-    virtual std::string sign(const std::string& issuer, const std::string& audience, int max_age) = 0;
+    virtual std::string sign(const std::string& issuer, const std::string& subject, int max_age) = 0;
 
     virtual std::pair<bool, std::string>
-    get_audience(const std::string& issuer, const std::string& token) = 0;
+    get_subject(const std::string& issuer, const std::string& token) = 0;
 };
 
 template<class Algorithm>
@@ -57,24 +57,25 @@ public:
     }
 
     std::string sign(const std::string& issuer,
-                     const std::string& audience,
+                     const std::string& subject,
                      int max_age) override
     {
         auto now = std::chrono::system_clock::now();
 
         return ::jwt::create()
                .set_issuer(issuer)
-               .set_audience(audience)
+               .set_audience(subject)
+               .set_subject(subject)
                .set_issued_at(now)
                .set_expires_at(now + std::chrono::seconds {max_age})
                .sign(m_algo);
     }
 
     std::pair<bool, std::string>
-    get_audience(const std::string& issuer, const std::string& token) override
+    get_subject(const std::string& issuer, const std::string& token) override
     {
         bool rval = false;
-        std::string audience;
+        std::string subject;
 
         try
         {
@@ -85,14 +86,14 @@ public:
             .with_issuer(issuer)
             .verify(d);
 
-            audience = *d.get_audience().begin();
+            subject = d.get_subject();
             rval = true;
         }
         catch (const std::exception& e)
         {
         }
 
-        return {rval, audience};
+        return {rval, subject};
     }
 
 private:
@@ -363,16 +364,16 @@ bool init()
     return this_unit.jwt.get();
 }
 
-std::string create(const std::string& issuer, const std::string& audience, int max_age)
+std::string create(const std::string& issuer, const std::string& subject, int max_age)
 {
     std::lock_guard guard(this_unit.lock);
-    return this_unit.jwt->sign(issuer, audience, max_age);
+    return this_unit.jwt->sign(issuer, subject, max_age);
 }
 
-std::pair<bool, std::string> get_audience(const std::string& issuer, const std::string& token)
+std::pair<bool, std::string> get_subject(const std::string& issuer, const std::string& token)
 {
     std::lock_guard guard(this_unit.lock);
-    return this_unit.jwt->get_audience(issuer, token);
+    return this_unit.jwt->get_subject(issuer, token);
 }
 }
 }
