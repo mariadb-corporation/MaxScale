@@ -1,4 +1,5 @@
 [maxscale]
+log_info=1
 threads=###threads###
 
 ###server###

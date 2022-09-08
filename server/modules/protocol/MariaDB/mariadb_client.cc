@@ -2959,8 +2959,7 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
 void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
 {
     // This needs to be executed once we return from the clientReply or the handleError callback of the
-    // LocalClient. In 6.4 this can be changed to use Worker::lcall to make it execute right after the
-    // function returns into epoll.
+    // LocalClient.
     auto fn = [=]() {
         m_local_clients.erase(
             std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
@@ -2969,7 +2968,7 @@ void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
         maybe_send_kill_response(send_ok);
     };
 
-    m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED);
+    m_session->worker()->lcall(fn);
 }
 
 void MariaDBClientConnection::maybe_send_kill_response(bool send_ok)

@@ -2145,26 +2145,31 @@ The file contains json text. Three objects are read from it: *user*, *db* and
 *roles_mapping*, none of which are mandatory. These objects must be arrays which
 contain user information similar to the *mysql.user*, *mysql.db* and
 *mysql.roles_mapping* tables on the server. Each array element must define at
-least the string fields "user" and "host", which define the user account to add
+least the string fields *user* and *host*, which define the user account to add
 or modify.
 
 The elements in the *user*-array may contain the following additional fields. If
 a field is not defined, it is assumed either empty (string) or false (boolean).
-- "password": String. Password hash, similar to the equivalent column on server.
-- "plugin": String. Authentication plugin used by client, similar to server.
-- "authentication_string": String. Additional authentication info, similar to server.
-- "default_role": String. Default role of user, similar to server.
-- "super_priv": Boolean. True if user has SUPER grant.
-- "global_db_priv": Boolean. True if user can access any database on login.
-- "proxy_priv": Boolean. True if user has a PROXY grant.
-- "is_role": Boolean. True if user is a role.
+
+- *password*: String. Password hash, similar to the equivalent column on server.
+- *plugin*: String. Authentication plugin used by client, similar to server.
+- *authentication_string*: String. Additional authentication info, similar to
+server.
+- *default_role*: String. Default role of user, similar to server.
+- *super_priv*: Boolean. True if user has SUPER grant.
+- *global_db_priv*: Boolean. True if user can access any database on login.
+- *proxy_priv*: Boolean. True if user has a PROXY grant.
+- *is_role*: Boolean. True if user is a role.
 
 The elements in the *db*-array must contain the following additional field:
-- "db": String. Database which the user can access. Can contain % and _ wildcards.
+
+- *db*: String. Database which the user can access. Can contain % and _
+wildcards.
 
 The elements in the *roles_mapping*-array must contain the following additional
 field:
-- "role": String. Role the user can access.
+
+- *role*: String. Role the user can access.
 
 When users are read from both servers and the file, the server takes priority.
 That is, if user `'joe'@'%'` is defined on both, the file-version is discarded.
@@ -2774,23 +2779,28 @@ name is then used when logging into backends. If the file also contains
 credentials for the mapped user, then those are used. Otherwise, MaxScale tries
 to log in with an empty password and default MariaDB authentication.
 
-Three arrays are read from the file: "user_map", "group_map" and
-"server_credentials", none of which are mandatory.
+Three arrays are read from the file: *user_map*, *group_map* and
+*server_credentials*, none of which are mandatory.
 
-Each array element in the "user_map"-array must define the following fields:
-- "original_user": String. Incoming client username.
-- "mapped_user": String. Username the client is mapped to.
+Each array element in the *user_map*-array must define the following fields:
 
-Each array element in the "group_map"-array must define the following fields:
-- "original_group": String. Incoming client Linux group.
-- "mapped_user": String. Username the client is mapped to.
+- *original_user*: String. Incoming client username.
+- *mapped_user*: String. Username the client is mapped to.
 
-Each array element in the "server_credentials"-array can define the following
+Each array element in the *group_map*-array must define the following fields:
+
+- *original_group*: String. Incoming client Linux group.
+- *mapped_user*: String. Username the client is mapped to.
+
+Each array element in the *server_credentials*-array can define the following
 fields:
-- "mapped_user": String. The mapped username this password is for.
-- "password": String. Backend server password. Can be encrypted with *maxpasswd*.
-- "plugin": String, optional. Authentication plugin to use. Must be enabled on
-the listener. Defaults to empty, which results in standard MariaDB authentication.
+
+- *mapped_user*: String. The mapped username this password is for.
+- *password*: String. Backend server password. Can be encrypted with
+*maxpasswd*.
+- *plugin*: String, optional. Authentication plugin to use. Must be enabled on
+the listener. Defaults to empty, which results in standard MariaDB
+authentication.
 
 When a client successfully logs into MaxScale, MaxScale first searches for
 name-based mapping. The incoming client does not need to be a Linux user for
@@ -2813,8 +2823,8 @@ An example mapping file is below.
             "mapped_user": "janet"
         },
         {
-          "original_user": "karen",
-          "mapped_user": "janet"
+            "original_user": "karen",
+            "mapped_user": "janet"
         }
     ],
     "group_map": [

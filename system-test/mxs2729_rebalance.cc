@@ -60,7 +60,7 @@ map<int, ThreadInfo> get_thread_info(TestConnections& test)
 {
     map<int, ThreadInfo> rv;
     auto result = test.maxctrl("api get maxscale/threads");
-    mxb_assert(result.rc == 0);
+    test.expect(result.rc == 0, "MaxCtrl command returned %d: %s", result.rc, result.output.c_str());
 
     json_error_t error;
     json_t* pJson = json_loads(result.output.c_str(), 0, &error);
@@ -190,7 +190,8 @@ int main(int argc, char* argv[])
 
     map<int, ThreadInfo> cbt2 = get_thread_info(test);
     cout << "Connection distribution after thread start:\n" << cbt2 << endl;
-    mxb_assert(cbt2.size() == cbt1.size());
+    test.expect(cbt2.size() == cbt1.size(), "Sizes should be the same: %lu != %lu",
+                cbt2.size(), cbt1.size());
 
     int nConn_total2 = 0;
 
@@ -208,7 +209,8 @@ int main(int argc, char* argv[])
     map<int, ThreadInfo> cbt3 = get_thread_info(test);
     cout << "Connection distribution after explicit rebalance to thread "
          << recipient << ":\n" << cbt3 << endl;
-    mxb_assert(cbt3.size() == cbt2.size());
+    test.expect(cbt3.size() == cbt2.size(), "Sizes should be the same: %lu != %lu",
+                cbt3.size(), cbt2.size());
 
     auto it1 = cbt1.begin();
     auto it3 = cbt3.begin();

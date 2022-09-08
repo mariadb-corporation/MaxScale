@@ -928,7 +928,7 @@ bool Client::auth_with_token(const std::string& token)
 {
     bool rval = false;
 
-    std::tie(rval, m_user) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
+    std::tie(rval, m_user) = mxs::jwt::get_subject(TOKEN_ISSUER, token);
 
     return rval;
 }

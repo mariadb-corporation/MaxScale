@@ -1293,7 +1293,21 @@ public:
 
                     auto table_schema = (*it++).as_string().to_string();
                     auto table_name = (*it++).as_string().to_string();
-                    auto bytes = std::stol((*it++).as_string().to_string());
+                    auto value = *it++;
+                    auto bytes = 0;
+                    if (!value.is_null())
+                    {
+                        string bytes_as_string = value.as_string().to_string();
+                        try
+                        {
+                            bytes = std::stol(bytes_as_string);
+                        }
+                        catch (const std::exception&)
+                        {
+                            MXB_WARNING("Could not convert '%s' to a number.", bytes_as_string.c_str());
+                        }
+                    }
+
                     mxb_assert(it == row.end());
 
                     size_by_db[table_schema] += bytes;
