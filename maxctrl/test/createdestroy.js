@@ -97,7 +97,7 @@ describe("Create/Destroy Commands", function () {
     return doCommand("unlink monitor MariaDB-Monitor server4")
       .then(() =>
         verifyCommand(
-          "create monitor my-monitor mysqlmon --servers server4 --monitor-user maxuser --monitor-password maxpwd",
+          "create monitor my-monitor mysqlmon user=maxuser password=maxpwd --servers server4",
           "monitors/my-monitor"
         )
       )
@@ -137,13 +137,6 @@ describe("Create/Destroy Commands", function () {
 
   it("will not create server with bad options", function () {
     return doCommand("create server server5 bad parameter --this-is-not-an-option").should.be.rejected;
-  });
-
-  it("create server with options", function () {
-    return verifyCommand(
-      "create server server5 127.0.0.1 3004 --authenticator GSSAPIBackendAuth",
-      "servers/server5"
-    ).should.be.fulfilled;
   });
 
   it("create server for service and monitor", function () {

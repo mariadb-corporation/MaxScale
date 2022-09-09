@@ -65,24 +65,7 @@ exports.builder = function (yargs) {
               "Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them."
           )
           .usage("Usage: create server <name> <host|socket> [port] [params...]")
-          .group(
-            [
-              "services",
-              "monitors",
-              "protocol",
-              "authenticator",
-              "authenticator-options",
-              "tls",
-              "tls-key",
-              "tls-cert",
-              "tls-ca-cert",
-              "tls-version",
-              "tls-cert-verify-depth",
-              "tls-verify-peer-certificate",
-              "tls-verify-peer-host",
-            ],
-            "Create server options:"
-          )
+          .group(["services", "monitors"], "Create server options:")
           .option("services", {
             describe: "Link the created server to these services",
             type: "array",
@@ -90,51 +73,6 @@ exports.builder = function (yargs) {
           .option("monitors", {
             describe: "Link the created server to these monitors",
             type: "array",
-          })
-          .option("protocol", {
-            describe: "Protocol module name",
-            type: "string",
-            default: "mariadbbackend",
-          })
-          .option("authenticator", {
-            describe: "Authenticator module name (deprecated)",
-            type: "string",
-          })
-          .option("authenticator-options", {
-            describe: "Option string for the authenticator (deprecated)",
-            type: "string",
-          })
-          .option("tls", {
-            describe: "Enable TLS",
-            type: "boolean",
-          })
-          .option("tls-key", {
-            describe: "Path to TLS key",
-            type: "string",
-          })
-          .option("tls-cert", {
-            describe: "Path to TLS certificate",
-            type: "string",
-          })
-          .option("tls-ca-cert", {
-            describe: "Path to TLS CA certificate",
-            type: "string",
-          })
-          .option("tls-version", {
-            describe: "TLS version to use",
-            type: "string",
-          })
-          .option("tls-cert-verify-depth", {
-            describe: "TLS certificate verification depth",
-            type: "number",
-          })
-          .option("tls-verify-peer-certificate", {
-            describe: "Enable TLS peer certificate verification",
-            type: "boolean",
-          })
-          .option("tls-verify-peer-host", {
-            describe: "Enable TLS peer host verification",
-            type: "boolean",
           });
       },
       function (argv) {
@@ -143,19 +81,7 @@ exports.builder = function (yargs) {
             id: argv.name,
             type: "servers",
             attributes: {
-              parameters: {
-                protocol: argv.protocol,
-                authenticator: argv.authenticator,
-                authenticator_options: argv["authenticator-options"],
-                ssl: argv["tls"],
-                ssl_key: argv["tls-key"],
-                ssl_cert: argv["tls-cert"],
-                ssl_ca_cert: argv["tls-ca-cert"],
-                ssl_version: argv["tls-version"],
-                ssl_cert_verify_depth: argv["tls-cert-verify-depth"],
-                ssl_verify_peer_certificate: argv["tls-verify-peer-certificate"],
-                ssl_verify_peer_host: argv["tls-verify-peer-host"],
-              },
+              parameters: {},
             },
           },
         };
@@ -220,20 +146,12 @@ exports.builder = function (yargs) {
               "given as the monitor parameters."
           )
           .usage("Usage: create monitor <name> <module> [params...]")
-          .group(["servers", "monitor-user", "monitor-password"], "Create monitor options:")
+          .group(["servers"], "Create monitor options:")
           .option("servers", {
             describe:
               "Link the created monitor to these servers. All non-option arguments " +
               "after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.",
             type: "array",
-          })
-          .option("monitor-user", {
-            describe: "Username for the monitor user",
-            type: "string",
-          })
-          .option("monitor-password", {
-            describe: "Password for the monitor user",
-            type: "string",
           });
       },
       function (argv) {
@@ -258,13 +176,6 @@ exports.builder = function (yargs) {
               type: "servers",
             });
           }
-        }
-
-        if (argv.monitorUser) {
-          _.set(monitor, "data.attributes.parameters.user", argv.monitorUser);
-        }
-        if (argv.monitorPassword) {
-          _.set(monitor, "data.attributes.parameters.password", argv.monitorPassword);
         }
 
         maxctrl(argv, function (host) {
@@ -420,74 +331,7 @@ exports.builder = function (yargs) {
               "set via command line options: e.g. using `protocol=mariadb` will override " +
               "the `--protocol=cdc` option."
           )
-          .usage("Usage: create listener <service> <name> <port> [params...]")
-          .group(
-            [
-              "interface",
-              "protocol",
-              "authenticator",
-              "authenticator-options",
-              "tls-key",
-              "tls-cert",
-              "tls-ca-cert",
-              "tls-version",
-              "tls-crl",
-              "tls-cert-verify-depth",
-              "tls-verify-peer-certificate",
-              "tls-verify-peer-host",
-            ],
-            "Create listener options:"
-          )
-          .option("interface", {
-            describe: "Interface to listen on",
-            type: "string",
-            default: "::",
-          })
-          .option("protocol", {
-            describe: "Protocol module name",
-            type: "string",
-            default: "mariadbclient",
-          })
-          .option("authenticator", {
-            describe: "Authenticator module name",
-            type: "string",
-          })
-          .option("authenticator-options", {
-            describe: "Option string for the authenticator",
-            type: "string",
-          })
-          .option("tls-key", {
-            describe: "Path to TLS key",
-            type: "string",
-          })
-          .option("tls-cert", {
-            describe: "Path to TLS certificate",
-            type: "string",
-          })
-          .option("tls-ca-cert", {
-            describe: "Path to TLS CA certificate",
-            type: "string",
-          })
-          .option("tls-version", {
-            describe: "TLS version to use",
-            type: "string",
-          })
-          .option("tls-crl", {
-            describe: "TLS CRL to use",
-            type: "string",
-          })
-          .option("tls-cert-verify-depth", {
-            describe: "TLS certificate verification depth",
-            type: "number",
-          })
-          .option("tls-verify-peer-certificate", {
-            describe: "Enable TLS peer certificate verification",
-            type: "boolean",
-          })
-          .option("tls-verify-peer-host", {
-            describe: "Enable TLS peer host verification",
-            type: "boolean",
-          });
+          .usage("Usage: create listener <service> <name> <port> [params...]");
       },
       function (argv) {
         maxctrl(argv, function (host) {
@@ -510,19 +354,6 @@ exports.builder = function (yargs) {
               attributes: {
                 parameters: {
                   port: argv.port,
-                  address: argv.interface,
-                  protocol: argv.protocol,
-                  authenticator: argv.authenticator,
-                  authenticator_options: argv["authenticator-options"],
-                  ssl: argv["tls"],
-                  ssl_key: argv["tls-key"],
-                  ssl_cert: argv["tls-cert"],
-                  ssl_ca_cert: argv["tls-ca-cert"],
-                  ssl_version: argv["tls-version"],
-                  ssl_cert_verify_depth: argv["tls-cert-verify-depth"],
-                  ssl_verify_peer_certificate: argv["tls-verify-peer-certificate"],
-                  ssl_verify_peer_host: argv["tls-verify-peer-host"],
-                  ssl_crl: argv["tls-crl"],
                 },
               },
               relationships: {
@@ -532,12 +363,6 @@ exports.builder = function (yargs) {
               },
             },
           };
-
-          var params = listener.data.attributes.parameters;
-
-          if (params.ssl_key || params.ssl_cert || params.ssl_ca_cert) {
-            listener.data.attributes.parameters.ssl = true;
-          }
 
           var extra_params = argv.params.reduce(to_obj, {});
           Object.assign(listener.data.attributes.parameters, extra_params);
