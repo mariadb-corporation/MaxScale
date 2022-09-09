@@ -2,6 +2,9 @@
 
 This filter was introduced in MariaDB MaxScale 2.1.
 
+**Note**: This filter has been deprecated in MaxScale 22.08.2 and will be
+  removed in MaxScale 23.02.
+
 [TOC]
 
 ## Overview
