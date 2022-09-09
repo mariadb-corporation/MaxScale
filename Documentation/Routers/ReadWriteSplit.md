@@ -723,7 +723,7 @@ All limitations that apply to `transaction_replay` also apply to
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Values**: `none`, `local`, `global`, `fast`, `universal`
+- **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`
 - **Default**: `none`
 
 Enable causal reads. This parameter is disabled by default and was introduced in
@@ -787,6 +787,16 @@ The possible values for this parameter are:
     causality guarantees for reads. This functionality can also be considered an
     improved version of the functionality that the
     [CCRFilter](../Filters/CCRFilter.md) module provides.
+
+* `fast_global`
+
+  * This mode is identical to the `fast` mode except that it uses the global
+    GTID instead of the session local one. This is similar to how `local` and
+    `global` modes differ from each other. The value of `causal_reads_timeout`
+    is ignored in this mode. Currently the replication state is only updated by
+    the mariadbmon monitor whenever the servers are monitored. This means that a
+    smaller `monitor_interval` provides faster replication state updates and
+    possibly better overall usage of servers.
 
 * `universal`
 

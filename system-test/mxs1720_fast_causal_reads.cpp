@@ -27,6 +27,32 @@ void basic_test(TestConnections& test)
     test.maxscale->disconnect();
 }
 
+void global_test(TestConnections& test)
+{
+    auto writer = test.maxscale->rwsplit();
+    auto reader = test.maxscale->rwsplit();
+    test.expect(writer.connect(), "Failed to connect writer: %s", writer.error());
+    test.expect(reader.connect(), "Failed to connect reader: %s", reader.error());
+
+    test.expect(writer.query("CREATE OR REPLACE TABLE test.t1(id INT)"),
+                "Failed to create table: %s", writer.error());
+
+    for (int i = 0; i < 100; i++)
+    {
+        std::string value = std::to_string(i);
+        std::string insert = "INSERT INTO test.t1 VALUES (" + value + ")";
+        std::string select = "SELECT @@server_id, COUNT(*) FROM test.t1 WHERE id = " + value;
+
+        test.expect(writer.query(insert), "INSERT failed: %s", writer.error());
+
+        auto row = reader.row(select);
+        test.expect(!row.empty() && row[1] == "1", "At %d: Row is %s", i,
+                    row.empty() ? "empty" : (row[0] + " " + row[1]).c_str());
+    }
+
+    writer.query("DROP TABLE test.t1");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections::require_repl_version("10.3.8");
@@ -35,6 +61,10 @@ int main(int argc, char** argv)
     test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");
 
     basic_test(test);
+
+    // MXS-4122: Fast global causal reads
+    test.check_maxctrl("alter service RW-Split-Router causal_reads=fast_global");
+    global_test(test);
 
     return test.global_result;
 }

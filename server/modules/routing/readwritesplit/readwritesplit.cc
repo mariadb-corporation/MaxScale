@@ -174,6 +174,12 @@ std::string RWSplit::last_gtid() const
     return gtid;
 }
 
+std::map<uint32_t, RWSplit::gtid> RWSplit::last_gtid_map() const
+{
+    std::shared_lock<mxb::shared_mutex> guard(m_last_gtid_lock);
+    return m_last_gtid;
+}
+
 void RWSplit::set_last_gtid(const std::string& str)
 {
     auto gtid = gtid::from_string(str);
