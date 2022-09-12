@@ -3582,6 +3582,42 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 }
             }
 
+            // The following will dig out "a" from a statement like "INSERT INTO t1 VALUES (a+2)"
+            List_iterator<List_item> it_many_values(lex->many_values);
+            List_item* list_item = it_many_values++;
+
+            while (list_item)
+            {
+                List_iterator<Item> it_list_item(*list_item);
+                Item* item = it_list_item++;
+
+                while (item)
+                {
+                    if (item->type() == Item::FUNC_ITEM)
+                    {
+                        Item_func* func_item = static_cast<Item_func*>(item);
+
+                        Item** arguments = func_item->arguments();
+
+                        for (size_t i = 0; i < func_item->argument_count(); ++i)
+                        {
+                            Item* argument = arguments[i];
+
+                            if (argument->type() == Item::FIELD_ITEM)
+                            {
+                                Item_field* field_argument = static_cast<Item_field*>(argument);
+
+                                add_field_info(pi, nullptr, field_argument, nullptr);
+                            }
+                        }
+                    }
+
+                    item = it_list_item++;
+                }
+
+                list_item = it_many_values++;
+            }
+
             if (lex->insert_list)
             {
                 List_iterator<Item> ilist(*lex->insert_list);
