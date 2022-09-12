@@ -284,6 +284,13 @@ mutation:
 
 `store.commit('queryEditorConfig/SET_BASE_URL', url)`
 
+## Change authentication cookies expired time
+
+The default expired time for the authentication cookies of SQL connections is
+24 hours (86400). To change it, committing the following mutation:
+
+`store.commit('queryEditorConfig/SET_AUTH_COOKIES_MAX_AGE', 86400)`
+
 ## Reserved keywords
 
 Certain keywords are reserved in order to make the query editor work properly.
