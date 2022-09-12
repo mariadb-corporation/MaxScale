@@ -1744,7 +1744,10 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector
                     && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
                 {
                     s = qcme_string_get(tbl->db);
-                    s += ".";
+                    if (!s.empty())
+                    {
+                        s += ".";
+                    }
                     s += qcme_string_get(tbl->table_name);
                 }
             }
