@@ -186,9 +186,7 @@ import {
 } from './alterTblHelpers'
 export default {
     name: 'alter-cols-opts',
-    components: {
-        'col-opt-input': ColOptInput,
-    },
+    components: { ColOptInput },
     props: {
         value: { type: Object, required: true },
         initialData: { type: Object, required: true },

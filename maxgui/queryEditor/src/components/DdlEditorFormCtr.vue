@@ -65,8 +65,8 @@ import AlterColsOpts from './AlterColsOpts.vue'
 export default {
     name: 'ddl-editor-form-ctr',
     components: {
-        'alter-table-opts': AlterTableOpts,
-        'alter-cols-opts': AlterColsOpts,
+        AlterTableOpts,
+        AlterColsOpts,
     },
     model: {
         prop: 'formData',

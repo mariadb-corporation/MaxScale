@@ -12,11 +12,11 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeToolbarLeftBtns from '../WkeToolbarLeftBtns.container.vue'
+import WkeToolbarRight from '../WkeToolbarRight.vue'
 
-const mountFactory = opts => mount({ shallow: false, component: WkeToolbarLeftBtns, ...opts })
+const mountFactory = opts => mount({ shallow: false, component: WkeToolbarRight, ...opts })
 
-describe(`wke-toolbar-left-btns-ctr`, () => {
+describe(`wke-toolbar-right`, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()
@@ -26,14 +26,11 @@ describe(`wke-toolbar-left-btns-ctr`, () => {
             expect(wrapper.emitted()).to.have.property('get-total-width')
         })
     })
-
-    it(`Should call addNewWs action`, async () => {
-        let isCalled = false
-        let wrapper = mountFactory({
-            computed: { isAddWkeDisabled: () => false },
-            methods: { addNewWs: () => (isCalled = true) },
+    const childComps = ['query-cnf-gear-btn', 'min-max-btn-ctr']
+    childComps.forEach(name => {
+        it(`Should render ${name}`, () => {
+            const comp = wrapper.findComponent({ name })
+            expect(comp.exists()).to.be.true
         })
-        await wrapper.find('.add-wke-btn').trigger('click')
-        expect(isCalled).to.be.true
     })
 })

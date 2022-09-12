@@ -120,9 +120,7 @@
 import CharsetCollateSelect from './CharsetCollateSelect.vue'
 export default {
     name: 'alter-table-opts',
-    components: {
-        'charset-collate-select': CharsetCollateSelect,
-    },
+    components: { CharsetCollateSelect },
     props: {
         value: { type: Object, required: true },
         engines: { type: Array, required: true },

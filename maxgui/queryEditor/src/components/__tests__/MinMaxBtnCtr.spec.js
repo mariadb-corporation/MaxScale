@@ -12,9 +12,9 @@
  */
 
 import mount from '@tests/unit/setup'
-import MinMaxBtn from '../MinMaxBtn.container.vue'
+import MinMaxBtnCtr from '../MinMaxBtnCtr.vue'
 
-const mountFactory = opts => mount({ shallow: false, component: MinMaxBtn, ...opts })
+const mountFactory = opts => mount({ shallow: false, component: MinMaxBtnCtr, ...opts })
 
 describe(`min-max-btn-ctr`, () => {
     it(`Should call SET_FULLSCREEN mutation`, () => {

@@ -21,7 +21,7 @@ import scopingI18n from '@share/plugins/scopingI18n'
 
 //TODO: Add more if needed
 export { default as QueryCnfGearBtn } from '@queryEditorSrc/components/QueryCnfGearBtn.vue'
-export { default as MinMaxBtn } from '@queryEditorSrc/components/MinMaxBtn.container.vue'
+export { default as MinMaxBtnCtr } from '@queryEditorSrc/components/MinMaxBtnCtr.vue'
 export { default as queryEditorStorePlugins } from '@queryEditorSrc/store/plugins/index'
 
 export default /*#__PURE__*/ (() => {

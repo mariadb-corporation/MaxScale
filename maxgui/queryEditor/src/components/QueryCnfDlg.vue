@@ -86,11 +86,11 @@
  * Emits
  * $emit('confirm-save', v:object): new cnf data
  */
-import RowLimit from './RowLimit.container.vue'
+import RowLimitCtr from './RowLimitCtr.vue'
 export default {
     name: 'query-cnf-dlg',
     components: {
-        'row-limit-ctr': RowLimit,
+        RowLimitCtr,
     },
     props: {
         value: { type: Boolean, required: true },

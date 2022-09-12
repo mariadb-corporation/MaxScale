@@ -19,16 +19,16 @@
  * Public License.
  */
 
-import ConnMan from './ConnMan.container.vue'
+import ConnManCtr from './ConnManCtr.vue'
 import QueryCnfGearBtn from './QueryCnfGearBtn.vue'
-import MinMaxBtn from './MinMaxBtn.container.vue'
+import MinMaxBtnCtr from './MinMaxBtnCtr.vue'
 
 export default {
-    name: 'wke-toolbar-right-btns',
+    name: 'wke-toolbar-right',
     components: {
-        'conn-man-ctr': ConnMan,
-        'query-cnf-gear-btn': QueryCnfGearBtn,
-        'min-max-btn-ctr': MinMaxBtn,
+        ConnManCtr,
+        QueryCnfGearBtn,
+        MinMaxBtnCtr,
     },
     mounted() {
         this.$nextTick(() => this.$emit('get-total-width', this.$refs.wrapper.clientWidth))

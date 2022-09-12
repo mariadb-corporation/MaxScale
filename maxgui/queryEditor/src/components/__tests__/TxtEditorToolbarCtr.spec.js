@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TxtEditorToolbar from '../TxtEditorToolbar.container.vue'
+import TxtEditorToolbarCtr from '../TxtEditorToolbarCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
 const dummy_session = { id: 'SESSION_123_45' }
@@ -21,7 +21,7 @@ const mountFactory = opts =>
         lodash.merge(
             {
                 shallow: false,
-                component: TxtEditorToolbar,
+                component: TxtEditorToolbarCtr,
                 stubs: {
                     'readonly-sql-editor': "<div class='stub'></div>",
                 },

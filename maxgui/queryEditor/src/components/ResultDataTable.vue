@@ -169,8 +169,8 @@ import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
-        'result-export': ResultExport,
-        'editable-cell': EditableCell,
+        ResultExport,
+        EditableCell,
     },
     props: {
         headers: {

@@ -117,7 +117,7 @@ import { check_charset_support, check_UN_ZF_support, check_AI_support } from './
 export default {
     name: 'col-opt-input',
     components: {
-        'charset-collate-select': CharsetCollateSelect,
+        CharsetCollateSelect,
     },
     props: {
         data: { type: Object, required: true },

@@ -80,14 +80,14 @@
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import '@queryEditorSrc/styles/queryEditor.scss'
-import Wke from '@queryEditorSrc/components/Wke.container.vue'
-import WkeNav from '@queryEditorSrc/components/WkeNav.container.vue'
+import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
+import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
 
 export default {
     name: 'query-editor',
     components: {
-        'wke-ctr': Wke,
-        'wke-nav-ctr': WkeNav,
+        WkeCtr,
+        WkeNavCtr,
     },
     data() {
         return {

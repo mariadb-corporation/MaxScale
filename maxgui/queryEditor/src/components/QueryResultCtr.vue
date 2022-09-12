@@ -82,15 +82,15 @@
  * Public License.
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
-import DataPrvw from './DataPrvw'
-import ResultsTab from './ResultsTab'
-import HistoryAndSnippets from './HistoryAndSnippets.container.vue'
+import DataPrvw from './DataPrvw.vue'
+import ResultsTab from './ResultsTab.vue'
+import HistoryAndSnippetsCtr from './HistoryAndSnippetsCtr.vue'
 export default {
     name: 'query-result-ctr',
     components: {
         DataPrvw,
         ResultsTab,
-        'history-and-snippets-ctr': HistoryAndSnippets,
+        HistoryAndSnippetsCtr,
     },
     props: {
         dynDim: {

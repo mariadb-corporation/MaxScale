@@ -2,9 +2,9 @@
     <div
         class="wke-toolbar d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border px-2"
     >
-        <wke-toolbar-left-btns-ctr @get-total-width="leftBtnsWidth = $event" />
+        <wke-toolbar-left-ctr @get-total-width="leftBtnsWidth = $event" />
         <v-spacer />
-        <wke-toolbar-right-btns @get-total-width="rightBtnsWidth = $event" />
+        <wke-toolbar-right @get-total-width="rightBtnsWidth = $event" />
     </div>
 </template>
 <script>
@@ -25,14 +25,14 @@
  * Emits
  * $emit('get-total-btn-width', v:number)
  */
-import WkeToolbarLeftBtns from './WkeToolbarLeftBtns.container.vue'
-import WkeToolbarRightBtns from './WkeToolbarRightBtns.vue'
+import WkeToolbarLeftCtr from './WkeToolbarLeftCtr.vue'
+import WkeToolbarRight from './WkeToolbarRight.vue'
 
 export default {
     name: 'wke-toolbar',
     components: {
-        'wke-toolbar-left-btns-ctr': WkeToolbarLeftBtns,
-        'wke-toolbar-right-btns': WkeToolbarRightBtns,
+        WkeToolbarLeftCtr,
+        WkeToolbarRight,
     },
     data() {
         return {
