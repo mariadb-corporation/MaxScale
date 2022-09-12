@@ -137,7 +137,7 @@ For a list of optional parameters that all monitors support, read the
 These are optional parameters specific to the MariaDB Monitor. Failover,
 switchover and rejoin-specific parameters are listed in their own
 [section](#cluster-manipulation-operations). Rebuild-related parameters are
-described in the [server rebuild-section](#server-rebuild). ColumnStore
+described in the [Rebuild server-section](#rebuild-server). ColumnStore
 parameters are described in the [ColumnStore commands-section](#settings).
 
 ### `assume_unique_hostnames`
@@ -1033,10 +1033,11 @@ from the master server, or when adding a new server to the cluster. The
 MariaDB Server configuration files are not affected.
 
 MariaDB-Monitor can perform this operation by running
-[Mariabackup](#https://mariadb.com/kb/en/mariabackup/) on both the source and
+[Mariabackup](https://mariadb.com/kb/en/mariabackup/) on both the source and
 target servers. To do this, MaxScale needs to have ssh-access on the machines.
 Also, the following tools need to be installed on the source and target
 machines:
+
 1. *Mariabackup*. Backups and restores MariaDB Server contents. Installed e.g.
 with `yum install MariaDB-backup`.
 2. *pigz*. Compresses and decompresses the backup stream. Installed e.g. with
@@ -1049,16 +1050,17 @@ uses to access the servers. MaxScale must be able to run commands with *sudo* on
 both the source and target servers. Mariabackup, on the other hand, needs to
 authenticate to the MariaDB Server being copied from. For this, MaxScale uses
 the monitor user. The monitor user may thus require additional privileges. See
-[Mariabackup documentation](#https://mariadb.com/kb/en/mariabackup-overview/#authentication-and-privileges)
+[Mariabackup documentation](https://mariadb.com/kb/en/mariabackup-overview/#authentication-and-privileges)
 for more details.
 
 When launched, the rebuild operation proceeds as below. If any step fails, the
 operation is stopped and the target server will be left in an unspecified state.
+
 1. Log in to both servers with ssh and check that the tools listed above are
 present (e.g. `mariabackup -v` should succeed).
 2. Check that the port used for transferring the backup is free on the source
 server. If not, kill the process holding it. This requires running *lsof* and
- *kill*.
+*kill*.
 3. Launch Mariabackup on the source machine, compress the stream and listen
 for an incoming connection. This is performed with a command like
 `mariabackup --backup --safe-slave-backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
@@ -1072,7 +1074,7 @@ take a long time if there is much data to transfer.
 `mariabackup --use-memory=1G --prepare`. This step can also take some time if
 the source server performed writes during data transfer.
 7. On the target server, change ownership of datadir contents to the
- *mysql*-user and start MariaDB-server.
+*mysql*-user and start MariaDB-server.
 8. Have the target server start replicating from the master.
 
 The rebuild-operation is a monitor module command and is best launched with

@@ -29,6 +29,7 @@
 * Causal reads now supported in a multi-MaxScale setup.
 
 For more details, please refer to:
+* [MariaDB MaxScale 22.08.1 Release Notes](Release-Notes/MaxScale-22.08.1-Release-Notes.md)
 * [MariaDB MaxScale 22.08.0 Release Notes](Release-Notes/MaxScale-22.08.0-Release-Notes.md)
 
 ## MariaDB MaxScale 6.4

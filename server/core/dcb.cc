@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-08-25
+ * Change Date: 2026-09-06
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -280,7 +280,7 @@ std::tuple<bool, GWBUF> DCB::read_strict(size_t minbytes, size_t maxbytes)
 
 std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLimit limit_type)
 {
-    mxb_assert(polling_worker() == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
     mxb_assert(maxbytes >= minbytes || maxbytes == 0);
 
@@ -1288,7 +1288,7 @@ private:
 
 uint32_t DCB::process_events(uint32_t events)
 {
-    mxb_assert(polling_worker() == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
     uint32_t rc = mxb::poll_action::NOP;
 
