@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2022 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-08-25
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
 #include <maxtest/maxscales.hh>
 #include <string>
 #include <maxbase/format.hh>
@@ -8,7 +21,6 @@
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
-
 
 using std::string;
 
@@ -781,6 +793,7 @@ mxt::ServersInfo MaxScale::get_servers()
     const string field_id = "id";
     const string field_attr = "attributes";
     const string field_state = "state";
+    const string field_state_details = "state_details";
     const string field_mgroup = "master_group";
     const string field_rlag = "replication_lag";
     const string field_serverid = "server_id";
@@ -826,7 +839,9 @@ mxt::ServersInfo MaxScale::get_servers()
                 info.name = elem.get_string(field_id);
                 auto attr = elem.get_object(field_attr);
                 string state = attr.get_string(field_state);
-                info.status_from_string(state);
+                string state_details;
+                attr.try_get_string(field_state_details, &state_details);
+                info.status_from_string(state, state_details);
 
                 // The following depend on the monitor and may be null.
                 info.master_group = try_get_int(attr, field_mgroup, ServerInfo::GROUP_NONE);
@@ -1089,7 +1104,7 @@ const std::vector<ServerInfo::bitfield>& ServersInfo::default_repl_states()
     return def_repl_states;
 }
 
-void ServerInfo::status_from_string(const string& source)
+void ServerInfo::status_from_string(const string& source, const string& details)
 {
     auto flags = mxb::strtok(source, ",");
     status = UNKNOWN;
@@ -1128,14 +1143,15 @@ void ServerInfo::status_from_string(const string& source)
         {
             status |= RELAY;
         }
-        else if (flag == "Slave of External Server")
-        {
-            status |= SERVER_SLAVE_OF_EXT_MASTER;
-        }
         else if (flag == "Binlog Relay")
         {
             status |= BLR;
         }
+    }
+
+    if (details == "Slave of External Server")
+    {
+        status |= SERVER_SLAVE_OF_EXT_MASTER;
     }
 }
 
