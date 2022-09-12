@@ -529,8 +529,6 @@ json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
     if (auto server = get_server(srv))
     {
         result = server->to_json();
-        json_object_set_new(result, "state_details", !server->m_node.external_masters.empty() ?
-                            json_string("Slave of External Server") : json_null());
     }
 
     return result;

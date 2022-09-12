@@ -1008,7 +1008,7 @@ running MariaDB-server.
 
 On MariaDB-server 10.3.3 and later, the TCP keepalive settings can be configured
 for just the server process. See
-[Server System Variables](#https://mariadb.com/kb/en/server-system-variables/#tcp_keepalive_interval)
+[Server System Variables](https://mariadb.com/kb/en/server-system-variables/#tcp_keepalive_interval)
 for information on settings *tcp_keepalive_interval*, *tcp_keepalive_probes* and
 *tcp_keepalive_time*. These settings can also be set on the operating system
 level, as described
