@@ -513,7 +513,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     bool ok = true;
     std::ostringstream error;
 
-    if (!have_open_connections())
+    if (!have_open_connections() || need_master_for_sescmd())
     {
         MXS_INFO("No connections available for session command");
 
@@ -545,6 +545,12 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 m_sescmd_replier = backend;
             }
         }
+    }
+
+    if (m_sescmd_replier && need_master_for_sescmd())
+    {
+        MXB_INFO("Cannot use '%s' for session command: transaction is open.", m_sescmd_replier->name());
+        m_sescmd_replier = nullptr;
     }
 
     if (m_sescmd_replier)

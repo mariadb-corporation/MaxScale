@@ -300,6 +300,12 @@ private:
                             });
     }
 
+    inline bool need_master_for_sescmd()
+    {
+        return trx_is_open() && !trx_is_read_only() && !in_optimistic_trx()
+               && (!m_current_master || !m_current_master->in_use());
+    }
+
     inline bool include_in_checksum(const mxs::Reply& reply) const
     {
         switch (m_config.trx_checksum)

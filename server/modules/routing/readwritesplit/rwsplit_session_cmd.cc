@@ -46,7 +46,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     {
         for (auto backend : m_raw_backends)
         {
-            if (backend->can_connect() && backend->is_master())
+            if (!backend->in_use() && backend->can_connect() && backend->is_master())
             {
                 if (prepare_target(backend, TARGET_MASTER))
                 {
@@ -65,10 +65,13 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     // If no master was found, find a slave
     for (auto backend : m_raw_backends)
     {
-        if (backend->can_connect() && backend->is_slave() && prepare_target(backend, TARGET_SLAVE))
+        if (!backend->in_use() && backend->can_connect() && backend->is_slave())
         {
-            MXS_INFO("Chose '%s' as slave due to session write", backend->name());
-            return true;
+            if (prepare_target(backend, TARGET_SLAVE))
+            {
+                MXS_INFO("Chose '%s' as slave due to session write", backend->name());
+                return true;
+            }
         }
     }
 
