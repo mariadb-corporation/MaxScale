@@ -1215,29 +1215,34 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
         std::set<std::string> names2;
         collect_missing_function_names(f2, f1, &names2);
 
-        bool real_error = false;
+        // A difference in sizes unconditionally means that there has to be
+        // a significant discrepancy.
+        bool real_error = (names1.size() != names2.size());
 
-        // We assume that names1 are from the qc_mysqlembedded and names2 from qc_sqlite.
-        // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
-        // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
-        // use of date_add_interval() functions.
-        for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
+        if (!real_error)
         {
-            if (*i == "date_add_interval")
+            // We assume that names1 are from the qc_mysqlembedded and names2 from qc_sqlite.
+            // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
+            // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
+            // use of date_add_interval() functions.
+            for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
             {
-                if ((names2.count("date_add") == 0)
-                    && (names2.count("adddate") == 0)
-                    && (names2.count("date_sub") == 0)
-                    && (names2.count("subdate") == 0)
-                    && (names2.count("+") == 0)
-                    && (names2.count("-") == 0))
+                if (*i == "date_add_interval")
+                {
+                    if ((names2.count("date_add") == 0)
+                        && (names2.count("adddate") == 0)
+                        && (names2.count("date_sub") == 0)
+                        && (names2.count("subdate") == 0)
+                        && (names2.count("+") == 0)
+                        && (names2.count("-") == 0))
+                    {
+                        real_error = true;
+                    }
+                }
+                else
                 {
                     real_error = true;
                 }
-            }
-            else
-            {
-                real_error = true;
             }
         }
 
