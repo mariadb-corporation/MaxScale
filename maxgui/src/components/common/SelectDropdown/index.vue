@@ -88,9 +88,8 @@ export default {
     },
     computed: {
         // compare default value with new values
-        hasChanged: function() {
-            let isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
-            return !isEqual
+        hasChanged() {
+            return !this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
         },
         selectedItems: {
             get() {
@@ -109,8 +108,11 @@ export default {
                 this.selectedItems = val
             },
         },
-        hasChanged(v) {
-            this.$emit('has-changed', v)
+        hasChanged: {
+            immediate: true,
+            handler(v) {
+                this.$emit('has-changed', v)
+            },
         },
     },
 

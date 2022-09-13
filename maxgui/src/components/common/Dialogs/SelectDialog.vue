@@ -15,7 +15,6 @@
             </p>
 
             <select-dropdown
-                ref="selectDropdown"
                 v-model="selectedItems"
                 :defaultItems="defaultItems"
                 :items="itemsList"
@@ -78,12 +77,9 @@ export default {
         },
     },
     watch: {
-        isDlgOpened: function(val) {
-            if (val) {
-                this.$emit('on-open')
-                // set default hasChanged data
-                this.hasChanged = this.$refs.selectDropdown.hasChanged
-            } else this.selectedItems = []
+        isDlgOpened(val) {
+            if (val) this.$emit('on-open')
+            else this.selectedItems = []
         },
         selectedItems: {
             deep: true,
