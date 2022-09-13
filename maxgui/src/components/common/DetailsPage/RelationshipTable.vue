@@ -4,8 +4,8 @@
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="readOnly && !addable ? null : () => onAdd()"
-        :addBtnText="readOnly && !addable ? '' : addBtnText"
+        :onAddClick="addable ? () => onAdd() : null"
+        :addBtnText="addable ? addBtnText : ''"
     >
         <template v-slot:content>
             <data-table
@@ -15,7 +15,7 @@
                 :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
                 sortBy=""
                 :loading="isLoading"
-                :showActionsOnHover="!readOnly"
+                :showActionsOnHover="removable"
                 :draggable="relationshipType === 'filters'"
                 :hasOrderNumber="relationshipType === 'filters'"
                 showAll
@@ -35,7 +35,7 @@
                         status
                     </icon-sprite-sheet>
                 </template>
-                <template v-if="!readOnly" v-slot:actions="{ data: { item } }">
+                <template v-if="removable" v-slot:actions="{ data: { item } }">
                     <v-btn icon @click="onDelete(item)">
                         <v-icon size="20" color="error">
                             $vuetify.icons.unlink
@@ -43,17 +43,16 @@
                     </v-btn>
                 </template>
             </data-table>
-            <!-- Avaiable dialogs for editable table -->
             <confirm-dialog
-                v-if="!readOnly"
+                v-if="removable"
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="deleteDialogType"
-                :item="Array.isArray(targetItem) ? {} : targetItem"
+                :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
                 :onSave="confirmDelete"
             />
             <select-dialog
-                v-if="!readOnly"
+                v-if="addable"
                 v-model="isSelectDlgOpened"
                 :title="dialogTitle"
                 mode="add"
@@ -61,7 +60,7 @@
                 :entityName="relationshipType"
                 :itemsList="itemsList"
                 :onSave="confirmAdd"
-                @selected-items="targetItem = $event"
+                @selected-items="targetItems = $event"
                 @on-open="getAllEntities"
             />
         </template>
@@ -102,10 +101,10 @@ export default {
     props: {
         relationshipType: { type: String, required: true }, // servers, services, filters
         tableRows: { type: Array, required: true },
-        readOnly: { type: Boolean, default: false },
-        addable: { type: Boolean, default: true },
+        removable: { type: Boolean, default: false },
+        addable: { type: Boolean, default: false },
         selectItems: { type: Array },
-        //below props are required only when readOnly is false.
+        //below props are required only when removable is true.
         getRelationshipData: { type: Function },
     },
     data() {
@@ -123,7 +122,7 @@ export default {
 
             //---------------- common
             dialogTitle: '',
-            targetItem: null,
+            targetItems: [],
             //delete dialog
             deleteDialogType: 'delete',
             //select dialog
@@ -161,7 +160,7 @@ export default {
     watch: {
         getRelationshipData: {
             handler(value) {
-                if (!this.readOnly && !this.$help.isFunction(value))
+                if (this.removable && !this.$help.isFunction(value))
                     this.logger.error("property 'getRelationshipData' is required.")
             },
             immediate: true,
@@ -227,27 +226,20 @@ export default {
         },
         // -------------- Delete handle
         onDelete(item) {
-            this.targetItem = item
+            this.targetItems = [item]
             this.deleteDialogType = 'unlink'
             this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
             this.isConfDlgOpened = true
         },
 
-        async confirmDelete() {
-            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
-            let relationship = []
-            rows.forEach(item => {
-                if (item.id !== this.targetItem.id) {
-                    delete item.state
-                    delete item.attributes
-                    delete item.index
-                    delete item.links
-                    relationship.push(item)
-                }
-            })
-            await this.$emit('on-relationship-update', {
+        confirmDelete() {
+            this.$emit('on-relationship-update', {
                 type: this.relationshipType,
-                data: relationship,
+                data: this.tableRowsData.reduce((arr, row) => {
+                    if (this.targetItems.some(item => item.id !== row.id))
+                        arr.push({ id: row.id, type: row.type })
+                    return arr
+                }, []),
             })
         },
 
@@ -276,19 +268,20 @@ export default {
             if (this.relationshipType !== 'listeners') this.isSelectDlgOpened = true
             else this.$emit('open-listener-form-dialog')
         },
-
-        async confirmAdd() {
-            const rows = this.$help.lodash.cloneDeep(this.tableRowsData)
-            let relationship = [...rows, ...this.targetItem]
-            relationship.forEach(item => {
-                delete item.state
-                delete item.attributes
-                delete item.index
-                delete item.links
-            })
-            await this.$emit('on-relationship-update', {
+        /**
+         * @param {Array} arr - array of object, each object must have id and type attributes
+         * @returns {Array} - returns valid relationship array data
+         */
+        formatRelationshipData(arr) {
+            return arr.map(item => ({ id: item.id, type: item.type }))
+        },
+        confirmAdd() {
+            this.$emit('on-relationship-update', {
                 type: this.relationshipType,
-                data: relationship,
+                data: [
+                    ...this.formatRelationshipData(this.tableRowsData),
+                    ...this.formatRelationshipData(this.targetItems),
+                ],
             })
         },
     },

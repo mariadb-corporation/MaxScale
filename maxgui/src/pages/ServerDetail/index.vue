@@ -28,6 +28,8 @@
                                     <v-col cols="12" class="pa-0 mt-4">
                                         <relationship-table
                                             relationshipType="services"
+                                            addable
+                                            removable
                                             :tableRows="serviceTableRow"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"

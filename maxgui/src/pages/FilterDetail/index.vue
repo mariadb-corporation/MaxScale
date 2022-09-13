@@ -13,12 +13,7 @@
                     />
                 </v-col>
                 <v-col cols="6">
-                    <relationship-table
-                        relationshipType="services"
-                        :tableRows="serviceTableRow"
-                        readOnly
-                        :addable="false"
-                    />
+                    <relationship-table relationshipType="services" :tableRows="serviceTableRow" />
                 </v-col>
             </v-row>
         </v-sheet>

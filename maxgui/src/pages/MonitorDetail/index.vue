@@ -16,6 +16,8 @@
                 <v-col cols="6">
                     <relationship-table
                         relationshipType="servers"
+                        addable
+                        removable
                         :tableRows="serverStateTableRow"
                         :getRelationshipData="fetchAllServers"
                         :selectItems="unmonitoredServers"

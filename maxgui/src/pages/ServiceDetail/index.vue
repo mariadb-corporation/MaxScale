@@ -35,6 +35,8 @@
                                         <relationship-table
                                             ref="servers-relationship-table"
                                             relationshipType="servers"
+                                            addable
+                                            removable
                                             :tableRows="serversTableRows"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
@@ -44,6 +46,8 @@
                                         <relationship-table
                                             ref="filters-relationship-table"
                                             relationshipType="filters"
+                                            addable
+                                            removable
                                             :tableRows="filtersTableRows"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
@@ -53,8 +57,8 @@
                                         <relationship-table
                                             ref="listeners-relationship-table"
                                             relationshipType="listeners"
+                                            addable
                                             :tableRows="listenersTableRows"
-                                            readOnly
                                             @open-listener-form-dialog="
                                                 SET_FORM_TYPE(FORM_LISTENER)
                                             "
