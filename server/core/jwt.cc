@@ -28,12 +28,38 @@
 namespace
 {
 
+// Uncrustify doesn't like a leading :: when used with a template parameter and breaks unless there's a space
+// between the < and the ::. A custom namespace works around this problem and it also makes it slightly more
+// readable.
+namespace Sig = ::jwt::algorithm;
+
 std::string rand_key(int bits)
 {
     std::string key;
     key.resize(bits / 8);
     RAND_bytes((uint8_t*)key.data(), key.size());
     return key;
+}
+
+std::string cert_cleanup(std::string cert)
+{
+    // Remove any extra data that might be at the beginning of the certificate. The jwt-cpp library doesn't
+    // like it and ends up throwing errors for perfectly valid certificates that would otherwise be accepted
+    // by OpenSSL.
+
+    auto pos = cert.find("-----BEGIN ");
+
+    if (pos != std::string::npos)
+    {
+        auto first_line = cert.find_last_of('\n', pos);
+
+        if (first_line != std::string::npos)
+        {
+            cert = cert.substr(first_line + 1);
+        }
+    }
+
+    return cert;
 }
 
 // Abstract base class for signature creation and verification
@@ -216,11 +242,107 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
 
 struct ThisUnit
 {
-    std::mutex           lock;
-    std::unique_ptr<Jwt> jwt;
+    std::mutex               lock;
+    std::unique_ptr<Jwt>     jwt;
+    std::vector<std::string> extra_certs;
 };
 
 ThisUnit this_unit;
+
+template<class Algo, class Decoded>
+bool verify_with_alg(const std::string& issuer, Decoded& d)
+{
+    bool ok = false;
+
+    for (const auto& cert : this_unit.extra_certs)
+    {
+        try
+        {
+            ::jwt::verify().allow_algorithm(Algo {cert}).verify(d);
+
+            ok = true;
+            break;
+        }
+        catch (const std::exception& e)
+        {
+            MXB_DEBUG("JWT verify failed: %s", e.what());
+        }
+    }
+
+    return ok;
+}
+
+std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::string& token)
+{
+    bool ok = false;
+    std::string sub;
+
+    try
+    {
+        auto d = ::jwt::decode(token);
+        auto algo = d.get_algorithm();
+
+        if (algo == "RS256")
+        {
+            ok = verify_with_alg<Sig::rs256>(issuer, d);
+        }
+        else if (algo == "RS384")
+        {
+            ok = verify_with_alg<Sig::rs384>(issuer, d);
+        }
+        else if (algo == "RS512")
+        {
+            ok = verify_with_alg<Sig::rs512>(issuer, d);
+        }
+        else if (algo == "ES256")
+        {
+            ok = verify_with_alg<Sig::es256>(issuer, d);
+        }
+        else if (algo == "ES384")
+        {
+            ok = verify_with_alg<Sig::es384>(issuer, d);
+        }
+        else if (algo == "ES512")
+        {
+            ok = verify_with_alg<Sig::es512>(issuer, d);
+        }
+        else if (algo == "PS256")
+        {
+            ok = verify_with_alg<Sig::ps256>(issuer, d);
+        }
+        else if (algo == "PS384")
+        {
+            ok = verify_with_alg<Sig::ps384>(issuer, d);
+        }
+        else if (algo == "PS512")
+        {
+            ok = verify_with_alg<Sig::ps512>(issuer, d);
+        }
+        else if (algo == "EdDSA")
+        {
+            if (d.has_header_claim("crv") && d.get_header_claim("crv").as_string() == "Ed448")
+            {
+                ok = verify_with_alg<Sig::ed448>(issuer, d);
+            }
+            else
+            {
+                // Fall back to Ed25519 if the "crv" claim is not present
+                ok = verify_with_alg<Sig::ed25519>(issuer, d);
+            }
+        }
+
+        if (ok)
+        {
+            sub = d.get_subject();
+        }
+    }
+    catch (const std::exception& e)
+    {
+        MXB_INFO("Token verification failed: %s", e.what());
+    }
+
+    return {ok, sub};
+}
 }
 
 namespace maxscale
@@ -248,6 +370,21 @@ bool init()
         if (std::tie(cert, err) = mxb::load_file<std::string>(cnf.admin_ssl_cert); !err.empty())
         {
             MXB_ERROR("Failed to load REST API public certificate: %s", err.c_str());
+            return false;
+        }
+    }
+
+    std::vector<std::string> extra_certs;
+
+    for (auto path : cnf.admin_jwt_extra_certs)
+    {
+        if (auto [extra_cert, v_err] = mxb::load_file<std::string>(path); v_err.empty())
+        {
+            extra_certs.push_back(cert_cleanup(extra_cert));
+        }
+        else
+        {
+            MXB_ERROR("Failed to load JWT verification certificate: %s", err.c_str());
             return false;
         }
     }
@@ -281,58 +418,58 @@ bool init()
         {
         case mxs::JwtAlgo::HS256:
             check_key(key, 256);
-            jwt = make_jwt(::jwt::algorithm::hs256 {key.empty() ? rand_key(256) : key});
+            jwt = make_jwt(Sig::hs256 {key.empty() ? rand_key(256) : key});
             break;
 
         case mxs::JwtAlgo::HS384:
             check_key(key, 384);
-            jwt = make_jwt(::jwt::algorithm::hs384 {key.empty() ? rand_key(384) : key});
+            jwt = make_jwt(Sig::hs384 {key.empty() ? rand_key(384) : key});
             break;
 
         case mxs::JwtAlgo::HS512:
             check_key(key, 512);
-            jwt = make_jwt(::jwt::algorithm::hs512 {key.empty() ? rand_key(512) : key});
+            jwt = make_jwt(Sig::hs512 {key.empty() ? rand_key(512) : key});
             break;
 
         case mxs::JwtAlgo::RS256:
-            jwt = make_jwt(::jwt::algorithm::rs256 {cert, key});
+            jwt = make_jwt(Sig::rs256 {cert, key});
             break;
 
         case mxs::JwtAlgo::RS384:
-            jwt = make_jwt(::jwt::algorithm::rs384 {cert, key});
+            jwt = make_jwt(Sig::rs384 {cert, key});
             break;
 
         case mxs::JwtAlgo::RS512:
-            jwt = make_jwt(::jwt::algorithm::rs512 {cert, key});
+            jwt = make_jwt(Sig::rs512 {cert, key});
             break;
 
         case mxs::JwtAlgo::ES256:
-            jwt = make_jwt(::jwt::algorithm::es256 {cert, key});
+            jwt = make_jwt(Sig::es256 {cert, key});
             break;
 
         case mxs::JwtAlgo::ES384:
-            jwt = make_jwt(::jwt::algorithm::es384 {cert, key});
+            jwt = make_jwt(Sig::es384 {cert, key});
             break;
 
         case mxs::JwtAlgo::ES512:
-            jwt = make_jwt(::jwt::algorithm::es512 {cert, key});
+            jwt = make_jwt(Sig::es512 {cert, key});
             break;
 
         case mxs::JwtAlgo::PS256:
-            jwt = make_jwt(::jwt::algorithm::ps256 {cert, key});
+            jwt = make_jwt(Sig::ps256 {cert, key});
             break;
 
         case mxs::JwtAlgo::PS384:
-            jwt = make_jwt(::jwt::algorithm::ps384 {cert, key});
+            jwt = make_jwt(Sig::ps384 {cert, key});
             break;
 
         case mxs::JwtAlgo::PS512:
-            jwt = make_jwt(::jwt::algorithm::ps512 {cert, key});
+            jwt = make_jwt(Sig::ps512 {cert, key});
             break;
 
         case mxs::JwtAlgo::ED25519:
 #ifdef OPENSSL_1_1
-            jwt = make_jwt(::jwt::algorithm::ed25519 {cert, key});
+            jwt = make_jwt(Sig::ed25519 {cert, key});
 #else
             MXB_ERROR("ED25519 is not supported on this system.");
 #endif
@@ -340,7 +477,7 @@ bool init()
 
         case mxs::JwtAlgo::ED448:
 #ifdef OPENSSL_1_1
-            jwt = make_jwt(::jwt::algorithm::ed448 {cert, key});
+            jwt = make_jwt(Sig::ed448 {cert, key});
 #else
             MXB_ERROR("ED448 is not supported on this system.");
 #endif
@@ -354,6 +491,7 @@ bool init()
         if (jwt)
         {
             this_unit.jwt = std::move(jwt);
+            this_unit.extra_certs = std::move(extra_certs);
         }
     }
     catch (const std::exception& e)
@@ -373,7 +511,14 @@ std::string create(const std::string& issuer, const std::string& subject, int ma
 std::pair<bool, std::string> get_subject(const std::string& issuer, const std::string& token)
 {
     std::lock_guard guard(this_unit.lock);
-    return this_unit.jwt->get_subject(issuer, token);
+    auto [ok, sub] = this_unit.jwt->get_subject(issuer, token);
+
+    if (!ok)
+    {
+        std::tie(ok, sub) = verify_extra(issuer, token);
+    }
+
+    return {ok, sub};
 }
 }
 }
