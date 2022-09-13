@@ -286,15 +286,15 @@ export default {
             await this.updateServiceRelationship({
                 id: this.current_service.id,
                 type: type,
-                [type]: data,
+                data,
                 callback: this.fetchService,
             })
             switch (type) {
                 case 'filters':
-                    if (!isFilterDrag) await this.processingRelationshipTable('filters')
+                    if (!isFilterDrag) await this.processingRelationshipTable(type)
                     break
                 case 'servers':
-                    await this.processingRelationshipTable('servers')
+                    await this.processingRelationshipTable(type)
                     break
             }
         },
