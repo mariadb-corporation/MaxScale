@@ -2633,28 +2633,31 @@ static void add_function_field_usage(st_select_lex* select,
 
     if (!database && !table)
     {
-        List_iterator<Item> ilist(select->item_list);
-        Item* item2;
-
-        while (!column && (item2 = ilist++))
+        if (select)
         {
-            if (item2->type() == Item::FIELD_ITEM)
+            List_iterator<Item> ilist(select->item_list);
+            Item* item2;
+
+            while (!column && (item2 = ilist++))
             {
-                Item_field* field = (Item_field*)item2;
-
-                const char* s2;
-                size_t l2;
-                get_string_and_length(field->name, &s2, &l2);
-
-                if (l1 == l2)
+                if (item2->type() == Item::FIELD_ITEM)
                 {
-                    if (strncasecmp(s1, s2, l1) == 0)
-                    {
-                        get_string_and_length(field->orig_field_name, &s1, &l1);
-                        column = strndup(s1, l1);
+                    Item_field* field = (Item_field*)item2;
 
-                        table = field->orig_table_name;
-                        database = field->orig_db_name;
+                    const char* s2;
+                    size_t l2;
+                    get_string_and_length(field->name, &s2, &l2);
+
+                    if (l1 == l2)
+                    {
+                        if (strncasecmp(s1, s2, l1) == 0)
+                        {
+                            get_string_and_length(field->orig_field_name, &s1, &l1);
+                            column = strndup(s1, l1);
+
+                            table = field->orig_table_name;
+                            database = field->orig_db_name;
+                        }
                     }
                 }
             }
@@ -2965,9 +2968,11 @@ static void remove_surrounding_back_ticks(char* s)
     }
 }
 
-static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name)
+static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name, std::string* final_func_name)
 {
     bool rv = false;
+
+    *final_func_name = func_name;
 
     // We want to ignore functions that do not really appear as such in an
     // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
@@ -2977,13 +2982,17 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
         || (strcasecmp(func_name, "cast_as_datetime") == 0)
         || (strcasecmp(func_name, "cast_as_time") == 0)
         || (strcasecmp(func_name, "cast_as_signed") == 0)
-        || (strcasecmp(func_name, "cast_as_unsigned") == 0)
-        || (strcasecmp(func_name, "get_user_var") == 0)
-        || (strcasecmp(func_name, "get_system_var") == 0)
-        || (strcasecmp(func_name, "not") == 0)
-        || (strcasecmp(func_name, "collate") == 0)
-        || (strcasecmp(func_name, "set_user_var") == 0)
-        || (strcasecmp(func_name, "set_system_var") == 0))
+        || (strcasecmp(func_name, "cast_as_unsigned") == 0))
+    {
+        *final_func_name = "cast";
+        rv = false;
+    }
+    else if ((strcasecmp(func_name, "get_user_var") == 0)
+             || (strcasecmp(func_name, "get_system_var") == 0)
+             || (strcasecmp(func_name, "not") == 0)
+             || (strcasecmp(func_name, "collate") == 0)
+             || (strcasecmp(func_name, "set_user_var") == 0)
+             || (strcasecmp(func_name, "set_system_var") == 0))
     {
         rv = true;
     }
@@ -3134,8 +3143,10 @@ static void update_field_infos(parsing_info_t* pi,
 
             // We want to ignore functions that do not really appear as such in an
             // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
-            if (!should_function_be_ignored(pi, func_name))
+            std::string final_func_name;
+            if (!should_function_be_ignored(pi, func_name, &final_func_name))
             {
+                const char* s = func_name;
                 if (strcmp(func_name, "%") == 0)
                 {
                     // Embedded library silently changes "mod" into "%". We need to check
@@ -3173,8 +3184,12 @@ static void update_field_infos(parsing_info_t* pi,
                     // For whatever reason the name of "addtime" is returned as "add_time".
                     strcpy(func_name, "addtime");
                 }
+                else
+                {
+                    s = final_func_name.c_str();
+                }
 
-                add_function_info(pi, select, func_name, items, n_items);
+                add_function_info(pi, select, s, items, n_items);
             }
 
             for (size_t i = 0; i < n_items; ++i)
@@ -3429,6 +3444,49 @@ void collect_from_list(set<TABLE_LIST*>& seen, parsing_info_t* pi, SELECT_LEX* s
 
 }
 
+namespace
+{
+
+void add_value_func_item(parsing_info_t* pi, Item_func* func_item)
+{
+    const char* func_name = func_item->func_name();
+    std::string final_func_name;
+
+    if (!should_function_be_ignored(pi, func_name, &final_func_name))
+    {
+        Item** arguments = func_item->arguments();
+        auto argument_count = func_item->argument_count();
+
+        for (size_t i = 0; i < argument_count; ++i)
+        {
+            Item* argument = arguments[i];
+
+            switch (argument->type())
+            {
+            case Item::FIELD_ITEM:
+                {
+                    Item_field* field_argument = static_cast<Item_field*>(argument);
+
+                    add_field_info(pi, nullptr, field_argument, nullptr);
+                }
+                break;
+
+            case Item::FUNC_ITEM:
+                add_value_func_item(pi, static_cast<Item_func*>(argument));
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        add_function_info(pi, nullptr, final_func_name.c_str(),
+                          arguments, argument_count);
+    }
+}
+
+}
+
 int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
     *infos = NULL;
@@ -3598,21 +3656,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 {
                     if (item->type() == Item::FUNC_ITEM)
                     {
-                        Item_func* func_item = static_cast<Item_func*>(item);
-
-                        Item** arguments = func_item->arguments();
-
-                        for (size_t i = 0; i < func_item->argument_count(); ++i)
-                        {
-                            Item* argument = arguments[i];
-
-                            if (argument->type() == Item::FIELD_ITEM)
-                            {
-                                Item_field* field_argument = static_cast<Item_field*>(argument);
-
-                                add_field_info(pi, nullptr, field_argument, nullptr);
-                            }
-                        }
+                        add_value_func_item(pi, static_cast<Item_func*>(item));
                     }
 
                     item = it_list_item++;
