@@ -1364,11 +1364,12 @@ bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-bool ParamPath::is_valid(const value_type& value) const
+// static
+bool ParamPath::is_valid_path(uint32_t options, const value_type& value)
 {
     bool valid = false;
 
-    if (m_options & (W | R | X | F))
+    if (options & (W | R | X | F))
     {
         std::string buf;
 
@@ -1384,17 +1385,17 @@ bool ParamPath::is_valid(const value_type& value) const
         int mode = F_OK;
         int mask = 0;
 
-        if (m_options & W)
+        if (options & W)
         {
             mask |= S_IWUSR | S_IWGRP;
             mode |= W_OK;
         }
-        if (m_options & R)
+        if (options & R)
         {
             mask |= S_IRUSR | S_IRGRP;
             mode |= R_OK;
         }
-        if (m_options & X)
+        if (options & X)
         {
             mask |= S_IXUSR | S_IXGRP;
             mode |= X_OK;
@@ -1409,7 +1410,7 @@ bool ParamPath::is_valid(const value_type& value) const
             /** Save errno as we do a second call to `accept` */
             int er = errno;
 
-            if (access(buf.c_str(), F_OK) == 0 || (m_options & C) == 0)
+            if (access(buf.c_str(), F_OK) == 0 || (options & C) == 0)
             {
                 /**
                  * Path already exists and it doesn't have the requested access
@@ -1439,6 +1440,124 @@ bool ParamPath::is_valid(const value_type& value) const
     }
 
     return valid;
+}
+
+/**
+ * ParamPathList
+ */
+std::string ParamPathList::type() const
+{
+    return "pathlist";
+}
+
+std::string ParamPathList::to_string(const value_type& value) const
+{
+    return mxb::join(value, ":");
+}
+
+bool ParamPathList::from_string(const std::string& value_as_string,
+                                value_type* pValue,
+                                std::string* pMessage) const
+{
+    bool valid = true;
+    auto paths = mxb::strtok(value_as_string, ":");
+
+    for (const auto& path : paths)
+    {
+        if (ParamPath::is_valid_path(m_options, path))
+        {
+            pValue->push_back(path);
+        }
+        else
+        {
+            if (pMessage)
+            {
+                *pMessage = "Invalid path: " + path;
+            }
+
+            valid = false;
+            break;
+        }
+    }
+
+    return valid;
+}
+
+json_t* ParamPathList::to_json(const value_type& value) const
+{
+    json_t* arr;
+
+    if (value.empty())
+    {
+        arr = json_null();
+    }
+    else
+    {
+        arr = json_array();
+
+        for (const auto& path : value)
+        {
+            json_array_append_new(arr, json_string(path.c_str()));
+        }
+    }
+
+    return arr;
+}
+
+bool ParamPathList::from_json(const json_t* pJson, value_type* pValue,
+                              std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        rv = from_string(json_string_value(pJson), pValue, pMessage);
+    }
+    else if (json_is_array(pJson))
+    {
+        rv = true;
+
+        size_t i;
+        json_t* val;
+
+        json_array_foreach(pJson, i, val)
+        {
+            if (json_is_string(val))
+            {
+                std::string path = json_string_value(val);
+
+                if (ParamPath::is_valid_path(m_options, path))
+                {
+                    pValue->push_back(path);
+                }
+                else
+                {
+                    if (pMessage)
+                    {
+                        *pMessage = "Invalid path: " + path;
+                    }
+
+                    rv = false;
+                    break;
+                }
+            }
+            else
+            {
+                rv = false;
+
+                if (pMessage)
+                {
+                    *pMessage = "Expected a json string, but got a json "s + mxs::json_type_to_string(val);
+                }
+            }
+        }
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json string, but got a json "s + mxs::json_type_to_string(pJson);
+    }
+
+    return rv;
 }
 
 /**

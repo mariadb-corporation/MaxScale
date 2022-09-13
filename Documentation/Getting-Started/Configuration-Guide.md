@@ -381,6 +381,18 @@ mask type enumeration:
 router_options=master,slave
 ```
 
+### Path Lists
+
+A `pathlist` type parameter expects one or more filesystem paths separated by
+colons. The value must not include space between the separators.
+
+Here is an example path list parameter that points to `/tmp/something.log` and
+`/var/log/maxscale/maxscale.log`:
+
+```
+path_list_parameter=/tmp/something.log:/var/log/maxscale/maxscale.log
+```
+
 ## Global Settings
 
 The global settings, in a section named `[MaxScale]`, allow various parameters

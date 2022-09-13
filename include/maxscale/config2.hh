@@ -1198,7 +1198,12 @@ public:
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
 
-    bool is_valid(const value_type& value) const;
+    bool is_valid(const value_type& value) const
+    {
+        return is_valid_path(m_options, value);
+    }
+
+    static bool is_valid_path(uint32_t options, const value_type& value);
 
 private:
     ParamPath(Specification* pSpecification,
@@ -1210,6 +1215,52 @@ private:
               value_type default_value)
         : ConcreteParam<ParamPath, std::string>(pSpecification, zName, zDescription,
                                                 modifiable, kind, default_value)
+        , m_options(options)
+    {
+    }
+
+private:
+    uint32_t m_options;
+};
+
+/**
+ * ParamPathList
+ */
+class ParamPathList : public ConcreteParam<ParamPathList, std::vector<std::string>>
+{
+public:
+
+    using Options = ParamPath::Options;
+
+    ParamPathList(Specification* pSpecification, const char* zName, const char* zDescription,
+                  uint32_t options, Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamPathList(pSpecification, zName, zDescription, modifiable,
+                        Param::MANDATORY, options, value_type())
+    {
+    }
+
+    ParamPathList(Specification* pSpecification, const char* zName, const char* zDescription,
+                  uint32_t options, value_type default_value, Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamPathList(pSpecification, zName, zDescription, modifiable,
+                        Param::OPTIONAL, options, default_value)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(const value_type& value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(const value_type& value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    ParamPathList(Specification* pSpecification, const char* zName, const char* zDescription,
+                  Modifiable modifiable, Kind kind, uint32_t options, value_type default_value)
+        : ConcreteParam<ParamPathList, std::vector<std::string>>(pSpecification, zName, zDescription,
+                                                                 modifiable, kind, default_value)
         , m_options(options)
     {
     }
@@ -3045,6 +3096,11 @@ using Module = ConcreteType<ParamModule>;
  * Path
  */
 using Path = ConcreteType<ParamPath>;
+
+/**
+ * PathList
+ */
+using PathList = ConcreteType<ParamPathList>;
 
 /**
  * Regex
