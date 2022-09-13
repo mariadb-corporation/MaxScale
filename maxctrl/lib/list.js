@@ -56,6 +56,11 @@ const list_servers_fields = [
     path: "attributes.gtid_current_pos",
     description: "Current value of @@gtid_current_pos",
   },
+  {
+    name: "Monitor",
+    path: "relationships.monitors.data[0].id",
+    description: "The monitor for this server",
+  },
 ];
 
 const list_services_fields = [
