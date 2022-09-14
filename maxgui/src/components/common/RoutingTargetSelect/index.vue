@@ -17,11 +17,12 @@
                 bottom: true,
                 offsetY: true,
             }"
-            :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
-            required
             @change="onChangeRoutingTarget"
         />
-        <label class="mt-4 field__label color text-small-text d-block">
+        <label
+            class="field__label color text-small-text d-block"
+            :class="{ 'mt-2': hasPaddingBetweenInputs }"
+        >
             {{ specifyRoutingTargetsLabel }}
         </label>
         <select-dropdown
@@ -59,13 +60,15 @@ export default {
     props: {
         value: { type: [Array, Object], required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
-        routingTarget: { type: String, default: '' }, // sync
+        defRoutingTarget: { type: String, default: 'servers' },
         routerId: { type: String, default: '' }, // the id of the MaxScale object being altered
+        hasPaddingBetweenInputs: { type: Boolean, default: false },
     },
     data() {
         return {
-            allTargetsMap: [],
+            allTargetsMap: {},
             itemsList: [],
+            chosenTarget: '',
         }
     },
     computed: {
@@ -75,14 +78,6 @@ export default {
             },
             set(v) {
                 this.$emit('input', v)
-            },
-        },
-        chosenTarget: {
-            get() {
-                return this.routingTarget
-            },
-            set(v) {
-                this.$emit('update:routingTarget', v)
             },
         },
         allowMultiple() {
@@ -134,15 +129,19 @@ export default {
     watch: {
         chosenTarget: {
             handler() {
-                this.itemsList = this.chosenRelationshipTypes.reduce((arr, type) => {
-                    arr = [...arr, ...this.allTargetsMap[type]]
-                    return arr
-                }, [])
+                this.assignItemList()
+            },
+        },
+        defRoutingTarget: {
+            immediate: true,
+            handler(v) {
+                if (v) this.chosenTarget = v
             },
         },
     },
     async created() {
         this.allTargetsMap = await this.getAllTargetsMap()
+        this.assignItemList()
     },
     methods: {
         ...mapActions({ getResourceState: 'getResourceState' }),
@@ -165,6 +164,12 @@ export default {
                 ]
             }
             return map
+        },
+        assignItemList() {
+            this.itemsList = this.chosenRelationshipTypes.reduce((arr, type) => {
+                arr = [...arr, ...this.$typy(this.allTargetsMap, `${[type]}`).safeArray]
+                return arr
+            }, [])
         },
         onChangeRoutingTarget() {
             this.selectedItems = []

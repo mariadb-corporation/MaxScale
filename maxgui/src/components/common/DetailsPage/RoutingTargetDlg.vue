@@ -4,8 +4,9 @@
             <routing-target-select
                 v-model="selectedItems"
                 :routerId="routerId"
-                :routingTarget.sync="routingTarget"
+                :defRoutingTarget="defRoutingTarget"
                 :defaultItems="defaultItems"
+                hasPaddingBetweenInputs
                 @has-changed="hasChanged = $event"
             />
         </template>
@@ -39,7 +40,7 @@ export default {
     data() {
         return {
             hasChanged: false,
-            routingTarget: '',
+            defRoutingTarget: '',
             selectedItems: [],
             defaultItems: [],
         }
@@ -74,10 +75,10 @@ export default {
     },
     methods: {
         assignDefRoutingTargets() {
-            this.routingTarget = this.initialRoutingTarget || 'servers'
+            this.defRoutingTarget = this.initialRoutingTarget || 'servers'
             const initialItems = [].concat(...Object.values(this.initialRoutingTargetHash))
             this.defaultItems =
-                this.routingTarget === 'cluster'
+                this.defRoutingTarget === 'cluster'
                     ? this.$typy(initialItems, '[0]').safeObjectOrEmpty
                     : initialItems
         },

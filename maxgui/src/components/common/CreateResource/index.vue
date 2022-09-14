@@ -65,7 +65,6 @@
                     <service-form-input
                         ref="formService"
                         :resourceModules="resourceModules"
-                        :allServers="all_servers"
                         :allFilters="all_filters"
                         :defaultItems="defaultRelationshipItems"
                     />
@@ -243,7 +242,6 @@ export default {
                         this.resourceModules = this.getModuleType('Router')
                         await this.fetchAllServices()
                         this.validateInfo = this.getAllServicesInfo
-                        await this.fetchAllServers()
                         await this.fetchAllFilters()
                         this.setDefaultRelationship({
                             allResourcesMap: this.getAllServersMap,

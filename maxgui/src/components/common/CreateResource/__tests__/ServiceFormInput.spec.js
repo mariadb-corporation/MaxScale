@@ -42,7 +42,7 @@ const mockupResourceModules = [
     },
 ]
 
-const getServersListStub = () => dummy_all_servers.map(({ id, type }) => ({ id, type }))
+const routingTargetItemsStub = dummy_all_servers.map(({ id, type }) => ({ id, type }))
 
 describe('ServiceFormInput.vue', () => {
     let wrapper
@@ -52,8 +52,12 @@ describe('ServiceFormInput.vue', () => {
             component: ServiceFormInput,
             propsData: {
                 resourceModules: mockupResourceModules,
-                allServers: dummy_all_servers,
                 allFilters: dummy_all_filters,
+            },
+            data() {
+                return {
+                    routingTargetItems: routingTargetItemsStub,
+                }
             },
         })
     })
@@ -68,39 +72,23 @@ describe('ServiceFormInput.vue', () => {
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 
-    it(`Should have two resource-relationships components`, () => {
-        const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
-        expect(resourceRelationships.length).to.be.equals(2)
-    })
-
-    it(`Should pass the following props and have ref to servers resource-relationships`, () => {
-        const resourceRelationships = wrapper
-            .findAllComponents({ name: 'resource-relationships' })
-            .at(0)
-        // props
-        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
-        expect(relationshipsType).to.be.equals('servers')
-        expect(items).to.be.deep.equals(wrapper.vm.serversList)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultServerItems)
-        //ref
-        expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
+    it(`Should pass the following props to routing-target-select`, () => {
+        const routingTargetSelect = wrapper.findComponent({ name: 'routing-target-select' })
+        const { value, routingTarget, defaultItems } = routingTargetSelect.vm.$props
+        expect(value).to.be.deep.equals(wrapper.vm.$data.routingTargetItems)
+        expect(routingTarget).to.be.equals(wrapper.vm.$data.routingTarget)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defRoutingTargetItems)
     })
 
     it(`Should pass the following props and have ref to filter resource-relationships`, () => {
-        const resourceRelationships = wrapper
-            .findAllComponents({ name: 'resource-relationships' })
-            .at(1)
+        const resourceRelationship = wrapper.findComponent({ name: 'resource-relationships' })
         // props
-        const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
+        const { relationshipsType, items, defaultItems } = resourceRelationship.vm.$props
         expect(relationshipsType).to.be.equals('filters')
         expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultFilterItems)
         expect(items).to.be.deep.equals(wrapper.vm.filtersList)
         //ref
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
-    })
-
-    it(`Should compute serversList from allServers accurately`, () => {
-        expect(wrapper.vm.serversList).to.be.deep.equals(getServersListStub())
     })
 
     it(`Should compute filtersList from allFilters accurately`, () => {
@@ -120,17 +108,15 @@ describe('ServiceFormInput.vue', () => {
         await inputChangeMock(parameterCell, newValue)
 
         // mockup service relationships changes
-        const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
-        const serversList = wrapper.vm.serversList // get serversList from computed property
+        const resourceRelationship = wrapper.findComponent({ name: 'resource-relationships' })
         const filtersList = wrapper.vm.filtersList // get filtersList from computed property
-        await itemSelectMock(resourceRelationships.at(0), serversList[0])
-        await itemSelectMock(resourceRelationships.at(1), filtersList[0])
+        await itemSelectMock(resourceRelationship, filtersList[0])
 
         const expectedValue = {
             moduleId: mockupResourceModules[0].id,
             parameters: { [serviceParameter.name]: newValue },
             relationships: {
-                servers: { data: [getServersListStub()[0]] },
+                servers: { data: routingTargetItemsStub },
                 filters: { data: [getFilterListStub[0]] },
             },
         }
