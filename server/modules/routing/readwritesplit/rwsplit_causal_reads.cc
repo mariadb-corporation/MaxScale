@@ -333,5 +333,6 @@ GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
         rval = modutil_create_ok();
     }
 
+    gwbuf_free(buffer);
     return rval;
 }

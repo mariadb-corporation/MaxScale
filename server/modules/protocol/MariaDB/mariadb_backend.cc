@@ -788,6 +788,10 @@ void MariaDBBackendConnection::normal_read()
 
         if (session_ok_to_route(m_dcb))
         {
+            // This keeps the row data in the mxs::Reply valid for the whole clientReply call even if the
+            // buffer is freed by a router or a filter.
+            GWBUF tmp_for_row_data(m_collect_rows ? *stmt : GWBUF {});
+
             thread_local mxs::ReplyRoute route;
             route.clear();
             m_upstream->clientReply(stmt, route, m_reply);
