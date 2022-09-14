@@ -1174,7 +1174,6 @@ bool RWSplitSession::need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) con
     return m_config.causal_reads == CausalReads::UNIVERSAL
            && plan.route_target == TARGET_SLAVE
            && m_wait_gtid == NONE
-           && m_state != TRX_REPLAY
            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE)
            && (route_info().type_mask() & (QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)) == 0;
 }
