@@ -14,7 +14,7 @@ using std::endl;
 struct TestCase
 {
     const char* description;
-    void        (* func)(TestConnections&, std::ostream&);
+    void        (* func)(TestConnections&);
 };
 
 TestConnections* global_test;
@@ -35,9 +35,9 @@ void change_master(int next, int current)
     test.maxscale->wait_for_monitor();
 }
 
-void test_replaced_master(TestConnections& test, std::ostream& out)
+void test_replaced_master(TestConnections& test)
 {
-    out << "Sanity check that reads and writes work" << endl;
+    test.log_printf("Sanity check that reads and writes work");
     test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
@@ -45,14 +45,14 @@ void test_replaced_master(TestConnections& test, std::ostream& out)
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor();
 
-    out << "Reads should still work even if no master is available" << endl;
+    test.log_printf("Reads should still work even if no master is available");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.repl->unblock_node(0);
     change_master(1, 0);
     test.maxscale->wait_for_monitor();
 
-    out << "Reads and writes after master change should work" << endl;
+    test.log_printf("Reads and writes after master change should work");
     test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (2)");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
@@ -60,20 +60,20 @@ void test_replaced_master(TestConnections& test, std::ostream& out)
     change_master(0, 1);
 }
 
-void test_new_master(TestConnections& test, std::ostream& out)
+void test_new_master(TestConnections& test)
 {
-    out << "Block the master before connecting" << endl;
+    test.log_printf("Block the master before connecting");
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor();
 
-    out << "Connect and check that read-only mode works" << endl;
+    test.log_printf("Connect and check that read-only mode works");
     test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     change_master(1, 0);
     test.maxscale->wait_for_monitor(2);
 
-    out << "Both reads and writes after master change should work" << endl;
+    test.log_printf("Both reads and writes after master change should work");
     test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (2)");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
@@ -82,9 +82,9 @@ void test_new_master(TestConnections& test, std::ostream& out)
     change_master(0, 1);
 }
 
-void test_master_failure(TestConnections& test, std::ostream& out)
+void test_master_failure(TestConnections& test)
 {
-    out << "Sanity check that reads and writes work" << endl;
+    test.log_printf("Sanity check that reads and writes work");
     test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
@@ -92,10 +92,10 @@ void test_master_failure(TestConnections& test, std::ostream& out)
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor();
 
-    out << "Reads should still work even if no master is available" << endl;
+    test.log_printf("Reads should still work even if no master is available");
     test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
-    out << "Writes should fail" << endl;
+    test.log_printf("Writes should fail");
     int rc = execute_query_silent(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test.expect(rc != 0, "Write after master failure should fail");
 
@@ -124,11 +124,10 @@ int main(int argc, char** argv)
     for (auto& i : tests)
     {
         std::stringstream out;
-        test.tprintf("Running test: %s", i.description);
-        i.func(test, out);
-        if (test.global_result)
+        test.log_printf("Running test: %s", i.description);
+        i.func(test);
+        if (!test.ok())
         {
-            test.tprintf("Test '%s' failed: \n\n%s\n\n", i.description, out.str().c_str());
             break;
         }
     }
