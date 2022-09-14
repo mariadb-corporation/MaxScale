@@ -49,7 +49,6 @@
                 v-model="isRoutingTargetDlgOpened"
                 :title="dialogTitle"
                 :routerId="routerId"
-                :getRelationshipData="getRelationshipData"
                 :onSave="confirmEdit"
                 :initialRoutingTargetHash="initialRoutingTargetHash"
                 @selected-items="targetItems = $event"
@@ -82,7 +81,6 @@ export default {
     props: {
         tableRows: { type: Array, required: true },
         routerId: { type: String, required: true }, // the id of the MaxScale object being altered
-        getRelationshipData: { type: Function, required: true },
     },
     data() {
         return {

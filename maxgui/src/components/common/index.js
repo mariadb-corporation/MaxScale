@@ -31,6 +31,7 @@ import VirtualScrollTable from './VirtualScrollTable'
 import TruncateString from './TruncateString'
 import SubMenu from './SubMenu'
 import FilterList from './FilterList'
+import RoutingTargetSelect from './RoutingTargetSelect'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -51,4 +52,5 @@ export default {
     'truncate-string': TruncateString,
     'sub-menu': SubMenu,
     'filter-list': FilterList,
+    'routing-target-select': RoutingTargetSelect,
 }

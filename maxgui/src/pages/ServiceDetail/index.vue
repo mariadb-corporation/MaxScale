@@ -35,7 +35,6 @@
                                         <routing-target-table
                                             :routerId="current_service.id"
                                             :tableRows="routingTargetsTableRows"
-                                            :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
