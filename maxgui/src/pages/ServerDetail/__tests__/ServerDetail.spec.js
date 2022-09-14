@@ -259,7 +259,13 @@ describe('ServerDetail index', () => {
     it(`Should pass necessary props value to 'SERVICES' table`, () => {
         const servicesTable = wrapper.findComponent({ name: 'relationship-table' })
         expect(servicesTable.exists()).to.be.true
-        const { relationshipType, tableRows, getRelationshipData } = servicesTable.vm.$props
+        const {
+            relationshipType,
+            addable,
+            removable,
+            tableRows,
+            getRelationshipData,
+        } = servicesTable.vm.$props
 
         const {
             $data: { serviceTableRow },
@@ -267,6 +273,8 @@ describe('ServerDetail index', () => {
         } = wrapper.vm
 
         expect(relationshipType).to.be.equals('services')
+        expect(addable).to.be.true
+        expect(removable).to.be.true
         expect(tableRows).to.be.deep.equals(serviceTableRow)
         expect(getRelationshipData).to.be.equals(getRelationshipDataAsync)
     })

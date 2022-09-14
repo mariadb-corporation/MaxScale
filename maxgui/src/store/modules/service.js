@@ -146,30 +146,16 @@ export default {
 
         //-----------------------------------------------Service relationship update---------------------------------
         /**
-         * @param {Object} payload payload object
          * @param {String} payload.id Name of the service
-         * @param {Array} payload.servers servers array
-         * @param {Array} payload.filters filters array
+         * @param {Array} payload.data servers||filters||services||monitors array
          * @param {Object} payload.type Type of relationships
          * @param {Function} payload.callback callback function after successfully updated
          */
-        async updateServiceRelationship({ commit }, payload) {
+        async updateServiceRelationship({ commit }, { id, data, type, callback }) {
             try {
-                let res
-                let message
-
-                res = await this.vue.$http.patch(
-                    `/services/${payload.id}/relationships/${payload.type}`,
-                    {
-                        data: payload.type === 'servers' ? payload.servers : payload.filters,
-                    }
-                )
-                message = [
-                    `${this.vue.$helpers.capitalizeFirstLetter(payload.type)} relationships of ${
-                        payload.id
-                    } is updated`,
-                ]
-
+                let res, message
+                res = await this.vue.$http.patch(`/services/${id}/relationships/${type}`, { data })
+                message = [`Update ${id} relationships successfully`]
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -180,7 +166,7 @@ export default {
                         },
                         { root: true }
                     )
-                    await this.vue.$typy(payload.callback).safeFunction()
+                    await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-updateServiceRelationship')

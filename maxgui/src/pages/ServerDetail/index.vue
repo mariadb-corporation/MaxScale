@@ -32,6 +32,8 @@
                                     <v-col cols="12">
                                         <relationship-table
                                             relationshipType="services"
+                                            addable
+                                            removable
                                             :tableRows="serviceTableRow"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"

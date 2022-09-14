@@ -6,7 +6,6 @@
                 {{ $mxs_tc(entityName, multiple ? 2 : 1) }}
             </p>
             <mxs-select
-                ref="selectDropdown"
                 v-model="selectedItems"
                 :defaultItems="defaultItems"
                 :items="itemsList"
@@ -57,11 +56,8 @@ export default {
     },
     watch: {
         '$attrs.value'(v) {
-            if (v) {
-                this.$emit('on-open')
-                // set default hasChanged data
-                this.hasChanged = this.$refs.selectDropdown.hasChanged
-            } else this.selectedItems = []
+            if (v) this.$emit('on-open')
+            else this.selectedItems = []
         },
         selectedItems: {
             deep: true,

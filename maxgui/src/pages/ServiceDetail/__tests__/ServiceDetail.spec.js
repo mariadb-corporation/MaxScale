@@ -306,7 +306,8 @@ describe('ServiceDetail index', () => {
                         relationshipType,
                         tableRows,
                         getRelationshipData: getRelationshipDataProps,
-                        readOnly,
+                        addable,
+                        removable,
                     } = relationshipTable.vm.$props
                     const {
                         getRelationshipData,
@@ -318,10 +319,12 @@ describe('ServiceDetail index', () => {
 
                     if (name === 'listeners') {
                         expect(getRelationshipDataProps).to.be.undefined
-                        expect(readOnly).to.be.true
+                        expect(addable).to.be.true
+                        expect(removable).to.be.false
                     } else {
                         expect(getRelationshipDataProps).to.be.equals(getRelationshipData)
-                        expect(readOnly).to.be.false
+                        expect(addable).to.be.true
+                        expect(removable).to.be.true
                     }
                     switch (name) {
                         case 'servers':
