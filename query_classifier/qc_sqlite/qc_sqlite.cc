@@ -852,6 +852,24 @@ public:
         return truth;
     }
 
+    static bool is_pure_limit(const Expr* pExpr)
+    {
+        // When sqlite3 parses a statement like "DELETE FROM t WHERE a IN (...) LIMIT 1"
+        // the WHERE part appears to be an IN expression, but so do "DELETE FROM T LIMIT 1"
+        // and "DELETE FROM T WHERE a=2 LIMIT 2" appear to be.
+        // In the first case, "in" should be reported as a function that is used, but
+        // in the latter case it should not be.
+        // This function figures out whether we have a "DELETE FROM T LIMIT 1" kind
+        // of statement.
+        mxb_assert(pExpr->op == TK_IN);
+
+        return
+            pExpr->flags & EP_xIsSelect
+            && ((pExpr->x.pSelect->pLimit && !pExpr->x.pSelect->pWhere)
+                || (pExpr->x.pSelect->pLimit && pExpr->x.pSelect->pWhere
+                    && pExpr->x.pSelect->pWhere->op != TK_IN));
+    }
+
     void update_field_infos(QcAliases* pAliases,
                             uint32_t context,
                             int prev_token,
@@ -864,6 +882,7 @@ public:
         const char* zToken = pExpr->u.zToken;
 
         bool ignore_exprlist = false;
+        bool ignore_function = false;
 
         switch (pExpr->op)
         {
@@ -953,6 +972,8 @@ public:
         case TK_SELECT:
             switch (pExpr->op)
             {
+            case TK_IN:
+                ignore_function = is_pure_limit(pExpr);
             case TK_EQ:
             case TK_GE:
             case TK_GT:
@@ -966,7 +987,6 @@ public:
             case TK_CASE:
             case TK_CAST:
             case TK_DIV:
-            case TK_IN:
             case TK_ISNULL:
             case TK_MINUS:
             case TK_MOD:
@@ -975,30 +995,33 @@ public:
             case TK_SLASH:
             case TK_STAR:
                 {
-                    int i = update_function_info(pAliases,
-                                                 get_token_symbol(pExpr->op),
-                                                 pExclude);
-
-                    if (i != -1)
+                    if (!ignore_function)
                     {
-                        vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
+                        int i = update_function_info(pAliases,
+                                                     get_token_symbol(pExpr->op),
+                                                     pExclude);
 
-                        if (pExpr->pLeft)
+                        if (i != -1)
                         {
-                            update_function_fields(pAliases, pExpr->pLeft, pExclude, fields);
-                        }
+                            vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
 
-                        if (pExpr->pRight)
-                        {
-                            update_function_fields(pAliases, pExpr->pRight, pExclude, fields);
-                        }
+                            if (pExpr->pLeft)
+                            {
+                                update_function_fields(pAliases, pExpr->pLeft, pExclude, fields);
+                            }
 
-                        if (fields.size() != 0)
-                        {
-                            QC_FUNCTION_INFO& info = m_function_infos[i];
+                            if (pExpr->pRight)
+                            {
+                                update_function_fields(pAliases, pExpr->pRight, pExclude, fields);
+                            }
 
-                            info.fields = &fields[0];
-                            info.n_fields = fields.size();
+                            if (fields.size() != 0)
+                            {
+                                QC_FUNCTION_INFO& info = m_function_infos[i];
+
+                                info.fields = &fields[0];
+                                info.n_fields = fields.size();
+                            }
                         }
                     }
                 }
@@ -1115,7 +1138,10 @@ public:
                         case TK_BETWEEN:
                         case TK_CASE:
                         case TK_IN:
-                            zName = get_token_symbol(pExpr->op);
+                            if (!ignore_function)
+                            {
+                                zName = get_token_symbol(pExpr->op);
+                            }
                             break;
                         }
 
@@ -1123,7 +1149,6 @@ public:
                         {
                             mxb_assert(pAliases);
                             update_field_infos_from_subselect(*pAliases, context, pExpr->x.pSelect, pExclude);
-
 
                             if (zName)
                             {
