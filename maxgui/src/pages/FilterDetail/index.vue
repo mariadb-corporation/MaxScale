@@ -17,8 +17,6 @@
                             <relationship-table
                                 relationshipType="services"
                                 :tableRows="serviceTableRow"
-                                readOnly
-                                :addable="false"
                             />
                         </v-col>
                         <v-col v-if="!$typy(filter_diagnostics).isEmptyObject" cols="12">

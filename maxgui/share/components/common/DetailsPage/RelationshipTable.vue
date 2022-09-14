@@ -4,8 +4,8 @@
         :isContentVisible="showTable"
         :title="`${$mxs_tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="isAdmin && !readOnly && addable ? onAdd : null"
-        :addBtnText="isAdmin && !readOnly && addable ? addBtnText : ''"
+        :onAddClick="isAdmin && addable ? onAdd : null"
+        :addBtnText="isAdmin && addable ? addBtnText : ''"
     >
         <data-table
             :search="search_keyword"
@@ -14,7 +14,7 @@
             :noDataText="$mxs_t('noEntity', { entityName: $mxs_tc(relationshipType, 2) })"
             sortBy=""
             :loading="isLoading"
-            :showActionsOnHover="!readOnly"
+            :showActionsOnHover="removable"
             :draggable="relationshipType === 'filters'"
             :hasOrderNumber="relationshipType === 'filters'"
             showAll
@@ -34,7 +34,7 @@
                     {{ relationshipType }}
                 </icon-sprite-sheet>
             </template>
-            <template v-if="isAdmin && !readOnly" v-slot:actions="{ data: { item } }">
+            <template v-if="isAdmin && removable" v-slot:actions="{ data: { item } }">
                 <v-btn icon @click="onDelete(item)">
                     <v-icon size="20" color="error">
                         $vuetify.icons.mxs_unlink
@@ -44,16 +44,16 @@
         </data-table>
         <!-- Available dialogs for editable table -->
         <mxs-conf-dlg
-            v-if="!readOnly"
+            v-if="removable"
             v-model="isConfDlgOpened"
             :title="dialogTitle"
             :saveText="deleteDialogType"
             :type="deleteDialogType"
-            :item="Array.isArray(targetItem) ? {} : targetItem"
+            :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
             :onSave="confirmDelete"
         />
         <mxs-sel-dlg
-            v-if="!readOnly"
+            v-if="addable"
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
             saveText="add"
@@ -61,7 +61,7 @@
             :entityName="relationshipType"
             :itemsList="itemsList"
             :onSave="confirmAdd"
-            @selected-items="targetItem = $event"
+            @selected-items="targetItems = $event"
             @on-open="getAllEntities"
         />
     </mxs-collapse>
@@ -101,10 +101,10 @@ export default {
     props: {
         relationshipType: { type: String, required: true }, // servers, services, filters
         tableRows: { type: Array, required: true },
-        readOnly: { type: Boolean, default: false },
-        addable: { type: Boolean, default: true },
+        removable: { type: Boolean, default: false },
+        addable: { type: Boolean, default: false },
         selectItems: { type: Array },
-        //below props are required only when readOnly is false.
+        //below props are required only when removable is true.
         getRelationshipData: { type: Function },
     },
     data() {
@@ -122,7 +122,7 @@ export default {
 
             //---------------- common
             dialogTitle: '',
-            targetItem: null,
+            targetItems: [],
             //delete dialog
             deleteDialogType: 'delete',
             //select dialog
@@ -161,7 +161,7 @@ export default {
     watch: {
         getRelationshipData: {
             handler(value) {
-                if (!this.readOnly && !this.$typy(value).isFunction)
+                if (this.removable && !this.$typy(value).isFunction)
                     this.logger.error("property 'getRelationshipData' is required.")
             },
             immediate: true,
@@ -227,27 +227,20 @@ export default {
         },
         // -------------- Delete handle
         onDelete(item) {
-            this.targetItem = item
+            this.targetItems = [item]
             this.deleteDialogType = 'unlink'
             this.dialogTitle = `${this.$mxs_t('unlink')} ${this.$mxs_tc(this.relationshipType, 1)}`
             this.isConfDlgOpened = true
         },
 
         async confirmDelete() {
-            const rows = this.$helpers.lodash.cloneDeep(this.tableRowsData)
-            let relationship = []
-            rows.forEach(item => {
-                if (item.id !== this.targetItem.id) {
-                    delete item.state
-                    delete item.attributes
-                    delete item.index
-                    delete item.links
-                    relationship.push(item)
-                }
-            })
-            await this.$emit('on-relationship-update', {
+            this.$emit('on-relationship-update', {
                 type: this.relationshipType,
-                data: relationship,
+                data: this.tableRowsData.reduce((arr, row) => {
+                    if (this.targetItems.some(item => item.id !== row.id))
+                        arr.push({ id: row.id, type: row.type })
+                    return arr
+                }, []),
             })
         },
 
@@ -277,18 +270,21 @@ export default {
             else this.$emit('open-listener-form-dialog')
         },
 
+        /**
+         * @param {Array} arr - array of object, each object must have id and type attributes
+         * @returns {Array} - returns valid relationship array data
+         */
+        formatRelationshipData(arr) {
+            return arr.map(item => ({ id: item.id, type: item.type }))
+        },
+
         async confirmAdd() {
-            const rows = this.$helpers.lodash.cloneDeep(this.tableRowsData)
-            let relationship = [...rows, ...this.targetItem]
-            relationship.forEach(item => {
-                delete item.state
-                delete item.attributes
-                delete item.index
-                delete item.links
-            })
-            await this.$emit('on-relationship-update', {
+            this.$emit('on-relationship-update', {
                 type: this.relationshipType,
-                data: relationship,
+                data: [
+                    ...this.formatRelationshipData(this.tableRowsData),
+                    ...this.formatRelationshipData(this.targetItems),
+                ],
             })
         },
     },

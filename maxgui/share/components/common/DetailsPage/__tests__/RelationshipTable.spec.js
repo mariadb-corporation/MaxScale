@@ -90,7 +90,7 @@ const dummyAllServicesState = [
     },
 ]
 
-describe('RelationshipTable.vue with readOnly mode and not addable', () => {
+describe('RelationshipTable.vue without removable and addable ability', () => {
     let wrapper
     beforeEach(() => {
         wrapper = mount({
@@ -99,7 +99,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
             propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
-                readOnly: true,
+                removable: false,
                 addable: false,
             },
             computed: {
@@ -108,12 +108,11 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         })
     })
 
-    it(`Should not render 'add button' when readOnly is true`, () => {
+    it(`Should not render 'add button'`, () => {
         expect(wrapper.find('.add-btn').exists()).to.be.false
     })
 
-    it(`Should not render mxs-conf-dlg and mxs-sel-dlg components if
-      readOnly is true and addable is false`, () => {
+    it(`Should not render mxs-conf-dlg and mxs-sel-dlg components`, () => {
         expect(wrapper.findComponent({ name: 'mxs-conf-dlg' }).exists()).to.be.false
         expect(wrapper.findComponent({ name: 'mxs-sel-dlg' }).exists()).to.be.false
     })
@@ -168,7 +167,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
 
 const getRelationshipDataStub = () => dummyAllServicesState
 
-describe('RelationshipTable.vue with editable and addable mode', () => {
+describe('RelationshipTable.vue with removable and addable ability', () => {
     let wrapper, loggerSpy, getRelationshipDataSpy
     beforeEach(() => {
         loggerSpy = sinon.spy(RelationshipTable.computed, 'logger')
@@ -178,7 +177,8 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
             propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
-                readOnly: false,
+                removable: true,
+                addable: true,
                 getRelationshipData: getRelationshipDataStub,
             },
             computed: {
@@ -192,7 +192,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         RelationshipTable.computed.logger.restore()
     })
 
-    it(`When readOnly is false, should throw error if getRelationshipData
+    it(`When removable is true, should throw error if getRelationshipData
       props is not defined`, () => {
         wrapper = mount({
             shallow: false,
@@ -201,7 +201,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
                 relationshipType: 'services',
                 loading: false,
                 tableRows: serviceStateTableRowsStub,
-                readOnly: false,
+                removable: true,
             },
         })
         loggerSpy.should.have.been.calledOnce
@@ -290,9 +290,15 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         let itemToBeAdded = wrapper.vm.itemsList[0]
         let count = 0
         wrapper.vm.$on('on-relationship-update', ({ type, data }) => {
-            expect(data)
-                .to.be.an('array')
-                .that.include(itemToBeAdded)
+            expect(
+                data.some(item =>
+                    wrapper.vm.$helpers.lodash.isEqual(item, {
+                        id: itemToBeAdded.id,
+                        type: itemToBeAdded.type,
+                    })
+                )
+            ).to.be.true
+
             data.forEach(item => {
                 expect(item).to.be.an('object')
                 expect(item).to.be.have.all.keys('id', 'type')
