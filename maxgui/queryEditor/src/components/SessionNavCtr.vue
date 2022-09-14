@@ -83,10 +83,10 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
-import SessionNavToolbar from './SessionNavToolbar.container.vue'
+import SessionNavToolbarCtr from './SessionNavToolbarCtr.vue'
 export default {
     name: 'session-nav-ctr',
-    components: { 'session-nav-toolbar-ctr': SessionNavToolbar },
+    components: { SessionNavToolbarCtr },
     props: {
         txtEditorToolbarRef: { type: Object, required: true },
         height: { type: Number, required: true },

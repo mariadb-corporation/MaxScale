@@ -86,20 +86,20 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
-import Sidebar from './Sidebar.container.vue'
-import DDLEditor from './DDLEditor.container.vue'
-import TxtEditor from './TxtEditor.container.vue'
-import SessionNav from './SessionNav.container.vue'
+import SidebarCtr from './SidebarCtr.vue'
+import DdlEditorCtr from './DdlEditorCtr.vue'
+import TxtEditorCtr from './TxtEditorCtr.vue'
+import SessionNavCtr from './SessionNavCtr.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 
 export default {
     name: 'wke-ctr',
     components: {
-        'sidebar-ctr': Sidebar,
-        'txt-editor-ctr': TxtEditor,
-        'ddl-editor-ctr': DDLEditor,
-        'session-nav-ctr': SessionNav,
-        'execute-sql-dialog': ExecuteSqlDialog,
+        SidebarCtr,
+        TxtEditorCtr,
+        DdlEditorCtr,
+        SessionNavCtr,
+        ExecuteSqlDialog,
     },
     props: {
         ctrDim: { type: Object, required: true },

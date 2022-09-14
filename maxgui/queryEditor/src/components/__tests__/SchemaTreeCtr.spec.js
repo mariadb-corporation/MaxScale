@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import SchemaTree from '../SchemaTree.container.vue'
+import SchemaTree from '../SchemaTreeCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

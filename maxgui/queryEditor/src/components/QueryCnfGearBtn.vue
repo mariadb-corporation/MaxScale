@@ -35,10 +35,10 @@
  * Public License.
  */
 
-import QueryCnfDlg from './QueryCnfDlg.container.vue'
+import QueryCnfDlgCtr from './QueryCnfDlgCtr.vue'
 export default {
     name: 'query-cnf-gear-btn',
-    components: { 'query-cnf-dlg-ctr': QueryCnfDlg },
+    components: { QueryCnfDlgCtr },
     data() {
         return { queryConfigDialog: false }
     },

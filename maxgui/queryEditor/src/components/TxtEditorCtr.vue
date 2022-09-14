@@ -97,20 +97,20 @@
  * Public License.
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
-import TxtEditorToolbar from './TxtEditorToolbar.container.vue'
+import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
-import QueryResult from './QueryResult.container.vue'
+import QueryResultCtr from './QueryResultCtr.vue'
 import ChartConfig from './ChartConfig'
 import ChartPane from './ChartPane'
 
 export default {
     name: 'txt-editor-ctr',
     components: {
-        'txt-editor-toolbar-ctr': TxtEditorToolbar,
+        TxtEditorToolbarCtr,
         'sql-editor': SqlEditor,
-        'query-result-ctr': QueryResult,
-        'chart-config': ChartConfig,
-        'chart-pane': ChartPane,
+        QueryResultCtr,
+        ChartConfig,
+        ChartPane,
     },
     props: {
         dim: { type: Object, required: true },

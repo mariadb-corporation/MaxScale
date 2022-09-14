@@ -40,14 +40,14 @@
  * update:execSqlDlg?: (object)
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
-import DDLEditorForm from './DDLEditorForm.container.vue'
-import DDLEditorToolbar from './DDLEditorToolbar.vue'
+import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
+import DdlEditorToolbar from './DdlEditorToolbar.vue'
 
 export default {
     name: 'ddl-editor-ctr',
     components: {
-        'ddl-editor-form-ctr': DDLEditorForm,
-        'ddl-editor-toolbar': DDLEditorToolbar,
+        DdlEditorFormCtr,
+        DdlEditorToolbar,
     },
     props: {
         dim: { type: Object, required: true },

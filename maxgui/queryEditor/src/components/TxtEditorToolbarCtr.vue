@@ -193,16 +193,16 @@
  */
 
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
-import RowLimit from './RowLimit.container.vue'
+import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
-import LoadSql from './LoadSql.container.vue'
+import LoadSqlCtr from './LoadSqlCtr.vue'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
     components: {
-        'row-limit-ctr': RowLimit,
+        RowLimitCtr,
         'readonly-sql-editor': SqlEditor,
-        'load-sql-ctr': LoadSql,
+        LoadSqlCtr,
     },
     props: {
         session: { type: Object, required: true },

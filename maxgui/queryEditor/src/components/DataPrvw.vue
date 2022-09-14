@@ -64,14 +64,14 @@
  */
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
-import DataPrvwNav from './DataPrvwNav.container.vue'
+import DataPrvwNavCtr from './DataPrvwNavCtr.vue'
 
 export default {
     name: 'data-prvw',
     components: {
         ResultDataTable,
         DurationTimer,
-        'data-prvw-nav-ctr': DataPrvwNav,
+        DataPrvwNavCtr,
     },
     props: {
         dynDim: {

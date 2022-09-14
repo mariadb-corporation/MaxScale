@@ -12,9 +12,9 @@
  */
 
 import mount from '@tests/unit/setup'
-import WkeNav from '../WkeNav.container.vue'
+import WkeNavCtr from '../WkeNavCtr.vue'
 
-const mountFactory = opts => mount({ shallow: false, component: WkeNav, ...opts })
+const mountFactory = opts => mount({ shallow: false, component: WkeNavCtr, ...opts })
 
 describe('wke-nav-ctr', () => {
     let wrapper

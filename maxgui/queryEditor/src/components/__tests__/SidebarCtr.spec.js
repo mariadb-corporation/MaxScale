@@ -12,12 +12,12 @@
  */
 
 import mount from '@tests/unit/setup'
-import Sidebar from '../Sidebar.container.vue'
+import SidebarCtr from '../SidebarCtr.vue'
 
 const mountFactory = opts =>
     mount({
         shallow: true,
-        component: Sidebar,
+        component: SidebarCtr,
         stubs: {
             'sql-editor': "<div class='stub'></div>",
         },
@@ -49,7 +49,7 @@ describe('sidebar-ctr', () => {
         const onTruncateTblParam = 't1'
         Object.keys(fnEvtMap).forEach(key => {
             it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar`, () => {
-                const spyFn = sinon.spy(Sidebar.methods, key)
+                const spyFn = sinon.spy(SidebarCtr.methods, key)
                 wrapper = mountFactory({
                     computed: { ...mockShowingDbListTree() },
                 })

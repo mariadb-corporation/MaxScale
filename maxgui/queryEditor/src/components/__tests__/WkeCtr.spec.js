@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Wke from '../Wke.container.vue'
+import WkeCtr from '../WkeCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }
@@ -22,7 +22,7 @@ const mountFactory = opts =>
         lodash.merge(
             {
                 shallow: true,
-                component: Wke,
+                component: WkeCtr,
                 propsData: {
                     ctrDim: dummyCtrDim,
                 },

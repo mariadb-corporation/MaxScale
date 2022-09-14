@@ -228,12 +228,12 @@ and `min-max-btn` are importable.
 </template>
 
 <script>
-import { MinMaxBtn, QueryCnfGearBtn } from 'mxs-query-editor'
+import { MinMaxBtnCtr, QueryCnfGearBtn } from 'mxs-query-editor'
 export default {
     name: 'query-page',
     components: {
         QueryCnfGearBtn,
-        MinMaxBtn,
+        MinMaxBtnCtr,
     },
     async beforeRouteLeave(to, from, next) {
         this.$refs.mxsQueryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)

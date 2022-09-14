@@ -97,10 +97,10 @@
  * $emit('toggle-sidebar')
  * $emit('set-search-schema', v?: string)
  */
-import SchemaTree from './SchemaTree.container.vue'
+import SchemaTreeCtr from './SchemaTreeCtr.vue'
 export default {
     name: 'sidebar',
-    components: { 'schema-tree-ctr': SchemaTree },
+    components: { SchemaTreeCtr },
     props: {
         disabled: { type: Boolean, required: true },
         isCollapsed: { type: Boolean, required: true },

@@ -109,14 +109,14 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
-import ConnDlg from './ConnDlg.container.vue'
-import ReconnDlg from './ReconnDlg.container.vue'
+import ConnDlgCtr from './ConnDlgCtr.vue'
+import ReconnDlgCtr from './ReconnDlgCtr.vue'
 
 export default {
     name: 'conn-man-ctr',
     components: {
-        'conn-dlg-ctr': ConnDlg,
-        'reconn-dlg-ctr': ReconnDlg,
+        ConnDlgCtr,
+        ReconnDlgCtr,
     },
     data() {
         return {

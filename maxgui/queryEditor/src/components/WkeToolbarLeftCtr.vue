@@ -30,7 +30,7 @@
  */
 import { mapActions, mapState } from 'vuex'
 export default {
-    name: 'wke-toolbar-left-btns-ctr',
+    name: 'wke-toolbar-left-ctr',
     computed: {
         ...mapState({ sql_conns: state => state.queryConn.sql_conns }),
         isAddWkeDisabled() {

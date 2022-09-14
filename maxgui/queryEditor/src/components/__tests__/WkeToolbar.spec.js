@@ -24,7 +24,7 @@ describe(`wke-toolbar - mounted hook and child component's interaction tests`, (
     it('Should emit get-total-btn-width evt', () => {
         expect(wrapper.emitted()).to.have.property('get-total-btn-width')
     })
-    const childComps = ['wke-toolbar-left-btns-ctr', 'wke-toolbar-right-btns']
+    const childComps = ['wke-toolbar-left-ctr', 'wke-toolbar-right']
     childComps.forEach(name => {
         it(`Should render ${name}`, () => {
             const comp = wrapper.findComponent({ name })

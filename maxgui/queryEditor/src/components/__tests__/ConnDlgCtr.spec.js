@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnDlg from '../ConnDlg.container.vue'
+import ConnDlgCtr from '../ConnDlgCtr.vue'
 import { lodash } from '@share/utils/helpers'
 import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
@@ -38,7 +38,7 @@ const mountFactory = opts =>
         lodash.merge(
             {
                 shallow: true,
-                component: ConnDlg,
+                component: ConnDlgCtr,
                 propsData: {
                     value: true, // open dialog by default
                     connOptions: [],
@@ -58,7 +58,7 @@ async function mockChangingBody({ wrapper, key, value }) {
     })
 }
 
-describe(`ConnDlg - child component's data communication tests `, () => {
+describe(`ConnDlgCtr - child component's data communication tests `, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory({
@@ -110,10 +110,10 @@ describe(`ConnDlg - child component's data communication tests `, () => {
         expect(errorMessages).to.be.equals(wrapper.vm.$data.errRsrcMsg)
     })
 })
-describe(`ConnDlg - dialog open/close side-effect tests`, () => {
+describe(`ConnDlgCtr - dialog open/close side-effect tests`, () => {
     let wrapper, handleFetchRsrcsSpy
     beforeEach(() => {
-        handleFetchRsrcsSpy = sinon.spy(ConnDlg.methods, 'handleFetchRsrcs')
+        handleFetchRsrcsSpy = sinon.spy(ConnDlgCtr.methods, 'handleFetchRsrcs')
         wrapper = mountFactory({
             methods: {
                 fetchRcTargetNames: () => null,
@@ -141,7 +141,7 @@ describe(`ConnDlg - dialog open/close side-effect tests`, () => {
         spy.should.have.been.calledOnceWith(null)
     })
 })
-describe(`ConnDlg - methods and computed properties tests `, () => {
+describe(`ConnDlgCtr - methods and computed properties tests `, () => {
     let wrapper
     it(`Should return accurate value for hasSavingErr computed property`, () => {
         const errStates = [true, false]
@@ -245,7 +245,7 @@ describe(`ConnDlg - methods and computed properties tests `, () => {
         })
     })
 })
-describe(`ConnDlg - form input tests`, () => {
+describe(`ConnDlgCtr - form input tests`, () => {
     let wrapper
     it(`Should parse value as number for timeout field`, async () => {
         wrapper = mountFactory({ shallow: false })
