@@ -70,11 +70,11 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
     // Route the query again later
     m_pSession->delay_routing(
         querybuf, delay, [this](GWBUF* buffer){
-            mxb_assert(m_pending_retries > 0);
-            --m_pending_retries;
+        mxb_assert(m_pending_retries > 0);
+        --m_pending_retries;
 
-            return route_query(buffer);
-        });
+        return route_query(buffer);
+    });
 
     ++m_retry_duration;
 
@@ -85,8 +85,8 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 bool RWSplitSession::have_connected_slaves() const
 {
     return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](auto b) {
-                           return b->is_slave() && b->in_use();
-                       });
+        return b->is_slave() && b->in_use();
+    });
 }
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
@@ -527,7 +527,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     bool ok = true;
     std::ostringstream error;
 
-    if (!have_open_connections())
+    if (!have_open_connections() || need_master_for_sescmd())
     {
         MXB_INFO("No connections available for session command");
 
@@ -565,6 +565,12 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         // A transaction is open on a backend, use it instead.
         m_sescmd_replier = m_trx.target();
+    }
+
+    if (m_sescmd_replier && need_master_for_sescmd())
+    {
+        MXB_INFO("Cannot use '%s' for session command: transaction is open.", m_sescmd_replier->name());
+        m_sescmd_replier = nullptr;
     }
 
     if (m_sescmd_replier)
@@ -1120,7 +1126,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
         else if (m_wait_gtid == READING_GTID)
         {
-            store = false;  // This is the GTID sync query, don't store it
+            store = false;      // This is the GTID sync query, don't store it
         }
 
         if (target->is_slave() && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))

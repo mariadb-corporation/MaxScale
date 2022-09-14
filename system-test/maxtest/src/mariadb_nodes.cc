@@ -746,14 +746,14 @@ void MariaDBCluster::reset_server_settings(int node)
     // Note: This is a CentOS specific path
     ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
 
-    copy_to_node(node, cnf_path.c_str(), "~/");
+    copy_to_node(node, cnf_path.c_str(), access_homedir(node));
     ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf_file.c_str());
 
     // Always configure the backend for SSL
     std::string ssl_dir = m_test_dir + "/ssl-cert";
     std::string ssl_cnf = m_test_dir + "/ssl.cnf";
-    copy_to_node_legacy(ssl_dir.c_str(), "~/", node);
-    copy_to_node_legacy(ssl_cnf.c_str(), "~/", node);
+    copy_to_node_legacy(ssl_dir.c_str(), access_homedir(node), node);
+    copy_to_node_legacy(ssl_cnf.c_str(), access_homedir(node), node);
 
     ssh_node_f(node, true, "cp %s/ssl.cnf /etc/my.cnf.d/", access_homedir(node));
     ssh_node_f(node, true, "cp -r %s/ssl-cert /etc/", access_homedir(node));
