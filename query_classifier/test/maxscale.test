@@ -117,7 +117,12 @@ PREPARE a FROM @sql;
 SET STATEMENT max_statement_time=30 FOR UPDATE tbl SET a = 42;
 
 # MXS-2242
-SELECT X(coordinates), Y(coordinates), ST_X(coordinates), ST_Y(coordinates) FROM data;
+# This applies also to X() and Y() that are synonyms to ST_X() and ST_Y().
+# However, as the embedded parser currently appears to silenty replace X()
+# with ST_X() and Y() with ST_Y(), something that qc_sqlite does not do,
+# better to not check for X() and Y(), as that would cause a mismatch in the
+# results of qc_mysqlembedded and qc_sqlite.
+SELECT ST_X(coordinates), ST_Y(coordinates) FROM data;
 
 # MXS-2248
 SELECT curdate() + interval '60' day;
