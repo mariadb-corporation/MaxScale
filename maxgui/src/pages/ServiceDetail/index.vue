@@ -32,12 +32,9 @@
                             <v-col class="py-0 my-0" cols="4">
                                 <v-row class="my-0 pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
-                                        <relationship-table
-                                            ref="servers-relationship-table"
-                                            relationshipType="servers"
-                                            addable
-                                            removable
-                                            :tableRows="serversTableRows"
+                                        <routing-target-table
+                                            :routerId="current_service.id"
+                                            :tableRows="routingTargetsTableRows"
                                             :getRelationshipData="getRelationshipData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
@@ -131,7 +128,7 @@ export default {
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('relationships', 2)}` },
                 { name: `${this.$tc('sessions', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
-            serversTableRows: [],
+            routingTargetsTableRows: [],
             listenersTableRows: [],
             filtersTableRows: [],
             sessionsTableHeader: [
@@ -170,6 +167,9 @@ export default {
                     idle,
                 })
             )
+        },
+        routingTargetRelationshipTypes() {
+            return ['servers', 'services', 'monitors']
         },
     },
     watch: {
@@ -215,9 +215,9 @@ export default {
             await this.genServiceConnectionsDataSets()
             await this.fetchConnSessDiag()
             await Promise.all([
-                this.processingRelationshipTable('servers'),
-                this.processingRelationshipTable('filters'),
-                this.processingRelationshipTable('listeners'),
+                this.processRoutingTargetsTable(),
+                this.processRelationshipTable('filters'),
+                this.processRelationshipTable('listeners'),
             ])
         },
         // reuse functions for fetch loop or after finish editing
@@ -237,38 +237,45 @@ export default {
                 this.fetchServiceDiagnostics(serviceId),
             ])
         },
-
-        /**
-         * This function get relationship data based on relationship type i.e. servers, listeners.
-         * It loops through id array to send sequential requests to get relationship state
-         * @param {String} relationshipType type of resource. e.g. servers, listeners
-         */
-        async processingRelationshipTable(relationshipType) {
-            const {
-                relationships: {
-                    [`${relationshipType}`]: { data: relationshipData = [] } = {},
-                } = {},
-            } = this.current_service
-
-            let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
+        async genRelationshipRows(type) {
+            const { relationships: { [`${type}`]: { data = [] } = {} } = {} } = this.current_service
             let arr = []
-
-            for (const id of ids) {
-                let data = await this.getRelationshipData(relationshipType, id)
-                const { id: relationshipId, type, attributes: { state = null } = {} } = data
-                let row = { id: relationshipId, type: type }
-                if (relationshipType !== 'filters') row.state = state
+            for (const obj of data) {
+                const { attributes: { state = null } = {} } = await this.getRelationshipData(
+                    type,
+                    obj.id
+                )
+                let row = { id: obj.id, type, state }
+                if (type === 'filters') delete row.state
                 arr.push(row)
             }
-
-            this[`${relationshipType}TableRows`] = arr
+            return arr
+        },
+        async processRoutingTargetsTable() {
+            const { relationships = {} } = this.current_service
+            let rows = []
+            for (const key of Object.keys(relationships)) {
+                if (this.routingTargetRelationshipTypes.includes(key)) {
+                    const data = await this.genRelationshipRows(key)
+                    rows = [...rows, ...data]
+                }
+            }
+            this.routingTargetsTableRows = rows
+        },
+        /**
+         * This function get relationship data based on relationship type i.e. filters, listeners.
+         * It loops through id array to send sequential requests to get relationship state
+         * @param {String} type- relationship type of resource. either filters or listeners
+         */
+        async processRelationshipTable(type) {
+            this[`${type}TableRows`] = await this.genRelationshipRows(type)
         },
 
         /**
          * This function fetch all resource state if id is not provided
          * otherwise it fetch a resource state.
          * Even filter doesn't have state, the request still success
-         * @param {String} type type of resource: servers, listeners, filters
+         * @param {String} type type of resource: listeners, filters
          * @param {String} id name of the resource (optional)
          * @return {Array} Resource state data
          */
@@ -282,7 +289,7 @@ export default {
         },
 
         // actions to vuex
-        async dispatchRelationshipUpdate({ type, data, isFilterDrag }) {
+        async dispatchRelationshipUpdate({ type, data, isFilterDrag, isUpdatingRouteTarget }) {
             await this.updateServiceRelationship({
                 id: this.current_service.id,
                 type: type,
@@ -291,12 +298,10 @@ export default {
             })
             switch (type) {
                 case 'filters':
-                    if (!isFilterDrag) await this.processingRelationshipTable(type)
-                    break
-                case 'servers':
-                    await this.processingRelationshipTable(type)
+                    if (!isFilterDrag) await this.processRelationshipTable(type)
                     break
             }
+            if (isUpdatingRouteTarget) this.processRoutingTargetsTable()
         },
     },
 }

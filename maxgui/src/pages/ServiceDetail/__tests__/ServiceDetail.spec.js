@@ -116,13 +116,11 @@ describe('ServiceDetail index', () => {
 
     it(`Should send request to get current service, then requests to get service
       connections, sessions and diagnostics created by this service. After that fetch parallelly
-      relationships type servers, filters and listener state.`, async () => {
+      relationships type filters and listener state.`, async () => {
         await wrapper.vm.$nextTick(async () => {
             let {
                 id,
-
                 relationships: {
-                    servers: { data: serversData },
                     filters: { data: filtersData },
                     listeners: { data: listenersData },
                 },
@@ -142,12 +140,6 @@ describe('ServiceDetail index', () => {
                 `/services/${id}?fields[services]=router_diagnostics`
             )
             let count = 4
-            await serversData.forEach(async server => {
-                await axiosGetStub.should.have.been.calledWith(
-                    `/servers/${server.id}?fields[servers]=state`
-                )
-                ++count
-            })
             await filtersData.forEach(async filter => {
                 await axiosGetStub.should.have.been.calledWith(
                     `/filters/${filter.id}?fields[filters]=state`
@@ -177,12 +169,12 @@ describe('ServiceDetail index', () => {
     })
 
     describe('Relationships update test assertions', () => {
-        const TYPES = ['servers', 'filters']
+        const TYPES = ['filters']
         TYPES.forEach(type => {
             let des = 'Should send PATCH request with accurate payload to update'
             it(`${des} ${type} relationship`, async () => {
                 wrapper = mount(shallowMountOptions)
-                const tableRowProcessingSpy = sinon.spy(wrapper.vm, 'processingRelationshipTable')
+                const tableRowProcessingSpy = sinon.spy(wrapper.vm, 'processRelationshipTable')
                 await testRelationshipUpdate({
                     wrapper,
                     currentResource: dummy_all_services[0],
@@ -323,7 +315,7 @@ describe('ServiceDetail index', () => {
 
     describe('Test assertions for relationship-table', () => {
         let dispatchRelationshipUpdateSpy, SET_FORM_TYPE_STUB
-        const ALL_RELATIONSHIP_TABLES = ['servers', 'filters', 'listeners']
+        const ALL_RELATIONSHIP_TABLES = ['filters', 'listeners']
 
         beforeEach(() => {
             wrapper = mount(shallowMountOptions)
@@ -356,7 +348,7 @@ describe('ServiceDetail index', () => {
                     } = relationshipTable.vm.$props
                     const {
                         getRelationshipData,
-                        $data: { serversTableRows, filtersTableRows, listenersTableRows },
+                        $data: { filtersTableRows, listenersTableRows },
                     } = wrapper.vm
 
                     expect(relationshipTable.exists()).to.be.true
@@ -372,9 +364,6 @@ describe('ServiceDetail index', () => {
                         expect(removable).to.be.true
                     }
                     switch (name) {
-                        case 'servers':
-                            expect(tableRows).to.be.deep.equals(serversTableRows)
-                            break
                         case 'filters':
                             expect(tableRows).to.be.deep.equals(filtersTableRows)
                             break
@@ -428,22 +417,6 @@ describe('ServiceDetail index', () => {
                     let tableRowStub = []
                     let dummy_resource = {}
                     switch (type) {
-                        case 'servers':
-                            dummy_resource = {
-                                attributes: {
-                                    state: 'Master, Running',
-                                },
-                                id: 'row_server_0',
-                                type,
-                            }
-                            tableRowStub = [
-                                {
-                                    id: 'row_server_0',
-                                    state: 'Master, Running',
-                                    type,
-                                },
-                            ]
-                            break
                         case 'filters':
                             dummy_resource = {
                                 id: 'filter_0',
@@ -476,7 +449,7 @@ describe('ServiceDetail index', () => {
                         .stub(wrapper.vm, 'getRelationshipData')
                         .returns(Promise.resolve(dummy_resource))
 
-                    await wrapper.vm.processingRelationshipTable(type)
+                    await wrapper.vm.processRelationshipTable(type)
                     expect(wrapper.vm.$data[`${type}TableRows`]).to.be.deep.equals(tableRowStub)
                 })
             })

@@ -16,6 +16,7 @@ import DetailsPageTitle from './DetailsPageTitle'
 import DetailsIconGroupWrapper from './DetailsIconGroupWrapper'
 import RelationshipTable from './RelationshipTable'
 import DetailsReadonlyTable from './DetailsReadonlyTable'
+import RoutingTargetTable from './RoutingTargetTable.vue'
 
 export default {
     'details-parameters-table': DetailsParametersTable,
@@ -23,4 +24,5 @@ export default {
     'details-icon-group-wrapper': DetailsIconGroupWrapper,
     'relationship-table': RelationshipTable,
     'details-readonly-table': DetailsReadonlyTable,
+    'routing-target-table': RoutingTargetTable,
 }
