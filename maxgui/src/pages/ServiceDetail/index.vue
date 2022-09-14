@@ -147,6 +147,8 @@ export default {
             service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
             sessions_by_service: state => state.session.sessions_by_service,
+            ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
+                state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
         }),
 
         routerDiagnostics: function() {
@@ -167,9 +169,6 @@ export default {
                     idle,
                 })
             )
-        },
-        routingTargetRelationshipTypes() {
-            return ['servers', 'services', 'monitors']
         },
     },
     watch: {
@@ -255,7 +254,7 @@ export default {
             const { relationships = {} } = this.current_service
             let rows = []
             for (const key of Object.keys(relationships)) {
-                if (this.routingTargetRelationshipTypes.includes(key)) {
+                if (this.ROUTING_TARGET_RELATIONSHIP_TYPES.includes(key)) {
                     const data = await this.genRelationshipRows(key)
                     rows = [...rows, ...data]
                 }

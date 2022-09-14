@@ -23,22 +23,21 @@
             <span>{{ state }} </span>
         </template>
 
-        <template v-slot:header-append-serverIds>
-            <span class="ml-1 color text-field-text"> ({{ serversLength }}) </span>
+        <template v-slot:header-append-routingTargets>
+            <span class="ml-1 color text-field-text"> ({{ routingTargetsLength }}) </span>
         </template>
-        <template v-slot:serverIds="{ data: { item: { serverIds } } }">
-            <span v-if="typeof serverIds === 'string'">{{ serverIds }} </span>
+        <template v-slot:routingTargets="{ data: { item: { routingTargets } } }">
+            <span v-if="typeof routingTargets === 'string'">{{ routingTargets }} </span>
 
-            <template v-else-if="serverIds.length < 3">
-                <template v-for="(serverId, i) in serverIds">
-                    <router-link
-                        :key="serverId"
-                        :to="`/dashboard/servers/${serverId}`"
-                        class="rsrc-link"
-                    >
-                        <span> {{ serverId }}{{ i !== serverIds.length - 1 ? ', ' : '' }} </span>
-                    </router-link>
-                </template>
+            <template v-else-if="routingTargets.length < 3">
+                <router-link
+                    v-for="(target, i) in routingTargets"
+                    :key="target.id"
+                    :to="`/dashboard/${target.type}/${target.id}`"
+                    class="rsrc-link"
+                >
+                    <span> {{ target.id }}{{ i !== routingTargets.length - 1 ? ', ' : '' }} </span>
+                </router-link>
             </template>
 
             <v-menu
@@ -56,21 +55,20 @@
                         class="pointer color text-links override-td--padding disable-auto-truncate"
                         v-on="on"
                     >
-                        {{ serverIds.length }}
-                        {{ $tc('servers', 2).toLowerCase() }}
+                        {{ routingTargets.length }}
+                        targets
                     </div>
                 </template>
 
                 <v-sheet class="pa-4">
-                    <template v-for="serverId in serverIds">
-                        <router-link
-                            :key="serverId"
-                            :to="`/dashboard/servers/${serverId}`"
-                            class="text-body-2 d-block rsrc-link"
-                        >
-                            <span>{{ serverId }} </span>
-                        </router-link>
-                    </template>
+                    <router-link
+                        v-for="target in routingTargets"
+                        :key="target.id"
+                        :to="`/dashboard/${target.type}/${target.id}`"
+                        class="text-body-2 d-block rsrc-link"
+                    >
+                        <span> {{ target.id }} </span>
+                    </router-link>
                 </v-sheet>
             </v-menu>
         </template>
@@ -103,9 +101,9 @@ export default {
                 { text: 'Router', value: 'router' },
                 { text: 'Current Sessions', value: 'connections', autoTruncate: true },
                 { text: 'Total Sessions', value: 'total_connections', autoTruncate: true },
-                { text: 'Servers', value: 'serverIds', autoTruncate: true },
+                { text: this.$t('routingTargets'), value: 'routingTargets', autoTruncate: true },
             ],
-            serversLength: 0,
+            routingTargetsLength: 0,
         }
     },
 
@@ -113,45 +111,47 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             all_services: state => state.service.all_services,
+            ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
+                state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
         }),
 
         /**
          * @return {Array} An array of objects
          */
-        tableRows: function() {
+        tableRows() {
             let rows = []
-            let allServerIds = []
-            this.all_services.forEach(services => {
+            let allRoutingTargets = []
+            this.all_services.forEach(service => {
                 const {
                     id,
                     attributes: { state, router, connections, total_connections },
-                    relationships: { servers: { data: associatedServers = [] } = {} },
-                } = services || {}
+                    relationships = {},
+                } = service || {}
 
-                const serverIds = associatedServers.length
-                    ? associatedServers.map(item => `${item.id}`)
-                    : this.$t('noEntity', { entityName: 'servers' })
+                const targets = Object.keys(relationships).reduce((arr, type) => {
+                    if (this.ROUTING_TARGET_RELATIONSHIP_TYPES.includes(type)) {
+                        arr = [...arr, ...this.$typy(relationships[type], 'data').safeArray]
+                    }
+                    return arr
+                }, [])
+                const routingTargets = targets.length
+                    ? targets
+                    : this.$t('noEntity', { entityName: this.$t('routingTargets') })
 
-                if (typeof serverIds !== 'string') allServerIds = [...allServerIds, ...serverIds]
+                if (typeof routingTargets !== 'string')
+                    allRoutingTargets = [...allRoutingTargets, ...routingTargets]
 
-                const row = {
-                    id: id,
-                    state: state,
-                    router: router,
-                    connections: connections,
-                    total_connections: total_connections,
-                    serverIds: serverIds,
-                }
+                const row = { id, state, router, connections, total_connections, routingTargets }
                 rows.push(row)
             })
-            const uniqueServerId = new Set(allServerIds) // get unique servers
-            this.setServersLength([...uniqueServerId].length)
+            const uniqueRoutingTargetIds = new Set(allRoutingTargets.map(target => target.id))
+            this.setRoutingTargetsLength([...uniqueRoutingTargetIds].length)
             return rows
         },
     },
     methods: {
-        setServersLength(total) {
-            this.serversLength = total
+        setRoutingTargetsLength(total) {
+            this.routingTargetsLength = total
         },
     },
 }

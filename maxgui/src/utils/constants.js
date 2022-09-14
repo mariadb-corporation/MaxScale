@@ -22,6 +22,7 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    ROUTING_TARGET_RELATIONSHIP_TYPES: ['servers', 'services', 'monitors'],
     QUERY_SHORTCUT_KEYS: Object.freeze({
         'win-ctrl-s': ['ctrl', 's'],
         'mac-cmd-s': ['meta', 's'],

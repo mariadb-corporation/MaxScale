@@ -26,7 +26,7 @@ const expectedTableHeaders = [
     { text: 'Router', value: 'router' },
     { text: 'Current Sessions', value: 'connections', autoTruncate: true },
     { text: 'Total Sessions', value: 'total_connections', autoTruncate: true },
-    { text: 'Servers', value: 'serverIds', autoTruncate: true },
+    { text: 'routing targets', value: 'routingTargets', autoTruncate: true },
 ]
 
 const expectedTableRows = [
@@ -36,7 +36,7 @@ const expectedTableRows = [
         router: 'readconnroute',
         connections: 0,
         total_connections: 1000001,
-        serverIds: ['row_server_0'],
+        routingTargets: [{ id: 'row_server_0', type: 'servers' }],
     },
     {
         id: 'service_1',
@@ -44,7 +44,7 @@ const expectedTableRows = [
         router: 'readwritesplit',
         connections: 0,
         total_connections: 0,
-        serverIds: 'No servers',
+        routingTargets: 'No routing targets',
     },
 ]
 
@@ -97,14 +97,17 @@ describe('Dashboard Services tab', () => {
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serviceId,
-            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serverIds'),
+            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'routingTargets'),
         })
         await aTag.trigger('click')
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/servers/${serverId}`)
     })
 
-    it(`Should get total number of unique server names accurately`, () => {
-        const uniqueServerNames = getUniqueResourceNamesStub(expectedTableRows, 'serverIds')
-        expect(wrapper.vm.$data.serversLength).to.be.equals(uniqueServerNames.length)
+    it(`Should get total number of unique routing target names accurately`, () => {
+        const uniqueRoutingTargetNames = getUniqueResourceNamesStub(
+            expectedTableRows,
+            'routingTargets'
+        )
+        expect(wrapper.vm.$data.routingTargetsLength).to.be.equals(uniqueRoutingTargetNames.length)
     })
 })
