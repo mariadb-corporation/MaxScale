@@ -2976,7 +2976,7 @@ std::vector<string> config_break_list_string(const string& list_string)
     return tokenized;
 }
 
-json_t* mxs::Config::maxscale_to_json(const char* host)
+json_t* mxs::Config::maxscale_to_json(const char* host) const
 {
     json_t* param = json_object();
 
@@ -3021,12 +3021,63 @@ json_t* mxs::Config::maxscale_to_json(const char* host)
     auto manager = mxs::ConfigManager::get()->to_json();
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
 
+    json_object_set_new(attr, "system", system_to_json());
+
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MAXSCALE));
 
     return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
+}
+
+json_t* mxs::Config::system_to_json() const
+{
+    // system.machine
+    json_t* machine = json_object();
+
+    json_object_set_new(machine, "cores_physical", json_integer(get_processor_count()));
+    auto cores = get_cpu_count();
+    json_object_set_new(machine, "cores_available", json_integer(cores));
+
+    double vcores = cores;
+
+    int quota;
+    int period;
+    if (get_cpu_quota_and_period(&quota, &period))
+    {
+        vcores = (double)quota/period;
+    }
+
+    json_object_set_new(machine, "cores_virtual", json_real(vcores));
+
+    json_object_set_new(machine, "memory_physical", json_integer(get_total_memory()));
+    json_object_set_new(machine, "memory_available", json_integer(get_available_memory()));
+
+    // system.os
+    json_t* os = json_object();
+
+    const mxs::Config& c = mxs::Config::get();
+    json_object_set_new(os, "sysname", json_string(c.sysname.c_str()));
+    json_object_set_new(os, "nodename", json_string(c.nodename.c_str()));
+    json_object_set_new(os, "release", json_string(c.release.c_str()));
+    json_object_set_new(os, "version", json_string(c.version.c_str()));
+    json_object_set_new(os, "machine", json_string(c.machine.c_str()));
+
+    // system.maxscale
+    json_t* maxscale = json_object();
+
+    json_object_set_new(maxscale, "threads", json_integer(config_threadcount()));
+    json_object_set_new(maxscale, "query_classifier_cache_size",
+                        json_integer(this->qc_cache_properties.max_size));
+
+    // system
+    json_t* system = json_object();
+    json_object_set_new(system, "machine", machine);
+    json_object_set_new(system, "os", os);
+    json_object_set_new(system, "maxscale", maxscale);
+
+    return system;
 }
 
 /**

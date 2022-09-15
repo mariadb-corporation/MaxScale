@@ -138,7 +138,14 @@ public:
      *
      * @return The global MaxScale configuration as a JSON object
      */
-    json_t* maxscale_to_json(const char* host);
+    json_t* maxscale_to_json(const char* host) const;
+
+    /**
+     * Get system information as a JSON object.
+     *
+     * @return System information as a JSON object.
+     */
+    json_t* system_to_json() const;
 
     class ParamAutoTune : public config::ParamStringList
     {
