@@ -502,12 +502,24 @@ bool Client::authorize_user(const char* user, const char* method, const char* ur
 {
     bool rval = true;
 
-    if (modifies_data(method) && !admin_user_is_inet_admin(user, nullptr) && !is_basic_endpoint())
+    if (modifies_data(method))
+    {
+        if (!admin_user_is_inet_admin(user, nullptr) && !is_basic_endpoint())
+        {
+            if (mxs::Config::get().admin_log_auth_failures.get())
+            {
+                MXB_WARNING("Authorization failed for '%s', request requires "
+                            "administrative privileges. Request: %s %s",
+                            user, method, url);
+            }
+            rval = false;
+        }
+    }
+    else if (!admin_inet_user_exists(user))
     {
         if (mxs::Config::get().admin_log_auth_failures.get())
         {
-            MXB_WARNING("Authorization failed for '%s', request requires "
-                        "administrative privileges. Request: %s %s",
+            MXB_WARNING("Authorization failed for '%s', user does not exist. Request: %s %s",
                         user, method, url);
         }
         rval = false;
