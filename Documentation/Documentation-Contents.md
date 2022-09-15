@@ -80,7 +80,6 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Comment Filter](Filters/Comment.md)
  - [Consistent Critical Read Filter](Filters/CCRFilter.md)
  - [Hint Filter](Filters/Hintfilter.md)
- - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
  - [Luafilter](Filters/Luafilter.md)
  - [Masking Filter](Filters/Masking.md)
  - [Maxrows Filter](Filters/Maxrows.md)
