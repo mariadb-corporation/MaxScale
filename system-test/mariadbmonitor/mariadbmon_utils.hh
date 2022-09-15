@@ -17,3 +17,6 @@
 
 bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int insert_count);
 bool generate_traffic_and_check_nosync(TestConnections& test, mxt::MariaDB* conn, int insert_count);
+
+void prepare_log_bin_failover_test(TestConnections& test);
+void cleanup_log_bin_failover_test(TestConnections& test);
