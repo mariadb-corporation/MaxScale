@@ -243,14 +243,16 @@ bool file_in_dir(const char* dir, const char* file)
  */
 void AvroSession::queue_client_callback()
 {
-    auto callback = [this]() {
-            if (m_state == AVRO_CLIENT_REQUEST_DATA)
-            {
-                client_callback();
-            }
-        };
+    auto callback = [this](auto action) {
+        if (action == mxb::Worker::Callable::EXECUTE && m_state == AVRO_CLIENT_REQUEST_DATA)
+        {
+            client_callback();
+        }
 
-    mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
+        return false;
+    };
+
+    m_session->dcall(0s, callback);
 }
 
 /**

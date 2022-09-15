@@ -62,7 +62,8 @@ exports.builder = function (yargs) {
               "connection. In this case the [port] argument is ignored." +
               "\n\n" +
               "The recommended way of declaring parameters is with the new `key=value` syntax added in MaxScale 6.2.0. " +
-              "Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them."
+              "Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them. " +
+              "The redundant option parameters have been deprecated in MaxScale 22.08."
           )
           .usage("Usage: create server <name> <host|socket> [port] [params...]")
           .group(["services", "monitors"], "Create server options:")
@@ -143,7 +144,8 @@ exports.builder = function (yargs) {
             "The list of servers given with the --servers option should not " +
               "contain any servers that are already monitored by another monitor. " +
               "The last argument to this command is a list of key=value parameters " +
-              "given as the monitor parameters."
+              "given as the monitor parameters. " +
+              "The redundant option parameters have been deprecated in MaxScale 22.08."
           )
           .usage("Usage: create monitor <name> <module> [params...]")
           .group(["servers"], "Create monitor options:")
@@ -329,7 +331,8 @@ exports.builder = function (yargs) {
               "The last argument to this command is a list of key=value parameters " +
               "given as the listener parameters. These parameters override any parameters " +
               "set via command line options: e.g. using `protocol=mariadb` will override " +
-              "the `--protocol=cdc` option."
+              "the `--protocol=cdc` option. " +
+              "The redundant option parameters have been deprecated in MaxScale 22.08."
           )
           .usage("Usage: create listener <service> <name> <port> [params...]");
       },

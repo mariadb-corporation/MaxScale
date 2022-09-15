@@ -134,6 +134,7 @@ private:
     mxs::RWBackend* get_last_used_backend();
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
     mxs::RWBackend* get_root_master();
+    bool            is_gtid_synced(mxs::RWBackend* backend);
 
     // The main target selection function
     mxs::RWBackend* get_target(const mxs::Buffer& buffer, route_target_t route_target);

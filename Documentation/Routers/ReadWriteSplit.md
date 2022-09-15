@@ -723,7 +723,7 @@ All limitations that apply to `transaction_replay` also apply to
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Values**: `none`, `local`, `global`, `fast`, `universal`
+- **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`
 - **Default**: `none`
 
 Enable causal reads. This parameter is disabled by default and was introduced in
@@ -731,8 +731,26 @@ MaxScale 2.3.0.
 
 If a client connection modifies the database and `causal_reads` is enabled, any
 subsequent reads performed on slave servers will be done in a manner that
-prevents replication lag from affecting the results. This only applies to the
-modifications done by the client itself.
+prevents replication lag from affecting the results.
+
+The following table contains a comparison of the modes.  Read the
+[implementation of causal_reads](#implementation-of-causal_reads) for more
+information on what a sync consists of and why minimizing the number of them is
+important.
+
+|Mode         |Level of Causality |Latency                                                 |
+|-------------|-------------------|--------------------------------------------------------|
+|`local`      |Session            |Low, one sync per write.                                |
+|`fast`       |Session            |None, no sync at all.                                   |
+|`global`     |Service            |Medium, one sync per read.                              |
+|`fast_global`|Service            |None, no sync at all.                                   |
+|`universal`  |Cluster            |High, one sync per read plus a roundtrip to the master. |
+
+The `fast` and `fast_global` modes should only be used when low latency is more
+important than proper distribution of reads. These modes should only be used
+when the workload is mostly read-only with only occasional writes. If used with
+a mixed or a write-heavy workload, the traffic will end up being routed almost
+exclusively to the master server.
 
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
   addition to this, the `session_track_system_variables` parameter must include
@@ -787,6 +805,16 @@ The possible values for this parameter are:
     causality guarantees for reads. This functionality can also be considered an
     improved version of the functionality that the
     [CCRFilter](../Filters/CCRFilter.md) module provides.
+
+* `fast_global`
+
+  * This mode is identical to the `fast` mode except that it uses the global
+    GTID instead of the session local one. This is similar to how `local` and
+    `global` modes differ from each other. The value of `causal_reads_timeout`
+    is ignored in this mode. Currently the replication state is only updated by
+    the mariadbmon monitor whenever the servers are monitored. This means that a
+    smaller `monitor_interval` provides faster replication state updates and
+    possibly better overall usage of servers.
 
 * `universal`
 

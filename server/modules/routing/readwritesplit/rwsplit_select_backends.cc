@@ -247,6 +247,30 @@ std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
     return std::make_pair(slaves_found, slaves_connected);
 }
 
+bool RWSplitSession::is_gtid_synced(mxs::RWBackend* backend)
+{
+    bool rv = true;
+
+    if (m_config.causal_reads == CausalReads::FAST)
+    {
+        rv = gtid_pos_is_ok(backend, m_gtid_pos);
+    }
+    else if (m_config.causal_reads == CausalReads::FAST_GLOBAL)
+    {
+        rv = true;
+
+        for (auto [domain, gtid] : m_router->last_gtid_map())
+        {
+            if (!gtid_pos_is_ok(backend, gtid))
+            {
+                rv = false;
+            }
+        }
+    }
+
+    return rv;
+}
+
 int64_t RWSplitSession::get_current_rank()
 {
     int64_t rv = 1;
@@ -306,8 +330,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
         int priority = get_backend_priority(backend, m_config.master_accept_reads);
         auto rank = backend->target()->rank();
-        bool gtid_is_ok = m_config.causal_reads != CausalReads::FAST
-            || my_master || gtid_pos_is_ok(backend, m_gtid_pos);
+        bool gtid_is_ok = my_master || is_gtid_synced(backend);
 
         if (master_or_slave && is_usable && rlag_ok && rank == current_rank && gtid_is_ok)
         {

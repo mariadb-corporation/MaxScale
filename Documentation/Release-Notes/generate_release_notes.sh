@@ -12,7 +12,7 @@ VERSION="${major}.${minor}.${patch}"
 # For version 6, this is just the major version. For other versions, it
 # is $major.$minor. Needs to be updated whenever a new major release is
 # out or if the versioning scheme for MaxScale changes.
-upgrade_version="$major"
+upgrade_version="$major.$minor"
 
 cat <<EOF > MaxScale-$VERSION-Release-Notes.md
 # MariaDB MaxScale ${VERSION} Release Notes

@@ -97,7 +97,8 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
 
             if (!gtid.empty())
             {
-                if (m_config.causal_reads == CausalReads::GLOBAL)
+                if (m_config.causal_reads == CausalReads::GLOBAL
+                    || m_config.causal_reads == CausalReads::FAST_GLOBAL)
                 {
                     m_router->set_last_gtid(gtid);
                 }
@@ -145,6 +146,7 @@ bool RWSplitSession::should_do_causal_read() const
         return m_wait_gtid == GTID_READ_DONE && !m_gtid_pos.empty();
 
     case CausalReads::FAST:
+    case CausalReads::FAST_GLOBAL:
     case CausalReads::NONE:
         return false;
 
@@ -331,5 +333,6 @@ GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
         rval = modutil_create_ok();
     }
 
+    gwbuf_free(buffer);
     return rval;
 }

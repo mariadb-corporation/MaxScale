@@ -618,6 +618,14 @@ config::ParamString Config::s_admin_jwt_key(
     "generate a random key that is used to sign the JWT.",
     "");
 
+config::ParamPathList Config::s_admin_jwt_extra_certs(
+    &Config::s_specification,
+    "admin_jwt_extra_certs",
+    "Extra public certificates used to validate externally signed JWTs",
+    config::ParamPath::R,
+    {},
+    config::Param::Modifiable::AT_STARTUP);
+
 config::ParamString Config::s_local_address(
     &Config::s_specification,
     CN_LOCAL_ADDRESS,
@@ -879,6 +887,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::admin_jwt_algorithm, &s_admin_jwt_algorithm);
     add_native(&Config::admin_jwt_key, &s_admin_jwt_key);
+    add_native(&Config::admin_jwt_extra_certs, &s_admin_jwt_extra_certs);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
     add_native(&Config::persist_runtime_changes, &s_persist_runtime_changes);

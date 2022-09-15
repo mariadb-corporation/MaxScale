@@ -46,6 +46,11 @@ inline ostream& operator<<(ostream& out, const std::vector<SERVER*>& x)
     return out;
 }
 
+inline ostream& operator<<(ostream& out, const std::vector<std::string>& x)
+{
+    return out << mxb::join(x);
+}
+
 config::Specification specification("test_module", config::Specification::FILTER);
 
 config::ParamBool
@@ -109,6 +114,12 @@ config::ParamPath
                "path_parameter",
                "Specifies the path of something.",
                config::ParamPath::F);
+
+config::ParamPathList
+    param_pathlist(&specification,
+                   "pathlist_parameter",
+                   "Specifies a list of the paths.",
+                   config::ParamPath::F);
 
 config::ParamRegex
     param_regex(&specification,
@@ -368,6 +379,26 @@ int test_path(config::Path& value)
     return test(value, entries, elements_in_array(entries));
 }
 
+int test_pathlist(config::PathList& value)
+{
+    static char path[PATH_MAX];
+    static char* strpath = getcwd(path, sizeof(path));
+    static std::string combined = strpath + ":/tmp"s;
+
+    static const TestEntry<config::PathList::value_type> entries[] =
+    {
+        {strpath,                true, {strpath}, strpath               },
+        {"/tmp",                 true, {"/tmp" }, "/tmp"                },
+        {combined.c_str(),       true, {strpath, "/tmp"}, combined.c_str()      },
+        {"/etc/os-release:/tmp", true, {"/etc/os-release", "/tmp"}, "/etc/os-release:/tmp"},
+        {"non-existent",         false},
+        {"/non-existent",        false},
+        {"/tmp:/non-existent",   false},
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
 int test_regex(config::Regex& value)
 {
     static TestEntry<config::Regex::value_type> entries[] =
@@ -561,6 +592,9 @@ int main()
 
             config::Path value_path(&configuration, &param_path);
             nErrors += test_path(value_path);
+
+            config::PathList value_pathlist(&configuration, &param_pathlist);
+            nErrors += test_pathlist(value_pathlist);
 
             config::Regex value_regex(&configuration, &param_regex);
             nErrors += test_regex(value_regex);
