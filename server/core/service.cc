@@ -52,6 +52,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/http.hh>
 
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
@@ -1137,6 +1138,11 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
         if (json_t* users = manager->users_to_json())
         {
             json_object_set_new(attr, "users", users);
+
+            time_t last_update = manager->last_update();
+            asctime_r(localtime_r(&last_update, &result), timebuf);
+            mxb::trim(timebuf);
+            json_object_set_new(attr, "users_last_update", json_string(timebuf));
         }
     }
 

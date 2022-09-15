@@ -221,6 +221,7 @@ public:
 
     std::string protocol_name() const override;
     json_t*     users_to_json() const override;
+    time_t      last_update() const override;
 
     struct UserDBInfo
     {
@@ -319,6 +320,9 @@ private:
 
     /** Check if service user has "show databases" privilege. If found, not done again. */
     bool m_check_showdb_priv {true};
+
+    /** The last time the users were loaded */
+    std::atomic<time_t> m_last_update;
 };
 
 class MariaDBUserCache : public mxs::UserAccountCache

@@ -101,6 +101,7 @@ const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privilege
 }
 
 MariaDBUserManager::MariaDBUserManager()
+    : m_last_update{time(nullptr)}
 {
     m_userdb = std::make_shared<UserDatabase>();    // Must never be null
 }
@@ -278,6 +279,7 @@ void MariaDBUserManager::updater_thread_function()
         m_service->sync_user_account_caches();
         m_update_users_requested.store(false, release);
         last_update = Clock::now();
+        m_last_update.store(time(nullptr), std::memory_order_relaxed);
     }
 
     // Possible race here: If throttling=false and m_keep_running=false, m_can_update may be momentarily
@@ -868,6 +870,11 @@ json_t* MariaDBUserManager::users_to_json() const
         ptr_copy = m_userdb;
     }
     return ptr_copy->users_to_json();
+}
+
+time_t MariaDBUserManager::last_update() const
+{
+    return m_last_update.load(std::memory_order_relaxed);
 }
 
 SERVICE* MariaDBUserManager::service() const
