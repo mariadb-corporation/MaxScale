@@ -148,6 +148,18 @@ long get_cpu_count();
 long get_vcpu_count();
 
 /**
+ * Returns the CPU quota and period of the current process.
+ *
+ * The functions looks for this information in /sys/fs/cgroup.
+ *
+ * @param quota   On output, the process CPU quota.
+ * @param period  On output, the process CPU period.
+ *
+ * @return True, if the quota and period could be obtained.
+ */
+bool get_cpu_quota_and_period(int* quota, int* period);
+
+/**
  * Return total system memory
  *
  * @return Total memory in bytes or 0 if the information is not available
