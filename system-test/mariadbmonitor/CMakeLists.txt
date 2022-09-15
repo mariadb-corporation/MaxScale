@@ -22,7 +22,7 @@ add_test_executable_ex(NAME mysqlmon_detect_standalone_master SOURCE mysqlmon_de
 
 # MySQL Monitor Failover (automatic) Test
 add_test_executable_ex(NAME mysqlmon_failover_auto SOURCE mysqlmon_failover_auto.cpp
-        CONFIG mysqlmon_failover_auto.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_failover_auto.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor Failover (manual) Test
 add_test_executable_ex(NAME mysqlmon_failover_manual SOURCE mysqlmon_failover_manual.cpp

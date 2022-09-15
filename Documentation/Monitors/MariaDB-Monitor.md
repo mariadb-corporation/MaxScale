@@ -15,12 +15,21 @@ Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Required Grants
 
-The monitor user _must_ have the following grants (REPLICATION CLIENT is named
-REPLICATION SLAVE ADMIN in MariaDB Server 10.5):
-
+The monitor user requires the following grant:
 ```
 CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
 GRANT REPLICATION CLIENT ON *.* TO 'maxscale'@'maxscalehost';
+```
+
+In MariaDB Server versions 10.5.0 to 10.5.8, the monitor user instead requires
+REPLICATION SLAVE ADMIN:
+```
+GRANT REPLICATION SLAVE ADMIN ON *.* TO 'maxscale'@'maxscalehost';
+```
+
+In MariaDB Server 10.5.9 and later, REPLICA MONITOR is required:
+```
+GRANT REPLICA MONITOR ON *.* TO 'maxscale'@'maxscalehost';
 ```
 
 If the monitor needs to query server disk space (i.e. `disk_space_threshold` is
