@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     maxctrl("create service svc1 readwritesplit user=skysql password=skysql");
 
     maxctrl("create listener svc1 listener1 4006");
-    maxctrl("create monitor mon1 mariadbmon --monitor-user skysql --monitor-password skysql");
+    maxctrl("create monitor mon1 mariadbmon user=skysql password=skysql");
     maxctrl("create server server1 " + host1 + " " + port1 + " --services svc1 --monitors mon1");
     maxctrl("create server server2 " + host2 + " " + port2 + " --services svc1 --monitors mon1");
     maxctrl("create server server3 " + host3 + " " + port3 + " --services svc1 --monitors mon1");

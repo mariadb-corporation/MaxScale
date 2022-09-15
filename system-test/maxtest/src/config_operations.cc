@@ -78,11 +78,12 @@ void Config::create_server(int num)
     if (test_->backend_ssl)
     {
         sprintf(ssl_line,
-                " --tls-key=/%s/certs/client-key.pem "
-                " --tls-cert=/%s/certs/client-cert.pem "
-                " --tls-ca-cert=/%s/certs/ca.pem "
-                " --tls-version=MAX "
-                " --tls-cert-verify-depth=9",
+                " ssl=true"
+                " ssl_key=/%s/certs/client-key.pem "
+                " ssl_cert=/%s/certs/client-cert.pem "
+                " ssl_ca=/%s/certs/ca.pem "
+                " ssl_version=MAX "
+                " ssl_cert_verify_depth=9",
                 homedir, homedir, homedir);
     }
     test_->maxscale->ssh_node_f(true,
@@ -171,9 +172,10 @@ void Config::create_ssl_listener(Config::Service service)
     auto homedir = test_->maxscale->access_homedir();
     test_->maxscale->ssh_node_f(true,
                                 "maxctrl create listener %s %s %d "
-                                "--tls-key=%s/certs/server-key.pem "
-                                "--tls-cert=%s/certs/server-cert.pem "
-                                "--tls-ca-cert=%s/certs/ca.pem ",
+                                "ssl=true "
+                                "ssl_key=%s/certs/server-key.pem "
+                                "ssl_cert=%s/certs/server-cert.pem "
+                                "ssl_ca=%s/certs/ca.pem ",
                                 services[i].service, services[i].listener, services[i].port,
                                 homedir, homedir, homedir);
 }

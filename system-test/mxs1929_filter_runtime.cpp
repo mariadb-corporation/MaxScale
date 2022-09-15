@@ -24,7 +24,7 @@ void create_all(TestConnections& test)
         "create service svc1 readwritesplit user=skysql password=skysql --servers server1 server2 server3");
     test.check_maxctrl("create listener svc1 listener1 4006");
     test.check_maxctrl(
-        "create monitor mon1 mariadbmon --monitor-user skysql --monitor-password skysql --servers server1 server2 server3");
+        "create monitor mon1 mariadbmon user=skysql password=skysql --servers server1 server2 server3");
 }
 
 void destroy_all(TestConnections& test)
