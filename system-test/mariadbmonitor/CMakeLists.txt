@@ -26,7 +26,7 @@ add_test_executable_ex(NAME mysqlmon_failover_auto SOURCE mysqlmon_failover_auto
 
 # MySQL Monitor Failover (manual) Test
 add_test_executable_ex(NAME mysqlmon_failover_manual SOURCE mysqlmon_failover_manual.cpp
-        CONFIG mysqlmon_failover_manual.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_failover_manual.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor manual failover with many valid candidates
 add_test_executable_ex(NAME mysqlmon_failover_manual2_4 SOURCE mysqlmon_failover_manual2.cpp
@@ -46,7 +46,7 @@ add_test_executable_ex(NAME mysqlmon_switchover_bad_master SOURCE mysqlmon_switc
 
 # MySQL Monitor manual failover with no valid slaves, uses config of mysqlmon_failover_auto. Also MXS-2652.
 add_test_executable_ex(NAME mysqlmon_failover_no_slaves SOURCE mysqlmon_failover_no_slaves.cpp
-        CONFIG mysqlmon_failover_auto.cnf VMS repl_backend LABELS mysqlmon failover)
+        CONFIG mysqlmon_failover_auto.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor Rejoin (good) Test
 add_test_executable_ex(NAME mysqlmon_rejoin_good SOURCE mysqlmon_rejoin_good.cpp

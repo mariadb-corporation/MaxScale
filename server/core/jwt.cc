@@ -318,6 +318,7 @@ std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::
         {
             ok = verify_with_alg<Sig::ps512>(issuer, d);
         }
+#ifdef OPENSSL_1_1
         else if (algo == "EdDSA")
         {
             if (d.has_header_claim("crv") && d.get_header_claim("crv").as_string() == "Ed448")
@@ -330,6 +331,7 @@ std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::
                 ok = verify_with_alg<Sig::ed25519>(issuer, d);
             }
         }
+#endif
 
         if (ok)
         {
