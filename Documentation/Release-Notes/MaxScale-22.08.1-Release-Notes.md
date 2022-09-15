@@ -6,7 +6,7 @@ This document describes the changes in release 22.08.1, when compared to the
 previous release in the same series.
 
 If you are upgrading from an older major version of MaxScale, please read the
-[upgrading document](../Upgrading/Upgrading-To-MaxScale-22.md) for
+[upgrading document](../Upgrading/Upgrading-To-MaxScale-22.08.md) for
 this MaxScale version.
 
 For any problems you encounter, please consider submitting a bug
