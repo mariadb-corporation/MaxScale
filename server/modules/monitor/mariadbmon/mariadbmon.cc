@@ -417,7 +417,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::assume_unique_hostnames, &s_assume_unique_hostnames);
     add_native(&Settings::failcount, &s_failcount);
     add_native(&Settings::failover_timeout, &s_failover_timeout);
-    add_native(&Settings::switchover_timeout, &s_switchover_timeout);
+    add_native(&Settings::shared, &Shared::switchover_timeout, &s_switchover_timeout);
     add_native(&Settings::auto_failover, &s_auto_failover);
     add_native(&Settings::auto_rejoin, &s_auto_rejoin);
     add_native(&Settings::enforce_read_only_slaves, &s_enforce_read_only_slaves);

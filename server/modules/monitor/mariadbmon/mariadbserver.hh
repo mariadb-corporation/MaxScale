@@ -137,6 +137,8 @@ public:
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
         bool server_locks_enabled {true};
+
+        std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */

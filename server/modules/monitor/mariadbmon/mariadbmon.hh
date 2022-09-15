@@ -463,7 +463,6 @@ private:
         // Cluster operations additional settings
         using seconds = std::chrono::seconds;
         seconds failover_timeout;           /* Time limit in seconds for failover */
-        seconds switchover_timeout;         /* Time limit in seconds for switchover */
         bool    verify_master_failure;      /* Is master failure is verified via slaves? */
         seconds master_failure_timeout;     /* Master failure verification (via slaves) time in seconds */
 
