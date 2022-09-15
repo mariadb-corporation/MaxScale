@@ -118,14 +118,25 @@ bool is_valid_posix_path(char* path);
 bool mxs_mkdir_all(const char* path, int mask, bool log_errors = true);
 
 /**
- * Return the number of processors
+ * Return the number of processors on the system
  *
  * @return Number of processors or 1 if the information is not available
  */
 long get_processor_count();
 
 /**
- * Get number of virtual CPUs that are available to the process
+ * Get the number of CPUs (cores) that are available to the process
+ *
+ * This differs from get_processor_count() by taking CPU affinities into account. This
+ * results to a number that is smaller than or equal to what @c get_processor_count()
+ * returns.
+ *
+ * @return Number of available cores or 1 if the information is not available.
+ */
+long get_cpu_count();
+
+/**
+ * Get number of virtual CPUs (cores) that are available to the process
  *
  * This differs from get_processor_count() by taking CPU affinities and cgroup CPU quotas into account. This
  * results in a "virtual" CPU count that estimates how much CPU resoures, in terms of CPU cores, are
