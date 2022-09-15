@@ -663,16 +663,25 @@ const std::string& get_cgroup()
     return cgroup;
 }
 
+long get_cpu_count()
+{
+    unsigned int cpus = get_processor_count();
+
+    if (cpus != 1)
+    {
+        cpu_set_t cpuset;
+        if (sched_getaffinity(getpid(), sizeof(cpuset), &cpuset) == 0)
+        {
+            cpus = std::min((unsigned int)CPU_COUNT(&cpuset), cpus);
+        }
+    }
+
+    return cpus;
+}
+
 long get_vcpu_count()
 {
-    mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
-    unsigned int cpus = std::thread::hardware_concurrency();
-
-    cpu_set_t cpuset;
-    if (sched_getaffinity(getpid(), sizeof(cpuset), &cpuset) == 0)
-    {
-        cpus = std::min((unsigned int)CPU_COUNT(&cpuset), cpus);
-    }
+    unsigned int cpus = get_cpu_count();
 
     int quota = 0;
     int period = 0;
