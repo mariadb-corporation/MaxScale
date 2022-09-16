@@ -9,6 +9,8 @@ servers=server1, server2, server3, server4
 user=mariadbmon
 password=mariadbmon
 monitor_interval=1000ms
+replication_user=repl
+replication_password=repl
 
 [RW-Split-Router]
 type=service
