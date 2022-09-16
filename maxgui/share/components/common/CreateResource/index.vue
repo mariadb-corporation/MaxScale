@@ -64,7 +64,6 @@
                     v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
                     :ref="`form_${RESOURCE_FORM_TYPES.SERVICE}`"
                     :resourceModules="resourceModules"
-                    :allServers="all_servers"
                     :allFilters="all_filters"
                     :defaultItems="defaultRelationshipItems"
                 />
@@ -272,7 +271,6 @@ export default {
                     {
                         await this.fetchAllServices()
                         this.validateInfo = this.getAllServicesInfo
-                        await this.fetchAllServers()
                         await this.fetchAllFilters()
                         this.setDefaultRelationship({
                             allResourcesMap: this.getAllServersMap,

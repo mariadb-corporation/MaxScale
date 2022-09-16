@@ -1,12 +1,18 @@
 <template>
     <div class="mb-2">
         <module-parameters ref="moduleInputs" moduleName="router" :modules="resourceModules" />
-        <resource-relationships
-            ref="serversRelationship"
-            relationshipsType="servers"
-            :items="serversList"
-            :defaultItems="defaultServerItems"
-        />
+        <mxs-collapse
+            wrapperClass="mt-4"
+            titleWrapperClass="mx-n9"
+            :toggleOnClick="() => (showRoutingTargetInputs = !showRoutingTargetInputs)"
+            :isContentVisible="showRoutingTargetInputs"
+            :title="$mxs_t('routingTargets')"
+        >
+            <routing-target-select
+                v-model="routingTargetItems"
+                :defaultItems="defRoutingTargetItems"
+            />
+        </mxs-collapse>
         <resource-relationships
             ref="filtersRelationship"
             relationshipsType="filters"
@@ -41,44 +47,56 @@ export default {
     },
     props: {
         resourceModules: { type: Array, required: true },
-        allServers: { type: Array, required: true },
         allFilters: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },
     data() {
         return {
-            defaultServerItems: [],
             defaultFilterItems: [],
+            //routing-target-select states
+            showRoutingTargetInputs: true,
+            routingTargetItems: [],
+            defRoutingTargetItems: [],
         }
     },
     computed: {
-        serversList: function() {
-            return this.allServers.map(({ id, type }) => ({ id, type }))
-        },
-        filtersList: function() {
+        filtersList() {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
         },
-        isServerDefaultItems: function() {
-            const isValidArr = this.$helpers.isNotEmptyArray(this.defaultItems)
-            return isValidArr && this.defaultItems[0].type === 'servers'
+        hasDefServerItems() {
+            return this.$typy(this.defaultItems, '[0].type').safeString === 'servers'
+        },
+        routingTargetRelationships() {
+            let data = this.routingTargetItems
+            if (this.$typy(this.routingTargetItems).isObject) data = [this.routingTargetItems]
+            return data.reduce((obj, item) => {
+                if (!obj[item.type]) obj[item.type] = { data: [] }
+                obj[item.type].data.push(item)
+                return obj
+            }, {})
         },
     },
     watch: {
-        defaultItems: function() {
-            if (this.isServerDefaultItems) this.defaultServerItems = this.defaultItems
-            else this.defaultFilterItems = this.defaultItems
+        defaultItems: {
+            deep: true,
+            handler() {
+                if (this.hasDefServerItems) {
+                    this.defRoutingTargetItems = this.defaultItems
+                } else this.defaultFilterItems = this.defaultItems
+            },
         },
     },
     methods: {
         getValues() {
-            const { moduleInputs, serversRelationship, filtersRelationship } = this.$refs
+            const { moduleInputs, filtersRelationship } = this.$refs
             const { moduleId, parameters } = moduleInputs.getModuleInputValues()
+
             return {
                 moduleId,
                 parameters,
                 relationships: {
-                    servers: { data: serversRelationship.getSelectedItems() },
                     filters: { data: filtersRelationship.getSelectedItems() },
+                    ...this.routingTargetRelationships,
                 },
             }
         },

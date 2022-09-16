@@ -31,6 +31,7 @@ import PageWrapper from './PageWrapper'
 import Parameters from './Parameters'
 import RepTooltip from './RepTooltip'
 import RefreshRate from './RefreshRate'
+import RoutingTargetSelect from './RoutingTargetSelect'
 import SessionsTable from './SessionsTable'
 import OutlinedOverviewCard from './OutlinedOverviewCard'
 
@@ -57,6 +58,7 @@ export default {
     ...Parameters,
     'rep-tooltip': RepTooltip,
     'refresh-rate': RefreshRate,
+    'routing-target-select': RoutingTargetSelect,
     'sessions-table': SessionsTable,
     'outlined-overview-card': OutlinedOverviewCard,
 }
