@@ -53,20 +53,42 @@ const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
 class Client
 {
 public:
-    enum
+    struct Settings
     {
-        DEFAULT_N_CLIENTS = 4,
-        DEFAULT_N_ROWS    = 100
+        string host;
+        int    port {0};
+        string user;
+        string pw;
+        int    rows {0};
     };
+
+    Client(const Settings& sett, int id, bool verbose)
+        : m_id(id)
+        , m_verbose(verbose)
+        , m_value(1)
+        , m_settings(sett)
+        , m_rand_dist(0.0, 1.0)
+    {
+    }
+
+    void start()
+    {
+        m_keep_running = true;
+        m_thread = std::thread(&Client::run, this);
+    }
+
+    void stop()
+    {
+        m_keep_running = false;
+        m_thread.join();
+    }
+
 
     static void init(TestConnections& test, size_t nClients, size_t nRows)
     {
-        s_nClients = nClients;
-        s_nRows = nRows;
-
-        if (create_tables(test))
+        if (create_tables(test, nClients))
         {
-            if (insert_data(test))
+            if (insert_data(test, nClients, nRows))
             {
                 cout << "\nSyncing slaves." << endl;
                 test.repl->sync_slaves();
@@ -74,57 +96,21 @@ public:
         }
     }
 
-    static bool drop_tables(TestConnections& test)
+    static bool drop_tables(TestConnections& test, int n_clients)
     {
         test.tprintf("Dropping tables.");
         auto sConn = test.maxscale->open_rwsplit_connection2();
 
-        for (size_t i = 0; i < s_nClients; ++i)
+        for (int i = 0; i < n_clients; ++i)
         {
-            sConn->cmd_f("drop table test.t%zu;", i);
+            sConn->cmd_f("drop table test.t%d;", i);
         }
 
         return test.ok();
     }
 
-    static void start(bool verbose,
-                      const char* zHost,
-                      int port,
-                      const char* zUser,
-                      const char* zPassword)
-    {
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            s_threads.push_back(std::thread(&Client::thread_main,
-                                            i,
-                                            verbose,
-                                            zHost,
-                                            port,
-                                            zUser,
-                                            zPassword));
-        }
-    }
-
-    static void stop()
-    {
-        s_shutdown = true;
-
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            s_threads[i].join();
-        }
-    }
-
 private:
-    Client(int id, bool verbose)
-        : m_id(id)
-        , m_verbose(verbose)
-        , m_value(1)
-        , m_rand_dist(0.0, 1.0)
-    {
-    }
-
-    enum action_t
+    enum class action_t
     {
         ACTION_SELECT,
         ACTION_UPDATE
@@ -138,30 +124,27 @@ private:
         // 80% selects
         if (d <= 0.2)
         {
-            return ACTION_UPDATE;
+            return action_t::ACTION_UPDATE;
         }
         else
         {
-            return ACTION_SELECT;
+            return action_t::ACTION_SELECT;
         }
     }
 
-    bool run(MYSQL* pConn)
+    bool run_query(MYSQL* pConn)
     {
         bool rv = false;
 
         switch (action())
         {
-        case ACTION_SELECT:
+        case action_t::ACTION_SELECT:
             rv = run_select(pConn);
             break;
 
-        case ACTION_UPDATE:
+        case action_t::ACTION_UPDATE:
             rv = run_update(pConn);
             break;
-
-        default:
-            ss_dassert(!true);
         }
 
         return rv;
@@ -171,10 +154,8 @@ private:
     {
         bool rv = true;
 
-        string stmt("SELECT * FROM test.t");
-        stmt += std::to_string(m_id);
-        stmt += " WHERE id=";
-        stmt += std::to_string(get_random_id());
+        string stmt = mxb::string_printf("SELECT * FROM test.t%zu WHERE id=%i;",
+                                         m_id, get_random_id());
 
         if (mysql_query(pConn, stmt.c_str()) == 0)
         {
@@ -196,13 +177,9 @@ private:
     {
         bool rv = true;
 
-        string stmt("UPDATE test.t");
-        stmt += std::to_string(m_id);
-        stmt += " SET id=";
-        stmt += std::to_string(m_value);
-        stmt += " WHERE id=";
-        stmt += std::to_string(get_random_id());
-        m_value = (m_value + 1) % s_nRows;
+        string stmt = mxb::string_printf("UPDATE test.t%zu SET id=%zu WHERE id=%i;",
+                                         m_id, m_value, get_random_id());
+        m_value = (m_value + 1) % m_settings.rows;
 
         if (mysql_query(pConn, stmt.c_str()) == 0)
         {
@@ -232,10 +209,10 @@ private:
 
     int get_random_id() const
     {
-        int id = s_nRows * random_decimal_fraction();
+        int id = m_settings.rows * random_decimal_fraction();
 
         ss_dassert(id >= 0);
-        ss_dassert(id <= (int)s_nRows);
+        ss_dassert(id <= m_settings.rows);
 
         return id;
     }
@@ -245,7 +222,7 @@ private:
         return m_rand_dist(m_rand_gen);
     }
 
-    void run(const char* zHost, int port, const char* zUser, const char* zPassword)
+    void run()
     {
         do
         {
@@ -263,14 +240,15 @@ private:
                     CMESSAGE("Connecting");
                 }
 
-                if (mysql_real_connect(pMysql, zHost, zUser, zPassword, "test", port, NULL, 0))
+                if (mysql_real_connect(pMysql, m_settings.host.c_str(), m_settings.user.c_str(),
+                                       m_settings.pw.c_str(), "test", m_settings.port, NULL, 0))
                 {
                     if (m_verbose)
                     {
                         CMESSAGE("Connected.");
                     }
 
-                    while (!s_shutdown && run(pMysql))
+                    while (m_keep_running && run_query(pMysql))
                     {
                     }
                 }
@@ -296,61 +274,39 @@ private:
             // To prevent some backend from becoming overwhelmed.
             sleep(1);
         }
-        while (!s_shutdown);
+        while (m_keep_running);
     }
 
-    static void thread_main(int i,
-                            bool verbose,
-                            const char* zHost,
-                            int port,
-                            const char* zUser,
-                            const char* zPassword)
-    {
-        if (mysql_thread_init() == 0)
-        {
-            Client client(i, verbose);
-
-            client.run(zHost, port, zUser, zPassword);
-
-            mysql_thread_end();
-        }
-        else
-        {
-            int m_id = i;
-            CMESSAGE("mysql_thread_init() failed.");
-        }
-    }
-
-    static bool create_tables(TestConnections& test)
+    static bool create_tables(TestConnections& test, int n_clients)
     {
         test.tprintf("Creating tables.");
         auto sConn = test.maxscale->open_rwsplit_connection2();
 
-        for (size_t i = 0; i < s_nClients; ++i)
+        for (int i = 0; i < n_clients; ++i)
         {
-            sConn->cmd_f("create or replace table test.t%zu (id int);", i);
+            sConn->cmd_f("create or replace table test.t%d (id int);", i);
         }
 
         return test.ok();
     }
 
-    static bool insert_data(TestConnections& test)
+    static bool insert_data(TestConnections& test, int n_clients, int n_rows)
     {
         test.tprintf("Inserting data.");
 
         auto pConn = test.maxscale->open_rwsplit_connection2();
 
-        for (size_t i = 0; i < s_nClients; ++i)
+        for (int i = 0; i < n_clients; ++i)
         {
-            string insert = mxb::string_printf("insert into test.t%zu values ", i);
+            string insert = mxb::string_printf("insert into test.t%d values ", i);
 
-            for (size_t j = 0; j < s_nRows; ++j)
+            for (int j = 0; j < n_rows; ++j)
             {
                 insert += "(";
                 insert += std::to_string(j);
                 insert += ")";
 
-                if (j < s_nRows - 1)
+                if (j < n_rows - 1)
                 {
                     insert += ", ";
                 }
@@ -363,28 +319,17 @@ private:
     }
 
 private:
-    enum
-    {
-        INITSTATE_SIZE = 32
-    };
 
-    size_t                                         m_id;
-    bool                                           m_verbose;
-    size_t                                         m_value;
+    size_t           m_id;
+    bool             m_verbose;
+    size_t           m_value;
+    std::thread      m_thread;
+    std::atomic_bool m_keep_running {true};
+
+    const Settings&                                m_settings;
     mutable std::mt19937                           m_rand_gen;
     mutable std::uniform_real_distribution<double> m_rand_dist;
-
-    static size_t s_nClients;
-    static size_t s_nRows;
-    static bool   s_shutdown;
-
-    static std::vector<std::thread> s_threads;
 };
-
-size_t Client::s_nClients;
-size_t Client::s_nRows;
-bool Client::s_shutdown;
-std::vector<std::thread> Client::s_threads;
 }
 
 namespace
@@ -453,18 +398,29 @@ void run(TestConnections& test)
     create_client_user(test);
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
-    Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
+    const int n_clients = 4;
+    const int n_rows = 100;
+    Client::init(test, n_clients, n_rows);
 
     if (test.ok())
     {
-        const char* zHost = test.maxscale->ip4();
-        int port = test.maxscale->rwsplit_port;
-        const char* zUser = CLIENT_USER;
-        const char* zPassword = CLIENT_PASSWORD;
+        Client::Settings sett;
+        sett.host = mxs.ip4();
+        sett.port = mxs.rwsplit_port;
+        sett.user = CLIENT_USER;
+        sett.pw = CLIENT_PASSWORD;
+        sett.rows = n_rows;
 
-        test.tprintf("Starting clients. Connecting to %s:%i as '%s':'%s'.",
-                     zHost, port, zUser, zPassword);
-        Client::start(test.verbose(), zHost, port, zUser, zPassword);
+        test.tprintf("Starting %i clients. Connecting to %s:%i as '%s':'%s'.",
+                     n_clients, sett.host.c_str(), sett.port, sett.user.c_str(), sett.pw.c_str());
+
+        std::vector<std::unique_ptr<Client>> clients;
+        for (int i = 0; i < n_clients; i++)
+        {
+            auto new_client = std::make_unique<Client>(sett, i, test.verbose());
+            new_client->start();
+            clients.emplace_back(std::move(new_client));
+        }
 
         time_t start = time(NULL);
         int current_master_id = 1;
@@ -484,7 +440,11 @@ void run(TestConnections& test)
         }
 
         test.tprintf("Stopping clients after %i switchovers.", n_switchovers);
-        Client::stop();
+
+        for (int i = 0; i < n_clients; i++)
+        {
+            clients[i]->stop();
+        }
 
         // Ensure master is at server1. Shortens startup time for next test.
         if (current_master_id != 1)
@@ -496,7 +456,7 @@ void run(TestConnections& test)
         drop_client_user(test);
     }
 
-    Client::drop_tables(test);
+    Client::drop_tables(test, n_clients);
 }
 }
 
