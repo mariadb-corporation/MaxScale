@@ -196,6 +196,7 @@ import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
 import LoadSqlCtr from './LoadSqlCtr.vue'
+import { EventBus } from './EventBus'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
@@ -245,6 +246,9 @@ export default {
             getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
             getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
+        eventBus() {
+            return EventBus
+        },
         isQueryKilled() {
             return (
                 !this.getLoadingQueryResultBySessionId(this.session.id) &&
@@ -261,10 +265,12 @@ export default {
         },
     },
     activated() {
+        this.eventBus.$on('shortkey', this.shortKeyHandler)
         this.watch_isQueryKilled()
     },
     deactivated() {
         this.$typy(this.unwatch_isQueryKilled).safeFunction()
+        this.eventBus.$off('shortkey')
     },
     methods: {
         ...mapActions({
@@ -368,6 +374,22 @@ export default {
             else if (names.includes(v))
                 return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
             return true
+        },
+        shortKeyHandler(key) {
+            switch (key) {
+                case 'ctrl-d':
+                case 'mac-cmd-d':
+                    this.openSnippetDlg()
+                    break
+                case 'ctrl-enter':
+                case 'mac-cmd-enter':
+                    this.handleRun('selected')
+                    break
+                case 'ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    this.handleRun('all')
+                    break
+            }
         },
     },
 }

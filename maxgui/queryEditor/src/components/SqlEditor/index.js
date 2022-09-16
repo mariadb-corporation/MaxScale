@@ -236,40 +236,41 @@ export default {
         },
         addCustomCmds(monaco) {
             // Add custom commands to palette list
+            // should emit win shortcut keys that are defined in app_config.QUERY_SHORTCUT_KEYS
             const actionDescriptors = [
                 {
                     label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('all') }),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
                     ],
-                    run: () => this.$emit('onCtrlShiftEnter'),
+                    run: () => this.$emit('shortkey', 'ctrl-shift-enter'),
                 },
                 {
                     label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('selected') }),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-                    run: () => this.$emit('onCtrlEnter'),
+                    run: () => this.$emit('shortkey', 'ctrl-enter'),
                 },
                 {
                     label: this.$mxs_t('createQuerySnippet'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
-                    run: () => this.$emit('onCtrlD'),
+                    run: () => this.$emit('shortkey', 'ctrl-d'),
                 },
                 {
                     label: this.$mxs_t('openScript'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO],
-                    run: () => this.$emit('onCtrlO'),
+                    run: () => this.$emit('shortkey', 'ctrl-o'),
                 },
                 {
                     label: this.$mxs_t('saveScript'),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-                    run: () => this.$emit('onCtrlS'),
+                    run: () => this.$emit('shortkey', 'ctrl-s'),
                 },
                 {
                     label: this.$mxs_t('saveScriptAs'),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
                     ],
-                    run: () => this.$emit('onCtrlShiftS'),
+                    run: () => this.$emit('shortkey', 'ctrl-shift-s'),
                 },
             ]
             for (const item of actionDescriptors) {

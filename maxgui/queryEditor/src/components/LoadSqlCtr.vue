@@ -51,7 +51,7 @@
                     text
                     class="save-sql-btn toolbar-square-btn"
                     type="file"
-                    :disabled="!getIsFileUnsaved || !hasFileHandle"
+                    :disabled="isSaveFileDisabled"
                     v-on="on"
                     @click="saveFile"
                 >
@@ -76,9 +76,9 @@
                     text
                     class="save-sql-btn toolbar-square-btn"
                     type="file"
-                    :disabled="!getIsFileUnsaved"
+                    :disabled="isSaveFileAsDisabled"
                     v-on="on"
-                    @click="hasFullSupport ? saveFileAs() : saveFileLegacy()"
+                    @click="handleSaveFileAs"
                 >
                     <v-icon size="20" color="accent-dark">
                         mdi-content-save-edit-outline
@@ -108,6 +108,7 @@
  */
 import { mapState, mapGetters, mapMutations } from 'vuex'
 import { fileOpen, supported } from 'browser-fs-access'
+import { EventBus } from './EventBus'
 
 export default {
     name: 'load-sql-ctr',
@@ -146,6 +147,21 @@ export default {
         hasFileHandle() {
             return Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
         },
+        isSaveFileDisabled() {
+            return !this.getIsFileUnsaved || !this.hasFileHandle
+        },
+        isSaveFileAsDisabled() {
+            return !this.getIsFileUnsaved
+        },
+        eventBus() {
+            return EventBus
+        },
+    },
+    activated() {
+        this.eventBus.$on('shortkey', this.shortKeyHandler)
+    },
+    deactivated() {
+        this.eventBus.$off('shortkey')
     },
     methods: {
         ...mapMutations({
@@ -275,12 +291,11 @@ export default {
             await this.loadFileToActiveSession(blob)
         },
         async handleSaveFile() {
-            if (!this.hasFullSupport) this.saveFileLegacy()
-            else if (this.hasFileHandle) await this.saveFile()
-            else await this.saveFileAs()
+            if (this.hasFullSupport && this.hasFileHandle) await this.saveFile()
+            else await this.handleSaveFileAs()
         },
         /*
-         * Download the file to user's local device
+         * Download the file to user's disk
          */
         saveFileLegacy() {
             let a = document.createElement('a')
@@ -329,6 +344,31 @@ export default {
                 this.$logger('load-sql-ctr-saveFile').error(e)
             }
         },
+
+        /**
+         * Create a handle to a new text file on the local file system.
+         * @param {string} suggestedName - suggestedName for the file
+         * @returns {Promise<FileSystemFileHandle>} Handle to the new file.
+         */
+        getNewFileHandle(suggestedName) {
+            try {
+                // For Chrome 86 and later...
+                if ('showSaveFilePicker' in window)
+                    return window.showSaveFilePicker({
+                        suggestedName,
+                    })
+                // For Chrome 85 and earlier...
+                return window.chooseFileSystemEntries({
+                    suggestedName,
+                    type: 'save-file',
+                })
+            } catch (ex) {
+                if (!ex.name === 'AbortError')
+                    this.$logger('load-sql-ctr-getNewFileHandle').error(
+                        'An error occurred trying to open the file.'
+                    )
+            }
+        },
         async saveFileAs() {
             let fileHandle = await this.getNewFileHandle(
                 `${this.getActiveSession.name}${this.hasFileHandle ? '' : '.sql'}`
@@ -352,6 +392,10 @@ export default {
                 this.$logger('load-sql-ctr-saveFileAs').error('Unable to write file')
             }
         },
+        async handleSaveFileAs() {
+            this.hasFullSupport ? await this.saveFileAs() : this.saveFileLegacy()
+        },
+
         /**
          * Writes the contents to disk.
          * @param {<FileSystemFileHandle>} param.fileHandle File handle to write to.
@@ -394,28 +438,22 @@ export default {
             return false
         },
 
-        /**
-         * Create a handle to a new text file on the local file system.
-         * @param {string} suggestedName - suggestedName for the file
-         * @returns {Promise<FileSystemFileHandle>} Handle to the new file.
-         */
-        getNewFileHandle(suggestedName) {
-            try {
-                // For Chrome 86 and later...
-                if ('showSaveFilePicker' in window)
-                    return window.showSaveFilePicker({
-                        suggestedName,
-                    })
-                // For Chrome 85 and earlier...
-                return window.chooseFileSystemEntries({
-                    suggestedName,
-                    type: 'save-file',
-                })
-            } catch (ex) {
-                if (!ex.name === 'AbortError')
-                    this.$logger('load-sql-ctr-getNewFileHandle').error(
-                        'An error occurred trying to open the file.'
-                    )
+        shortKeyHandler(key) {
+            switch (key) {
+                case 'ctrl-o':
+                case 'mac-cmd-o':
+                    this.handleFileOpen()
+                    break
+                case 'ctrl-s':
+                case 'mac-cmd-s': {
+                    if (!this.isSaveFileDisabled && this.hasFullSupport) this.saveFile()
+                    break
+                }
+                case 'ctrl-shift-s':
+                case 'mac-cmd-shift-s': {
+                    if (!this.isSaveFileAsDisabled) this.handleSaveFileAs()
+                    break
+                }
             }
         },
     },

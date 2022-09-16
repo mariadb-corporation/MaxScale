@@ -4,7 +4,7 @@
         v-resize.quiet="setDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
         class="query-editor fill-height"
-        @shortkey="getIsTxtEditor ? wkeShortKeyHandler($event) : null"
+        @shortkey="eventBus.$emit('shortkey', $event.srcKey)"
     >
         <div
             class="fill-height d-flex flex-column"
@@ -24,12 +24,6 @@
                         v-if="active_wke_id === wke.id && ctrDim.height"
                         ref="wke"
                         :ctrDim="ctrDim"
-                        @onCtrlEnter="onCtrlEnter"
-                        @onCtrlShiftEnter="onCtrlShiftEnter"
-                        @onCtrlD="onCtrlD"
-                        @onCtrlO="onCtrlO"
-                        @onCtrlS="onCtrlS"
-                        @onCtrlShiftS="onCtrlShiftS"
                     >
                         <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                     </wke-ctr>
@@ -82,6 +76,7 @@ import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import '@queryEditorSrc/styles/queryEditor.scss'
 import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
 import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
+import { EventBus } from '@queryEditorSrc/components/EventBus'
 
 export default {
     name: 'query-editor',
@@ -119,6 +114,9 @@ export default {
                 width: this.dim.width,
                 height: this.dim.height - this.wkeNavCtrHeight - this.queryEditorTopSlotHeight,
             }
+        },
+        eventBus() {
+            return EventBus
         },
     },
     watch: {
@@ -211,69 +209,6 @@ export default {
                 const { height } = this.$refs.queryEditorTopSlot.getBoundingClientRect()
                 this.queryEditorTopSlotHeight = height
             }
-        },
-        async wkeShortKeyHandler(e) {
-            switch (e.srcKey) {
-                case 'win-ctrl-d':
-                case 'mac-cmd-d':
-                    this.onCtrlD()
-                    break
-                case 'win-ctrl-enter':
-                case 'mac-cmd-enter':
-                    await this.onCtrlEnter()
-                    break
-                case 'win-ctrl-shift-enter':
-                case 'mac-cmd-shift-enter':
-                    await this.onCtrlShiftEnter()
-                    break
-                case 'win-ctrl-o':
-                case 'mac-cmd-o':
-                    this.onCtrlO()
-                    break
-                case 'win-ctrl-s':
-                case 'mac-cmd-s':
-                    await this.onCtrlS()
-                    break
-                case 'win-ctrl-shift-s':
-                case 'mac-cmd-shift-s':
-                    await this.onCtrlShiftS()
-                    break
-            }
-        },
-        //TODO: Refactor to use event bus instead of accessing the target component via $refs
-        getTxtEditorToolbar() {
-            return this.$typy(this.$refs, `wke[0].$refs.editor[0].$refs.txtEditorToolbar`)
-                .safeObject
-        },
-        getLoadSqlCtr() {
-            return this.getTxtEditorToolbar().$refs.loadSqlCtr
-        },
-        async onCtrlEnter() {
-            await this.getTxtEditorToolbar().handleRun('selected')
-        },
-        async onCtrlShiftEnter() {
-            await this.getTxtEditorToolbar().handleRun('all')
-        },
-        onCtrlD() {
-            this.getTxtEditorToolbar().openSnippetDlg()
-        },
-        onCtrlO() {
-            this.getLoadSqlCtr().handleFileOpen()
-        },
-        async onCtrlS() {
-            const loadSqlCtr = this.getLoadSqlCtr()
-            if (
-                loadSqlCtr.getIsFileUnsaved &&
-                loadSqlCtr.hasFullSupport &&
-                loadSqlCtr.hasFileHandle
-            )
-                await loadSqlCtr.saveFile()
-        },
-        async onCtrlShiftS() {
-            const loadSqlCtr = this.getLoadSqlCtr()
-            if (loadSqlCtr.getIsFileUnsaved)
-                if (loadSqlCtr.hasFullSupport) await loadSqlCtr.saveFileAs()
-                else loadSqlCtr.saveFileLegacy()
         },
     },
 }
