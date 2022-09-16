@@ -75,6 +75,7 @@ export const APP_CONFIG = Object.freeze({
             },
         },
     },
+    ROUTING_TARGET_RELATIONSHIP_TYPES: ['servers', 'services', 'monitors'],
     // routes having children routes
     ROUTE_GROUP: Object.freeze({
         DASHBOARD: 'dashboard',
