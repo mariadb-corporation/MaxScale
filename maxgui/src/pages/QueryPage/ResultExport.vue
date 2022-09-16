@@ -86,27 +86,6 @@
                             v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
                             class="mx-n1"
                         >
-                            <v-col cols="12" md="12" class="pa-1 mt-1">
-                                <v-radio-group
-                                    v-model="hasHeaders"
-                                    hide-details="auto"
-                                    row
-                                    dense
-                                    class="ma-0 pt-0"
-                                >
-                                    <v-radio
-                                        :label="$t('withHeaders')"
-                                        :value="true"
-                                        class="field__label-radio"
-                                    />
-                                    <v-radio
-                                        :label="$t('withoutHeaders')"
-                                        :value="false"
-                                        class="field__label-radio"
-                                    />
-                                </v-radio-group>
-                            </v-col>
-
                             <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
                                 <label class="field__label color text-small-text">
                                     {{ $t('delimiter') }}
@@ -158,7 +137,7 @@
                                     required
                                 />
                             </v-col>
-                            <v-col cols="12" md="6" class="pa-1 mt-3">
+                            <v-col cols="12" class="pa-1 mt-3">
                                 <v-checkbox
                                     v-model="noBackslashEscapes"
                                     class="no-back-slash-escapes-checkbox pa-0 ma-0"
@@ -188,6 +167,15 @@
                                         </v-tooltip>
                                     </template>
                                 </v-checkbox>
+                            </v-col>
+                            <v-col cols="12" class="pa-1">
+                                <v-checkbox
+                                    v-model="withHeaders"
+                                    class="no-back-slash-escapes-checkbox pa-0 ma-0"
+                                    color="primary"
+                                    :label="$t('withHeaders')"
+                                    hide-details="auto"
+                                />
                             </v-col>
                         </v-row>
                     </v-container>
@@ -248,7 +236,7 @@ export default {
             chosenDelimiter: { txt: 'Comma', val: ',' },
             noBackslashEscapes: false,
             custDelimiter: '',
-            hasHeaders: true,
+            withHeaders: false,
         }
     },
     computed: {
@@ -268,7 +256,7 @@ export default {
             if (this.chosenDelimiter.val) delimiter = this.chosenDelimiter.val
             else delimiter = this.custDelimiter
             let str = ''
-            if (this.hasHeaders) {
+            if (this.withHeaders) {
                 let headers = this.headers.map(header => this.escapeCell(header.text))
                 str = `${headers.join(delimiter)}\n`
             }
