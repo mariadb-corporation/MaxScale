@@ -224,6 +224,7 @@
     "truncateTbl": "Truncate Table",
     "reconnect": "Reconnect",
     "noConnAvail": "No connections available",
+    "noBackslashEscapes": "No back slash escapes",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -272,7 +273,8 @@
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
         "reconnSuccessfully": "Reconnection was successful",
-        "showTrendline": "The trend line can only be computed for numerical data on both axes"
+        "showTrendline": "The trend line can only be computed for numerical data on both axes",
+        "noBackslashEscapes": "Disables using the backslash character as an escape character within strings, making it equivalent to an ordinary character."
     },
 
     "$vuetify": {

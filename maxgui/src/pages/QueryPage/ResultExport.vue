@@ -158,6 +158,37 @@
                                     required
                                 />
                             </v-col>
+                            <v-col cols="12" md="6" class="pa-1 mt-3">
+                                <v-checkbox
+                                    v-model="noBackslashEscapes"
+                                    class="no-back-slash-escapes-checkbox pa-0 ma-0"
+                                    color="primary"
+                                    hide-details="auto"
+                                >
+                                    <template v-slot:label>
+                                        <label class="v-label">
+                                            {{ $t('noBackslashEscapes') }}
+                                        </label>
+                                        <v-tooltip
+                                            top
+                                            transition="slide-y-transition"
+                                            content-class="shadow-drop white color text-navigation py-1 px-4"
+                                        >
+                                            <template v-slot:activator="{ on }">
+                                                <v-icon
+                                                    class="ml-1 material-icons-outlined pointer"
+                                                    size="16"
+                                                    color="#9DB4BB"
+                                                    v-on="on"
+                                                >
+                                                    info
+                                                </v-icon>
+                                            </template>
+                                            <span>{{ $t('info.noBackslashEscapes') }}</span>
+                                        </v-tooltip>
+                                    </template>
+                                </v-checkbox>
+                            </v-col>
                         </v-row>
                     </v-container>
                 </template>
@@ -181,7 +212,7 @@
  * Public License.
  */
 export default {
-    name: 'result-data-table',
+    name: 'result-export',
     props: {
         rows: { type: Array, required: true },
         headers: {
@@ -203,7 +234,7 @@ export default {
                     extension: 'json',
                 },
                 {
-                    contentType: 'data:application/csv;charset=utf-8;',
+                    contentType: 'data:text/csv;charset=utf-8;',
                     extension: 'csv',
                 },
             ],
@@ -215,6 +246,7 @@ export default {
                 { txt: 'Custom', val: '' },
             ],
             chosenDelimiter: { txt: 'Comma', val: ',' },
+            noBackslashEscapes: false,
             custDelimiter: '',
             hasHeaders: true,
         }
@@ -237,14 +269,14 @@ export default {
             else delimiter = this.custDelimiter
             let str = ''
             if (this.hasHeaders) {
-                let headers = this.headers.map(header => this.escapeCsv(header.text))
-                str = `${headers.join(delimiter)}\r\n`
+                let headers = this.headers.map(header => this.escapeCell(header.text))
+                str = `${headers.join(delimiter)}\n`
             }
             str += this.rows
-                .map(row => row.map(cell => this.escapeCsv(cell)).join(delimiter))
-                .join('\r\n')
+                .map(row => row.map(cell => this.escapeCell(cell)).join(delimiter))
+                .join('\n')
 
-            return str
+            return `${str}\n` // line terminator
         },
     },
     watch: {
@@ -254,14 +286,13 @@ export default {
     },
     methods: {
         /**
-         * This function escapes value by adding double quotes
-         * if value contains whitespace, comma, single quote or double quote
          * @param {(String|Number)} v cell value
          * @returns {(String|Number)} returns escape value
          */
-        escapeCsv(v) {
-            // remove blanks before checking
-            if (`${v}`.replace(/ /g, '').match(/[\s,',"]/)) return '"' + v.replace(/"/g, '""') + '"'
+        escapeCell(v) {
+            // NULL is returned as js null in the query result.
+            if (this.$typy(v).isNull) return this.noBackslashEscapes ? 'NULL' : '\\N' // db escape
+            if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
         },
         getData(fileExtension) {
@@ -285,7 +316,7 @@ export default {
         onExport() {
             const { contentType, extension } = this.selectedFormat
             let a = document.createElement('a')
-            a.href = `${contentType}, ${encodeURIComponent(this.getData(extension))}`
+            a.href = `${contentType},${encodeURIComponent(this.getData(extension))}`
             a.download = `${this.fileName}.${extension}`
             document.body.appendChild(a)
             a.click()
@@ -300,6 +331,12 @@ export default {
     ::v-deep.v-label {
         color: $small-text;
         font-size: $label-control-size;
+    }
+}
+::v-deep .no-back-slash-escapes-checkbox {
+    label {
+        font-size: $label-control-size;
+        color: $small-text;
     }
 }
 </style>
