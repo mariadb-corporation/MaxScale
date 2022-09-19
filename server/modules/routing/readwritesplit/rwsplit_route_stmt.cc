@@ -1169,7 +1169,15 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 
     if (trx_is_open())
     {
-        if (!m_trx.target())
+        if (m_wait_gtid == READING_GTID)
+        {
+            // Ignore transaction target if a sync query is in progress. This prevents the transaction from
+            // being assigned based on the target of the sync query which would end up causing all read-only
+            // transactions to be routed to the master.
+            MXB_INFO("Doing GTID sync on '%s' while transaction is open, transaction target is '%s'",
+                     target->name(), m_trx.target() ? m_trx.target()->name() : "<none>");
+        }
+        else if (!m_trx.target())
         {
             MXB_INFO("Transaction starting on '%s'", target->name());
             m_trx.set_target(target);
@@ -1183,9 +1191,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
         else
         {
-            // The only case where a query is routed to another server than the original transaction target is
-            // when the GTID sync query is done for causal_reads=universal.
-            mxb_assert(m_trx.target() == target || m_wait_gtid == READING_GTID);
+            mxb_assert(m_trx.target() == target);
         }
     }
 

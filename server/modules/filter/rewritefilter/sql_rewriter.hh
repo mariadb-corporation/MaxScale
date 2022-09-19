@@ -25,6 +25,8 @@
 class SqlRewriter
 {
 public:
+    virtual ~SqlRewriter() = default;
+
     SqlRewriter(const TemplateDef& template_def);
 
     /**

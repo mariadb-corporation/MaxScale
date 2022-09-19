@@ -429,6 +429,13 @@ public:
      * @return Users as json
      */
     virtual json_t* users_to_json() const = 0;
+
+    /**
+     * Get the point in time when the users were last loaded
+     *
+     * @return The point in time when the users were last loaded
+     */
+    virtual time_t last_update() const = 0;
 };
 
 class UserAccountCache

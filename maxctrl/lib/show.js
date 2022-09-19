@@ -151,6 +151,11 @@ const service_fields = [
     description: "When the service was started",
   },
   {
+    name: "Users Loaded At",
+    path: "attributes.users_last_update",
+    description: "When the users for the service were loaded",
+  },
+  {
     name: "Current Connections",
     path: "attributes.statistics.connections",
     description: "Current connection count",

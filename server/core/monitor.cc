@@ -2301,22 +2301,39 @@ void MonitorServer::apply_status_requests()
 {
     // The admin can only modify the [Maintenance] and [Drain] bits.
     int admin_msg = m_status_request.exchange(NO_CHANGE, std::memory_order_acq_rel);
+    string msg;
 
     switch (admin_msg)
     {
     case MonitorServer::MAINT_ON:
+        if (!server->is_in_maint())
+        {
+            msg = mxb::string_printf("Server '%s' is going into maintenance.", server->name());
+        }
         server->set_status(SERVER_MAINT);
         break;
 
     case MonitorServer::MAINT_OFF:
+        if (server->is_in_maint())
+        {
+            msg = mxb::string_printf("Server '%s' is coming out of maintenance.", server->name());
+        }
         server->clear_status(SERVER_MAINT);
         break;
 
     case MonitorServer::DRAINING_ON:
+        if (!server->is_in_maint() && !server->is_draining())
+        {
+            msg = mxb::string_printf("Server '%s' is being drained.", server->name());
+        }
         server->set_status(SERVER_DRAINING);
         break;
 
     case MonitorServer::DRAINING_OFF:
+        if (!server->is_in_maint() && server->is_draining())
+        {
+            msg = mxb::string_printf("Server '%s' is no longer being drained.", server->name());
+        }
         server->clear_status(SERVER_DRAINING);
         break;
 
@@ -2325,6 +2342,11 @@ void MonitorServer::apply_status_requests()
 
     default:
         mxb_assert(!true);
+    }
+
+    if (!msg.empty())
+    {
+        MXB_NOTICE("%s", msg.c_str());
     }
 }
 

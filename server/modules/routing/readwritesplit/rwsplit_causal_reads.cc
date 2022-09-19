@@ -290,6 +290,14 @@ std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_p
     m_qc.update_route_info(get_current_target(), buffer.get());
     RoutingPlan plan = resolve_route(buffer, route_info());
 
+    // Now with MXS-4260 fixed, the attached routing hint will be more of a suggestion to the downstream
+    // components rather than something that must be followed. For this reason, the target type must be
+    // explicitly set as TARGET_MASTER. In addition, the actual target must be re-selected every time to make
+    // sure that a new connection is created if the master changes and/or dies during a read-only transaction
+    // that's being replayed.
+    plan.route_target = TARGET_MASTER;
+    plan.target = handle_master_is_target();
+
     return {buffer, plan};
 }
 
