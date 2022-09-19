@@ -1970,7 +1970,7 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %ld processor cores (%ld available).",
+    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %ld processor cores (%.2f available).",
                cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
                cnf.version.c_str(), cnf.machine.c_str(), get_processor_count(),
                get_vcpu_count());

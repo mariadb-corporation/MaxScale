@@ -3037,20 +3037,8 @@ json_t* mxs::Config::system_to_json() const
     json_t* machine = json_object();
 
     json_object_set_new(machine, "cores_physical", json_integer(get_processor_count()));
-    auto cores = get_cpu_count();
-    json_object_set_new(machine, "cores_available", json_integer(cores));
-
-    double vcores = cores;
-
-    int quota;
-    int period;
-    if (get_cpu_quota_and_period(&quota, &period))
-    {
-        vcores = (double)quota/period;
-    }
-
-    json_object_set_new(machine, "cores_virtual", json_real(vcores));
-
+    json_object_set_new(machine, "cores_available", json_integer(get_cpu_count()));
+    json_object_set_new(machine, "cores_virtual", json_real(get_vcpu_count()));
     json_object_set_new(machine, "memory_physical", json_integer(get_total_memory()));
     json_object_set_new(machine, "memory_available", json_integer(get_available_memory()));
 
