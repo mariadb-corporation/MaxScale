@@ -216,30 +216,34 @@ export default {
         return {
             isFormValid: false,
             isConfigDialogOpened: false,
-            fileFormats: [
-                {
-                    contentType: 'data:application/json;charset=utf-8;',
-                    extension: 'json',
-                },
-                {
-                    contentType: 'data:text/csv;charset=utf-8;',
-                    extension: 'csv',
-                },
-            ],
             selectedFormat: null,
             fileName: '',
-            delimiters: [
-                { txt: 'Comma', val: ',' },
-                { txt: 'Tab', val: '\t' },
-                { txt: 'Custom', val: '' },
-            ],
-            chosenDelimiter: { txt: 'Comma', val: ',' },
+            chosenDelimiter: null,
             noBackslashEscapes: false,
             custDelimiter: '',
             withHeaders: false,
         }
     },
     computed: {
+        fileFormats() {
+            return [
+                {
+                    contentType: 'data:text/csv;charset=utf-8;',
+                    extension: 'csv',
+                },
+                {
+                    contentType: 'data:application/json;charset=utf-8;',
+                    extension: 'json',
+                },
+            ]
+        },
+        delimiters() {
+            return [
+                { txt: 'Tab', val: '\t' },
+                { txt: 'Comma', val: ',' },
+                { txt: 'Custom', val: '' },
+            ]
+        },
         jsonData() {
             let arr = []
             for (let i = 0; i < this.rows.length; ++i) {
@@ -269,7 +273,8 @@ export default {
     },
     watch: {
         isConfigDialogOpened(v) {
-            if (!v) Object.assign(this.$data, this.$options.data())
+            if (v) this.assignDefOpt()
+            else Object.assign(this.$data, this.$options.data())
         },
     },
     methods: {
@@ -309,6 +314,10 @@ export default {
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
+        },
+        assignDefOpt() {
+            this.chosenDelimiter = this.delimiters[0] // tab
+            this.selectedFormat = this.fileFormats[0] // csv
         },
     },
 }
