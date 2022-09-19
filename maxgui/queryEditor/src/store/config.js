@@ -29,6 +29,8 @@ export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'mac-cmd-s': ['meta', 's'],
     'ctrl-shift-s': ['ctrl', 'shift', 's'],
     'mac-cmd-shift-s': ['meta', 'shift', 's'],
+    'ctrl-shift-c': ['ctrl', 'shift', 'c'],
+    'mac-cmd-shift-c': ['meta', 'shift', 'c'],
 })
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 export const SQL_NODE_TYPES = Object.freeze({

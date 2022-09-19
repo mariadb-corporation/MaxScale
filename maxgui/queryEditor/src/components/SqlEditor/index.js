@@ -236,7 +236,7 @@ export default {
         },
         addCustomCmds(monaco) {
             // Add custom commands to palette list
-            // should emit win shortcut keys that are defined in app_config.QUERY_SHORTCUT_KEYS
+            // should emit shortcut keys that are defined in app_config.QUERY_SHORTCUT_KEYS
             const actionDescriptors = [
                 {
                     label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('all') }),
@@ -271,6 +271,13 @@ export default {
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
                     ],
                     run: () => this.$emit('shortkey', 'ctrl-shift-s'),
+                },
+                {
+                    label: this.$mxs_t('stopStatements'),
+                    keybindings: [
+                        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyC,
+                    ],
+                    run: () => this.$emit('shortkey', 'ctrl-shift-c'),
                 },
             ]
             for (const item of actionDescriptors) {

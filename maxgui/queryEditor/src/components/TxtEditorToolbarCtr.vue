@@ -4,42 +4,33 @@
         :style="{ height: `${height}px` }"
     >
         <mxs-tooltip-btn
-            :btnClass="[
-                'toolbar-square-btn',
-                getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn',
-            ]"
+            :btnClass="['toolbar-square-btn', isExecuting ? 'stop-btn' : 'run-btn']"
             text
             color="accent-dark"
-            :disabled="
-                getLoadingQueryResultBySessionId(session.id)
-                    ? false
-                    : getIsRunBtnDisabledBySessionId(session.id)
-            "
+            :disabled="isExecuting ? isStopping : isRunBtnDisabled"
             @click="
                 () =>
-                    getLoadingQueryResultBySessionId(session.id)
-                        ? stopQuery()
-                        : handleRun(selected_query_txt ? 'selected' : 'all')
+                    isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
             "
         >
             <template v-slot:btn-content>
                 <v-icon size="16">
-                    {{
-                        `$vuetify.icons.mxs_${
-                            getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
-                        }`
-                    }}
+                    {{ `$vuetify.icons.mxs_${isExecuting ? 'stopped' : 'running'}` }}
                 </v-icon>
             </template>
-            <template v-if="selected_query_txt">
-                {{ $mxs_t('runStatements', { quantity: $mxs_t('selected') }) }}
+            <template v-if="isExecuting">
+                {{ $mxs_t('stopStatements') }}
                 <br />
-                Cmd/Ctrl + Enter
+                Cmd/Ctrl + Shift + C
             </template>
             <template v-else>
-                {{ $mxs_t('runStatements', { quantity: $mxs_t('all') }) }}
+                {{
+                    $mxs_t('runStatements', {
+                        quantity: selected_query_txt ? $mxs_t('selected') : $mxs_t('all'),
+                    })
+                }}
                 <br />
-                Cmd/Ctrl + Shift + Enter
+                {{ selected_query_txt ? 'Cmd/Ctrl + Enter' : 'Cmd/Ctrl + Shift + Enter' }}
             </template>
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
@@ -47,7 +38,7 @@
             :depressed="show_vis_sidebar"
             :text="!show_vis_sidebar"
             :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-            :disabled="getIsVisBtnDisabledBySessionId(session.id)"
+            :disabled="isVisBtnDisabled"
             @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: session.id })"
         >
             <template v-slot:btn-content>
@@ -207,7 +198,6 @@ export default {
             selected_query_txt: state => state.editor.selected_query_txt,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
             getBgConn: 'queryConn/getBgConn',
@@ -218,10 +208,7 @@ export default {
             return EventBus
         },
         isQueryKilled() {
-            return (
-                !this.getLoadingQueryResultBySessionId(this.session.id) &&
-                !this.getIsStoppingQueryBySessionId(this.session.id)
-            )
+            return !this.isExecuting && !this.isStopping
         },
         isRowLimitValid: {
             get() {
@@ -230,6 +217,18 @@ export default {
             set(v) {
                 if (v) this.SET_IS_MAX_ROWS_VALID(v)
             },
+        },
+        isExecuting() {
+            return this.getLoadingQueryResultBySessionId(this.session.id)
+        },
+        isStopping() {
+            return this.getIsStoppingQueryBySessionId(this.session.id)
+        },
+        isRunBtnDisabled() {
+            return this.getIsRunBtnDisabledBySessionId(this.session.id)
+        },
+        isVisBtnDisabled() {
+            return this.getIsVisBtnDisabledBySessionId(this.session.id)
         },
     },
     activated() {
@@ -272,7 +271,7 @@ export default {
             )
         },
         async handleRun(mode) {
-            if (!this.getIsRunBtnDisabledBySessionId[this.getActiveSessionId])
+            if (!this.isRunBtnDisabled)
                 if (!this.query_confirm_flag) await this.onRun(mode)
                 else if (this.shouldOpenDialog(mode)) {
                     this.activeRunMode = mode
@@ -301,7 +300,7 @@ export default {
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
                 payload: this.SQL_QUERY_MODES.QUERY_VIEW,
-                id: this.getActiveSessionId,
+                id: this.session.id,
             })
             switch (mode) {
                 case 'all':
@@ -357,6 +356,9 @@ export default {
                 case 'mac-cmd-shift-enter':
                     this.handleRun('all')
                     break
+                case 'ctrl-shift-c':
+                case 'mac-cmd-shift-c':
+                    if (this.isExecuting) this.stopQuery()
             }
         },
     },
