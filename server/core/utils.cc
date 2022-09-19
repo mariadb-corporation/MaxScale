@@ -722,20 +722,20 @@ bool get_cpu_quota_and_period(int* quotap, int* periodp)
     return quota && period;
 }
 
-long get_vcpu_count()
+double get_vcpu_count()
 {
-    unsigned int cpus = get_cpu_count();
+    double cpus = get_cpu_count();
 
     int quota = 0;
     int period = 0;
 
     if (get_cpu_quota_and_period(&quota, &period))
     {
-        unsigned int vcpu = std::ceil((double)quota / period);
+        double vcpu = (double)quota / period;
         cpus = std::min(vcpu, cpus);
     }
 
-    return std::max(cpus, 1U);
+    return cpus;
 }
 
 long get_processor_count()
