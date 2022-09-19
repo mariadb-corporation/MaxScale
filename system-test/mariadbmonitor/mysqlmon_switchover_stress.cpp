@@ -11,35 +11,15 @@
  * Public License.
  */
 
-#include <iostream>
+#include <maxtest/testconnections.hh>
 #include <string>
 #include <thread>
 #include <vector>
 #include <random>
-#include <maxtest/testconnections.hh>
+#include <maxbase/assert.h>
 #include <maxbase/format.hh>
 
-using namespace std;
-
-#define CMESSAGE(msg) \
-    do { \
-        stringstream ss; \
-        ss << "client(" << m_id << ") : " << msg << "\n"; \
-        cout << ss.str() << flush; \
-    } while (false)
-
-#if !defined (NDEBUG)
-
-#define ss_dassert(x) do {if (!(x)) {fprintf(stderr, "Assertion failed: %s\n", #x); abort();}} while (false)
-#define ss_debug(x)   x
-
-#else
-
-#define ss_dassert(s)
-#define ss_debug(x)
-
-#endif
-
+using std::string;
 
 namespace
 {
@@ -62,11 +42,12 @@ public:
         int    rows {0};
     };
 
-    Client(const Settings& sett, int id, bool verbose)
-        : m_id(id)
+    Client(TestConnections& test, const Settings& sett, int id, bool verbose)
+        : m_test(test)
+        , m_settings(sett)
+        , m_id(id)
         , m_verbose(verbose)
         , m_value(1)
-        , m_settings(sett)
         , m_rand_dist(0.0, 1.0)
     {
     }
@@ -83,40 +64,14 @@ public:
         m_thread.join();
     }
 
-
-    static void init(TestConnections& test, size_t nClients, size_t nRows)
-    {
-        if (create_tables(test, nClients))
-        {
-            if (insert_data(test, nClients, nRows))
-            {
-                cout << "\nSyncing slaves." << endl;
-                test.repl->sync_slaves();
-            }
-        }
-    }
-
-    static bool drop_tables(TestConnections& test, int n_clients)
-    {
-        test.tprintf("Dropping tables.");
-        auto sConn = test.maxscale->open_rwsplit_connection2();
-
-        for (int i = 0; i < n_clients; ++i)
-        {
-            sConn->cmd_f("drop table test.t%d;", i);
-        }
-
-        return test.ok();
-    }
-
 private:
-    enum class action_t
+    enum class Action
     {
-        ACTION_SELECT,
-        ACTION_UPDATE
+        SELECT,
+        UPDATE
     };
 
-    action_t action() const
+    Action action() const
     {
         double d = random_decimal_fraction();
 
@@ -124,11 +79,11 @@ private:
         // 80% selects
         if (d <= 0.2)
         {
-            return action_t::ACTION_UPDATE;
+            return Action::UPDATE;
         }
         else
         {
-            return action_t::ACTION_SELECT;
+            return Action::SELECT;
         }
     }
 
@@ -138,11 +93,11 @@ private:
 
         switch (action())
         {
-        case action_t::ACTION_SELECT:
+        case Action::SELECT:
             rv = run_select(pConn);
             break;
 
-        case action_t::ACTION_UPDATE:
+        case Action::UPDATE:
             rv = run_update(pConn);
             break;
         }
@@ -154,7 +109,7 @@ private:
     {
         bool rv = true;
 
-        string stmt = mxb::string_printf("SELECT * FROM test.t%zu WHERE id=%i;",
+        string stmt = mxb::string_printf("SELECT * FROM test.t%d WHERE id=%i;",
                                          m_id, get_random_id());
 
         if (mysql_query(pConn, stmt.c_str()) == 0)
@@ -165,7 +120,7 @@ private:
         {
             if (m_verbose)
             {
-                CMESSAGE("\"" << stmt << "\" failed: " << mysql_error(pConn));
+                m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
             }
             rv = false;
         }
@@ -177,7 +132,7 @@ private:
     {
         bool rv = true;
 
-        string stmt = mxb::string_printf("UPDATE test.t%zu SET id=%zu WHERE id=%i;",
+        string stmt = mxb::string_printf("UPDATE test.t%d SET id=%zu WHERE id=%i;",
                                          m_id, m_value, get_random_id());
         m_value = (m_value + 1) % m_settings.rows;
 
@@ -189,7 +144,7 @@ private:
         {
             if (m_verbose)
             {
-                CMESSAGE("\"" << stmt << "\" failed: " << mysql_error(pConn));
+                m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
             }
             rv = false;
         }
@@ -211,8 +166,8 @@ private:
     {
         int id = m_settings.rows * random_decimal_fraction();
 
-        ss_dassert(id >= 0);
-        ss_dassert(id <= m_settings.rows);
+        mxb_assert(id >= 0);
+        mxb_assert(id <= m_settings.rows);
 
         return id;
     }
@@ -235,17 +190,12 @@ private:
                 mysql_options(pMysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
                 mysql_options(pMysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
-                if (m_verbose)
-                {
-                    CMESSAGE("Connecting");
-                }
-
                 if (mysql_real_connect(pMysql, m_settings.host.c_str(), m_settings.user.c_str(),
                                        m_settings.pw.c_str(), "test", m_settings.port, NULL, 0))
                 {
                     if (m_verbose)
                     {
-                        CMESSAGE("Connected.");
+                        m_test.tprintf("Client %i connected, starting queries.", m_id);
                     }
 
                     while (m_keep_running && run_query(pMysql))
@@ -256,19 +206,20 @@ private:
                 {
                     if (m_verbose)
                     {
-                        CMESSAGE("mysql_real_connect() failed: " << mysql_error(pMysql));
+                        m_test.tprintf("mysql_real_connect() on client %i failed: %s",
+                                       m_id, mysql_error(pMysql));
                     }
                 }
 
+                mysql_close(pMysql);
                 if (m_verbose)
                 {
-                    CMESSAGE("Closing");
+                    m_test.tprintf("Client %i connection closed.", m_id);
                 }
-                mysql_close(pMysql);
             }
             else
             {
-                CMESSAGE("mysql_init() failed.");
+                m_test.tprintf("mysql_init() failed on client %i.", m_id);
             }
 
             // To prevent some backend from becoming overwhelmed.
@@ -277,36 +228,110 @@ private:
         while (m_keep_running);
     }
 
-    static bool create_tables(TestConnections& test, int n_clients)
-    {
-        test.tprintf("Creating tables.");
-        auto sConn = test.maxscale->open_rwsplit_connection2();
+private:
+    TestConnections& m_test;
+    const Settings&  m_settings;
 
-        for (int i = 0; i < n_clients; ++i)
+    int              m_id {-1};
+    bool             m_verbose;
+    size_t           m_value;
+    std::thread      m_thread;
+    std::atomic_bool m_keep_running {true};
+
+    mutable std::mt19937                           m_rand_gen;
+    mutable std::uniform_real_distribution<double> m_rand_dist;
+};
+
+class ClientGroup
+{
+public:
+    ClientGroup(TestConnections& test, int nClients, Client::Settings settings)
+        : m_test(test)
+        , m_nClients(nClients)
+        , m_settings(std::move(settings))
+    {
+    }
+
+    void prepare()
+    {
+        if (create_tables())
+        {
+            if (insert_data())
+            {
+                m_test.repl->sync_slaves();
+            }
+        }
+    }
+
+    void cleanup()
+    {
+        m_test.tprintf("Dropping tables.");
+        auto sConn = m_test.maxscale->open_rwsplit_connection2();
+
+        for (int i = 0; i < m_nClients; ++i)
+        {
+            sConn->cmd_f("drop table test.t%d;", i);
+        }
+    }
+
+    void start()
+    {
+        m_test.tprintf("Starting %i clients. Connecting to %s:%i as '%s'.",
+                       m_nClients, m_settings.host.c_str(), m_settings.port, m_settings.user.c_str());
+
+        for (int i = 0; i < m_nClients; i++)
+        {
+            auto new_client = std::make_unique<Client>(m_test, m_settings, i, m_test.verbose());
+            new_client->start();
+            m_clients.emplace_back(std::move(new_client));
+        }
+    }
+
+    void stop()
+    {
+        for (int i = 0; i < m_nClients; i++)
+        {
+            m_clients[i]->stop();
+        }
+        m_clients.clear();
+    }
+
+private:
+    TestConnections&                     m_test;
+    std::vector<std::unique_ptr<Client>> m_clients;
+    const int                            m_nClients {0};
+    const Client::Settings               m_settings;
+
+    bool create_tables()
+    {
+        m_test.tprintf("Creating tables.");
+        auto sConn = m_test.maxscale->open_rwsplit_connection2();
+
+        for (int i = 0; i < m_nClients; ++i)
         {
             sConn->cmd_f("create or replace table test.t%d (id int);", i);
         }
 
-        return test.ok();
+        return m_test.ok();
     }
 
-    static bool insert_data(TestConnections& test, int n_clients, int n_rows)
+    bool insert_data()
     {
-        test.tprintf("Inserting data.");
+        m_test.tprintf("Inserting data.");
 
-        auto pConn = test.maxscale->open_rwsplit_connection2();
+        auto pConn = m_test.maxscale->open_rwsplit_connection2();
 
-        for (int i = 0; i < n_clients; ++i)
+        for (int i = 0; i < m_nClients; ++i)
         {
             string insert = mxb::string_printf("insert into test.t%d values ", i);
 
-            for (int j = 0; j < n_rows; ++j)
+            for (int j = 0; j < m_settings.rows; ++j)
             {
                 insert += "(";
                 insert += std::to_string(j);
                 insert += ")";
 
-                if (j < n_rows - 1)
+                if (j < m_settings.rows - 1)
                 {
                     insert += ", ";
                 }
@@ -315,25 +340,9 @@ private:
             pConn->cmd(insert);
         }
 
-        return test.ok();
+        return m_test.ok();
     }
-
-private:
-
-    size_t           m_id;
-    bool             m_verbose;
-    size_t           m_value;
-    std::thread      m_thread;
-    std::atomic_bool m_keep_running {true};
-
-    const Settings&                                m_settings;
-    mutable std::mt19937                           m_rand_gen;
-    mutable std::uniform_real_distribution<double> m_rand_dist;
 };
-}
-
-namespace
-{
 
 void create_client_user(TestConnections& test)
 {
@@ -398,29 +407,18 @@ void run(TestConnections& test)
     create_client_user(test);
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
-    const int n_clients = 4;
-    const int n_rows = 100;
-    Client::init(test, n_clients, n_rows);
+    Client::Settings sett;
+    sett.host = mxs.ip4();
+    sett.port = mxs.rwsplit_port;
+    sett.user = CLIENT_USER;
+    sett.pw = CLIENT_PASSWORD;
+    sett.rows = 100;
+    ClientGroup clients(test, 4, sett);
+    clients.prepare();
 
     if (test.ok())
     {
-        Client::Settings sett;
-        sett.host = mxs.ip4();
-        sett.port = mxs.rwsplit_port;
-        sett.user = CLIENT_USER;
-        sett.pw = CLIENT_PASSWORD;
-        sett.rows = n_rows;
-
-        test.tprintf("Starting %i clients. Connecting to %s:%i as '%s':'%s'.",
-                     n_clients, sett.host.c_str(), sett.port, sett.user.c_str(), sett.pw.c_str());
-
-        std::vector<std::unique_ptr<Client>> clients;
-        for (int i = 0; i < n_clients; i++)
-        {
-            auto new_client = std::make_unique<Client>(sett, i, test.verbose());
-            new_client->start();
-            clients.emplace_back(std::move(new_client));
-        }
+        clients.start();
 
         time_t start = time(NULL);
         int current_master_id = 1;
@@ -441,10 +439,7 @@ void run(TestConnections& test)
 
         test.tprintf("Stopping clients after %i switchovers.", n_switchovers);
 
-        for (int i = 0; i < n_clients; i++)
-        {
-            clients[i]->stop();
-        }
+        clients.stop();
 
         // Ensure master is at server1. Shortens startup time for next test.
         if (current_master_id != 1)
@@ -456,7 +451,7 @@ void run(TestConnections& test)
         drop_client_user(test);
     }
 
-    Client::drop_tables(test, n_clients);
+    clients.cleanup();
 }
 }
 
