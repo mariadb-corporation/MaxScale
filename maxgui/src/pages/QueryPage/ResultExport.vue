@@ -86,42 +86,12 @@
                             v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
                             class="mx-n1"
                         >
-                            <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
+                            <v-col cols="12" md="12" class="pa-1">
                                 <label class="field__label color text-small-text">
-                                    {{ $t('delimiter') }}
-                                </label>
-                                <v-select
-                                    v-model="chosenDelimiter"
-                                    return-object
-                                    :items="delimiters"
-                                    item-text="txt"
-                                    item-value="val"
-                                    outlined
-                                    dense
-                                    :height="36"
-                                    class="std mariadb-select-input error--text__bottom"
-                                    :menu-props="{
-                                        contentClass: 'mariadb-select-v-menu',
-                                        bottom: true,
-                                        offsetY: true,
-                                    }"
-                                    :rules="[
-                                        v =>
-                                            !!v ||
-                                            $t('errors.requiredInput', {
-                                                inputName: 'Delimiter',
-                                            }),
-                                    ]"
-                                    hide-details="auto"
-                                    required
-                                />
-                            </v-col>
-                            <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
-                                <label class="field__label color text-small-text">
-                                    {{ $t('custdelimiter') }}
+                                    {{ $t('fieldsTerminatedBy') }}
                                 </label>
                                 <v-text-field
-                                    v-model="custDelimiter"
+                                    v-model="fieldsTerminatedBy"
                                     class="std error--text__bottom"
                                     dense
                                     outlined
@@ -130,13 +100,14 @@
                                         v =>
                                             !!v ||
                                             $t('errors.requiredInput', {
-                                                inputName: $t('custdelimiter'),
+                                                inputName: $t('fieldsTerminatedBy'),
                                             }),
                                     ]"
                                     hide-details="auto"
                                     required
                                 />
                             </v-col>
+
                             <v-col cols="12" class="pa-1 mt-3">
                                 <v-checkbox
                                     v-model="noBackslashEscapes"
@@ -218,9 +189,8 @@ export default {
             isConfigDialogOpened: false,
             selectedFormat: null,
             fileName: '',
-            chosenDelimiter: null,
+            fieldsTerminatedBy: '',
             noBackslashEscapes: false,
-            custDelimiter: '',
             withHeaders: false,
         }
     },
@@ -237,13 +207,6 @@ export default {
                 },
             ]
         },
-        delimiters() {
-            return [
-                { txt: 'Tab', val: '\t' },
-                { txt: 'Comma', val: ',' },
-                { txt: 'Custom', val: '' },
-            ]
-        },
         jsonData() {
             let arr = []
             for (let i = 0; i < this.rows.length; ++i) {
@@ -256,16 +219,14 @@ export default {
             return JSON.stringify(arr)
         },
         csvData() {
-            let delimiter = ''
-            if (this.chosenDelimiter.val) delimiter = this.chosenDelimiter.val
-            else delimiter = this.custDelimiter
+            let fieldsTerminatedBy = this.unescapedUserInput(this.fieldsTerminatedBy)
             let str = ''
             if (this.withHeaders) {
                 let headers = this.headers.map(header => this.escapeCell(header.text))
-                str = `${headers.join(delimiter)}\n`
+                str = `${headers.join(fieldsTerminatedBy)}\n`
             }
             str += this.rows
-                .map(row => row.map(cell => this.escapeCell(cell)).join(delimiter))
+                .map(row => row.map(cell => this.escapeCell(cell)).join(fieldsTerminatedBy))
                 .join('\n')
 
             return `${str}\n` // line terminator
@@ -279,10 +240,32 @@ export default {
     },
     methods: {
         /**
+         * Input entered by the user is escaped automatically.
+         * As the result, if the user enters \t, it is escaped as \\t. However, here
+         * we allow the user to add the custom line | fields terminator, so when the user
+         * enters \t, it should be parsed as a tab character. At the moment, JS doesn't
+         * allow to have dynamic escaped char. So this function uses JSON.parse approach
+         * to unescaped inputs
+         * @param {String} v - users utf8 input
+         */
+        unescapedUserInput(v) {
+            try {
+                let str = v
+                // if user enters \\, escape it again so it won't be removed when it is parsed by JSON.parse
+                if (str.includes('\\\\')) str = this.escapeCell(str)
+                return JSON.parse(
+                    '"' +
+                    str.replace(/"/g, '\\"') + // escape " to prevent json syntax errors
+                        '"'
+                )
+            } catch (e) {
+                this.$logger('unescapedUserInput', e)
+            }
+        },
+        /**
          * @param {(String|Number)} v cell value
          * @returns {(String|Number)} returns escape value
-         */
-        escapeCell(v) {
+         */ escapeCell(v) {
             // NULL is returned as js null in the query result.
             if (this.$typy(v).isNull) return this.noBackslashEscapes ? 'NULL' : '\\N' // db escape
             if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
@@ -316,7 +299,7 @@ export default {
             document.body.removeChild(a)
         },
         assignDefOpt() {
-            this.chosenDelimiter = this.delimiters[0] // tab
+            this.fieldsTerminatedBy = '\\t' // escaped tab char so it can be rendered to the DOM
             this.selectedFormat = this.fileFormats[0] // csv
         },
     },
