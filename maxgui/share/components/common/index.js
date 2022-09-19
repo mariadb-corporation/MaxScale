@@ -24,6 +24,7 @@ import MxsFilterList from './MxsFilterList'
 import MxsSelect from './MxsSelect'
 import MxsSplitPane from './MxsSplitPane'
 import MxsSubMenu from './MxsSubMenu'
+import MxsTooltipBtn from './MxsTooltipBtn'
 import MxsTreeview from './MxsTreeview'
 import MxsTruncateStr from './MxsTruncateStr'
 import MxsVirtualScrollTbl from './MxsVirtualScrollTbl'
@@ -51,6 +52,7 @@ export default {
     'mxs-select': MxsSelect,
     'mxs-split-pane': MxsSplitPane,
     'mxs-sub-menu': MxsSubMenu,
+    'mxs-tooltip-btn': MxsTooltipBtn,
     'mxs-treeview': MxsTreeview,
     'mxs-truncate-str': MxsTruncateStr,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,

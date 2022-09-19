@@ -72,29 +72,19 @@
                 </icon-sprite-sheet>
 
                 <mxs-truncate-str :text="`${value}`" />
-
-                <v-tooltip
+                <mxs-tooltip-btn
                     v-if="key === 'filters'"
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    btnClass="ml-auto vis-filter-btn"
+                    x-small
+                    icon
+                    depressed
+                    @click="handleVisFilters"
                 >
-                    <template v-slot:activator="{ on }">
-                        <v-btn
-                            x-small
-                            icon
-                            class="ml-auto vis-filter-btn"
-                            depressed
-                            v-on="on"
-                            @click="handleVisFilters"
-                        >
-                            <v-icon color="primary" size="14">
-                                $vuetify.icons.mxs_reports
-                            </v-icon>
-                        </v-btn>
+                    <template v-slot:btn-content>
+                        <v-icon color="primary" size="14">$vuetify.icons.mxs_reports </v-icon>
                     </template>
-                    <span> {{ $mxs_t('visFilters') }}</span>
-                </v-tooltip>
+                    {{ $mxs_t('visFilters') }}
+                </mxs-tooltip-btn>
             </div>
         </div>
     </v-card>

@@ -3,26 +3,18 @@
         <template v-slot:setting-menu>
             <details-icon-group-wrapper>
                 <template v-slot:body>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        :tooltipProps="{ bottom: true }"
+                        btnClass="delete-btn"
+                        text
+                        color="error"
+                        @click="handleDelete"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="delete-btn"
-                                text
-                                color="error"
-                                v-on="on"
-                                @click="handleDelete"
-                            >
-                                <v-icon size="18">
-                                    $vuetify.icons.mxs_delete
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="18">$vuetify.icons.mxs_delete</v-icon>
                         </template>
-                        <span>{{ $mxs_t('destroy') }} {{ $mxs_tc('filters', 1) }} </span>
-                    </v-tooltip>
+                        {{ $mxs_t('destroy') }} {{ $mxs_tc('filters', 1) }}
+                    </mxs-tooltip-btn>
                 </template>
             </details-icon-group-wrapper>
         </template>

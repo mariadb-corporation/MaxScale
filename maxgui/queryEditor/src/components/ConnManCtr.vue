@@ -40,29 +40,20 @@
                         :nudgeLeft="32"
                     />
                     <v-spacer />
-                    <v-tooltip
-                        top
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        btnClass="ml-2 disconnect-conn"
+                        small
+                        icon
+                        fab
+                        height="24"
+                        width="24"
+                        @click.stop="unlinkConn(item)"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="ml-2 disconnect-conn"
-                                height="24"
-                                width="24"
-                                fab
-                                icon
-                                small
-                                v-on="on"
-                                @click.stop="unlinkConn(item)"
-                            >
-                                <v-icon size="18" color="error">
-                                    $vuetify.icons.mxs_unlink
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="18" color="error">$vuetify.icons.mxs_unlink</v-icon>
                         </template>
-                        <span>{{ $mxs_t('disconnect') }}</span>
-                    </v-tooltip>
+                        {{ $mxs_t('disconnect') }}
+                    </mxs-tooltip-btn>
                 </div>
             </template>
             <template v-slot:append-item>

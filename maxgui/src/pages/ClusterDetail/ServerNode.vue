@@ -37,25 +37,18 @@
                     {{ nodeAttrs.read_only ? $mxs_t('readonly') : $mxs_t('writable') }}
                 </span>
                 <div class="ml-1 button-container text-no-wrap">
-                    <v-tooltip
-                        top
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        small
+                        icon
+                        @click="openQueryEditor({ type: 'servers', conn_name: node.id })"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                small
-                                icon
-                                @click="openQueryEditor({ type: 'servers', conn_name: node.id })"
-                                v-on="on"
-                            >
-                                <v-icon size="16" :color="iconColor">
-                                    $vuetify.icons.mxs_queryEditor
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="16" :color="iconColor">
+                                $vuetify.icons.mxs_queryEditor
+                            </v-icon>
                         </template>
-                        <span>{{ $mxs_t('openQueryEditor') }}</span>
-                    </v-tooltip>
+                        {{ $mxs_t('openQueryEditor') }}
+                    </mxs-tooltip-btn>
                     <v-menu
                         v-if="isAdmin"
                         transition="slide-y-transition"

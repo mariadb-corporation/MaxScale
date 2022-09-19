@@ -2,62 +2,39 @@
     <div class="chart-pane fill-height">
         <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn small icon depressed color="accent-dark" v-on="on" @click="exportToJpeg">
-                        <v-icon size="16" color="accent-dark">
-                            mdi-download
-                        </v-icon>
-                    </v-btn>
+            <mxs-tooltip-btn small icon depressed color="accent-dark" @click="exportToJpeg">
+                <template v-slot:btn-content>
+                    <v-icon size="16" color="accent-dark"> mdi-download </v-icon>
                 </template>
-                <span>{{ $mxs_t('exportChart') }}</span>
-            </v-tooltip>
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                {{ $mxs_t('exportChart') }}
+            </mxs-tooltip-btn>
+            <mxs-tooltip-btn
+                small
+                icon
+                depressed
+                @click="chartOpt.isMaximized = !chartOpt.isMaximized"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        small
-                        icon
-                        depressed
-                        v-on="on"
-                        @click="chartOpt.isMaximized = !chartOpt.isMaximized"
-                    >
-                        <v-icon size="18" color="accent-dark">
-                            mdi-fullscreen{{ chartOpt.isMaximized ? '-exit' : '' }}
-                        </v-icon>
-                    </v-btn>
+                <template v-slot:btn-content>
+                    <v-icon size="18" color="accent-dark">
+                        mdi-fullscreen{{ chartOpt.isMaximized ? '-exit' : '' }}
+                    </v-icon>
                 </template>
-                <span>{{ chartOpt.isMaximized ? $mxs_t('minimize') : $mxs_t('maximize') }}</span>
-            </v-tooltip>
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                {{ chartOpt.isMaximized ? $mxs_t('minimize') : $mxs_t('maximize') }}
+            </mxs-tooltip-btn>
+            <mxs-tooltip-btn
+                btnClass="close-chart"
+                small
+                icon
+                depressed
+                color="accent-dark"
+                @click="$emit('close-chart')"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        small
-                        icon
-                        depressed
-                        color="accent-dark"
-                        class="close-chart"
-                        v-on="on"
-                        @click="$emit('close-chart')"
-                    >
-                        <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
-                    </v-btn>
+                <template v-slot:btn-content>
+                    <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
                 </template>
-                <span>{{ $mxs_t('close') }}</span>
-            </v-tooltip>
+                {{ $mxs_t('close') }}
+            </mxs-tooltip-btn>
         </div>
-
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
             <mxs-line-chart
                 v-if="type === chartTypes.LINE"

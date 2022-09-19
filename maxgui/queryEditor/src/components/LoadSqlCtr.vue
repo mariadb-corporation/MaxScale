@@ -15,82 +15,49 @@
                 <p v-html="confDlg.confirmMsg" />
             </template>
         </mxs-conf-dlg>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn load-sql-btn"
+            text
+            type="file"
+            @click="handleFileOpen"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="load-sql-btn toolbar-square-btn"
-                    type="file"
-                    v-on="on"
-                    @click="handleFileOpen"
-                >
-                    <v-icon size="18" color="accent-dark">
-                        {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
-                    </v-icon>
-                    <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="18" color="accent-dark">
+                    {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
+                </v-icon>
+                <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('openScript') }}
-                <br />
-                Cmd/Ctrl + O
-            </span>
-        </v-tooltip>
-        <v-tooltip
+            {{ $mxs_t('openScript') }}
+            <br />
+            Cmd/Ctrl + O
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
             v-if="hasFullSupport"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            btnClass="toolbar-square-btn save-sql-btn"
+            text
+            :disabled="isSaveFileDisabled"
+            @click="saveFile"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="save-sql-btn toolbar-square-btn"
-                    type="file"
-                    :disabled="isSaveFileDisabled"
-                    v-on="on"
-                    @click="saveFile"
-                >
-                    <v-icon size="20" color="accent-dark">
-                        mdi-content-save-outline
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="20" color="accent-dark">mdi-content-save-outline</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('saveScript') }}
-                <br />
-                Cmd/Ctrl + S
-            </span>
-        </v-tooltip>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            {{ $mxs_t('saveScript') }}
+            <br />
+            Cmd/Ctrl + S
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn save-sql-btn"
+            text
+            :disabled="isSaveFileAsDisabled"
+            @click="handleSaveFileAs"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="save-sql-btn toolbar-square-btn"
-                    type="file"
-                    :disabled="isSaveFileAsDisabled"
-                    v-on="on"
-                    @click="handleSaveFileAs"
-                >
-                    <v-icon size="20" color="accent-dark">
-                        mdi-content-save-edit-outline
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="20" color="accent-dark">mdi-content-save-edit-outline</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('saveScriptAs') }}
-                <br />
-                Cmd/Ctrl + Shift + S
-            </span>
-        </v-tooltip>
+            {{ $mxs_t('saveScriptAs') }}
+            <br />
+            Cmd/Ctrl + Shift + S
+        </mxs-tooltip-btn>
     </div>
 </template>
 <script>

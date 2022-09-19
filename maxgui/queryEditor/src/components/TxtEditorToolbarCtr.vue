@@ -3,108 +3,76 @@
         class="txt-editor-toolbar mxs-color-helper border-bottom-table-border d-flex align-center"
         :style="{ height: `${height}px` }"
     >
-        <!-- Run/Stop buttons-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-            :disabled="getLoadingQueryResultBySessionId(session.id)"
+        <mxs-tooltip-btn
+            :btnClass="[
+                'toolbar-square-btn',
+                getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn',
+            ]"
+            text
+            color="accent-dark"
+            :disabled="
+                getLoadingQueryResultBySessionId(session.id)
+                    ? false
+                    : getIsRunBtnDisabledBySessionId(session.id)
+            "
+            @click="
+                () =>
+                    getLoadingQueryResultBySessionId(session.id)
+                        ? stopQuery()
+                        : handleRun(selected_query_txt ? 'selected' : 'all')
+            "
         >
-            <template v-slot:activator="{ on }">
-                <!-- disable button Prevent parallel querying of the same connection -->
-                <v-btn
-                    class="toolbar-square-btn"
-                    :class="[getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn']"
-                    text
-                    color="accent-dark"
-                    :disabled="
-                        getLoadingQueryResultBySessionId(session.id)
-                            ? false
-                            : getIsRunBtnDisabledBySessionId(session.id)
-                    "
-                    v-on="on"
-                    @click="
-                        () =>
-                            getLoadingQueryResultBySessionId(session.id)
-                                ? stopQuery()
-                                : handleRun(selected_query_txt ? 'selected' : 'all')
-                    "
-                >
-                    <v-icon size="16">
-                        {{
-                            `$vuetify.icons.mxs_${
-                                getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
-                            }`
-                        }}
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="16">
+                    {{
+                        `$vuetify.icons.mxs_${
+                            getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
+                        }`
+                    }}
+                </v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                <template v-if="selected_query_txt">
-                    {{ $mxs_t('runStatements', { quantity: $mxs_t('selected') }) }}
-                    <br />
-                    Cmd/Ctrl + Enter
-                </template>
-                <template v-else>
-                    {{ $mxs_t('runStatements', { quantity: $mxs_t('all') }) }}
-                    <br />
-                    Cmd/Ctrl + Shift + Enter
-                </template>
-            </span>
-        </v-tooltip>
-        <!-- Visualize button-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="toolbar-square-btn visualize-btn"
-                    :depressed="show_vis_sidebar"
-                    :text="!show_vis_sidebar"
-                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="getIsVisBtnDisabledBySessionId(session.id)"
-                    v-on="on"
-                    @click="
-                        SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
-                    "
-                >
-                    <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
-                </v-btn>
-            </template>
-            <span class="text-capitalize">
-                {{
-                    $mxs_t('visualizedConfig', {
-                        action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
-                    })
-                }}
-            </span>
-        </v-tooltip>
-        <!-- Create snippet button-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="create-snippet-btn toolbar-square-btn"
-                    text
-                    color="accent-dark"
-                    :disabled="!query_txt"
-                    v-on="on"
-                    @click="openSnippetDlg"
-                >
-                    <v-icon size="19"> mdi-star-plus-outline </v-icon>
-                </v-btn>
-            </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('createQuerySnippet') }}
+            <template v-if="selected_query_txt">
+                {{ $mxs_t('runStatements', { quantity: $mxs_t('selected') }) }}
                 <br />
-                Cmd/Ctrl + D
-            </span>
-        </v-tooltip>
+                Cmd/Ctrl + Enter
+            </template>
+            <template v-else>
+                {{ $mxs_t('runStatements', { quantity: $mxs_t('all') }) }}
+                <br />
+                Cmd/Ctrl + Shift + Enter
+            </template>
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="visualize-btn toolbar-square-btn"
+            :depressed="show_vis_sidebar"
+            :text="!show_vis_sidebar"
+            :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+            :disabled="getIsVisBtnDisabledBySessionId(session.id)"
+            @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: session.id })"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
+            </template>
+            {{
+                $mxs_t('visualizedConfig', {
+                    action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
+                })
+            }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="create-snippet-btn toolbar-square-btn"
+            text
+            color="accent-dark"
+            :disabled="!query_txt"
+            @click="openSnippetDlg"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="19"> mdi-star-plus-outline </v-icon>
+            </template>
+            {{ $mxs_t('createQuerySnippet') }}
+            <br />
+            Cmd/Ctrl + D
+        </mxs-tooltip-btn>
         <load-sql-ctr ref="loadSqlCtr" />
         <v-spacer />
         <!-- QUERY_ROW_LIMIT dropdown input-->

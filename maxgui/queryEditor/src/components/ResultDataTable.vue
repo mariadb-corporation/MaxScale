@@ -33,27 +33,20 @@
             >
                 {{ isEditing ? $mxs_t('doneEditing') : $mxs_t('edit') }}
             </v-btn>
-            <v-tooltip
+            <mxs-tooltip-btn
                 v-if="selectedItems.length"
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                btnClass="mr-2 pa-1 text-capitalize font-weight-medium"
+                x-small
+                outlined
+                depressed
+                color="error"
+                @click="$emit('on-delete-selected', selectedItems)"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        class="mr-2 pa-1 text-capitalize font-weight-medium"
-                        outlined
-                        depressed
-                        color="error"
-                        v-on="on"
-                        @click="$emit('on-delete-selected', selectedItems)"
-                    >
-                        {{ $mxs_t('delete') }} ({{ selectedItems.length }})
-                    </v-btn>
+                <template v-slot:btn-content>
+                    {{ $mxs_t('delete') }} ({{ selectedItems.length }})
                 </template>
-                <span>{{ $mxs_t('deleteSelectedRows') }}</span>
-            </v-tooltip>
+                {{ $mxs_t('deleteSelectedRows') }}
+            </mxs-tooltip-btn>
             <result-export
                 :rows="filteredRows_wo_idx"
                 :headers="visHeaders_wo_idx"
@@ -66,33 +59,22 @@
                 :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            <mxs-tooltip-btn
+                btnClass="ml-2 pa-1"
+                x-small
+                outlined
+                depressed
+                color="accent-dark"
+                :disabled="isGrouping"
+                @click="isVertTable = !isVertTable"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        class="ml-2 pa-1"
-                        outlined
-                        depressed
-                        color="accent-dark"
-                        :disabled="isGrouping"
-                        v-on="on"
-                        @click="isVertTable = !isVertTable"
-                    >
-                        <v-icon
-                            size="14"
-                            color="accent-dark"
-                            :class="{ 'rotate-left': !isVertTable }"
-                        >
-                            mdi-format-rotate-90
-                        </v-icon>
-                    </v-btn>
+                <template v-slot:btn-content>
+                    <v-icon size="14" color="accent-dark" :class="{ 'rotate-left': !isVertTable }">
+                        mdi-format-rotate-90
+                    </v-icon>
                 </template>
-                <span>{{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
-            </v-tooltip>
+                {{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
+            </mxs-tooltip-btn>
             <slot name="right-table-tools-append" />
         </div>
         <!-- Keep it in memory, negative height crashes v-virtual-scroll -->
