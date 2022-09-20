@@ -46,6 +46,7 @@ export default {
         }),
         ...mapGetters({
             getLostCnnErrMsgObj: 'queryConn/getLostCnnErrMsgObj',
+            getCurrWkeConn: 'queryConn/getCurrWkeConn',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         queryErrMsg() {
@@ -69,7 +70,14 @@ export default {
             disconnect: 'queryConn/disconnect',
         }),
         async deleteConn() {
-            await this.disconnect({ id: this.active_sql_conn.id })
+            try {
+                const targetConn = this.active_sql_conn
+                await this.disconnect({ id: targetConn.id, showSnackbar: true })
+                if (targetConn.clone_of_conn_id)
+                    await this.disconnect({ id: this.getCurrWkeConn.id })
+            } catch (e) {
+                this.$logger('reconn-dlg-ctr-deleteConn').error(e)
+            }
         },
     },
 }
