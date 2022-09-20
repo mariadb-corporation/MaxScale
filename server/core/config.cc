@@ -118,7 +118,6 @@ constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
 
 static int64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
-static int64_t RECOMMENDED_QC_CACHE_SIZE = get_available_memory() * 0.15;
 static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
 }
 
@@ -1054,14 +1053,14 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
                     || this->qc_cache_properties.max_size > available_memory)
                 {
                     MXB_WARNING("It seems MaxScale is running in a constrained environment with "
-                                "less memory (%s) available in it than what is available on the "
-                                "machine (%s). In this context, the recommended size for the "
-                                "query classifier cache is %ld, which must be specified explicitly. "
-                                "Running with the current setting may cause MaxScale to use more "
-                                "resources than what is available, which may cause it to crash.",
+                                "less memory (%s) available in it than what is installed on the "
+                                "machine (%s). In this context, the query classifier cache size "
+                                "should be specified explicitly in the configuration file with "
+                                "'query_classifier_cache_size' set to 15%% of the available memory. "
+                                "Otherwise MaxScale may use more resources than what is available, "
+                                "which may cause it to crash.",
                                 mxb::pretty_size(available_memory).c_str(),
-                                mxb::pretty_size(total_memory).c_str(),
-                                RECOMMENDED_QC_CACHE_SIZE);
+                                mxb::pretty_size(total_memory).c_str());
                 }
             }
         }
