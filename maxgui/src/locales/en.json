@@ -147,6 +147,7 @@
     "fileFormat": "File format",
     "withHeaders": "With headers",
     "fieldsTerminatedBy": "Fields terminated by",
+    "linesTerminatedBy": "Lines terminated by",
     "runStatements": "Run {quantity} statements",
     "switchToVertTable": "Switch to vertical table",
     "switchToHorizTable": "Switch to horizontal table",

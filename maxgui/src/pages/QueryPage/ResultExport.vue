@@ -29,7 +29,7 @@
             >
                 <template v-slot:form-body>
                     <v-container class="pa-1">
-                        <v-row class="my-0 mx-n1">
+                        <v-row class="ma-n1">
                             <v-col cols="12" md="12" class="pa-1">
                                 <label class="field__label color text-small-text label-required">
                                     {{ $t('fileName') }}
@@ -82,73 +82,76 @@
                                 />
                             </v-col>
                         </v-row>
-                        <v-row
-                            v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
-                            class="mx-n1"
-                        >
-                            <v-col cols="12" md="12" class="pa-1">
-                                <label class="field__label color text-small-text">
-                                    {{ $t('fieldsTerminatedBy') }}
-                                </label>
-                                <v-text-field
-                                    v-model="fieldsTerminatedBy"
-                                    class="std error--text__bottom"
-                                    dense
-                                    outlined
-                                    :height="36"
-                                    :rules="[
-                                        v =>
-                                            !!v ||
-                                            $t('errors.requiredInput', {
-                                                inputName: $t('fieldsTerminatedBy'),
-                                            }),
-                                    ]"
-                                    hide-details="auto"
-                                    required
-                                />
-                            </v-col>
-
-                            <v-col cols="12" class="pa-1 mt-3">
-                                <v-checkbox
-                                    v-model="noBackslashEscapes"
-                                    class="no-back-slash-escapes-checkbox pa-0 ma-0"
-                                    color="primary"
-                                    hide-details="auto"
+                        <template v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'">
+                            <v-row class="ma-n1">
+                                <v-col
+                                    v-for="(_, key) in csvTerminatedOpts"
+                                    :key="key"
+                                    cols="12"
+                                    md="12"
+                                    class="pa-1"
                                 >
-                                    <template v-slot:label>
-                                        <label class="v-label">
-                                            {{ $t('noBackslashEscapes') }}
-                                        </label>
-                                        <v-tooltip
-                                            top
-                                            transition="slide-y-transition"
-                                            content-class="shadow-drop white color text-navigation py-1 px-4"
-                                        >
-                                            <template v-slot:activator="{ on }">
-                                                <v-icon
-                                                    class="ml-1 material-icons-outlined pointer"
-                                                    size="16"
-                                                    color="#9DB4BB"
-                                                    v-on="on"
-                                                >
-                                                    info
-                                                </v-icon>
-                                            </template>
-                                            <span>{{ $t('info.noBackslashEscapes') }}</span>
-                                        </v-tooltip>
-                                    </template>
-                                </v-checkbox>
-                            </v-col>
-                            <v-col cols="12" class="pa-1">
-                                <v-checkbox
-                                    v-model="withHeaders"
-                                    class="no-back-slash-escapes-checkbox pa-0 ma-0"
-                                    color="primary"
-                                    :label="$t('withHeaders')"
-                                    hide-details="auto"
-                                />
-                            </v-col>
-                        </v-row>
+                                    <label class="field__label color text-small-text">
+                                        {{ $t(key) }}
+                                    </label>
+                                    <v-text-field
+                                        v-model="csvTerminatedOpts[key]"
+                                        class="std error--text__bottom"
+                                        dense
+                                        outlined
+                                        :height="36"
+                                        :rules="[
+                                            v =>
+                                                !!v ||
+                                                $t('errors.requiredInput', {
+                                                    inputName: $t(key),
+                                                }),
+                                        ]"
+                                        hide-details="auto"
+                                        required
+                                    />
+                                </v-col>
+                            </v-row>
+                            <v-row class="mt-3 mx-n1 mb-n1">
+                                <v-col
+                                    v-for="(_, key) in csvCheckboxOpts"
+                                    :key="key"
+                                    cols="12"
+                                    class="pa-1"
+                                >
+                                    <v-checkbox
+                                        v-model="csvCheckboxOpts[key]"
+                                        class="pa-0 ma-0 csv-checkbox"
+                                        color="primary"
+                                        hide-details="auto"
+                                    >
+                                        <template v-slot:label>
+                                            <label class="v-label pointer">
+                                                {{ $t(key) }}
+                                            </label>
+                                            <v-tooltip
+                                                v-if="key === 'noBackslashEscapes'"
+                                                top
+                                                transition="slide-y-transition"
+                                                content-class="shadow-drop white color text-navigation py-1 px-4"
+                                            >
+                                                <template v-slot:activator="{ on }">
+                                                    <v-icon
+                                                        class="ml-1 material-icons-outlined pointer"
+                                                        size="16"
+                                                        color="#9DB4BB"
+                                                        v-on="on"
+                                                    >
+                                                        info
+                                                    </v-icon>
+                                                </template>
+                                                <span>{{ $t(`info.${key}`) }}</span>
+                                            </v-tooltip>
+                                        </template>
+                                    </v-checkbox>
+                                </v-col>
+                            </v-row>
+                        </template>
                     </v-container>
                 </template>
             </base-dialog>
@@ -189,9 +192,15 @@ export default {
             isConfigDialogOpened: false,
             selectedFormat: null,
             fileName: '',
-            fieldsTerminatedBy: '',
-            noBackslashEscapes: false,
-            withHeaders: false,
+            // csv export options
+            csvTerminatedOpts: {
+                fieldsTerminatedBy: '',
+                linesTerminatedBy: '',
+            },
+            csvCheckboxOpts: {
+                noBackslashEscapes: false,
+                withHeaders: false,
+            },
         }
     },
     computed: {
@@ -219,17 +228,22 @@ export default {
             return JSON.stringify(arr)
         },
         csvData() {
-            let fieldsTerminatedBy = this.unescapedUserInput(this.fieldsTerminatedBy)
+            let fieldsTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.fieldsTerminatedBy
+            )
+            let linesTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.linesTerminatedBy
+            )
             let str = ''
-            if (this.withHeaders) {
+            if (this.csvCheckboxOpts.withHeaders) {
                 let headers = this.headers.map(header => this.escapeCell(header.text))
-                str = `${headers.join(fieldsTerminatedBy)}\n`
+                str = `${headers.join(fieldsTerminatedBy)}${linesTerminatedBy}`
             }
             str += this.rows
                 .map(row => row.map(cell => this.escapeCell(cell)).join(fieldsTerminatedBy))
-                .join('\n')
+                .join(linesTerminatedBy)
 
-            return `${str}\n` // line terminator
+            return `${str}${linesTerminatedBy}`
         },
     },
     watch: {
@@ -267,7 +281,8 @@ export default {
          * @returns {(String|Number)} returns escape value
          */ escapeCell(v) {
             // NULL is returned as js null in the query result.
-            if (this.$typy(v).isNull) return this.noBackslashEscapes ? 'NULL' : '\\N' // db escape
+            if (this.$typy(v).isNull)
+                return this.csvCheckboxOpts.noBackslashEscapes ? 'NULL' : '\\N' // db escape
             if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
         },
@@ -299,7 +314,12 @@ export default {
             document.body.removeChild(a)
         },
         assignDefOpt() {
-            this.fieldsTerminatedBy = '\\t' // escaped tab char so it can be rendered to the DOM
+            //TODO: Determine OS newline and store it as user preferences
+            // escape reserved single character escape sequences so it can be rendered to the DOM
+            this.csvTerminatedOpts = {
+                fieldsTerminatedBy: '\\t',
+                linesTerminatedBy: '\\n',
+            }
             this.selectedFormat = this.fileFormats[0] // csv
         },
     },
@@ -313,7 +333,7 @@ export default {
         font-size: $label-control-size;
     }
 }
-::v-deep .no-back-slash-escapes-checkbox {
+::v-deep .csv-checkbox {
     label {
         font-size: $label-control-size;
         color: $small-text;
