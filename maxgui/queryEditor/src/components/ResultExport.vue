@@ -29,7 +29,7 @@
             >
                 <template v-slot:form-body>
                     <v-container class="pa-1">
-                        <v-row class="my-0 mx-n1">
+                        <v-row class="ma-n1">
                             <v-col cols="12" md="12" class="pa-1">
                                 <label
                                     class="field__label mxs-color-helper text-small-text label-required"
@@ -88,83 +88,76 @@
                                 />
                             </v-col>
                         </v-row>
-                        <v-row
-                            v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
-                            class="mx-n1"
-                        >
-                            <v-col cols="12" md="12" class="pa-1 mt-1">
-                                <v-radio-group
-                                    v-model="hasHeaders"
-                                    hide-details="auto"
-                                    row
-                                    dense
-                                    class="ma-0 pt-0"
+                        <template v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'">
+                            <v-row class="ma-n1">
+                                <v-col
+                                    v-for="(_, key) in csvTerminatedOpts"
+                                    :key="key"
+                                    cols="12"
+                                    md="12"
+                                    class="pa-1"
                                 >
-                                    <v-radio
-                                        :label="$mxs_t('withHeaders')"
-                                        :value="true"
-                                        class="v-radio--custom-label"
+                                    <label class="field__label mxs-color-helper text-small-text">
+                                        {{ $mxs_t(key) }}
+                                    </label>
+                                    <v-text-field
+                                        v-model="csvTerminatedOpts[key]"
+                                        class="vuetify-input--override error--text__bottom"
+                                        dense
+                                        outlined
+                                        :height="36"
+                                        :rules="[
+                                            v =>
+                                                !!v ||
+                                                $mxs_t('errors.requiredInput', {
+                                                    inputName: $mxs_t(key),
+                                                }),
+                                        ]"
+                                        hide-details="auto"
+                                        required
                                     />
-                                    <v-radio
-                                        :label="$mxs_t('withoutHeaders')"
-                                        :value="false"
-                                        class="v-radio--custom-label"
-                                    />
-                                </v-radio-group>
-                            </v-col>
-
-                            <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
-                                <label class="field__label mxs-color-helper text-small-text">
-                                    {{ $mxs_t('delimiter') }}
-                                </label>
-                                <v-select
-                                    v-model="chosenDelimiter"
-                                    return-object
-                                    :items="delimiters"
-                                    item-text="txt"
-                                    item-value="val"
-                                    outlined
-                                    dense
-                                    :height="36"
-                                    class="vuetify-input--override mariadb-select-input error--text__bottom"
-                                    :menu-props="{
-                                        contentClass: 'mariadb-select-v-menu',
-                                        bottom: true,
-                                        offsetY: true,
-                                    }"
-                                    :rules="[
-                                        v =>
-                                            !!v ||
-                                            $mxs_t('errors.requiredInput', {
-                                                inputName: 'Delimiter',
-                                            }),
-                                    ]"
-                                    hide-details="auto"
-                                    required
-                                />
-                            </v-col>
-                            <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
-                                <label class="field__label mxs-color-helper text-small-text">
-                                    {{ $mxs_t('custdelimiter') }}
-                                </label>
-                                <v-text-field
-                                    v-model="custDelimiter"
-                                    class="vuetify-input--override error--text__bottom"
-                                    dense
-                                    outlined
-                                    :height="36"
-                                    :rules="[
-                                        v =>
-                                            !!v ||
-                                            $mxs_t('errors.requiredInput', {
-                                                inputName: $mxs_t('custdelimiter'),
-                                            }),
-                                    ]"
-                                    hide-details="auto"
-                                    required
-                                />
-                            </v-col>
-                        </v-row>
+                                </v-col>
+                            </v-row>
+                            <v-row class="mt-3 mx-n1 mb-n1">
+                                <v-col
+                                    v-for="(_, key) in csvCheckboxOpts"
+                                    :key="key"
+                                    cols="12"
+                                    class="pa-1"
+                                >
+                                    <v-checkbox
+                                        v-model="csvCheckboxOpts[key]"
+                                        class="pa-0 ma-0 v-checkbox--custom-label"
+                                        color="primary"
+                                        hide-details="auto"
+                                    >
+                                        <template v-slot:label>
+                                            <label class="v-label pointer">
+                                                {{ $mxs_t(key) }}
+                                            </label>
+                                            <v-tooltip
+                                                v-if="key === 'noBackslashEscapes'"
+                                                top
+                                                transition="slide-y-transition"
+                                                content-class="shadow-drop white mxs-color-helper text-navigation py-1 px-4"
+                                            >
+                                                <template v-slot:activator="{ on }">
+                                                    <v-icon
+                                                        class="ml-1 pointer"
+                                                        size="16"
+                                                        color="#9DB4BB"
+                                                        v-on="on"
+                                                    >
+                                                        mdi-information-outline
+                                                    </v-icon>
+                                                </template>
+                                                <span>{{ $mxs_t(`info.${key}`) }}</span>
+                                            </v-tooltip>
+                                        </template>
+                                    </v-checkbox>
+                                </v-col>
+                            </v-row>
+                        </template>
                     </v-container>
                 </template>
             </mxs-dlg>
@@ -204,29 +197,32 @@ export default {
         return {
             isFormValid: false,
             isConfigDialogOpened: false,
-            fileFormats: [
+            selectedFormat: null,
+            fileName: '',
+            // csv export options
+            csvTerminatedOpts: {
+                fieldsTerminatedBy: '',
+                linesTerminatedBy: '',
+            },
+            csvCheckboxOpts: {
+                noBackslashEscapes: false,
+                withHeaders: false,
+            },
+        }
+    },
+    computed: {
+        fileFormats() {
+            return [
+                {
+                    contentType: 'data:text/csv;charset=utf-8;',
+                    extension: 'csv',
+                },
                 {
                     contentType: 'data:application/json;charset=utf-8;',
                     extension: 'json',
                 },
-                {
-                    contentType: 'data:application/csv;charset=utf-8;',
-                    extension: 'csv',
-                },
-            ],
-            selectedFormat: null,
-            fileName: '',
-            delimiters: [
-                { txt: 'Comma', val: ',' },
-                { txt: 'Tab', val: '\t' },
-                { txt: 'Custom', val: '' },
-            ],
-            chosenDelimiter: { txt: 'Comma', val: ',' },
-            custDelimiter: '',
-            hasHeaders: true,
-        }
-    },
-    computed: {
+            ]
+        },
         jsonData() {
             let arr = []
             for (let i = 0; i < this.rows.length; ++i) {
@@ -239,36 +235,62 @@ export default {
             return JSON.stringify(arr)
         },
         csvData() {
-            let delimiter = ''
-            if (this.chosenDelimiter.val) delimiter = this.chosenDelimiter.val
-            else delimiter = this.custDelimiter
+            let fieldsTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.fieldsTerminatedBy
+            )
+            let linesTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.linesTerminatedBy
+            )
             let str = ''
-            if (this.hasHeaders) {
-                let headers = this.headers.map(header => this.escapeCsv(header.text))
-                str = `${headers.join(delimiter)}\r\n`
+            if (this.csvCheckboxOpts.withHeaders) {
+                let headers = this.headers.map(header => this.escapeCell(header.text))
+                str = `${headers.join(fieldsTerminatedBy)}${linesTerminatedBy}`
             }
             str += this.rows
-                .map(row => row.map(cell => this.escapeCsv(cell)).join(delimiter))
-                .join('\r\n')
+                .map(row => row.map(cell => this.escapeCell(cell)).join(fieldsTerminatedBy))
+                .join(linesTerminatedBy)
 
-            return str
+            return `${str}${linesTerminatedBy}`
         },
     },
     watch: {
         isConfigDialogOpened(v) {
-            if (!v) Object.assign(this.$data, this.$options.data())
+            if (v) this.assignDefOpt()
+            else Object.assign(this.$data, this.$options.data())
         },
     },
     methods: {
         /**
-         * This function escapes value by adding double quotes
-         * if value contains whitespace, comma, single quote or double quote
+         * Input entered by the user is escaped automatically.
+         * As the result, if the user enters \t, it is escaped as \\t. However, here
+         * we allow the user to add the custom line | fields terminator, so when the user
+         * enters \t, it should be parsed as a tab character. At the moment, JS doesn't
+         * allow to have dynamic escaped char. So this function uses JSON.parse approach
+         * to unescaped inputs
+         * @param {String} v - users utf8 input
+         */
+        unescapedUserInput(v) {
+            try {
+                let str = v
+                // if user enters \\, escape it again so it won't be removed when it is parsed by JSON.parse
+                if (str.includes('\\\\')) str = this.escapeCell(str)
+                return JSON.parse(
+                    '"' +
+                    str.replace(/"/g, '\\"') + // escape " to prevent json syntax errors
+                        '"'
+                )
+            } catch (e) {
+                this.$logger('unescapedUserInput', e)
+            }
+        },
+        /**
          * @param {(String|Number)} v cell value
          * @returns {(String|Number)} returns escape value
-         */
-        escapeCsv(v) {
-            // remove blanks before checking
-            if (`${v}`.replace(/ /g, '').match(/[\s,',"]/)) return '"' + v.replace(/"/g, '""') + '"'
+         */ escapeCell(v) {
+            // NULL is returned as js null in the query result.
+            if (this.$typy(v).isNull)
+                return this.csvCheckboxOpts.noBackslashEscapes ? 'NULL' : '\\N' // db escape
+            if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
         },
         getData(fileExtension) {
@@ -293,11 +315,20 @@ export default {
         onExport() {
             const { contentType, extension } = this.selectedFormat
             let a = document.createElement('a')
-            a.href = `${contentType}, ${encodeURIComponent(this.getData(extension))}`
+            a.href = `${contentType},${encodeURIComponent(this.getData(extension))}`
             a.download = `${this.fileName}.${extension}`
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
+        },
+        assignDefOpt() {
+            //TODO: Determine OS newline and store it as user preferences
+            // escape reserved single character escape sequences so it can be rendered to the DOM
+            this.csvTerminatedOpts = {
+                fieldsTerminatedBy: '\\t',
+                linesTerminatedBy: '\\n',
+            }
+            this.selectedFormat = this.fileFormats[0] // csv
         },
     },
 }
