@@ -1420,9 +1420,11 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 {
     bool rv = true;
 
+    int processor_count = get_processor_count();
+
     if (value_as_string == CN_AUTO)
     {
-        *pValue = get_processor_count();
+        *pValue = processor_count;
     }
     else
     {
@@ -1431,7 +1433,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 
         if (rv)
         {
-            int processor_count = get_processor_count();
             if (value > processor_count)
             {
                 MXB_WARNING("Number of threads set to %d, which is greater than "
@@ -1452,6 +1453,27 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             }
 
             *pValue = value;
+        }
+    }
+
+    if (rv)
+    {
+        auto threads = *pValue;
+
+        // We can hardly have a fewer number of threads than 1, and we have warned already
+        // if the specified number of threads is larger than the number of hardware cores.
+        if (threads > 1 && threads <= processor_count)
+        {
+            double vcpu = get_vcpu_count();
+
+            if (threads > ceil(vcpu) + 1) // One more than available is still ok.
+            {
+                MXB_WARNING("Number of threads set to %d, which is significantly more than the "
+                            "number of virtual cores %.2f available to MaxScale. This may lead "
+                            "to worse performance and MaxScale using more resources than what "
+                            "is available.",
+                            (int)threads, vcpu);
+            }
         }
     }
 
