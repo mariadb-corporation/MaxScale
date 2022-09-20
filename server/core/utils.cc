@@ -712,6 +712,21 @@ bool get_cpu_quota_and_period(int* quotap, int* periodp)
             }
         }
     }
+    // Workaround for https://github.com/moby/moby/issues/34584
+    else if (std::ifstream cpu_v1_quota("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"); cpu_v1_quota)
+    {
+        if (std::ifstream cpu_v1_period("/sys/fs/cgroup/cpu/cpu.cfs_period_us"); cpu_v1_period)
+        {
+            int tmp_quota = 0;
+            int tmp_period = 0;
+
+            if ((cpu_v1_quota >> tmp_quota) && (cpu_v1_period >> tmp_period) && tmp_quota > 0)
+            {
+                quota = tmp_quota;
+                period = tmp_period;
+            }
+        }
+    }
 
     if (quota && period)
     {
@@ -753,7 +768,9 @@ int64_t get_available_memory()
         const auto& cg = get_cgroup();
 
         for (auto path : {"/sys/fs/cgroup/" + cg + "/memory.max",
-                          "/sys/fs/cgroup/memory/" + cg + "/memory.limit_in_bytes"})
+                          "/sys/fs/cgroup/memory/" + cg + "/memory.limit_in_bytes",
+                          // Workaround for https://github.com/moby/moby/issues/34584
+                          std::string {"/sys/fs/cgroup/memory/memory.limit_in_bytes"}})
         {
             if (std::ifstream mem(path); mem)
             {
