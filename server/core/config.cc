@@ -1031,13 +1031,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
         // in the constructor, across translation units and threads.
         qc_cache_properties.max_size = qc_cache_max_size.get();
 
-        if (DEFAULT_QC_CACHE_SIZE == 0)
-        {
-            MXB_WARNING("Failed to automatically detect available system memory: disabling the query "
-                        "classifier cache. To enable it, add '%s' to the configuration file.",
-                        CN_QUERY_CLASSIFIER_CACHE_SIZE);
-        }
-        else if (this->qc_cache_properties.max_size == 0)
+        if (this->qc_cache_properties.max_size == 0)
         {
             MXB_NOTICE("Query classifier cache is disabled");
         }
