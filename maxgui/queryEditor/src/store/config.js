@@ -100,4 +100,4 @@ export const QUERY_LOG_TYPES = Object.freeze({
     USER_LOGS: 'User query logs',
     ACTION_LOGS: 'Action logs',
 })
-export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013]
+export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927]
