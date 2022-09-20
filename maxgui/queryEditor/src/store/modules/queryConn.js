@@ -167,7 +167,12 @@ export default {
                     // get session_conn new value after validating
                     const session_conn_updated = validSqlConns[session_conn.id] || {}
                     // update active_sql_conn attributes
-                    if (session_conn_updated.id !== state.active_sql_conn.id) {
+                    if (
+                        !this.vue.$helpers.lodash.isEqual(
+                            session_conn_updated,
+                            state.active_sql_conn
+                        )
+                    ) {
                         commit('SET_ACTIVE_SQL_CONN', {
                             payload: session_conn_updated,
                             id: active_session_id,
