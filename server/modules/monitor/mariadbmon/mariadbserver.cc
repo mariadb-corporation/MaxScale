@@ -2252,13 +2252,11 @@ bool MariaDBServer::update_enabled_events()
  */
 void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
 {
-    auto server = this;
-    MonitorServer* mon_srv = server;
-    ConnectResult conn_status = mon_srv->ping_or_connect();
+    ConnectResult conn_status = ping_or_connect();
 
     if (mxs::Monitor::connection_is_ok(conn_status))
     {
-        mon_srv->maybe_fetch_session_track();
+        maybe_fetch_session_track();
         set_status(SERVER_RUNNING);
         const bool new_connection = (conn_status == ConnectResult::NEWCONN_OK);
         if (new_connection)
@@ -2277,11 +2275,11 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             }
 
             // If permissions are ok, continue.
-            if (!server->has_status(SERVER_AUTH_ERROR))
+            if (!has_status(SERVER_AUTH_ERROR))
             {
-                if (time_to_update_disk_space && mon_srv->can_update_disk_space_status())
+                if (time_to_update_disk_space && can_update_disk_space_status())
                 {
-                    mon_srv->update_disk_space_status();
+                    update_disk_space_status();
                 }
 
                 if (m_settings.server_locks_enabled)
@@ -2292,7 +2290,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
                 }
 
                 // Query MariaDBServer specific data
-                server->monitor_server();
+                monitor_server();
             }
         }
     }
@@ -2300,27 +2298,25 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
     {
         /* The current server is not running. Clear some of the bits. User-set bits and some long-term bits
          * can stay. */
-        server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
+        clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
         clear_locks_info();
 
         if (conn_status == ConnectResult::ACCESS_DENIED)
         {
-            server->set_status(SERVER_AUTH_ERROR);
+            set_status(SERVER_AUTH_ERROR);
         }
 
-        /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
-         * iteration. Always log on first tick. */
-        if (first_tick || server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT)
-            || (conn_status == ConnectResult::ACCESS_DENIED && !server->had_status(SERVER_AUTH_ERROR)))
+        /* Avoid spamming and only log if this is the first tick or if server was
+         * running last tick or if server has started to reject the monitor. */
+        if (first_tick || had_status(SERVER_RUNNING)
+            || (has_status(SERVER_AUTH_ERROR) && !had_status(SERVER_AUTH_ERROR)))
         {
-            mon_srv->log_connect_error(conn_status);
+            log_connect_error(conn_status);
         }
     }
 
     /** Increase or reset the error count of the server. */
-    bool is_running = server->is_running();
-    bool in_maintenance = server->is_in_maintenance();
-    mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
+    mon_err_count = (is_running() || is_in_maintenance()) ? 0 : mon_err_count + 1;
 }
 
 
