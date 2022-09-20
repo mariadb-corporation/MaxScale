@@ -150,6 +150,7 @@ private:
         PREPARE_TARGET,
         START_TRANSFER,
         WAIT_TRANSFER,
+        CHECK_DATADIR_SIZE,
         START_BACKUP_PREPARE,
         WAIT_BACKUP_PREPARE,
         START_TARGET,
@@ -166,6 +167,7 @@ private:
     bool prepare_target();
     bool start_transfer();
     bool wait_transfer();
+    void check_datadir_size();
     bool start_backup_prepare();
     bool wait_backup_prepare();
 
@@ -177,6 +179,7 @@ private:
     bool check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
     bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server);
     bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
+    void report_source_stream_status();
 
     MariaDBServer* autoselect_source_srv(const MariaDBServer* target);
 };
