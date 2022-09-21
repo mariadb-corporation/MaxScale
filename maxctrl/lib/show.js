@@ -557,6 +557,11 @@ const show_maxscale_fields = [
     path: "attributes.parameters",
     description: "Global MaxScale parameters",
   },
+  {
+    name: "System",
+    path: "attributes.system",
+    description: "System Information",
+  }
 ];
 
 const show_logging_fields = [
