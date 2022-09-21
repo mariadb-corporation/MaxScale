@@ -114,10 +114,9 @@ export default {
                 })
 
                 /**
-                 * dispatch cloneConn before running the user's query to prevent concurrent
-                 * querying of the same connection.
-                 * This "BACKGROUND" connection must be disconnected after finnish the user's query.
-                 * i.e. dispatch disconnectBgConn
+                 * Clone the current connection and make it a BACKGROUND connection which is
+                 * used to stop the query. This action must be dispatched before running the
+                 * user's query to prevent concurrent querying of the same connection.
                  */
                 await dispatch(
                     'queryConn/cloneConn',
@@ -129,7 +128,9 @@ export default {
                     },
                     { root: true }
                 )
-
+                const bgConn = rootGetters['queryConn/getBgConn']({
+                    session_id_fk: active_session_id,
+                })
                 let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                     max_rows: rootState.queryPersisted.query_row_limit,
@@ -160,6 +161,8 @@ export default {
                     },
                     { root: true }
                 )
+                // Disconnect "BACKGROUND" connection
+                await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
