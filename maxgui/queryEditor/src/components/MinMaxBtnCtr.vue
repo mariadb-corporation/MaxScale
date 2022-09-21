@@ -1,18 +1,12 @@
 <template>
-    <v-tooltip
-        top
-        transition="slide-y-transition"
-        content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-    >
-        <template v-slot:activator="{ on }">
-            <v-btn icon small class="min-max-btn" v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
-                <v-icon size="22" color="accent-dark">
-                    mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
-                </v-icon>
-            </v-btn>
+    <mxs-tooltip-btn btnClass="min-max-btn" icon small @click="SET_FULLSCREEN(!is_fullscreen)">
+        <template v-slot:btn-content>
+            <v-icon size="22" color="accent-dark">
+                mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
+            </v-icon>
         </template>
-        <span>{{ is_fullscreen ? $mxs_t('minimize') : $mxs_t('maximize') }}</span>
-    </v-tooltip>
+        {{ is_fullscreen ? $mxs_t('minimize') : $mxs_t('maximize') }}
+    </mxs-tooltip-btn>
 </template>
 <script>
 /*

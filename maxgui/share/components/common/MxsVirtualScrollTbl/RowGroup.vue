@@ -29,26 +29,12 @@
                 <span class="d-inline-block val-separator mr-4">:</span>
                 <mxs-truncate-str :text="`${row.value}`" :maxWidth="maxRowGroupWidth * 0.85" />
             </div>
-
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        class="ml-2"
-                        width="24"
-                        height="24"
-                        icon
-                        v-on="on"
-                        @click="handleUngroup"
-                    >
-                        <v-icon size="10" color="deep-ocean"> $vuetify.icons.mxs_close</v-icon>
-                    </v-btn>
+            <mxs-tooltip-btn btnClass="ml-2" width="24" height="24" icon @click="handleUngroup">
+                <template v-slot:btn-content>
+                    <v-icon size="10" color="deep-ocean"> $vuetify.icons.mxs_close</v-icon>
                 </template>
-                <span>{{ $mxs_t('ungroup') }}</span>
-            </v-tooltip>
+                {{ $mxs_t('ungroup') }}
+            </mxs-tooltip-btn>
         </div>
     </div>
 </template>

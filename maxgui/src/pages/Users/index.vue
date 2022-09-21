@@ -44,7 +44,7 @@
                     fixedHeader
                 >
                     <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
-                        <v-tooltip
+                        <mxs-tooltip-btn
                             v-for="action in [
                                 userAdminActions[USER_ADMIN_ACTIONS.UPDATE],
                                 ...(isLoggedInUser(item)
@@ -52,23 +52,14 @@
                                     : [userAdminActions[USER_ADMIN_ACTIONS.DELETE]]),
                             ]"
                             :key="action.text"
-                            top
-                            transition="slide-y-transition"
-                            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                            icon
+                            @click="actionHandler({ type: action.type, user: item })"
                         >
-                            <template v-slot:activator="{ on }">
-                                <v-btn
-                                    icon
-                                    v-on="on"
-                                    @click="actionHandler({ type: action.type, user: item })"
-                                >
-                                    <v-icon size="18" :color="action.color">
-                                        {{ action.icon }}
-                                    </v-icon>
-                                </v-btn>
+                            <template v-slot:btn-content>
+                                <v-icon size="18" :color="action.color"> {{ action.icon }} </v-icon>
                             </template>
-                            <span>{{ action.text }}</span>
-                        </v-tooltip>
+                            {{ action.text }}
+                        </mxs-tooltip-btn>
                     </template>
                     <template v-for="h in tableHeaders" v-slot:[`${h.value}`]="{ data: { item } }">
                         <span

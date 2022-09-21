@@ -3,72 +3,48 @@
         <template v-slot:setting-menu>
             <details-icon-group-wrapper multiIcons>
                 <template v-slot:body>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        :tooltipProps="{ bottom: true }"
+                        btnClass="stop-btn"
+                        text
+                        color="primary"
+                        :disabled="serviceState === 'Stopped'"
+                        @click="actionHandle('stop')"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="stop-btn"
-                                text
-                                color="primary"
-                                :disabled="serviceState === 'Stopped'"
-                                v-on="on"
-                                @click="actionHandle('stop')"
-                            >
-                                <v-icon size="22">
-                                    $vuetify.icons.mxs_stopped
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="22">$vuetify.icons.mxs_stopped</v-icon>
                         </template>
-                        <span>{{ $mxs_t('stop') }} {{ $mxs_tc('services', 1) }} </span>
-                    </v-tooltip>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                        {{ $mxs_t('stop') }} {{ $mxs_tc('services', 1) }}
+                    </mxs-tooltip-btn>
+                    <mxs-tooltip-btn
+                        :tooltipProps="{ bottom: true }"
+                        btnClass="start-btn"
+                        text
+                        color="primary"
+                        :disabled="serviceState === 'Started'"
+                        @click="actionHandle('start')"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="start-btn"
-                                text
-                                color="primary"
-                                :disabled="serviceState === 'Started'"
-                                v-on="on"
-                                @click="actionHandle('start')"
-                            >
-                                <v-icon size="22">
-                                    $vuetify.icons.mxs_running
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="22">$vuetify.icons.mxs_running</v-icon>
                         </template>
-                        <span>{{ $mxs_t('start') }} {{ $mxs_tc('services', 1) }} </span>
-                    </v-tooltip>
+                        {{ $mxs_t('start') }} {{ $mxs_tc('services', 1) }}
+                    </mxs-tooltip-btn>
                 </template>
             </details-icon-group-wrapper>
             <details-icon-group-wrapper>
                 <template v-slot:body>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        :tooltipProps="{ bottom: true }"
+                        btnClass="delete-btn"
+                        text
+                        color="error"
+                        @click="actionHandle('destroy')"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="delete-btn"
-                                text
-                                color="error"
-                                v-on="on"
-                                @click="actionHandle('destroy')"
-                            >
-                                <v-icon size="18">
-                                    $vuetify.icons.mxs_delete
-                                </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon size="18">$vuetify.icons.mxs_delete</v-icon>
                         </template>
-                        <span>{{ $mxs_t('destroy') }} {{ $mxs_tc('services', 1) }} </span>
-                    </v-tooltip>
+                        {{ $mxs_t('destroy') }} {{ $mxs_tc('services', 1) }}
+                    </mxs-tooltip-btn>
                 </template>
             </details-icon-group-wrapper>
         </template>

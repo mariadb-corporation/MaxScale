@@ -1,25 +1,16 @@
 <template>
-    <v-tooltip
-        top
-        transition="slide-y-transition"
-        content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+    <mxs-tooltip-btn
+        btnClass="query-setting-btn"
+        icon
+        small
+        @click="queryConfigDialog = !queryConfigDialog"
     >
-        <template v-slot:activator="{ on }">
-            <v-btn
-                icon
-                small
-                class="query-setting-btn"
-                v-on="on"
-                @click="queryConfigDialog = !queryConfigDialog"
-            >
-                <v-icon size="16" color="accent-dark">
-                    $vuetify.icons.mxs_settings
-                </v-icon>
-            </v-btn>
+        <template v-slot:btn-content>
+            <v-icon size="16" color="accent-dark">$vuetify.icons.mxs_settings</v-icon>
             <query-cnf-dlg-ctr v-model="queryConfigDialog" />
         </template>
-        <span class="text-capitalize"> {{ $mxs_tc('settings', 2) }}</span>
-    </v-tooltip>
+        {{ $mxs_tc('settings', 2) }}
+    </mxs-tooltip-btn>
 </template>
 <script>
 /*

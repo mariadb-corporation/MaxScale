@@ -31,7 +31,6 @@
                                 ref="editor"
                                 :session="session"
                                 :dim="editorDim"
-                                v-on="$listeners"
                             >
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </txt-editor-ctr>

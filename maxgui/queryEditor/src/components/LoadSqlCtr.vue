@@ -15,82 +15,49 @@
                 <p v-html="confDlg.confirmMsg" />
             </template>
         </mxs-conf-dlg>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn load-sql-btn"
+            text
+            type="file"
+            @click="handleFileOpen"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="load-sql-btn toolbar-square-btn"
-                    type="file"
-                    v-on="on"
-                    @click="handleFileOpen"
-                >
-                    <v-icon size="18" color="accent-dark">
-                        {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
-                    </v-icon>
-                    <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="18" color="accent-dark">
+                    {{ supportFs ? 'mdi-file-outline' : 'mdi-file-upload-outline' }}
+                </v-icon>
+                <input ref="uploader" class="d-none" type="file" @input="onFileLoadChanged" />
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('openScript') }}
-                <br />
-                Cmd/Ctrl + O
-            </span>
-        </v-tooltip>
-        <v-tooltip
+            {{ $mxs_t('openScript') }}
+            <br />
+            Cmd/Ctrl + O
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
             v-if="hasFullSupport"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            btnClass="toolbar-square-btn save-sql-btn"
+            text
+            :disabled="isSaveFileDisabled"
+            @click="saveFile"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="save-sql-btn toolbar-square-btn"
-                    type="file"
-                    :disabled="!getIsFileUnsaved || !hasFileHandle"
-                    v-on="on"
-                    @click="saveFile"
-                >
-                    <v-icon size="20" color="accent-dark">
-                        mdi-content-save-outline
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="20" color="accent-dark">mdi-content-save-outline</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('saveScript') }}
-                <br />
-                Cmd/Ctrl + S
-            </span>
-        </v-tooltip>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            {{ $mxs_t('saveScript') }}
+            <br />
+            Cmd/Ctrl + S
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn save-sql-btn"
+            text
+            :disabled="isSaveFileAsDisabled"
+            @click="handleSaveFileAs"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    text
-                    class="save-sql-btn toolbar-square-btn"
-                    type="file"
-                    :disabled="!getIsFileUnsaved"
-                    v-on="on"
-                    @click="hasFullSupport ? saveFileAs() : saveFileLegacy()"
-                >
-                    <v-icon size="20" color="accent-dark">
-                        mdi-content-save-edit-outline
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="20" color="accent-dark">mdi-content-save-edit-outline</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('saveScriptAs') }}
-                <br />
-                Cmd/Ctrl + Shift + S
-            </span>
-        </v-tooltip>
+            {{ $mxs_t('saveScriptAs') }}
+            <br />
+            Cmd/Ctrl + Shift + S
+        </mxs-tooltip-btn>
     </div>
 </template>
 <script>
@@ -108,6 +75,7 @@
  */
 import { mapState, mapGetters, mapMutations } from 'vuex'
 import { fileOpen, supported } from 'browser-fs-access'
+import { EventBus } from './EventBus'
 
 export default {
     name: 'load-sql-ctr',
@@ -146,6 +114,21 @@ export default {
         hasFileHandle() {
             return Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
         },
+        isSaveFileDisabled() {
+            return !this.getIsFileUnsaved || !this.hasFileHandle
+        },
+        isSaveFileAsDisabled() {
+            return !this.getIsFileUnsaved
+        },
+        eventBus() {
+            return EventBus
+        },
+    },
+    activated() {
+        this.eventBus.$on('shortkey', this.shortKeyHandler)
+    },
+    deactivated() {
+        this.eventBus.$off('shortkey')
     },
     methods: {
         ...mapMutations({
@@ -275,12 +258,11 @@ export default {
             await this.loadFileToActiveSession(blob)
         },
         async handleSaveFile() {
-            if (!this.hasFullSupport) this.saveFileLegacy()
-            else if (this.hasFileHandle) await this.saveFile()
-            else await this.saveFileAs()
+            if (this.hasFullSupport && this.hasFileHandle) await this.saveFile()
+            else await this.handleSaveFileAs()
         },
         /*
-         * Download the file to user's local device
+         * Download the file to user's disk
          */
         saveFileLegacy() {
             let a = document.createElement('a')
@@ -329,6 +311,31 @@ export default {
                 this.$logger('load-sql-ctr-saveFile').error(e)
             }
         },
+
+        /**
+         * Create a handle to a new text file on the local file system.
+         * @param {string} suggestedName - suggestedName for the file
+         * @returns {Promise<FileSystemFileHandle>} Handle to the new file.
+         */
+        getNewFileHandle(suggestedName) {
+            try {
+                // For Chrome 86 and later...
+                if ('showSaveFilePicker' in window)
+                    return window.showSaveFilePicker({
+                        suggestedName,
+                    })
+                // For Chrome 85 and earlier...
+                return window.chooseFileSystemEntries({
+                    suggestedName,
+                    type: 'save-file',
+                })
+            } catch (ex) {
+                if (!ex.name === 'AbortError')
+                    this.$logger('load-sql-ctr-getNewFileHandle').error(
+                        'An error occurred trying to open the file.'
+                    )
+            }
+        },
         async saveFileAs() {
             let fileHandle = await this.getNewFileHandle(
                 `${this.getActiveSession.name}${this.hasFileHandle ? '' : '.sql'}`
@@ -352,6 +359,10 @@ export default {
                 this.$logger('load-sql-ctr-saveFileAs').error('Unable to write file')
             }
         },
+        async handleSaveFileAs() {
+            this.hasFullSupport ? await this.saveFileAs() : this.saveFileLegacy()
+        },
+
         /**
          * Writes the contents to disk.
          * @param {<FileSystemFileHandle>} param.fileHandle File handle to write to.
@@ -394,28 +405,22 @@ export default {
             return false
         },
 
-        /**
-         * Create a handle to a new text file on the local file system.
-         * @param {string} suggestedName - suggestedName for the file
-         * @returns {Promise<FileSystemFileHandle>} Handle to the new file.
-         */
-        getNewFileHandle(suggestedName) {
-            try {
-                // For Chrome 86 and later...
-                if ('showSaveFilePicker' in window)
-                    return window.showSaveFilePicker({
-                        suggestedName,
-                    })
-                // For Chrome 85 and earlier...
-                return window.chooseFileSystemEntries({
-                    suggestedName,
-                    type: 'save-file',
-                })
-            } catch (ex) {
-                if (!ex.name === 'AbortError')
-                    this.$logger('load-sql-ctr-getNewFileHandle').error(
-                        'An error occurred trying to open the file.'
-                    )
+        shortKeyHandler(key) {
+            switch (key) {
+                case 'ctrl-o':
+                case 'mac-cmd-o':
+                    this.handleFileOpen()
+                    break
+                case 'ctrl-s':
+                case 'mac-cmd-s': {
+                    if (!this.isSaveFileDisabled && this.hasFullSupport) this.saveFile()
+                    break
+                }
+                case 'ctrl-shift-s':
+                case 'mac-cmd-shift-s': {
+                    if (!this.isSaveFileAsDisabled) this.handleSaveFileAs()
+                    break
+                }
             }
         },
     },

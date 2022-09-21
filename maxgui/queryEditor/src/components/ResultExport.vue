@@ -1,23 +1,14 @@
 <template>
-    <v-tooltip
-        top
-        transition="slide-y-transition"
-        content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+    <mxs-tooltip-btn
+        btnClass="mr-2"
+        x-small
+        outlined
+        depressed
+        color="accent-dark"
+        @click="openConfigDialog"
     >
-        <template v-slot:activator="{ on }">
-            <v-btn
-                x-small
-                class="mr-2"
-                outlined
-                depressed
-                color="accent-dark"
-                v-on="on"
-                @click="openConfigDialog"
-            >
-                <v-icon size="14" color="accent-dark">
-                    mdi-download
-                </v-icon>
-            </v-btn>
+        <template v-slot:btn-content>
+            <v-icon size="14" color="accent-dark">mdi-download</v-icon>
             <mxs-dlg
                 v-model="isConfigDialogOpened"
                 :onSave="onExport"
@@ -162,8 +153,8 @@
                 </template>
             </mxs-dlg>
         </template>
-        <span>{{ $mxs_t('exportResults') }}</span>
-    </v-tooltip>
+        {{ $mxs_t('exportResults') }}
+    </mxs-tooltip-btn>
 </template>
 
 <script>

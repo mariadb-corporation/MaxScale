@@ -41,7 +41,7 @@
                                     :cmplList="cmplList"
                                     isKeptAlive
                                     @on-selection="SET_SELECTED_QUERY_TXT($event)"
-                                    v-on="$listeners"
+                                    @shortkey="eventBus.$emit('shortkey', $event)"
                                 />
                             </template>
                             <template slot="pane-right">
@@ -102,6 +102,7 @@ import SqlEditor from './SqlEditor'
 import QueryResultCtr from './QueryResultCtr.vue'
 import ChartConfig from './ChartConfig'
 import ChartPane from './ChartPane'
+import { EventBus } from './EventBus'
 
 export default {
     name: 'txt-editor-ctr',
@@ -156,6 +157,9 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getChartResultSets: 'queryResult/getChartResultSets',
         }),
+        eventBus() {
+            return EventBus
+        },
         resultSets() {
             return this.getChartResultSets({ scope: this })
         },

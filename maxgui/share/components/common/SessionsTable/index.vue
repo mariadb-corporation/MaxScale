@@ -26,20 +26,12 @@
                 <slot :name="slot" v-bind="slotData" />
             </template>
             <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <v-btn icon v-on="on" @click="onKillSession(item)">
-                            <v-icon size="18" color="error">
-                                $vuetify.icons.mxs_unlink
-                            </v-icon>
-                        </v-btn>
+                <mxs-tooltip-btn icon @click="onKillSession(item)">
+                    <template v-slot:btn-content>
+                        <v-icon size="18" color="error">$vuetify.icons.mxs_unlink</v-icon>
                     </template>
-                    <span>{{ $mxs_t('killSession') }}</span>
-                </v-tooltip>
+                    {{ $mxs_t('killSession') }}
+                </mxs-tooltip-btn>
             </template>
             <template
                 v-if="headers.find(h => h.value === 'memory')"

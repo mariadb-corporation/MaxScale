@@ -348,6 +348,7 @@
         "rowLimit": "Row limit",
         "run": "Run",
         "runStatements": "Run {quantity} statements",
+        "stopStatements": "Stop statements",
         "save": "Save",
         "saveScript": "Save Script",
         "saveScriptAs": "Save Script As",

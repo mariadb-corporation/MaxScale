@@ -3,52 +3,30 @@
         class="d-flex align-center mxs-color-helper border-bottom-table-border"
         :style="{ height: `${height}px` }"
     >
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            color="accent-dark"
+            :disabled="disableRevert"
+            @click="$emit('on-revert')"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="toolbar-square-btn"
-                    text
-                    color="accent-dark"
-                    :disabled="disableRevert"
-                    v-on="on"
-                    @click="$emit('on-revert')"
-                >
-                    <v-icon size="16">
-                        $vuetify.icons.mxs_reload
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="16">$vuetify.icons.mxs_reload</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('revertChanges') }}
-            </span>
-        </v-tooltip>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            {{ $mxs_t('revertChanges') }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="toolbar-square-btn"
+            text
+            color="accent-dark"
+            :disabled="disableApply"
+            @click="$emit('on-apply')"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="toolbar-square-btn"
-                    text
-                    color="accent-dark"
-                    :disabled="disableApply"
-                    v-on="on"
-                    @click="$emit('on-apply')"
-                >
-                    <v-icon size="16">
-                        $vuetify.icons.mxs_running
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="16">$vuetify.icons.mxs_running</v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('applyChanges') }}
-            </span>
-        </v-tooltip>
+            {{ $mxs_t('applyChanges') }}
+        </mxs-tooltip-btn>
         <slot name="ddl-editor-toolbar-right-slot" />
     </div>
 </template>

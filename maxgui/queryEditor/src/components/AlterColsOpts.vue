@@ -2,47 +2,33 @@
     <div class="fill-height">
         <div ref="header" class="pb-2 d-flex align-center flex-1">
             <v-spacer />
-            <v-tooltip
+            <mxs-tooltip-btn
                 v-if="selectedItems.length"
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                btnClass="mr-2 pa-1 text-capitalize"
+                x-small
+                outlined
+                depressed
+                color="error"
+                @click="deleteSelectedRows(selectedItems)"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        class="mr-2 pa-1 text-capitalize"
-                        outlined
-                        depressed
-                        color="error"
-                        v-on="on"
-                        @click="deleteSelectedRows(selectedItems)"
-                    >
-                        {{ $mxs_t('drop') }} ({{ selectedItems.length }})
-                    </v-btn>
+                <template v-slot:btn-content>
+                    {{ $mxs_t('drop') }} ({{ selectedItems.length }}
                 </template>
-                <span>{{ $mxs_t('dropSelectedCols') }}</span>
-            </v-tooltip>
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                {{ $mxs_t('dropSelectedCols') }}
+            </mxs-tooltip-btn>
+            <mxs-tooltip-btn
+                btnClass="mr-2 pa-1 text-capitalize"
+                x-small
+                outlined
+                depressed
+                color="accent-dark"
+                @click="addNewCol"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        class="mr-2 pa-1 text-capitalize"
-                        outlined
-                        depressed
-                        color="accent-dark"
-                        v-on="on"
-                        @click="addNewCol"
-                    >
-                        {{ $mxs_t('add') }}
-                    </v-btn>
+                <template v-slot:btn-content>
+                    {{ $mxs_t('add') }}
                 </template>
-                <span>{{ $mxs_t('addNewCol') }}</span>
-            </v-tooltip>
+                {{ $mxs_t('addNewCol') }}
+            </mxs-tooltip-btn>
             <mxs-filter-list
                 v-model="selectedColSpecs"
                 returnObject
@@ -50,33 +36,21 @@
                 :items="colSpecs"
                 :maxHeight="tableMaxHeight - 20"
             />
-
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+            <mxs-tooltip-btn
+                btnClass="ml-2 pa-1"
+                x-small
+                outlined
+                depressed
+                color="accent-dark"
+                @click="isVertTable = !isVertTable"
             >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        class="ml-2 pa-1"
-                        outlined
-                        depressed
-                        color="accent-dark"
-                        v-on="on"
-                        @click="isVertTable = !isVertTable"
-                    >
-                        <v-icon
-                            size="14"
-                            color="accent-dark"
-                            :class="{ 'rotate-left': !isVertTable }"
-                        >
-                            mdi-format-rotate-90
-                        </v-icon>
-                    </v-btn>
+                <template v-slot:btn-content>
+                    <v-icon size="14" color="accent-dark" :class="{ 'rotate-left': !isVertTable }">
+                        mdi-format-rotate-90
+                    </v-icon>
                 </template>
-                <span>{{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
-            </v-tooltip>
+                {{ $mxs_t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
+            </mxs-tooltip-btn>
         </div>
 
         <mxs-virtual-scroll-tbl

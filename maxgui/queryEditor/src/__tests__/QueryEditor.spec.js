@@ -163,24 +163,4 @@ describe('QueryEditor', () => {
         const wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
         expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.ctrDim)
     })
-
-    describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
-        const evts = [
-            'onCtrlEnter',
-            'onCtrlShiftEnter',
-            'onCtrlD',
-            'onCtrlO',
-            'onCtrlS',
-            'onCtrlShiftS',
-        ]
-        evts.map(evt => {
-            it(`Handle ${evt} evt`, () => {
-                let callCount = 0
-                wrapper = mountFactory({ methods: { [evt]: () => callCount++ } })
-                const wke = wrapper.findAllComponents({ name: 'wke-ctr' }).at(0)
-                wke.vm.$emit(evt)
-                expect(callCount).to.be.equals(1)
-            })
-        })
-    })
 })

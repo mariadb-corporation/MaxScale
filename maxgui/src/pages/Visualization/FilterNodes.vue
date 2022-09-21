@@ -1,25 +1,17 @@
 <template>
     <div v-if="isVisualizingFilters" class="visualized-filters">
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+        <mxs-tooltip-btn
+            btnClass="hide-filter-btn"
+            x-small
+            icon
+            depressed
+            @click="handleVisFilters"
         >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    x-small
-                    icon
-                    class="hide-filter-btn"
-                    depressed
-                    v-on="on"
-                    @click="handleVisFilters"
-                >
-                    <v-icon size="10" color="error"> $vuetify.icons.mxs_close</v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="10" color="error"> $vuetify.icons.mxs_close</v-icon>
             </template>
-            <span> {{ $mxs_t('hideFilters') }}</span>
-        </v-tooltip>
-
+            {{ $mxs_t('hideFilters') }}
+        </mxs-tooltip-btn>
         <div class="filter-node-group pt-4">
             <div
                 v-for="filter in filters.slice().reverse()"
@@ -91,7 +83,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.visualized-filters {
+::v-deep.visualized-filters {
     position: relative;
     .hide-filter-btn {
         position: absolute;

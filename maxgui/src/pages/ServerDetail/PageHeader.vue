@@ -3,30 +3,24 @@
         <template v-slot:setting-menu>
             <details-icon-group-wrapper multiIcons>
                 <template v-slot:body>
-                    <v-tooltip
+                    <mxs-tooltip-btn
                         v-for="op in [
                             serverOps[SERVER_OP_TYPES.MAINTAIN],
                             serverOps[SERVER_OP_TYPES.CLEAR],
                         ]"
                         :key="op.text"
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                        :tooltipProps="{ bottom: true }"
+                        :btnClass="`${op.type}-btn`"
+                        text
+                        :color="op.color"
+                        :disabled="op.disabled"
+                        @click="handleClick(op)"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                :class="`${op.type}-btn`"
-                                text
-                                :color="op.color"
-                                :disabled="op.disabled"
-                                v-on="on"
-                                @click="handleClick(op)"
-                            >
-                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
                         </template>
-                        <span>{{ op.text }} </span>
-                    </v-tooltip>
+                        {{ op.text }}
+                    </mxs-tooltip-btn>
                 </template>
             </details-icon-group-wrapper>
             <details-icon-group-wrapper
@@ -34,25 +28,19 @@
                 :key="op.text"
             >
                 <template v-slot:body>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
+                    <mxs-tooltip-btn
+                        :tooltipProps="{ bottom: true }"
+                        :btnClass="`${op.type}-btn`"
+                        text
+                        :color="op.color"
+                        :disabled="op.disabled"
+                        @click="handleClick(op)"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                :class="`${op.type}-btn`"
-                                text
-                                :color="op.color"
-                                :disabled="op.disabled"
-                                v-on="on"
-                                @click="handleClick(op)"
-                            >
-                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
-                            </v-btn>
+                        <template v-slot:btn-content>
+                            <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
                         </template>
-                        <span>{{ op.text }} </span>
-                    </v-tooltip>
+                        {{ op.text }}
+                    </mxs-tooltip-btn>
                 </template>
             </details-icon-group-wrapper>
         </template>

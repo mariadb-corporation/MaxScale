@@ -11,53 +11,39 @@
                 >
                     {{ $mxs_t('schemas') }}
                 </span>
-                <v-tooltip
+                <mxs-tooltip-btn
                     v-if="!isCollapsed"
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                    btnClass="reload-schemas"
+                    icon
+                    small
+                    :disabled="reloadDisabled"
+                    @click="$emit('reload-schemas')"
                 >
-                    <template v-slot:activator="{ on }">
-                        <v-btn
-                            icon
-                            small
-                            :disabled="reloadDisabled"
-                            class="reload-schemas"
-                            v-on="on"
-                            @click="$emit('reload-schemas')"
-                        >
-                            <v-icon size="12" :color="reloadDisabled ? '' : 'deep-ocean'">
-                                $vuetify.icons.mxs_reload
-                            </v-icon>
-                        </v-btn>
+                    <template v-slot:btn-content>
+                        <v-icon size="12" :color="reloadDisabled ? '' : 'deep-ocean'">
+                            $vuetify.icons.mxs_reload
+                        </v-icon>
                     </template>
-                    <span>{{ $mxs_t('reload') }}</span>
-                </v-tooltip>
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                    {{ $mxs_t('reload') }}
+                </mxs-tooltip-btn>
+                <mxs-tooltip-btn
+                    btnClass="toggle-sidebar"
+                    icon
+                    small
+                    @click="$emit('toggle-sidebar')"
                 >
-                    <template v-slot:activator="{ on }">
-                        <v-btn
-                            icon
-                            small
-                            class="toggle-sidebar"
-                            v-on="on"
-                            @click="$emit('toggle-sidebar')"
+                    <template v-slot:btn-content>
+                        <v-icon
+                            size="22"
+                            color="deep-ocean"
+                            class="collapse-icon"
+                            :class="[isCollapsed ? 'rotate-right' : 'rotate-left']"
                         >
-                            <v-icon
-                                size="22"
-                                color="deep-ocean"
-                                class="collapse-icon"
-                                :class="[isCollapsed ? 'rotate-right' : 'rotate-left']"
-                            >
-                                mdi-chevron-double-down
-                            </v-icon>
-                        </v-btn>
+                            mdi-chevron-double-down
+                        </v-icon>
                     </template>
-                    <span>{{ isCollapsed ? $mxs_t('expand') : $mxs_t('collapse') }}</span>
-                </v-tooltip>
+                    {{ isCollapsed ? $mxs_t('expand') : $mxs_t('collapse') }}
+                </mxs-tooltip-btn>
             </div>
             <v-text-field
                 v-if="!isCollapsed"

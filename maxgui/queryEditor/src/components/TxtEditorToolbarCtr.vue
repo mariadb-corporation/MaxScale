@@ -3,108 +3,67 @@
         class="txt-editor-toolbar mxs-color-helper border-bottom-table-border d-flex align-center"
         :style="{ height: `${height}px` }"
     >
-        <!-- Run/Stop buttons-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-            :disabled="getLoadingQueryResultBySessionId(session.id)"
+        <mxs-tooltip-btn
+            :btnClass="['toolbar-square-btn', isExecuting ? 'stop-btn' : 'run-btn']"
+            text
+            color="accent-dark"
+            :disabled="isExecuting ? isStopping : isRunBtnDisabled"
+            @click="
+                () =>
+                    isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
+            "
         >
-            <template v-slot:activator="{ on }">
-                <!-- disable button Prevent parallel querying of the same connection -->
-                <v-btn
-                    class="toolbar-square-btn"
-                    :class="[getLoadingQueryResultBySessionId(session.id) ? 'stop-btn' : 'run-btn']"
-                    text
-                    color="accent-dark"
-                    :disabled="
-                        getLoadingQueryResultBySessionId(session.id)
-                            ? false
-                            : getIsRunBtnDisabledBySessionId(session.id)
-                    "
-                    v-on="on"
-                    @click="
-                        () =>
-                            getLoadingQueryResultBySessionId(session.id)
-                                ? stopQuery()
-                                : handleRun(selected_query_txt ? 'selected' : 'all')
-                    "
-                >
-                    <v-icon size="16">
-                        {{
-                            `$vuetify.icons.mxs_${
-                                getLoadingQueryResultBySessionId(session.id) ? 'stopped' : 'running'
-                            }`
-                        }}
-                    </v-icon>
-                </v-btn>
+            <template v-slot:btn-content>
+                <v-icon size="16">
+                    {{ `$vuetify.icons.mxs_${isExecuting ? 'stopped' : 'running'}` }}
+                </v-icon>
             </template>
-            <span class="d-inline-block text-center">
-                <template v-if="selected_query_txt">
-                    {{ $mxs_t('runStatements', { quantity: $mxs_t('selected') }) }}
-                    <br />
-                    Cmd/Ctrl + Enter
-                </template>
-                <template v-else>
-                    {{ $mxs_t('runStatements', { quantity: $mxs_t('all') }) }}
-                    <br />
-                    Cmd/Ctrl + Shift + Enter
-                </template>
-            </span>
-        </v-tooltip>
-        <!-- Visualize button-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="toolbar-square-btn visualize-btn"
-                    :depressed="show_vis_sidebar"
-                    :text="!show_vis_sidebar"
-                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="getIsVisBtnDisabledBySessionId(session.id)"
-                    v-on="on"
-                    @click="
-                        SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: getActiveSessionId })
-                    "
-                >
-                    <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
-                </v-btn>
+            <template v-if="isExecuting">
+                {{ $mxs_t('stopStatements') }}
+                <br />
+                Cmd/Ctrl + Shift + C
             </template>
-            <span class="text-capitalize">
+            <template v-else>
                 {{
-                    $mxs_t('visualizedConfig', {
-                        action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
+                    $mxs_t('runStatements', {
+                        quantity: selected_query_txt ? $mxs_t('selected') : $mxs_t('all'),
                     })
                 }}
-            </span>
-        </v-tooltip>
-        <!-- Create snippet button-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="create-snippet-btn toolbar-square-btn"
-                    text
-                    color="accent-dark"
-                    :disabled="!query_txt"
-                    v-on="on"
-                    @click="openSnippetDlg"
-                >
-                    <v-icon size="19"> mdi-star-plus-outline </v-icon>
-                </v-btn>
-            </template>
-            <span class="d-inline-block text-center">
-                {{ $mxs_t('createQuerySnippet') }}
                 <br />
-                Cmd/Ctrl + D
-            </span>
-        </v-tooltip>
+                {{ selected_query_txt ? 'Cmd/Ctrl + Enter' : 'Cmd/Ctrl + Shift + Enter' }}
+            </template>
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="visualize-btn toolbar-square-btn"
+            :depressed="show_vis_sidebar"
+            :text="!show_vis_sidebar"
+            :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+            :disabled="isVisBtnDisabled"
+            @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: session.id })"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
+            </template>
+            {{
+                $mxs_t('visualizedConfig', {
+                    action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
+                })
+            }}
+        </mxs-tooltip-btn>
+        <mxs-tooltip-btn
+            btnClass="create-snippet-btn toolbar-square-btn"
+            text
+            color="accent-dark"
+            :disabled="!query_txt"
+            @click="openSnippetDlg"
+        >
+            <template v-slot:btn-content>
+                <v-icon size="19"> mdi-star-plus-outline </v-icon>
+            </template>
+            {{ $mxs_t('createQuerySnippet') }}
+            <br />
+            Cmd/Ctrl + D
+        </mxs-tooltip-btn>
         <load-sql-ctr ref="loadSqlCtr" />
         <v-spacer />
         <!-- QUERY_ROW_LIMIT dropdown input-->
@@ -196,6 +155,7 @@ import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
 import LoadSqlCtr from './LoadSqlCtr.vue'
+import { EventBus } from './EventBus'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
@@ -238,18 +198,17 @@ export default {
             selected_query_txt: state => state.editor.selected_query_txt,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
             getBgConn: 'queryConn/getBgConn',
             getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
             getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
+        eventBus() {
+            return EventBus
+        },
         isQueryKilled() {
-            return (
-                !this.getLoadingQueryResultBySessionId(this.session.id) &&
-                !this.getIsStoppingQueryBySessionId(this.session.id)
-            )
+            return !this.isExecuting && !this.isStopping
         },
         isRowLimitValid: {
             get() {
@@ -259,12 +218,26 @@ export default {
                 if (v) this.SET_IS_MAX_ROWS_VALID(v)
             },
         },
+        isExecuting() {
+            return this.getLoadingQueryResultBySessionId(this.session.id)
+        },
+        isStopping() {
+            return this.getIsStoppingQueryBySessionId(this.session.id)
+        },
+        isRunBtnDisabled() {
+            return this.getIsRunBtnDisabledBySessionId(this.session.id)
+        },
+        isVisBtnDisabled() {
+            return this.getIsVisBtnDisabledBySessionId(this.session.id)
+        },
     },
     activated() {
+        this.eventBus.$on('shortkey', this.shortKeyHandler)
         this.watch_isQueryKilled()
     },
     deactivated() {
         this.$typy(this.unwatch_isQueryKilled).safeFunction()
+        this.eventBus.$off('shortkey')
     },
     methods: {
         ...mapActions({
@@ -298,7 +271,7 @@ export default {
             )
         },
         async handleRun(mode) {
-            if (!this.getIsRunBtnDisabledBySessionId[this.getActiveSessionId])
+            if (!this.isRunBtnDisabled)
                 if (!this.query_confirm_flag) await this.onRun(mode)
                 else if (this.shouldOpenDialog(mode)) {
                     this.activeRunMode = mode
@@ -327,7 +300,7 @@ export default {
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
                 payload: this.SQL_QUERY_MODES.QUERY_VIEW,
-                id: this.getActiveSessionId,
+                id: this.session.id,
             })
             switch (mode) {
                 case 'all':
@@ -368,6 +341,25 @@ export default {
             else if (names.includes(v))
                 return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
             return true
+        },
+        shortKeyHandler(key) {
+            switch (key) {
+                case 'ctrl-d':
+                case 'mac-cmd-d':
+                    this.openSnippetDlg()
+                    break
+                case 'ctrl-enter':
+                case 'mac-cmd-enter':
+                    this.handleRun('selected')
+                    break
+                case 'ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    this.handleRun('all')
+                    break
+                case 'ctrl-shift-c':
+                case 'mac-cmd-shift-c':
+                    if (this.isExecuting) this.stopQuery()
+            }
         },
     },
 }

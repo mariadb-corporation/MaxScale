@@ -17,18 +17,20 @@ export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     BACKGROUND: 'BACKGROUND', // used to stop the running query
 })
 export const QUERY_SHORTCUT_KEYS = Object.freeze({
-    'win-ctrl-d': ['ctrl', 'd'],
+    'ctrl-d': ['ctrl', 'd'],
     'mac-cmd-d': ['meta', 'd'],
-    'win-ctrl-enter': ['ctrl', 'enter'],
+    'ctrl-enter': ['ctrl', 'enter'],
     'mac-cmd-enter': ['meta', 'enter'],
-    'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
+    'ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
     'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
-    'win-ctrl-o': ['ctrl', 'o'],
+    'ctrl-o': ['ctrl', 'o'],
     'mac-cmd-o': ['meta', 'o'],
-    'win-ctrl-s': ['ctrl', 's'],
+    'ctrl-s': ['ctrl', 's'],
     'mac-cmd-s': ['meta', 's'],
-    'win-ctrl-shift-s': ['ctrl', 'shift', 's'],
+    'ctrl-shift-s': ['ctrl', 'shift', 's'],
     'mac-cmd-shift-s': ['meta', 'shift', 's'],
+    'ctrl-shift-c': ['ctrl', 'shift', 'c'],
+    'mac-cmd-shift-c': ['meta', 'shift', 'c'],
 })
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 export const SQL_NODE_TYPES = Object.freeze({
@@ -98,4 +100,4 @@ export const QUERY_LOG_TYPES = Object.freeze({
     USER_LOGS: 'User query logs',
     ACTION_LOGS: 'Action logs',
 })
-export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013]
+export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927]
