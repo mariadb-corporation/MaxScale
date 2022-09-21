@@ -8,6 +8,7 @@
             text
             color="accent-dark"
             :disabled="isExecuting ? isStopping : isRunBtnDisabled"
+            :loading="isStopping"
             @click="
                 () =>
                     isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
@@ -349,3 +350,9 @@ export default {
     },
 }
 </script>
+<style lang="scss">
+.stop-btn.v-btn--loading .v-progress-circular {
+    height: 16px !important;
+    width: 16px !important;
+}
+</style>
