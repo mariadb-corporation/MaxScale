@@ -342,6 +342,9 @@ public:
 private:
     Config(int argc, char** argv);
 
+    void check_cpu_situation() const;
+    void check_memory_situation() const;
+
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:

@@ -1021,6 +1021,8 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
     if (configured)
     {
+        check_cpu_situation();
+
         if (this->qc_cache_properties.max_size == 0)
         {
             MXB_NOTICE("Query classifier cache is disabled");
@@ -1030,33 +1032,57 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
             MXB_NOTICE("Using up to %s of memory for query classifier cache",
                        mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
 
-            int64_t total_memory = get_total_memory();
-            int64_t available_memory = get_available_memory();
-
-            if (total_memory != available_memory)
-            {
-                // If the query classifier cache size has not been explicitly specified
-                // and the default (calculated based upon total size) is used, or if the
-                // size is clearly wrong.
-
-                if (this->qc_cache_properties.max_size == DEFAULT_QC_CACHE_SIZE
-                    || this->qc_cache_properties.max_size > available_memory)
-                {
-                    MXB_WARNING("It seems MaxScale is running in a constrained environment with "
-                                "less memory (%s) available in it than what is installed on the "
-                                "machine (%s). In this context, the query classifier cache size "
-                                "should be specified explicitly in the configuration file with "
-                                "'query_classifier_cache_size' set to 15%% of the available memory. "
-                                "Otherwise MaxScale may use more resources than what is available, "
-                                "which may cause it to crash.",
-                                mxb::pretty_size(available_memory).c_str(),
-                                mxb::pretty_size(total_memory).c_str());
-                }
-            }
+            check_memory_situation();
         }
     }
 
     return configured;
+}
+
+void Config::check_cpu_situation() const
+{
+    // We can hardly have a fewer number of threads than 1, and we have warned already
+    // if the specified number of threads is larger than the number of hardware cores.
+    if (this->n_threads > 1 && this->n_threads <= get_processor_count())
+    {
+        double vcpu = get_vcpu_count();
+
+        if (this->n_threads > ceil(vcpu) + 1) // One more than available is still ok.
+        {
+            MXB_WARNING("Number of threads set to %d, which is significantly more than "
+                        "the %.2f virtual cores available to MaxScale. This may lead "
+                        "to worse performance and MaxScale using more resources than what "
+                        "is available.",
+                        (int)this->n_threads, vcpu);
+        }
+    }
+}
+
+void Config::check_memory_situation() const
+{
+    int64_t total_memory = get_total_memory();
+    int64_t available_memory = get_available_memory();
+
+    if (total_memory != available_memory)
+    {
+        // If the query classifier cache size has not been explicitly specified
+        // and the default (calculated based upon total size) is used, or if the
+        // size is clearly wrong.
+
+        if (this->qc_cache_properties.max_size == DEFAULT_QC_CACHE_SIZE
+            || this->qc_cache_properties.max_size > available_memory)
+        {
+            MXB_WARNING("It seems MaxScale is running in a constrained environment with "
+                        "less memory (%s) available in it than what is installed on the "
+                        "machine (%s). In this context, the query classifier cache size "
+                        "should be specified explicitly in the configuration file with "
+                        "'query_classifier_cache_size' set to 15%% of the available memory. "
+                        "Otherwise MaxScale may use more resources than what is available, "
+                        "which may cause it to crash.",
+                        mxb::pretty_size(available_memory).c_str(),
+                        mxb::pretty_size(total_memory).c_str());
+        }
+    }
 }
 
 std::ostream& Config::persist_maxscale(std::ostream& os) const
@@ -1462,27 +1488,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             }
 
             *pValue = value;
-        }
-    }
-
-    if (rv)
-    {
-        auto threads = *pValue;
-
-        // We can hardly have a fewer number of threads than 1, and we have warned already
-        // if the specified number of threads is larger than the number of hardware cores.
-        if (threads > 1 && threads <= processor_count)
-        {
-            double vcpu = get_vcpu_count();
-
-            if (threads > ceil(vcpu) + 1) // One more than available is still ok.
-            {
-                MXB_WARNING("Number of threads set to %d, which is significantly more than the "
-                            "number of virtual cores %.2f available to MaxScale. This may lead "
-                            "to worse performance and MaxScale using more resources than what "
-                            "is available.",
-                            (int)threads, vcpu);
-            }
         }
     }
 
