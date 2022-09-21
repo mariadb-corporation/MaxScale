@@ -1021,16 +1021,6 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
     if (configured)
     {
-        // TODO: this needs to be fixed at a higher level. For a
-        // config value with a default and an on_set() function,
-        // the on_set() function should be called at config time
-        // else any side effect that the function has (like copying
-        // the value somewhere) will not happen. The problem is not
-        // trivial as config values are mostly initialized in a constructor,
-        // leading to problems related to initialization order
-        // in the constructor, across translation units and threads.
-        this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
-
         if (this->qc_cache_properties.max_size == 0)
         {
             MXB_NOTICE("Query classifier cache is disabled");
@@ -1128,6 +1118,16 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
             rv = false;
         }
     }
+
+    // TODO: this needs to be fixed at a higher level. For a
+    // config value with a default and an on_set() function,
+    // the on_set() function should be called at config time
+    // else any side effect that the function has (like copying
+    // the value somewhere) will not happen. The problem is not
+    // trivial as config values are mostly initialized in a constructor,
+    // leading to problems related to initialization order
+    // in the constructor, across translation units and threads.
+    this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
 
     return rv;
 }
