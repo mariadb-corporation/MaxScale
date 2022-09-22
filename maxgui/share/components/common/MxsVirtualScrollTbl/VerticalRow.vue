@@ -26,17 +26,18 @@
                             })
                     "
                 >
+                    <!-- vertical-row header slot -->
                     <slot
                         :name="`vertical-header-${h.text}`"
                         :data="{
                             header: h,
-                            maxWidth: $typy(headerWidthMap[0]).safeNumber - 24,
+                            maxWidth: $typy(cellContentMaxWidth[0]).safeNumber,
                             colIdx: i,
                         }"
                     >
                         <mxs-truncate-str
                             :text="`${h.text}`"
-                            :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
+                            :maxWidth="$typy(cellContentMaxWidth[0]).safeNumber"
                         />
                     </slot>
                 </div>
@@ -59,7 +60,23 @@
                             })
                     "
                 >
-                    <slot :name="h.text" :data="{ cell: row[i], header: h, colIdx: i }" />
+                    <!-- vertical-row cell slot -->
+                    <slot
+                        :name="h.text"
+                        :data="{
+                            rowData: row,
+                            cell: row[i],
+                            header: h,
+                            maxWidth: $typy(cellContentMaxWidth[1]).safeNumber,
+                            colIdx: i,
+                            rowIdx,
+                        }"
+                    >
+                        <mxs-truncate-str
+                            :text="`${row[i]}`"
+                            :maxWidth="$typy(cellContentMaxWidth[1]).safeNumber"
+                        />
+                    </slot>
                 </div>
                 <div
                     v-if="!isYOverflowed"
@@ -102,6 +119,7 @@ export default {
         isYOverflowed: { type: Boolean, required: true },
         scrollBarThicknessOffset: { type: Number, required: true },
         genCellID: { type: Function, required: true },
+        cellContentMaxWidth: { type: Object, required: true },
     },
 }
 </script>

@@ -23,8 +23,8 @@
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
         >
-            <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
-                <slot :name="`header-${h.text}`" :data="data" />
+            <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                <slot :name="slot" v-bind="props" />
             </template>
         </table-header>
         <v-virtual-scroll
@@ -45,34 +45,14 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
+                    :cellContentMaxWidth="cellContentMaxWidth"
                     :isYOverflowed="isYOverflowed"
                     :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     :genCellID="genCellID"
                     v-on="$listeners"
                 >
-                    <template
-                        v-for="h in tableHeaders"
-                        v-slot:[h.text]="{ data: { cell, header, colIdx } }"
-                    >
-                        <slot
-                            :name="`${h.text}`"
-                            :data="{
-                                rowData: row,
-                                cell,
-                                header,
-                                maxWidth: cellMaxWidth(1),
-                                rowIdx,
-                                colIdx,
-                            }"
-                        >
-                            <mxs-truncate-str :text="`${cell}`" :maxWidth="cellMaxWidth(1)" />
-                        </slot>
-                    </template>
-                    <template
-                        v-for="h in tableHeaders"
-                        v-slot:[`vertical-header-${h.text}`]="{ data }"
-                    >
-                        <slot :name="`vertical-header-${h.text}`" :data="data" />
+                    <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                        <slot :name="slot" v-bind="props" />
                     </template>
                 </vertical-row>
                 <row-group
@@ -160,20 +140,21 @@
                                     })
                             "
                         >
+                            <!-- cell slot -->
                             <slot
                                 :name="h.text"
                                 :data="{
                                     rowData: row,
                                     cell: row[colIdx],
                                     header: h,
-                                    maxWidth: cellMaxWidth(colIdx),
+                                    maxWidth: $typy(cellContentMaxWidth[colIdx]).safeNumber,
                                     rowIdx: rowIdx,
                                     colIdx,
                                 }"
                             >
                                 <mxs-truncate-str
                                     :text="`${row[colIdx]}`"
-                                    :maxWidth="cellMaxWidth(colIdx)"
+                                    :maxWidth="$typy(cellContentMaxWidth[colIdx]).safeNumber"
                                     :disabled="isDragging"
                                 />
                             </slot>
@@ -225,10 +206,10 @@ import customDragEvt from '@share/mixins/customDragEvt'
 export default {
     name: 'mxs-virtual-scroll-tbl',
     components: {
-        'table-header': TableHeader,
-        'vertical-row': VerticalRow,
-        'row-group': RowGroup,
-        'row-group-checkbox': RowGroupCheckbox,
+        TableHeader,
+        VerticalRow,
+        RowGroup,
+        RowGroupCheckbox,
     },
     mixins: [customDragEvt],
     props: {
@@ -333,6 +314,13 @@ export default {
         areHeadersHidden() {
             return this.visHeaders.length === 0
         },
+        // minus padding. i.e px-3
+        cellContentMaxWidth() {
+            return Object.keys(this.headerWidthMap).reduce((obj, key) => {
+                obj[key] = this.$typy(this.headerWidthMap[key]).safeNumber - 24
+                return obj
+            }, {})
+        },
     },
     watch: {
         selectedItems: {
@@ -381,10 +369,6 @@ export default {
             this.lastScrollTop = ele.scrollTop
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
-        },
-
-        cellMaxWidth(colIdx) {
-            return this.$typy(this.headerWidthMap[colIdx]).safeNumber - 24
         },
 
         genCellID: ({ rowIdx, colIdx }) => `cell_id-${rowIdx}-${colIdx}`,
