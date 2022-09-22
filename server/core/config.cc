@@ -117,7 +117,7 @@ constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
 
-static uint64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
+static int64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
 static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
 }
 
@@ -1021,23 +1021,9 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
     if (configured)
     {
-        // TODO: this needs to be fixed at a higher level. For a
-        // config value with a default and an on_set() function,
-        // the on_set() function should be called at config time
-        // else any side effect that the function has (like copying
-        // the value somewhere) will not happen. The problem is not
-        // trivial as config values are mostly initialized in a constructor,
-        // leading to problems related to initialization order
-        // in the constructor, across translation units and threads.
-        qc_cache_properties.max_size = qc_cache_max_size.get();
+        check_cpu_situation();
 
-        if (DEFAULT_QC_CACHE_SIZE == 0)
-        {
-            MXB_WARNING("Failed to automatically detect available system memory: disabling the query "
-                        "classifier cache. To enable it, add '%s' to the configuration file.",
-                        CN_QUERY_CLASSIFIER_CACHE_SIZE);
-        }
-        else if (this->qc_cache_properties.max_size == 0)
+        if (this->qc_cache_properties.max_size == 0)
         {
             MXB_NOTICE("Query classifier cache is disabled");
         }
@@ -1045,10 +1031,58 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
         {
             MXB_NOTICE("Using up to %s of memory for query classifier cache",
                        mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
+
+            check_memory_situation();
         }
     }
 
     return configured;
+}
+
+void Config::check_cpu_situation() const
+{
+    // We can hardly have a fewer number of threads than 1, and we have warned already
+    // if the specified number of threads is larger than the number of hardware cores.
+    if (this->n_threads > 1 && this->n_threads <= get_processor_count())
+    {
+        double vcpu = get_vcpu_count();
+
+        if (this->n_threads > ceil(vcpu) + 1) // One more than available is still ok.
+        {
+            MXB_WARNING("Number of threads set to %d, which is significantly more than "
+                        "the %.2f virtual cores available to MaxScale. This may lead "
+                        "to worse performance and MaxScale using more resources than what "
+                        "is available.",
+                        (int)this->n_threads, vcpu);
+        }
+    }
+}
+
+void Config::check_memory_situation() const
+{
+    int64_t total_memory = get_total_memory();
+    int64_t available_memory = get_available_memory();
+
+    if (total_memory != available_memory)
+    {
+        // If the query classifier cache size has not been explicitly specified
+        // and the default (calculated based upon total size) is used, or if the
+        // size is clearly wrong.
+
+        if (this->qc_cache_properties.max_size == DEFAULT_QC_CACHE_SIZE
+            || this->qc_cache_properties.max_size > available_memory)
+        {
+            MXB_WARNING("It seems MaxScale is running in a constrained environment with "
+                        "less memory (%s) available in it than what is installed on the "
+                        "machine (%s). In this context, the query classifier cache size "
+                        "should be specified explicitly in the configuration file with "
+                        "'query_classifier_cache_size' set to 15%% of the available memory. "
+                        "Otherwise MaxScale may use more resources than what is available, "
+                        "which may cause it to crash.",
+                        mxb::pretty_size(available_memory).c_str(),
+                        mxb::pretty_size(total_memory).c_str());
+        }
+    }
 }
 
 std::ostream& Config::persist_maxscale(std::ostream& os) const
@@ -1110,6 +1144,16 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
             rv = false;
         }
     }
+
+    // TODO: this needs to be fixed at a higher level. For a
+    // config value with a default and an on_set() function,
+    // the on_set() function should be called at config time
+    // else any side effect that the function has (like copying
+    // the value somewhere) will not happen. The problem is not
+    // trivial as config values are mostly initialized in a constructor,
+    // leading to problems related to initialization order
+    // in the constructor, across translation units and threads.
+    this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
 
     return rv;
 }
@@ -1411,9 +1455,11 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 {
     bool rv = true;
 
+    int processor_count = get_processor_count();
+
     if (value_as_string == CN_AUTO)
     {
-        *pValue = get_processor_count();
+        *pValue = processor_count;
     }
     else
     {
@@ -1422,7 +1468,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 
         if (rv)
         {
-            int processor_count = get_processor_count();
             if (value > processor_count)
             {
                 MXB_WARNING("Number of threads set to %d, which is greater than "
@@ -2985,7 +3030,7 @@ std::vector<string> config_break_list_string(const string& list_string)
     return tokenized;
 }
 
-json_t* mxs::Config::maxscale_to_json(const char* host)
+json_t* mxs::Config::maxscale_to_json(const char* host) const
 {
     json_t* param = json_object();
 
@@ -3030,12 +3075,51 @@ json_t* mxs::Config::maxscale_to_json(const char* host)
     auto manager = mxs::ConfigManager::get()->to_json();
     json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
 
+    json_object_set_new(attr, "system", system_to_json());
+
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MAXSCALE));
 
     return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
+}
+
+json_t* mxs::Config::system_to_json() const
+{
+    // system.machine
+    json_t* machine = json_object();
+
+    json_object_set_new(machine, "cores_physical", json_integer(get_processor_count()));
+    json_object_set_new(machine, "cores_available", json_integer(get_cpu_count()));
+    json_object_set_new(machine, "cores_virtual", json_real(get_vcpu_count()));
+    json_object_set_new(machine, "memory_physical", json_integer(get_total_memory()));
+    json_object_set_new(machine, "memory_available", json_integer(get_available_memory()));
+
+    // system.os
+    json_t* os = json_object();
+
+    const mxs::Config& c = mxs::Config::get();
+    json_object_set_new(os, "sysname", json_string(c.sysname.c_str()));
+    json_object_set_new(os, "nodename", json_string(c.nodename.c_str()));
+    json_object_set_new(os, "release", json_string(c.release.c_str()));
+    json_object_set_new(os, "version", json_string(c.version.c_str()));
+    json_object_set_new(os, "machine", json_string(c.machine.c_str()));
+
+    // system.maxscale
+    json_t* maxscale = json_object();
+
+    json_object_set_new(maxscale, "threads", json_integer(config_threadcount()));
+    json_object_set_new(maxscale, "query_classifier_cache_size",
+                        json_integer(this->qc_cache_properties.max_size));
+
+    // system
+    json_t* system = json_object();
+    json_object_set_new(system, "machine", machine);
+    json_object_set_new(system, "os", os);
+    json_object_set_new(system, "maxscale", maxscale);
+
+    return system;
 }
 
 /**

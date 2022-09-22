@@ -1970,12 +1970,12 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %ld processor cores (%ld available).",
+    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %ld processor cores (%.2f available).",
                cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
                cnf.version.c_str(), cnf.machine.c_str(), get_processor_count(),
                get_vcpu_count());
 
-    MXB_NOTICE("Total usable main memory: %s (%s available).",
+    MXB_NOTICE("Total main memory: %s (%s usable).",
                mxb::pretty_size(get_total_memory()).c_str(),
                mxb::pretty_size(get_available_memory()).c_str());
     MXB_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);

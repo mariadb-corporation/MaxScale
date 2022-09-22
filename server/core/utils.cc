@@ -663,17 +663,24 @@ const std::string& get_cgroup()
     return cgroup;
 }
 
-long get_vcpu_count()
+long get_cpu_count()
 {
-    mxb_assert(sysconf(_SC_NPROCESSORS_ONLN) == std::thread::hardware_concurrency());
-    unsigned int cpus = std::thread::hardware_concurrency();
+    unsigned int cpus = get_processor_count();
 
-    cpu_set_t cpuset;
-    if (sched_getaffinity(getpid(), sizeof(cpuset), &cpuset) == 0)
+    if (cpus != 1)
     {
-        cpus = std::min((unsigned int)CPU_COUNT(&cpuset), cpus);
+        cpu_set_t cpuset;
+        if (sched_getaffinity(getpid(), sizeof(cpuset), &cpuset) == 0)
+        {
+            cpus = std::min((unsigned int)CPU_COUNT(&cpuset), cpus);
+        }
     }
 
+    return cpus;
+}
+
+bool get_cpu_quota_and_period(int* quotap, int* periodp)
+{
     int quota = 0;
     int period = 0;
     const auto& cg = get_cgroup();
@@ -705,14 +712,45 @@ long get_vcpu_count()
             }
         }
     }
+    // Workaround for https://github.com/moby/moby/issues/34584
+    else if (std::ifstream cpu_v1_quota("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"); cpu_v1_quota)
+    {
+        if (std::ifstream cpu_v1_period("/sys/fs/cgroup/cpu/cpu.cfs_period_us"); cpu_v1_period)
+        {
+            int tmp_quota = 0;
+            int tmp_period = 0;
+
+            if ((cpu_v1_quota >> tmp_quota) && (cpu_v1_period >> tmp_period) && tmp_quota > 0)
+            {
+                quota = tmp_quota;
+                period = tmp_period;
+            }
+        }
+    }
 
     if (quota && period)
     {
-        unsigned int vcpu = std::ceil((double)quota / period);
+        *quotap = quota;
+        *periodp = period;
+    }
+
+    return quota && period;
+}
+
+double get_vcpu_count()
+{
+    double cpus = get_cpu_count();
+
+    int quota = 0;
+    int period = 0;
+
+    if (get_cpu_quota_and_period(&quota, &period))
+    {
+        double vcpu = (double)quota / period;
         cpus = std::min(vcpu, cpus);
     }
 
-    return std::max(cpus, 1U);
+    return cpus;
 }
 
 long get_processor_count()
@@ -723,33 +761,30 @@ long get_processor_count()
 
 int64_t get_available_memory()
 {
-    int64_t pagesize = 0;
-    int64_t num_pages = 0;
-#if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
-    if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
-    {
-        MXB_WARNING("Unable to establish total system memory");
-        pagesize = 0;
-        num_pages = 0;
-    }
-#else
-#error _SC_PAGESIZE and _SC_PHYS_PAGES are not defined
-#endif
-    mxb_assert(pagesize * num_pages > 0);
-    int64_t memory = pagesize * num_pages;
-    const auto& cg = get_cgroup();
+    int64_t memory = get_total_memory();
 
-    for (auto path : {"/sys/fs/cgroup/" + cg + "/memory.max",
-                      "/sys/fs/cgroup/memory/" + cg + "/memory.limit_in_bytes"})
+    if (memory)
     {
-        if (std::ifstream mem(path); mem)
+        const auto& cg = get_cgroup();
+
+        for (auto path : {"/sys/fs/cgroup/" + cg + "/memory.max",
+                          "/sys/fs/cgroup/memory/" + cg + "/memory.limit_in_bytes",
+                          // Workaround for https://github.com/moby/moby/issues/34584
+                          std::string {"/sys/fs/cgroup/memory/memory.limit_in_bytes"}})
         {
-            if (int64_t mem_tmp = 0; (mem >> mem_tmp))
+            if (std::ifstream mem(path); mem)
             {
-                memory = std::min(mem_tmp, memory);
-                break;
+                if (int64_t mem_tmp = 0; (mem >> mem_tmp))
+                {
+                    memory = std::min(mem_tmp, memory);
+                    break;
+                }
             }
         }
+    }
+    else
+    {
+        MXB_ERROR("Unable to establish available memory.");
     }
 
     return std::max(memory, 0L);
@@ -762,7 +797,7 @@ int64_t get_total_memory()
 #if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
     if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
     {
-        MXB_WARNING("Unable to establish total system memory");
+        MXB_ERROR("Unable to establish total system memory: %s", mxb_strerror(errno));
         pagesize = 0;
         num_pages = 0;
     }
