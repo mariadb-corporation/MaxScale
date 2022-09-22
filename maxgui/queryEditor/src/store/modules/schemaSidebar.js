@@ -425,7 +425,7 @@ export default {
                     queryAction = this.vue.$mxs_t('info.exeActionSuccessfully', { action })
                     if (showSnackbar)
                         commit(
-                            'appNotifier/SET_SNACK_BAR_MESSAGE',
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
                             { text: [queryAction], type: 'success' },
                             { root: true }
                         )

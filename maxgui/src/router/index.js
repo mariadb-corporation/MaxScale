@@ -42,10 +42,10 @@ export default router
  * @param {Number} param.duration - duration time for showing overlay loading
  */
 async function showLoadingOverlay(overlay_type) {
-    store.commit('appNotifier/SET_OVERLAY_TYPE', overlay_type, { root: true })
+    store.commit('mxsApp/SET_OVERLAY_TYPE', overlay_type, { root: true })
     await store.vue.$helpers
         .delay(400)
-        .then(() => store.commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true }))
+        .then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
 }
 /**
  *

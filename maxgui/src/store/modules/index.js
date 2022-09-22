@@ -20,10 +20,10 @@ import session from './session'
 import user from './user'
 import persisted from './persisted'
 import visualization from './visualization'
-import appNotifier from '@share/store/appNotifier'
+import mxsApp from '@share/store/mxsApp'
 
 export default {
-    appNotifier,
+    mxsApp,
     filter,
     listener,
     maxscale,

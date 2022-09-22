@@ -301,7 +301,7 @@ Certain keywords are reserved in order to make the query editor work properly.
 | mxs_icon_name      | Query editor icons, they have `mxs_`as the prefix. |
 | mxs-component-name |   Global Vue components with`mxs-`as the prefix    |
 | mxs-query-editor   |                Global Vue component                |
-| appNotifier        |                    Vuex module                     |
+| mxsApp             |                    Vuex module                     |
 | wke                |                    Vuex module                     |
 | queryConn          |                    Vuex module                     |
 | editor             |                    Vuex module                     |

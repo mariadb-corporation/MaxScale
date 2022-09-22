@@ -258,7 +258,7 @@ export default {
                 if (res.status === 201) {
                     dispatch('unbindConn')
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.vue.$mxs_t('info.connSuccessfully')],
                             type: 'success',
@@ -426,7 +426,7 @@ export default {
 
                     if (allRes.every(promise => promise.status === 204) && showSnackbar)
                         commit(
-                            'appNotifier/SET_SNACK_BAR_MESSAGE',
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
                             {
                                 text: [this.vue.$mxs_t('info.disconnSuccessfully')],
                                 type: 'success',
@@ -452,7 +452,7 @@ export default {
                 const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
                 if (res.status === 204) {
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.vue.$mxs_t('info.reconnSuccessfully')],
                             type: 'success',
@@ -464,7 +464,7 @@ export default {
                     })
                 } else
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.vue.$mxs_t('errors.reconnFailed')],
                             type: 'error',
@@ -525,7 +525,7 @@ export default {
                 if (res.data.data.attributes.results[0].errno) {
                     const errObj = res.data.data.attributes.results[0]
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
                             type: 'error',

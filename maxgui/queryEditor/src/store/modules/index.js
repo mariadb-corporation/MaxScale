@@ -6,10 +6,10 @@ import queryResult from './queryResult'
 import querySession from './querySession'
 import queryPersisted from './queryPersisted'
 import queryEditorConfig from './queryEditorConfig'
-import appNotifier from '@share/store/appNotifier'
+import mxsApp from '@share/store/mxsApp'
 
 export default {
-    appNotifier,
+    mxsApp,
     wke,
     queryConn,
     editor,

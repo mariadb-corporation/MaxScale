@@ -117,7 +117,7 @@ export default {
                 const logger = this.vue.$logger('store-queryPersisted-pushQueryLog')
                 logger.error(e)
                 commit(
-                    'appNotifier/SET_SNACK_BAR_MESSAGE',
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
                         text: [this.vue.$mxs_t('errors.persistentStorage')],
                         type: 'error',
@@ -144,7 +144,7 @@ export default {
                 const logger = this.vue.$logger('store-queryPersisted-pushToQuerySnippets')
                 logger.error(e)
                 commit(
-                    'appNotifier/SET_SNACK_BAR_MESSAGE',
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
                         text: [this.vue.$mxs_t('errors.persistentStorage')],
                         type: 'error',

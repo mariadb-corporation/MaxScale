@@ -144,7 +144,7 @@ export default {
     },
 
     methods: {
-        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'appNotifier/SET_SNACK_BAR_MESSAGE' }),
+        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',
             disconnectAll: 'queryConn/disconnectAll',

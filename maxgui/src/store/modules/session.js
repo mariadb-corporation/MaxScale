@@ -72,7 +72,7 @@ export default {
                 const res = await this.vue.$http.delete(`/sessions/${id}`)
                 if (res.status === 200) {
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [this.vue.$mxs_t('info.killSessionSuccessfully')],
                             type: 'success',

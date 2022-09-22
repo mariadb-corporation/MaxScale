@@ -66,7 +66,7 @@ export default {
         snackbars: Snackbars,
     },
     computed: {
-        ...mapState({ snackbar_message: state => state.appNotifier.snackbar_message }),
+        ...mapState({ snackbar_message: state => state.mxsApp.snackbar_message }),
     },
 }
 </script>

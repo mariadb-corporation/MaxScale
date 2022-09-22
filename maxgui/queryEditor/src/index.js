@@ -30,8 +30,8 @@ export default {
         Vue.component('query-editor', QueryEditor)
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {
-            // appNotifier exists in maxgui already
-            if (key === 'appNotifier') null
+            // mxsApp exists in maxgui already
+            if (key === 'mxsApp') null
             else store.registerModule(key, queryEditorModules[key])
         })
         // Register store plugins

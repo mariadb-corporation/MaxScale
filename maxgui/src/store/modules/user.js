@@ -77,22 +77,22 @@ export default {
             await dispatch('queryConn/disconnectAll', {}, { root: true })
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
-            commit('appNotifier/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const { appNotifier, queryPersisted, wke, querySession, persisted } = rootState
+            commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
+            const { mxsApp, queryPersisted, wke, querySession, persisted } = rootState
             // hide snackbar snackbar_message if it is on
-            if (appNotifier.snackbar_message.status) {
+            if (mxsApp.snackbar_message.status) {
                 commit(
-                    'appNotifier/SET_SNACK_BAR_MESSAGE',
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: appNotifier.snackbar_message.text,
-                        type: appNotifier.snackbar_message.type,
+                        text: mxsApp.snackbar_message.text,
+                        type: mxsApp.snackbar_message.type,
                         status: false,
                     },
                     { root: true }
                 )
             }
             await this.vue.$helpers.delay(1500).then(() => {
-                commit('appNotifier/SET_OVERLAY_TYPE', null, { root: true })
+                commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true })
                 if (router.app.$route.name !== 'login') router.push('/login')
             })
 
@@ -180,7 +180,7 @@ export default {
                 }
                 if (res.status === 204) {
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         { text: message, type: 'success' },
                         { root: true }
                     )
