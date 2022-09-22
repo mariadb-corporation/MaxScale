@@ -456,6 +456,8 @@ static Keyword aKeywordTable[] = {
   { "SEPARATOR",        "TK_SEPARATOR",    ALWAYS                 },
   { "SHARE",            "TK_SHARE",        ALWAYS                 },
   { "SHOW",             "TK_SHOW",         ALWAYS                 },
+  // Whether it is SIGNED or UNSIGNED lacks meaning.
+  { "SIGNED",           "TK_UNSIGNED",     ALWAYS                 },
   { "SLAVE",            "TK_SLAVE",        ALWAYS                 },
   { "SPATIAL",          "TK_SPATIAL",      ALWAYS                 },
   { "SQL_BIG_RESULT",   "TK_SELECT_OPTIONS_KW", ALWAYS            },

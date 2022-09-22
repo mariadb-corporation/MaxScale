@@ -1222,19 +1222,35 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1,
         if (!real_error)
         {
             // We assume that names1 are from the qc_mysqlembedded and names2 from qc_sqlite.
-            // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
-            // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
-            // use of date_add_interval() functions.
             for (std::set<std::string>::iterator i = names1.begin(); i != names1.end(); ++i)
             {
                 if (*i == "date_add_interval")
                 {
+                    // The embedded parser reports all date_add(), adddate(), date_sub() and subdate()
+                    // functions as date_add_interval(). Further, all "DATE + INTERVAL ..." cases become
+                    // use of date_add_interval() functions.
                     if ((names2.count("date_add") == 0)
                         && (names2.count("adddate") == 0)
                         && (names2.count("date_sub") == 0)
                         && (names2.count("subdate") == 0)
                         && (names2.count("+") == 0)
                         && (names2.count("-") == 0))
+                    {
+                        real_error = true;
+                    }
+                }
+                else if (*i == "cast")
+                {
+                    // The embedded parser returns "convert" as "cast".
+                    if (names2.count("convert") == 0)
+                    {
+                        real_error = true;
+                    }
+                }
+                else if (*i == "substr")
+                {
+                    // The embedded parser returns "substring" as "substr".
+                    if (names2.count("substring") == 0)
                     {
                         real_error = true;
                     }
