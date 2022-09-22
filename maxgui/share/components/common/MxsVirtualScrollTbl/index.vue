@@ -45,10 +45,10 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
-                    :cellContentMaxWidth="cellContentMaxWidth"
+                    :cellContentWidthMap="cellContentWidthMap"
                     :isYOverflowed="isYOverflowed"
                     :scrollBarThicknessOffset="scrollBarThicknessOffset"
-                    :genCellID="genCellID"
+                    :genActivatorID="genActivatorID"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -112,7 +112,7 @@
                         <!-- dependency keys to force a rerender -->
                         <div
                             v-if="!h.hidden"
-                            :id="genCellID({ rowIdx, colIdx })"
+                            :id="genActivatorID(`${rowIdx}-${colIdx}`)"
                             :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
                             class="td"
                             :class="[
@@ -136,7 +136,7 @@
                                         e,
                                         row,
                                         cell: row[colIdx],
-                                        cellID: genCellID({ rowIdx, colIdx }),
+                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                                     })
                             "
                         >
@@ -147,14 +147,14 @@
                                     rowData: row,
                                     cell: row[colIdx],
                                     header: h,
-                                    maxWidth: $typy(cellContentMaxWidth[colIdx]).safeNumber,
+                                    maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
                                     rowIdx: rowIdx,
                                     colIdx,
                                 }"
                             >
                                 <mxs-truncate-str
                                     :text="`${row[colIdx]}`"
-                                    :maxWidth="$typy(cellContentMaxWidth[colIdx]).safeNumber"
+                                    :maxWidth="$typy(cellContentWidthMap[colIdx]).safeNumber"
                                     :disabled="isDragging"
                                 />
                             </slot>
@@ -191,7 +191,7 @@
  * Public License.
  */
 /*
-@on-cell-right-click: { e: event, row:[], cell:string, cellID:string }
+@on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
 @item-selected: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
 Emit when the header has groupable and hasCustomGroup keys.
@@ -315,7 +315,7 @@ export default {
             return this.visHeaders.length === 0
         },
         // minus padding. i.e px-3
-        cellContentMaxWidth() {
+        cellContentWidthMap() {
             return Object.keys(this.headerWidthMap).reduce((obj, key) => {
                 obj[key] = this.$typy(this.headerWidthMap[key]).safeNumber - 24
                 return obj
@@ -371,7 +371,7 @@ export default {
                 this.$emit('scroll-end')
         },
 
-        genCellID: ({ rowIdx, colIdx }) => `cell_id-${rowIdx}-${colIdx}`,
+        genActivatorID: id => `activator_id-${id}`,
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc

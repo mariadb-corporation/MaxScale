@@ -392,9 +392,6 @@ export default {
             &:first-child {
                 border-radius: 5px 0 0 0;
             }
-            &:last-child {
-                border-radius: 0 5px 0 0;
-            }
             .sort-icon {
                 transform: none;
                 visibility: hidden;
@@ -457,6 +454,7 @@ export default {
         background-color: $table-border;
         height: 30px;
         position: absolute;
+        border-radius: 0 5px 0 0;
     }
 }
 </style>

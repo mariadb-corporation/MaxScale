@@ -1,29 +1,22 @@
 <template>
     <div class="tr-vertical-group d-flex flex-column">
-        <template v-for="(h, i) in tableHeaders">
+        <template v-for="(h, colIdx) in tableHeaders">
             <div
                 v-if="!h.hidden"
-                :key="`${h.text}_${i}`"
+                :key="`${h.text}_${colIdx}`"
                 class="tr align-center"
                 :style="{ height: lineHeight }"
             >
                 <div
-                    :id="genCellID({ rowIdx, colIdx: 0 })"
-                    :key="`${h.text}_${headerWidthMap[0]}_0`"
+                    :id="genHeaderColID(colIdx)"
                     class="td border-bottom-none px-3"
-                    :style="{
-                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[0]),
-                        lineHeight,
-                        height: lineHeight,
-                    }"
+                    :style="headerColStyle"
                     @contextmenu.prevent="
-                        e =>
-                            $emit('on-cell-right-click', {
-                                e,
-                                row,
-                                cell: row[i],
-                                cellID: genCellID({ rowIdx, colIdx: 0 }),
-                            })
+                        ctxMenuHandler({
+                            e: $event,
+                            cell: h.text,
+                            activatorID: genHeaderColID(colIdx),
+                        })
                     "
                 >
                     <!-- vertical-row header slot -->
@@ -31,33 +24,23 @@
                         :name="`vertical-header-${h.text}`"
                         :data="{
                             header: h,
-                            maxWidth: $typy(cellContentMaxWidth[0]).safeNumber,
-                            colIdx: i,
+                            maxWidth: headerContentWidth,
+                            colIdx,
                         }"
                     >
-                        <mxs-truncate-str
-                            :text="`${h.text}`"
-                            :maxWidth="$typy(cellContentMaxWidth[0]).safeNumber"
-                        />
+                        <mxs-truncate-str :text="`${h.text}`" :maxWidth="headerContentWidth" />
                     </slot>
                 </div>
                 <div
-                    :id="genCellID({ rowIdx, colIdx: 1 })"
-                    :key="`${h.text}_${headerWidthMap[1]}_1`"
+                    :id="genValueColID(colIdx)"
                     class="td no-border px-3"
-                    :style="{
-                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[1]),
-                        lineHeight,
-                        height: lineHeight,
-                    }"
+                    :style="valueColStyle"
                     @contextmenu.prevent="
-                        e =>
-                            $emit('on-cell-right-click', {
-                                e,
-                                row,
-                                cell: row[i],
-                                cellID: genCellID({ rowIdx, colIdx: 1 }),
-                            })
+                        ctxMenuHandler({
+                            e: $event,
+                            cell: row[colIdx],
+                            activatorID: genValueColID(colIdx),
+                        })
                     "
                 >
                     <!-- vertical-row cell slot -->
@@ -65,17 +48,14 @@
                         :name="h.text"
                         :data="{
                             rowData: row,
-                            cell: row[i],
+                            cell: row[colIdx],
                             header: h,
-                            maxWidth: $typy(cellContentMaxWidth[1]).safeNumber,
-                            colIdx: i,
+                            maxWidth: valueContentWidth,
+                            colIdx,
                             rowIdx,
                         }"
                     >
-                        <mxs-truncate-str
-                            :text="`${row[i]}`"
-                            :maxWidth="$typy(cellContentMaxWidth[1]).safeNumber"
-                        />
+                        <mxs-truncate-str :text="`${row[colIdx]}`" :maxWidth="valueContentWidth" />
                     </slot>
                 </div>
                 <div
@@ -101,6 +81,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/**
+ * In vertical-row mode, there are two html table headers which are `COLUMN` and `VALUE`.
+ * `COLUMN`: render sql columns
+ * `VALUE`: render sql column value
+ * In this mode,
+ * rowIdx: indicates to the row index
+ * colIdx: indicates the column index in row (props)
+ * 0: indicates the `COLUMN` index in the html table headers
+ * 1: indicates the `VALUE` index in the html table headers
+ */
 export default {
     name: 'vertical-row',
     props: {
@@ -118,8 +108,50 @@ export default {
         headerWidthMap: { type: Object, required: true },
         isYOverflowed: { type: Boolean, required: true },
         scrollBarThicknessOffset: { type: Number, required: true },
-        genCellID: { type: Function, required: true },
-        cellContentMaxWidth: { type: Object, required: true },
+        genActivatorID: { type: Function, required: true },
+        cellContentWidthMap: { type: Object, required: true },
+    },
+    computed: {
+        baseColStyle() {
+            return {
+                lineHeight: this.lineHeight,
+                height: this.lineHeight,
+            }
+        },
+        headerColStyle() {
+            return {
+                ...this.baseColStyle,
+                minWidth: this.$helpers.handleAddPxUnit(this.headerWidthMap[0]),
+            }
+        },
+        valueColStyle() {
+            return {
+                ...this.baseColStyle,
+                minWidth: this.$helpers.handleAddPxUnit(this.headerWidthMap[1]),
+            }
+        },
+        headerContentWidth() {
+            return this.$typy(this.cellContentWidthMap[0]).safeNumber
+        },
+        valueContentWidth() {
+            return this.$typy(this.cellContentWidthMap[1]).safeNumber
+        },
+    },
+    methods: {
+        genHeaderColID(colIdx) {
+            return this.genActivatorID(`${this.rowIdx}-${colIdx}-${0}`)
+        },
+        genValueColID(colIdx) {
+            return this.genActivatorID(`${this.rowIdx}-${colIdx}-${1}`)
+        },
+        ctxMenuHandler({ e, cell, activatorID }) {
+            this.$emit('on-cell-right-click', {
+                e,
+                row: this.row,
+                cell,
+                activatorID,
+            })
+        },
     },
 }
 </script>
