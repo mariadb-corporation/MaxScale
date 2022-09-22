@@ -58,11 +58,6 @@
                         <mxs-truncate-str :text="`${row[colIdx]}`" :maxWidth="valueContentWidth" />
                     </slot>
                 </div>
-                <div
-                    v-if="!isYOverflowed"
-                    :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
-                    class="dummy-cell mxs-color-helper border-right-table-border"
-                />
             </div>
         </template>
     </div>
@@ -106,8 +101,6 @@ export default {
         },
         lineHeight: { type: String, required: true },
         headerWidthMap: { type: Object, required: true },
-        isYOverflowed: { type: Boolean, required: true },
-        scrollBarThicknessOffset: { type: Number, required: true },
         genActivatorID: { type: Function, required: true },
         cellContentWidthMap: { type: Object, required: true },
     },

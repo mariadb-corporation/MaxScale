@@ -8,7 +8,7 @@
             ref="tableHeader"
             :isVertTable="isVertTable"
             :headers="tableHeaders"
-            :boundingWidth="boundingWidth"
+            :boundingWidth="maxBoundingWidth"
             :headerStyle="headerStyle"
             :curr2dRowsLength="curr2dRowsLength"
             :showSelect="showSelect"
@@ -32,7 +32,7 @@
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : bench"
             :items="currRows"
-            :height="tbodyHeight"
+            :height="maxTbodyHeight"
             :item-height="rowHeight"
             class="tbody"
             @scroll.native="scrolling"
@@ -46,8 +46,6 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
-                    :isYOverflowed="isYOverflowed"
-                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     :genActivatorID="genActivatorID"
                     v-on="$listeners"
                 >
@@ -60,9 +58,8 @@
                     :row="row"
                     :collapsedRowGroups="collapsedRowGroups"
                     :isCollapsed="isRowGroupCollapsed(row)"
-                    :boundingWidth="boundingWidth"
+                    :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
-                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @update-collapsed-row-groups="collapsedRowGroups = $event"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 >
@@ -114,13 +111,11 @@
                             v-if="!h.hidden"
                             :id="genActivatorID(`${rowIdx}-${colIdx}`)"
                             :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
-                            class="td"
-                            :class="[
-                                draggableCell && h.draggable ? 'cursor--grab no-userSelect' : '',
-                                h.text === $typy(lastVisHeader, 'text').safeString
-                                    ? `td--last-cell ${!isYOverflowed ? 'pl-3 pr-0' : 'px-3'}`
-                                    : 'px-3',
-                            ]"
+                            class="td px-3"
+                            :class="{
+                                'cursor--grab no-userSelect': draggableCell && h.draggable,
+                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
+                            }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
@@ -160,11 +155,6 @@
                             </slot>
                         </div>
                     </template>
-                    <div
-                        v-if="!isYOverflowed"
-                        :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
-                        class="dummy-cell mxs-color-helper border-right-table-border border-bottom-table-border"
-                    />
                 </div>
             </template>
         </v-virtual-scroll>
@@ -255,6 +245,10 @@ export default {
         scrollBarThicknessOffset() {
             return this.$helpers.getScrollbarWidth()
         },
+        // minus scrollbar thickness if body is vertically overflow
+        maxBoundingWidth() {
+            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThicknessOffset : 0)
+        },
         lineHeight() {
             return `${this.itemHeight}px`
         },
@@ -270,11 +264,8 @@ export default {
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
         },
-        tbodyHeight() {
-            return this.rowsHeight > this.maxTbodyHeight ? this.maxTbodyHeight : this.rowsHeight
-        },
         isYOverflowed() {
-            return this.rowsHeight > this.tbodyHeight
+            return this.rowsHeight > this.maxTbodyHeight
         },
         // initial rows length
         initialRowsLength() {
@@ -540,21 +531,18 @@ export default {
                 }
             }
             &:hover {
-                .td,
-                .dummy-cell {
+                .td {
                     background: $tr-hovered-color;
                 }
             }
             &:active,
             &--active {
-                .td,
-                .dummy-cell {
+                .td {
                     background: #f2fcff !important;
                 }
             }
             &--selected {
-                .td,
-                .dummy-cell {
+                .td {
                     background: $selected-tr-color !important;
                 }
             }

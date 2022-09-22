@@ -1,101 +1,99 @@
 <template>
-    <div class="virtual-table__header">
-        <div class="thead d-inline-block" :style="{ width: headerWidth }">
-            <div class="tr">
+    <div class="virtual-table__header d-flex relative">
+        <div class="thead d-flex" :style="{ width: `${boundingWidth}px` }">
+            <div
+                v-if="!areHeadersHidden && showSelect && !isVertTable"
+                class="th d-flex justify-center align-center"
+                :style="{
+                    ...headerStyle,
+                    maxWidth: activeGroupBy ? '82px' : '50px',
+                    minWidth: activeGroupBy ? '82px' : '50px',
+                }"
+            >
+                <v-checkbox
+                    :input-value="isAllselected"
+                    :indeterminate="indeterminate"
+                    dense
+                    class="v-checkbox--scale-reduce ma-0"
+                    primary
+                    hide-details
+                    @change="val => $emit('toggle-select-all', val)"
+                />
+                <div class="header__resizer no-pointerEvent d-inline-block fill-height"></div>
+            </div>
+            <template v-for="(header, i) in tableHeaders">
                 <div
-                    v-if="!areHeadersHidden && showSelect && !isVertTable"
-                    class="th d-flex justify-center align-center"
+                    v-if="!header.hidden"
+                    :key="`${header.text}_${i}`"
+                    :ref="`header__${i}`"
                     :style="{
                         ...headerStyle,
-                        maxWidth: activeGroupBy ? '82px' : '50px',
-                        minWidth: activeGroupBy ? '82px' : '50px',
+                        maxWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
+                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
                     }"
+                    class="th d-flex align-center px-3"
+                    :class="{
+                        pointer: enableSorting && header.sortable !== false,
+                        [`sort--active ${sortOrder}`]: activeSort === header.text,
+                        'text-capitalize': header.capitalize,
+                        'th--resizable': !isResizerDisabled(header),
+                    }"
+                    @click="
+                        () =>
+                            enableSorting && header.sortable !== false
+                                ? handleSort(header.text)
+                                : null
+                    "
                 >
-                    <v-checkbox
-                        :input-value="isAllselected"
-                        :indeterminate="indeterminate"
-                        dense
-                        class="v-checkbox--scale-reduce ma-0"
-                        primary
-                        hide-details
-                        @change="val => $emit('toggle-select-all', val)"
-                    />
-                    <div class="header__resizer no-pointerEvent d-inline-block fill-height"></div>
-                </div>
-                <template v-for="(header, i) in tableHeaders">
-                    <div
-                        v-if="!header.hidden"
-                        :key="`${header.text}_${i}`"
-                        :ref="`header__${i}`"
-                        :style="{
-                            ...headerStyle,
-                            maxWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
-                            minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
-                        }"
-                        class="th d-flex align-center px-3"
-                        :class="{
-                            pointer: enableSorting && header.sortable !== false,
-                            [`sort--active ${sortOrder}`]: activeSort === header.text,
-                            'text-capitalize': header.capitalize,
-                            'th--resizable': !isResizerDisabled(header),
-                        }"
-                        @click="
-                            () =>
-                                enableSorting && header.sortable !== false
-                                    ? handleSort(header.text)
-                                    : null
-                        "
-                    >
-                        <template v-if="header.text === '#'">
-                            <span> {{ header.text }}</span>
-                            <span class="ml-1 mxs-color-helper text-grayed-out">
-                                ({{ curr2dRowsLength }})
-                            </span>
-                        </template>
-                        <slot
-                            v-else
-                            :name="`header-${header.text}`"
-                            :data="{
-                                header,
-                                // maxWidth: minus padding and sort-icon
-                                maxWidth: headerTxtMaxWidth({ header, i }),
-                                colIdx: i,
-                            }"
-                        >
-                            {{ header.text }}
-                        </slot>
-
-                        <v-icon
-                            v-if="enableSorting && header.sortable !== false"
-                            size="14"
-                            class="sort-icon ml-2"
-                        >
-                            $vuetify.icons.mxs_arrowDown
-                        </v-icon>
-                        <span
-                            v-if="enableGrouping && $typy(header, 'groupable').safeBoolean"
-                            class="ml-2 text-none"
-                            :class="[
-                                activeGroupBy === header.text && !isVertTable
-                                    ? 'group--active'
-                                    : 'group--inactive',
-                            ]"
-                            @click.stop="() => handleToggleGroup(header.text)"
-                        >
-                            {{ $mxs_t('group') }}
+                    <template v-if="header.text === '#'">
+                        <span> {{ header.text }}</span>
+                        <span class="ml-1 mxs-color-helper text-grayed-out">
+                            ({{ curr2dRowsLength }})
                         </span>
-                        <div
-                            v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
-                            class="header__resizer d-inline-block fill-height"
-                            v-on="
-                                isResizerDisabled(header)
-                                    ? null
-                                    : { mousedown: e => resizerMouseDown(e, i) }
-                            "
-                        />
-                    </div>
-                </template>
-            </div>
+                    </template>
+                    <slot
+                        v-else
+                        :name="`header-${header.text}`"
+                        :data="{
+                            header,
+                            // maxWidth: minus padding and sort-icon
+                            maxWidth: headerTxtMaxWidth({ header, i }),
+                            colIdx: i,
+                        }"
+                    >
+                        {{ header.text }}
+                    </slot>
+
+                    <v-icon
+                        v-if="enableSorting && header.sortable !== false"
+                        size="14"
+                        class="sort-icon ml-2"
+                    >
+                        $vuetify.icons.mxs_arrowDown
+                    </v-icon>
+                    <span
+                        v-if="enableGrouping && $typy(header, 'groupable').safeBoolean"
+                        class="ml-2 text-none"
+                        :class="[
+                            activeGroupBy === header.text && !isVertTable
+                                ? 'group--active'
+                                : 'group--inactive',
+                        ]"
+                        @click.stop="() => handleToggleGroup(header.text)"
+                    >
+                        {{ $mxs_t('group') }}
+                    </span>
+                    <div
+                        v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
+                        class="header__resizer d-inline-block fill-height"
+                        v-on="
+                            isResizerDisabled(header)
+                                ? null
+                                : { mousedown: e => resizerMouseDown(e, i) }
+                        "
+                    />
+                </div>
+            </template>
         </div>
         <div
             :style="{ minWidth: `${scrollBarThicknessOffset}px` }"
@@ -164,9 +162,6 @@ export default {
         }
     },
     computed: {
-        headerWidth() {
-            return `calc(100% - ${this.scrollBarThicknessOffset}px)`
-        },
         tableHeaders() {
             return this.isVertTable
                 ? [
@@ -187,6 +182,17 @@ export default {
         },
         enableGrouping() {
             return this.tableHeaders.filter(h => !h.hidden).length > 1
+        },
+        //threshold, user cannot resize header smaller than this
+        headerMinWidthMap() {
+            return this.tableHeaders.reduce((obj, h) => {
+                obj[h.text] = h.minWidth
+                    ? h.minWidth
+                    : this.$typy(h, 'groupable').safeBoolean
+                    ? 117
+                    : 67
+                return obj
+            }, {})
         },
     },
     watch: {
@@ -232,11 +238,6 @@ export default {
         isResizerDisabled(header) {
             return header.text === '#' || header.resizable === false
         },
-        //threshold, user cannot resize header smaller than this
-        getMinHeaderWidth(header) {
-            if (header.minWidth) return header.minWidth
-            return this.$typy(header, 'groupable').safeBoolean ? 117 : 67
-        },
         resetHeaderWidth() {
             let headerWidthMap = {}
             for (const [i, header] of this.tableHeaders.entries()) {
@@ -247,25 +248,30 @@ export default {
             }
             this.headerWidthMap = headerWidthMap
         },
+        getHeaderWidth(headerIdx) {
+            const headerEle = this.$typy(this.$refs, `header__${headerIdx}[0]`).safeObject
+            if (headerEle) {
+                const { width } = headerEle.getBoundingClientRect()
+                return width
+            }
+            return 0
+        },
         assignHeaderWidthMap() {
             let headerWidthMap = {}
             // get width of each header then use it to set same width of corresponding cells
             for (const [i, header] of this.tableHeaders.entries()) {
                 if (this.$typy(this.$refs, `header__${i}`).safeArray.length) {
-                    let headerWidth = this.$refs[`header__${i}`][0].clientWidth
-                    const minHeaderWidth = this.getMinHeaderWidth(header)
-                    if (headerWidth < minHeaderWidth) headerWidth = minHeaderWidth
-                    headerWidthMap = {
-                        ...headerWidthMap,
-                        [i]: headerWidth,
-                    }
+                    const minWidth = this.headerMinWidthMap[header.text]
+                    const width = this.getHeaderWidth(i)
+                    const headerWidth = width < minWidth ? minWidth : width
+                    headerWidthMap = { ...headerWidthMap, [i]: headerWidth }
                 }
             }
-            this.headerWidthMap = { ...this.headerWidthMap, ...headerWidthMap }
+            this.headerWidthMap = headerWidthMap
         },
         recalculateWidth() {
             this.resetHeaderWidth()
-            this.$nextTick(() => this.$nextTick(() => this.assignHeaderWidthMap()))
+            this.$nextTick(() => this.assignHeaderWidthMap())
         },
         hasClass({ ele, className }) {
             let str = ` ${ele.className} `
@@ -310,7 +316,7 @@ export default {
                 const diffX = e.pageX - currPageX
                 if (
                     currColWidth + diffX >=
-                    this.getMinHeaderWidth(this.tableHeaders[currColIndex])
+                    this.headerMinWidthMap[this.tableHeaders[currColIndex].text]
                 ) {
                     const newCurrColW = `${currColWidth + diffX}px`
                     currCol.style.maxWidth = newCurrColW
@@ -318,7 +324,7 @@ export default {
                     if (
                         nxtCol &&
                         nxtColWidth - diffX >=
-                            this.getMinHeaderWidth(this.tableHeaders[nxtColIndex])
+                            this.headerMinWidthMap[this.tableHeaders[nxtColIndex].text]
                     ) {
                         const newNxtColW = `${nxtColWidth - diffX}px`
                         nxtCol.style.maxWidth == newNxtColW
@@ -371,14 +377,8 @@ export default {
 .virtual-table__header {
     height: 30px;
     overflow: hidden;
-    .tr {
-        display: flex;
-        flex-direction: row;
-        box-shadow: -7px 5px 7px -7px rgb(0 0 0 / 10%);
-        flex-wrap: nowrap;
-        line-height: 30px;
+    .thead {
         .th {
-            display: flex;
             position: relative;
             z-index: 1;
             flex: 1;
@@ -449,12 +449,14 @@ export default {
             }
         }
     }
+
     .dummy-header {
         z-index: 2;
         background-color: $table-border;
         height: 30px;
         position: absolute;
         border-radius: 0 5px 0 0;
+        right: 0;
     }
 }
 </style>
