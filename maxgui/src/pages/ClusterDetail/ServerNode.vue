@@ -114,12 +114,14 @@
                 >
                     servers
                 </icon-sprite-sheet>
-                <mxs-truncate-str :text="`${nodeAttrs.state}`" />
+                <mxs-truncate-str
+                    autoID
+                    :tooltipItem="{ txt: `${nodeAttrs.state}` }"
+                    :maxWidth="150"
+                />
                 <v-spacer />
                 <span v-if="!node.data.isMaster" class="ml-1">
-                    <span class="font-weight-bold text-capitalize">
-                        {{ $mxs_t('lag') }}
-                    </span>
+                    <span class="font-weight-bold text-capitalize">{{ $mxs_t('lag') }} </span>
                     <span> {{ sbm }}s </span>
                 </span>
             </div>
@@ -133,7 +135,10 @@
                 <span class="text-capitalize font-weight-bold mr-2">
                     {{ nodeAttrs.parameters.socket ? $mxs_t('socket') : $mxs_t('address') }}
                 </span>
-                <mxs-truncate-str :text="$helpers.getAddress(nodeAttrs.parameters)" />
+                <mxs-truncate-str
+                    autoID
+                    :tooltipItem="{ txt: `${$helpers.getAddress(nodeAttrs.parameters)}` }"
+                />
             </div>
         </template>
     </mxs-tree-graph-node>

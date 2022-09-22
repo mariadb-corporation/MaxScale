@@ -15,6 +15,7 @@ export default {
     state: {
         snackbar_message: { status: false, text: '', type: 'info' },
         overlay_type: false,
+        truncate_tooltip_item: null,
     },
     mutations: {
         SET_OVERLAY_TYPE(state, type) {
@@ -30,6 +31,9 @@ export default {
             state.snackbar_message.status = status
             state.snackbar_message.text = text
             state.snackbar_message.type = type
+        },
+        SET_TRUNCATE_TOOLTIP_ITEM(state, obj) {
+            state.truncate_tooltip_item = obj
         },
     },
 }

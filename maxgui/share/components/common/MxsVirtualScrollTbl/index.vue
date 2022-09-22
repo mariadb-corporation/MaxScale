@@ -145,12 +145,14 @@
                                     maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
                                     rowIdx: rowIdx,
                                     colIdx,
+                                    activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                                 }"
                             >
                                 <mxs-truncate-str
-                                    :text="`${row[colIdx]}`"
-                                    :maxWidth="$typy(cellContentWidthMap[colIdx]).safeNumber"
-                                    :disabled="isDragging"
+                                    :tooltipItem="{
+                                        txt: `${row[colIdx]}`,
+                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                                    }"
                                 />
                             </slot>
                         </div>

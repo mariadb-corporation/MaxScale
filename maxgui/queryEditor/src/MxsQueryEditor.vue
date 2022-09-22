@@ -10,6 +10,7 @@
             />
         </v-fade-transition>
         <snackbars :msgObj="snackbar_message" />
+        <mxs-truncate-tooltip />
     </div>
 </template>
 

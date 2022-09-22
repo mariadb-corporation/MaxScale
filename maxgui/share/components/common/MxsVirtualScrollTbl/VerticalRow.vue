@@ -21,14 +21,21 @@
                 >
                     <!-- vertical-row header slot -->
                     <slot
-                        :name="`vertical-header-${h.text}`"
+                        :name="`header-${h.text}`"
                         :data="{
                             header: h,
                             maxWidth: headerContentWidth,
                             colIdx,
+                            activatorID: genHeaderColID(colIdx),
                         }"
                     >
-                        <mxs-truncate-str :text="`${h.text}`" :maxWidth="headerContentWidth" />
+                        <mxs-truncate-str
+                            :tooltipItem="{
+                                txt: `${h.text}`,
+                                activatorID: genHeaderColID(colIdx),
+                            }"
+                            :maxWidth="headerContentWidth"
+                        />
                     </slot>
                 </div>
                 <div
@@ -53,9 +60,16 @@
                             maxWidth: valueContentWidth,
                             colIdx,
                             rowIdx,
+                            activatorID: genValueColID(colIdx),
                         }"
                     >
-                        <mxs-truncate-str :text="`${row[colIdx]}`" :maxWidth="valueContentWidth" />
+                        <mxs-truncate-str
+                            :tooltipItem="{
+                                txt: `${row[colIdx]}`,
+                                activatorID: genValueColID(colIdx),
+                            }"
+                            :maxWidth="valueContentWidth"
+                        />
                     </slot>
                 </div>
             </div>

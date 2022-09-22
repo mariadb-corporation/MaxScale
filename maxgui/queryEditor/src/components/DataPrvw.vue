@@ -4,7 +4,10 @@
             <template v-if="activePrvwTblNodeId">
                 <div class="d-flex align-center mr-4">
                     <b class="mr-1">Table:</b>
-                    <mxs-truncate-str :maxWidth="260" :nudgeLeft="16" :text="activePrvwTblNodeId" />
+                    <mxs-truncate-str
+                        :tooltipItem="{ txt: activePrvwTblNodeId, nudgeLeft: 16 }"
+                        :maxWidth="260"
+                    />
                 </div>
                 <data-prvw-nav-ctr :isLoading="isLoading" :resultData="resultData" />
                 <v-spacer />

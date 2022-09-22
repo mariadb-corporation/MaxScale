@@ -58,7 +58,7 @@
                 class="d-flex flex-row flex-grow-1 align-center"
                 :style="{ lineHeight }"
             >
-                <span class="mr-2 font-weight-bold text-capitalize">
+                <span class="mr-2 font-weight-bold text-capitalize text-no-wrap">
                     {{ key }}
                 </span>
 
@@ -71,7 +71,7 @@
                     {{ nodeType }}
                 </icon-sprite-sheet>
 
-                <mxs-truncate-str :text="`${value}`" />
+                <mxs-truncate-str :tooltipItem="{ txt: `${value}` }" />
                 <mxs-tooltip-btn
                     v-if="key === 'filters'"
                     btnClass="ml-auto vis-filter-btn"

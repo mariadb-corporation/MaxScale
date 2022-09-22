@@ -25,7 +25,10 @@
                     <v-icon class="mr-2" size="16" color="accent-dark">
                         $vuetify.icons.mxs_server
                     </v-icon>
-                    <mxs-truncate-str :text="item.name" :maxWidth="145" :nudgeLeft="32" />
+                    <mxs-truncate-str
+                        :tooltipItem="{ txt: item.name, nudgeLeft: 32 }"
+                        :maxWidth="145"
+                    />
                 </div>
             </template>
             <template v-slot:item="{ item }">
@@ -34,10 +37,8 @@
                         $vuetify.icons.mxs_server
                     </v-icon>
                     <mxs-truncate-str
-                        class="text-truncate"
-                        :text="item.name"
+                        :tooltipItem="{ txt: item.name, nudgeLeft: 32 }"
                         :maxWidth="135"
-                        :nudgeLeft="32"
                     />
                     <v-spacer />
                     <mxs-tooltip-btn

@@ -23,11 +23,15 @@
             >
                 <mxs-truncate-str
                     class="font-weight-bold"
-                    :text="`${row.groupBy}`"
+                    :tooltipItem="{ txt: `${row.groupBy}` }"
                     :maxWidth="maxRowGroupWidth * 0.15"
                 />
+
                 <span class="d-inline-block val-separator mr-4">:</span>
-                <mxs-truncate-str :text="`${row.value}`" :maxWidth="maxRowGroupWidth * 0.85" />
+                <mxs-truncate-str
+                    :tooltipItem="{ txt: `${row.value}` }"
+                    :maxWidth="maxRowGroupWidth * 0.85"
+                />
             </div>
             <mxs-tooltip-btn btnClass="ml-2" width="24" height="24" icon @click="handleUngroup">
                 <template v-slot:btn-content>

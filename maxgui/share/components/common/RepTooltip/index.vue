@@ -34,9 +34,7 @@
                         <td>
                             <div class="d-flex align-center fill-height">
                                 <mxs-truncate-str
-                                    wrap
-                                    :text="slaveStat.id"
-                                    :nudgeTop="10"
+                                    :tooltipItem="{ txt: `${slaveStat.id}`, nudgeTop: 10 }"
                                     :maxWidth="300"
                                 />
                                 <span class="ml-1 mxs-color-helper text-grayed-out">
@@ -69,10 +67,8 @@
                                     replication
                                 </icon-sprite-sheet>
                                 <mxs-truncate-str
-                                    wrap
-                                    :text="`${value}`"
+                                    :tooltipItem="{ txt: `${value}`, nudgeTop: 10 }"
                                     :maxWidth="400"
-                                    :nudgeTop="10"
                                 />
                             </div>
                         </td>

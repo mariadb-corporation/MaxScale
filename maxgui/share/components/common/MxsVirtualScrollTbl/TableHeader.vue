@@ -21,15 +21,16 @@
                 />
                 <div class="header__resizer no-pointerEvent d-inline-block fill-height"></div>
             </div>
-            <template v-for="(header, i) in tableHeaders">
+            <template v-for="(header, colIdx) in tableHeaders">
                 <div
                     v-if="!header.hidden"
-                    :key="`${header.text}_${i}`"
-                    :ref="`header__${i}`"
+                    :id="genHeaderColID(colIdx)"
+                    :key="`${header.text}_${colIdx}`"
+                    :ref="`header__${colIdx}`"
                     :style="{
                         ...headerStyle,
-                        maxWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
-                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
+                        maxWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
+                        minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
                     }"
                     class="th d-flex align-center px-3"
                     :class="{
@@ -57,8 +58,9 @@
                         :data="{
                             header,
                             // maxWidth: minus padding and sort-icon
-                            maxWidth: headerTxtMaxWidth({ header, i }),
-                            colIdx: i,
+                            maxWidth: headerTxtMaxWidth({ header, colIdx }),
+                            colIdx: colIdx,
+                            activatorID: genHeaderColID(colIdx),
                         }"
                     >
                         {{ header.text }}
@@ -89,7 +91,7 @@
                         v-on="
                             isResizerDisabled(header)
                                 ? null
-                                : { mousedown: e => resizerMouseDown(e, i) }
+                                : { mousedown: e => resizerMouseDown(e, colIdx) }
                         "
                     />
                 </div>
@@ -227,9 +229,12 @@ export default {
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
     methods: {
-        headerTxtMaxWidth({ header, i }) {
+        genHeaderColID(colIdx) {
+            return `table-header__header-text_${colIdx}`
+        },
+        headerTxtMaxWidth({ header, colIdx }) {
             const w =
-                this.$typy(this.headerWidthMap[i]).safeNumber -
+                this.$typy(this.headerWidthMap[colIdx]).safeNumber -
                 (this.enableSorting && header.sortable !== false ? 22 : 0) -
                 (this.enableGrouping && this.$typy(header, 'groupable').safeBoolean ? 38 : 0) -
                 24 // padding
@@ -240,10 +245,14 @@ export default {
         },
         resetHeaderWidth() {
             let headerWidthMap = {}
-            for (const [i, header] of this.tableHeaders.entries()) {
+            for (const [colIdx, header] of this.tableHeaders.entries()) {
                 headerWidthMap = {
                     ...headerWidthMap,
-                    [i]: header.maxWidth ? header.maxWidth : header.width ? header.width : 'unset',
+                    [colIdx]: header.maxWidth
+                        ? header.maxWidth
+                        : header.width
+                        ? header.width
+                        : 'unset',
                 }
             }
             this.headerWidthMap = headerWidthMap
@@ -259,13 +268,11 @@ export default {
         assignHeaderWidthMap() {
             let headerWidthMap = {}
             // get width of each header then use it to set same width of corresponding cells
-            for (const [i, header] of this.tableHeaders.entries()) {
-                if (this.$typy(this.$refs, `header__${i}`).safeArray.length) {
-                    const minWidth = this.headerMinWidthMap[header.text]
-                    const width = this.getHeaderWidth(i)
-                    const headerWidth = width < minWidth ? minWidth : width
-                    headerWidthMap = { ...headerWidthMap, [i]: headerWidth }
-                }
+            for (const [colIdx, header] of this.tableHeaders.entries()) {
+                const minWidth = this.headerMinWidthMap[header.text]
+                const width = this.getHeaderWidth(colIdx)
+                const headerWidth = width < minWidth ? minWidth : width
+                headerWidthMap = { ...headerWidthMap, [colIdx]: headerWidth }
             }
             this.headerWidthMap = headerWidthMap
         },
@@ -285,9 +292,9 @@ export default {
             }
             return { node: null, nxtColIndex }
         },
-        resizerMouseDown(e, i) {
+        resizerMouseDown(e, colIdx) {
             let resizingData = {
-                currColIndex: i,
+                currColIndex: colIdx,
                 currCol: e.target.parentElement,
                 currPageX: e.pageX,
                 currColWidth: e.target.parentElement.offsetWidth,
@@ -295,7 +302,7 @@ export default {
             const { node: nxtCol, nxtColIndex } = this.getNxtColByClass({
                 node: resizingData.currCol,
                 className: 'th--resizable',
-                nxtColIndex: i,
+                nxtColIndex: colIdx,
             })
             resizingData = { ...resizingData, nxtCol, nxtColIndex }
             if (resizingData.nxtCol) resizingData.nxtColWidth = resizingData.nxtCol.offsetWidth

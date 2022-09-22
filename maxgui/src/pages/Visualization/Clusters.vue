@@ -15,9 +15,9 @@
                         </v-list-item-avatar>
                         <v-list-item-content class="py-4">
                             <v-list-item-title
-                                class="tk-azo-sans-web text-h5 mxs-color-helper font-weight-medium text-blue-azure"
+                                class="tk-azo-sans-web text-h5 mxs-color-helper font-weight-medium text-blue-azure d-flex"
                             >
-                                <mxs-truncate-str :text="cluster.id" />
+                                <mxs-truncate-str :tooltipItem="{ txt: `${cluster.id}` }" />
                             </v-list-item-title>
                             <v-list-item-subtitle>
                                 <span class="grayed-out">
@@ -55,7 +55,14 @@
                                             >
                                                 servers
                                             </icon-sprite-sheet>
-                                            <mxs-truncate-str :text="cluster.children[0].name" />
+                                            <mxs-truncate-str
+                                                :tooltipItem="{
+                                                    txt: `${cluster.children[0].name}`,
+                                                    activatorID: $helpers.lodash.uniqueId(
+                                                        'clusters__cluster-children-name'
+                                                    ),
+                                                }"
+                                            />
                                         </span>
                                     </template>
                                 </cluster-server-tooltip>

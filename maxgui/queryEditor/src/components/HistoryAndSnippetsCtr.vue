@@ -52,26 +52,25 @@
                     @on-done-editing="onDoneEditingSnippets"
                     v-on="$listeners"
                 >
-                    <template v-slot:header-connection_name="{ data: { maxWidth } }">
+                    <template v-slot:header-connection_name="{ data: { maxWidth, activatorID } }">
                         <mxs-truncate-str
-                            :key="maxWidth"
-                            class="text-truncate"
-                            text="Connection Name"
+                            :tooltipItem="{ txt: 'Connection Name', activatorID }"
                             :maxWidth="maxWidth"
                         />
                     </template>
                     <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
-                    <template v-slot:date="{ data: { cell, maxWidth } }">
+                    <template v-slot:date="{ data: { cell, maxWidth, activatorID } }">
                         <mxs-truncate-str
-                            :text="
-                                `${$helpers.dateFormat({
+                            :tooltipItem="{
+                                txt: `${$helpers.dateFormat({
                                     moment: $moment,
                                     value: cell,
                                     formatType: 'ddd, DD MMM YYYY',
-                                })}`
-                            "
+                                })}`,
+                                activatorID,
+                            }"
                             :maxWidth="maxWidth"
                         />
                     </template>

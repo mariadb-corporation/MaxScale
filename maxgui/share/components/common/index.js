@@ -54,7 +54,7 @@ export default {
     'mxs-sub-menu': MxsSubMenu,
     'mxs-tooltip-btn': MxsTooltipBtn,
     'mxs-treeview': MxsTreeview,
-    'mxs-truncate-str': MxsTruncateStr,
+    ...MxsTruncateStr,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
     'page-wrapper': PageWrapper,
     ...Parameters,

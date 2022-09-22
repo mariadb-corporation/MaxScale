@@ -22,10 +22,8 @@
                 >
                     <div class="d-inline-flex align-center">
                         <mxs-truncate-str
-                            :key="`${session.name}`"
-                            :text="`${session.name}`"
+                            :tooltipItem="{ txt: `${session.name}`, nudgeLeft: 36 }"
                             :maxWidth="112"
-                            :nudgeLeft="48"
                         />
                         <span
                             v-if="getIsFileUnsavedBySessionId(session.id)"
