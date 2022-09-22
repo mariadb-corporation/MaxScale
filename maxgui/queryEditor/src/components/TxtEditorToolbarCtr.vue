@@ -8,6 +8,7 @@
             text
             color="accent-dark"
             :disabled="isExecuting ? isStopping : isRunBtnDisabled"
+            :loading="isStopping"
             @click="
                 () =>
                     isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
@@ -200,15 +201,11 @@ export default {
         ...mapGetters({
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
             getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
-            getBgConn: 'queryConn/getBgConn',
             getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
             getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
         eventBus() {
             return EventBus
-        },
-        isQueryKilled() {
-            return !this.isExecuting && !this.isStopping
         },
         isRowLimitValid: {
             get() {
@@ -233,10 +230,8 @@ export default {
     },
     activated() {
         this.eventBus.$on('shortkey', this.shortKeyHandler)
-        this.watch_isQueryKilled()
     },
     deactivated() {
-        this.$typy(this.unwatch_isQueryKilled).safeFunction()
         this.eventBus.$off('shortkey')
     },
     methods: {
@@ -244,7 +239,6 @@ export default {
             fetchQueryResult: 'queryResult/fetchQueryResult',
             pushToQuerySnippets: 'queryPersisted/pushToQuerySnippets',
             stopQuery: 'queryResult/stopQuery',
-            disconnectClone: 'queryConn/disconnectClone',
         }),
         ...mapMutations({
             SET_QUERY_ROW_LIMIT: 'queryPersisted/SET_QUERY_ROW_LIMIT',
@@ -253,14 +247,6 @@ export default {
             SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
             SET_IS_MAX_ROWS_VALID: 'queryResult/SET_IS_MAX_ROWS_VALID',
         }),
-        watch_isQueryKilled() {
-            this.unwatch_isQueryKilled = this.$watch('isQueryKilled', async (v, oV) => {
-                if (v !== oV && v) {
-                    const bgConn = this.getBgConn({ session_id_fk: this.session.id })
-                    if (bgConn.id) await this.disconnectClone({ id: bgConn.id })
-                }
-            })
-        },
         /**
          * Only open dialog when its corresponding query text exists
          */
@@ -364,3 +350,9 @@ export default {
     },
 }
 </script>
+<style lang="scss">
+.stop-btn.v-btn--loading .v-progress-circular {
+    height: 16px !important;
+    width: 16px !important;
+}
+</style>

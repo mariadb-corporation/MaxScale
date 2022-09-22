@@ -128,12 +128,12 @@
                             "
                         />
                     </div>
-                    <template v-for="(h, i) in tableHeaders">
+                    <template v-for="(h, colIdx) in tableHeaders">
                         <!-- dependency keys to force a rerender -->
                         <div
                             v-if="!h.hidden"
-                            :id="genCellID({ rowIdx, colIdx: i })"
-                            :key="`${h.text}_${headerWidthMap[i]}_${i}`"
+                            :id="genCellID({ rowIdx, colIdx })"
+                            :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
                             class="td"
                             :class="[
                                 draggableCell && h.draggable ? 'cursor--grab no-userSelect' : '',
@@ -143,7 +143,7 @@
                             ]"
                             :style="{
                                 height: lineHeight,
-                                minWidth: $helpers.handleAddPxUnit(headerWidthMap[i]),
+                                minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
                             }"
                             v-on="
                                 draggableCell && h.draggable
@@ -155,8 +155,8 @@
                                     $emit('on-cell-right-click', {
                                         e,
                                         row,
-                                        cell: row[i],
-                                        cellID: genCellID({ rowIdx, colIdx: i }),
+                                        cell: row[colIdx],
+                                        cellID: genCellID({ rowIdx, colIdx }),
                                     })
                             "
                         >
@@ -164,16 +164,16 @@
                                 :name="h.text"
                                 :data="{
                                     rowData: row,
-                                    cell: row[i],
+                                    cell: row[colIdx],
                                     header: h,
-                                    maxWidth: cellMaxWidth(i),
+                                    maxWidth: cellMaxWidth(colIdx),
                                     rowIdx: rowIdx,
-                                    colIdx: i,
+                                    colIdx,
                                 }"
                             >
                                 <mxs-truncate-str
-                                    :text="`${row[i]}`"
-                                    :maxWidth="cellMaxWidth(i)"
+                                    :text="`${row[colIdx]}`"
+                                    :maxWidth="cellMaxWidth(colIdx)"
                                     :disabled="isDragging"
                                 />
                             </slot>
@@ -383,8 +383,8 @@ export default {
                 this.$emit('scroll-end')
         },
 
-        cellMaxWidth(i) {
-            return this.$typy(this.headerWidthMap[i]).safeNumber - 24
+        cellMaxWidth(colIdx) {
+            return this.$typy(this.headerWidthMap[colIdx]).safeNumber - 24
         },
 
         genCellID: ({ rowIdx, colIdx }) => `cell_id-${rowIdx}-${colIdx}`,

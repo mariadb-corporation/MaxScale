@@ -98,7 +98,7 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ commit, dispatch, rootState, rootGetters }, query) {
+        async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
             const active_session_id = rootGetters['querySession/getActiveSessionId']
@@ -114,10 +114,9 @@ export default {
                 })
 
                 /**
-                 * dispatch cloneConn before running the user's query to prevent concurrent
-                 * querying of the same connection.
-                 * This "BACKGROUND" connection must be disconnected after finnish the user's query.
-                 * i.e. dispatch disconnectBgConn
+                 * Clone the current connection and make it a BACKGROUND connection which is
+                 * used to stop the query. This action must be dispatched before running the
+                 * user's query to prevent concurrent querying of the same connection.
                  */
                 await dispatch(
                     'queryConn/cloneConn',
@@ -129,7 +128,9 @@ export default {
                     },
                     { root: true }
                 )
-
+                const bgConn = rootGetters['queryConn/getBgConn']({
+                    session_id_fk: active_session_id,
+                })
                 let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                     max_rows: rootState.queryPersisted.query_row_limit,
@@ -160,6 +161,13 @@ export default {
                     },
                     { root: true }
                 )
+                // Disconnect "BACKGROUND" connection
+                await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
+                if (getters.getIsStoppingQueryBySessionId(active_session_id))
+                    commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                        id: active_session_id,
+                        payload: { value: false },
+                    })
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
@@ -199,10 +207,6 @@ export default {
             } catch (e) {
                 this.vue.$logger(`store-queryResult-stopQuery`).error(e)
             }
-            commit('PATCH_IS_STOPPING_QUERY_MAP', {
-                id: active_session_id,
-                payload: { value: false },
-            })
         },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
@@ -260,9 +264,8 @@ export default {
                 return (
                     !session.query_txt ||
                     !session.active_sql_conn.id ||
-                    (rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) &&
-                        getters.getLoadingQueryResultBySessionId(session.id)) ||
-                    !state.is_max_rows_valid
+                    rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) ||
+                    getters.getLoadingQueryResultBySessionId(session.id)
                 )
             }
         },
