@@ -203,3 +203,7 @@ SELECT uuid FROM Transaction LIMIT 1;
 # MXS-4080
 # "sequence" is always parsed as a keyword.
 DELETE FROM obj_stat_log_seq WHERE sequence < 6000;
+
+# MXS-4307
+# Does not parse CONVERT() properly.
+select CONVERT(substring(receive_code,8), UNSIGNED INTEGER) FROM t;
