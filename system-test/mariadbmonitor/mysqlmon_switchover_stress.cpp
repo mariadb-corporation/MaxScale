@@ -12,30 +12,14 @@
  */
 
 #include <iostream>
-#include <iterator>
 #include <string>
-#include <sstream>
 #include <thread>
 #include <vector>
 #include <random>
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
+#include <maxbase/format.hh>
 
 using namespace std;
-
-// How often the monitor checks the server state.
-// NOTE: Ensure this is identical with the value in the configuration file.
-const time_t MONITOR_INTERVAL = 1;
-
-// After how many seconds should the switchover operation surely have
-// been performed. Not very critical.
-const time_t SWITCHOVER_DURATION = 5;
-
-// How long should we keep in running.
-const time_t TEST_DURATION = 90;
-
-const char* CLIENT_USER = "mysqlmon_switchover_stress";
-const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
 
 #define CMESSAGE(msg) \
     do { \
@@ -60,6 +44,12 @@ const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
 namespace
 {
 
+// How long should we keep in running.
+const time_t TEST_DURATION = 60;
+
+const char* CLIENT_USER = "mysqlmon_switchover_stress";
+const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
+
 class Client
 {
 public:
@@ -82,6 +72,19 @@ public:
                 test.repl->sync_slaves();
             }
         }
+    }
+
+    static bool drop_tables(TestConnections& test)
+    {
+        test.tprintf("Dropping tables.");
+        auto sConn = test.maxscale->open_rwsplit_connection2();
+
+        for (size_t i = 0; i < s_nClients; ++i)
+        {
+            sConn->cmd_f("drop table test.t%zu;", i);
+        }
+
+        return test.ok();
     }
 
     static void start(bool verbose,
@@ -320,21 +323,12 @@ private:
 
     static bool create_tables(TestConnections& test)
     {
-        cout << "\nCreating tables." << endl;
-
-        MYSQL* pConn = test.maxscale->conn_rwsplit;
-
-        string drop_head("DROP TABLE IF EXISTS test.t");
-        string create_head("CREATE TABLE test.t");
-        string create_tail(" (id INT)");
+        test.tprintf("Creating tables.");
+        auto sConn = test.maxscale->open_rwsplit_connection2();
 
         for (size_t i = 0; i < s_nClients; ++i)
         {
-            string drop = drop_head + std::to_string(i);
-            test.try_query(pConn, "%s", drop.c_str());
-
-            string create = create_head + std::to_string(i) + create_tail;
-            test.try_query(pConn, "%s", create.c_str());
+            sConn->cmd_f("create or replace table test.t%zu (id int);", i);
         }
 
         return test.ok();
@@ -342,15 +336,13 @@ private:
 
     static bool insert_data(TestConnections& test)
     {
-        cout << "\nInserting data." << endl;
+        test.tprintf("Inserting data.");
 
-        MYSQL* pConn = test.maxscale->conn_rwsplit;
+        auto pConn = test.maxscale->open_rwsplit_connection2();
 
         for (size_t i = 0; i < s_nClients; ++i)
         {
-            string insert("insert into test.t");
-            insert += std::to_string(i);
-            insert += " values ";
+            string insert = mxb::string_printf("insert into test.t%zu values ", i);
 
             for (size_t j = 0; j < s_nRows; ++j)
             {
@@ -364,7 +356,7 @@ private:
                 }
             }
 
-            test.try_query(pConn, "%s", insert.c_str());
+            pConn->cmd(insert);
         }
 
         return test.ok();
@@ -398,171 +390,68 @@ std::vector<std::thread> Client::s_threads;
 namespace
 {
 
-void list_servers(TestConnections& test)
-{
-    test.print_maxctrl("list servers");
-}
-
-void sleep(int s)
-{
-    cout << "Sleeping " << s << " times 1 second" << flush;
-    do
-    {
-        ::sleep(1);
-        cout << "." << flush;
-        --s;
-    }
-    while (s > 0);
-
-    cout << endl;
-}
-
-bool check_server_status(TestConnections& test, int id)
-{
-    bool is_master = false;
-
-    MariaDBCluster* pRepl = test.repl;
-
-    string server = string("server") + std::to_string(id);
-
-    StringSet statuses = test.get_server_status(server.c_str());
-    std::ostream_iterator<string> oi(cout, " ");
-
-    cout << server << ": ";
-    std::copy(statuses.begin(), statuses.end(), oi);
-
-    cout << " => ";
-
-    if (statuses.count("Master"))
-    {
-        is_master = true;
-        cout << "OK" << endl;
-    }
-    else if (statuses.count("Slave"))
-    {
-        cout << "OK" << endl;
-    }
-    else if (statuses.count("Running"))
-    {
-        MYSQL* pConn = pRepl->nodes[id - 1];
-
-        char result[1024];
-        if (find_field(pConn, "SHOW SLAVE STATUS", "Last_IO_Error", result) == 0)
-        {
-            cout << result << endl;
-            test.expect(false, "Server is neither slave, nor master.");
-        }
-        else
-        {
-            cout << "?" << endl;
-            test.expect(false, "Could not execute \"SHOW SLAVE STATUS\"");
-        }
-    }
-    else
-    {
-        cout << "?" << endl;
-        test.expect(false, "Unexpected server state for %s.", server.c_str());
-    }
-
-    return is_master;
-}
-
-void check_server_statuses(TestConnections& test)
-{
-    int masters = 0;
-
-    masters += check_server_status(test, 1);
-    masters += check_server_status(test, 2);
-    masters += check_server_status(test, 3);
-    masters += check_server_status(test, 4);
-
-    test.expect(masters == 1, "Unpexpected number of masters: %d", masters);
-}
-
-int get_next_master_id(TestConnections& test, int current_id)
-{
-    int next_id = current_id;
-
-    do
-    {
-        next_id = (next_id + 1) % 5;
-        if (next_id == 0)
-        {
-            next_id = 1;
-        }
-        ss_dassert(next_id >= 1);
-        ss_dassert(next_id <= 4);
-        string server("server");
-        server += std::to_string(next_id);
-        StringSet states = test.get_server_status(server.c_str());
-        if (states.count("Slave") != 0)
-        {
-            break;
-        }
-    }
-    while (next_id != current_id);
-
-    return next_id != current_id ? next_id : -1;
-}
-
 void create_client_user(TestConnections& test)
 {
-    string stmt;
+    auto conn = test.maxscale->open_rwsplit_connection2();
+    conn->cmd_f("create or replace user '%s' identified by '%s';", CLIENT_USER, CLIENT_PASSWORD);
+    conn->cmd_f("grant select, insert, update on test.* to '%s';", CLIENT_USER);
+}
 
-    // Drop user
-    stmt = "DROP USER IF EXISTS ";
-    stmt += "'";
-    stmt += CLIENT_USER;
-    stmt += "'@'%%'";
-    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
-
-    // Create user
-    stmt = "CREATE USER ";
-    stmt += "'";
-    stmt += CLIENT_USER;
-    stmt += "'@'%%'";
-    stmt += " IDENTIFIED BY ";
-    stmt += "'";
-    stmt += CLIENT_PASSWORD;
-    stmt += "'";
-    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
-
-    // Grant access
-    stmt = "GRANT SELECT, INSERT, UPDATE ON *.* TO ";
-    stmt += "'";
-    stmt += CLIENT_USER;
-    stmt += "'@'%%'";
-    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
-
-    test.try_query(test.maxscale->conn_rwsplit, "FLUSH PRIVILEGES");
+void drop_client_user(TestConnections& test)
+{
+    auto conn = test.maxscale->open_rwsplit_connection2();
+    conn->cmd_f("drop user '%s';", CLIENT_USER);
 }
 
 void switchover(TestConnections& test, int next_master_id, int current_master_id)
 {
-    cout << "\nTrying to do manual switchover from server" << current_master_id
-         << " to server" << next_master_id << endl;
+    auto& mxs = *test.maxscale;
+    string next_master_name = "server" + std::to_string(next_master_id);
+    string command = mxb::string_printf("call command mysqlmon switchover MySQL-Monitor %s server%i",
+                                        next_master_name.c_str(), current_master_id);
+    test.tprintf("Running on MaxCtrl: %s", command.c_str());
+    auto res = mxs.maxctrl(command);
+    if (res.rc == 0)
+    {
+        mxs.wait_for_monitor();
 
-    string command("call command mysqlmon switchover MySQL-Monitor ");
-    command += "server";
-    command += std::to_string(next_master_id);
-    command += " ";
-    command += "server";
-    command += std::to_string(current_master_id);
+        // Check that server statuses are as expected.
+        string master_name;
+        int n_master = 0;
 
-    cout << "\nCommand: " << command << endl;
+        auto servers = mxs.get_servers();
+        servers.print();
 
-    test.print_maxctrl(command);
+        for (int i = 0; i < 4; i++)
+        {
+            const auto& srv = servers.get(i);
+            auto status = srv.status;
+            if (status == mxt::ServerInfo::master_st)
+            {
+                n_master++;
+                test.expect(srv.name == next_master_name, "Wrong master. Got %s, expected %s.",
+                            srv.name.c_str(), next_master_name.c_str());
+            }
+            else if (status != mxt::ServerInfo::slave_st)
+            {
+                test.add_failure("%s is neither master or slave. Status: %s", srv.name.c_str(),
+                                 srv.status_to_string().c_str());
+            }
+        }
 
-    sleep(1);
-    list_servers(test);
+        test.expect(n_master == 1, "Expected one master, found %i.", n_master);
+    }
+    else
+    {
+        test.add_failure("Manual switchover failed: %s", res.output.c_str());
+    }
 }
 
 void run(TestConnections& test)
 {
-    cout << "\nConnecting to MaxScale." << endl;
-    test.maxscale->connect_maxscale();
-
+    auto& mxs = *test.maxscale;
     create_client_user(test);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
     Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
 
@@ -573,51 +462,28 @@ void run(TestConnections& test)
         const char* zUser = CLIENT_USER;
         const char* zPassword = CLIENT_PASSWORD;
 
-        cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
-        cout << "Starting clients." << endl;
+        test.tprintf("Starting clients. Connecting to %s:%i as '%s':'%s'.",
+                     zHost, port, zUser, zPassword);
         Client::start(test.verbose(), zHost, port, zUser, zPassword);
 
         time_t start = time(NULL);
-
-        list_servers(test);
-
         int current_master_id = 1;
+        int n_switchovers = 0;
 
-        while ((test.global_result == 0) && (time(NULL) - start < TEST_DURATION))
+        while (test.ok() && (time(NULL) - start < TEST_DURATION))
         {
-            sleep(SWITCHOVER_DURATION);
+            int next_master_id = current_master_id % 4 + 1;
+            switchover(test, next_master_id, current_master_id);
 
-            int next_master_id = get_next_master_id(test, current_master_id);
-
-            if (next_master_id != -1)
+            if (test.ok())
             {
-                switchover(test, next_master_id, current_master_id);
                 current_master_id = next_master_id;
-
-                sleep(SWITCHOVER_DURATION);
-
-                int master_id = get_master_server_id(test);
-
-                if (master_id < 0)
-                {
-                    test.expect(false, "No master available after switchover.");
-                }
-                else if (master_id != current_master_id)
-                {
-                    test.expect(false,
-                                "Master should have been server%d, but it was server%d.",
-                                current_master_id,
-                                master_id);
-                }
-            }
-            else
-            {
-                test.expect(false,
-                            "Could not find any slave to switch to.");
+                n_switchovers++;
+                sleep(1);
             }
         }
 
-        cout << "\nStopping clients.\n" << flush;
+        test.tprintf("Stopping clients after %i switchovers.", n_switchovers);
         Client::stop();
 
         // Ensure master is at server1. Shortens startup time for next test.
@@ -626,23 +492,16 @@ void run(TestConnections& test)
             switchover(test, 1, current_master_id);
         }
 
-        test.repl->close_connections();
-        test.repl->connect();
-
-        check_server_statuses(test);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        drop_client_user(test);
     }
+
+    Client::drop_tables(test);
 }
 }
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
-
-    run(test);
-
-    test.repl->connect();
-    execute_query(test.repl->nodes[0], "DROP TABLE test.t");
-    test.repl->disconnect();
-
-    return test.global_result;
+    TestConnections test;
+    return test.run_test(argc, argv, run);
 }
