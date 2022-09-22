@@ -1,7 +1,7 @@
 <template>
     <query-editor
         ref="queryEditor"
-        class="query-editor-page mxs-color-helper all-border-table-border fill-height"
+        class="query-editor-page fill-height"
         @leave-page="$router.push($event)"
     />
 </template>
