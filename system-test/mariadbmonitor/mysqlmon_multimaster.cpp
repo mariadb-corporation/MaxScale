@@ -21,6 +21,7 @@
 #include <string>
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
+#include <maxbase/stopwatch.hh>
 
 using std::string;
 using std::vector;
@@ -194,11 +195,11 @@ int main(int argc, char* argv[])
     servers_info.check_master_groups(phase7_8_groups);
     check_rlag(test, servers_info, 0, 0, 0);
 
-    // Rwsplit should detects that replication lag is 0.
+    // Rwsplit should detect that replication lag is 0.
     maxconn->query(show);
     test.log_includes("is returned to query routing.");
 
-    // Test over, reset topology.
+    // Reset topology.
     const char reset_with_name[] = "STOP SLAVE '%s'; RESET SLAVE '%s' ALL;";
     test.try_query(test.repl->nodes[0], reset_with_name, "a", "a");
     test.try_query(test.repl->nodes[0], reset_with_name, "b", "b");
@@ -208,7 +209,42 @@ int main(int argc, char* argv[])
     change_master(test, 1, 0);
     change_master(test, 2, 0);
     change_master(test, 3, 0);
+    mxs.wait_for_monitor();
 
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    if (test.ok())
+    {
+        test.tprintf("Test 9 - All slaves lagging more than switchover_timeout.");
+        mxs.maxctrl("alter monitor MySQL-Monitor switchover_timeout 3s");
+
+        auto set_delay = [&test](int node, int delay) {
+            const char stop[] = "stop slave;";
+            test.try_query(test.repl->nodes[node], stop);
+            change_master(test, node, 0, "", delay);
+        };
+
+        const int delay = 20;
+        set_delay(1, delay);
+        set_delay(2, delay);
+        set_delay(3, delay);
+
+        test.try_query(test.repl->nodes[0], "%s", flush.c_str());
+        sleep(4);
+        mxs.wait_for_monitor();
+
+        // All slaves should be invalid for promotion now. Expect the switchover to fail quickly, as it's
+        // not even attempted.
+        mxb::StopWatch timer;
+        auto res = mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor");
+        double time_s = mxb::to_secs(timer.lap());
+        test.expect(res.rc != 0, "Switchover succeeded when it should have failed.");
+        test.expect(time_s < 1, "Switchover took %f seconds, which is longer than expected.", time_s);
+
+        // Finally, remove slave delay.
+        set_delay(1, 0);
+        set_delay(2, 0);
+        set_delay(3, 0);
+    }
     return test.global_result;
 }
 

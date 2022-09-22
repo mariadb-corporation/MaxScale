@@ -1907,6 +1907,10 @@ term(A) ::= DEFAULT(X).          {spanExpr(&A, pParse, @X, &X);}
 %endif
 term(A) ::= NULL(X).             {spanExpr(&A, pParse, @X, &X);}
 expr(A) ::= id(X).               {spanExpr(&A, pParse, TK_ID, &X);}
+// This is for "[UN]SIGNED INTEGER" and alikes. We claim it is
+// TK_UNSIGNED and not TK_ID as in that case it appears as if
+// the field "INTEGER" would be referred to.
+expr(A) ::= UNSIGNED(X) id.      {spanExpr(&A, pParse, TK_UNSIGNED, &X);}
 expr(A) ::= nm(X) DOT nm(Y). {
   Expr *temp1 = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   Expr *temp2 = sqlite3PExpr(pParse, TK_ID, 0, 0, &Y);

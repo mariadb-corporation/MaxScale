@@ -145,7 +145,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
         return rval;
     }
 
-    maxbase::Duration time_limit(m_settings.switchover_timeout);
+    maxbase::Duration time_limit(m_settings.shared.switchover_timeout);
     GeneralOpData op(OpStart::MANUAL, output, time_limit);
 
     bool rejoin_done = false;
@@ -910,7 +910,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             // Step 2 or 3 failed, try to undo step 1 by promoting the demotion target back to master.
             // Reset the time limit since the last part may have used it all.
             MXB_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
-            const mxb::Duration demotion_undo_time_limit(m_settings.switchover_timeout);
+            const mxb::Duration demotion_undo_time_limit(m_settings.shared.switchover_timeout);
             GeneralOpData general_undo(op.general.start, op.general.error_out, demotion_undo_time_limit);
             if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
@@ -1757,7 +1757,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
     unique_ptr<SwitchoverParams> rval;
     if (promotion_target && demotion_target && gtid_ok)
     {
-        maxbase::Duration time_limit(std::chrono::seconds(m_settings.switchover_timeout));
+        maxbase::Duration time_limit(std::chrono::seconds(m_settings.shared.switchover_timeout));
         bool master_swap = (demotion_target == m_master);
         ServerOperation promotion(promotion_target, master_swap,
                                   demotion_target->m_slave_status, demotion_target->m_enabled_events);
@@ -1878,7 +1878,7 @@ void MariaDBMonitor::handle_auto_rejoin()
     mxb::Json dummy(mxb::Json::Type::UNDEFINED);
     // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
     // the first phase of standalone rejoin is similar to switchover.
-    maxbase::Duration time_limit(m_settings.switchover_timeout);
+    maxbase::Duration time_limit(m_settings.shared.switchover_timeout);
     GeneralOpData op(OpStart::AUTO, dummy, time_limit);
 
     ServerArray joinable_servers;
