@@ -3646,7 +3646,7 @@ In addition there is an `os` object that contains what the Linux command `uname`
 
 If `threads` has not been specified at all in the MaxScale configuration file,
 or if its value is `auto`, then MaxScale will use as many routing threads as
-there are physical cores on the machine. This is the right choise, if MaxScale
+there are physical cores on the machine. This is the right choice, if MaxScale
 is running on a dedicated machine or in a container that has not been restriced
 in any way.
 
@@ -3658,7 +3658,7 @@ is appropriate in the environment where it is running.
 If `machine.cores_virtual` is less than `machine.cores_physical`, then `threads`
 should be specified explicitly in the MaxScale configuration file and its value
 should be that of `machine.cores_virtual` rounded up to the nearest integer. If
-that value is `1` it may be benefitial to check whether `2` gives better performance.
+that value is `1` it may be beneficial to check whether `2` gives better performance.
 
 #### `query_classifier_cache_size`
 
