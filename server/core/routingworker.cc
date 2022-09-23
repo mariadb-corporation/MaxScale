@@ -428,6 +428,11 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
     return m_sessions;
 }
 
+const RoutingWorker::SessionsById& RoutingWorker::session_registry() const
+{
+    return m_sessions;
+}
+
 void RoutingWorker::destroy(DCB* pDcb)
 {
     mxb_assert(pDcb->owner() == this);
@@ -1855,36 +1860,8 @@ public:
         mxb_assert(rworker.is_current());
 
         json_t* pStats = json_object();
-        const Worker::STATISTICS& s = rworker.statistics();
-        json_object_set_new(pStats, "reads", json_integer(s.n_read));
-        json_object_set_new(pStats, "writes", json_integer(s.n_write));
-        json_object_set_new(pStats, "errors", json_integer(s.n_error));
-        json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
-        json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
-        json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
-        json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
-        json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
-        json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
 
-        int64_t nCurrent = rworker.current_fd_count();
-        int64_t nTotal = rworker.total_fd_count();
-        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
-        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
-
-        json_t* load = json_object();
-        json_object_set_new(load, "last_second", json_integer(rworker.load(Worker::Load::ONE_SECOND)));
-        json_object_set_new(load, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
-        json_object_set_new(load, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
-        json_object_set_new(pStats, "load", load);
-
-        json_t* qc = qc_get_cache_stats_as_json();
-
-        if (qc)
-        {
-            json_object_set_new(pStats, "query_classifier_cache", qc);
-        }
-
-        json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
+        add_general_info(rworker, pStats);
 
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
@@ -1920,6 +1897,38 @@ public:
         stringstream self;
         self << MXS_JSON_API_THREADS << index;
         return mxs_json_resource(m_zHost, self.str().c_str(), m_data[index]);
+    }
+
+private:
+    static void add_general_info(const RoutingWorker& rworker, json_t* pStats)
+    {
+        const Worker::STATISTICS& s = rworker.statistics();
+
+        json_object_set_new(pStats, "reads", json_integer(s.n_read));
+        json_object_set_new(pStats, "writes", json_integer(s.n_write));
+        json_object_set_new(pStats, "errors", json_integer(s.n_error));
+        json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
+        json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
+        json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
+        json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
+        json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
+        json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
+
+        int64_t nCurrent = rworker.current_fd_count();
+        int64_t nTotal = rworker.total_fd_count();
+        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
+        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
+
+        json_t* pLoad = json_object();
+        json_object_set_new(pLoad, "last_second", json_integer(rworker.load(Worker::Load::ONE_SECOND)));
+        json_object_set_new(pLoad, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
+        json_object_set_new(pLoad, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
+
+        json_object_set_new(pStats, "load", pLoad);
+
+        json_object_set_new(pStats, "query_classifier_cache", qc_get_cache_stats_as_json());
+
+        json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
     }
 
 private:

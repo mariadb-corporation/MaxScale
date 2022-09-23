@@ -104,6 +104,8 @@ public:
      */
     SessionsById& session_registry();
 
+    const SessionsById& session_registry() const;
+
     /**
      * Add a session to the current routing worker's session container.
      *
