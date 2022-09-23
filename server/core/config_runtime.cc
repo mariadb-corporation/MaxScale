@@ -482,6 +482,40 @@ bool is_valid_integer(const char* value)
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
 }
 
+/**
+ * Check if the value is a non-empty JSON string
+ *
+ * @param json Value to check
+ * @param path JSON Pointer to the value
+ *
+ * @return True if the value pointed to by `path` is a non-empty JSON string
+ */
+bool is_valid_string(json_t* json, const char* path)
+{
+    bool ok = false;
+    json_t* val = mxs_json_pointer(json, path);
+
+    if (!val)
+    {
+        MXS_ERROR("Request body does not define the '%s' field.", path);
+    }
+    else if (!json_is_string(val))
+    {
+        MXS_ERROR("The '%s' field is not a string.", path);
+    }
+    else if (json_string_length(val) == 0)
+    {
+        MXS_ERROR("Value '%s' is empty.", path);
+    }
+    else
+    {
+        ok = true;
+    }
+
+    return ok;
+}
+
+
 bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
                                    const mxs::ConfigParameters* params)
 {
@@ -1408,29 +1442,24 @@ bool validate_listener_json(json_t* json)
     bool rval = false;
     json_t* param;
 
-    if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
+    if (is_valid_string(json, MXS_JSON_PTR_ID))
     {
-        MXS_ERROR("Value not found: '%s'", MXS_JSON_PTR_ID);
-    }
-    else if (!json_is_string(param))
-    {
-        MXS_ERROR("Value '%s' is not a string", MXS_JSON_PTR_ID);
-    }
-    else if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
-    {
-        MXS_ERROR("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
-    }
-    else if (!json_is_object(param))
-    {
-        MXS_ERROR("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
-    }
-    else if (runtime_is_count_or_null(param, CN_PORT)
-             && runtime_is_string_or_null(param, CN_ADDRESS)
-             && runtime_is_string_or_null(param, CN_AUTHENTICATOR)
-             && runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS)
-             && (!have_ssl_json(param) || validate_ssl_json(param, OT_LISTENER)))
-    {
-        rval = true;
+        if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
+        {
+            MXS_ERROR("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
+        }
+        else if (!json_is_object(param))
+        {
+            MXS_ERROR("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
+        }
+        else if (runtime_is_count_or_null(param, CN_PORT)
+                 && runtime_is_string_or_null(param, CN_ADDRESS)
+                 && runtime_is_string_or_null(param, CN_AUTHENTICATOR)
+                 && runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS)
+                 && (!have_ssl_json(param) || validate_ssl_json(param, OT_LISTENER)))
+        {
+            rval = true;
+        }
     }
 
     return rval;
@@ -1439,63 +1468,34 @@ bool validate_listener_json(json_t* json)
 bool validate_user_json(json_t* json)
 {
     bool rval = false;
-    json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
-    json_t* type = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
-    json_t* password = mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD);
-    json_t* account = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
 
-    if (!id)
+    if (is_valid_string(json, MXS_JSON_PTR_ID)
+        && is_valid_string(json, MXS_JSON_PTR_TYPE)
+        && is_valid_string(json, MXS_JSON_PTR_PASSWORD)
+        && is_valid_string(json, MXS_JSON_PTR_ACCOUNT))
     {
-        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
-    }
-    else if (!json_is_string(id))
-    {
-        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_ID);
-    }
-    else if (!type)
-    {
-        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
-    }
-    else if (!json_is_string(type))
-    {
-        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
-    }
-    else if (!account)
-    {
-        MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
-    }
-    else if (!json_is_string(account))
-    {
-        MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
-    }
-    else if (json_to_account_type(account) == mxs::USER_ACCOUNT_UNKNOWN)
-    {
-        MXS_ERROR("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
-    }
-    else
-    {
-        if (strcmp(json_string_value(type), CN_INET) == 0)
+        json_t* account = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
+
+        if (json_to_account_type(account) == mxs::USER_ACCOUNT_UNKNOWN)
         {
-            if (!password)
-            {
-                MXS_ERROR("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
-            }
-            else if (!json_is_string(password))
-            {
-                MXS_ERROR("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
-            }
-            else
-            {
-                rval = true;
-            }
-        }
-        else if (strcmp(json_string_value(type), CN_UNIX) == 0)
-        {
-            rval = true;
+            MXS_ERROR("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
         }
         else
         {
-            MXS_ERROR("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE, json_string_value(type));
+            json_t* type  = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
+
+            if (strcmp(json_string_value(type), CN_INET) == 0)
+            {
+                rval = true;
+            }
+            else if (strcmp(json_string_value(type), CN_UNIX) == 0)
+            {
+                rval = true;
+            }
+            else
+            {
+                MXS_ERROR("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE, json_string_value(type));
+            }
         }
     }
 
@@ -1574,8 +1574,8 @@ bool validate_service_json(json_t* json)
 bool validate_create_service_json(json_t* json)
 {
     return validate_service_json(json)
-           && mxs_json_pointer(json, MXS_JSON_PTR_ID)
-           && mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
+           && is_valid_string(json, MXS_JSON_PTR_ID)
+           && is_valid_string(json, MXS_JSON_PTR_ROUTER);
 }
 
 bool ignored_core_parameters(const char* key)
