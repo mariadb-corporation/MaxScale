@@ -158,6 +158,11 @@ describe("Create/Destroy Commands", function () {
     return doCommand("destroy user testuser");
   });
 
+  it("create user with numbers as a name", function () {
+    return verifyCommand("create user 1234 1234", "users/inet/1234")
+      .then(() => doCommand("destroy user 1234"))
+  });
+
   it("create admin user", function () {
     return verifyCommand("create user testadmin test --type=admin", "users/inet/testadmin").then((res) => {
       res.data.attributes.account.should.equal("admin");
