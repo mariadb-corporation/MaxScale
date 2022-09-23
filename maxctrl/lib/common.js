@@ -199,7 +199,14 @@ async function getTransposedCollection(host, resource, fields) {
   var table = getTable([]);
 
   for (var i = 0; i < fields.length; i++) {
-    var row = [colors.cyan(fields[i].name)].concat(arr.map((v) => v[i]));
+    var values = arr.map((v) => v[i]);
+    if (i == 0) {
+      values.push('Total');
+    } else {
+      var sum = values.reduce((accumulator, value) => accumulator + value, 0);
+      values.push(sum);
+    }
+    var row = [colors.cyan(fields[i].name)].concat(values);
     table.push(row);
   }
 
