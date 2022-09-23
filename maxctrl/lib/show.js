@@ -519,6 +519,11 @@ const thread_fields = [
     description:
       "How many times a query classification result was evicted from the query classification cache",
   },
+  {
+    name: "Sessions",
+    path: "attributes.stats.sessions",
+    description: "The current number of sessions",
+  }
 ];
 
 const show_maxscale_fields = [

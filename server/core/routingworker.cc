@@ -1884,6 +1884,8 @@ public:
             json_object_set_new(pStats, "query_classifier_cache", qc);
         }
 
+        json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
+
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
 
