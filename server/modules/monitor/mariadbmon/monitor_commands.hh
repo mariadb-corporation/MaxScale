@@ -146,6 +146,7 @@ private:
     enum class State
     {
         INIT,
+        TEST_DATALINK,
         SERVE_BACKUP,
         PREPARE_TARGET,
         START_TRANSFER,
@@ -163,6 +164,7 @@ private:
     Result m_result;
 
     bool init();
+    void test_datalink();
     bool serve_backup();
     bool prepare_target();
     bool start_transfer();
