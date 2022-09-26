@@ -280,7 +280,7 @@ function syncStateCreator(namespace) {
                 query_txt: '',
                 curr_ddl_alter_spec: '',
                 /**
-                 * holds these properties:
+                 * has these properties:
                  * txt?: string: txt content of the blob file
                  * file_handle?: FileSystemFileHandle. File handle.
                  */
@@ -297,7 +297,7 @@ function syncStateCreator(namespace) {
         case 'queryConn':
             return {
                 /**
-                 * holds these properties:
+                 * has these properties:
                  * id?: string. sql connection id.
                  * attributes?: object. connection attributes.
                  * name?: string. Connection name. e.g. server_0
@@ -382,12 +382,12 @@ function memStateCreator(namespace) {
         case 'queryConn':
             return {
                 /**
-                 * each key holds these properties:
+                 * each state has these properties:
                  * value?: boolean
                  */
                 is_conn_busy_map: {},
                 /**
-                 * each key holds these properties:
+                 * each state has these properties:
                  * value?: object
                  */
                 lost_cnn_err_msg_obj_map: {},
@@ -395,17 +395,19 @@ function memStateCreator(namespace) {
         case 'queryResult':
             return {
                 /**
-                 * each key holds these properties:
+                 * prvw_data_map, prvw_data_details_map and query_results_map has these properties:
                  * request_sent_time?: number
                  * total_duration?: number
                  * is_loading?: boolean,
                  * data? object
+                 * query_results_map has another property called `abort_controller` which is used to
+                 * abort the running query
                  */
                 prvw_data_map: {},
                 prvw_data_details_map: {},
                 query_results_map: {},
                 /**
-                 * each key holds these properties:
+                 * each state has these properties:
                  * value?: boolean
                  */
                 is_stopping_query_map: {},
@@ -413,7 +415,7 @@ function memStateCreator(namespace) {
         case 'schemaSidebar':
             return {
                 /**
-                 * each key holds these properties:
+                 * each state has these properties:
                  * loading_db_tree?: boolean
                  * db_completion_list?: array,
                  * data? array. Contains schemas array
@@ -423,7 +425,7 @@ function memStateCreator(namespace) {
                  */
                 db_tree_map: {},
                 /**
-                 * each key holds these properties:
+                 * each state has these properties:
                  * data? object. Contains res.data.data.attributes of a query
                  * stmt_err_msg_obj? object.
                  * result?: array. error msg array.
