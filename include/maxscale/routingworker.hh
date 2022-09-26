@@ -46,6 +46,8 @@ class RoutingWorker : public mxb::WatchedWorker
     RoutingWorker& operator=(const RoutingWorker&) = delete;
 
 public:
+    class InfoTask;
+
     enum
     {
         FIRST = -1 // Shorthand for first created RoutingWorker, for testing purposes.

@@ -1838,17 +1838,11 @@ void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
     times_found += rhs.times_found;
     times_empty += rhs.times_empty;
 }
-}
 
-namespace
-{
-
-using namespace maxscale;
-
-class WorkerInfoTask : public Worker::Task
+class RoutingWorker::InfoTask : public Worker::Task
 {
 public:
-    WorkerInfoTask(const char* zHost, uint32_t nThreads)
+    InfoTask(const char* zHost, uint32_t nThreads)
         : m_zHost(zHost)
     {
         m_data.resize(nThreads);
@@ -1862,6 +1856,7 @@ public:
         json_t* pStats = json_object();
 
         add_general_info(rworker, pStats);
+        add_memory_info(rworker, pStats);
 
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
@@ -1929,12 +1924,52 @@ private:
         json_object_set_new(pStats, "query_classifier_cache", qc_get_cache_stats_as_json());
 
         json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
+        json_object_set_new(pStats, "zombies", json_integer(rworker.m_zombies.size()));
+    }
+
+    void add_memory_info(const RoutingWorker& rworker, json_t* pStats)
+    {
+        json_t* pMemory = json_object();
+
+        int64_t total_size = 0;
+
+        QC_CACHE_STATS qc;
+        if (qc_get_cache_stats(&qc))
+        {
+            json_object_set_new(pMemory, "query_classifier", json_integer(qc.size));
+            total_size += qc.size;
+        }
+
+        int64_t zombies_size = 0;
+        for (const DCB* pZombie : rworker.m_zombies)
+        {
+            zombies_size += pZombie->runtime_size();
+        }
+        json_object_set_new(pMemory, "zombies", json_integer(zombies_size));
+        total_size += zombies_size;
+
+        int64_t sessions_size = 0;
+        const Registry<MXS_SESSION>& sessions = rworker.session_registry();
+        for (const auto& kv : sessions)
+        {
+            sessions_size += kv.second->varying_size();
+        }
+        json_object_set_new(pMemory, "sessions", json_integer(sessions_size));
+        total_size += sessions_size;
+
+        json_object_set_new(pMemory, "total", json_integer(total_size));
+
+        json_object_set_new(pStats, "memory", pMemory);
     }
 
 private:
     vector<json_t*> m_data;
     const char*     m_zHost;
 };
+}
+
+namespace
+{
 
 class FunctionTask : public Worker::DisposableTask
 {
@@ -1957,7 +1992,7 @@ protected:
 json_t* mxs_rworker_to_json(const char* zHost, int index)
 {
     Worker* target = RoutingWorker::get_by_index(index);
-    WorkerInfoTask task(zHost, index + 1);
+    RoutingWorker::InfoTask task(zHost, index + 1);
     Semaphore sem;
 
     target->execute(&task, &sem, Worker::EXECUTE_AUTO);
@@ -1968,7 +2003,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 
 json_t* mxs_rworker_list_to_json(const char* host)
 {
-    WorkerInfoTask task(host, this_unit.nWorkers);
+    RoutingWorker::InfoTask task(host, this_unit.nWorkers);
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }
