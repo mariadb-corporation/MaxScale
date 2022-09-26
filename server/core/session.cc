@@ -204,53 +204,16 @@ mxb::Json Session::get_memory_statistics() const
 {
     mxb::Json memory;
 
-    size_t total = 0;
+    size_t connection_buffers;
+    size_t last_queries;
+    size_t variables;
 
-    //
-    // connection_buffers
-    //
-    size_t connection_buffers = 0;
-    mxb_assert(m_client_conn);
-    connection_buffers += m_client_conn->sizeof_buffers();
-
-    for (const auto* conn : m_backends_conns)
-    {
-        connection_buffers += conn->sizeof_buffers();
-    }
+    size_t total = get_memory_statistics(&connection_buffers, &last_queries, &variables);
 
     memory.set_int("connection_buffers", connection_buffers);
-    total += connection_buffers;
-
-    //
-    // last_queries
-    //
-    size_t last_queries = 0;
-
-    for (const auto& qi : m_last_queries)
-    {
-        last_queries += qi.runtime_size();
-    }
-
     memory.set_int("last_queries", last_queries);
-    total += last_queries;
-
-    //
-    // variables
-    //
-    size_t variables = 0;
-
-    for (const auto& kv : m_variables)
-    {
-        variables += sizeof(kv);
-        variables += kv.first.capacity();
-    }
-
     memory.set_int("variables", variables);
-    total += variables;
 
-    //
-    // protocol data
-    //
     const auto* p = protocol_data();
 
     if (p)
@@ -258,12 +221,71 @@ mxb::Json Session::get_memory_statistics() const
         total += p->amend_memory_statistics(memory.get_json());
     }
 
-    //
-    // total
-    //
     memory.set_int("total", total);
 
     return memory;
+}
+
+size_t Session::static_size() const
+{
+    return sizeof(*this);
+}
+
+size_t Session::varying_size() const
+{
+    size_t total = get_memory_statistics(nullptr, nullptr, nullptr);
+
+    const auto* p = protocol_data();
+
+    if (p)
+    {
+        total += p->runtime_size();
+    }
+
+    return total;
+}
+
+size_t Session::get_memory_statistics(size_t* connection_buffers_size,
+                                      size_t* last_queries_size,
+                                      size_t* variables_size) const
+{
+    size_t connection_buffers = 0;
+    mxb_assert(m_client_conn);
+    connection_buffers += m_client_conn->sizeof_buffers();
+    for (const auto* conn : m_backends_conns)
+    {
+        connection_buffers += conn->sizeof_buffers();
+    }
+
+    size_t last_queries = 0;
+    for (const auto& qi : m_last_queries)
+    {
+        last_queries += qi.runtime_size();
+    }
+
+    size_t variables = 0;
+    for (const auto& kv : m_variables)
+    {
+        variables += sizeof(kv);
+        variables += kv.first.capacity();
+    }
+
+    if (connection_buffers_size)
+    {
+        *connection_buffers_size = connection_buffers;
+    }
+
+    if (last_queries_size)
+    {
+        *last_queries_size = last_queries;
+    }
+
+    if (variables_size)
+    {
+        *variables_size = variables;
+    }
+
+    return connection_buffers + last_queries + variables;
 }
 
 void Session::deliver_response()

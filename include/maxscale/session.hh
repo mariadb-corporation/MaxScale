@@ -426,6 +426,38 @@ public:
      */
     void delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn);
 
+    /**
+     * Returns memory statistics of the session.
+     *
+     * @return Memory statistics.
+     */
+    virtual mxb::Json get_memory_statistics() const = 0;
+
+    /**
+     * Returns the static size of the instance, i.e. sizeof(*this) of the most
+     * derived class.
+     *
+     * @return The static size.
+     */
+    virtual size_t static_size() const = 0;
+
+    /**
+     * Returns the current size of the varying part of the instance.
+     *
+     * @return The varying size.
+     */
+    virtual size_t varying_size() const = 0;
+
+    /**
+     * Returns the runtime size of the instance; i.e. the static size + the varying size.
+     *
+     * @return The runtime size.
+     */
+    size_t runtime_size() const
+    {
+        return static_size() + varying_size();
+    }
+
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
