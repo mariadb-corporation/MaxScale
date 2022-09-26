@@ -141,8 +141,8 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 // If the KILL command was sent for the query is being run, the query request is aborted/canceled
-                if (getters.getIsStoppingQueryBySessionId(active_session_id)) {
-                    commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                if (getters.getHasKillFlagMapBySessionId(active_session_id)) {
+                    commit('PATCH_HAS_KILL_FLAG_MAP', {
                         id: active_session_id,
                         payload: { value: false },
                     })
@@ -205,7 +205,7 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
-                commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                commit('PATCH_HAS_KILL_FLAG_MAP', {
                     id: active_session_id,
                     payload: { value: true },
                 })
@@ -283,9 +283,9 @@ export default {
                 return isLoading
             }
         },
-        getIsStoppingQueryBySessionId: state => {
+        getHasKillFlagMapBySessionId: state => {
             return session_id => {
-                const { value = false } = state.is_stopping_query_map[session_id] || {}
+                const { value = false } = state.has_kill_flag_map[session_id] || {}
                 return value
             }
         },

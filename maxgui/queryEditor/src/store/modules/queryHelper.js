@@ -410,7 +410,7 @@ function memStateCreator(namespace) {
                  * each state has these properties:
                  * value?: boolean
                  */
-                is_stopping_query_map: {},
+                has_kill_flag_map: {},
             }
         case 'schemaSidebar':
             return {

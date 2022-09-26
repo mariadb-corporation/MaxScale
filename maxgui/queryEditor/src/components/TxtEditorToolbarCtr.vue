@@ -7,8 +7,8 @@
             :btnClass="['toolbar-square-btn', isExecuting ? 'stop-btn' : 'run-btn']"
             text
             color="accent-dark"
-            :disabled="isExecuting ? isStopping : isRunBtnDisabled"
-            :loading="isStopping"
+            :disabled="isExecuting ? hasKillFlag : isRunBtnDisabled"
+            :loading="hasKillFlag"
             @click="
                 () =>
                     isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
@@ -200,7 +200,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
-            getIsStoppingQueryBySessionId: 'queryResult/getIsStoppingQueryBySessionId',
+            getHasKillFlagMapBySessionId: 'queryResult/getHasKillFlagMapBySessionId',
             getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
             getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
         }),
@@ -218,8 +218,8 @@ export default {
         isExecuting() {
             return this.getLoadingQueryResultBySessionId(this.session.id)
         },
-        isStopping() {
-            return this.getIsStoppingQueryBySessionId(this.session.id)
+        hasKillFlag() {
+            return this.getHasKillFlagMapBySessionId(this.session.id)
         },
         isRunBtnDisabled() {
             return this.getIsRunBtnDisabledBySessionId(this.session.id)
