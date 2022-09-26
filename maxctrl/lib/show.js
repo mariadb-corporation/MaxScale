@@ -523,7 +523,17 @@ const thread_fields = [
     name: "Sessions",
     path: "attributes.stats.sessions",
     description: "The current number of sessions",
-  }
+  },
+  {
+    name: "Zombies",
+    path: "attributes.stats.zombies",
+    description: "The current number of zombie connections, waiting to be discarded",
+  },
+  {
+    name: "Memory",
+    path: "attributes.stats.memory.total",
+    description: "The current (partial) memory usage",
+  },
 ];
 
 const show_maxscale_fields = [
