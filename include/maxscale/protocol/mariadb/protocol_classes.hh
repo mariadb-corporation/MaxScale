@@ -244,7 +244,11 @@ public:
      */
     bool is_trx_ending() const override;
 
-    size_t amend_memory_statistics(json_t* memory) const override;
+    size_t amend_memory_statistics(json_t* memory) const override final;
+
+    size_t static_size() const override final;
+
+    size_t varying_size() const override final;
 
     /**
      * Sets the capabilities required by the client protocol, to be used by the
@@ -268,5 +272,7 @@ public:
     }
 
 private:
+    size_t get_size(size_t* sescmd_history_size, size_t* exec_metadata_size) const;
+
     uint64_t m_client_protocol_capabilities {0};
 };
