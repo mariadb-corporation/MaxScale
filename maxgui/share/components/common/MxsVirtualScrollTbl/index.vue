@@ -66,91 +66,29 @@
                     :showSelect="showSelect"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 />
-                <div
+                <horiz-row
                     v-else
-                    class="tr"
-                    :class="{
-                        'tr--selected': isRowSelected(row),
-                        'tr--active': $helpers.lodash.isEqual(activeRow, row),
-                    }"
-                    :style="{ lineHeight }"
+                    :row="row"
+                    :rowIdx="rowIdx"
+                    :selectedTblRows.sync="selectedTblRows"
+                    :areHeadersHidden="areHeadersHidden"
+                    :tableHeaders="tableHeaders"
+                    :lineHeight="lineHeight"
+                    :showSelect="showSelect"
+                    :activeGroupBy="activeGroupBy"
+                    :activeRow="activeRow"
+                    :genActivatorID="genActivatorID"
+                    :headerWidthMap="headerWidthMap"
+                    :cellContentWidthMap="cellContentWidthMap"
+                    :draggableCell="draggableCell"
+                    :lastVisHeader="lastVisHeader"
+                    @mousedown="onCellDragStart"
+                    v-on="$listeners"
                 >
-                    <div
-                        v-if="!areHeadersHidden && showSelect"
-                        class="td d-flex align-center justify-center"
-                        :style="{
-                            height: lineHeight,
-                            maxWidth: activeGroupBy ? '82px' : '50px',
-                            minWidth: activeGroupBy ? '82px' : '50px',
-                        }"
-                    >
-                        <v-checkbox
-                            :input-value="isRowSelected(row)"
-                            dense
-                            class="v-checkbox--scale-reduce ma-0 pa-0"
-                            primary
-                            hide-details
-                            @change="
-                                val =>
-                                    val
-                                        ? selectedTblRows.push(row)
-                                        : selectedTblRows.splice(getSelectedRowIdx(row), 1)
-                            "
-                        />
-                    </div>
-                    <template v-for="(h, colIdx) in tableHeaders">
-                        <!-- dependency keys to force a rerender -->
-                        <div
-                            v-if="!h.hidden"
-                            :id="genActivatorID(`${rowIdx}-${colIdx}`)"
-                            :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
-                            class="td px-3"
-                            :class="{
-                                'cursor--grab no-userSelect': draggableCell && h.draggable,
-                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
-                            }"
-                            :style="{
-                                height: lineHeight,
-                                minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
-                            }"
-                            v-on="
-                                draggableCell && h.draggable
-                                    ? { mousedown: e => onCellDragStart(e) }
-                                    : null
-                            "
-                            @contextmenu.prevent="
-                                e =>
-                                    $emit('on-cell-right-click', {
-                                        e,
-                                        row,
-                                        cell: row[colIdx],
-                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                                    })
-                            "
-                        >
-                            <!-- cell slot -->
-                            <slot
-                                :name="h.text"
-                                :data="{
-                                    rowData: row,
-                                    cell: row[colIdx],
-                                    header: h,
-                                    maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
-                                    rowIdx: rowIdx,
-                                    colIdx,
-                                    activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                                }"
-                            >
-                                <mxs-truncate-str
-                                    :tooltipItem="{
-                                        txt: `${row[colIdx]}`,
-                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                                    }"
-                                />
-                            </slot>
-                        </div>
+                    <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                        <slot :name="slot" v-bind="props" />
                     </template>
-                </div>
+                </horiz-row>
             </template>
         </v-virtual-scroll>
         <div v-else class="tr" :style="{ lineHeight, height: `${maxTbodyHeight}px` }">
@@ -185,6 +123,7 @@ Emit when the header has groupable and hasCustomGroup keys.
 */
 import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
+import HorizRow from './HorizRow.vue'
 import RowGroup from './RowGroup.vue'
 import customDragEvt from '@share/mixins/customDragEvt'
 export default {
@@ -192,6 +131,7 @@ export default {
     components: {
         TableHeader,
         VerticalRow,
+        HorizRow,
         RowGroup,
     },
     mixins: [customDragEvt],
@@ -264,7 +204,7 @@ export default {
         initialRowsLength() {
             return this.rows.length
         },
-        // indicates the number of current rows (rows after being filtered), excluding rows group
+        // indicates the number of current rows (rows after being filtered), excluding row group objects
         curr2dRowsLength() {
             return this.currRows.filter(row => !this.isRowGroup(row)).length
         },
@@ -354,8 +294,8 @@ export default {
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
-
         genActivatorID: id => `activator_id-${id}`,
+        //SORT FEAT
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc
@@ -364,7 +304,6 @@ export default {
             this.idxOfSortingCol = this.tableHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
-
         /**
          * @param {Array} rows - 2d array to be sorted
          */
@@ -374,7 +313,7 @@ export default {
                 else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
             })
         },
-
+        // GROUP feat
         /** This groups 2d array with same value at provided index to a Map
          * @param {Array} payload.rows - 2d array to be grouped into a Map
          * @param {Number} payload.idx - col index of the inner array
@@ -390,7 +329,6 @@ export default {
             })
             return map
         },
-
         handleGroupRows(rows) {
             let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
             if (this.headers[this.idxOfGroupCol].hasCustomGroup) {
@@ -413,7 +351,6 @@ export default {
             }
             return groupRows
         },
-
         /**
          * @param {String} activeGroupBy - header name
          */
@@ -422,7 +359,6 @@ export default {
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
             this.$emit('is-grouping', Boolean(activeGroupBy))
         },
-
         /**
          * @param {Object|Array} row - row to check
          * @returns {Boolean} - return whether this is a group row or not
@@ -430,10 +366,10 @@ export default {
         isRowGroup(row) {
             return this.$typy(row).isObject
         },
-
         /**
+         *  If provided row is found in collapsedRowGroups data, it's collapsed
          * @param {Object} row - row group object
-         * @returns {Boolean} - return true if it is found in collapsedRowGroups data
+         * @returns {Boolean} - return true if it is collapsed
          */
         isRowGroupCollapsed(row) {
             const targetIdx = this.collapsedRowGroups.findIndex(r =>
@@ -441,15 +377,15 @@ export default {
             )
             return targetIdx === -1 ? false : true
         },
-
         /**
-         * @param {Array} groupRows - rows that have been grouped
-         * @returns {Array} - filtered rows by collapsedRowGroups values
+         * Filter out rows that have been collapsed by collapsedRowGroups
+         * @param {Array} tableRows - tableRows
+         * @returns {Array} - filtered rows
          */
-        handleFilterGroupRows(groupRows) {
+        handleFilterGroupRows(tableRows) {
             let hiddenRowIdxs = []
             if (this.collapsedRowGroups.length) {
-                for (const [i, r] of groupRows.entries()) {
+                for (const [i, r] of tableRows.entries()) {
                     if (this.isRowGroupCollapsed(r)) {
                         hiddenRowIdxs = [
                             ...hiddenRowIdxs,
@@ -460,25 +396,9 @@ export default {
                     }
                 }
             }
-            return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
+            return tableRows.filter((_, i) => !hiddenRowIdxs.includes(i))
         },
-
-        /**
-         * @param {Array} row - row array
-         * @returns {Number} - returns index of row array in selectedTblRows
-         */
-        getSelectedRowIdx(row) {
-            return this.selectedTblRows.findIndex(ele => this.$helpers.lodash.isEqual(ele, row))
-        },
-
-        /**
-         * @param {Array} row - row array
-         * @returns {Boolean} - returns true if row is found in selectedTblRows
-         */
-        isRowSelected(row) {
-            return this.getSelectedRowIdx(row) === -1 ? false : true
-        },
-
+        // SELECT feat
         /**
          * @param {Boolean} v - is row selected
          */
@@ -492,7 +412,7 @@ export default {
                 this.selectedGroupRows = []
             }
         },
-
+        // DRAG feat
         onCellDragStart(e) {
             e.preventDefault()
             // Assign value to data in customDragEvt mixin

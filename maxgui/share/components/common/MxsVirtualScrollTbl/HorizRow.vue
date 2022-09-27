@@ -1,0 +1,150 @@
+<template>
+    <div
+        class="tr"
+        :class="{
+            'tr--selected': isRowSelected(row),
+            'tr--active': $helpers.lodash.isEqual(activeRow, row),
+        }"
+        :style="{ lineHeight }"
+    >
+        <div
+            v-if="!areHeadersHidden && showSelect"
+            class="td d-flex align-center justify-center"
+            :style="{
+                height: lineHeight,
+                maxWidth: activeGroupBy ? '82px' : '50px',
+                minWidth: activeGroupBy ? '82px' : '50px',
+            }"
+        >
+            <v-checkbox
+                :input-value="isRowSelected(row)"
+                dense
+                class="v-checkbox--scale-reduce ma-0 pa-0"
+                primary
+                hide-details
+                @change="
+                    val =>
+                        val
+                            ? selectedRows.push(row)
+                            : selectedRows.splice(getSelectedRowIdx(row), 1)
+                "
+            />
+        </div>
+        <template v-for="(h, colIdx) in tableHeaders">
+            <!-- dependency keys to force a rerender -->
+            <div
+                v-if="!h.hidden"
+                :id="genActivatorID(`${rowIdx}-${colIdx}`)"
+                :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
+                class="td px-3"
+                :class="{
+                    'cursor--grab no-userSelect': draggableCell && h.draggable,
+                    'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
+                }"
+                :style="{
+                    height: lineHeight,
+                    minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
+                }"
+                v-on="
+                    draggableCell && h.draggable ? { mousedown: e => $emit('mousedown', e) } : null
+                "
+                @contextmenu.prevent="
+                    e =>
+                        $emit('on-cell-right-click', {
+                            e,
+                            row,
+                            cell: row[colIdx],
+                            activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                        })
+                "
+            >
+                <!-- cell slot -->
+                <slot
+                    :name="h.text"
+                    :data="{
+                        rowData: row,
+                        cell: row[colIdx],
+                        header: h,
+                        maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
+                        rowIdx: rowIdx,
+                        colIdx,
+                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                    }"
+                >
+                    <mxs-truncate-str
+                        :tooltipItem="{
+                            txt: `${row[colIdx]}`,
+                            activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                        }"
+                    />
+                </slot>
+            </div>
+        </template>
+    </div>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-09-06
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+/*
+@on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
+Emit when the header has groupable and hasCustomGroup keys.
+@on-ungroup
+*/
+export default {
+    name: 'horiz-row',
+    props: {
+        row: { type: [Array, Object], required: true },
+        rowIdx: { type: Number, required: true },
+        selectedTblRows: { type: Array, required: true }, //sync
+        areHeadersHidden: { type: Boolean, required: true },
+        tableHeaders: { type: Array, required: true },
+        lineHeight: { type: String, required: true },
+        showSelect: { type: Boolean, required: true },
+        activeGroupBy: { type: String, required: true },
+        activeRow: { type: [Array, Object], required: true },
+        genActivatorID: { type: Function, required: true },
+        headerWidthMap: { type: Object, required: true },
+        cellContentWidthMap: { type: Object, required: true },
+        draggableCell: { type: Boolean, default: true },
+        lastVisHeader: { type: Object, required: true },
+    },
+    computed: {
+        selectedRows: {
+            get() {
+                return this.selectedTblRows
+            },
+            set(value) {
+                this.$emit('update:selectedTblRows', value)
+            },
+        },
+    },
+    methods: {
+        // SELECT feat
+        /**
+         * @param {Array} row - row array
+         * @returns {Number} - returns index of row array in selectedRows
+         */
+        getSelectedRowIdx(row) {
+            return this.selectedRows.findIndex(ele => this.$helpers.lodash.isEqual(ele, row))
+        },
+        /**
+         * @param {Array} row - row array
+         * @returns {Boolean} - returns true if row is found in selectedTblRows
+         */
+        isRowSelected(row) {
+            return this.getSelectedRowIdx(row) === -1 ? false : true
+        },
+    },
+}
+</script>
