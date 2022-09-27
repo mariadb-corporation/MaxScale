@@ -38,16 +38,14 @@
                 :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
                 class="td px-3"
                 :class="{
-                    'cursor--grab no-userSelect': draggableCell && h.draggable,
+                    [draggableClass]: isCellDraggable(h),
                     'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
                 }"
                 :style="{
                     height: lineHeight,
                     minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
                 }"
-                v-on="
-                    draggableCell && h.draggable ? { mousedown: e => $emit('mousedown', e) } : null
-                "
+                v-on="isCellDraggable(h) ? { mousedown: e => $emit('mousedown', e) } : null"
                 @contextmenu.prevent="
                     e =>
                         $emit('on-cell-right-click', {
@@ -69,9 +67,11 @@
                         rowIdx: rowIdx,
                         colIdx,
                         activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                        isDragging,
                     }"
                 >
                     <mxs-truncate-str
+                        :disabled="isDragging"
                         :tooltipItem="{
                             txt: `${row[colIdx]}`,
                             activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
@@ -116,8 +116,10 @@ export default {
         genActivatorID: { type: Function, required: true },
         headerWidthMap: { type: Object, required: true },
         cellContentWidthMap: { type: Object, required: true },
-        draggableCell: { type: Boolean, default: true },
         lastVisHeader: { type: Object, required: true },
+        isDragging: { type: Boolean, default: true },
+        isCellDraggable: { type: Function, required: true },
+        draggableClass: { type: String, required: true },
     },
     computed: {
         selectedRows: {

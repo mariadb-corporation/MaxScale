@@ -10,7 +10,9 @@
                 <div
                     :id="genHeaderColID(colIdx)"
                     class="td border-bottom-none px-3"
+                    :class="{ [draggableClass]: isCellDraggable(h) }"
                     :style="headerColStyle"
+                    v-on="isCellDraggable(h) ? { mousedown: e => $emit('mousedown', e) } : null"
                     @contextmenu.prevent="
                         ctxMenuHandler({
                             e: $event,
@@ -30,6 +32,7 @@
                         }"
                     >
                         <mxs-truncate-str
+                            :disabled="isDragging"
                             :tooltipItem="{
                                 txt: `${h.text}`,
                                 activatorID: genHeaderColID(colIdx),
@@ -41,6 +44,7 @@
                 <div
                     :id="genValueColID(colIdx)"
                     class="td no-border px-3"
+                    :class="{ [draggableClass]: isCellDraggable(h) }"
                     :style="valueColStyle"
                     @contextmenu.prevent="
                         ctxMenuHandler({
@@ -61,9 +65,11 @@
                             colIdx,
                             rowIdx,
                             activatorID: genValueColID(colIdx),
+                            isDragging,
                         }"
                     >
                         <mxs-truncate-str
+                            :disabled="isDragging"
                             :tooltipItem="{
                                 txt: `${row[colIdx]}`,
                                 activatorID: genValueColID(colIdx),
@@ -117,6 +123,9 @@ export default {
         headerWidthMap: { type: Object, required: true },
         genActivatorID: { type: Function, required: true },
         cellContentWidthMap: { type: Object, required: true },
+        isDragging: { type: Boolean, default: true },
+        isCellDraggable: { type: Function, required: true },
+        draggableClass: { type: String, required: true },
     },
     computed: {
         baseColStyle() {

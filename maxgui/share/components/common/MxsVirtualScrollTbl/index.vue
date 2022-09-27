@@ -47,6 +47,10 @@
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
                     :genActivatorID="genActivatorID"
+                    :isDragging="isDragging"
+                    :isCellDraggable="isCellDraggable"
+                    :draggableClass="draggableClass"
+                    @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -80,8 +84,10 @@
                     :genActivatorID="genActivatorID"
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
-                    :draggableCell="draggableCell"
                     :lastVisHeader="lastVisHeader"
+                    :isDragging="isDragging"
+                    :isCellDraggable="isCellDraggable"
+                    :draggableClass="draggableClass"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -184,6 +190,9 @@ export default {
         },
         lineHeight() {
             return `${this.itemHeight}px`
+        },
+        draggableClass() {
+            return 'cursor--grab no-userSelect'
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
@@ -295,6 +304,9 @@ export default {
                 this.$emit('scroll-end')
         },
         genActivatorID: id => `activator_id-${id}`,
+        isCellDraggable(header) {
+            return this.draggableCell && header.draggable
+        },
         //SORT FEAT
         /**
          * @param {String} payload.sortBy  sort by header name

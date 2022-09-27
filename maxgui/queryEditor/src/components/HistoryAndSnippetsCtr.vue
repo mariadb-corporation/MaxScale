@@ -61,8 +61,9 @@
                     <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
-                    <template v-slot:date="{ data: { cell, maxWidth, activatorID } }">
+                    <template v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging } }">
                         <mxs-truncate-str
+                            :disabled="isDragging"
                             :tooltipItem="{
                                 txt: `${$helpers.dateFormat({
                                     moment: $moment,
@@ -74,11 +75,12 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-slot:action="{ data: { cell, maxWidth } }">
+                    <template v-slot:action="{ data: { cell, maxWidth, isDragging } }">
                         <v-tooltip
                             top
                             transition="slide-y-transition"
                             content-class="shadow-drop mxs-color-helper white text-navigation pa-2 pb-4"
+                            :disabled="isDragging"
                         >
                             <template v-slot:activator="{ on }">
                                 <span

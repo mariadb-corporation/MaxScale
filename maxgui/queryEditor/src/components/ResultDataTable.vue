@@ -97,17 +97,16 @@
                 @on-cell-right-click="onCellRClick"
                 v-on="$listeners"
             >
-                <template
-                    v-for="h in visibleHeaders"
-                    v-slot:[h.text]="{ data: { cell, header, maxWidth, rowData } }"
-                >
+                <template v-for="h in visibleHeaders" v-slot:[h.text]="{ data }">
                     <editable-cell
-                        v-if="isEditing && header.editableCol"
-                        :key="`${h.text}-${cell}`"
-                        :cellItem="toCellItem({ rowData, cell, colName: h.text })"
+                        v-if="isEditing && h.editableCol"
+                        :key="`${h.text}-${data.cell}`"
+                        :cellItem="
+                            toCellItem({ rowData: data.rowData, cell: data.cell, colName: h.text })
+                        "
                         :changedCells.sync="changedCells"
                     />
-                    <slot v-else :name="`${h.text}`" :data="{ cell, header, maxWidth }" />
+                    <slot v-else :name="`${h.text}`" :data="data" />
                 </template>
                 <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
                     <slot :name="`header-${h.text}`" :data="data" />
