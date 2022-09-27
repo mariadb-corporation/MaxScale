@@ -46,6 +46,7 @@ public:
 
     class Test;
     friend class Test;
+    friend class mon_op::BackupOperation;
     friend class mon_op::RebuildServer;
 
     // Weakly-typed enums since cast to integer.

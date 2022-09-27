@@ -1272,7 +1272,7 @@ bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string&
     return rval;
 }
 
-bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
+bool BackupOperation::check_rebuild_tools(const char* srvname, ssh::Session& ssh)
 {
     const char socat_cmd[] = "socat -V";
     const char pigz_cmd[] = "pigz -V";
@@ -1284,23 +1284,23 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
 
     auto& error_out = m_result.output;
     bool all_ok = true;
-    auto check = [server, &all_ok, &error_out](const ssh_util::CmdResult& res, const char* tool,
-                                               const char* cmd) {
+    auto check = [srvname, &all_ok, &error_out](const ssh_util::CmdResult& res, const char* tool,
+                                                const char* cmd) {
         if (res.type == RType::OK)
         {
             if (res.rc != 0)
             {
                 string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
-                PRINT_JSON_ERROR(error_out, "'%s' lacks '%s', which is required for server rebuild. %s",
-                                 server->name(), tool, fail_reason.c_str());
+                PRINT_JSON_ERROR(error_out, "%s lacks '%s', which is required for backup operations. %s",
+                                 srvname, tool, fail_reason.c_str());
                 all_ok = false;
             }
         }
         else
         {
             string fail_reason = ssh_util::form_cmd_error_msg(res, cmd);
-            PRINT_JSON_ERROR(error_out, "Could not check that '%s' has '%s', which is required for "
-                                        "server rebuild. %s", server->name(), tool, fail_reason.c_str());
+            PRINT_JSON_ERROR(error_out, "Could not check that %s has '%s', which is required for backup "
+                                        "operations. %s", srvname, tool, fail_reason.c_str());
             all_ok = false;
         }
     };
@@ -1311,18 +1311,17 @@ bool RebuildServer::check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh
     return all_ok;
 }
 
-bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* server)
+bool BackupOperation::check_free_listen_port(const char* srvname, ssh::Session& ses, int port)
 {
     bool success = true;
     auto& error_out = m_result.output;
 
-    auto get_port_pids = [this, &success, &ses, server, &error_out]() {
+    auto get_port_pids = [&]() {
         std::vector<int> pids;
-        // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
+        // lsof needs to be run as sudo to see ports, even from the same user. This part could be made
         // optional if users are not willing to give MaxScale sudo-privs.
         auto port_pid_cmd = mxb::string_printf("sudo lsof -n -P -i TCP:%i -s TCP:LISTEN | tr -s ' ' "
-                                               "| cut --fields=2 --delimiter=' ' | tail -n+2",
-                                               m_rebuild_port);
+                                               "| cut --fields=2 --delimiter=' ' | tail -n+2", port);
         auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, m_ssh_timeout);
         if (port_res.type == RType::OK && port_res.rc == 0)
         {
@@ -1348,7 +1347,7 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         {
             string fail_reason = ssh_util::form_cmd_error_msg(port_res, port_pid_cmd.c_str());
             PRINT_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
-                             m_rebuild_port, server->name(), fail_reason.c_str());
+                             port, srvname, fail_reason.c_str());
             success = false;
         }
         return pids;
@@ -1360,14 +1359,14 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         for (auto pid : pids)
         {
             MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.",
-                        m_rebuild_port, server->name(), pid);
+                        port, srvname, pid);
             auto kill_cmd = mxb::string_printf("kill -s SIGKILL %i", pid);
             auto kill_res = ssh_util::run_cmd(ses, kill_cmd, m_ssh_timeout);
             if (kill_res.type != RType::OK || kill_res.rc != 0)
             {
                 string fail_reason = ssh_util::form_cmd_error_msg(kill_res, kill_cmd.c_str());
                 PRINT_JSON_ERROR(error_out, "Failed to kill process %i on %s. %s",
-                                 pid, server->name(), fail_reason.c_str());
+                                 pid, srvname, fail_reason.c_str());
                 success = false;
             }
         }
@@ -1379,8 +1378,8 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
             auto pids2 = get_port_pids();
             if (success && !pids2.empty())
             {
-                PRINT_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild source.",
-                                 m_rebuild_port, server->name());
+                PRINT_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as a backup "
+                                            "source.", port, srvname);
                 success = false;
             }
         }
@@ -1412,15 +1411,32 @@ void SimpleOp::cancel()
     // any of it was ran. In any case, nothing to do.
 }
 
-RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master)
+BackupOperation::BackupOperation(MariaDBMonitor& mon)
     : m_mon(mon)
+{
+    m_ssh_timeout = m_mon.m_settings.ssh_timeout;
+}
+
+ssh_util::SSession BackupOperation::init_ssh_session(const char* name, const string& host)
+{
+    const auto& sett = m_mon.m_settings;
+    auto [ses, errmsg_con] = ssh_util::init_ssh_session(host, sett.ssh_port, sett.ssh_user, sett.ssh_keyfile,
+                                                        sett.ssh_host_check, m_ssh_timeout);
+
+    if (!ses)
+    {
+        PRINT_JSON_ERROR(m_result.output, "SSH connection to %s failed. %s", name, errmsg_con.c_str());
+    }
+    return ses;
+}
+
+RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master)
+    : BackupOperation(mon)
     , m_target_srv(target)
     , m_source_srv(source)
     , m_repl_master(master)
 {
-    const auto& sett = m_mon.m_settings;
-    m_rebuild_port = (int)sett.rebuild_port;
-    m_ssh_timeout = sett.ssh_timeout;
+    m_rebuild_port = (int)m_mon.m_settings.rebuild_port;
 }
 
 bool RebuildServer::run()
@@ -1521,37 +1537,23 @@ bool RebuildServer::init()
     if (rebuild_check_preconds())
     {
         // Ok so far. Initiate SSH-sessions to both servers.
-        auto init_ssh = [this](MariaDBServer* server) {
-            const auto& sett = m_mon.m_settings;
-            auto [ses, errmsg_con] = ssh_util::init_ssh_session(
-                server->server->address(), sett.ssh_port, sett.ssh_user, sett.ssh_keyfile,
-                sett.ssh_host_check, m_ssh_timeout);
-
-            if (!ses)
-            {
-                PRINT_JSON_ERROR(m_result.output, "SSH connection to %s failed. %s",
-                                 server->name(), errmsg_con.c_str());
-            }
-            return ses;
-        };
-
-        auto target_ses = init_ssh(m_target);
-        auto source_ses = init_ssh(m_source);
+        auto target_ses = init_ssh_session(m_target->name(), m_target->server->address());
+        auto source_ses = init_ssh_session(m_source->name(), m_source->server->address());
 
         if (target_ses && source_ses)
         {
             bool have_tools = true;
 
             // Check installed tools.
-            auto target_tools = check_rebuild_tools(m_target, *target_ses);
-            auto source_tools = check_rebuild_tools(m_source, *source_ses);
+            bool target_tools = check_rebuild_tools(m_target->name(), *target_ses);
+            bool source_tools = check_rebuild_tools(m_source->name(), *source_ses);
 
             if (target_tools && source_tools)
             {
-                if (check_free_listen_port(*source_ses, m_source))
+                if (check_free_listen_port(m_source->name(), *source_ses, m_rebuild_port))
                 {
-                    m_target_ses = move(target_ses);
-                    m_source_ses = move(source_ses);
+                    m_target_ses = std::move(target_ses);
+                    m_source_ses = std::move(source_ses);
 
                     m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
                     init_ok = true;
@@ -2100,7 +2102,7 @@ void RebuildServer::cleanup()
 
     if (m_source_ses)
     {
-        check_free_listen_port(*m_source_ses, m_source);
+        check_free_listen_port(m_source->name(), *m_source_ses, m_rebuild_port);
     }
 
     if (m_source_slaves_stopped && !m_source_slaves_old.empty())
