@@ -32,53 +32,31 @@
         </div>
         <template v-for="(h, colIdx) in tableHeaders">
             <!-- dependency keys to force a rerender -->
-            <div
+            <table-cell
                 v-if="!h.hidden"
-                :id="genActivatorID(`${rowIdx}-${colIdx}`)"
                 :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
-                class="td px-3"
-                :class="{
-                    [draggableClass]: isCellDraggable(h),
-                    'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
-                }"
+                :class="{ 'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString }"
                 :style="{
                     height: lineHeight,
                     minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
                 }"
-                v-on="isCellDraggable(h) ? { mousedown: e => $emit('mousedown', e) } : null"
-                @contextmenu.prevent="
-                    e =>
-                        $emit('on-cell-right-click', {
-                            e,
-                            row,
-                            cell: row[colIdx],
-                            activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                        })
-                "
+                :slotName="h.text"
+                :slotData="{
+                    rowData: row,
+                    rowIdx,
+                    cell: row[colIdx],
+                    colIdx,
+                    header: h,
+                    maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
+                    activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                    isDragging,
+                }"
+                v-on="$listeners"
             >
-                <!-- cell slot -->
-                <slot
-                    :name="h.text"
-                    :data="{
-                        rowData: row,
-                        cell: row[colIdx],
-                        header: h,
-                        maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
-                        rowIdx: rowIdx,
-                        colIdx,
-                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                        isDragging,
-                    }"
-                >
-                    <mxs-truncate-str
-                        :disabled="isDragging"
-                        :tooltipItem="{
-                            txt: `${row[colIdx]}`,
-                            activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                        }"
-                    />
-                </slot>
-            </div>
+                <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                    <slot :name="slot" v-bind="props" />
+                </template>
+            </table-cell>
         </template>
     </div>
 </template>
@@ -101,8 +79,11 @@
 Emit when the header has groupable and hasCustomGroup keys.
 @on-ungroup
 */
+import TableCell from './TableCell.vue'
+
 export default {
     name: 'horiz-row',
+    components: { TableCell },
     props: {
         row: { type: [Array, Object], required: true },
         rowIdx: { type: Number, required: true },
@@ -118,8 +99,6 @@ export default {
         cellContentWidthMap: { type: Object, required: true },
         lastVisHeader: { type: Object, required: true },
         isDragging: { type: Boolean, default: true },
-        isCellDraggable: { type: Function, required: true },
-        draggableClass: { type: String, required: true },
     },
     computed: {
         selectedRows: {

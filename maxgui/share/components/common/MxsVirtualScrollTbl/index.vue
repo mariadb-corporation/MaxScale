@@ -48,8 +48,6 @@
                     :cellContentWidthMap="cellContentWidthMap"
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
-                    :isCellDraggable="isCellDraggable"
-                    :draggableClass="draggableClass"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -86,8 +84,6 @@
                     :cellContentWidthMap="cellContentWidthMap"
                     :lastVisHeader="lastVisHeader"
                     :isDragging="isDragging"
-                    :isCellDraggable="isCellDraggable"
-                    :draggableClass="draggableClass"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -160,7 +156,6 @@ export default {
         groupBy: { type: String, default: '' },
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
-        draggableCell: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -190,9 +185,6 @@ export default {
         },
         lineHeight() {
             return `${this.itemHeight}px`
-        },
-        draggableClass() {
-            return 'cursor--grab no-userSelect'
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
@@ -304,9 +296,6 @@ export default {
                 this.$emit('scroll-end')
         },
         genActivatorID: id => `activator_id-${id}`,
-        isCellDraggable(header) {
-            return this.draggableCell && header.draggable
-        },
         //SORT FEAT
         /**
          * @param {String} payload.sortBy  sort by header name

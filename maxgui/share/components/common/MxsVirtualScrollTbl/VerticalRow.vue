@@ -7,77 +7,48 @@
                 class="tr align-center"
                 :style="{ height: lineHeight }"
             >
-                <div
-                    :id="genHeaderColID(colIdx)"
-                    class="td border-bottom-none px-3"
-                    :class="{ [draggableClass]: isCellDraggable(h) }"
+                <!-- vertical-row header slot -->
+                <table-cell
+                    class="border-bottom-none"
                     :style="headerColStyle"
-                    v-on="isCellDraggable(h) ? { mousedown: e => $emit('mousedown', e) } : null"
-                    @contextmenu.prevent="
-                        ctxMenuHandler({
-                            e: $event,
-                            cell: h.text,
-                            activatorID: genHeaderColID(colIdx),
-                        })
-                    "
+                    :slotName="`header-${h.text}`"
+                    :slotData="{
+                        rowData: row,
+                        rowIdx,
+                        cell: h.text,
+                        colIdx,
+                        header: h,
+                        maxWidth: headerContentWidth,
+                        activatorID: genHeaderColID(colIdx),
+                        isDragging,
+                    }"
+                    v-on="$listeners"
                 >
-                    <!-- vertical-row header slot -->
-                    <slot
-                        :name="`header-${h.text}`"
-                        :data="{
-                            header: h,
-                            maxWidth: headerContentWidth,
-                            colIdx,
-                            activatorID: genHeaderColID(colIdx),
-                        }"
-                    >
-                        <mxs-truncate-str
-                            :disabled="isDragging"
-                            :tooltipItem="{
-                                txt: `${h.text}`,
-                                activatorID: genHeaderColID(colIdx),
-                            }"
-                            :maxWidth="headerContentWidth"
-                        />
-                    </slot>
-                </div>
-                <div
-                    :id="genValueColID(colIdx)"
-                    class="td no-border px-3"
-                    :class="{ [draggableClass]: isCellDraggable(h) }"
+                    <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                        <slot :name="slot" v-bind="props" />
+                    </template>
+                </table-cell>
+                <!-- vertical-row cell slot -->
+                <table-cell
+                    class="no-border"
                     :style="valueColStyle"
-                    @contextmenu.prevent="
-                        ctxMenuHandler({
-                            e: $event,
-                            cell: row[colIdx],
-                            activatorID: genValueColID(colIdx),
-                        })
-                    "
+                    :slotName="h.text"
+                    :slotData="{
+                        rowData: row,
+                        rowIdx,
+                        cell: row[colIdx],
+                        colIdx,
+                        header: h,
+                        maxWidth: valueContentWidth,
+                        activatorID: genValueColID(colIdx),
+                        isDragging,
+                    }"
+                    v-on="$listeners"
                 >
-                    <!-- vertical-row cell slot -->
-                    <slot
-                        :name="h.text"
-                        :data="{
-                            rowData: row,
-                            cell: row[colIdx],
-                            header: h,
-                            maxWidth: valueContentWidth,
-                            colIdx,
-                            rowIdx,
-                            activatorID: genValueColID(colIdx),
-                            isDragging,
-                        }"
-                    >
-                        <mxs-truncate-str
-                            :disabled="isDragging"
-                            :tooltipItem="{
-                                txt: `${row[colIdx]}`,
-                                activatorID: genValueColID(colIdx),
-                            }"
-                            :maxWidth="valueContentWidth"
-                        />
-                    </slot>
-                </div>
+                    <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                        <slot :name="slot" v-bind="props" />
+                    </template>
+                </table-cell>
             </div>
         </template>
     </div>
@@ -106,8 +77,11 @@
  * 0: indicates the `COLUMN` index in the html table headers
  * 1: indicates the `VALUE` index in the html table headers
  */
+import TableCell from './TableCell.vue'
+
 export default {
     name: 'vertical-row',
+    components: { TableCell },
     props: {
         row: { type: Array, required: true },
         rowIdx: { type: Number, required: true },
@@ -124,8 +98,6 @@ export default {
         genActivatorID: { type: Function, required: true },
         cellContentWidthMap: { type: Object, required: true },
         isDragging: { type: Boolean, default: true },
-        isCellDraggable: { type: Function, required: true },
-        draggableClass: { type: String, required: true },
     },
     computed: {
         baseColStyle() {

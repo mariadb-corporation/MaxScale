@@ -91,7 +91,6 @@
                 :showSelect="showSelect"
                 :groupBy="groupBy"
                 :activeRow="activeRow"
-                :draggableCell="!isEditing"
                 @selected-rows="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"
@@ -198,6 +197,9 @@ export default {
         tableHeight() {
             return this.height - this.tableToolsHeight - 8
         },
+        draggable() {
+            return !this.isEditing
+        },
         tableHeaders() {
             let headers = []
             if (this.headers.length)
@@ -205,8 +207,8 @@ export default {
                     { text: '#', maxWidth: 'max-content' },
                     ...this.headers.map(h =>
                         this.showGroupBy && !this.$typy(h, 'groupable').isDefined
-                            ? { ...h, groupable: true, draggable: true }
-                            : { ...h, draggable: true }
+                            ? { ...h, groupable: true, draggable: this.draggable }
+                            : { ...h, draggable: this.draggable }
                     ),
                 ]
 
