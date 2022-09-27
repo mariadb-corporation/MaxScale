@@ -201,10 +201,22 @@ async function getTransposedCollection(host, resource, fields) {
   for (var i = 0; i < fields.length; i++) {
     var values = arr.map((v) => v[i]);
     if (i == 0) {
-      values.push('Total');
+      values.push('All');
     } else {
-      var sum = values.reduce((accumulator, value) => accumulator + value, 0);
-      values.push(sum);
+      var summary = fields[i].summary;
+      var val;
+      if (summary == "max") {
+        val = _.max(values);
+      }
+      else if (summary == "avg") {
+        val = _.mean(values).toFixed(1);
+      }
+      else
+      {
+        val = _.sum(values);
+      }
+
+      values.push(val);
     }
     var row = [colors.cyan(fields[i].name)].concat(values);
     table.push(row);
