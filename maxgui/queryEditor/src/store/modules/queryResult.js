@@ -194,7 +194,7 @@ export default {
                 })
                 if (results.length && results[0].errno)
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [
                                 'Failed to stop the query',

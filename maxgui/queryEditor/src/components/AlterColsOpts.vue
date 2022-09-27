@@ -94,20 +94,15 @@
                     />
                 </div>
             </template>
-            <!-- Add :key so that mxs-truncate-str rerender to evaluate truncation and fallback text-truncate class  -->
-            <template v-slot:header-column_name="{ data: { maxWidth } }">
+            <template v-slot:header-column_name="{ data: { maxWidth, activatorID } }">
                 <mxs-truncate-str
-                    :key="maxWidth"
-                    class="text-truncate"
-                    text="Column Name"
+                    :tooltipItem="{ txt: 'Column Name', activatorID }"
                     :maxWidth="maxWidth"
                 />
             </template>
-            <template v-slot:header-column_type="{ data: { maxWidth } }">
+            <template v-slot:header-column_type="{ data: { maxWidth, activatorID } }">
                 <mxs-truncate-str
-                    :key="maxWidth"
-                    class="text-truncate"
-                    text="Column Type"
+                    :tooltipItem="{ txt: 'Column Type', activatorID }"
                     :maxWidth="maxWidth"
                 />
             </template>
@@ -327,7 +322,6 @@ export default {
             }
         },
         abbrHeaderSlotName(h) {
-            if (this.isVertTable) return `vertical-header-${h}`
             return `header-${h}`
         },
         setHeaderHeight() {

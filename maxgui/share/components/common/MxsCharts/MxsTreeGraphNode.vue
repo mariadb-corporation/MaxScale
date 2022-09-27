@@ -36,7 +36,7 @@
                                     <span class="mr-2 font-weight-bold text-capitalize">
                                         {{ $mxs_t(key) }}
                                     </span>
-                                    <mxs-truncate-str :text="`${value}`" />
+                                    <mxs-truncate-str :tooltipItem="{ txt: `${value}` }" />
                                 </div>
                             </v-carousel-item>
                         </v-carousel>

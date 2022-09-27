@@ -13,7 +13,7 @@
                     </v-icon>
                 </v-btn>
                 <div class="d-inline-flex align-center">
-                    <mxs-truncate-str :text="$route.params.id" :maxWidth="600">
+                    <mxs-truncate-str :tooltipItem="{ txt: `${$route.params.id}` }" :maxWidth="600">
                         <span class="ml-1 mb-0 mxs-color-helper text-navigation text-h4 page-title">
                             <slot name="page-title" :pageId="$route.params.id">
                                 {{ $route.params.id }}

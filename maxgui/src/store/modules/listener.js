@@ -70,7 +70,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: message,
                             type: 'success',
@@ -103,7 +103,7 @@ export default {
                 // response ok
                 if (res.status === 204) {
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Parameters of ${payload.id} is updated`],
                             type: 'success',
@@ -123,7 +123,7 @@ export default {
                 if (res.status === 204) {
                     await dispatch('fetchAllListeners')
                     commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [`Listeners ${id} is destroyed`],
                             type: 'success',

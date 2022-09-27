@@ -98,7 +98,7 @@ function queryHttp(store) {
                 case 404:
                 case 503:
                     store.commit(
-                        'appNotifier/SET_SNACK_BAR_MESSAGE',
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
                             text: [...getErrorsArr(error), 'Please reconnect'],
                             type: 'error',

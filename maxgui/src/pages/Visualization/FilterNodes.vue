@@ -18,16 +18,25 @@
                 :key="filter.id"
                 class="d-flex align-center flex-column"
             >
-                <div class="px-3 py-1 mx-auto filter-node" :style="{ width: `${nodeWidth}px` }">
+                <div
+                    class="px-2 py-1 mx-auto filter-node d-flex justify-space-between"
+                    :style="{ width: `${nodeWidth}px` }"
+                >
                     <router-link
                         target="_blank"
                         :to="`/dashboard/${filter.type}/${filter.id}`"
-                        class="text-truncate mr-2 "
+                        class="text-truncate mr-2"
                         :style="{ color: '#fff' }"
                     >
-                        {{ filter.id }}
+                        <mxs-truncate-str
+                            :tooltipItem="{ txt: `${filter.id}` }"
+                            :maxWidth="(nodeWidth - 30) / 2"
+                        />
                     </router-link>
-                    <mxs-truncate-str class="float-right" :text="`${getFilterModule(filter.id)}`" />
+                    <mxs-truncate-str
+                        :tooltipItem="{ txt: `${getFilterModule(filter.id)}` }"
+                        :maxWidth="(nodeWidth - 30) / 2"
+                    />
                 </div>
 
                 <div class="dashed-arrow d-flex justify-center">

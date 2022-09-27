@@ -8,7 +8,7 @@
             ref="tableHeader"
             :isVertTable="isVertTable"
             :headers="tableHeaders"
-            :boundingWidth="boundingWidth"
+            :boundingWidth="maxBoundingWidth"
             :headerStyle="headerStyle"
             :curr2dRowsLength="curr2dRowsLength"
             :showSelect="showSelect"
@@ -23,8 +23,8 @@
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
         >
-            <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
-                <slot :name="`header-${h.text}`" :data="data" />
+            <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                <slot :name="slot" v-bind="props" />
             </template>
         </table-header>
         <v-virtual-scroll
@@ -32,7 +32,7 @@
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : bench"
             :items="currRows"
-            :height="tbodyHeight"
+            :height="maxTbodyHeight"
             :item-height="rowHeight"
             class="tbody"
             @scroll.native="scrolling"
@@ -45,34 +45,12 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
-                    :isYOverflowed="isYOverflowed"
-                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
-                    :genCellID="genCellID"
+                    :cellContentWidthMap="cellContentWidthMap"
+                    :genActivatorID="genActivatorID"
                     v-on="$listeners"
                 >
-                    <template
-                        v-for="h in tableHeaders"
-                        v-slot:[h.text]="{ data: { cell, header, colIdx } }"
-                    >
-                        <slot
-                            :name="`${h.text}`"
-                            :data="{
-                                rowData: row,
-                                cell,
-                                header,
-                                maxWidth: cellMaxWidth(1),
-                                rowIdx,
-                                colIdx,
-                            }"
-                        >
-                            <mxs-truncate-str :text="`${cell}`" :maxWidth="cellMaxWidth(1)" />
-                        </slot>
-                    </template>
-                    <template
-                        v-for="h in tableHeaders"
-                        v-slot:[`vertical-header-${h.text}`]="{ data }"
-                    >
-                        <slot :name="`vertical-header-${h.text}`" :data="data" />
+                    <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+                        <slot :name="slot" v-bind="props" />
                     </template>
                 </vertical-row>
                 <row-group
@@ -80,9 +58,8 @@
                     :row="row"
                     :collapsedRowGroups="collapsedRowGroups"
                     :isCollapsed="isRowGroupCollapsed(row)"
-                    :boundingWidth="boundingWidth"
+                    :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
-                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @update-collapsed-row-groups="collapsedRowGroups = $event"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 >
@@ -132,15 +109,13 @@
                         <!-- dependency keys to force a rerender -->
                         <div
                             v-if="!h.hidden"
-                            :id="genCellID({ rowIdx, colIdx })"
+                            :id="genActivatorID(`${rowIdx}-${colIdx}`)"
                             :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
-                            class="td"
-                            :class="[
-                                draggableCell && h.draggable ? 'cursor--grab no-userSelect' : '',
-                                h.text === $typy(lastVisHeader, 'text').safeString
-                                    ? `td--last-cell ${!isYOverflowed ? 'pl-3 pr-0' : 'px-3'}`
-                                    : 'px-3',
-                            ]"
+                            class="td px-3"
+                            :class="{
+                                'cursor--grab no-userSelect': draggableCell && h.draggable,
+                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
+                            }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
@@ -156,34 +131,32 @@
                                         e,
                                         row,
                                         cell: row[colIdx],
-                                        cellID: genCellID({ rowIdx, colIdx }),
+                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                                     })
                             "
                         >
+                            <!-- cell slot -->
                             <slot
                                 :name="h.text"
                                 :data="{
                                     rowData: row,
                                     cell: row[colIdx],
                                     header: h,
-                                    maxWidth: cellMaxWidth(colIdx),
+                                    maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
                                     rowIdx: rowIdx,
                                     colIdx,
+                                    activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                                 }"
                             >
                                 <mxs-truncate-str
-                                    :text="`${row[colIdx]}`"
-                                    :maxWidth="cellMaxWidth(colIdx)"
-                                    :disabled="isDragging"
+                                    :tooltipItem="{
+                                        txt: `${row[colIdx]}`,
+                                        activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
+                                    }"
                                 />
                             </slot>
                         </div>
                     </template>
-                    <div
-                        v-if="!isYOverflowed"
-                        :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
-                        class="dummy-cell mxs-color-helper border-right-table-border border-bottom-table-border"
-                    />
                 </div>
             </template>
         </v-virtual-scroll>
@@ -210,7 +183,7 @@
  * Public License.
  */
 /*
-@on-cell-right-click: { e: event, row:[], cell:string, cellID:string }
+@on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
 @item-selected: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
 Emit when the header has groupable and hasCustomGroup keys.
@@ -225,10 +198,10 @@ import customDragEvt from '@share/mixins/customDragEvt'
 export default {
     name: 'mxs-virtual-scroll-tbl',
     components: {
-        'table-header': TableHeader,
-        'vertical-row': VerticalRow,
-        'row-group': RowGroup,
-        'row-group-checkbox': RowGroupCheckbox,
+        TableHeader,
+        VerticalRow,
+        RowGroup,
+        RowGroupCheckbox,
     },
     mixins: [customDragEvt],
     props: {
@@ -274,6 +247,10 @@ export default {
         scrollBarThicknessOffset() {
             return this.$helpers.getScrollbarWidth()
         },
+        // minus scrollbar thickness if body is vertically overflow
+        maxBoundingWidth() {
+            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThicknessOffset : 0)
+        },
         lineHeight() {
             return `${this.itemHeight}px`
         },
@@ -289,11 +266,8 @@ export default {
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
         },
-        tbodyHeight() {
-            return this.rowsHeight > this.maxTbodyHeight ? this.maxTbodyHeight : this.rowsHeight
-        },
         isYOverflowed() {
-            return this.rowsHeight > this.tbodyHeight
+            return this.rowsHeight > this.maxTbodyHeight
         },
         // initial rows length
         initialRowsLength() {
@@ -332,6 +306,13 @@ export default {
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0
+        },
+        // minus padding. i.e px-3
+        cellContentWidthMap() {
+            return Object.keys(this.headerWidthMap).reduce((obj, key) => {
+                obj[key] = this.$typy(this.headerWidthMap[key]).safeNumber - 24
+                return obj
+            }, {})
         },
     },
     watch: {
@@ -383,11 +364,7 @@ export default {
                 this.$emit('scroll-end')
         },
 
-        cellMaxWidth(colIdx) {
-            return this.$typy(this.headerWidthMap[colIdx]).safeNumber - 24
-        },
-
-        genCellID: ({ rowIdx, colIdx }) => `cell_id-${rowIdx}-${colIdx}`,
+        genActivatorID: id => `activator_id-${id}`,
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc
@@ -556,21 +533,18 @@ export default {
                 }
             }
             &:hover {
-                .td,
-                .dummy-cell {
+                .td {
                     background: $tr-hovered-color;
                 }
             }
             &:active,
             &--active {
-                .td,
-                .dummy-cell {
+                .td {
                     background: #f2fcff !important;
                 }
             }
             &--selected {
-                .td,
-                .dummy-cell {
+                .td {
                     background: $selected-tr-color !important;
                 }
             }

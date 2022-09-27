@@ -1,12 +1,3 @@
-<template>
-    <query-editor
-        ref="queryEditor"
-        class="query-editor-page fill-height"
-        @leave-page="$router.push($event)"
-    />
-</template>
-
-<script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -19,10 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import MxsTruncateTooltip from './MxsTruncateTooltip'
+import MxsTruncateStr from './MxsTruncateStr'
+
 export default {
-    name: 'query-page',
-    async beforeRouteLeave(to, from, next) {
-        this.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
-    },
+    'mxs-truncate-str': MxsTruncateStr,
+    'mxs-truncate-tooltip': MxsTruncateTooltip,
 }
-</script>

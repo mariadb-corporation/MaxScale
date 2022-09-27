@@ -9,6 +9,7 @@
             saveText="update"
             isForceAccept
         />
+        <mxs-truncate-tooltip />
     </v-app>
 </template>
 

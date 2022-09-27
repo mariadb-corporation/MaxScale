@@ -27,6 +27,6 @@
     "prettier.semi": false,
     "editor.formatOnSave": true,
     "cSpell.userWords": ["camelcase", "mariadb", "vuetify"],
-    "cSpell.words": ["devtool", "maxgui", "maxscale", "appNotifier", "vuex"],
+    "cSpell.words": ["devtool", "maxgui", "maxscale", "mxsApp", "vuex"],
     "files.trimTrailingWhitespace": true
 }

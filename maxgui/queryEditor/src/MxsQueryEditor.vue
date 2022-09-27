@@ -10,6 +10,7 @@
             />
         </v-fade-transition>
         <snackbars :msgObj="snackbar_message" />
+        <mxs-truncate-tooltip />
     </div>
 </template>
 
@@ -42,8 +43,8 @@ export default /*#__PURE__*/ {
     components: { QueryEditor, LoadingTransparentOverlay, Snackbars },
     computed: {
         ...mapState({
-            snackbar_message: state => state.appNotifier.snackbar_message,
-            overlay_type: state => state.appNotifier.overlay_type,
+            snackbar_message: state => state.mxsApp.snackbar_message,
+            overlay_type: state => state.mxsApp.overlay_type,
         }),
         transparentLoading() {
             return this.overlay_type === OVERLAY_TRANSPARENT_LOADING

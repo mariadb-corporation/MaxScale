@@ -246,7 +246,7 @@ export default {
             return this.$typy(this.ctxMenuData, 'row').safeArray
         },
         ctxMenuActivator() {
-            return `#${this.$typy(this.ctxMenuData, 'cellID').safeString}`
+            return `#${this.$typy(this.ctxMenuData, 'activatorID').safeString}`
         },
         clipboardOpts() {
             const { CLIPBOARD } = this.SQL_RES_TBL_CTX_OPT_TYPES
@@ -305,11 +305,11 @@ export default {
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
         },
         /**
-         * @param {Object} data { e: event, row:[], cell:string, cellID:string }
+         * @param {Object} data { e: event, row:[], cell:string, activatorID:string }
          */
         onCellRClick(data) {
-            const { cellID } = data
-            if (this.$typy(this.ctxMenuData, 'cellID').safeString === cellID) {
+            const { activatorID } = data
+            if (this.$typy(this.ctxMenuData, 'activatorID').safeString === activatorID) {
                 this.showCtxMenu = false
                 this.ctxMenuData = {}
             } else {
