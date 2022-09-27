@@ -92,7 +92,7 @@
                 :groupBy="groupBy"
                 :activeRow="activeRow"
                 :draggableCell="!isEditing"
-                @item-selected="selectedItems = $event"
+                @selected-rows="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"
                 v-on="$listeners"

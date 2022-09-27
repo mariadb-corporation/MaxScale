@@ -55,24 +55,17 @@
                 </vertical-row>
                 <row-group
                     v-else-if="isRowGroup(row) && !areHeadersHidden"
+                    :collapsedRowGroups.sync="collapsedRowGroups"
+                    :selectedGroupRows.sync="selectedGroupRows"
+                    :selectedTblRows.sync="selectedTblRows"
                     :row="row"
-                    :collapsedRowGroups="collapsedRowGroups"
+                    :tableRows="tableRows"
                     :isCollapsed="isRowGroupCollapsed(row)"
                     :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
-                    @update-collapsed-row-groups="collapsedRowGroups = $event"
+                    :showSelect="showSelect"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
-                >
-                    <template v-if="showSelect" v-slot:row-content-prepend>
-                        <row-group-checkbox
-                            v-model="selectedGroupItems"
-                            :row="row"
-                            :tableRows="tableRows"
-                            :selectedItems="selectedItems"
-                            @update-selected-items="selectedItems = $event"
-                        />
-                    </template>
-                </row-group>
+                />
                 <div
                     v-else
                     class="tr"
@@ -100,8 +93,8 @@
                             @change="
                                 val =>
                                     val
-                                        ? selectedItems.push(row)
-                                        : selectedItems.splice(getSelectedRowIdx(row), 1)
+                                        ? selectedTblRows.push(row)
+                                        : selectedTblRows.splice(getSelectedRowIdx(row), 1)
                             "
                         />
                     </div>
@@ -184,7 +177,7 @@
  */
 /*
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-@item-selected: value:any[][]. Event is emitted when showSelect props is true
+@selected-rows: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
 Emit when the header has groupable and hasCustomGroup keys.
 @custom-group: data:{ rows:any[][], idx:number, header:object}, callback():Map
@@ -193,7 +186,6 @@ Emit when the header has groupable and hasCustomGroup keys.
 import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
 import RowGroup from './RowGroup.vue'
-import RowGroupCheckbox from './RowGroupCheckbox.vue'
 import customDragEvt from '@share/mixins/customDragEvt'
 export default {
     name: 'mxs-virtual-scroll-tbl',
@@ -201,7 +193,6 @@ export default {
         TableHeader,
         VerticalRow,
         RowGroup,
-        RowGroupCheckbox,
     },
     mixins: [customDragEvt],
     props: {
@@ -239,8 +230,8 @@ export default {
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
             // Select feat states
-            selectedItems: [],
-            selectedGroupItems: [],
+            selectedTblRows: [],
+            selectedGroupRows: [],
         }
     },
     computed: {
@@ -297,12 +288,12 @@ export default {
             )
         },
         isAllselected() {
-            if (!this.selectedItems.length) return false
-            return this.selectedItems.length === this.initialRowsLength
+            if (!this.selectedTblRows.length) return false
+            return this.selectedTblRows.length === this.initialRowsLength
         },
         indeterminate() {
-            if (!this.selectedItems.length) return false
-            return !this.isAllselected && this.selectedItems.length < this.initialRowsLength
+            if (!this.selectedTblRows.length) return false
+            return !this.isAllselected && this.selectedTblRows.length < this.initialRowsLength
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0
@@ -316,22 +307,22 @@ export default {
         },
     },
     watch: {
-        selectedItems: {
+        selectedTblRows: {
             deep: true,
             handler(v) {
-                this.$emit('item-selected', v)
+                this.$emit('selected-rows', v)
             },
         },
         rows: {
             deep: true,
             handler(v, oV) {
-                // Clear selectedItems once rows value changes
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.selectedItems = []
+                // Clear selectedTblRows once rows value changes
+                if (!this.$helpers.lodash.isEqual(v, oV)) this.selectedTblRows = []
             },
         },
         isVertTable(v) {
             // clear selected items
-            if (v) this.selectedItems = []
+            if (v) this.selectedTblRows = []
         },
     },
     mounted() {
@@ -474,15 +465,15 @@ export default {
 
         /**
          * @param {Array} row - row array
-         * @returns {Number} - returns index of row array in selectedItems
+         * @returns {Number} - returns index of row array in selectedTblRows
          */
         getSelectedRowIdx(row) {
-            return this.selectedItems.findIndex(ele => this.$helpers.lodash.isEqual(ele, row))
+            return this.selectedTblRows.findIndex(ele => this.$helpers.lodash.isEqual(ele, row))
         },
 
         /**
          * @param {Array} row - row array
-         * @returns {Boolean} - returns true if row is found in selectedItems
+         * @returns {Boolean} - returns true if row is found in selectedTblRows
          */
         isRowSelected(row) {
             return this.getSelectedRowIdx(row) === -1 ? false : true
@@ -494,11 +485,11 @@ export default {
         handleSelectAll(v) {
             // don't select group row
             if (v) {
-                this.selectedItems = this.tableRows.filter(row => Array.isArray(row))
-                this.selectedGroupItems = this.tableRows.filter(row => !Array.isArray(row))
+                this.selectedTblRows = this.tableRows.filter(row => Array.isArray(row))
+                this.selectedGroupRows = this.tableRows.filter(row => !Array.isArray(row))
             } else {
-                this.selectedItems = []
-                this.selectedGroupItems = []
+                this.selectedTblRows = []
+                this.selectedGroupRows = []
             }
         },
 
