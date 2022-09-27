@@ -198,6 +198,10 @@ std::string mxs_is_valid_json_resource(json_t* json)
         {
             return reason;
         }
+        else if (json_string_length(id) == 0)
+        {
+            return "The '"s + MXS_JSON_PTR_ID + "' field is empty";
+        }
     }
 
     if (auto parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
