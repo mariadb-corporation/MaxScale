@@ -1594,6 +1594,65 @@ void RoutingWorker::rebalance()
     m_rebalance.reset();
 }
 
+namespace
+{
+
+class MemoryTask : public Worker::Task
+{
+public:
+    MemoryTask(uint32_t nThreads)
+        : m_tmus(nThreads)
+    {
+    }
+
+    void execute(Worker& worker) override final
+    {
+        auto& rworker = static_cast<RoutingWorker&>(worker);
+
+        m_tmus[rworker.index()] = rworker.calculate_memory_usage();
+    }
+
+    void fill(json_t* pStats)
+    {
+        RoutingWorker::MemoryUsage pmu;
+
+        json_t* pThreads = json_array();
+
+        for (size_t i = 0; i < m_tmus.size(); ++i)
+        {
+            const auto& tmu = m_tmus[i];
+
+            json_array_append_new(pThreads, tmu.to_json());
+            pmu += tmu;
+        }
+
+        json_object_set_new(pStats, "process", pmu.to_json());
+        json_object_set_new(pStats, "threads", pThreads);
+    }
+
+private:
+    std::vector<RoutingWorker::MemoryUsage> m_tmus;
+};
+
+}
+
+//static
+std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
+{
+    MemoryTask task(this_unit.nWorkers);
+    RoutingWorker::execute_concurrently(task);
+
+    json_t* pAttr = json_object();
+    task.fill(pAttr);
+
+    json_t* pMemory = json_object();
+    json_object_set_new(pMemory, CN_ID, json_string(CN_MEMORY));
+    json_object_set_new(pMemory, CN_TYPE, json_string(CN_MEMORY));
+    json_object_set_new(pMemory, CN_ATTRIBUTES, pAttr);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_MEMORY, pMemory));
+}
+
 RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
 {
     MemoryUsage rv;

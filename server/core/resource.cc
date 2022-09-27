@@ -1030,6 +1030,11 @@ HttpResponse cb_module(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, json);
 }
 
+HttpResponse cb_memory(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, mxs::RoutingWorker::memory_to_json(request.host()).release());
+}
+
 HttpResponse cb_all_users(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host()));
@@ -1445,6 +1450,7 @@ public:
         m_get.emplace_back(cb_log_stream, "maxscale", "logs", "stream");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");
+        m_get.emplace_back(cb_memory, "maxscale", "memory");
 
         /** For all read-only module commands */
         m_get.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");

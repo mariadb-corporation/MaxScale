@@ -48,6 +48,7 @@ constexpr char CN_LISTENERS[] = "listeners";
 constexpr char CN_LISTENER[] = "listener";
 constexpr char CN_MAX_ROUTING_CONNECTIONS[] = "max_routing_connections";
 constexpr char CN_MAXSCALE[] = "maxscale";
+constexpr char CN_MEMORY[] = "memory";
 constexpr char CN_MODULE[] = "module";
 constexpr char CN_MONITORS[] = "monitors";
 constexpr char CN_MONITOR[] = "monitor";

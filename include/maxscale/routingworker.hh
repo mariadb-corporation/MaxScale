@@ -59,6 +59,15 @@ public:
         {
         }
 
+        MemoryUsage& operator += (const MemoryUsage& rhs)
+        {
+            this->query_classifier += rhs.query_classifier;
+            this->zombies += rhs.zombies;
+            this->sessions += rhs.sessions;
+            this->total += rhs.total;
+            return *this;
+        }
+
         json_t* to_json() const;
 
         int64_t query_classifier;
@@ -449,6 +458,8 @@ public:
     static bool balance_workers(int threshold);
 
     void rebalance(RoutingWorker* pTo, int nSessions = 1);
+
+    static std::unique_ptr<json_t> memory_to_json(const char* zHost);
 
     MemoryUsage calculate_memory_usage() const;
 
