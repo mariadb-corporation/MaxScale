@@ -206,6 +206,22 @@ describe("Authentication", function () {
       return request.post(base_url + "/users/inet", { json: user }).should.be.rejected;
     });
 
+    it("add user with empty name", function () {
+      return request.post(base_url + "/users/inet", {
+        json: {
+          data: { id: "", type: "inet", attributes: { account: "admin" } },
+        },
+      }).should.be.rejected;
+    });
+
+    it("add user with number as a name", function () {
+      return request.post(base_url + "/users/inet", {
+        json: {
+          data: { id: 123, type: "inet", attributes: { account: "admin" } },
+        },
+      }).should.be.rejected;
+    });
+
     it("add user", function () {
       user.data.attributes.password = "pw1";
       return request.post(base_url + "/users/inet", { json: user }).should.be.fulfilled;

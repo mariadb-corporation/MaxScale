@@ -79,7 +79,7 @@ exports.builder = function (yargs) {
       function (argv) {
         var server = {
           data: {
-            id: argv.name,
+            id: String(argv.name),
             type: "servers",
             attributes: {
               parameters: {},
@@ -103,7 +103,7 @@ exports.builder = function (yargs) {
         if (argv.services) {
           for (let i = 0; i < argv.services.length; i++) {
             _.set(server, "data.relationships.services.data[" + i + "]", {
-              id: argv.services[i],
+              id: String(argv.services[i]),
               type: "services",
             });
           }
@@ -112,7 +112,7 @@ exports.builder = function (yargs) {
         if (argv.monitors) {
           for (let i = 0; i < argv.monitors.length; i++) {
             _.set(server, "data.relationships.monitors.data[" + i + "]", {
-              id: argv.monitors[i],
+              id: String(argv.monitors[i]),
               type: "monitors",
             });
           }
@@ -159,7 +159,7 @@ exports.builder = function (yargs) {
       function (argv) {
         var monitor = {
           data: {
-            id: argv.name,
+            id: String(argv.name),
             attributes: {
               module: argv.module,
             },
@@ -174,7 +174,7 @@ exports.builder = function (yargs) {
         if (argv.servers) {
           for (let i = 0; i < argv.servers.length; i++) {
             _.set(monitor, "data.relationships.servers.data[" + i + "]", {
-              id: argv.servers[i],
+              id: String(argv.servers[i]),
               type: "servers",
             });
           }
@@ -240,7 +240,7 @@ exports.builder = function (yargs) {
 
           var service = {
             data: {
-              id: argv.name,
+              id: String(argv.name),
               attributes: {
                 router: argv.router,
                 parameters: argv.params.reduce(to_obj, {}),
@@ -251,7 +251,7 @@ exports.builder = function (yargs) {
           if (argv.servers) {
             for (let i = 0; i < argv.servers.length; i++) {
               _.set(service, "data.relationships.servers.data[" + i + "]", {
-                id: argv.servers[i],
+                id: String(argv.servers[i]),
                 type: "servers",
               });
             }
@@ -260,20 +260,20 @@ exports.builder = function (yargs) {
           if (argv.services) {
             for (let i = 0; i < argv.services.length; i++) {
               _.set(service, "data.relationships.services.data[" + i + "]", {
-                id: argv.services[i],
+                id: String(argv.services[i]),
                 type: "services",
               });
             }
           }
 
           if (argv.cluster) {
-            _.set(service, "data.relationships.monitors.data[0]", { id: argv.cluster, type: "monitors" });
+            _.set(service, "data.relationships.monitors.data[0]", { id: String(argv.cluster), type: "monitors" });
           }
 
           if (argv.filters) {
             for (let i = 0; i < argv.filters.length; i++) {
               _.set(service, "data.relationships.filters.data[" + i + "]", {
-                id: argv.filters[i],
+                id: String(argv.filters[i]),
                 type: "filters",
               });
             }
@@ -302,7 +302,7 @@ exports.builder = function (yargs) {
 
           var filter = {
             data: {
-              id: argv.name,
+              id: String(argv.name),
               attributes: {
                 module: argv.module,
               },
@@ -352,7 +352,7 @@ exports.builder = function (yargs) {
 
           var listener = {
             data: {
-              id: argv.name,
+              id: String(argv.name),
               type: "listeners",
               attributes: {
                 parameters: {
@@ -361,7 +361,7 @@ exports.builder = function (yargs) {
               },
               relationships: {
                 services: {
-                  data: [{ id: argv.service, type: "services" }],
+                  data: [{ id: String(argv.service), type: "services" }],
                 },
               },
             },
@@ -397,10 +397,10 @@ exports.builder = function (yargs) {
       function (argv) {
         var user = {
           data: {
-            id: argv.name,
+            id: String(argv.name),
             type: "inet",
             attributes: {
-              password: argv.passwd,
+              password: String(argv.passwd),
               account: argv.type,
             },
           },
