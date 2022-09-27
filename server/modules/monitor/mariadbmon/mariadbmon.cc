@@ -239,14 +239,17 @@ cfg::ParamString s_cs_admin_base_path(&s_spec, "cs_admin_base_path",
 cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key",
     "The API key used in communication with the ColumnStore admin daemon.", "");
 
-cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER, "SSH username. Used for accessing servers.", "");
-
-cfg::ParamPath s_ssh_keyfile(&s_spec, CONFIG_SSH_KEYFILE, "SSH keyfile. Used for accessing servers.",
+cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER,
+                            "SSH username. Used for running remote commands on servers.", "");
+cfg::ParamPath s_ssh_keyfile(&s_spec, CONFIG_SSH_KEYFILE,
+                             "SSH keyfile. Used for running remote commands on servers.",
                              cfg::ParamPath::R | cfg::ParamPath::F, "");
 cfg::ParamBool s_ssh_check_host_key(&s_spec, "ssh_check_host_key", "Is SSH host key check enabled.", true,
                                     cfg::Param::AT_RUNTIME);
 cfg::ParamSeconds s_ssh_timeout(&s_spec, "ssh_timeout", "SSH connection and command timeout", 10s,
                                 cfg::Param::AT_RUNTIME);
+cfg::ParamCount s_ssh_port(&s_spec, "ssh_port", "SSH port. Used for running remote commands on servers.",
+                           22, 0, 65535, cfg::Param::AT_RUNTIME);
 cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for transferring server backup.",
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
 
@@ -445,6 +448,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::ssh_keyfile, &s_ssh_keyfile);
     add_native(&Settings::ssh_host_check, &s_ssh_check_host_key);
     add_native(&Settings::ssh_timeout, &s_ssh_timeout);
+    add_native(&Settings::ssh_port, &s_ssh_port);
     add_native(&Settings::rebuild_port, &s_rebuild_port);
 }
 

@@ -1128,6 +1128,10 @@ commands take more than *ssh_timeout* to complete, the operation fails. Adjust
 this setting if rebuild fails due to ssh commands timing out. This setting does
 not affect steps 5 and 6, as these are assumed to take significant time.
 
+#### `ssh_port`
+
+Numeric, default: 22. SSH port. Used for running remote commands on servers.
+
 #### `rebuild_port`
 
 Numeric, default: 4444. The port which the source server listens on for a

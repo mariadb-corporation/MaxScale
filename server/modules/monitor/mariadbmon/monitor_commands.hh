@@ -134,7 +134,7 @@ private:
     SlaveStatusArray m_source_slaves_old;
     bool             m_source_slaves_stopped {false};
 
-    int                  m_port {0};
+    int                  m_rebuild_port {0};
     std::chrono::seconds m_ssh_timeout {0};
 
     ssh_util::SSession m_target_ses;

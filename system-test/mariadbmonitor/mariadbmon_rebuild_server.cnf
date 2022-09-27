@@ -7,6 +7,7 @@ ssh_keyfile=/tmp/sshkey.pem
 ssh_check_host_key=false
 ssh_timeout=6s
 rebuild_port=4443
+ssh_port=22
 
 ###rwsplit_service###
 

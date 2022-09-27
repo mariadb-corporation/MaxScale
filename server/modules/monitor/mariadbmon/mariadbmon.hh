@@ -482,6 +482,7 @@ private:
         std::string          ssh_keyfile;           /**< SSH keyfile for accessing server */
         bool                 ssh_host_check {true}; /**< Check that host is in known_hosts */
         std::chrono::seconds ssh_timeout;           /**< SSH connection and command timeout */
+        int64_t              ssh_port {0};          /**< SSH port on all servers */
         int64_t              rebuild_port {0};      /**< Listen port for server backup transfer */
 
     private:
