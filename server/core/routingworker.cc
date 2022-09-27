@@ -94,6 +94,18 @@ bool can_close_dcb(mxs::BackendConnection* b)
 namespace maxscale
 {
 
+json_t* RoutingWorker::MemoryUsage::to_json() const
+{
+    json_t* pMu = json_object();
+
+    json_object_set_new(pMu, "query_classifier", json_integer(this->query_classifier));
+    json_object_set_new(pMu, "zombies", json_integer(this->zombies));
+    json_object_set_new(pMu, "sessions", json_integer(this->sessions));
+    json_object_set_new(pMu, "total", json_integer(this->total));
+
+    return pMu;
+}
+
 RoutingWorker::ConnPoolEntry::ConnPoolEntry(mxs::BackendConnection* pConn)
     : m_created(time(nullptr))
     , m_pConn(pConn)
@@ -1582,6 +1594,32 @@ void RoutingWorker::rebalance()
     m_rebalance.reset();
 }
 
+RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
+{
+    MemoryUsage rv;
+
+    QC_CACHE_STATS qc;
+    if (qc_get_cache_stats(&qc))
+    {
+        rv.query_classifier = qc.size;
+    }
+
+    for (const DCB* pZombie : m_zombies)
+    {
+        rv.zombies += pZombie->runtime_size();
+    }
+
+    const Registry<MXS_SESSION>& sessions = session_registry();
+    for (const auto& kv : sessions)
+    {
+        rv.sessions += kv.second->runtime_size();
+    }
+
+    rv.total = rv.query_classifier + rv.zombies + rv.sessions;
+
+    return rv;
+}
+
 // static
 void RoutingWorker::start_shutdown()
 {
@@ -1855,8 +1893,7 @@ public:
 
         json_t* pStats = json_object();
 
-        add_general_info(rworker, pStats);
-        add_memory_info(rworker, pStats);
+        add_stats(rworker, pStats);
 
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
@@ -1895,10 +1932,9 @@ public:
     }
 
 private:
-    static void add_general_info(const RoutingWorker& rworker, json_t* pStats)
+    static void add_stats(const RoutingWorker& rworker, json_t* pStats)
     {
         const Worker::STATISTICS& s = rworker.statistics();
-
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
         json_object_set_new(pStats, "writes", json_integer(s.n_write));
         json_object_set_new(pStats, "errors", json_integer(s.n_error));
@@ -1925,41 +1961,9 @@ private:
 
         json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
         json_object_set_new(pStats, "zombies", json_integer(rworker.m_zombies.size()));
-    }
 
-    void add_memory_info(const RoutingWorker& rworker, json_t* pStats)
-    {
-        json_t* pMemory = json_object();
-
-        int64_t total_size = 0;
-
-        QC_CACHE_STATS qc;
-        if (qc_get_cache_stats(&qc))
-        {
-            json_object_set_new(pMemory, "query_classifier", json_integer(qc.size));
-            total_size += qc.size;
-        }
-
-        int64_t zombies_size = 0;
-        for (const DCB* pZombie : rworker.m_zombies)
-        {
-            zombies_size += pZombie->runtime_size();
-        }
-        json_object_set_new(pMemory, "zombies", json_integer(zombies_size));
-        total_size += zombies_size;
-
-        int64_t sessions_size = 0;
-        const Registry<MXS_SESSION>& sessions = rworker.session_registry();
-        for (const auto& kv : sessions)
-        {
-            sessions_size += kv.second->varying_size();
-        }
-        json_object_set_new(pMemory, "sessions", json_integer(sessions_size));
-        total_size += sessions_size;
-
-        json_object_set_new(pMemory, "total", json_integer(total_size));
-
-        json_object_set_new(pStats, "memory", pMemory);
+        RoutingWorker::MemoryUsage mu = rworker.calculate_memory_usage();
+        json_object_set_new(pStats, "memory", mu.to_json());
     }
 
 private:

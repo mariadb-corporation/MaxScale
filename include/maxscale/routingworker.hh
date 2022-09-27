@@ -48,6 +48,25 @@ class RoutingWorker : public mxb::WatchedWorker
 public:
     class InfoTask;
 
+    class MemoryUsage
+    {
+    public:
+        MemoryUsage()
+            : query_classifier(0)
+            , zombies(0)
+            , sessions(0)
+            , total(0)
+        {
+        }
+
+        json_t* to_json() const;
+
+        int64_t query_classifier;
+        int64_t zombies;
+        int64_t sessions;
+        int64_t total;
+    };
+
     enum
     {
         FIRST = -1 // Shorthand for first created RoutingWorker, for testing purposes.
@@ -430,6 +449,8 @@ public:
     static bool balance_workers(int threshold);
 
     void rebalance(RoutingWorker* pTo, int nSessions = 1);
+
+    MemoryUsage calculate_memory_usage() const;
 
     /**
      * Start the routingworker shutdown process
