@@ -119,21 +119,31 @@ public:
     BackupOperation(MariaDBMonitor& mon);
 
 protected:
-    ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
+    bool init_operation(int listen_port);
+    bool test_datalink(int listen_port);
+    bool serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
 
-    bool check_rebuild_tools(const char* srvname, ssh::Session& ssh);
-    bool check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
+    ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
+    bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
+    bool               check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
+
+    void set_source(std::string name, std::string host);
+    void set_target(std::string name, std::string host);
 
     MariaDBMonitor&      m_mon;
     std::chrono::seconds m_ssh_timeout {0};
+    bool                 m_source_slaves_stopped {false};
+    Result               m_result;
 
+    std::string                         m_source_name;
+    std::string                         m_source_host;
     ssh_util::SSession                  m_source_ses;
     std::unique_ptr<ssh_util::AsyncCmd> m_source_cmd;
 
+    std::string                         m_target_name;
+    std::string                         m_target_host;
     ssh_util::SSession                  m_target_ses;
     std::unique_ptr<ssh_util::AsyncCmd> m_target_cmd;
-
-    Result m_result;
 };
 
 class RebuildServer : public BackupOperation
@@ -153,7 +163,6 @@ private:
     MariaDBServer* m_repl_master {nullptr};
 
     SlaveStatusArray m_source_slaves_old;
-    bool             m_source_slaves_stopped {false};
 
     int m_rebuild_port {0};
 
@@ -175,9 +184,9 @@ private:
     };
     State m_state {State::INIT};
 
-    bool init();
-    void test_datalink();
-    bool serve_backup();
+    bool state_init();
+    bool state_test_datalink();
+    bool state_serve_backup();
     bool prepare_target();
     bool start_transfer();
     bool wait_transfer();
@@ -189,7 +198,7 @@ private:
     bool start_replication();
     void cleanup();
 
-    bool rebuild_check_preconds();
+    bool check_preconditions();
     bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
     void report_source_stream_status();
 

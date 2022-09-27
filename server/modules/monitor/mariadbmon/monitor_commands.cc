@@ -1169,7 +1169,7 @@ bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, jso
 
 namespace mon_op
 {
-bool RebuildServer::rebuild_check_preconds()
+bool RebuildServer::check_preconditions()
 {
     auto& error_out = m_result.output;
     MariaDBServer* target = m_mon.get_server(m_target_srv);
@@ -1417,6 +1417,18 @@ BackupOperation::BackupOperation(MariaDBMonitor& mon)
     m_ssh_timeout = m_mon.m_settings.ssh_timeout;
 }
 
+void BackupOperation::set_source(string name, string host)
+{
+    m_source_name = std::move(name);
+    m_source_host = std::move(host);
+}
+
+void BackupOperation::set_target(string name, string host)
+{
+    m_target_name = std::move(name);
+    m_target_host = std::move(host);
+}
+
 ssh_util::SSession BackupOperation::init_ssh_session(const char* name, const string& host)
 {
     const auto& sett = m_mon.m_settings;
@@ -1448,15 +1460,15 @@ bool RebuildServer::run()
         switch (m_state)
         {
         case State::INIT:
-            advance = init();
+            advance = state_init();
             break;
 
         case State::TEST_DATALINK:
-            test_datalink();
+            advance = state_test_datalink();
             break;
 
         case State::SERVE_BACKUP:
-            advance = serve_backup();
+            advance = state_serve_backup();
             break;
 
         case State::PREPARE_TARGET:
@@ -1530,56 +1542,74 @@ Result RebuildServer::result()
     return m_result;
 }
 
-bool RebuildServer::init()
+bool BackupOperation::init_operation(int listen_port)
 {
+    const char* source_name = m_source_name.c_str();
+    const char* target_name = m_target_name.c_str();
+
     bool init_ok = false;
 
-    if (rebuild_check_preconds())
+    // Ok so far. Initiate SSH-sessions to both servers.
+    auto target_ses = init_ssh_session(m_target_name.c_str(), m_target_host);
+    auto source_ses = init_ssh_session(m_source_name.c_str(), m_source_host);
+
+    if (target_ses && source_ses)
     {
-        // Ok so far. Initiate SSH-sessions to both servers.
-        auto target_ses = init_ssh_session(m_target->name(), m_target->server->address());
-        auto source_ses = init_ssh_session(m_source->name(), m_source->server->address());
+        bool have_tools = true;
 
-        if (target_ses && source_ses)
+        // Check installed tools.
+        bool target_tools = check_rebuild_tools(target_name, *target_ses);
+        bool source_tools = check_rebuild_tools(source_name, *source_ses);
+
+        if (target_tools && source_tools)
         {
-            bool have_tools = true;
-
-            // Check installed tools.
-            bool target_tools = check_rebuild_tools(m_target->name(), *target_ses);
-            bool source_tools = check_rebuild_tools(m_source->name(), *source_ses);
-
-            if (target_tools && source_tools)
+            if (check_free_listen_port(source_name, *source_ses, listen_port))
             {
-                if (check_free_listen_port(m_source->name(), *source_ses, m_rebuild_port))
-                {
-                    m_target_ses = std::move(target_ses);
-                    m_source_ses = std::move(source_ses);
-
-                    m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
-                    init_ok = true;
-                }
+                m_target_ses = std::move(target_ses);
+                m_source_ses = std::move(source_ses);
+                init_ok = true;
             }
         }
     }
+    return init_ok;
+}
 
-    m_state = init_ok ? State::TEST_DATALINK : State::CLEANUP;
+bool RebuildServer::state_init()
+{
+    if (check_preconditions())
+    {
+        set_source(m_source->name(), m_source->server->address());
+        set_target(m_target->name(), m_target->server->address());
+
+        if (init_operation(m_rebuild_port))
+        {
+            m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
+            m_state = State::TEST_DATALINK;
+        }
+        else
+        {
+            m_state = State::CLEANUP;
+        }
+    }
     return true;
 }
 
-void RebuildServer::test_datalink()
+bool BackupOperation::test_datalink(int listen_port)
 {
     using Status = ssh_util::AsyncCmd::Status;
+    auto source_name = m_source_name.c_str();
+    auto target_name = m_target_name.c_str();
     auto& error_out = m_result.output;
+
     bool success = false;
     // Test the datalink between source and target by steaming some bytes.
     string test_serve_cmd = mxb::string_printf("echo \"%s\" | socat - TCP-LISTEN:%i,reuseaddr",
-                                               link_test_msg, m_rebuild_port);
+                                               link_test_msg, listen_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
     {
         string test_receive_cmd = mxb::string_printf("socat -u TCP:%s:%i,connect-timeout=%i STDOUT",
-                                                     m_source->server->address(), m_rebuild_port,
-                                                     socat_timeout_s);
+                                                     m_source_host.c_str(), listen_port, socat_timeout_s);
         auto res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
         if (res.type == RType::OK && res.rc == 0)
         {
@@ -1603,18 +1633,18 @@ void RebuildServer::test_datalink()
                 {
                     PRINT_JSON_ERROR(error_out, "Received '%s' when '%s' was expected when testing data "
                                                 "streaming from %s to %s.",
-                                     res.output.c_str(), link_test_msg, m_source->name(), m_target->name());
+                                     res.output.c_str(), link_test_msg, source_name, target_name);
                 }
                 if (source_status == Status::BUSY)
                 {
                     PRINT_JSON_ERROR(error_out, "Data stream serve command '%s' did not stop on %s even "
                                                 "after data was transferred",
-                                     test_receive_cmd.c_str(), m_source->name());
+                                     test_receive_cmd.c_str(), source_name);
                 }
                 else if (source_status == Status::SSH_FAIL)
                 {
                     PRINT_JSON_ERROR(error_out, "Failed to check transfer status on %s. %s",
-                                     m_source->name(), cmd_handle->error_output().c_str());
+                                     source_name, cmd_handle->error_output().c_str());
                 }
             }
         }
@@ -1622,26 +1652,26 @@ void RebuildServer::test_datalink()
         {
             string errmsg = ssh_util::form_cmd_error_msg(res, test_receive_cmd.c_str());
             PRINT_JSON_ERROR(m_result.output, "Could not receive test data on %s. %s",
-                             m_target->name(), errmsg.c_str());
+                             target_name, errmsg.c_str());
         }
     }
     else
     {
         PRINT_JSON_ERROR(error_out, "Failed to test data streaming from %s. %s",
-                         m_source->name(), ssh_errmsg.c_str());
+                         source_name, ssh_errmsg.c_str());
     }
-    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
+    return success;
 }
 
-bool RebuildServer::serve_backup()
+bool BackupOperation::serve_backup(const string& mariadb_user, const string& mariadb_pw, int listen_port)
 {
-    auto& cs = m_source->conn_settings();
+    auto source_name = m_source_name.c_str();
     // Start serving the backup stream. The source will wait for a new connection.
     const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1,
-                                           m_rebuild_port);
+    string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), mariadb_pw.c_str(), 1,
+                                           listen_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -1658,20 +1688,20 @@ bool RebuildServer::serve_backup()
         if (status == ssh_util::AsyncCmd::Status::BUSY)
         {
             rval = true;
-            m_source_cmd = move(cmd_handle);
-            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_rebuild_port);
+            m_source_cmd = std::move(cmd_handle);
+            MXB_NOTICE("%s serving backup on port %i.", source_name, listen_port);
         }
         else if (status == ssh_util::AsyncCmd::Status::READY)
         {
             // The stream serve operation ended before it should. Print all output available.
             // The ssh-command includes username & pw so mask those in the message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_rebuild_port);
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, listen_port);
 
             int rc = cmd_handle->rc();
 
             string message = mxb::string_printf(
                 "Failed to stream data from %s. Command '%s' stopped before data was streamed. Return "
-                "value %i. Output: '%s' Error output: '%s'", m_source->name(), masked_cmd.c_str(), rc,
+                "value %i. Output: '%s' Error output: '%s'", source_name, masked_cmd.c_str(), rc,
                 cmd_handle->output().c_str(), cmd_handle->error_output().c_str());
 
             PRINT_JSON_ERROR(error_out, "%s", message.c_str());
@@ -1687,11 +1717,9 @@ bool RebuildServer::serve_backup()
     {
         mxb_assert(!m_source_cmd);
         PRINT_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
-                         m_source->name(), ssh_errmsg.c_str());
+                         source_name, ssh_errmsg.c_str());
     }
-
-    m_state = rval ? State::PREPARE_TARGET : State::CLEANUP;
-    return true;
+    return rval;
 }
 
 bool RebuildServer::prepare_target()
@@ -2188,6 +2216,19 @@ void RebuildServer::report_source_stream_status()
                          m_source->name(), m_source_cmd->rc(),
                          m_source_cmd->error_output().c_str());
     }
+}
+
+bool RebuildServer::state_test_datalink()
+{
+    m_state = test_datalink(m_rebuild_port) ? State::SERVE_BACKUP : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::state_serve_backup()
+{
+    auto& cs = m_source->conn_settings();
+    m_state = serve_backup(cs.username, cs.password, m_rebuild_port) ? State::PREPARE_TARGET : State::CLEANUP;
+    return true;
 }
 
 Result Result::deep_copy() const
