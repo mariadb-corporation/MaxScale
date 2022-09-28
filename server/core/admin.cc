@@ -611,7 +611,7 @@ void Client::add_cors_headers(MHD_Response* response) const
 
     if (!request_method.empty())
     {
-        MHD_add_response_header(response, "Access-Control-Allow-Methods", request_headers.c_str());
+        MHD_add_response_header(response, "Access-Control-Allow-Methods", request_method.c_str());
     }
 }
 
