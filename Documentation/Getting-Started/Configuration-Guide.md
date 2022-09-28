@@ -1497,6 +1497,32 @@ be first created with `maxctrl create user` before the tokens are accepted.
 If this URL is changed at runtime, the new certificates will not be
 fetched until a `maxctrl reload tls` command is executed.
 
+### `admin_verify_url`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+URL to a server to which the REST API token verification is delegated.
+
+If the URL is defined, any tokens passed to the REST API will be validated by
+doing a GET request to the URL with the client's token as a bearer token. The
+`Referer` header of the request is set to the URL being requested by the client
+and the custom `X-Referrer-Method` header is set to the HTTP method being used
+(PUT, GET etc.).
+
+**Note**: When `admin_verify_url` is used and the remote server cannot
+be accessed, all REST API access that uses tokens will be disabled. The
+only way to use the REST API with tokens is to remove `admin_verify_url`
+from the configuration which requires restarting MaxScale. The REST API
+still accepts HTTP Basic Access authentication even if the remote server
+cannot be reached.
+
+By delegating the authentication and authorization of the REST API to an
+external server, users can implement custom access control systems for the
+MaxScale REST API.
+
 ### `config_sync_cluster`
 
 - **Type**: monitor

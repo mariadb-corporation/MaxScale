@@ -625,6 +625,12 @@ config::ParamString Config::s_admin_oidc_url(
     "",
     config::Param::Modifiable::AT_RUNTIME);
 
+config::ParamString Config::s_admin_verify_url(
+    &Config::s_specification,
+    "admin_verify_url",
+    "URL for third-party verification of client tokens",
+    "");
+
 config::ParamString Config::s_local_address(
     &Config::s_specification,
     CN_LOCAL_ADDRESS,
@@ -886,6 +892,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::admin_jwt_algorithm, &s_admin_jwt_algorithm);
     add_native(&Config::admin_jwt_key, &s_admin_jwt_key);
+    add_native(&Config::admin_verify_url, &s_admin_verify_url);
     add_native(&Config::admin_oidc_url, &s_admin_oidc_url);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);

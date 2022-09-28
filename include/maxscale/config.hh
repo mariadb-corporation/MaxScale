@@ -299,6 +299,7 @@ public:
     mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
     std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
     std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
+    std::string               admin_verify_url;     /**< URL that points to a verification server */
 
     std::string  local_address;                 /**< Local address to use when connecting */
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
@@ -409,6 +410,7 @@ private:
     static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;
     static config::ParamString                          s_admin_jwt_key;
     static config::ParamString                          s_admin_oidc_url;
+    static config::ParamString                          s_admin_verify_url;
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamBool                            s_persist_runtime_changes;

@@ -28,6 +28,7 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/filesystem.hh>
+#include <maxbase/http.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
@@ -936,11 +937,60 @@ HttpResponse Client::generate_token(const HttpRequest& request)
     }
 }
 
-bool Client::auth_with_token(const std::string& token)
+bool Client::auth_with_token(const std::string& token, const char* method, const char* client_url)
 {
+    const auto& cnf = mxs::Config::get();
     bool rval = false;
 
-    std::tie(rval, m_user) = mxs::jwt::get_subject(TOKEN_ISSUER, token);
+    if (!cnf.admin_verify_url.empty())
+    {
+        // Authentication and authorization is being delegated to a remote server. If the GET request on the
+        // configured URL works, the user is allowed access. The headers contain enough information to
+        // uniquely identify the requested endpoint.
+        mxb::http::Config config;
+        std::string referer = (this_unit.using_ssl ? "https://" : "http://") + m_headers["host"] + client_url;
+        config.headers[MHD_HTTP_HEADER_AUTHORIZATION] = "Bearer " + token;
+        config.headers[MHD_HTTP_HEADER_REFERER] = referer;
+        config.headers["X-Referrer-Method"] = method;   // Non-standard but we need something for the method
+
+        auto response = mxb::http::get(cnf.admin_verify_url, config);
+
+        if (response.is_success())
+        {
+            rval = true;
+        }
+        else
+        {
+            send_token_auth_error();
+
+            if (cnf.admin_log_auth_failures.get())
+            {
+                MXB_WARNING("Request verification failed, %s. Request: %s %s",
+                            response.to_string(response.code), method, client_url);
+            }
+        }
+    }
+    else
+    {
+        // Normal token authentication, tokens are generated and verified by MaxScale
+        if (auto [ok, user] = mxs::jwt::get_subject(TOKEN_ISSUER, token); ok)
+        {
+            if (authorize_user(user.c_str(), method, client_url))
+            {
+                rval = true;
+                m_user = std::move(user);
+            }
+            else
+            {
+                send_write_access_error();
+            }
+        }
+        else
+        {
+            send_token_auth_error();
+        }
+    }
+
 
     return rval;
 }
@@ -962,32 +1012,12 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             if (!cookie_token.empty())
             {
                 done = true;
-
-                if (!auth_with_token(cookie_token))
-                {
-                    send_token_auth_error();
-                    rval = false;
-                }
-                else if (!authorize_user(m_user.c_str(), method, url))
-                {
-                    send_write_access_error();
-                    rval = false;
-                }
+                rval = auth_with_token(cookie_token, method, url);
             }
             else if (token.substr(0, 7) == "Bearer ")
             {
                 done = true;
-
-                if (!auth_with_token(token.substr(7)))
-                {
-                    send_token_auth_error();
-                    rval = false;
-                }
-                else if (!authorize_user(m_user.c_str(), method, url))
-                {
-                    send_write_access_error();
-                    rval = false;
-                }
+                rval = auth_with_token(token.substr(7), method, url);
             }
         }
         else if (!this_unit.using_ssl && mxs::Config::get().secure_gui)

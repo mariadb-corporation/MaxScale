@@ -115,7 +115,7 @@ private:
     WebSocket::Handler m_ws_handler;
 
     HttpResponse generate_token(const HttpRequest& request);
-    bool         auth_with_token(const std::string& token);
+    bool         auth_with_token(const std::string& token, const char* method, const char* url);
     bool         authorize_user(const char* user, const char* method, const char* url) const;
     bool         is_basic_endpoint() const;
     bool         send_cors_preflight_request(const std::string& verb);
