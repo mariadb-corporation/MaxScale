@@ -13,4 +13,120 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <memory>
+#include <string>
 #include <jansson.h>
+#include <maxbase/assert.hh>
+
+namespace std
+{
+
+template<>
+struct default_delete<json_t>
+{
+    void operator()(json_t* pJson)
+    {
+        json_decref(pJson);
+    }
+};
+}
+
+namespace maxbase
+{
+
+/**
+ * @brief Convenience function for dumping JSON into a string
+ *
+ * @param json  JSON to dump
+ * @param flags Optional flags passed to the jansson json_dump function
+ *
+ * @return The JSON in string format
+ */
+std::string json_dump(const json_t* json, int flags = 0);
+
+/**
+ * @brief Return value at provided JSON Pointer
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6901
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ *
+ * @return Pointed value or NULL if no value is found
+ */
+json_t* json_ptr(const json_t* json, const char* json_ptr);
+
+/**
+ * Get the type of the JSON as a string
+ *
+ * @param json The JSON object to inspect
+ *
+ * @return The human-readable JSON type
+ */
+const char* json_type_to_string(const json_t* json);
+
+/**
+ * Remove null values from JSON objects
+ *
+ * Removes any keys with JSON null values.
+ *
+ * @param json JSON to modify
+ */
+void json_remove_nulls(json_t* json);
+
+/**
+ * Convert json_t to string.
+ *
+ * @param json  JSON to convert to string.
+ *
+ * @return The json_t value as string.
+ */
+static inline std::string json_to_string(json_t* json)
+{
+    std::stringstream ss;
+
+    switch (json_typeof(json))
+    {
+    case JSON_STRING:
+        ss << json_string_value(json);
+        break;
+
+    case JSON_INTEGER:
+        ss << json_integer_value(json);
+        break;
+
+    case JSON_REAL:
+        ss << json_real_value(json);
+        break;
+
+    case JSON_TRUE:
+        ss << "true";
+        break;
+
+    case JSON_FALSE:
+        ss << "false";
+        break;
+
+    case JSON_NULL:
+        break;
+
+    default:
+        mxb_assert(false);
+        break;
+    }
+
+    return ss.str();
+}
+
+/**
+ * @brief Check if the value at the provided JSON Pointer is of a certain type
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ * @param type     JSON type that is expected
+ *
+ * @return False if the object was found but it was not of the expected type. True in all other cases.
+ */
+bool json_is_type(json_t* json, const char* json_ptr, json_type type);
+
+}

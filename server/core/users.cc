@@ -20,8 +20,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <maxbase/jansson.hh>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/users.hh>
 #include <maxscale/http.hh>
 
@@ -274,7 +274,7 @@ bool Users::load_json(json_t* json)
         }
         else
         {
-            MXB_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
+            MXB_ERROR("Corrupt JSON value in users file: %s", mxb::json_dump(value).c_str());
             ok = false;
         }
     }

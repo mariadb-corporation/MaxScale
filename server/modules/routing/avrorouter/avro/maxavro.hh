@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/buffer.hh>
 
 /** File magic and sync marker sizes block sizes */

@@ -14,8 +14,8 @@
 
 #include "common.hh"
 
+#include <maxbase/jansson.hh>
 #include <maxscale/ccdefs.hh>
-#include <maxscale/jansson.hh>
 
 #include "config.hh"
 

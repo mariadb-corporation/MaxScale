@@ -408,6 +408,28 @@ bool MYSQL_session::is_trx_active() const
 
 size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
 {
+    size_t sescmd_history;
+    size_t exec_metadata;
+    size_t rv = get_size(&sescmd_history, &exec_metadata);
+
+    json_object_set_new(memory, "sescmd_history", json_integer(sescmd_history));
+    json_object_set_new(memory, "exec_metadata", json_integer(exec_metadata));
+
+    return rv;
+}
+
+size_t MYSQL_session::static_size() const
+{
+    return sizeof(*this);
+}
+
+size_t MYSQL_session::varying_size() const
+{
+    return get_size(nullptr, nullptr);
+}
+
+size_t MYSQL_session::get_size(size_t* sescmd_history_size, size_t* exec_metadata_size) const
+{
     size_t rv = 0;
 
     size_t sescmd_history = 0;
@@ -420,7 +442,6 @@ size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
     sescmd_history += this->history_responses.size() * sizeof(decltype(this->history_responses)::value_type);
     sescmd_history += this->history_info.size() * sizeof(decltype(this->history_info)::value_type);
 
-    json_object_set_new(memory, "sescmd_history", json_integer(sescmd_history));
     rv += sescmd_history;
 
     size_t exec_metadata = 0;
@@ -430,8 +451,17 @@ size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
         exec_metadata += kv.second.capacity();
     }
 
-    json_object_set_new(memory, "exec_metadata", json_integer(exec_metadata));
     rv += exec_metadata;
+
+    if (sescmd_history_size)
+    {
+        *sescmd_history_size = sescmd_history;
+    }
+
+    if (exec_metadata_size)
+    {
+        *exec_metadata_size = exec_metadata;
+    }
 
     return rv;
 }

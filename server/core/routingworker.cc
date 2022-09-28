@@ -94,6 +94,18 @@ bool can_close_dcb(mxs::BackendConnection* b)
 namespace maxscale
 {
 
+json_t* RoutingWorker::MemoryUsage::to_json() const
+{
+    json_t* pMu = json_object();
+
+    json_object_set_new(pMu, "query_classifier", json_integer(this->query_classifier));
+    json_object_set_new(pMu, "zombies", json_integer(this->zombies));
+    json_object_set_new(pMu, "sessions", json_integer(this->sessions));
+    json_object_set_new(pMu, "total", json_integer(this->total));
+
+    return pMu;
+}
+
 RoutingWorker::ConnPoolEntry::ConnPoolEntry(mxs::BackendConnection* pConn)
     : m_created(time(nullptr))
     , m_pConn(pConn)
@@ -424,6 +436,11 @@ bool RoutingWorker::shutdown_complete()
 }
 
 RoutingWorker::SessionsById& RoutingWorker::session_registry()
+{
+    return m_sessions;
+}
+
+const RoutingWorker::SessionsById& RoutingWorker::session_registry() const
 {
     return m_sessions;
 }
@@ -1577,6 +1594,91 @@ void RoutingWorker::rebalance()
     m_rebalance.reset();
 }
 
+namespace
+{
+
+class MemoryTask : public Worker::Task
+{
+public:
+    MemoryTask(uint32_t nThreads)
+        : m_tmus(nThreads)
+    {
+    }
+
+    void execute(Worker& worker) override final
+    {
+        auto& rworker = static_cast<RoutingWorker&>(worker);
+
+        m_tmus[rworker.index()] = rworker.calculate_memory_usage();
+    }
+
+    void fill(json_t* pStats)
+    {
+        RoutingWorker::MemoryUsage pmu;
+
+        json_t* pThreads = json_array();
+
+        for (size_t i = 0; i < m_tmus.size(); ++i)
+        {
+            const auto& tmu = m_tmus[i];
+
+            json_array_append_new(pThreads, tmu.to_json());
+            pmu += tmu;
+        }
+
+        json_object_set_new(pStats, "process", pmu.to_json());
+        json_object_set_new(pStats, "threads", pThreads);
+    }
+
+private:
+    std::vector<RoutingWorker::MemoryUsage> m_tmus;
+};
+
+}
+
+//static
+std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
+{
+    MemoryTask task(this_unit.nWorkers);
+    RoutingWorker::execute_concurrently(task);
+
+    json_t* pAttr = json_object();
+    task.fill(pAttr);
+
+    json_t* pMemory = json_object();
+    json_object_set_new(pMemory, CN_ID, json_string(CN_MEMORY));
+    json_object_set_new(pMemory, CN_TYPE, json_string(CN_MEMORY));
+    json_object_set_new(pMemory, CN_ATTRIBUTES, pAttr);
+
+    return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_MEMORY, pMemory));
+}
+
+RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
+{
+    MemoryUsage rv;
+
+    QC_CACHE_STATS qc;
+    if (qc_get_cache_stats(&qc))
+    {
+        rv.query_classifier = qc.size;
+    }
+
+    for (const DCB* pZombie : m_zombies)
+    {
+        rv.zombies += pZombie->runtime_size();
+    }
+
+    const Registry<MXS_SESSION>& sessions = session_registry();
+    for (const auto& kv : sessions)
+    {
+        rv.sessions += kv.second->runtime_size();
+    }
+
+    rv.total = rv.query_classifier + rv.zombies + rv.sessions;
+
+    return rv;
+}
+
 // static
 void RoutingWorker::start_shutdown()
 {
@@ -1833,17 +1935,11 @@ void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
     times_found += rhs.times_found;
     times_empty += rhs.times_empty;
 }
-}
 
-namespace
-{
-
-using namespace maxscale;
-
-class WorkerInfoTask : public Worker::Task
+class RoutingWorker::InfoTask : public Worker::Task
 {
 public:
-    WorkerInfoTask(const char* zHost, uint32_t nThreads)
+    InfoTask(const char* zHost, uint32_t nThreads)
         : m_zHost(zHost)
     {
         m_data.resize(nThreads);
@@ -1855,34 +1951,8 @@ public:
         mxb_assert(rworker.is_current());
 
         json_t* pStats = json_object();
-        const Worker::STATISTICS& s = rworker.statistics();
-        json_object_set_new(pStats, "reads", json_integer(s.n_read));
-        json_object_set_new(pStats, "writes", json_integer(s.n_write));
-        json_object_set_new(pStats, "errors", json_integer(s.n_error));
-        json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
-        json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
-        json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
-        json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
-        json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
-        json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
 
-        int64_t nCurrent = rworker.current_fd_count();
-        int64_t nTotal = rworker.total_fd_count();
-        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
-        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
-
-        json_t* load = json_object();
-        json_object_set_new(load, "last_second", json_integer(rworker.load(Worker::Load::ONE_SECOND)));
-        json_object_set_new(load, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
-        json_object_set_new(load, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
-        json_object_set_new(pStats, "load", load);
-
-        json_t* qc = qc_get_cache_stats_as_json();
-
-        if (qc)
-        {
-            json_object_set_new(pStats, "query_classifier_cache", qc);
-        }
+        add_stats(rworker, pStats);
 
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
@@ -1921,9 +1991,48 @@ public:
     }
 
 private:
+    static void add_stats(const RoutingWorker& rworker, json_t* pStats)
+    {
+        const Worker::STATISTICS& s = rworker.statistics();
+        json_object_set_new(pStats, "reads", json_integer(s.n_read));
+        json_object_set_new(pStats, "writes", json_integer(s.n_write));
+        json_object_set_new(pStats, "errors", json_integer(s.n_error));
+        json_object_set_new(pStats, "hangups", json_integer(s.n_hup));
+        json_object_set_new(pStats, "accepts", json_integer(s.n_accept));
+        json_object_set_new(pStats, "avg_event_queue_length", json_integer(s.evq_avg));
+        json_object_set_new(pStats, "max_event_queue_length", json_integer(s.evq_max));
+        json_object_set_new(pStats, "max_exec_time", json_integer(s.maxexectime));
+        json_object_set_new(pStats, "max_queue_time", json_integer(s.maxqtime));
+
+        int64_t nCurrent = rworker.current_fd_count();
+        int64_t nTotal = rworker.total_fd_count();
+        json_object_set_new(pStats, "current_descriptors", json_integer(nCurrent));
+        json_object_set_new(pStats, "total_descriptors", json_integer(nTotal));
+
+        json_t* pLoad = json_object();
+        json_object_set_new(pLoad, "last_second", json_integer(rworker.load(Worker::Load::ONE_SECOND)));
+        json_object_set_new(pLoad, "last_minute", json_integer(rworker.load(Worker::Load::ONE_MINUTE)));
+        json_object_set_new(pLoad, "last_hour", json_integer(rworker.load(Worker::Load::ONE_HOUR)));
+
+        json_object_set_new(pStats, "load", pLoad);
+
+        json_object_set_new(pStats, "query_classifier_cache", qc_get_cache_stats_as_json());
+
+        json_object_set_new(pStats, "sessions", json_integer(rworker.session_registry().size()));
+        json_object_set_new(pStats, "zombies", json_integer(rworker.m_zombies.size()));
+
+        RoutingWorker::MemoryUsage mu = rworker.calculate_memory_usage();
+        json_object_set_new(pStats, "memory", mu.to_json());
+    }
+
+private:
     vector<json_t*> m_data;
     const char*     m_zHost;
 };
+}
+
+namespace
+{
 
 class FunctionTask : public Worker::DisposableTask
 {
@@ -1946,7 +2055,7 @@ protected:
 json_t* mxs_rworker_to_json(const char* zHost, int index)
 {
     Worker* target = RoutingWorker::get_by_index(index);
-    WorkerInfoTask task(zHost, index + 1);
+    RoutingWorker::InfoTask task(zHost, index + 1);
     Semaphore sem;
 
     target->execute(&task, &sem, Worker::EXECUTE_AUTO);
@@ -1957,7 +2066,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 
 json_t* mxs_rworker_list_to_json(const char* host)
 {
-    WorkerInfoTask task(host, this_unit.nWorkers);
+    RoutingWorker::InfoTask task(host, this_unit.nWorkers);
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }

@@ -14,7 +14,6 @@
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
-#include <jansson.h>
 #include <utility>
 
 using std::string;
@@ -731,4 +730,17 @@ void json_remove_nulls(json_t* json)
         }
     }
 }
+
+bool json_is_type(json_t* json, const char* json_ptr, json_type type)
+{
+    bool rval = true;
+
+    if (auto j = mxb::json_ptr(json, json_ptr))
+    {
+        rval = json_typeof(j) == type;
+    }
+
+    return rval;
+}
+
 }

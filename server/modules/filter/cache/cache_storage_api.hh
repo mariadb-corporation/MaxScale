@@ -16,7 +16,6 @@
 
 #include <cstdbool>
 #include <cstdint>
-#include <jansson.h>
 
 #include <chrono>
 #include <functional>
@@ -25,6 +24,7 @@
 #include <vector>
 
 #include <maxbase/host.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

@@ -1442,7 +1442,7 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
     else
     {
         *pMessage = "Expected a json object, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -2578,7 +2578,7 @@ mxs::ConfigParameters mxs::ConfigParameters::from_json(json_t* json)
     {
         if (!json_is_null(value) && !json_is_array(value) && !json_is_object(value))
         {
-            auto strval = mxs::json_to_string(value);
+            auto strval = mxb::json_to_string(value);
 
             if (!strval.empty())
             {

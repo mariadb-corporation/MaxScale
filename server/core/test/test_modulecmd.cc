@@ -465,7 +465,7 @@ int test_output()
     TEST(modulecmd_call_command(cmd, NULL, &output), "Module call should be successful");
     TEST(output, "Output should be non-NULL");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
-    TEST(json_is_string(mxs_json_pointer(output, "/hello")), "Value should be correct");
+    TEST(json_is_string(mxb::json_ptr(output, "/hello")), "Value should be correct");
 
     json_decref(output);
 

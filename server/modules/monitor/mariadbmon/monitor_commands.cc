@@ -50,6 +50,8 @@ const char rebuild_server_cmd[] = "rebuild-server";
 const char mask[] = "******";
 
 const string rebuild_datadir = "/var/lib/mysql";    // configurable?
+const char link_test_msg[] = "Test message";
+const int socat_timeout_s = 5;      // TODO: configurable?
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -1432,6 +1434,10 @@ bool RebuildServer::run()
             advance = init();
             break;
 
+        case State::TEST_DATALINK:
+            test_datalink();
+            break;
+
         case State::SERVE_BACKUP:
             advance = serve_backup();
             break;
@@ -1446,6 +1452,10 @@ bool RebuildServer::run()
 
         case State::WAIT_TRANSFER:
             advance = wait_transfer();
+            break;
+
+        case State::CHECK_DATADIR_SIZE:
+            check_datadir_size();
             break;
 
         case State::START_BACKUP_PREPARE:
@@ -1474,9 +1484,6 @@ bool RebuildServer::run()
             command_complete = true;
             advance = false;
             break;
-
-        default:
-            mxb_assert(!true);
         }
     }
 
@@ -1552,8 +1559,74 @@ bool RebuildServer::init()
         }
     }
 
-    m_state = init_ok ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = init_ok ? State::TEST_DATALINK : State::CLEANUP;
     return true;
+}
+
+void RebuildServer::test_datalink()
+{
+    using Status = ssh_util::AsyncCmd::Status;
+    auto& error_out = m_result.output;
+    bool success = false;
+    // Test the datalink between source and target by steaming some bytes.
+    string test_serve_cmd = mxb::string_printf("echo \"%s\" | socat - TCP-LISTEN:%i,reuseaddr",
+                                               link_test_msg, m_port);
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
+    if (cmd_handle)
+    {
+        string test_receive_cmd = mxb::string_printf("socat -u TCP:%s:%i,connect-timeout=%i STDOUT",
+                                                     m_source->server->address(), m_port, socat_timeout_s);
+        auto res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
+        if (res.type == RType::OK && res.rc == 0)
+        {
+            mxb::trim(res.output);
+            bool data_ok = (res.output == link_test_msg);
+            auto source_status = cmd_handle->update_status();
+            if (source_status == Status::BUSY)
+            {
+                // Maybe source is slow to quit?
+                sleep(1);
+                source_status = cmd_handle->update_status();
+            }
+
+            if (data_ok && source_status == Status::READY)
+            {
+                success = true;
+            }
+            else
+            {
+                if (!data_ok)
+                {
+                    PRINT_JSON_ERROR(error_out, "Received '%s' when '%s' was expected when testing data "
+                                                "streaming from %s to %s.",
+                                     res.output.c_str(), link_test_msg, m_source->name(), m_target->name());
+                }
+                if (source_status == Status::BUSY)
+                {
+                    PRINT_JSON_ERROR(error_out, "Data stream serve command '%s' did not stop on %s even "
+                                                "after data was transferred",
+                                     test_receive_cmd.c_str(), m_source->name());
+                }
+                else if (source_status == Status::SSH_FAIL)
+                {
+                    PRINT_JSON_ERROR(error_out, "Failed to check transfer status on %s. %s",
+                                     m_source->name(), cmd_handle->error_output().c_str());
+                }
+            }
+        }
+        else
+        {
+            string errmsg = ssh_util::form_cmd_error_msg(res, test_receive_cmd.c_str());
+            PRINT_JSON_ERROR(m_result.output, "Could not receive test data on %s. %s",
+                             m_target->name(), errmsg.c_str());
+        }
+    }
+    else
+    {
+        PRINT_JSON_ERROR(error_out, "Failed to test data streaming from %s. %s",
+                         m_source->name(), ssh_errmsg.c_str());
+    }
+    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
 }
 
 bool RebuildServer::serve_backup()
@@ -1583,24 +1656,25 @@ bool RebuildServer::serve_backup()
             m_source_cmd = move(cmd_handle);
             MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_port);
         }
+        else if (status == ssh_util::AsyncCmd::Status::READY)
+        {
+            // The stream serve operation ended before it should. Print all output available.
+            // The ssh-command includes username & pw so mask those in the message.
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_port);
+
+            int rc = cmd_handle->rc();
+
+            string message = mxb::string_printf(
+                "Failed to stream data from %s. Command '%s' stopped before data was streamed. Return "
+                "value %i. Output: '%s' Error output: '%s'", m_source->name(), masked_cmd.c_str(), rc,
+                cmd_handle->output().c_str(), cmd_handle->error_output().c_str());
+
+            PRINT_JSON_ERROR(error_out, "%s", message.c_str());
+        }
         else
         {
-            // The ssh-command includes username & pw so mask those in the log message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_port);
-            if (status == ssh_util::AsyncCmd::Status::READY)
-            {
-                int rc = cmd_handle->rc();
-                string result = rc == 0 ? "succeeded" :
-                    mxb::string_printf("failed with error %i: '%s'", rc, cmd_handle->error_output().c_str());
-                PRINT_JSON_ERROR(error_out, "Failed to stream data from %s. Command '%s' %s before data "
-                                            "was streamed.", m_mon.name(), masked_cmd.c_str(),
-                                 result.c_str());
-            }
-            else
-            {
-                ssh_errmsg = mxb::string_printf("Failed to read output. %s",
-                                                cmd_handle->error_output().c_str());
-            }
+            ssh_errmsg = mxb::string_printf("Failed to read output. %s",
+                                            cmd_handle->error_output().c_str());
         }
     }
 
@@ -1608,7 +1682,7 @@ bool RebuildServer::serve_backup()
     {
         mxb_assert(!m_source_cmd);
         PRINT_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
-                         m_mon.name(), ssh_errmsg.c_str());
+                         m_source->name(), ssh_errmsg.c_str());
     }
 
     m_state = rval ? State::PREPARE_TARGET : State::CLEANUP;
@@ -1648,8 +1722,7 @@ bool RebuildServer::start_transfer()
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
                                "| sudo mbstream -x --directory=%s";
-    int timeout_s = 5;      // TODO: configurable?
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_port, timeout_s,
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_port, socat_timeout_s,
                                             rebuild_datadir.c_str());
 
     bool rval = false;
@@ -1663,7 +1736,7 @@ bool RebuildServer::start_transfer()
     else
     {
         PRINT_JSON_ERROR(m_result.output, "Failed to start receiving data to %s. %s",
-                         m_mon.name(), ssh_errmsg.c_str());
+                         m_target->name(), ssh_errmsg.c_str());
     }
     m_state = transfer_started ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
@@ -1688,10 +1761,20 @@ bool RebuildServer::wait_transfer()
         {
             if (m_target_cmd->rc() == 0)
             {
+                // Transfer ended with rval 0. This does not guarantee success since the return value of a
+                // multistage command is the return value of the last part. Print any error messages here
+                // and in the next step, check that the target directory is not empty.
                 target_success = true;
                 MXB_NOTICE("Backup transferred to %s.", m_target->name());
-                // TODO: return code is not entirely reliable. Should perhaps check if error output has some
-                // worrisome contents. Not that it really matters for the end result.
+                if (!m_target_cmd->output().empty())
+                {
+                    MXB_NOTICE("Output from %s: %s", m_target->name(), m_target_cmd->output().c_str());
+                }
+                if (!m_target_cmd->error_output().empty())
+                {
+                    MXB_WARNING("Error output from %s: %s", m_target->name(),
+                                m_target_cmd->error_output().c_str());
+                }
             }
             else
             {
@@ -1722,12 +1805,7 @@ bool RebuildServer::wait_transfer()
             // Both stopped.
             if (source_status == Status::READY)
             {
-                if (m_source_cmd->rc() != 0)
-                {
-                    PRINT_JSON_ERROR(error_out, "Backup send failure on %s. Error %i: '%s'.",
-                                     m_source->name(), m_source_cmd->rc(),
-                                     m_source_cmd->error_output().c_str());
-                }
+                report_source_stream_status();
             }
             else
             {
@@ -1744,9 +1822,49 @@ bool RebuildServer::wait_transfer()
     }
     else
     {
-        m_state = target_success ? State::START_BACKUP_PREPARE : State::CLEANUP;
+        m_state = target_success ? State::CHECK_DATADIR_SIZE : State::CLEANUP;
         return true;
     }
+}
+
+
+void RebuildServer::check_datadir_size()
+{
+    // Check that target data directory has contents. This is just to get a better error message in case
+    // transfer failed without any clear errors. Even if this part fails, go to next state. The size check
+    // can fail simply because MaxScale cannot run "du" as sudo.
+    string du_cmd = mxb::string_printf("sudo du -sm %s/", rebuild_datadir.c_str());
+    auto res = ssh_util::run_cmd(*m_target_ses, du_cmd, m_ssh_timeout);
+    if (res.type == RType::OK && res.rc == 0)
+    {
+        bool parse_ok = false;
+        auto words = mxb::strtok(res.output, " \t");
+        if (words.size() > 1)
+        {
+            long size_mb = -1;
+            if (mxb::get_long(words[0], &size_mb))
+            {
+                parse_ok = true;
+                if (size_mb < 1)
+                {
+                    MXB_WARNING("Data directory '%s' on %s is empty. Transfer must have failed.",
+                                rebuild_datadir.c_str(), m_target->name());
+                }
+            }
+        }
+
+        if (!parse_ok)
+        {
+            MXB_WARNING("Could not check data directory size on %s. Command '%s' returned '%s.",
+                        m_target->name(), du_cmd.c_str(), res.output.c_str());
+        }
+    }
+    else
+    {
+        string errmsg = ssh_util::form_cmd_error_msg(res, du_cmd.c_str());
+        MXB_WARNING("Could not check data directory size on %s. %s", m_target->name(), errmsg.c_str());
+    }
+    m_state = State::START_BACKUP_PREPARE;
 }
 
 bool RebuildServer::start_backup_prepare()
@@ -1948,6 +2066,7 @@ bool RebuildServer::start_replication()
 
 void RebuildServer::cleanup()
 {
+    using Status = ssh_util::AsyncCmd::Status;
     // Target cmd may exist if rebuild is canceled while waiting for transfer/prepare.
     if (m_target_cmd)
     {
@@ -1958,7 +2077,21 @@ void RebuildServer::cleanup()
     // Ensure that the source server is no longer serving the backup.
     if (m_source_cmd)
     {
-        m_source_cmd->update_status();
+        auto source_status = m_source_cmd->update_status();
+        if (source_status == Status::BUSY)
+        {
+            MXB_WARNING("%s is serving backup data stream even after transfer has ended. "
+                        "Closing ssh channel.", m_source->name());
+        }
+        else if (source_status == Status::READY)
+        {
+            report_source_stream_status();
+        }
+        else
+        {
+            PRINT_JSON_ERROR(m_result.output, "Failed to check backup transfer status on %s. %s",
+                             m_source->name(), m_source_cmd->error_output().c_str());
+        }
         m_source_cmd = nullptr;
     }
 
@@ -2025,6 +2158,31 @@ MariaDBServer* RebuildServer::autoselect_source_srv(const MariaDBServer* target)
         }
     }
     return rval;
+}
+
+void RebuildServer::report_source_stream_status()
+{
+    int rc = m_source_cmd->rc();
+    if (rc == 0)
+    {
+        // Send command completed successfully. Print any output from the command as INFO-level, since it
+        // can be a lot and is usually uninteresting.
+        if (!m_source_cmd->output().empty())
+        {
+            MXB_INFO("Backup send output from %s: %s", m_source->name(), m_source_cmd->output().c_str());
+        }
+        if (!m_source_cmd->error_output().empty())
+        {
+            MXB_INFO("Backup send error output from %s: %s", m_source->name(),
+                     m_source_cmd->error_output().c_str());
+        }
+    }
+    else
+    {
+        PRINT_JSON_ERROR(m_result.output, "Backup send failure on %s. Error %i: '%s'.",
+                         m_source->name(), m_source_cmd->rc(),
+                         m_source_cmd->error_output().c_str());
+    }
 }
 
 Result Result::deep_copy() const

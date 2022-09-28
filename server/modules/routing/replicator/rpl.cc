@@ -1622,7 +1622,7 @@ void Table::serialize(const char* path) const
         {
             if (json_t* json = to_json())
             {
-                fprintf(file, "%s\n", mxs::json_dump(json, JSON_COMPACT).c_str());
+                fprintf(file, "%s\n", mxb::json_dump(json, JSON_COMPACT).c_str());
                 json_decref(json);
             }
 

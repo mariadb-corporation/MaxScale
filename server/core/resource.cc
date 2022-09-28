@@ -16,11 +16,11 @@
 #include <map>
 #include <sstream>
 
+#include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>
@@ -97,7 +97,7 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
     }
 
     std::string final_path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + relationship;
-    auto rel = json_incref(mxs_json_pointer(json, final_path.c_str()));
+    auto rel = json_incref(mxb::json_ptr(json, final_path.c_str()));
     json_decref(json);
 
     return HttpResponse(rel ? MHD_HTTP_OK : MHD_HTTP_NOT_FOUND, rel);
@@ -129,7 +129,7 @@ bool Resource::match(const HttpRequest& request) const
 
 static void remove_null_parameters(json_t* json)
 {
-    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    if (json_t* parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
         json_t* value;
@@ -1030,6 +1030,11 @@ HttpResponse cb_module(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, json);
 }
 
+HttpResponse cb_memory(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, mxs::RoutingWorker::memory_to_json(request.host()).release());
+}
+
 HttpResponse cb_all_users(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host()));
@@ -1445,6 +1450,7 @@ public:
         m_get.emplace_back(cb_log_stream, "maxscale", "logs", "stream");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");
+        m_get.emplace_back(cb_memory, "maxscale", "memory");
 
         /** For all read-only module commands */
         m_get.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");
@@ -1837,7 +1843,7 @@ static HttpResponse handle_request(const HttpRequest& request)
     }
 
     // Calculate the checksum from the generated JSON
-    auto str = mxs::json_dump(rval.get_response(), JSON_COMPACT);
+    auto str = mxb::json_dump(rval.get_response(), JSON_COMPACT);
     auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>(str) + '"';
 
     if (request_precondition_met(request, rval, cksum))

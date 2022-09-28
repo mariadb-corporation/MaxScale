@@ -298,12 +298,20 @@ public:
 
     std::chrono::seconds multiplex_timeout() const;
 
-    mxb::Json get_memory_statistics() const;
+    mxb::Json get_memory_statistics() const override final;
+
+    size_t static_size() const override final;
+
+    size_t varying_size() const override final;
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
+    size_t get_memory_statistics(size_t* connection_buffers,
+                                 size_t* last_queries,
+                                 size_t* variables) const;
+
     void adjust_io_activity(time_t now) const;
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);

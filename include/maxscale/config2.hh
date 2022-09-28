@@ -3262,7 +3262,7 @@ bool ParamDuration<T>::from_json(const json_t* pJson,
     else
     {
         *pMessage = "Expected a json string with a duration, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -3385,7 +3385,7 @@ bool ParamEnum<T>::from_json(const json_t* pJson, value_type* pValue,
     else
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -3529,7 +3529,7 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
     else
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 

@@ -22,7 +22,7 @@
 #include <microhttpd.h>
 
 #include <maxbase/alloc.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/http.hh>
 
@@ -223,7 +223,7 @@ public:
      */
     std::string get_json_str() const
     {
-        return m_json ? mxs::json_dump(m_json.get()) : "";
+        return m_json ? mxb::json_dump(m_json.get()) : "";
     }
 
     /**

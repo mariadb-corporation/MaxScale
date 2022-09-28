@@ -16,7 +16,7 @@
 #include <string>
 
 #include <maxbase/alloc.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/json_api.hh>
 
 using std::string;
@@ -261,31 +261,31 @@ int test1()
 
     mxb_assert(json);
 
-    mxb_assert(mxs_json_pointer(json, "") == json);
-    mxb_assert(mxs_json_pointer(json, "links") == json_object_get(json, "links"));
-    mxb_assert(json_is_string(mxs_json_pointer(json, "links/self")));
+    mxb_assert(mxb::json_ptr(json, "") == json);
+    mxb_assert(mxb::json_ptr(json, "links") == json_object_get(json, "links"));
+    mxb_assert(json_is_string(mxb::json_ptr(json, "links/self")));
 
-    mxb_assert(mxs_json_pointer(json, "data") == json_object_get(json, "data"));
-    mxb_assert(json_is_array(mxs_json_pointer(json, "data")));
+    mxb_assert(mxb::json_ptr(json, "data") == json_object_get(json, "data"));
+    mxb_assert(json_is_array(mxb::json_ptr(json, "data")));
 
-    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0")));
-    mxb_assert(json_is_string(mxs_json_pointer(json, "data/0/id")));
-    string s = json_string_value(mxs_json_pointer(json, "data/0/id"));
+    mxb_assert(json_is_object(mxb::json_ptr(json, "data/0")));
+    mxb_assert(json_is_string(mxb::json_ptr(json, "data/0/id")));
+    string s = json_string_value(mxb::json_ptr(json, "data/0/id"));
     mxb_assert(s == "server1");
 
-    mxb_assert(json_is_object(mxs_json_pointer(json, "data/1")));
-    mxb_assert(json_is_string(mxs_json_pointer(json, "data/1/id")));
-    s = json_string_value(mxs_json_pointer(json, "data/1/id"));
+    mxb_assert(json_is_object(mxb::json_ptr(json, "data/1")));
+    mxb_assert(json_is_string(mxb::json_ptr(json, "data/1/id")));
+    s = json_string_value(mxb::json_ptr(json, "data/1/id"));
     mxb_assert(s == "server2");
 
-    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0/attributes")));
-    mxb_assert(json_is_object(mxs_json_pointer(json, "data/0/attributes/parameters")));
-    mxb_assert(json_is_integer(mxs_json_pointer(json, "data/0/attributes/parameters/port")));
-    int i = json_integer_value(mxs_json_pointer(json, "data/0/attributes/parameters/port"));
+    mxb_assert(json_is_object(mxb::json_ptr(json, "data/0/attributes")));
+    mxb_assert(json_is_object(mxb::json_ptr(json, "data/0/attributes/parameters")));
+    mxb_assert(json_is_integer(mxb::json_ptr(json, "data/0/attributes/parameters/port")));
+    int i = json_integer_value(mxb::json_ptr(json, "data/0/attributes/parameters/port"));
     mxb_assert(i == 3000);
 
-    mxb_assert(json_is_array(mxs_json_pointer(json, "data/0/attributes/slaves")));
-    mxb_assert(json_array_size(mxs_json_pointer(json, "data/0/attributes/slaves")) == 3);
+    mxb_assert(json_is_array(mxb::json_ptr(json, "data/0/attributes/slaves")));
+    mxb_assert(json_array_size(mxb::json_ptr(json, "data/0/attributes/slaves")) == 3);
 
     json_decref(json);
 

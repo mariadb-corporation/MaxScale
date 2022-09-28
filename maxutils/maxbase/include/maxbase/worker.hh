@@ -513,7 +513,7 @@ public:
         return m_id;
     }
 
-    int load(Load::counter_t counter)
+    int load(Load::counter_t counter) const
     {
         return m_load.percentage(counter);
     }

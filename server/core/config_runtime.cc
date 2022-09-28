@@ -28,13 +28,13 @@
 #include <strings.h>
 #include <fcntl.h>
 
-#include <maxscale/jansson.hh>
+#include <maxbase/filesystem.hh>
+#include <maxbase/format.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
-#include <maxbase/format.hh>
-#include <maxbase/filesystem.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
@@ -561,7 +561,7 @@ bool runtime_unlink_target(const StringSet& children, const StringSet& parents)
 bool is_valid_string(json_t* json, const char* path)
 {
     bool ok = false;
-    json_t* val = mxs_json_pointer(json, path);
+    json_t* val = mxb::json_ptr(json, path);
 
     if (!val)
     {
@@ -588,7 +588,7 @@ bool extract_ordered_relations(json_t* json,
                                Relationship rel)
 {
     bool rval = true;
-    json_t* arr = mxs_json_pointer(json, rel.first);
+    json_t* arr = mxb::json_ptr(json, rel.first);
 
     if (arr && json_is_array(arr))
     {
@@ -598,7 +598,7 @@ bool extract_ordered_relations(json_t* json,
         {
             json_t* obj = json_array_get(arr, j);
             json_t* id = json_object_get(obj, CN_ID);
-            json_t* type = mxs_json_pointer(obj, CN_TYPE);
+            json_t* type = mxb::json_ptr(obj, CN_TYPE);
 
             if (id && json_is_string(id)
                 && type && json_is_string(type))
@@ -643,8 +643,8 @@ bool is_null_relation(json_t* json, const char* relation)
     mxb_assert(pos != std::string::npos);
     str = str.substr(0, pos);
 
-    json_t* data = mxs_json_pointer(json, relation);
-    json_t* base = mxs_json_pointer(json, str.c_str());
+    json_t* data = mxb::json_ptr(json, relation);
+    json_t* base = mxb::json_ptr(json, str.c_str());
 
     return (data && json_is_null(data)) || (base && json_is_null(base));
 }
@@ -691,7 +691,7 @@ const char* json_type_to_string(const json_t* json)
 const char* get_string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value = mxb::json_ptr(json, path);
 
     if (value && json_is_string(value))
     {
@@ -704,7 +704,7 @@ const char* get_string_or_null(json_t* json, const char* path)
 bool runtime_is_string_or_null(json_t* json, const char* path)
 {
     bool rval = true;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value = mxb::json_ptr(json, path);
 
     if (value && !json_is_string(value) && !json_is_null(value))
     {
@@ -718,7 +718,7 @@ bool runtime_is_string_or_null(json_t* json, const char* path)
 bool runtime_is_bool_or_null(json_t* json, const char* path)
 {
     bool rval = true;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value = mxb::json_ptr(json, path);
 
     if (value && !json_is_boolean(value) && !json_is_null(value))
     {
@@ -732,7 +732,7 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
 bool runtime_is_size_or_null(json_t* json, const char* path)
 {
     bool rval = true;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value = mxb::json_ptr(json, path);
 
     if (value)
     {
@@ -756,7 +756,7 @@ bool runtime_is_size_or_null(json_t* json, const char* path)
 bool runtime_is_count_or_null(json_t* json, const char* path)
 {
     bool rval = true;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value = mxb::json_ptr(json, path);
 
     if (value)
     {
@@ -780,7 +780,7 @@ bool is_valid_resource_body(json_t* json)
 {
     bool rval = true;
 
-    if (mxs_json_pointer(json, MXS_JSON_PTR_DATA) == NULL)
+    if (mxb::json_ptr(json, MXS_JSON_PTR_DATA) == NULL)
     {
         MXB_ERROR("No '%s' field defined", MXS_JSON_PTR_DATA);
         rval = false;
@@ -798,7 +798,7 @@ bool is_valid_resource_body(json_t* json)
 
         for (auto it = relations.begin(); it != relations.end(); it++)
         {
-            json_t* j = mxs_json_pointer(json, *it);
+            json_t* j = mxb::json_ptr(json, *it);
 
             if (j && !json_is_object(j))
             {
@@ -820,7 +820,7 @@ bool server_contains_required_fields(json_t* json)
     {
         MXB_ERROR("%s", err.c_str());
     }
-    else if (!mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    else if (!mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
     {
         MXB_ERROR("Field '%s' is not defined", MXS_JSON_PTR_PARAMETERS);
     }
@@ -852,8 +852,8 @@ bool link_target_to_objects(const std::string& target, StringSet& relations)
 
 bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL
-        && mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS) == NULL)
+    if (mxb::json_ptr(new_json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES) == NULL
+        && mxb::json_ptr(new_json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS) == NULL)
     {
         /** No change to relationships */
         return true;
@@ -866,7 +866,7 @@ bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_js
     for (const auto& a : {to_service_rel, to_monitor_rel})
     {
         // Extract only changed or deleted relationships
-        if (is_null_relation(new_json, a.first) || mxs_json_pointer(new_json, a.first))
+        if (is_null_relation(new_json, a.first) || mxb::json_ptr(new_json, a.first))
         {
             if (!extract_relations(new_json, new_relations, a)
                 || !extract_relations(old_json, old_relations, a))
@@ -908,7 +908,7 @@ bool is_valid_relationship_body(json_t* json)
 {
     bool rval = true;
 
-    json_t* obj = mxs_json_pointer(json, MXS_JSON_PTR_DATA);
+    json_t* obj = mxb::json_ptr(json, MXS_JSON_PTR_DATA);
 
     if (!obj)
     {
@@ -953,7 +953,7 @@ bool inject_server_relationship_as_parameter(json_t* params, json_t* json)
 
     // We need to check first if there's a value defined. If there isn't, we do nothing and treat the
     // relationships as the same.
-    if (mxs_json_pointer(json, to_server_rel.first))
+    if (mxb::json_ptr(json, to_server_rel.first))
     {
         if (extract_ordered_relations(json, relations, to_server_rel))
         {
@@ -1001,7 +1001,7 @@ bool update_object_relations(const std::string& target,
                              json_t* old_json,
                              json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, rel.first) == NULL)
+    if (mxb::json_ptr(new_json, rel.first) == NULL)
     {
         /** No change to relationships */
         return true;
@@ -1060,7 +1060,7 @@ bool service_to_service_relations(const std::string& target, json_t* old_json, j
 
 bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new_json)
 {
-    if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS_FILTERS) == NULL)
+    if (mxb::json_ptr(new_json, MXS_JSON_PTR_RELATIONSHIPS_FILTERS) == NULL)
     {
         // No relationships defined, nothing to change
         return true;
@@ -1115,7 +1115,7 @@ bool monitor_to_service_relations(const std::string& target, json_t* old_json, j
 
 bool validate_logs_json(json_t* json)
 {
-    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+    json_t* param = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
     bool rval = false;
 
     if (param && json_is_object(param))
@@ -1143,7 +1143,7 @@ bool validate_listener_json(json_t* json)
     if (is_valid_string(json, MXS_JSON_PTR_ID))
     {
 
-        if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
+        if (!(param = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS)))
         {
             MXB_ERROR("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
         }
@@ -1172,7 +1172,7 @@ bool validate_user_json(json_t* json)
         && is_valid_string(json, MXS_JSON_PTR_PASSWORD)
         && is_valid_string(json, MXS_JSON_PTR_ACCOUNT))
     {
-        json_t* account = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
+        json_t* account = mxb::json_ptr(json, MXS_JSON_PTR_ACCOUNT);
 
         if (json_to_account_type(account) == mxs::USER_ACCOUNT_UNKNOWN)
         {
@@ -1180,7 +1180,7 @@ bool validate_user_json(json_t* json)
         }
         else
         {
-            json_t* type  = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
+            json_t* type  = mxb::json_ptr(json, MXS_JSON_PTR_TYPE);
 
             if (strcmp(json_string_value(type), CN_INET) == 0)
             {
@@ -1206,11 +1206,11 @@ bool validate_monitor_json(json_t* json)
 
     if (rval)
     {
-        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+        json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
 
         for (auto a : {CN_USER, CN_PASSWORD})
         {
-            if (!mxs_json_pointer(params, a))
+            if (!mxb::json_ptr(params, a))
             {
                 MXB_ERROR("Mandatory parameter '%s' is not defined", a);
                 rval = false;
@@ -1218,7 +1218,7 @@ bool validate_monitor_json(json_t* json)
             }
         }
 
-        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        if (!mxb::json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
@@ -1234,7 +1234,7 @@ bool validate_filter_json(json_t* json)
 
     if (rval)
     {
-        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        if (!mxb::json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
@@ -1250,16 +1250,16 @@ bool validate_service_json(json_t* json)
 
     if (rval)
     {
-        auto servers = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS);
-        auto services = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES);
-        auto monitors = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS);
+        auto servers = mxb::json_ptr(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS);
+        auto services = mxb::json_ptr(json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES);
+        auto monitors = mxb::json_ptr(json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS);
 
         if (json_array_size(monitors) && (json_array_size(servers) || json_array_size(services)))
         {
             MXB_ERROR("A service must use either servers and services or monitors, not both");
             rval = false;
         }
-        else if (!mxs_json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
+        else if (!mxb::json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_ROUTER);
             rval = false;
@@ -1300,7 +1300,7 @@ Service* get_service_from_listener_json(json_t* json)
     Service* rval = nullptr;
     const char* ptr = "/data/relationships/services/data/0/id";
 
-    if (auto svc = mxs_json_pointer(json, ptr))
+    if (auto svc = mxb::json_ptr(json, ptr))
     {
         if (json_is_string(svc))
         {
@@ -1436,6 +1436,23 @@ const char* get_object_type(const std::string& name)
 
     return nullptr;
 }
+
+/**
+ * Combine `dest` and `src` into one object
+ *
+ * Removes JSON nulls and updates `dest` with the contents of `src`. Both objects are modified as a result of
+ * this function call.
+ *
+ * @param dest JSON object where the combined result is stored
+ * @param src  JSON object from where the values are copied
+ */
+void merge_json(json_t* dest, json_t* src)
+{
+    mxb::json_remove_nulls(dest);
+    mxb::json_remove_nulls(src);
+    json_object_update(dest, src);
+}
+
 }
 
 void config_runtime_add_error(const std::string& error)
@@ -1657,9 +1674,9 @@ bool runtime_create_server_from_json(json_t* json)
         && extract_relations(json, relations, to_service_rel)
         && extract_relations(json, relations, to_monitor_rel))
     {
-        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-        mxs::json_remove_nulls(params);
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
+        mxb::json_remove_nulls(params);
+        const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
         mxb_assert(name);
 
         if (const char* other = get_object_type(name))
@@ -1694,12 +1711,12 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
         rval = true;
         json_t* new_parameters = nullptr;
 
-        if (json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+        if (json_t* parameters = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             rval = false;
-            new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
+            new_parameters = mxb::json_ptr(old_json.get(), MXS_JSON_PTR_PARAMETERS);
             json_object_update(new_parameters, parameters);
-            mxs::json_remove_nulls(new_parameters);
+            mxb::json_remove_nulls(new_parameters);
 
             if (Server::specification().validate(new_parameters))
             {
@@ -1786,8 +1803,8 @@ bool runtime_create_monitor_from_json(json_t* json)
 
     if (validate_monitor_json(json))
     {
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+        const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
+        const char* module = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
         if (const char* other = get_object_type(name))
         {
@@ -1795,13 +1812,13 @@ bool runtime_create_monitor_from_json(json_t* json)
         }
         else
         {
-            json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+            json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
             mxb::json_remove_nulls(params);
             mxb_assert_message(params, "Validation should guarantee that parameters exist");
             inject_server_relationship_as_parameter(params, json);
 
             // Copy the module into the parameters to make sure it always appears in the parameters
-            json_object_set(params, CN_MODULE, mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+            json_object_set(params, CN_MODULE, mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
             if (auto monitor = MonitorManager::create_monitor(name, module, params))
             {
@@ -1835,8 +1852,8 @@ bool runtime_create_filter_from_json(json_t* json)
 
     if (validate_filter_json(json))
     {
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+        const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
+        const char* module = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
         if (const char* other = get_object_type(name))
         {
@@ -1844,14 +1861,14 @@ bool runtime_create_filter_from_json(json_t* json)
         }
         else
         {
-            json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+            json_t* parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
 
             // A filter is allowed to be constructed without parameters. To handle this gracefully, we
             // allocate an empty object. In addition, the module name is injected into it to make the
             // construction behave uniformly across all parameter types.
             parameters = parameters ? json_incref(parameters) : json_object();
             json_object_set_new(parameters, CN_MODULE, json_string(module));
-            mxs::json_remove_nulls(parameters);
+            mxb::json_remove_nulls(parameters);
 
             if (auto filter = filter_alloc(name, parameters))
             {
@@ -1893,17 +1910,17 @@ bool runtime_create_service_from_json(json_t* json)
 
     if (validate_create_service_json(json))
     {
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
 
         if (const char* other = get_object_type(name))
         {
             MXB_ERROR("Can't create service '%s', a %s with that name already exists", name, other);
         }
-        else if (json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+        else if (json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
         {
-            json_t* router = mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
+            json_t* router = mxb::json_ptr(json, MXS_JSON_PTR_ROUTER);
             json_object_set(params, CN_ROUTER, router);
-            mxs::json_remove_nulls(params);
+            mxb::json_remove_nulls(params);
 
             if (auto service = Service::create(name, params))
             {
@@ -1942,11 +1959,11 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         && monitor_to_service_relations(monitor->name(), old_json.get_json(), new_json))
     {
         json_t* params = monitor->parameters_to_json();
-        json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+        json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS);
 
         if (new_params)
         {
-            mxs::json_remove_nulls(new_params);
+            mxb::json_remove_nulls(new_params);
             json_object_update(params, new_params);
         }
 
@@ -1955,7 +1972,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
         // Make sure there are no null values left in the parameters, the configuration code
         // treats that as an error.
-        mxs::json_remove_nulls(params);
+        mxb::json_remove_nulls(params);
 
         if (MonitorManager::reconfigure_monitor(monitor, params))
         {
@@ -2023,10 +2040,10 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
     if (rval)
     {
-        if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+        if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             json_t* params = service->json_parameters();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
             rval = service->configure(params);
             json_decref(params);
         }
@@ -2055,13 +2072,13 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
         rval = true;
         auto& config = filter->configuration();
 
-        if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+        if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             rval = false;
 
             // The new parameters are merged with the old parameters to get a complete filter definition.
             json_t* params = config.to_json();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
 
             if (config.specification().validate(params)
                 && can_modify_params(config, params)
@@ -2102,8 +2119,8 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
         }
         else
         {
-            json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-            mxs::json_remove_nulls(params);
+            json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
+            mxb::json_remove_nulls(params);
 
             // The service is expressed as a relationship instead of a parameter. Add it to the parameters so
             // that it's expressed in the same way regardless of the way the listener is created.
@@ -2138,11 +2155,11 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
 
     if (validate_service_json(new_json))
     {
-        if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
+        if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             auto& cnf = listener->config();
             json_t* params = cnf.to_json();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
 
             if (cnf.specification().validate(params) && cnf.configure(params))
             {
@@ -2163,10 +2180,10 @@ bool runtime_create_user_from_json(json_t* json)
 
     if (validate_user_json(json))
     {
-        const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
-        std::string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
-        auto type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
+        const char* user = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
+        const char* password = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_PASSWORD));
+        std::string strtype = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_TYPE));
+        auto type = json_to_account_type(mxb::json_ptr(json, MXS_JSON_PTR_ACCOUNT));
         const char* err = NULL;
 
         if (strtype == CN_INET && (err = admin_add_inet_user(user, password, type)) == ADMIN_SUCCESS)
@@ -2208,7 +2225,7 @@ bool runtime_remove_user(const char* id)
 bool runtime_alter_user(const std::string& user, const std::string& type, json_t* json)
 {
     bool rval = false;
-    const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
+    const char* password = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_PASSWORD));
 
     if (!password)
     {
@@ -2237,9 +2254,9 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
     if (validate_object_json(json))
     {
-        json_t* new_params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+        json_t* new_params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
         json_t* params = mxs::Config::get().to_json();
-        mxs::json_merge(params, new_params);
+        merge_json(params, new_params);
         auto& cfg = mxs::Config::get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.

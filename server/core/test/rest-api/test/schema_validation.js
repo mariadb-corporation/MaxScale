@@ -61,6 +61,7 @@ describe("Schema Validation", function () {
       "/maxscale/query_classifier/cache",
       "/maxscale/threads/0",
       "/maxscale/logs",
+      "/maxscale/memory",
       "/maxscale/modules/readwritesplit",
     ];
 

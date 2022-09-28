@@ -452,21 +452,25 @@ const thread_fields = [
     name: "Avg event queue length",
     path: "attributes.stats.avg_event_queue_length",
     description: "Average number of events returned by one epoll_wait call",
+    summary: "avg",
   },
   {
     name: "Max event queue length",
     path: "attributes.stats.max_event_queue_length",
     description: "Maximum number of events returned by one epoll_wait call",
+    summary: "max",
   },
   {
     name: "Max exec time",
     path: "attributes.stats.max_exec_time",
     description: "The longest time spent processing events returned by a epoll_wait call",
+    summary: "max",
   },
   {
     name: "Max queue time",
     path: "attributes.stats.max_queue_time",
     description: "The longest time an event had to wait before it was processed",
+    summary: "max",
   },
   {
     name: "Current FDs",
@@ -482,16 +486,19 @@ const thread_fields = [
     name: "Load (1s)",
     path: "attributes.stats.load.last_second",
     description: "Load percentage over the last second",
+    summary: "avg",
   },
   {
     name: "Load (1m)",
     path: "attributes.stats.load.last_minute",
     description: "Load percentage over the last minute",
+    summary: "avg",
   },
   {
     name: "Load (1h)",
     path: "attributes.stats.load.last_hour",
     description: "Load percentage over the last hour",
+    summary: "avg",
   },
   {
     name: "QC cache size",
@@ -518,6 +525,21 @@ const thread_fields = [
     path: "attributes.stats.query_classifier_cache.evictions",
     description:
       "How many times a query classification result was evicted from the query classification cache",
+  },
+  {
+    name: "Sessions",
+    path: "attributes.stats.sessions",
+    description: "The current number of sessions",
+  },
+  {
+    name: "Zombies",
+    path: "attributes.stats.zombies",
+    description: "The current number of zombie connections, waiting to be discarded",
+  },
+  {
+    name: "Memory",
+    path: "attributes.stats.memory.total",
+    description: "The current (partial) memory usage",
   },
 ];
 
