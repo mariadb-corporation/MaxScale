@@ -18,8 +18,8 @@
 #include <functional>
 #include <string.h>
 #include <maxbase/assert.hh>
+#include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.hh>

@@ -14,7 +14,7 @@
 #define MXB_MODULE_NAME "cache"
 #include "cachefilter.hh"
 
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>
 

@@ -16,11 +16,11 @@
 #include <map>
 #include <sstream>
 
+#include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>

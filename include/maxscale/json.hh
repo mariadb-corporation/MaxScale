@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/jansson.hh>
+#include <maxscale/ccdefs.hh>
 #include <maxbase/json.hh>
 
 /**

@@ -16,7 +16,7 @@
 #include <string>
 
 #include <maxbase/alloc.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/json_api.hh>
 
 using std::string;

@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <maxbase/string.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxtest/maxrest.hh>
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>

@@ -28,13 +28,13 @@
 #include <strings.h>
 #include <fcntl.h>
 
-#include <maxscale/jansson.hh>
+#include <maxbase/filesystem.hh>
+#include <maxbase/format.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
-#include <maxbase/format.hh>
-#include <maxbase/filesystem.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"

@@ -26,15 +26,15 @@
 #endif
 
 #include <maxbase/alloc.hh>
+#include <maxbase/jansson.hh>
 #include <maxbase/log.hh>
 #include <maxbase/logger.hh>
+#include <maxbase/string.hh>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/session.hh>
-#include <maxbase/string.hh>
 
 namespace
 {

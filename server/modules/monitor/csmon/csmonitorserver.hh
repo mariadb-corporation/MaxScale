@@ -14,7 +14,7 @@
 
 #include "csmon.hh"
 #include <maxbase/http.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include "columnstore.hh"
 
 class CsContext;

@@ -20,7 +20,7 @@
 #include <memory>
 #include <microhttpd.h>
 
-#include <maxscale/jansson.hh>
+#include <maxbase/jansson.hh>
 #include <maxscale/http.hh>
 
 #include "websocket.hh"

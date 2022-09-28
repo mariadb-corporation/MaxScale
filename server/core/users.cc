@@ -20,8 +20,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <maxbase/jansson.hh>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/jansson.hh>
 #include <maxscale/users.hh>
 #include <maxscale/http.hh>
 
