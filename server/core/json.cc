@@ -15,18 +15,6 @@
 
 #include <string>
 
-bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type)
-{
-    bool rval = true;
-
-    if (auto j = mxb::json_ptr(json, json_ptr))
-    {
-        rval = json_typeof(j) == type;
-    }
-
-    return rval;
-}
-
 namespace maxscale
 {
 
@@ -86,10 +74,4 @@ bool get_json_bool(json_t* json, const char* ptr, bool* out)
     return rval;
 }
 
-void json_merge(json_t* dest, json_t* src)
-{
-    mxb::json_remove_nulls(dest);
-    mxb::json_remove_nulls(src);
-    json_object_update(dest, src);
-}
 }

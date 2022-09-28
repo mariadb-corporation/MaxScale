@@ -183,7 +183,7 @@ std::string mxs_is_valid_json_resource(json_t* json)
 
     for (auto a : {MXS_JSON_PTR_ID, MXS_JSON_PTR_TYPE})
     {
-        if (!mxs_json_is_type(json, a, JSON_STRING))
+        if (!mxb::json_is_type(json, a, JSON_STRING))
         {
             return "The '"s + a + "' field is not a string";
         }

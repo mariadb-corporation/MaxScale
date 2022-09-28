@@ -118,4 +118,15 @@ static inline std::string json_to_string(json_t* json)
     return ss.str();
 }
 
+/**
+ * @brief Check if the value at the provided JSON Pointer is of a certain type
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ * @param type     JSON type that is expected
+ *
+ * @return False if the object was found but it was not of the expected type. True in all other cases.
+ */
+bool json_is_type(json_t* json, const char* json_ptr, json_type type);
+
 }

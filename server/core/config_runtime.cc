@@ -1218,7 +1218,7 @@ bool validate_monitor_json(json_t* json)
             }
         }
 
-        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        if (!mxb::json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
@@ -1234,7 +1234,7 @@ bool validate_filter_json(json_t* json)
 
     if (rval)
     {
-        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        if (!mxb::json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
             rval = false;
@@ -1259,7 +1259,7 @@ bool validate_service_json(json_t* json)
             MXB_ERROR("A service must use either servers and services or monitors, not both");
             rval = false;
         }
-        else if (!mxs_json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
+        else if (!mxb::json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
         {
             MXB_ERROR("Field '%s' is not a string", MXS_JSON_PTR_ROUTER);
             rval = false;
@@ -1436,6 +1436,23 @@ const char* get_object_type(const std::string& name)
 
     return nullptr;
 }
+
+/**
+ * Combine `dest` and `src` into one object
+ *
+ * Removes JSON nulls and updates `dest` with the contents of `src`. Both objects are modified as a result of
+ * this function call.
+ *
+ * @param dest JSON object where the combined result is stored
+ * @param src  JSON object from where the values are copied
+ */
+void merge_json(json_t* dest, json_t* src)
+{
+    mxb::json_remove_nulls(dest);
+    mxb::json_remove_nulls(src);
+    json_object_update(dest, src);
+}
+
 }
 
 void config_runtime_add_error(const std::string& error)
@@ -2026,7 +2043,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
         if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
             json_t* params = service->json_parameters();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
             rval = service->configure(params);
             json_decref(params);
         }
@@ -2061,7 +2078,7 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
 
             // The new parameters are merged with the old parameters to get a complete filter definition.
             json_t* params = config.to_json();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
 
             if (config.specification().validate(params)
                 && can_modify_params(config, params)
@@ -2142,7 +2159,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
         {
             auto& cnf = listener->config();
             json_t* params = cnf.to_json();
-            mxs::json_merge(params, new_params);
+            merge_json(params, new_params);
 
             if (cnf.specification().validate(params) && cnf.configure(params))
             {
@@ -2239,7 +2256,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
     {
         json_t* new_params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
         json_t* params = mxs::Config::get().to_json();
-        mxs::json_merge(params, new_params);
+        merge_json(params, new_params);
         auto& cfg = mxs::Config::get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.
