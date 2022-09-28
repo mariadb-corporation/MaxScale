@@ -14,7 +14,9 @@
 
 #include <maxbase/ccdefs.hh>
 #include <memory>
+#include <string>
 #include <jansson.h>
+#include <maxbase/assert.hh>
 
 namespace std
 {
@@ -71,5 +73,49 @@ const char* json_type_to_string(const json_t* json);
  * @param json JSON to modify
  */
 void json_remove_nulls(json_t* json);
+
+/**
+ * Convert json_t to string.
+ *
+ * @param json  JSON to convert to string.
+ *
+ * @return The json_t value as string.
+ */
+static inline std::string json_to_string(json_t* json)
+{
+    std::stringstream ss;
+
+    switch (json_typeof(json))
+    {
+    case JSON_STRING:
+        ss << json_string_value(json);
+        break;
+
+    case JSON_INTEGER:
+        ss << json_integer_value(json);
+        break;
+
+    case JSON_REAL:
+        ss << json_real_value(json);
+        break;
+
+    case JSON_TRUE:
+        ss << "true";
+        break;
+
+    case JSON_FALSE:
+        ss << "false";
+        break;
+
+    case JSON_NULL:
+        break;
+
+    default:
+        mxb_assert(false);
+        break;
+    }
+
+    return ss.str();
+}
 
 }
