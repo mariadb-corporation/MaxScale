@@ -19,7 +19,7 @@ bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type)
 {
     bool rval = true;
 
-    if (auto j = mxs_json_pointer(json, json_ptr))
+    if (auto j = mxb::json_ptr(json, json_ptr))
     {
         rval = json_typeof(j) == type;
     }
@@ -32,7 +32,7 @@ namespace maxscale
 
 bool get_json_string(json_t* json, const char* ptr, std::string* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val = mxb::json_ptr(json, ptr);
     bool rval = false;
 
     if (json_is_string(val))
@@ -46,7 +46,7 @@ bool get_json_string(json_t* json, const char* ptr, std::string* out)
 
 bool get_json_int(json_t* json, const char* ptr, int64_t* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val = mxb::json_ptr(json, ptr);
     bool rval = false;
 
     if (json_is_integer(val))
@@ -60,7 +60,7 @@ bool get_json_int(json_t* json, const char* ptr, int64_t* out)
 
 bool get_json_float(json_t* json, const char* ptr, double* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val = mxb::json_ptr(json, ptr);
     bool rval = false;
 
     if (json_is_real(val))
@@ -74,7 +74,7 @@ bool get_json_float(json_t* json, const char* ptr, double* out)
 
 bool get_json_bool(json_t* json, const char* ptr, bool* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val = mxb::json_ptr(json, ptr);
     bool rval = false;
 
     if (json_is_boolean(val))
@@ -86,15 +86,10 @@ bool get_json_bool(json_t* json, const char* ptr, bool* out)
     return rval;
 }
 
-void json_remove_nulls(json_t* json)
-{
-    mxb::json_remove_nulls(json);
-}
-
 void json_merge(json_t* dest, json_t* src)
 {
-    mxs::json_remove_nulls(dest);
-    mxs::json_remove_nulls(src);
+    mxb::json_remove_nulls(dest);
+    mxb::json_remove_nulls(src);
     json_object_update(dest, src);
 }
 }

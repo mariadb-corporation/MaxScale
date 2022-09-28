@@ -84,7 +84,7 @@ std::unordered_map<std::string, std::function<bool(const char*)>> valid_relation
 
 std::string validate_relationships(json_t* json)
 {
-    if (auto rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS))
+    if (auto rel = mxb::json_ptr(json, MXS_JSON_PTR_RELATIONSHIPS))
     {
         if (!json_is_object(rel))
         {
@@ -176,7 +176,7 @@ json_t* mxs_json_resource(const char* host, const char* self, json_t* data)
 
 std::string mxs_is_valid_json_resource(json_t* json)
 {
-    if (!json_is_object(mxs_json_pointer(json, MXS_JSON_PTR_DATA)))
+    if (!json_is_object(mxb::json_ptr(json, MXS_JSON_PTR_DATA)))
     {
         return "The '"s + MXS_JSON_PTR_DATA + "' field is not an object";
     }
@@ -189,7 +189,7 @@ std::string mxs_is_valid_json_resource(json_t* json)
         }
     }
 
-    if (auto id = mxs_json_pointer(json, MXS_JSON_PTR_ID))
+    if (auto id = mxb::json_ptr(json, MXS_JSON_PTR_ID))
     {
         std::string reason;
 
@@ -203,7 +203,7 @@ std::string mxs_is_valid_json_resource(json_t* json)
         }
     }
 
-    if (auto parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    if (auto parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
     {
         if (!json_is_object(parameters))
         {

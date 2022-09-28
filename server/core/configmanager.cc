@@ -1144,7 +1144,7 @@ void ConfigManager::remove_extra_data(json_t* data)
         }
         else
         {
-            mxs::json_remove_nulls(value);
+            mxb::json_remove_nulls(value);
         }
     }
 

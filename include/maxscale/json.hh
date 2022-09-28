@@ -16,19 +16,6 @@
 #include <maxbase/json.hh>
 
 /**
- * @brief Return value at provided JSON Pointer
- *
- * @param json     JSON object
- * @param json_ptr JSON Pointer to object
- *
- * @return Pointed value or NULL if no value is found
- */
-static inline json_t* mxs_json_pointer(json_t* json, const char* json_ptr)
-{
-    return mxb::json_ptr(json, json_ptr);
-}
-
-/**
  * @brief Check if the value at the provided JSON Pointer is of a certain type
  *
  * @param json     JSON object
@@ -85,17 +72,6 @@ bool get_json_float(json_t* json, const char* ptr, double* out);
  * @return True if value was unpacked
  */
 bool get_json_bool(json_t* json, const char* ptr, bool* out);
-
-/**
- * Remove null values from JSON objects
- *
- * Removes any keys with JSON null values.
- *
- * @note Use mxb::json_remove_nulls in new code
- *
- * @param json JSON to modify
- */
-void json_remove_nulls(json_t* json);
 
 /**
  * Combine `dest` and `src` into one object

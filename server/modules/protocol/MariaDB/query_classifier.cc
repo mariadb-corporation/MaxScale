@@ -1475,11 +1475,11 @@ namespace
 
 json_t* get_params(json_t* pJson)
 {
-    json_t* pParams = mxs_json_pointer(pJson, MXS_JSON_PTR_PARAMETERS);
+    json_t* pParams = mxb::json_ptr(pJson, MXS_JSON_PTR_PARAMETERS);
 
     if (pParams && json_is_object(pParams))
     {
-        if (auto pSize = mxs_json_pointer(pParams, CN_CACHE_SIZE))
+        if (auto pSize = mxb::json_ptr(pParams, CN_CACHE_SIZE))
         {
             if (!json_is_null(pSize) && !json_is_integer(pSize))
             {
@@ -1507,7 +1507,7 @@ bool qc_alter_from_json(json_t* pJson)
 
         json_t* pValue;
 
-        if ((pValue = mxs_json_pointer(pParams, CN_CACHE_SIZE)))
+        if ((pValue = mxb::json_ptr(pParams, CN_CACHE_SIZE)))
         {
             cache_properties.max_size = json_integer_value(pValue);
             // If get_params() did its job, then we will not

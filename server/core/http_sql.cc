@@ -610,7 +610,7 @@ HttpResponse query(const HttpRequest& request)
             response.set_code(MHD_HTTP_CREATED);
 
             // Add the request SQL into the initial response
-            json_t* attr = mxs_json_pointer(response.get_response(), "/data/attributes");
+            json_t* attr = mxb::json_ptr(response.get_response(), "/data/attributes");
             mxb_assert(attr);
             json_object_set_new(attr, "sql", json_string(sql.c_str()));
 

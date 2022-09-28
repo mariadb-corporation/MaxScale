@@ -97,7 +97,7 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
     }
 
     std::string final_path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + relationship;
-    auto rel = json_incref(mxs_json_pointer(json, final_path.c_str()));
+    auto rel = json_incref(mxb::json_ptr(json, final_path.c_str()));
     json_decref(json);
 
     return HttpResponse(rel ? MHD_HTTP_OK : MHD_HTTP_NOT_FOUND, rel);
@@ -129,7 +129,7 @@ bool Resource::match(const HttpRequest& request) const
 
 static void remove_null_parameters(json_t* json)
 {
-    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    if (json_t* parameters = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
         json_t* value;

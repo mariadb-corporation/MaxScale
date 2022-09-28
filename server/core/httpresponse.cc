@@ -29,7 +29,7 @@ namespace
 {
 bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
 {
-    auto lhs = mxs_json_pointer(obj, json_ptr.c_str());
+    auto lhs = mxb::json_ptr(obj, json_ptr.c_str());
     return lhs && json_equal(lhs, rhs);
 }
 }

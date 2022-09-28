@@ -1429,7 +1429,7 @@ bool Session::update(json_t* json)
 {
     bool rval = true;
 
-    if (json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    if (json_t* param = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS))
     {
 #ifdef SS_DEBUG
         update_log_level(param, "log_debug", LOG_DEBUG);
@@ -1440,7 +1440,7 @@ bool Session::update(json_t* json)
         update_log_level(param, "log_error", LOG_ERR);
     }
 
-    if (json_t* rel = mxs_json_pointer(json, "/data/relationships/filters/data"))
+    if (json_t* rel = mxb::json_ptr(json, "/data/relationships/filters/data"))
     {
         decltype(m_filters) new_filters;
         size_t idx;
