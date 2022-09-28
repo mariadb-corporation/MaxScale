@@ -172,6 +172,13 @@ bool mxs_admin_https_enabled();
 bool mxs_admin_enable_cors();
 
 /**
+ * @brief Check if CORS is enabled for the REST API
+ *
+ * @return True if CORS is enabled
+ */
+bool mxs_admin_use_cors();
+
+/**
  * @brief Reload administrative interface TLS certificates
  *
  * @return True if the certificates were reloaded successfully. False if the reloading fails in which case the

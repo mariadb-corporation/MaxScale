@@ -1143,6 +1143,11 @@ bool mxs_admin_https_enabled()
     return this_unit.using_ssl;
 }
 
+bool mxs_admin_use_cors()
+{
+    return this_unit.cors;
+}
+
 bool mxs_admin_enable_cors()
 {
     return this_unit.cors = true;
