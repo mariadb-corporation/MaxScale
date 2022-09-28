@@ -223,7 +223,7 @@ public:
      */
     std::string get_json_str() const
     {
-        return m_json ? mxs::json_dump(m_json.get()) : "";
+        return m_json ? mxb::json_dump(m_json.get()) : "";
     }
 
     /**

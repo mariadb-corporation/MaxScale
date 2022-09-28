@@ -1843,7 +1843,7 @@ static HttpResponse handle_request(const HttpRequest& request)
     }
 
     // Calculate the checksum from the generated JSON
-    auto str = mxs::json_dump(rval.get_response(), JSON_COMPACT);
+    auto str = mxb::json_dump(rval.get_response(), JSON_COMPACT);
     auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>(str) + '"';
 
     if (request_precondition_met(request, rval, cksum))

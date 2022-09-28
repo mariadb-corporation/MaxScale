@@ -216,7 +216,7 @@ public:
         {
             if (json_t* json = entry_to_json(m_j, m_priorities))
             {
-                rval = mxs::json_dump(json, JSON_COMPACT);
+                rval = mxb::json_dump(json, JSON_COMPACT);
                 json_decref(json);
             }
         }
@@ -521,7 +521,7 @@ public:
         {
             if (json_t* obj = line_to_json(line, m_lineno++, m_priorities))
             {
-                rval = mxs::json_dump(obj, JSON_COMPACT);
+                rval = mxb::json_dump(obj, JSON_COMPACT);
                 json_decref(obj);
                 break;
             }

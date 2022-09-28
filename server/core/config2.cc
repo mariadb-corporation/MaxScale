@@ -1131,7 +1131,7 @@ bool ParamBool::from_json(const json_t* pJson, value_type* pValue, string* pMess
     else if (pMessage)
     {
         *pMessage = "Expected a json boolean, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1191,7 +1191,7 @@ bool ParamNumber::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json integer, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1298,7 +1298,7 @@ bool ParamHost::from_json(const json_t* pJson,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1357,7 +1357,7 @@ bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1547,14 +1547,14 @@ bool ParamPathList::from_json(const json_t* pJson, value_type* pValue,
 
                 if (pMessage)
                 {
-                    *pMessage = "Expected a json string, but got a json "s + mxs::json_type_to_string(val);
+                    *pMessage = "Expected a json string, but got a json "s + mxb::json_type_to_string(val);
                 }
             }
         }
     }
     else if (pMessage)
     {
-        *pMessage = "Expected a json string, but got a json "s + mxs::json_type_to_string(pJson);
+        *pMessage = "Expected a json string, but got a json "s + mxb::json_type_to_string(pJson);
     }
 
     return rv;
@@ -1654,7 +1654,7 @@ bool ParamRegex::from_json(const json_t* pJson,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1738,7 +1738,7 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1823,7 +1823,7 @@ bool ParamServerList::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -1968,7 +1968,7 @@ bool ParamModule::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -2022,7 +2022,7 @@ bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -2080,7 +2080,7 @@ bool ParamService::from_json(const json_t* pJson, value_type* pValue,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -2148,7 +2148,7 @@ bool ParamSize::from_json(const json_t* pJson,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 
@@ -2267,7 +2267,7 @@ bool ParamString::from_json(const json_t* pJson,
     else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
-        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += mxb::json_type_to_string(pJson);
         *pMessage += ".";
     }
 

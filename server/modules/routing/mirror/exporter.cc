@@ -25,7 +25,7 @@ class LogExporter : public Exporter
 public:
     void ship(json_t* obj) override final
     {
-        MXB_INFO("%s", mxs::json_dump(obj, JSON_COMPACT).c_str());
+        MXB_INFO("%s", mxb::json_dump(obj, JSON_COMPACT).c_str());
     }
 };
 
@@ -45,7 +45,7 @@ public:
 
     void ship(json_t* obj) override final
     {
-        auto str = mxs::json_dump(obj, JSON_COMPACT) + '\n';
+        auto str = mxb::json_dump(obj, JSON_COMPACT) + '\n';
         write(m_fd, str.c_str(), str.length());
     }
 

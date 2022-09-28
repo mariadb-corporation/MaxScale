@@ -178,7 +178,7 @@ bool AvroConverter::open_table(const Table& create)
 
     if (json_t* json = create.to_json())
     {
-        std::string json_schema = mxs::json_dump(json);
+        std::string json_schema = mxb::json_dump(json);
         json_decref(json);
 
         char filepath[PATH_MAX + 1];
