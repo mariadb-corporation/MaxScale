@@ -22,6 +22,7 @@
 #include <openssl/obj_mac.h>
 
 #include <maxbase/assert.hh>
+#include <maxbase/http.hh>
 #include <maxbase/filesystem.hh>
 #include <maxscale/config.hh>
 
@@ -41,23 +42,114 @@ std::string rand_key(int bits)
     return key;
 }
 
-std::string cert_cleanup(std::string cert)
+// See example implementation in: https://www.rfc-editor.org/rfc/rfc7515.txt
+std::vector<uint8_t> from_base64url(std::string value)
 {
-    // Remove any extra data that might be at the beginning of the certificate. The jwt-cpp library doesn't
-    // like it and ends up throwing errors for perfectly valid certificates that would otherwise be accepted
-    // by OpenSSL.
-
-    auto pos = cert.find("-----BEGIN ");
-
-    if (pos != std::string::npos)
+    for (auto& c : value)
     {
-        auto first_line = cert.find_last_of('\n', pos);
-
-        if (first_line != std::string::npos)
+        if (c == '-')
         {
-            cert = cert.substr(first_line + 1);
+            c = '+';
+        }
+        else if (c == '_')
+        {
+            c = '/';
         }
     }
+
+    switch (value.size() % 4)
+    {
+    case 0:
+        break;
+
+    case 2:
+        value += "==";
+        break;
+
+    case 3:
+        value += "=";
+        break;
+
+    default:
+        // Malformed input
+        return {};
+    }
+
+    return mxs::from_base64(value);
+}
+
+std::string rsa_jwk_to_pem(std::string modulus, std::string exponent)
+{
+    auto mod = from_base64url(modulus);
+    auto exp = from_base64url(exponent);
+
+    if (mod.empty() || exp.empty())
+    {
+        return {};
+    }
+
+    RSA* rsa = RSA_new();
+    RSA_set0_key(rsa, BN_bin2bn(mod.data(), mod.size(), nullptr),
+                 BN_bin2bn(exp.data(), exp.size(), nullptr), nullptr);
+
+    BIO* bio = BIO_new(BIO_s_mem());
+    PEM_write_bio_RSA_PUBKEY(bio, rsa);
+
+    char* ptr = nullptr;
+    long len = BIO_get_mem_data(bio, &ptr);
+    std::string cert(ptr, len);
+
+    BIO_free(bio);
+    RSA_free(rsa);
+
+    return cert;
+}
+
+std::string ec_jwk_to_pem(std::string curve, std::string x_coord, std::string y_coord)
+{
+    auto x = from_base64url(x_coord);
+    auto y = from_base64url(y_coord);
+
+    if (x.empty() || y.empty())
+    {
+        return {};
+    }
+
+    EC_KEY* ec = EC_KEY_new();
+    EC_GROUP* group = nullptr;
+
+    if (curve == "P-256")
+    {
+        group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    }
+    else if (curve == "P-384")
+    {
+        group = EC_GROUP_new_by_curve_name(NID_secp384r1);
+    }
+    else if (curve == "P-512")
+    {
+        group = EC_GROUP_new_by_curve_name(NID_secp521r1);
+    }
+    else
+    {
+        return {};
+    }
+
+    EC_KEY_set_group(ec, group);
+    EC_KEY_set_public_key_affine_coordinates(ec,
+                                             BN_bin2bn(x.data(), x.size(), nullptr),
+                                             BN_bin2bn(y.data(), y.size(), nullptr));
+
+
+    BIO* bio = BIO_new(BIO_s_mem());
+    PEM_write_bio_EC_PUBKEY(bio, ec);
+
+    char* ptr = nullptr;
+    long len = BIO_get_mem_data(bio, &ptr);
+    std::string cert(ptr, len);
+
+    EC_GROUP_free(group);
+    EC_KEY_free(ec);
 
     return cert;
 }
@@ -130,6 +222,73 @@ template<class Algorithm>
 std::unique_ptr<Jwt> make_jwt(Algorithm algo)
 {
     return std::make_unique<JwtBase<Algorithm>>(std::move(algo));
+}
+
+std::pair<bool, std::vector<std::string>> get_oidc_certs(const std::string& url)
+{
+    std::vector<std::string> certs;
+    bool ok = false;
+
+    try
+    {
+        // See: https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+        auto response = mxb::http::get(url + "/.well-known/openid-configuration");
+        mxb::Json js;
+
+        if (response.is_success() && js.load_string(response.body))
+        {
+            auto jwks_uri = js.get_string("jwks_uri");
+            response = mxb::http::get(jwks_uri);
+
+            if (response.is_success() && js.load_string(response.body))
+            {
+                for (auto k : ::jwt::parse_jwks(response.body))
+                {
+                    std::string type = k.get_key_type();
+                    std::string cert;
+
+                    if (type == "RSA")
+                    {
+                        cert = rsa_jwk_to_pem(k.get_jwk_claim("n").as_string(),
+                                              k.get_jwk_claim("e").as_string());
+                    }
+                    else if (type == "EC")
+                    {
+                        cert = ec_jwk_to_pem(k.get_curve(),
+                                             k.get_jwk_claim("x").as_string(),
+                                             k.get_jwk_claim("y").as_string());
+                    }
+
+                    if (cert.empty())
+                    {
+                        MXB_ERROR("Failed to decode JWK %s", k.get_key_id().c_str());
+                    }
+                    else
+                    {
+                        MXB_NOTICE("Cert for '%s': %s", k.get_key_id().c_str(), cert.c_str());
+                        certs.push_back(std::move(cert));
+                    }
+                }
+            }
+            else
+            {
+                MXB_ERROR("Request to '%s' failed: %d, %s",
+                          jwks_uri.c_str(), response.code, response.body.c_str());
+            }
+        }
+        else
+        {
+            MXB_ERROR("Request to '%s' failed: %d, %s",
+                      url.c_str(), response.code, response.body.c_str());
+        }
+        ok = true;
+    }
+    catch (const std::exception& e)
+    {
+        MXB_ERROR("%s", e.what());
+    }
+
+    return {ok, certs};
 }
 
 bool is_pubkey_alg(mxs::JwtAlgo algo)
@@ -378,15 +537,17 @@ bool init()
 
     std::vector<std::string> extra_certs;
 
-    for (auto path : cnf.admin_jwt_extra_certs)
+    if (const auto& url = cnf.admin_oidc_url; !url.empty())
     {
-        if (auto [extra_cert, v_err] = mxb::load_file<std::string>(path); v_err.empty())
+        auto [ok, certs] = get_oidc_certs(url);
+
+        if (ok)
         {
-            extra_certs.push_back(cert_cleanup(extra_cert));
+            extra_certs = std::move(certs);
         }
         else
         {
-            MXB_ERROR("Failed to load JWT verification certificate: %s", err.c_str());
+            MXB_ERROR("Failed to load JWK set from '%s'", url.c_str());
             return false;
         }
     }
