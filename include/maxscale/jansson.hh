@@ -20,7 +20,6 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/jansson.hh>
-#include <maxbase/json.hh>
 
 namespace maxscale
 {
