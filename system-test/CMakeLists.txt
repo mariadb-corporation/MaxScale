@@ -274,9 +274,6 @@ add_test_executable(false_monitor_state_change.cpp false_monitor_state_change re
 # Block and unblock Master and check that Maxscale survived
 add_test_executable(kill_master.cpp kill_master replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
-# Test insertstream filter
-add_test_script(insertstream.sh insertstream.sh insertstream LABELS insertstream REPL_BACKEND)
-
 # Check load balancing
 add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit LIGHT REPL_BACKEND)
 
