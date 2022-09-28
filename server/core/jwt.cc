@@ -34,6 +34,19 @@ namespace
 // readable.
 namespace Sig = ::jwt::algorithm;
 
+struct Jwt;
+
+struct ThisUnit
+{
+    std::mutex           lock;
+    std::unique_ptr<Jwt> jwt;
+
+    std::unordered_map<std::string, std::unique_ptr<Jwt>> extra_certs;
+    std::string                                           extra_issuer;
+};
+
+ThisUnit this_unit;
+
 std::string rand_key(int bits)
 {
     std::string key;
@@ -237,6 +250,10 @@ std::pair<bool, std::unordered_map<std::string, std::unique_ptr<Jwt>>> get_oidc_
 
         if (response.is_success() && js.load_string(response.body))
         {
+            // Store the issuer field from the OIDC metadata. This should be the literal value stored in the
+            // "iss" field of the JWTs. If it isn't then we're dealing with a broken provider.
+            this_unit.extra_issuer = js.get_string("issuer");
+
             auto jwks_uri = js.get_string("jwks_uri");
             response = mxb::http::get(jwks_uri);
 
@@ -444,16 +461,6 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
 
     return algo;
 }
-
-struct ThisUnit
-{
-    std::mutex           lock;
-    std::unique_ptr<Jwt> jwt;
-
-    std::unordered_map<std::string, std::unique_ptr<Jwt>> extra_certs;
-};
-
-ThisUnit this_unit;
 
 template<class Algo, class Decoded>
 bool verify_with_alg(const std::string& issuer, Decoded& d)
@@ -671,9 +678,9 @@ std::pair<bool, std::string> get_subject(const std::string& issuer, const std::s
     std::lock_guard guard(this_unit.lock);
     auto [ok, sub] = this_unit.jwt->get_subject(issuer, token);
 
-    if (!ok && !mxs::Config::get().admin_oidc_url.empty())
+    if (!ok && !this_unit.extra_certs.empty())
     {
-        std::tie(ok, sub) = verify_extra(mxs::Config::get().admin_oidc_url, token);
+        std::tie(ok, sub) = verify_extra(this_unit.extra_issuer, token);
     }
 
     return {ok, sub};
