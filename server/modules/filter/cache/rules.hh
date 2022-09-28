@@ -14,9 +14,9 @@
 
 #include <maxscale/ccdefs.hh>
 #include <stdbool.h>
-#include <jansson.h>
 #include <memory>
 #include <vector>
+#include <maxbase/jansson.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/pcre2.hh>

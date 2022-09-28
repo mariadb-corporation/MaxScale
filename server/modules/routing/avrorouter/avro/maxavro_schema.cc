@@ -12,7 +12,6 @@
  */
 
 #include "maxavro_internal.hh"
-#include <jansson.h>
 #include <string.h>
 #include <maxbase/assert.hh>
 #include <maxscale/log.hh>

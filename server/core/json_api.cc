@@ -14,7 +14,6 @@
 #include <maxscale/json_api.hh>
 
 #include <string>
-#include <jansson.h>
 
 #include <maxscale/cn_strings.hh>
 #include <maxbase/format.hh>

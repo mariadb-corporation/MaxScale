@@ -13,4 +13,19 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <memory>
 #include <jansson.h>
+
+namespace std
+{
+
+template<>
+struct default_delete<json_t>
+{
+    void operator()(json_t* pJson)
+    {
+        json_decref(pJson);
+    }
+};
+}
+

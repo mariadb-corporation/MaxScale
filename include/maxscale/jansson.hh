@@ -22,19 +22,6 @@
 #include <maxbase/jansson.hh>
 #include <maxbase/json.hh>
 
-namespace std
-{
-
-template<>
-struct default_delete<json_t>
-{
-    void operator()(json_t* pJson)
-    {
-        json_decref(pJson);
-    }
-};
-}
-
 namespace maxscale
 {
 
