@@ -224,9 +224,9 @@ std::unique_ptr<Jwt> make_jwt(Algorithm algo)
     return std::make_unique<JwtBase<Algorithm>>(std::move(algo));
 }
 
-std::pair<bool, std::vector<std::string>> get_oidc_certs(const std::string& url)
+std::pair<bool, std::unordered_map<std::string, std::unique_ptr<Jwt>>> get_oidc_certs(const std::string& url)
 {
-    std::vector<std::string> certs;
+    std::unordered_map<std::string, std::unique_ptr<Jwt>> certs;
     bool ok = false;
 
     try
@@ -245,7 +245,10 @@ std::pair<bool, std::vector<std::string>> get_oidc_certs(const std::string& url)
                 for (auto k : ::jwt::parse_jwks(response.body))
                 {
                     std::string type = k.get_key_type();
+                    std::string algo = k.get_algorithm();
+                    std::string kid = k.get_key_id();
                     std::string cert;
+                    std::unique_ptr<Jwt> jwt;
 
                     if (type == "RSA")
                     {
@@ -261,14 +264,58 @@ std::pair<bool, std::vector<std::string>> get_oidc_certs(const std::string& url)
 
                     if (cert.empty())
                     {
-                        MXB_ERROR("Failed to decode JWK %s", k.get_key_id().c_str());
+                        MXB_ERROR("Failed to decode JWK '%s'", kid.c_str());
+                    }
+                    else if (algo == "RS256")
+                    {
+                        jwt = make_jwt(Sig::rs256 {cert});
+                    }
+                    else if (algo == "RS384")
+                    {
+                        jwt = make_jwt(Sig::rs384 {cert});
+                    }
+                    else if (algo == "RS512")
+                    {
+                        jwt = make_jwt(Sig::rs512 {cert});
+                    }
+                    else if (algo == "ES256")
+                    {
+                        jwt = make_jwt(Sig::es256 {cert});
+                    }
+                    else if (algo == "ES384")
+                    {
+                        jwt = make_jwt(Sig::es384 {cert});
+                    }
+                    else if (algo == "ES512")
+                    {
+                        jwt = make_jwt(Sig::es512 {cert});
+                    }
+                    else if (algo == "PS256")
+                    {
+                        jwt = make_jwt(Sig::ps256 {cert});
+                    }
+                    else if (algo == "PS384")
+                    {
+                        jwt = make_jwt(Sig::ps384 {cert});
+                    }
+                    else if (algo == "PS512")
+                    {
+                        jwt = make_jwt(Sig::ps512 {cert});
                     }
                     else
                     {
-                        MXB_NOTICE("Cert for '%s': %s", k.get_key_id().c_str(), cert.c_str());
-                        certs.push_back(std::move(cert));
+                        MXB_WARNING("JWK '%s' contains an unknown \"alg\" value: %s",
+                                    kid.c_str(),
+                                    algo.c_str());
+                    }
+
+                    if (jwt)
+                    {
+                        certs.emplace(kid, std::move(jwt));
                     }
                 }
+
+                ok = true;
             }
             else
             {
@@ -281,14 +328,13 @@ std::pair<bool, std::vector<std::string>> get_oidc_certs(const std::string& url)
             MXB_ERROR("Request to '%s' failed: %d, %s",
                       url.c_str(), response.code, response.body.c_str());
         }
-        ok = true;
     }
     catch (const std::exception& e)
     {
         MXB_ERROR("%s", e.what());
     }
 
-    return {ok, certs};
+    return {ok, std::move(certs)};
 }
 
 bool is_pubkey_alg(mxs::JwtAlgo algo)
@@ -401,9 +447,10 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
 
 struct ThisUnit
 {
-    std::mutex               lock;
-    std::unique_ptr<Jwt>     jwt;
-    std::vector<std::string> extra_certs;
+    std::mutex           lock;
+    std::unique_ptr<Jwt> jwt;
+
+    std::unordered_map<std::string, std::unique_ptr<Jwt>> extra_certs;
 };
 
 ThisUnit this_unit;
@@ -439,62 +486,10 @@ std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::
     try
     {
         auto d = ::jwt::decode(token);
-        auto algo = d.get_algorithm();
 
-        if (algo == "RS256")
+        if (auto it = this_unit.extra_certs.find(d.get_key_id()); it != this_unit.extra_certs.end())
         {
-            ok = verify_with_alg<Sig::rs256>(issuer, d);
-        }
-        else if (algo == "RS384")
-        {
-            ok = verify_with_alg<Sig::rs384>(issuer, d);
-        }
-        else if (algo == "RS512")
-        {
-            ok = verify_with_alg<Sig::rs512>(issuer, d);
-        }
-        else if (algo == "ES256")
-        {
-            ok = verify_with_alg<Sig::es256>(issuer, d);
-        }
-        else if (algo == "ES384")
-        {
-            ok = verify_with_alg<Sig::es384>(issuer, d);
-        }
-        else if (algo == "ES512")
-        {
-            ok = verify_with_alg<Sig::es512>(issuer, d);
-        }
-        else if (algo == "PS256")
-        {
-            ok = verify_with_alg<Sig::ps256>(issuer, d);
-        }
-        else if (algo == "PS384")
-        {
-            ok = verify_with_alg<Sig::ps384>(issuer, d);
-        }
-        else if (algo == "PS512")
-        {
-            ok = verify_with_alg<Sig::ps512>(issuer, d);
-        }
-#ifdef OPENSSL_1_1
-        else if (algo == "EdDSA")
-        {
-            if (d.has_header_claim("crv") && d.get_header_claim("crv").as_string() == "Ed448")
-            {
-                ok = verify_with_alg<Sig::ed448>(issuer, d);
-            }
-            else
-            {
-                // Fall back to Ed25519 if the "crv" claim is not present
-                ok = verify_with_alg<Sig::ed25519>(issuer, d);
-            }
-        }
-#endif
-
-        if (ok)
-        {
-            sub = d.get_subject();
+            std::tie(ok, sub) = it->second->get_subject(issuer, token);
         }
     }
     catch (const std::exception& e)
@@ -535,7 +530,7 @@ bool init()
         }
     }
 
-    std::vector<std::string> extra_certs;
+    std::unordered_map<std::string, std::unique_ptr<Jwt>> extra_certs;
 
     if (const auto& url = cnf.admin_oidc_url; !url.empty())
     {
@@ -676,9 +671,9 @@ std::pair<bool, std::string> get_subject(const std::string& issuer, const std::s
     std::lock_guard guard(this_unit.lock);
     auto [ok, sub] = this_unit.jwt->get_subject(issuer, token);
 
-    if (!ok)
+    if (!ok && !mxs::Config::get().admin_oidc_url.empty())
     {
-        std::tie(ok, sub) = verify_extra(issuer, token);
+        std::tie(ok, sub) = verify_extra(mxs::Config::get().admin_oidc_url, token);
     }
 
     return {ok, sub};
