@@ -60,7 +60,10 @@ export default {
          * @param {Object} payload.res - query response
          * @param {String} payload.queryType - query type in QUERY_LOG_TYPES
          */
-        pushQueryLog({ commit }, { startTime, connection_name, name, sql, res, queryType }) {
+        pushQueryLog(
+            { commit, rootState },
+            { startTime, connection_name, name, sql, res, queryType }
+        ) {
             try {
                 const { capitalizeFirstLetter } = this.vue.$helpers
                 const { execution_time, results } = this.vue.$typy(
@@ -72,10 +75,16 @@ export default {
                 let resSetCount = 0
                 let resCount = 0
                 for (const res of results) {
-                    if (this.vue.$typy(res, 'data').isDefined) {
+                    const { data, message = '', errno } = res
+                    const isQueryCanceled =
+                        message === rootState.queryEditorConfig.config.QUERY_CANCELED
+
+                    if (isQueryCanceled) {
+                        resultData[`INTERRUPT`] = message
+                    } else if (data) {
                         ++resSetCount
-                        resultData[`Result set ${resSetCount}`] = `${res.data.length} rows in set.`
-                    } else if (this.vue.$typy(res, 'errno').isDefined) {
+                        resultData[`Result set ${resSetCount}`] = `${data.length} rows in set.`
+                    } else if (this.vue.$typy(errno).isNumber) {
                         let msg = ''
                         Object.keys(res).forEach(
                             key => (msg += `${capitalizeFirstLetter(key)}: ${res[key]}. `)
@@ -93,10 +102,13 @@ export default {
                 })
                 let action = {
                     name: sql, // if no name is defined, use sql as name
-                    execution_time: execution_time.toFixed(4),
                     response,
                     type: queryType,
                 }
+                // if query is aborted/canceled, there is no execution_time
+                if (this.vue.$typy(execution_time).isNumber)
+                    action.execution_time = execution_time.toFixed(4)
+
                 if (name) {
                     action.sql = sql
                     action.name = name

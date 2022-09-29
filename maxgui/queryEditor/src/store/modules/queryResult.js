@@ -102,6 +102,8 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
             const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const abort_controller = new AbortController()
+            const config = rootState.queryEditorConfig.config
             try {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
@@ -110,6 +112,7 @@ export default {
                         request_sent_time,
                         total_duration: 0,
                         is_loading: true,
+                        abort_controller,
                     },
                 })
 
@@ -122,22 +125,55 @@ export default {
                     'queryConn/cloneConn',
                     {
                         conn_to_be_cloned: active_sql_conn,
-                        binding_type:
-                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                        binding_type: config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
                         session_id_fk: active_session_id,
                     },
                     { root: true }
                 )
-                const bgConn = rootGetters['queryConn/getBgConn']({
-                    session_id_fk: active_session_id,
-                })
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: query,
-                    max_rows: rootState.queryPersisted.query_row_limit,
-                })
+                let res = await this.vue.$queryHttp.post(
+                    `/sql/${active_sql_conn.id}/queries`,
+                    {
+                        sql: query,
+                        max_rows: rootState.queryPersisted.query_row_limit,
+                    },
+                    { signal: abort_controller.signal }
+                )
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-
+                // If the KILL command was sent for the query is being run, the query request is aborted/canceled
+                if (getters.getHasKillFlagMapBySessionId(active_session_id)) {
+                    commit('PATCH_HAS_KILL_FLAG_MAP', {
+                        id: active_session_id,
+                        payload: { value: false },
+                    })
+                    res = {
+                        data: {
+                            data: {
+                                attributes: {
+                                    results: [{ message: config.QUERY_CANCELED }],
+                                    sql: query,
+                                },
+                            },
+                        },
+                    }
+                    /**
+                     * This is done automatically in queryHttp.interceptors.response. However, because the request
+                     * is aborted, this needs to be called manually.
+                     */
+                    commit(
+                        'queryConn/PATCH_IS_CONN_BUSY_MAP',
+                        { id: active_session_id, payload: { value: false } },
+                        { root: true }
+                    )
+                } else {
+                    const USE_REG = /(use|drop database)\s/i
+                    if (query.match(USE_REG))
+                        await dispatch('queryConn/updateActiveDb', {}, { root: true })
+                    const bgConn = rootGetters['queryConn/getBgConn']({
+                        session_id_fk: active_session_id,
+                    })
+                    await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
+                }
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
                     payload: {
@@ -146,10 +182,6 @@ export default {
                         is_loading: false,
                     },
                 })
-
-                const USE_REG = /(use|drop database)\s/i
-                if (query.match(USE_REG))
-                    await dispatch('queryConn/updateActiveDb', {}, { root: true })
                 dispatch(
                     'queryPersisted/pushQueryLog',
                     {
@@ -161,13 +193,6 @@ export default {
                     },
                     { root: true }
                 )
-                // Disconnect "BACKGROUND" connection
-                await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
-                if (getters.getIsStoppingQueryBySessionId(active_session_id))
-                    commit('PATCH_IS_STOPPING_QUERY_MAP', {
-                        id: active_session_id,
-                        payload: { value: false },
-                    })
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
@@ -176,11 +201,11 @@ export default {
                 this.vue.$logger(`store-queryResult-fetchQueryResult`).error(e)
             }
         },
-        async stopQuery({ commit, rootGetters, rootState }) {
+        async stopQuery({ commit, getters, dispatch, rootGetters, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
-                commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                commit('PATCH_HAS_KILL_FLAG_MAP', {
                     id: active_session_id,
                     payload: { value: true },
                 })
@@ -192,7 +217,7 @@ export default {
                 } = await this.vue.$queryHttp.post(`/sql/${bgConn.id}/queries`, {
                     sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
                 })
-                if (results.length && results[0].errno)
+                if (this.vue.$typy(results, '[0].errno').isDefined)
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
@@ -204,6 +229,12 @@ export default {
                         },
                         { root: true }
                     )
+                else {
+                    const abort_controller = getters.getAbortControllerBySessId(active_session_id)
+                    abort_controller.abort() // abort the running query
+                    // Disconnect the "BACKGROUND" connection once KILL QUERY statement is sent
+                    await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
+                }
             } catch (e) {
                 this.vue.$logger(`store-queryResult-stopQuery`).error(e)
             }
@@ -228,6 +259,12 @@ export default {
                 return is_loading
             }
         },
+        getAbortControllerBySessId: state => {
+            return session_id => {
+                const { abort_controller = {} } = state.query_results_map[session_id] || {}
+                return abort_controller
+            }
+        },
         isWkeLoadingQueryResult: (state, getters, rootState, rootGetters) => {
             return wke_id => {
                 const sessionIds = rootGetters['querySession/getSessionsByWkeId'](wke_id).map(
@@ -246,9 +283,9 @@ export default {
                 return isLoading
             }
         },
-        getIsStoppingQueryBySessionId: state => {
+        getHasKillFlagMapBySessionId: state => {
             return session_id => {
-                const { value = false } = state.is_stopping_query_map[session_id] || {}
+                const { value = false } = state.has_kill_flag_map[session_id] || {}
                 return value
             }
         },

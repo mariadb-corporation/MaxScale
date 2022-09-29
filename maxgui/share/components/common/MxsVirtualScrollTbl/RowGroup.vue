@@ -16,7 +16,15 @@
                     mdi-chevron-down
                 </v-icon>
             </v-btn>
-            <slot name="row-content-prepend"></slot>
+            <!-- checkbox for selecting/deselecting all items of the group -->
+            <v-checkbox
+                :input-value="isRowGroupSelected"
+                dense
+                class="v-checkbox--scale-reduce ma-0 pa-0"
+                primary
+                hide-details
+                @change="handleSelectGroup"
+            />
             <div
                 class="tr--group__content d-inline-flex align-center"
                 :style="{ maxWidth: `${maxRowGroupWidth}px` }"
@@ -56,14 +64,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+@on-ungroup: Emit when the ungroup button is clicked
+ */
 export default {
     name: 'row-group',
     props: {
+        collapsedRowGroups: { type: Array, required: true }, //sync
+        selectedTblRows: { type: Array, required: true }, //sync
+        selectedGroupRows: { type: Array, required: true }, //sync
         row: { type: Object, required: true },
-        collapsedRowGroups: { type: Array, required: true },
+        tableRows: { type: Array, required: true },
         isCollapsed: { type: Boolean, required: true },
         boundingWidth: { type: Number, required: true },
         lineHeight: { type: String, required: true },
+        showSelect: { type: Boolean, required: true },
     },
     computed: {
         maxRowGroupWidth() {
@@ -74,26 +89,97 @@ export default {
              */
             return this.boundingWidth - 18 - 24 - 32
         },
+        collapsedGroups: {
+            get() {
+                return this.collapsedRowGroups
+            },
+            set(value) {
+                this.$emit('update:collapsedRowGroups', value)
+            },
+        },
+        selectedGroups: {
+            get() {
+                return this.selectedGroupRows
+            },
+            set(value) {
+                this.$emit('update:selectedGroupRows', value)
+            },
+        },
+        selectedGroupItems: {
+            get() {
+                return this.selectedTblRows
+            },
+            set(value) {
+                this.$emit('update:selectedTblRows', value)
+            },
+        },
+        selectedGroupIdx() {
+            return this.selectedGroups.findIndex(ele => this.$helpers.lodash.isEqual(ele, this.row))
+        },
+        areGroupItemsSelected() {
+            return this.getGroupItems().every(item => this.selectedGroupItems.includes(item))
+        },
+        isRowGroupSelected() {
+            return this.areGroupItemsSelected ||
+                (this.selectedGroupIdx !== -1 && this.areGroupItemsSelected)
+                ? true
+                : false
+        },
     },
     methods: {
-        /**
-         * @emits update-collapsed-row-groups - Emits event with new data for collapsedRowGroups
-         */
+        //Row group toggle feat
         toggleRowGroup() {
-            const targetIdx = this.collapsedRowGroups.findIndex(r =>
+            const targetIdx = this.collapsedGroups.findIndex(r =>
                 this.$helpers.lodash.isEqual(this.row, r)
             )
             if (targetIdx >= 0)
-                this.$emit('update-collapsed-row-groups', [
-                    ...this.collapsedRowGroups.slice(0, targetIdx),
-                    ...this.collapsedRowGroups.slice(targetIdx + 1),
-                ])
-            else this.$emit('update-collapsed-row-groups', [...this.collapsedRowGroups, this.row])
+                this.collapsedGroups = [
+                    ...this.collapsedGroups.slice(0, targetIdx),
+                    ...this.collapsedGroups.slice(targetIdx + 1),
+                ]
+            else this.collapsedGroups = [...this.collapsedGroups, this.row]
         },
-
         handleUngroup() {
-            this.$emit('update-collapsed-row-groups', [])
+            this.collapsedGroups = []
             this.$emit('on-ungroup')
+        },
+        //SELECT feat
+        /**
+         * This method returns rows belonged to row group
+         * @returns {Array} - returns 2d array
+         */
+        getGroupItems() {
+            const { isEqual } = this.$helpers.lodash
+            const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, this.row))
+            let items = []
+            let i = targetIdx + 1
+            while (i !== -1) {
+                if (Array.isArray(this.tableRows[i])) {
+                    items.push(this.tableRows[i])
+                    i++
+                } else i = -1
+            }
+            return items
+        },
+        /**
+         * @param {Boolean} v - is row group selected
+         */
+        handleSelectGroupItems(v) {
+            const { isEqual, xorWith, differenceWith } = this.$helpers.lodash
+            let groupItems = this.getGroupItems()
+            let newSelectedItems = []
+            if (v) newSelectedItems = xorWith(this.selectedGroupItems, groupItems, isEqual)
+            else newSelectedItems = differenceWith(this.selectedGroupItems, groupItems, isEqual)
+            this.selectedGroupItems = newSelectedItems
+        },
+        /**
+         * @param {Boolean} v - is row group selected
+         * @emits update:selectedGroupRows - Emits event with new data for selectedGroupRows
+         */
+        handleSelectGroup(v) {
+            if (v) this.selectedGroups.push(this.row)
+            else this.selectedGroups.splice(this.selectedGroupIdx, 1)
+            this.handleSelectGroupItems(v)
         },
     },
 }

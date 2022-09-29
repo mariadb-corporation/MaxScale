@@ -5,7 +5,6 @@
         :value="Boolean(truncate_tooltip_item)"
         open-on-hover
         :close-on-content-click="false"
-        :disabled="truncate_tooltip_item.disabled"
         :activator="`#${truncate_tooltip_item.activatorID}`"
         :nudge-left="$typy(truncate_tooltip_item, 'nudgeLeft').safeNumber"
         :nudge-top="$typy(truncate_tooltip_item, 'nudgeTop').safeNumber"

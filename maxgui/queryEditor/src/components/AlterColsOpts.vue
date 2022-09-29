@@ -62,7 +62,7 @@
             showSelect
             :isVertTable="isVertTable"
             v-on="$listeners"
-            @item-selected="selectedItems = $event"
+            @selected-rows="selectedItems = $event"
         >
             <template
                 v-for="(h, colOptIdx) in visHeaders"

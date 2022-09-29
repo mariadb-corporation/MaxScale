@@ -4,7 +4,7 @@
         ref="string"
         class="d-inline-block text-truncate"
         :style="style"
-        @mouseenter="mouseEnter"
+        v-on="disabled ? null : { mouseenter }"
     >
         <slot> {{ $typy(tooltipItem, 'txt').safeString }}</slot>
     </span>
@@ -27,9 +27,12 @@ import { mapMutations } from 'vuex'
 export default {
     name: 'mxs-truncate-str',
     props: {
-        //must contain text key. If tooltipItem.activatorID is defined, it uses that instead of the componentActivatorID
+        /* must contain text key. If tooltipItem.activatorID is defined, it uses that as an external
+         * activator instead of the componentActivatorID.
+         */
         tooltipItem: { type: Object, required: true },
         maxWidth: { type: Number, default: 0 }, // if maxWidth isn't provided, it uses clientWidth
+        disabled: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -53,7 +56,7 @@ export default {
     },
     methods: {
         ...mapMutations({ SET_TRUNCATE_TOOLTIP_ITEM: 'mxsApp/SET_TRUNCATE_TOOLTIP_ITEM' }),
-        mouseEnter() {
+        mouseenter() {
             const isTruncated = this.$refs.string.scrollWidth > this.$refs.string.clientWidth
             this.scrollWidth = this.$refs.string.scrollWidth
             this.clientWidth = this.$refs.string.clientWidth
