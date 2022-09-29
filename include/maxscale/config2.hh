@@ -204,13 +204,15 @@ protected:
      *
      * This can be overridden to check dependencies between parameters.
      *
-     * @param params The set of validated parameters
+     * @param  params         The individually validated parameters
+     * @params nested_params  Extracted nested parameters.
      *
      * @return True, if the post validation check is successful.
      *
      * @note The default implementation always returns true
      */
-    virtual bool post_validate(const mxs::ConfigParameters& params) const
+    virtual bool post_validate(const mxs::ConfigParameters& params,
+                               const std::map<std::string, mxs::ConfigParameters>& nested_params) const
     {
         return true;
     }
@@ -220,13 +222,15 @@ protected:
      *
      * This can be overridden to check dependencies between parameters.
      *
-     * @param json The JSON parameter object to validate
+     * @param pParams         The individually validated parameters
+     * @param nested_params   Extracted nested parameters
      *
      * @return True, if the post validation check is successful.
      *
      * @note The default implementation always returns true
      */
-    virtual bool post_validate(json_t* json) const
+    virtual bool post_validate(json_t* pParams,
+                               const std::map<std::string, json_t*>& nested_params) const
     {
         return true;
     }

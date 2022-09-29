@@ -207,6 +207,8 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     {
         if (mandatory_params_defined(provided))
         {
+            map<string, mxs::ConfigParameters> unrecognized_parameters = nested_parameters;
+
             for (const auto& kv : parameters_with_params)
             {
                 const auto& my_params = nested_parameters[kv.first];
@@ -239,11 +241,11 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                 }
 
                 // Remove the parameter once we've processed it. This will leave only unrecognized nested
-                // parameters inside nested_parameters once we're done.
-                nested_parameters.erase(kv.first);
+                // parameters inside unrecognized_parameters once we're done.
+                unrecognized_parameters.erase(kv.first);
             }
 
-            for (const auto& kv : nested_parameters)
+            for (const auto& kv : unrecognized_parameters)
             {
                 for (const auto& params : kv.second)
                 {
@@ -263,7 +265,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
 
             if (valid)
             {
-                valid = post_validate(params);
+                valid = post_validate(params, nested_parameters);
             }
         }
         else
@@ -345,6 +347,8 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
     {
         if (mandatory_params_defined(provided))
         {
+            map<string, json_t*> unrecognized_parameters = nested_parameters;
+
             for (const auto& kv : parameters_with_params)
             {
                 const auto& my_params = nested_parameters[kv.first];
@@ -377,12 +381,12 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
                 }
 
                 // Remove the parameter once we've processed it. This will leave only unrecognized nested
-                // parameters inside nested_parameters once we're done.
-                nested_parameters.erase(kv.first);
+                // parameters inside unrecognized_parameters once we're done.
+                unrecognized_parameters.erase(kv.first);
             }
 
 
-            for (const auto& kv : nested_parameters)
+            for (const auto& kv : unrecognized_parameters)
             {
                 const char* k;
                 json_t* v;
@@ -404,7 +408,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
 
             if (valid)
             {
-                valid = post_validate(pParams);
+                valid = post_validate(pParams, nested_parameters);
             }
         }
         else

@@ -85,12 +85,14 @@ private:
     template<class Params>
     bool do_post_validate(Params params) const;
 
-    bool post_validate(const mxs::ConfigParameters& params) const override
+    bool post_validate(const mxs::ConfigParameters& params,
+                       const std::map<std::string, mxs::ConfigParameters>&) const override
     {
         return do_post_validate(params);
     }
 
-    bool post_validate(json_t* json) const override
+    bool post_validate(json_t* json,
+                       const std::map<std::string, json_t*>&) const override
     {
         return do_post_validate(json);
     }

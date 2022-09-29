@@ -27,8 +27,10 @@ public:
     using cfg::Specification::Specification;
 
 protected:
-    bool post_validate(const mxs::ConfigParameters& params) const override;
-    bool post_validate(json_t* json) const override;
+    bool post_validate(const mxs::ConfigParameters& params,
+                       const std::map<std::string, mxs::ConfigParameters>& nested_params) const override;
+    bool post_validate(json_t* json,
+                       const std::map<std::string, json_t*>& nested_params) const override;
 };
 
 KafkaSpecification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
@@ -59,12 +61,14 @@ cfg::ParamSeconds s_timeout(
 
 KafkaCommonConfig s_kafka(&s_spec);
 
-bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params) const
+bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params,
+                                       const std::map<std::string, mxs::ConfigParameters>& nested_params) const
 {
     return s_kafka.post_validate(params);
 }
 
-bool KafkaSpecification::post_validate(json_t* json) const
+bool KafkaSpecification::post_validate(json_t* json,
+                                       const std::map<std::string, json_t*>& nested_params) const
 {
     return s_kafka.post_validate(json);
 }
