@@ -1,5 +1,6 @@
 <template>
     <v-tooltip
+        v-if="isActivated"
         :disabled="isGettingEndTime"
         top
         transition="slide-y-transition"
@@ -70,6 +71,7 @@ export default {
     data() {
         return {
             duration: 0,
+            isActivated: false,
         }
     },
     computed: {
@@ -81,19 +83,24 @@ export default {
         },
     },
     activated() {
-        this.updateSecond()
+        this.isActivated = true
         this.duration = this.totalDuration
         this.watch_executionTime()
     },
     deactivated() {
         this.$typy(this.unwatch_executionTime).safeFunction()
+        this.isActivated = false
     },
     methods: {
         watch_executionTime() {
             // store watcher to unwatch_executionTime and use it for removing the watcher
-            this.unwatch_executionTime = this.$watch('executionTime', v => {
-                if (v === -1) this.updateSecond()
-            })
+            this.unwatch_executionTime = this.$watch(
+                'executionTime',
+                v => {
+                    if (v === -1) this.updateSecond()
+                },
+                { immediate: true }
+            )
         },
         updateSecond() {
             const now = new Date().valueOf()
