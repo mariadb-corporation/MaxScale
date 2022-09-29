@@ -1232,16 +1232,8 @@ bool RebuildServer::check_preconditions()
             source_ok = false;
         }
 
-        const char settings_err_fmt[] = "'%s' is not set. %s requires ssh access to servers.";
-        if (m_mon.m_settings.ssh_user.empty())
+        if (!check_ssh_settings())
         {
-            PRINT_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
-            settings_ok = false;
-        }
-        if (m_mon.m_settings.ssh_keyfile.empty())
-        {
-            // TODO: perhaps allow no authentication
-            PRINT_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
             settings_ok = false;
         }
 
@@ -1537,7 +1529,7 @@ void RebuildServer::cancel()
     }
 }
 
-Result RebuildServer::result()
+Result BackupOperation::result()
 {
     return m_result;
 }
@@ -1720,6 +1712,24 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
                          source_name, ssh_errmsg.c_str());
     }
     return rval;
+}
+
+bool BackupOperation::check_ssh_settings()
+{
+    bool settings_ok = true;
+    const char settings_err_fmt[] = "'%s' is not set. Backup operations require ssh access to servers.";
+    if (m_mon.m_settings.ssh_user.empty())
+    {
+        PRINT_JSON_ERROR(m_result.output, settings_err_fmt, CONFIG_SSH_USER);
+        settings_ok = false;
+    }
+    if (m_mon.m_settings.ssh_keyfile.empty())
+    {
+        // TODO: perhaps allow no authentication
+        PRINT_JSON_ERROR(m_result.output, settings_err_fmt, CONFIG_SSH_KEYFILE);
+        settings_ok = false;
+    }
+    return settings_ok;
 }
 
 bool RebuildServer::prepare_target()
@@ -2166,7 +2176,7 @@ void RebuildServer::cleanup()
     }
 }
 
-MariaDBServer* RebuildServer::autoselect_source_srv(const MariaDBServer* target)
+MariaDBServer* BackupOperation::autoselect_source_srv(const MariaDBServer* target)
 {
     MariaDBServer* rval = nullptr;
     for (auto* cand : m_mon.servers())
@@ -2234,5 +2244,197 @@ bool RebuildServer::state_serve_backup()
 Result Result::deep_copy() const
 {
     return {success, output.deep_copy()};
+}
+
+CreateBackup::CreateBackup(MariaDBMonitor& mon, SERVER* source)
+    : BackupOperation(mon)
+    , m_source_srv(source)
+{
+    m_listen_port = (int)m_mon.m_settings.rebuild_port;
+}
+
+bool CreateBackup::run()
+{
+    bool command_complete = false;
+    bool advance = true;
+    while (advance)
+    {
+        switch (m_state)
+        {
+        case State::INIT:
+            advance = state_init();
+            break;
+
+        case State::CHECK_BACKUP_STORAGE:
+            advance = state_check_backup_storage();
+            break;
+
+        case State::TEST_DATALINK:
+            advance = state_test_datalink();
+            break;
+
+        case State::SERVE_BACKUP:
+            advance = state_serve_backup();
+            break;
+
+        case State::START_TRANSFER:
+            break;
+
+        case State::WAIT_TRANSFER:
+            break;
+
+        case State::CHECK_DATADIR_SIZE:
+            break;
+
+        case State::DONE:
+            m_result.success = true;
+            m_state = State::CLEANUP;
+            break;
+
+        case State::CLEANUP:
+            state_cleanup();
+            command_complete = true;
+            advance = false;
+            break;
+        }
+    }
+
+    return command_complete;
+}
+
+bool CreateBackup::state_init()
+{
+    if (check_preconditions())
+    {
+        set_source(m_source->name(), m_source->server->address());
+        set_target("backup storage", m_mon.m_settings.backup_storage_addr);
+
+        if (init_operation(m_listen_port))
+        {
+            m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
+            m_state = State::TEST_DATALINK;
+        }
+        else
+        {
+            m_state = State::CLEANUP;
+        }
+    }
+    return true;
+}
+
+bool CreateBackup::state_check_backup_storage()
+{
+    // Check that the backup-folder exists and that it does not already contain a backup with the same tag
+    // as the one currently being generated.
+    bool success = false;
+    auto& output = m_result.output;
+    string bu_storage_path = m_mon.m_settings.backup_storage_path;
+    string cmd = mxb::string_printf("ls %s", m_mon.m_settings.backup_storage_path.c_str());
+    auto ls_res = ssh_util::run_cmd(*m_target_ses, cmd, m_ssh_timeout);
+    if (ls_res.type == RType::OK && ls_res.rc == 0)
+    {
+        auto dirs = mxb::strtok(ls_res.output, " ");
+
+        // The final folder where a backup is saved is <monitor-name>. TODO: add timestamp.
+        string subdir = m_mon.name();
+        auto it = std::find(dirs.begin(), dirs.end(), subdir);
+        if (it == dirs.end())
+        {
+            // Directory is free, assume it will stay that way for now.
+            success = true;
+            m_bu_subdir = subdir;
+        }
+        else
+        {
+            PRINT_JSON_ERROR(output, "Backup storage directory '%s/%s' already exists on %s. Cannot save "
+                                     "backup.", bu_storage_path.c_str(), subdir.c_str(),
+                             m_target_name.c_str());
+        }
+    }
+    else
+    {
+        string fail_reason = ssh_util::form_cmd_error_msg(ls_res, cmd.c_str());
+        PRINT_JSON_ERROR(output, "Could not list contents of '%s' on %s. '%s' must exist and be accessible. "
+                                 "%s", bu_storage_path.c_str(), m_target_name.c_str(),
+                         bu_storage_path.c_str(), fail_reason.c_str());
+    }
+    m_state = success ? State::START_TRANSFER : State::CLEANUP;
+    return true;
+}
+
+bool CreateBackup::state_test_datalink()
+{
+    m_state = test_datalink(m_listen_port) ? State::SERVE_BACKUP : State::CLEANUP;
+    return true;
+}
+
+bool CreateBackup::state_serve_backup()
+{
+    auto& cs = m_source->conn_settings();
+    m_state = serve_backup(cs.username, cs.password, m_listen_port) ? State::CHECK_BACKUP_STORAGE :
+        State::CLEANUP;
+    return true;
+}
+
+bool CreateBackup::state_cleanup()
+{
+    // TODO
+    return false;
+}
+
+bool CreateBackup::check_preconditions()
+{
+    auto& error_out = m_result.output;
+    MariaDBServer* source = nullptr;
+    if (m_source_srv)
+    {
+        source = m_mon.get_server(m_source_srv);
+        if (!source)
+        {
+            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as backup source.",
+                             m_source_srv->name(), m_mon.name());
+        }
+    }
+    else
+    {
+        // User did not give a source server, so autoselect. Prefer a slave.
+        source = autoselect_source_srv(nullptr);
+        if (!source)
+        {
+            PRINT_JSON_ERROR(error_out, "Could not autoselect backup source server. A valid source must "
+                                        "be either a master or slave.");
+        }
+    }
+
+    bool rval = false;
+    if (source)
+    {
+        bool source_ok = true;
+        bool settings_ok = true;
+
+        // The following do not actually prevent rebuilding, they are just safeguards against user errors.
+        if (!source->is_slave() && !source->is_master())
+        {
+            PRINT_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
+                                        "as source.", source->name());
+            source_ok = false;
+        }
+
+        if (!check_ssh_settings())
+        {
+            settings_ok = false;
+        }
+
+        if (source_ok && settings_ok)
+        {
+            m_source = source;
+            rval = true;
+        }
+    }
+    return rval;
+}
+
+void CreateBackup::cancel()
+{
 }
 }

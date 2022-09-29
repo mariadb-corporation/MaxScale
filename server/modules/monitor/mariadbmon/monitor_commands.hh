@@ -117,15 +117,19 @@ class BackupOperation : public Operation
 {
 public:
     BackupOperation(MariaDBMonitor& mon);
+    Result result() override;
 
 protected:
     bool init_operation(int listen_port);
     bool test_datalink(int listen_port);
     bool serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
+    bool check_ssh_settings();
 
     ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
     bool               check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
+
+    MariaDBServer* autoselect_source_srv(const MariaDBServer* target);
 
     void set_source(std::string name, std::string host);
     void set_target(std::string name, std::string host);
@@ -151,9 +155,8 @@ class RebuildServer : public BackupOperation
 public:
     RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master);
 
-    bool   run() override;
-    Result result() override;
-    void   cancel() override;
+    bool run() override;
+    void cancel() override;
 
 private:
     SERVER*        m_target_srv {nullptr};
@@ -201,12 +204,45 @@ private:
     bool check_preconditions();
     bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
     void report_source_stream_status();
-
-    MariaDBServer* autoselect_source_srv(const MariaDBServer* target);
 };
 
 class CreateBackup : public BackupOperation
 {
+public:
+    CreateBackup(MariaDBMonitor& mon, SERVER* source);
+
+    bool run() override;
+    void cancel() override;
+
+private:
+    SERVER*        m_source_srv {nullptr};
+    MariaDBServer* m_source {nullptr};
+    int            m_listen_port {0};
+
+    SlaveStatusArray m_source_slaves_old;
+    std::string      m_bu_subdir;
+
+    enum class State
+    {
+        INIT,
+        CHECK_BACKUP_STORAGE,
+        TEST_DATALINK,
+        SERVE_BACKUP,
+        START_TRANSFER,
+        WAIT_TRANSFER,
+        CHECK_DATADIR_SIZE,
+        DONE,
+        CLEANUP,
+    };
+    State m_state {State::INIT};
+
+    bool state_init();
+    bool state_check_backup_storage();
+    bool state_test_datalink();
+    bool state_serve_backup();
+    bool state_cleanup();
+
+    bool check_preconditions();
 };
 
 class RestoreFromBackup : public BackupOperation

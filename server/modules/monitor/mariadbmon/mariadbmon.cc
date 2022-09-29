@@ -256,6 +256,10 @@ cfg::ParamCount s_ssh_port(&s_spec, "ssh_port", "SSH port. Used for running remo
                            22, 0, 65535, cfg::Param::AT_RUNTIME);
 cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for transferring server backup.",
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
+cfg::ParamString s_backup_storage_addr(&s_spec, "backup_storage_address", "Address of backup storage.", "",
+                                       cfg::Param::AT_RUNTIME);
+cfg::ParamString s_backup_storage_path(&s_spec, "backup_storage_path", "Backup storage directory path.", "",
+                                       cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool Spec::do_post_validate(Params& params) const
@@ -454,6 +458,8 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::ssh_timeout, &s_ssh_timeout);
     add_native(&Settings::ssh_port, &s_ssh_port);
     add_native(&Settings::rebuild_port, &s_rebuild_port);
+    add_native(&Settings::backup_storage_addr, &s_backup_storage_addr);
+    add_native(&Settings::backup_storage_path, &s_backup_storage_path);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,

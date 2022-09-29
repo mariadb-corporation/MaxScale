@@ -48,6 +48,7 @@ public:
     friend class Test;
     friend class mon_op::BackupOperation;
     friend class mon_op::RebuildServer;
+    friend class mon_op::CreateBackup;
 
     // Weakly-typed enums since cast to integer.
     enum RequireLocks
@@ -485,6 +486,8 @@ private:
         std::chrono::seconds ssh_timeout;           /**< SSH connection and command timeout */
         int64_t              ssh_port {0};          /**< SSH port on all servers */
         int64_t              rebuild_port {0};      /**< Listen port for server backup transfer */
+        std::string          backup_storage_addr;   /**< Backup storage host */
+        std::string          backup_storage_path;   /**< Backup storage directory */
 
     private:
         MariaDBMonitor* m_monitor;
