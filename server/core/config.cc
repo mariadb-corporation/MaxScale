@@ -1279,7 +1279,18 @@ bool Config::ParamKeyManager::do_validate_parameters(const std::string& value,
 
     if (from_string(value, &val, nullptr))
     {
-        if (auto* spec = mxs::KeyManager::specification(val))
+        if (val == KeyManager::Type::NONE)
+        {
+            if (mxs::key_manager())
+            {
+                MXB_ERROR("The key manager cannot be disabled at runtime once enabled.");
+            }
+            else
+            {
+                ok = true;
+            }
+        }
+        else if (auto* spec = mxs::KeyManager::specification(val))
         {
             ok = spec->validate(params, pUnrecognized);
         }

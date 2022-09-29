@@ -93,11 +93,6 @@ bool KeyManager::configure()
 
     if (type == Type::NONE)
     {
-        if (this_unit.manager)
-        {
-            MXB_ERROR("The key manager cannot be disabled at runtime once enabled.");
-        }
-
         return !this_unit.manager;
     }
 
