@@ -361,17 +361,22 @@ private:
         bool post_validate(const mxs::ConfigParameters& params,
                            const std::map<std::string, mxs::ConfigParameters>& nested_params) const override
         {
-            return do_post_validate(params);
+            return do_post_validate(params, nested_params);
         }
 
-        template<class Params>
-        bool do_post_validate(Params params) const;
-
-        bool post_validate(json_t* params,
+        bool post_validate(json_t* pParams,
                            const std::map<std::string, json_t*>& nested_params) const override
         {
-            return do_post_validate(params);
+            return do_post_validate(pParams, nested_params);
         }
+
+    private:
+        template<class Params, class NestedParams>
+        bool do_post_validate(Params& params, const NestedParams& nested_params) const;
+
+        bool validate_events(const mxs::ConfigParameters& event_params) const;
+        bool validate_events(json_t* pEvent_params) const;
+        bool validate_event(const std::string& name, const std::string& value) const;
     };
 
     static Specification s_specification;

@@ -253,10 +253,81 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
     return ok;
 }
 
-template<class Params>
-bool Config::Specification::do_post_validate(Params params) const
+template<class Params, class NestedParams>
+bool Config::Specification::do_post_validate(Params& params, const NestedParams& nested_params) const
 {
-    return true;
+    bool rv = true;
+    auto it = nested_params.find("event");
+
+    if (it != nested_params.end())
+    {
+        rv = validate_events(it->second);
+    }
+
+    auto whw = s_writeq_high_water.get(params);
+    auto wlw = s_writeq_low_water.get(params);
+
+    if (whw != 0 || wlw != 0)
+    {
+        if (whw <= wlw)
+        {
+            MXB_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool Config::Specification::validate_events(const mxs::ConfigParameters& event_params) const
+{
+    bool rv = true;
+
+    for (const auto& kv : event_params)
+    {
+        string name = "event." + kv.first;
+        string value = kv.second;
+
+        if (!validate_event(name, value))
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool Config::Specification::validate_events(json_t* pEvent_params) const
+{
+    bool rv = true;
+
+    const char* zKey;
+    json_t* pValue;
+    json_object_foreach(pEvent_params, zKey, pValue)
+    {
+        string name = string("event.") + zKey;
+        string value = mxb::json_to_string(pValue);
+
+        if (!validate_event(name, value))
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool Config::Specification::validate_event(const std::string& name, const std::string& value) const
+{
+    bool rv = true;
+
+    if (maxscale::event::validate(name, value) == maxscale::event::INVALID)
+    {
+        MXB_ERROR("'%s' is not a valid value for the event '%s'.", value.c_str(), name.c_str());
+        rv = false;
+    }
+
+    return rv;
 }
 
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
@@ -1122,39 +1193,21 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
             const auto& name = "event." + kv.first;
             const auto& value = kv.second;
 
-            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
-            {
-                maxscale::event::configure(name, value);
-            }
-            else
-            {
-                rv = false;
-            }
+            MXB_AT_DEBUG(auto result =)maxscale::event::configure(name, value);
+            mxb_assert(result != maxscale::event::INVALID);
         }
     }
 
-    it = nested_params.find(s_key_manager.to_string(key_manager));
+    it = nested_params.find(s_key_manager.to_string(this->key_manager));
 
     if (it != nested_params.end())
     {
-        key_manager_options = it->second;
+        this->key_manager_options = it->second;
     }
 
     if (!mxs::KeyManager::configure())
     {
         rv = false;
-    }
-
-    auto whw = this->writeq_high_water.get();
-    auto wlw = this->writeq_low_water.get();
-
-    if (whw != 0 || wlw != 0)
-    {
-        if (whw <= wlw)
-        {
-            MXB_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
-            rv = false;
-        }
     }
 
     // TODO: this needs to be fixed at a higher level. For a
