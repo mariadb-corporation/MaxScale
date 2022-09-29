@@ -253,6 +253,12 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
     return ok;
 }
 
+template<class Params>
+bool Config::Specification::do_post_validate(Params params) const
+{
+    return true;
+}
+
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
 
 Config::ParamAutoTune Config::s_auto_tune(

@@ -357,6 +357,21 @@ private:
         bool validate(const mxs::ConfigParameters& params,
                       mxs::ConfigParameters* pUnrecognized = nullptr) const override final;
         bool validate(json_t* pJson, std::set<std::string>* pUnrecognized = nullptr) const override final;
+
+        bool post_validate(const mxs::ConfigParameters& params,
+                           const std::map<std::string, mxs::ConfigParameters>& nested_params) const override
+        {
+            return do_post_validate(params);
+        }
+
+        template<class Params>
+        bool do_post_validate(Params params) const;
+
+        bool post_validate(json_t* params,
+                           const std::map<std::string, json_t*>& nested_params) const override
+        {
+            return do_post_validate(params);
+        }
     };
 
     static Specification s_specification;
