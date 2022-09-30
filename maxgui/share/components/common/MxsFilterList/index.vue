@@ -39,7 +39,7 @@
                     dense
                     outlined
                     height="36"
-                    class="vuetify-input--override filter-list__search"
+                    class="vuetify-input--override mxs-filter-list__search"
                     :placeholder="$mxs_t('search')"
                     hide-details
                 />
@@ -50,7 +50,7 @@
                 <v-checkbox
                     dense
                     color="primary"
-                    class="pa-0 ma-0 filter-list__checkbox d-flex align-center"
+                    class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
                     hide-details
                     :label="$mxs_t('selectAll')"
                     :input-value="isAllSelected"
@@ -64,7 +64,7 @@
                     v-model="selectedItems"
                     dense
                     color="primary"
-                    class="pa-0 ma-0 filter-list__checkbox d-flex align-center"
+                    class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
                     :value="item.text"
                     hide-details
                 >
@@ -192,17 +192,17 @@ export default {
             }
         }
     }
-}
-.filter-list__checkbox {
-    width: 100%;
-    height: 36px;
-    .v-label {
-        font-size: 0.875rem;
-        color: $navigation;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 36px;
+    &__checkbox {
+        width: 100%;
+        height: 36px;
+        .v-label {
+            font-size: 0.875rem;
+            color: $navigation;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 36px;
+        }
     }
 }
 </style>
