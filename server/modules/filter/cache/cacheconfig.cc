@@ -97,7 +97,8 @@ config::ParamBitMask CacheConfig::s_debug(
     "debug",
     "An integer value, using which the level of debug logging made by the cache "
     "can be controlled.",
-    0
+    CACHE_DEBUG_MIN,
+    CACHE_DEBUG_MAX
     );
 
 config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(
@@ -214,15 +215,6 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
     mxb_assert(nested_params.empty());
 
     bool configured = true;
-
-    if ((this->debug < CACHE_DEBUG_MIN) || (this->debug > CACHE_DEBUG_MAX))
-    {
-        MXB_ERROR("The value of the configuration entry 'debug' must "
-                  "be between %d and %d, inclusive.",
-                  CACHE_DEBUG_MIN,
-                  CACHE_DEBUG_MAX);
-        configured = false;
-    }
 
     if (this->soft_ttl > this->hard_ttl)
     {
