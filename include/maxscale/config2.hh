@@ -102,6 +102,8 @@ public:
     /**
      *  Validate parameters
      *
+     * @param pConfig        Pointer to the configuration whose parameters are validated
+     *                       or nullptr if the configuration is not known.
      * @param params         Parameters as found in the configuration file.
      * @param pUnrecognized  If non-null:
      *                       - Will contain on return parameters that were not used.
@@ -111,12 +113,21 @@ public:
      * @return True, if `params` represent valid parameters - all mandatory are
      *         present, all present ones are of correct type - for this specification.
      */
-    virtual bool validate(const mxs::ConfigParameters& params,
+    virtual bool validate(const Configuration* pConfig,
+                          const mxs::ConfigParameters& params,
                           mxs::ConfigParameters* pUnrecognized = nullptr) const;
+
+    bool validate(const mxs::ConfigParameters& params,
+                  mxs::ConfigParameters* pUnrecognized = nullptr) const
+    {
+        return validate(nullptr, params, pUnrecognized);
+    }
 
     /**
      *  Validate JSON
      *
+     * @param pConfig        Pointer to the configuration whose parameters are validated
+     *                       or nullptr if the configuration is not known.
      * @param pJson          JSON parameter object to validate
      * @param pUnrecognized  If non-null:
      *                       - Will contain on return object keys that were not used.
@@ -126,7 +137,15 @@ public:
      * @return True, if `pJson` represent valid JSON parameters - all mandatory are
      *         present, all present ones are of correct type - for this specification.
      */
-    virtual bool validate(json_t* pJson, std::set<std::string>* pUnrecognized = nullptr) const;
+    virtual bool validate(const Configuration* pConfig,
+                          json_t* pJson,
+                          std::set<std::string>* pUnrecognized = nullptr) const;
+
+    bool validate(json_t* pJson,
+                  std::set<std::string>* pUnrecognized = nullptr) const
+    {
+        return validate(nullptr, pJson, pUnrecognized);
+    }
 
     /**
      * Find given parameter of the specification.
@@ -204,6 +223,8 @@ protected:
      *
      * This can be overridden to check dependencies between parameters.
      *
+     * @param pConfig         Pointer to the configuration whose parameters are validated
+     *                        or nullptr if the configuration is not known.
      * @param  params         The individually validated parameters
      * @params nested_params  Extracted nested parameters.
      *
@@ -211,7 +232,8 @@ protected:
      *
      * @note The default implementation always returns true
      */
-    virtual bool post_validate(const mxs::ConfigParameters& params,
+    virtual bool post_validate(const Configuration* pConfig,
+                               const mxs::ConfigParameters& params,
                                const std::map<std::string, mxs::ConfigParameters>& nested_params) const
     {
         return true;
@@ -222,6 +244,8 @@ protected:
      *
      * This can be overridden to check dependencies between parameters.
      *
+     * @param pConfig         Pointer to the configuration whose parameters are validated
+     *                        or nullptr if the configuration is not known.
      * @param pParams         The individually validated parameters
      * @param nested_params   Extracted nested parameters
      *
@@ -229,7 +253,8 @@ protected:
      *
      * @note The default implementation always returns true
      */
-    virtual bool post_validate(json_t* pParams,
+    virtual bool post_validate(const Configuration* pConfig,
+                               json_t* pParams,
                                const std::map<std::string, json_t*>& nested_params) const
     {
         return true;

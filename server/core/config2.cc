@@ -133,7 +133,8 @@ bool Specification::mandatory_params_defined(const std::set<std::string>& provid
     return valid;
 }
 
-bool Specification::validate(const mxs::ConfigParameters& params,
+bool Specification::validate(const Configuration* pConfig,
+                             const mxs::ConfigParameters& params,
                              mxs::ConfigParameters* pUnrecognized) const
 {
     bool valid = true;
@@ -265,7 +266,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
 
             if (valid)
             {
-                valid = post_validate(params, nested_parameters);
+                valid = post_validate(pConfig, params, nested_parameters);
             }
         }
         else
@@ -277,7 +278,9 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     return valid;
 }
 
-bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecognized) const
+bool Specification::validate(const Configuration* pConfig,
+                             json_t* pParams,
+                             std::set<std::string>* pUnrecognized) const
 {
     bool valid = true;
 
@@ -408,7 +411,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
 
             if (valid)
             {
-                valid = post_validate(pParams, nested_parameters);
+                valid = post_validate(pConfig, pParams, nested_parameters);
             }
         }
         else

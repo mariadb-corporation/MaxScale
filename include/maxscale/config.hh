@@ -354,17 +354,22 @@ private:
     public:
         using config::Specification::Specification;
 
-        bool validate(const mxs::ConfigParameters& params,
+        bool validate(const Configuration* pConfig,
+                      const mxs::ConfigParameters& params,
                       mxs::ConfigParameters* pUnrecognized = nullptr) const override final;
-        bool validate(json_t* pJson, std::set<std::string>* pUnrecognized = nullptr) const override final;
+        bool validate(const Configuration* pConfig,
+                      json_t* pJson,
+                      std::set<std::string>* pUnrecognized = nullptr) const override final;
 
-        bool post_validate(const mxs::ConfigParameters& params,
+        bool post_validate(const Configuration* pConfig,
+                           const mxs::ConfigParameters& params,
                            const std::map<std::string, mxs::ConfigParameters>& nested_params) const override
         {
             return do_post_validate(params, nested_params);
         }
 
-        bool post_validate(json_t* pParams,
+        bool post_validate(const Configuration* pConfig,
+                           json_t* pParams,
                            const std::map<std::string, json_t*>& nested_params) const override
         {
             return do_post_validate(pParams, nested_params);

@@ -69,13 +69,15 @@ protected:
     template<class Params>
     bool do_post_validate(Params params) const;
 
-    bool post_validate(const mxs::ConfigParameters& params,
+    bool post_validate(const cfg::Configuration* config,
+                       const mxs::ConfigParameters& params,
                        const std::map<std::string, mxs::ConfigParameters>& nested_params) const override
     {
         return do_post_validate(params);
     }
 
-    bool post_validate(json_t* params,
+    bool post_validate(const cfg::Configuration* config,
+                       json_t* params,
                        const std::map<std::string, json_t*>& nested_params) const override
     {
         return do_post_validate(params);

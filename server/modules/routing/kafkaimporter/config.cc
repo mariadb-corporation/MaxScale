@@ -27,9 +27,11 @@ public:
     using cfg::Specification::Specification;
 
 protected:
-    bool post_validate(const mxs::ConfigParameters& params,
+    bool post_validate(const cfg::Configuration* pConfig,
+                       const mxs::ConfigParameters& params,
                        const std::map<std::string, mxs::ConfigParameters>& nested_params) const override;
-    bool post_validate(json_t* json,
+    bool post_validate(const cfg::Configuration* pConfig,
+                       json_t* json,
                        const std::map<std::string, json_t*>& nested_params) const override;
 };
 
@@ -61,13 +63,15 @@ cfg::ParamSeconds s_timeout(
 
 KafkaCommonConfig s_kafka(&s_spec);
 
-bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params,
+bool KafkaSpecification::post_validate(const cfg::Configuration* config,
+                                       const mxs::ConfigParameters& params,
                                        const std::map<std::string, mxs::ConfigParameters>& nested_params) const
 {
     return s_kafka.post_validate(params);
 }
 
-bool KafkaSpecification::post_validate(json_t* json,
+bool KafkaSpecification::post_validate(const cfg::Configuration* config,
+                                       json_t* json,
                                        const std::map<std::string, json_t*>& nested_params) const
 {
     return s_kafka.post_validate(json);

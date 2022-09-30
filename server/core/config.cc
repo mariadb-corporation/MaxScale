@@ -124,12 +124,13 @@ static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
 namespace maxscale
 {
 
-bool Config::Specification::validate(const ConfigParameters& params,
+bool Config::Specification::validate(const Configuration* pConfig,
+                                     const ConfigParameters& params,
                                      ConfigParameters* pUnrecognized) const
 {
     ConfigParameters unrecognized;
 
-    bool validated = config::Specification::validate(params, &unrecognized);
+    bool validated = config::Specification::validate(pConfig, params, &unrecognized);
 
     if (validated)
     {
@@ -210,7 +211,9 @@ bool Config::Specification::validate(const ConfigParameters& params,
     return validated;
 }
 
-bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized) const
+bool Config::Specification::validate(const Configuration* pConfig,
+                                     json_t* pJson,
+                                     std::set<std::string>* pUnrecognized) const
 {
     bool ok = false;
     auto cluster = s_config_sync_cluster.get(pJson);
@@ -225,7 +228,7 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
         }
         else
         {
-            ok = mxs::config::Specification::validate(pJson, pUnrecognized);
+            ok = mxs::config::Specification::validate(pConfig, pJson, pUnrecognized);
         }
     }
     else
