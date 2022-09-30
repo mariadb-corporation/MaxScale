@@ -50,6 +50,8 @@
 
 using std::string;
 using std::set;
+using std::unique_ptr;
+using std::vector;
 using Guard = std::lock_guard<std::mutex>;
 using maxscale::Monitor;
 using maxscale::MonitorServer;
@@ -83,20 +85,20 @@ public:
 
 private:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(const cfg::Configuration* config, Params params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
                        const std::map<std::string, mxs::ConfigParameters>&) const override
     {
-        return do_post_validate(params);
+        return do_post_validate(config, params);
     }
 
     bool post_validate(const cfg::Configuration* config,
                        json_t* json,
                        const std::map<std::string, json_t*>&) const override
     {
-        return do_post_validate(json);
+        return do_post_validate(config, json);
     }
 };
 
@@ -181,22 +183,6 @@ cfg::ParamEnumMask<mxs_monitor_event_t> s_events(
         {NEW_DONOR_EVENT, "new_donor"},
     }, ALL_EVENTS, cfg::Param::AT_RUNTIME);
 
-template<class Params>
-bool MonitorSpec::do_post_validate(Params params) const
-{
-    bool ok = true;
-
-    std::string threshold = s_disk_space_threshold.get(params);
-
-    if (!threshold.empty())
-    {
-        DiskSpaceLimits limit;
-        ok = config_parse_disk_space_threshold(&limit, threshold.c_str());
-    }
-
-    return ok;
-}
-
 class ThisUnit
 {
 public:
@@ -227,6 +213,34 @@ public:
             claim_success = true;
         }
         return claim_success;
+    }
+
+    /**
+     * Return the current monitor of a server.
+     *
+     * @param  server The server.
+     *
+     * @return The name of the owning monitor. Empty string if it does not have an owner.
+     */
+    string get_owner(const string& server) const
+    {
+        mxb_assert(Monitor::is_main_worker());
+
+        string owner;
+
+        auto iter = m_server_owners.find(server);
+        if (iter != m_server_owners.end())
+        {
+            // Server is claimed by a monitor.
+            owner = iter->second;
+        }
+
+        return owner;
+    }
+
+    string get_owner(SERVER* server) const
+    {
+        return get_owner(server->name());
     }
 
     /**
@@ -262,6 +276,66 @@ private:
 };
 
 ThisUnit this_unit;
+
+template<class Params>
+bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params params) const
+{
+    bool ok = true;
+
+    std::string threshold = s_disk_space_threshold.get(params);
+
+    if (!threshold.empty())
+    {
+        DiskSpaceLimits limit;
+        ok = config_parse_disk_space_threshold(&limit, threshold.c_str());
+    }
+
+    auto script = s_script.get(params);
+
+    if (!script.empty())
+    {
+        auto script_timeout = s_script_timeout.get(params);
+
+        unique_ptr<ExternalCmd> cmd = ExternalCmd::create(script, script_timeout.count());
+
+        if (!cmd)
+        {
+            ok = false;
+        }
+    }
+
+    vector<::SERVER*> servers = s_servers.get(params);
+
+    for (::SERVER* server : servers)
+    {
+        string owner = this_unit.get_owner(server);
+
+        if (!owner.empty())
+        {
+            if (config)
+            {
+                // Logically, an attempt to add a server to the monitor that already monitors
+                // it should be an error. However, if that approach is followed, due to the
+                // way things are currently implemented, it would no longer be possible to alter
+                // the servers of a monitor.
+                if (owner != config->name())
+                {
+                    MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to '%s'.",
+                              server->name(), owner.c_str(), config->name().c_str());
+                    ok = false;
+                }
+            }
+            else
+            {
+                MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
+                          server->name(), owner.c_str());
+                ok = false;
+            }
+        }
+    }
+
+    return ok;
+}
 
 /** Server type specific bits */
 const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_RELAY | SERVER_BLR;
