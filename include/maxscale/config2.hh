@@ -2104,6 +2104,21 @@ public:
     const Specification& specification() const;
 
     /**
+     * Validate parameters for this configuration.
+     *
+     * @see Specification::validate
+     */
+    bool validate(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized = nullptr) const
+    {
+        return specification().validate(this, params, pUnrecognized);
+    }
+
+    bool validate(json_t* pParams, std::set<std::string>* pUnrecognized = nullptr) const
+    {
+        return specification().validate(this, pParams, pUnrecognized);
+    }
+
+    /**
      * Configure this configuration
      *
      * @param params         The parameters that should be used, will be validated.
