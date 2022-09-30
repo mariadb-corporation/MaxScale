@@ -256,9 +256,9 @@ cfg::ParamCount s_ssh_port(&s_spec, "ssh_port", "SSH port. Used for running remo
                            22, 0, 65535, cfg::Param::AT_RUNTIME);
 cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for transferring server backup.",
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
-cfg::ParamString s_backup_storage_addr(&s_spec, "backup_storage_address", "Address of backup storage.", "",
+cfg::ParamString s_backup_storage_addr(&s_spec, CONFIG_BACKUP_ADDR, "Address of backup storage.", "",
                                        cfg::Param::AT_RUNTIME);
-cfg::ParamString s_backup_storage_path(&s_spec, "backup_storage_path", "Backup storage directory path.", "",
+cfg::ParamString s_backup_storage_path(&s_spec, CONFIG_BACKUP_PATH, "Backup storage directory path.", "",
                                        cfg::Param::AT_RUNTIME);
 
 template<class Params>

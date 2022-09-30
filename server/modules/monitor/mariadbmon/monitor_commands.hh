@@ -120,16 +120,23 @@ public:
     Result result() override;
 
 protected:
-    bool init_operation(int listen_port);
-    bool test_datalink(int listen_port);
-    bool serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
-    bool check_ssh_settings();
+    enum class StateResult {OK, AGAIN, ERROR};
+
+    bool        init_operation(int listen_port);
+    bool        test_datalink(int listen_port);
+    bool        serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
+    bool        start_transfer(int source_port, const std::string& destination);
+    StateResult wait_transfer();
+    bool        check_directory_not_empty(const std::string& datadir_path);
+    void        cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
 
     ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
     bool               check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
-
-    MariaDBServer* autoselect_source_srv(const MariaDBServer* target);
+    bool               check_ssh_settings();
+    void               report_source_stream_status();
+    MariaDBServer*     autoselect_source_srv(const MariaDBServer* target);
+    bool               run_cmd_on_target(const std::string& cmd, const std::string& desc);
 
     void set_source(std::string name, std::string host);
     void set_target(std::string name, std::string host);
@@ -191,19 +198,16 @@ private:
     bool state_test_datalink();
     bool state_serve_backup();
     bool prepare_target();
-    bool start_transfer();
-    bool wait_transfer();
-    void check_datadir_size();
+    bool state_start_transfer();
+    bool state_wait_transfer();
+    void state_check_datadir_size();
     bool start_backup_prepare();
     bool wait_backup_prepare();
+    void state_cleanup();
 
     bool start_target();
     bool start_replication();
-    void cleanup();
-
     bool check_preconditions();
-    bool run_cmd_on_target(const std::string& cmd, const std::string& desc);
-    void report_source_stream_status();
 };
 
 class CreateBackup : public BackupOperation
@@ -220,27 +224,30 @@ private:
     int            m_listen_port {0};
 
     SlaveStatusArray m_source_slaves_old;
-    std::string      m_bu_subdir;
+    std::string      m_bu_path;
 
     enum class State
     {
         INIT,
-        CHECK_BACKUP_STORAGE,
         TEST_DATALINK,
+        CHECK_BACKUP_STORAGE,
         SERVE_BACKUP,
         START_TRANSFER,
         WAIT_TRANSFER,
-        CHECK_DATADIR_SIZE,
+        CHECK_BACKUP_SIZE,
         DONE,
         CLEANUP,
     };
     State m_state {State::INIT};
 
     bool state_init();
-    bool state_check_backup_storage();
     bool state_test_datalink();
+    bool state_check_backup_storage();
     bool state_serve_backup();
-    bool state_cleanup();
+    bool state_start_transfer();
+    bool state_wait_transfer();
+    void state_check_backup_size();
+    void state_cleanup();
 
     bool check_preconditions();
 };

@@ -54,6 +54,8 @@ extern const char* SERVER_LOCK_NAME;
 extern const char* MASTER_LOCK_NAME;
 constexpr char CONFIG_SSH_USER[] = "ssh_user";
 constexpr char CONFIG_SSH_KEYFILE[] = "ssh_keyfile";
+constexpr char CONFIG_BACKUP_ADDR[] = "backup_storage_address";
+constexpr char CONFIG_BACKUP_PATH[] = "backup_storage_path";
 
 // Helper class for concatenating strings with a delimiter.
 class DelimitedPrinter

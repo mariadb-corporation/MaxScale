@@ -47,6 +47,7 @@ const char cs_stop_cluster_cmd[] = "cs-stop-cluster";
 const char cs_set_readonly_cmd[] = "cs-set-readonly";
 const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 const char rebuild_server_cmd[] = "rebuild-server";
+const char create_backup_cmd[] = "create-backup";
 const char mask[] = "******";
 
 const string rebuild_datadir = "/var/lib/mysql";    // configurable?
@@ -234,6 +235,13 @@ bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
     SERVER* target = args->argv[1].value.server;
     SERVER* source = args->argc > 2 ? args->argv[2].value.server : nullptr;
     return mon->schedule_rebuild_server(target, source, output);
+}
+
+bool handle_async_create_backup(const MODULECMD_ARG* args, json_t** output)
+{
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    SERVER* source = args->argc > 1 ? args->argv[1].value.server : nullptr;
+    return mon->schedule_create_backup(source, output);
 }
 
 /**
@@ -627,7 +635,17 @@ void register_monitor_commands()
     modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", MODULECMD_TYPE_ACTIVE,
                                handle_async_rebuild_server,
                                MXS_ARRAY_NELEMS(rebuild_server_argv), rebuild_server_argv,
-                               "Rebuild a server with mariabackup. Does not wait for completion.");
+                               "Rebuild a server with Mariabackup. Does not wait for completion.");
+
+    const modulecmd_arg_type_t create_backup_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Source server (optional)" }
+    };
+    modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", MODULECMD_TYPE_ACTIVE,
+                               handle_async_create_backup,
+                               MXS_ARRAY_NELEMS(create_backup_argv), create_backup_argv,
+                               "Create a backup with Mariabackup. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -1167,6 +1185,12 @@ bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, jso
     return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
+bool MariaDBMonitor::schedule_create_backup(SERVER* source, json_t** error_out)
+{
+    auto op = std::make_unique<mon_op::CreateBackup>(*this, source);
+    return schedule_manual_command(std::move(op), create_backup_cmd, error_out);
+}
+
 namespace mon_op
 {
 bool RebuildServer::check_preconditions()
@@ -1247,7 +1271,7 @@ bool RebuildServer::check_preconditions()
     return rval;
 }
 
-bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string& desc)
+bool BackupOperation::run_cmd_on_target(const std::string& cmd, const std::string& desc)
 {
     bool rval = false;
     auto res = ssh_util::run_cmd(*m_target_ses, cmd, m_ssh_timeout);
@@ -1259,7 +1283,7 @@ bool RebuildServer::run_cmd_on_target(const std::string& cmd, const std::string&
     {
         string errmsg = ssh_util::form_cmd_error_msg(res, cmd.c_str());
         PRINT_JSON_ERROR(m_result.output, "Could not %s on %s. %s",
-                         desc.c_str(), m_target->name(), errmsg.c_str());
+                         desc.c_str(), m_target_name.c_str(), errmsg.c_str());
     }
     return rval;
 }
@@ -1468,15 +1492,15 @@ bool RebuildServer::run()
             break;
 
         case State::START_TRANSFER:
-            advance = start_transfer();
+            advance = state_start_transfer();
             break;
 
         case State::WAIT_TRANSFER:
-            advance = wait_transfer();
+            advance = state_wait_transfer();
             break;
 
         case State::CHECK_DATADIR_SIZE:
-            check_datadir_size();
+            state_check_datadir_size();
             break;
 
         case State::START_BACKUP_PREPARE:
@@ -1501,7 +1525,7 @@ bool RebuildServer::run()
             break;
 
         case State::CLEANUP:
-            cleanup();
+            state_cleanup();
             command_complete = true;
             advance = false;
             break;
@@ -1521,7 +1545,7 @@ void RebuildServer::cancel()
 
     case State::WAIT_TRANSFER:
     case State::WAIT_BACKUP_PREPARE:
-        cleanup();
+        state_cleanup();
         break;
 
     default:
@@ -1568,6 +1592,7 @@ bool BackupOperation::init_operation(int listen_port)
 
 bool RebuildServer::state_init()
 {
+    m_state = State::CLEANUP;
     if (check_preconditions())
     {
         set_source(m_source->name(), m_source->server->address());
@@ -1577,10 +1602,6 @@ bool RebuildServer::state_init()
         {
             m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
             m_state = State::TEST_DATALINK;
-        }
-        else
-        {
-            m_state = State::CLEANUP;
         }
     }
     return true;
@@ -1758,37 +1779,44 @@ bool RebuildServer::prepare_target()
     return true;
 }
 
-bool RebuildServer::start_transfer()
+bool BackupOperation::start_transfer(int source_port, const string& destination)
 {
     bool transfer_started = false;
 
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
                                "| sudo mbstream -x --directory=%s";
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_rebuild_port,
-                                            socat_timeout_s, rebuild_datadir.c_str());
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), source_port,
+                                            socat_timeout_s, destination.c_str());
 
     bool rval = false;
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
     if (cmd_handle)
     {
         transfer_started = true;
-        m_target_cmd = move(cmd_handle);
-        MXB_NOTICE("Backup transfer from %s to %s started.", m_source->name(), m_target->name());
+        m_target_cmd = std::move(cmd_handle);
+        MXB_NOTICE("Backup transfer from %s to %s started.", m_source_name.c_str(), m_target_name.c_str());
     }
     else
     {
         PRINT_JSON_ERROR(m_result.output, "Failed to start receiving data to %s. %s",
-                         m_target->name(), ssh_errmsg.c_str());
+                         m_target_name.c_str(), ssh_errmsg.c_str());
     }
-    m_state = transfer_started ? State::WAIT_TRANSFER : State::CLEANUP;
+    return transfer_started;
+}
+
+bool RebuildServer::state_start_transfer()
+{
+    m_state = start_transfer(m_rebuild_port, rebuild_datadir) ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
 }
 
-bool RebuildServer::wait_transfer()
+BackupOperation::StateResult BackupOperation::wait_transfer()
 {
     using Status = ssh_util::AsyncCmd::Status;
     auto& error_out = m_result.output;
+    const char* target_name = m_target_name.c_str();
+
     bool wait_again = false;
     bool target_success = false;
 
@@ -1808,28 +1836,28 @@ bool RebuildServer::wait_transfer()
                 // multistage command is the return value of the last part. Print any error messages here
                 // and in the next step, check that the target directory is not empty.
                 target_success = true;
-                MXB_NOTICE("Backup transferred to %s.", m_target->name());
+                MXB_NOTICE("Backup transferred to %s.", target_name);
                 if (!m_target_cmd->output().empty())
                 {
-                    MXB_NOTICE("Output from %s: %s", m_target->name(), m_target_cmd->output().c_str());
+                    MXB_NOTICE("Output from %s: %s", target_name, m_target_cmd->output().c_str());
                 }
                 if (!m_target_cmd->error_output().empty())
                 {
-                    MXB_WARNING("Error output from %s: %s", m_target->name(),
+                    MXB_WARNING("Error output from %s: %s", target_name,
                                 m_target_cmd->error_output().c_str());
                 }
             }
             else
             {
                 PRINT_JSON_ERROR(error_out, "Failed to receive backup on %s. Error %i: '%s'.",
-                                 m_target->name(), m_target_cmd->rc(),
+                                 target_name, m_target_cmd->rc(),
                                  m_target_cmd->error_output().c_str());
             }
         }
         else
         {
             PRINT_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
-                             m_target->name(), m_target_cmd->error_output().c_str());
+                             target_name, m_target_cmd->error_output().c_str());
         }
         m_target_cmd = nullptr;
     }
@@ -1853,30 +1881,43 @@ bool RebuildServer::wait_transfer()
             else
             {
                 PRINT_JSON_ERROR(error_out, "Failed to check backup transfer status on %s. %s",
-                                 m_source->name(), m_source_cmd->error_output().c_str());
+                                 m_source_name.c_str(), m_source_cmd->error_output().c_str());
             }
             m_source_cmd = nullptr;
         }
     }
 
-    if (wait_again)
-    {
-        return false;
-    }
-    else
-    {
-        m_state = target_success ? State::CHECK_DATADIR_SIZE : State::CLEANUP;
-        return true;
-    }
+    return wait_again ? StateResult::AGAIN : (target_success ? StateResult::OK : StateResult::ERROR);
 }
 
-
-void RebuildServer::check_datadir_size()
+bool RebuildServer::state_wait_transfer()
 {
-    // Check that target data directory has contents. This is just to get a better error message in case
-    // transfer failed without any clear errors. Even if this part fails, go to next state. The size check
-    // can fail simply because MaxScale cannot run "du" as sudo.
-    string du_cmd = mxb::string_printf("sudo du -sm %s/", rebuild_datadir.c_str());
+    auto res = wait_transfer();
+    bool rval = false;
+    switch (res)
+    {
+    case StateResult::OK:
+        rval = true;
+        m_state = State::CHECK_DATADIR_SIZE;
+        break;
+
+    case StateResult::AGAIN:
+        break;
+
+    case StateResult::ERROR:
+        rval = true;
+        m_state = State::CLEANUP;
+        break;
+    }
+    return rval;
+}
+
+bool BackupOperation::check_directory_not_empty(const std::string& datadir_path)
+{
+    bool has_contents = false;
+    const char* path = datadir_path.c_str();
+    const char* target_name = m_target_name.c_str();
+    string du_cmd = mxb::string_printf("sudo du -sm %s/", path);
     auto res = ssh_util::run_cmd(*m_target_ses, du_cmd, m_ssh_timeout);
     if (res.type == RType::OK && res.rc == 0)
     {
@@ -1888,26 +1929,31 @@ void RebuildServer::check_datadir_size()
             if (mxb::get_long(words[0], &size_mb))
             {
                 parse_ok = true;
-                if (size_mb < 1)
+                if (size_mb >= 1)
                 {
-                    MXB_WARNING("Data directory '%s' on %s is empty. Transfer must have failed.",
-                                rebuild_datadir.c_str(), m_target->name());
+                    // Assume that the directory should contain at least 1MB.
+                    has_contents = true;
+                }
+                else
+                {
+                    MXB_WARNING("Directory '%s' on %s is empty. Transfer must have failed.",
+                                path, target_name);
                 }
             }
         }
 
         if (!parse_ok)
         {
-            MXB_WARNING("Could not check data directory size on %s. Command '%s' returned '%s.",
-                        m_target->name(), du_cmd.c_str(), res.output.c_str());
+            MXB_WARNING("Could not check size of directory '%s' on %s. Command '%s' returned '%s.",
+                        path, target_name, du_cmd.c_str(), res.output.c_str());
         }
     }
     else
     {
         string errmsg = ssh_util::form_cmd_error_msg(res, du_cmd.c_str());
-        MXB_WARNING("Could not check data directory size on %s. %s", m_target->name(), errmsg.c_str());
+        MXB_WARNING("Could not check size of directory '%s' on %s. %s", path, target_name, errmsg.c_str());
     }
-    m_state = State::START_BACKUP_PREPARE;
+    return has_contents;
 }
 
 bool RebuildServer::start_backup_prepare()
@@ -2107,7 +2153,8 @@ bool RebuildServer::start_replication()
     return true;
 }
 
-void RebuildServer::cleanup()
+void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
+                              const SlaveStatusArray& source_slaves_old)
 {
     using Status = ssh_util::AsyncCmd::Status;
     // Target cmd may exist if rebuild is canceled while waiting for transfer/prepare.
@@ -2124,7 +2171,7 @@ void RebuildServer::cleanup()
         if (source_status == Status::BUSY)
         {
             MXB_WARNING("%s is serving backup data stream even after transfer has ended. "
-                        "Closing ssh channel.", m_source->name());
+                        "Closing ssh channel.", source->name());
         }
         else if (source_status == Status::READY)
         {
@@ -2133,30 +2180,30 @@ void RebuildServer::cleanup()
         else
         {
             PRINT_JSON_ERROR(m_result.output, "Failed to check backup transfer status on %s. %s",
-                             m_source->name(), m_source_cmd->error_output().c_str());
+                             source->name(), m_source_cmd->error_output().c_str());
         }
         m_source_cmd = nullptr;
     }
 
     if (m_source_ses)
     {
-        check_free_listen_port(m_source->name(), *m_source_ses, m_rebuild_port);
+        check_free_listen_port(source->name(), *m_source_ses, listen_port);
     }
 
-    if (m_source_slaves_stopped && !m_source_slaves_old.empty())
+    if (m_source_slaves_stopped && !source_slaves_old.empty())
     {
         // Source server replication was stopped when starting Mariabackup. Mariabackup does not restart the
         // connections if it quits in error or is killed. Check that any slave connections are running as
         // before.
-        m_source->update_server(false, false);
-        if (m_source->is_running())
+        source->update_server(false, false);
+        if (source->is_running())
         {
-            const auto& new_slaves = m_source->m_slave_status;
-            if (new_slaves.size() == m_source_slaves_old.size())
+            const auto& new_slaves = source->m_slave_status;
+            if (new_slaves.size() == source_slaves_old.size())
             {
                 for (size_t i = 0; i < new_slaves.size(); i++)
                 {
-                    const auto& old_slave = m_source_slaves_old[i];
+                    const auto& old_slave = source_slaves_old[i];
                     const auto& new_slave = new_slaves[i];
                     bool was_running = (old_slave.slave_io_running != SlaveStatus::SLAVE_IO_NO)
                         && old_slave.slave_sql_running;
@@ -2166,9 +2213,9 @@ void RebuildServer::cleanup()
                     {
                         auto& slave_name = old_slave.settings.name;
                         MXB_NOTICE("Slave connection '%s' is not running on %s, starting it.",
-                                   slave_name.c_str(), m_source->name());
+                                   slave_name.c_str(), source->name());
                         string start_slave = mxb::string_printf("START SLAVE '%s';", slave_name.c_str());
-                        m_source->execute_cmd(start_slave);
+                        source->execute_cmd(start_slave);
                     }
                 }
             }
@@ -2203,8 +2250,9 @@ MariaDBServer* BackupOperation::autoselect_source_srv(const MariaDBServer* targe
     return rval;
 }
 
-void RebuildServer::report_source_stream_status()
+void BackupOperation::report_source_stream_status()
 {
+    const char* source_name = m_source_name.c_str();
     int rc = m_source_cmd->rc();
     if (rc == 0)
     {
@@ -2212,18 +2260,18 @@ void RebuildServer::report_source_stream_status()
         // can be a lot and is usually uninteresting.
         if (!m_source_cmd->output().empty())
         {
-            MXB_INFO("Backup send output from %s: %s", m_source->name(), m_source_cmd->output().c_str());
+            MXB_INFO("Backup send output from %s: %s", source_name, m_source_cmd->output().c_str());
         }
         if (!m_source_cmd->error_output().empty())
         {
-            MXB_INFO("Backup send error output from %s: %s", m_source->name(),
+            MXB_INFO("Backup send error output from %s: %s", source_name,
                      m_source_cmd->error_output().c_str());
         }
     }
     else
     {
         PRINT_JSON_ERROR(m_result.output, "Backup send failure on %s. Error %i: '%s'.",
-                         m_source->name(), m_source_cmd->rc(),
+                         source_name, m_source_cmd->rc(),
                          m_source_cmd->error_output().c_str());
     }
 }
@@ -2239,6 +2287,20 @@ bool RebuildServer::state_serve_backup()
     auto& cs = m_source->conn_settings();
     m_state = serve_backup(cs.username, cs.password, m_rebuild_port) ? State::PREPARE_TARGET : State::CLEANUP;
     return true;
+}
+
+void RebuildServer::state_check_datadir_size()
+{
+    // This is just to get a better error message in case transfer failed without any clear errors.
+    // Even if this part fails, go to next state. The size check can fail simply because MaxScale cannot
+    // run "du" as sudo.
+    check_directory_not_empty(rebuild_datadir);
+    m_state = State::START_BACKUP_PREPARE;
+}
+
+void RebuildServer::state_cleanup()
+{
+    cleanup(m_source, m_rebuild_port, m_source_slaves_old);
 }
 
 Result Result::deep_copy() const
@@ -2278,12 +2340,15 @@ bool CreateBackup::run()
             break;
 
         case State::START_TRANSFER:
+            advance = state_start_transfer();
             break;
 
         case State::WAIT_TRANSFER:
+            advance = state_wait_transfer();
             break;
 
-        case State::CHECK_DATADIR_SIZE:
+        case State::CHECK_BACKUP_SIZE:
+            state_check_backup_size();
             break;
 
         case State::DONE:
@@ -2304,6 +2369,7 @@ bool CreateBackup::run()
 
 bool CreateBackup::state_init()
 {
+    m_state = State::CLEANUP;
     if (check_preconditions())
     {
         set_source(m_source->name(), m_source->server->address());
@@ -2313,10 +2379,6 @@ bool CreateBackup::state_init()
         {
             m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
             m_state = State::TEST_DATALINK;
-        }
-        else
-        {
-            m_state = State::CLEANUP;
         }
     }
     return true;
@@ -2329,7 +2391,7 @@ bool CreateBackup::state_check_backup_storage()
     bool success = false;
     auto& output = m_result.output;
     string bu_storage_path = m_mon.m_settings.backup_storage_path;
-    string cmd = mxb::string_printf("ls %s", m_mon.m_settings.backup_storage_path.c_str());
+    string cmd = mxb::string_printf("ls %s", bu_storage_path.c_str());
     auto ls_res = ssh_util::run_cmd(*m_target_ses, cmd, m_ssh_timeout);
     if (ls_res.type == RType::OK && ls_res.rc == 0)
     {
@@ -2340,9 +2402,14 @@ bool CreateBackup::state_check_backup_storage()
         auto it = std::find(dirs.begin(), dirs.end(), subdir);
         if (it == dirs.end())
         {
-            // Directory is free, assume it will stay that way for now.
-            success = true;
-            m_bu_subdir = subdir;
+            // Directory is free, create it.
+            string backup_dir = bu_storage_path + "/" + subdir;
+            string mkdir = mxb::string_printf("mkdir %s", backup_dir.c_str());
+            if (run_cmd_on_target(mkdir, "create backup directory"))
+            {
+                success = true;
+                m_bu_path = bu_storage_path + "/" + subdir;
+            }
         }
         else
         {
@@ -2358,28 +2425,27 @@ bool CreateBackup::state_check_backup_storage()
                                  "%s", bu_storage_path.c_str(), m_target_name.c_str(),
                          bu_storage_path.c_str(), fail_reason.c_str());
     }
-    m_state = success ? State::START_TRANSFER : State::CLEANUP;
+    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
 bool CreateBackup::state_test_datalink()
 {
-    m_state = test_datalink(m_listen_port) ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = test_datalink(m_listen_port) ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
     return true;
 }
 
 bool CreateBackup::state_serve_backup()
 {
     auto& cs = m_source->conn_settings();
-    m_state = serve_backup(cs.username, cs.password, m_listen_port) ? State::CHECK_BACKUP_STORAGE :
+    m_state = serve_backup(cs.username, cs.password, m_listen_port) ? State::START_TRANSFER :
         State::CLEANUP;
     return true;
 }
 
-bool CreateBackup::state_cleanup()
+void CreateBackup::state_cleanup()
 {
-    // TODO
-    return false;
+    cleanup(m_source, m_listen_port, m_source_slaves_old);
 }
 
 bool CreateBackup::check_preconditions()
@@ -2425,6 +2491,19 @@ bool CreateBackup::check_preconditions()
             settings_ok = false;
         }
 
+        const char settings_err[] = "'%s' is not set. Backup operations require a valid value for this "
+                                    "setting.";
+        if (m_mon.m_settings.backup_storage_addr.empty())
+        {
+            PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_ADDR);
+            settings_ok = false;
+        }
+        if (m_mon.m_settings.backup_storage_path.empty())
+        {
+            PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_PATH);
+            settings_ok = false;
+        }
+
         if (source_ok && settings_ok)
         {
             m_source = source;
@@ -2436,5 +2515,51 @@ bool CreateBackup::check_preconditions()
 
 void CreateBackup::cancel()
 {
+    switch (m_state)
+    {
+    case State::INIT:
+        // No need to do anything.
+        break;
+
+    case State::WAIT_TRANSFER:
+        state_cleanup();
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+bool CreateBackup::state_start_transfer()
+{
+    m_state = start_transfer(m_listen_port, m_bu_path) ? State::WAIT_TRANSFER : State::CLEANUP;
+    return true;
+}
+
+bool CreateBackup::state_wait_transfer()
+{
+    auto res = wait_transfer();
+    bool rval = false;
+    switch (res)
+    {
+    case StateResult::OK:
+        rval = true;
+        m_state = State::CHECK_BACKUP_SIZE;
+        break;
+
+    case StateResult::AGAIN:
+        break;
+
+    case StateResult::ERROR:
+        rval = true;
+        m_state = State::CLEANUP;
+        break;
+    }
+    return rval;
+}
+
+void CreateBackup::state_check_backup_size()
+{
+    m_state = check_directory_not_empty(rebuild_datadir) ? State::DONE : State::CLEANUP;
 }
 }
