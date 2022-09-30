@@ -387,7 +387,7 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, json_t* paramete
         auto& base = monitor->base_configuration();
         auto& mod = monitor->configuration();
 
-        if (base.specification().validate(parameters, &unknown) && mod.specification().validate(parameters))
+        if (base.validate(parameters, &unknown) && mod.validate(parameters))
         {
             if (base.configure(parameters, &unknown))
             {
