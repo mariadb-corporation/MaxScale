@@ -45,7 +45,7 @@
                         :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
                         @click.stop.prevent="
                             getIsFileUnsavedBySessionId(session.id)
-                                ? openConfDlg(session)
+                                ? openFileDlg(session)
                                 : handleDeleteSessTab(session)
                         "
                     >
@@ -82,13 +82,12 @@
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import SessionNavToolbarCtr from './SessionNavToolbarCtr.vue'
+import saveFile from '@queryEditorSrc/mixins/saveFile'
 export default {
     name: 'session-nav-ctr',
     components: { SessionNavToolbarCtr },
-    props: {
-        txtEditorToolbarRef: { type: Object, required: true },
-        height: { type: Number, required: true },
-    },
+    mixins: [saveFile],
+    props: { height: { type: Number, required: true } },
     data() {
         return {
             sessionNavToolbarWidth: 0,
@@ -128,6 +127,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_ACTIVE_SESSION_BY_WKE_ID_MAP: 'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+            SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
         ...mapActions({
             handleDeleteSession: 'querySession/handleDeleteSession',
@@ -146,20 +146,17 @@ export default {
         /**
          * @param {Object} session - session object
          */
-        openConfDlg(session) {
-            const loadSqlCtr = this.$typy(this.txtEditorToolbarRef, '$refs.loadSqlCtr').safeObject
-            loadSqlCtr.confDlg = {
-                ...loadSqlCtr.confDlg,
-                isOpened: true,
+        openFileDlg(session) {
+            this.SET_FILE_DLG_DATA({
+                is_opened: true,
                 title: this.$mxs_t('deleteSession'),
-                type: 'deleteSession',
-                confirmMsg: this.$mxs_t('confirmations.deleteSession', { targetId: session.name }),
-                onSave: async () => {
-                    await loadSqlCtr.handleSaveFile()
+                confirm_msg: this.$mxs_t('confirmations.deleteSession', { targetId: session.name }),
+                on_save: async () => {
+                    await this.handleSaveFile(session)
                     await this.handleDeleteSessTab(session)
                 },
-                dontSave: async () => await this.handleDeleteSessTab(session),
-            }
+                dont_save: async () => await this.handleDeleteSessTab(session),
+            })
         },
         async handleDeleteSessTab(session) {
             if (this.getSessionsOfActiveWke.length === 1) this.handleClearTheLastSession(session)

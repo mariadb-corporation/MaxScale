@@ -18,12 +18,7 @@
             </template>
             <template slot="pane-right">
                 <div class="d-flex flex-column fill-height">
-                    <session-nav-ctr
-                        :height="sessTabCtrHeight"
-                        :txtEditorToolbarRef="
-                            $typy($refs, 'editor[0].$refs.txtEditorToolbar').safeObjectOrEmpty
-                        "
-                    />
+                    <session-nav-ctr :height="sessTabCtrHeight" />
                     <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
                         <template v-if="getActiveSessionId === session.id">
                             <txt-editor-ctr
@@ -45,6 +40,7 @@
                             </ddl-editor-ctr>
                         </template>
                     </keep-alive>
+                    <file-dlg-ctr />
                 </div>
             </template>
         </mxs-split-pane>
@@ -90,6 +86,7 @@ import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
 import SessionNavCtr from './SessionNavCtr.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
+import FileDlgCtr from './FileDlgCtr.vue'
 
 export default {
     name: 'wke-ctr',
@@ -99,6 +96,7 @@ export default {
         DdlEditorCtr,
         SessionNavCtr,
         ExecuteSqlDialog,
+        FileDlgCtr,
     },
     props: {
         ctrDim: { type: Object, required: true },

@@ -11,7 +11,7 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-
+import { supported } from 'browser-fs-access'
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
 const memStates = queryHelper.memStateCreator('editor')
 
@@ -24,6 +24,13 @@ export default {
         engines: [],
         ...memStates,
         ...statesToBeSynced,
+        file_dlg_data: {
+            is_opened: false,
+            title: '',
+            confirm_msg: '',
+            on_save: () => null,
+            dont_save: () => null,
+        },
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(memStates),
@@ -42,6 +49,9 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
+        },
+        SET_FILE_DLG_DATA(state, payload) {
+            state.file_dlg_data = payload
         },
     },
     actions: {
@@ -182,6 +192,10 @@ export default {
             const { altered_active_node = {} } = state.tbl_creation_info
             return altered_active_node
         },
+        //browser fs getters
+        hasFileSystemReadOnlyAccess: () => Boolean(supported),
+        hasFileSystemRWAccess: (state, getters) =>
+            getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
         getIsFileUnsavedBySessionId: (state, getters, rootState, rootGetters) => {
             return id => {
                 const session = rootGetters['querySession/getSessionById'](id)
@@ -189,5 +203,15 @@ export default {
                 return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
             }
         },
+        getSessFileHandle: () => session => {
+            const { blob_file: { file_handle = {} } = {} } = session
+            return file_handle
+        },
+        getSessFileHandleName: (state, getters) => session => {
+            const { name = '' } = getters.getSessFileHandle(session)
+            return name
+        },
+        checkSessFileHandleValidity: (state, getters) => session =>
+            Boolean(getters.getSessFileHandleName(session)),
     },
 }
