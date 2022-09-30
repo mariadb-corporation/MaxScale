@@ -65,7 +65,7 @@
             <br />
             Cmd/Ctrl + D
         </mxs-tooltip-btn>
-        <load-sql-ctr ref="loadSqlCtr" />
+        <load-sql-ctr ref="loadSqlCtr" :session="session" />
         <v-spacer />
         <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">

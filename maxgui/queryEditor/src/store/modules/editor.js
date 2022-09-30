@@ -182,14 +182,9 @@ export default {
             const { altered_active_node = {} } = state.tbl_creation_info
             return altered_active_node
         },
-        getIsFileUnsaved: state => {
-            const { blob_file = {}, query_txt = '' } = state
-            return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
-        },
-        getIsFileUnsavedBySessionId: (state, getters, rootState) => {
-            return session_id => {
-                const session =
-                    rootState.querySession.query_sessions.find(s => s.id === session_id) || {}
+        getIsFileUnsavedBySessionId: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const session = rootGetters['querySession/getSessionById'](id)
                 const { blob_file = {}, query_txt = '' } = session
                 return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
             }

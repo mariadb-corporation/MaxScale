@@ -79,6 +79,7 @@ import { EventBus } from './EventBus'
 
 export default {
     name: 'load-sql-ctr',
+    props: { session: { type: Object, required: true } },
     data() {
         return {
             confDlg: {
@@ -92,15 +93,10 @@ export default {
     },
     computed: {
         ...mapState({
-            query_sessions: state => state.querySession.query_sessions,
             active_wke_id: state => state.wke.active_wke_id,
-            blob_file: state => state.editor.blob_file,
-            query_txt: state => state.editor.query_txt,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
-            getActiveSession: 'querySession/getActiveSession',
-            getIsFileUnsaved: 'editor/getIsFileUnsaved',
+            getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
         }),
         supportFs() {
             return supported
@@ -111,14 +107,26 @@ export default {
         hasFullSupport() {
             return this.supportFs && this.isInSecureCtx
         },
+        blobFile() {
+            return this.session.blob_file
+        },
+        queryTxt() {
+            return this.session.query_txt
+        },
+        fileHandleName() {
+            return this.$typy(this.blobFile, 'file_handle.name').safeString
+        },
         hasFileHandle() {
-            return Boolean(this.$typy(this.blob_file, 'file_handle.name').safeString)
+            return Boolean(this.fileHandleName)
+        },
+        isFileUnsaved() {
+            return this.getIsFileUnsavedBySessionId(this.session.id)
         },
         isSaveFileDisabled() {
-            return !this.getIsFileUnsaved || !this.hasFileHandle
+            return !this.isFileUnsaved || !this.hasFileHandle
         },
         isSaveFileAsDisabled() {
-            return !this.getIsFileUnsaved
+            return !this.isFileUnsaved
         },
         eventBus() {
             return EventBus
@@ -166,7 +174,7 @@ export default {
                 const file = await fileHandle.getFile()
                 return await file.text()
             }
-            return await this.getFileTextLegacy(fileHandle)
+            return this.getFileTextLegacy(fileHandle)
         },
 
         /**
@@ -178,7 +186,7 @@ export default {
                 isOpened: true,
                 title: this.$mxs_t('openScript'),
                 confirmMsg: this.$mxs_t('confirmations.openScript', {
-                    targetId: this.getActiveSession.name,
+                    targetId: this.session.name,
                     fileNameToBeOpened: blob.handle.name,
                 }),
                 onSave: async () => await this.onSave(blob),
@@ -206,7 +214,7 @@ export default {
          * @param {Blob} blob - blob
          */
         async handleLoadFile(blob) {
-            if (this.getIsFileUnsaved) this.openConfDlg(blob)
+            if (this.isFileUnsaved) this.openConfDlg(blob)
             else await this.loadFileToActiveSession(blob)
         },
         /**
@@ -214,14 +222,8 @@ export default {
          */
         async loadFileToActiveSession(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
-            this.SET_QUERY_TXT({ payload: blobTxt, id: this.getActiveSessionId })
-            this.UPDATE_SESSION({
-                idx: this.query_sessions.indexOf(this.getActiveSession),
-                session: {
-                    ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
-                    name: blob.handle.name,
-                },
-            })
+            this.UPDATE_SESSION({ ...this.session, name: blob.handle.name })
+            this.SET_QUERY_TXT({ payload: blobTxt, id: this.session.id })
             if (!this.supportFs)
                 /**
                  * clear the uploader file input so that if the user upload the same file,
@@ -238,7 +240,7 @@ export default {
                      */
                     txt: blobTxt,
                 },
-                id: this.getActiveSessionId,
+                id: this.session.id,
             })
         },
 
@@ -269,11 +271,9 @@ export default {
             /** legacy download file name
              *  If there is no file_handle, use the current session tab name
              */
-            const fileName =
-                `${this.$typy(this.blob_file, 'file_handle.name').safeString}` ||
-                `${this.getActiveSession.name}.sql`
+            const fileName = `${this.fileHandleName}` || `${this.session.name}.sql`
 
-            a.href = `data:application/text;charset=utf-8;, ${encodeURIComponent(this.query_txt)}`
+            a.href = `data:application/text;charset=utf-8;, ${encodeURIComponent(this.queryTxt)}`
             a.download = fileName
             document.body.appendChild(a)
             a.click()
@@ -281,10 +281,10 @@ export default {
             // update blob_file
             this.SET_BLOB_FILE({
                 payload: {
-                    ...this.blob_file,
-                    txt: this.query_txt,
+                    ...this.blobFile,
+                    txt: this.queryTxt,
                 },
-                id: this.getActiveSessionId,
+                id: this.session.id,
             })
         },
         /*
@@ -292,19 +292,19 @@ export default {
          */
         async saveFile() {
             try {
-                const hasPriv = await this.verifyWritePriv(this.blob_file.file_handle)
+                const hasPriv = await this.verifyWritePriv(this.blobFile.file_handle)
                 if (hasPriv) {
                     await this.writeFile({
-                        fileHandle: this.blob_file.file_handle,
-                        contents: this.query_txt,
+                        fileHandle: this.blobFile.file_handle,
+                        contents: this.queryTxt,
                     })
                     // update blob_file
                     this.SET_BLOB_FILE({
                         payload: {
-                            file_handle: this.blob_file.file_handle,
-                            txt: this.query_txt,
+                            file_handle: this.blobFile.file_handle,
+                            txt: this.queryTxt,
                         },
-                        id: this.getActiveSessionId,
+                        id: this.session.id,
                     })
                 }
             } catch (e) {
@@ -338,23 +338,17 @@ export default {
         },
         async saveFileAs() {
             let fileHandle = await this.getNewFileHandle(
-                `${this.getActiveSession.name}${this.hasFileHandle ? '' : '.sql'}`
+                `${this.session.name}${this.hasFileHandle ? '' : '.sql'}`
             )
             try {
-                await this.writeFile({ fileHandle, contents: this.query_txt })
+                await this.writeFile({ fileHandle, contents: this.queryTxt })
                 // update blob_file
                 this.SET_BLOB_FILE({
-                    payload: { file_handle: fileHandle, txt: this.query_txt },
-                    id: this.getActiveSessionId,
+                    payload: { file_handle: fileHandle, txt: this.queryTxt },
+                    id: this.session.id,
                 })
                 // update session tab name
-                this.UPDATE_SESSION({
-                    idx: this.query_sessions.indexOf(this.getActiveSession),
-                    session: {
-                        ...this.$helpers.lodash.cloneDeep(this.getActiveSession),
-                        name: fileHandle.name,
-                    },
-                })
+                this.UPDATE_SESSION({ ...this.session, name: fileHandle.name })
             } catch (ex) {
                 this.$logger('load-sql-ctr-saveFileAs').error('Unable to write file')
             }
