@@ -438,7 +438,7 @@ bool Server::configure_ssl(const mxs::ConfigParameters& params)
             {
                 m_ssl_provider.set_context(std::move(ctx));
             }
-            else
+            else if (ctx->config().to_string() != m_ssl_provider.config()->to_string())
             {
                 MXS_ERROR("Cannot alter SSL at runtime");
                 ok = false;
