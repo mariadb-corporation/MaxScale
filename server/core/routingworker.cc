@@ -59,8 +59,6 @@ struct this_unit
     RoutingWorker** ppWorkers;          // Array of routing worker instances.
     mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
     int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    int             id_min_worker;      // The smallest routing worker id.
-    int             id_max_worker;      // The largest routing worker id.
     bool            running;            // True if worker threads are running
 } this_unit =
 {
@@ -69,8 +67,6 @@ struct this_unit
     nullptr,            // ppWorkers
     nullptr,            // ppWorker_loads
     -1,                 // epoll_listener_fd
-    WORKER_ABSENT_ID,   // id_min_worker
-    WORKER_ABSENT_ID,   // id_max_worker
     false,
 };
 
@@ -146,8 +142,9 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
+RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
+    , m_index(index)
     , m_callable(this)
     , m_pool_handler(this)
 {
@@ -176,16 +173,13 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
         if (ppWorkers && ppWorker_loads)
         {
-            int id_min_worker = -1;
-            int id_max_worker = 0;
-
             size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
             MXB_AT_DEBUG(int id_prev = -1);
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
-                RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd);
+                RoutingWorker* pWorker = RoutingWorker::create(i, pNotifier, this_unit.epoll_listener_fd);
                 AverageN* pAverage = new AverageN(rebalance_window);
 
                 if (pWorker && pAverage)
@@ -195,16 +189,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                     // We require the routing worker ids to be consequtive.
                     mxb_assert(id_prev == -1 || (id_prev + 1 == id));
                     MXB_AT_DEBUG(id_prev = id);
-
-                    if (id_min_worker == -1)
-                    {
-                        id_min_worker = id;
-                    }
-
-                    if (id > id_max_worker)
-                    {
-                        id_max_worker = id;
-                    }
 
                     ppWorkers[i] = pWorker;
                     ppWorker_loads[i] = pAverage;
@@ -228,8 +212,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 this_unit.ppWorkers = ppWorkers;
                 this_unit.ppWorker_loads = ppWorker_loads;
                 this_unit.nWorkers = nWorkers;
-                this_unit.id_min_worker = id_min_worker;
-                this_unit.id_max_worker = id_max_worker;
 
                 this_unit.initialized = true;
             }
@@ -334,7 +316,7 @@ int RoutingWorker::get_current_id()
 
 int RoutingWorker::index() const
 {
-    return id() - this_unit.id_min_worker;
+    return m_index;
 }
 
 // static
@@ -953,15 +935,16 @@ void RoutingWorker::post_run()
  * - Adds the read descriptor to the polling mechanism.
  *
  * @param pNotifier          The watchdog notifier.
+ * @param index              Routing worker index.
  * @param epoll_listener_fd  The file descriptor of the epoll set to which listening
  *                           sockets will be placed.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 // static
-RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
+RoutingWorker* RoutingWorker::create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
 {
-    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pNotifier);
+    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(index, pNotifier);
 
     if (pThis)
     {
