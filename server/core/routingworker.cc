@@ -322,15 +322,6 @@ bool RoutingWorker::remove_listener(Listener* pListener)
     return rv;
 }
 
-RoutingWorker* RoutingWorker::get(int worker_id)
-{
-    mxb_assert(this_unit.initialized);
-
-    bool valid = (worker_id >= this_unit.id_min_worker && worker_id <= this_unit.id_max_worker);
-
-    return valid ? this_unit.ppWorkers[worker_id  - this_unit.id_min_worker] : nullptr;
-}
-
 RoutingWorker* RoutingWorker::get_current()
 {
     RoutingWorker* pWorker = NULL;
@@ -1389,10 +1380,10 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 // static
 RoutingWorker* RoutingWorker::pick_worker()
 {
-    static uint32_t id_generator = 0;
-    int id = this_unit.id_min_worker
-        + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
-    return get(id);
+    static uint32_t index_generator = 0;
+    uint32_t index = mxb::atomic::add(&index_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers;
+
+    return this_unit.ppWorkers[index];
 }
 
 void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
