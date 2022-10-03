@@ -326,11 +326,6 @@ RoutingWorker* RoutingWorker::get(int worker_id)
 {
     mxb_assert(this_unit.initialized);
 
-    if (worker_id == FIRST)
-    {
-        worker_id = this_unit.id_min_worker;
-    }
-
     bool valid = (worker_id >= this_unit.id_min_worker && worker_id <= this_unit.id_max_worker);
 
     return valid ? this_unit.ppWorkers[worker_id  - this_unit.id_min_worker] : nullptr;
