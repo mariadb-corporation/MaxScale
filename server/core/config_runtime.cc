@@ -1709,6 +1709,8 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
     if (is_valid_resource_body(new_json))
     {
         rval = true;
+
+        auto& config = server->configuration();
         json_t* new_parameters = nullptr;
 
         if (json_t* parameters = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
@@ -1718,7 +1720,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
             json_object_update(new_parameters, parameters);
             mxb::json_remove_nulls(new_parameters);
 
-            if (Server::specification().validate(new_parameters))
+            if (config.validate(new_parameters))
             {
                 auto other = get_server_by_address(new_parameters);
 
@@ -1741,7 +1743,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
         if (rval && new_parameters)
         {
-            if ((rval = server->configure(new_parameters)))
+            if ((rval = config.configure(new_parameters)))
             {
                 rval = save_config(server);
 
@@ -2080,7 +2082,7 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
             json_t* params = config.to_json();
             merge_json(params, new_params);
 
-            if (config.specification().validate(params)
+            if (config.validate(params)
                 && can_modify_params(config, params)
                 && config.configure(params))
             {
@@ -2157,11 +2159,11 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
     {
         if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            auto& cnf = listener->config();
-            json_t* params = cnf.to_json();
+            auto& config = listener->config();
+            json_t* params = config.to_json();
             merge_json(params, new_params);
 
-            if (cnf.specification().validate(params) && cnf.configure(params))
+            if (config.validate(params) && config.configure(params))
             {
                 // TODO: Configure the protocol module as well
                 rval = save_config(listener);
@@ -2257,7 +2259,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
         json_t* new_params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
         json_t* params = mxs::Config::get().to_json();
         merge_json(params, new_params);
-        auto& cfg = mxs::Config::get();
+        auto& config = mxs::Config::get();
 
         // TODO: Don't strip out these parameters and define them in the core specification instead.
         const char* key;
@@ -2273,9 +2275,9 @@ bool runtime_alter_maxscale_from_json(json_t* json)
             }
         }
 
-        if (cfg.specification().validate(params) && cfg.configure(params))
+        if (config.validate(params) && config.configure(params))
         {
-            rval = save_config(cfg);
+            rval = save_config(config);
         }
 
         json_decref(params);

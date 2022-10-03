@@ -374,16 +374,6 @@ bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pV
     return ok;
 }
 
-bool Server::configure(const mxs::ConfigParameters& params)
-{
-    return m_settings.configure(params);
-}
-
-bool Server::configure(json_t* params)
-{
-    return m_settings.configure(params);
-}
-
 Server::Settings::Settings(const std::string& name, Server* server)
     : mxs::config::Configuration(name, &s_spec)
     , m_type(this, &s_type)
@@ -466,7 +456,7 @@ std::unique_ptr<Server> Server::create(const char* name, const mxs::ConfigParame
     {
         if (auto server = std::make_unique<Server>(name))
         {
-            if (server->configure(params))
+            if (server->configuration().configure(params))
             {
                 rval = std::move(server);
             }
@@ -484,7 +474,7 @@ std::unique_ptr<Server> Server::create(const char* name, json_t* json)
     {
         if (auto server = std::make_unique<Server>(name))
         {
-            if (server->configure(json))
+            if (server->configuration().configure(json))
             {
                 rval = std::move(server);
             }

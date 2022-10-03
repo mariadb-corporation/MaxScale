@@ -232,7 +232,9 @@ bool ServerManager::reload_tls()
             mxb::Json js(server->json_parameters(), mxb::Json::RefType::STEAL);
             js.remove_nulls();
 
-            if (!Server::specification().validate(js.get_json()) || !server->configure(js.get_json()))
+            auto& config = server->configuration();
+
+            if (!config.validate(js.get_json()) || !config.configure(js.get_json()))
             {
                 MXB_ERROR("Failed to reload TLS certificates for '%s'", server->name());
                 ok = false;

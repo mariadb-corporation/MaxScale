@@ -155,28 +155,6 @@ public:
     static const mxs::config::Specification& specification();
 
     /**
-     * Configure the server
-     *
-     * Must be done in the admin thread.
-     *
-     * @param params New parameters that have been validated
-     *
-     * @return True if the configuration was successful
-     */
-    bool configure(const mxs::ConfigParameters& params);
-
-    /**
-     * Configure the server from JSON
-     *
-     * Must be done in the admin thread.
-     *
-     * @param params JSON parameters that have been validated
-     *
-     * @return True if the configuration was successful
-     */
-    bool configure(json_t* json);
-
-    /**
      * Print server details to a DCB
      *
      * Designed to be called within a debugger session in order
