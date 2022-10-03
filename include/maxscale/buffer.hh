@@ -30,6 +30,13 @@ namespace maxscale
 class Buffer;
 }
 
+namespace maxbase
+{
+class Worker;
+}
+
+namespace mxb = maxbase;
+
 /**
  * A structure for adding arbitrary data to a buffer.
  */
@@ -302,7 +309,7 @@ public:
     void set_id(uint32_t new_id);
 
 #ifdef SS_DEBUG
-    void set_owner(int owner);
+    void set_owner(mxb::Worker* owner);
 #endif
 
     uint8_t operator[](size_t ind) const;
@@ -362,7 +369,7 @@ private:
     uint32_t m_type {TYPE_UNDEFINED};   /**< Data type information */
 
 #ifdef SS_DEBUG
-    int m_owner {-1};   /**< Owning thread id. Used for debugging */
+    mxb::Worker* m_owner {nullptr};   /**< Owning thread. Used for debugging */
 #endif
 
     mutable std::string      m_sql;

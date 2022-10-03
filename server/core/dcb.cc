@@ -165,7 +165,7 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
 static mxb::Worker* get_dcb_owner()
 {
     /** The DCB is owned by the thread that allocates it */
-    mxb_assert(RoutingWorker::get_current_id() != -1);
+    mxb_assert(RoutingWorker::get_current() != nullptr);
     return RoutingWorker::get_current();
 }
 

@@ -520,9 +520,8 @@ public:
         mxb_assert(this->polling_worker() == nullptr);
         m_owner = worker;
 #ifdef SS_DEBUG
-        int wid = worker ? worker->id() : -1;
-        m_writeq.set_owner(wid);
-        m_readq.set_owner(wid);
+        m_writeq.set_owner(worker);
+        m_readq.set_owner(worker);
 #endif
     }
 
