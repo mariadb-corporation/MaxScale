@@ -192,7 +192,7 @@ public:
     /**
      * Get listener config
      */
-    mxs::config::Configuration& config()
+    mxs::config::Configuration& configuration()
     {
         return m_config;
     }

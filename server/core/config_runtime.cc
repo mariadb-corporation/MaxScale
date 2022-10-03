@@ -2128,7 +2128,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
     {
         if (json_t* new_params = mxb::json_ptr(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            auto& config = listener->config();
+            auto& config = listener->configuration();
             json_t* params = config.to_json();
             merge_json(params, new_params);
 
