@@ -477,6 +477,7 @@ private:
     bool try_shutdown();
 
 private:
+    int              m_index;     /*< Index of routing worker */
     Worker::Callable m_callable;  /*< Context for own dcalls */
     SessionsById     m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies          m_zombies;   /*< DCBs to be deleted. */
@@ -504,10 +505,10 @@ private:
         }
     } m_rebalance;
 
-    RoutingWorker(mxb::WatchdogNotifier* pNotifier);
+    RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier);
     virtual ~RoutingWorker();
 
-    static RoutingWorker* create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
+    static RoutingWorker* create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
     bool pre_run() override;
     void post_run() override;
