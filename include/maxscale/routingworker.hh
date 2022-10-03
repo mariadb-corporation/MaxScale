@@ -146,17 +146,6 @@ public:
     void deregister_session(uint64_t session_id);
 
     /**
-     * Return the worker associated with the provided worker id.
-     *
-     * @param worker_id  A worker id. By specifying MAIN, the routing worker
-     *                   running in the main thread will be returned.
-     *
-     * @return The corresponding worker instance, or NULL if the id does
-     *         not correspond to a worker.
-     */
-    static RoutingWorker* get(int worker_id);
-
-    /**
      * Return the worker associated with the current thread.
      *
      * @return The worker instance, or NULL if the current thread does not have a worker.
