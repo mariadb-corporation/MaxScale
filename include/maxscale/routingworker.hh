@@ -153,13 +153,6 @@ public:
     static RoutingWorker* get_current();
 
     /**
-     * Return the worker id associated with the current thread.
-     *
-     * @return A worker instance, or -1 if the current thread does not have a worker.
-     */
-    static int get_current_id();
-
-    /**
      * Return the index of the routing worker. The index will be >= 0 and
      * < #routing threads.
      *

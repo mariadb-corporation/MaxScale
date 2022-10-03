@@ -271,19 +271,19 @@ struct KillInfo
     typedef  bool (* DcbCallback)(DCB* dcb, void* data);
 
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
-        : origin(mxs::RoutingWorker::get_current_id())
+        : origin(mxs::RoutingWorker::get_current())
         , session(ses)
         , query_base(query)
         , cb(callback)
     {
     }
 
-    int          origin;
-    MXS_SESSION* session;
-    std::string  query_base;
-    DcbCallback  cb;
-    TargetList   targets;
-    std::mutex   lock;
+    mxs::RoutingWorker* origin;
+    MXS_SESSION*        session;
+    std::string         query_base;
+    DcbCallback         cb;
+    TargetList          targets;
+    std::mutex          lock;
 };
 
 static bool kill_func(DCB* dcb, void* data);
