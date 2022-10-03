@@ -54,7 +54,7 @@ public:
 
     Server(const std::string& name)
         : m_name(name)
-        , m_settings(name)
+        , m_settings(name, this)
     {
     }
 
@@ -353,7 +353,7 @@ private:
 
     struct Settings : public mxs::config::Configuration
     {
-        Settings(const std::string& name);
+        Settings(const std::string& name, Server* server);
 
         char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
@@ -414,6 +414,9 @@ private:
 
     protected:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
+    private:
+        Server& m_server;
     };
 
     const std::string m_name;       /**< Server config name */

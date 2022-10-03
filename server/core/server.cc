@@ -376,15 +376,15 @@ bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pV
 
 bool Server::configure(const mxs::ConfigParameters& params)
 {
-    return m_settings.configure(params) && post_configure();
+    return m_settings.configure(params);
 }
 
 bool Server::configure(json_t* params)
 {
-    return m_settings.configure(params) && post_configure();
+    return m_settings.configure(params);
 }
 
-Server::Settings::Settings(const std::string& name)
+Server::Settings::Settings(const std::string& name, Server* server)
     : mxs::config::Configuration(name, &s_spec)
     , m_type(this, &s_type)
     , m_protocol(this, &s_protocol)
@@ -411,6 +411,7 @@ Server::Settings::Settings(const std::string& name)
     , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
     , m_ssl_cipher(this, &s_ssl_cipher)
     , m_persistpoolmax(this, &s_persistpoolmax)
+    , m_server(*server)
 {
 }
 
@@ -448,7 +449,7 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
         mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
     }
 
-    return true;
+    return m_server.post_configure();
 }
 
 // static
