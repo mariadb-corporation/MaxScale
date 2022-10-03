@@ -72,7 +72,10 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            config.baseURL = store.state.queryEditorConfig.base_url
+            config = store.vue.$helpers.lodash.merge(
+                config,
+                store.state.queryEditorConfig.axios_opts
+            )
             patchIsConnBusyMap({ store, value: true, sql_conn_id: getSqlConnId(config.url) })
             return { ...config }
         },

@@ -618,13 +618,18 @@ config::ParamString Config::s_admin_jwt_key(
     "generate a random key that is used to sign the JWT.",
     "");
 
-config::ParamPathList Config::s_admin_jwt_extra_certs(
+config::ParamString Config::s_admin_oidc_url(
     &Config::s_specification,
-    "admin_jwt_extra_certs",
+    "admin_oidc_url",
     "Extra public certificates used to validate externally signed JWTs",
-    config::ParamPath::R,
-    {},
-    config::Param::Modifiable::AT_STARTUP);
+    "",
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamString Config::s_admin_verify_url(
+    &Config::s_specification,
+    "admin_verify_url",
+    "URL for third-party verification of client tokens",
+    "");
 
 config::ParamString Config::s_local_address(
     &Config::s_specification,
@@ -887,7 +892,8 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::admin_jwt_algorithm, &s_admin_jwt_algorithm);
     add_native(&Config::admin_jwt_key, &s_admin_jwt_key);
-    add_native(&Config::admin_jwt_extra_certs, &s_admin_jwt_extra_certs);
+    add_native(&Config::admin_verify_url, &s_admin_verify_url);
+    add_native(&Config::admin_oidc_url, &s_admin_oidc_url);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
     add_native(&Config::persist_runtime_changes, &s_persist_runtime_changes);
@@ -1279,7 +1285,18 @@ bool Config::ParamKeyManager::do_validate_parameters(const std::string& value,
 
     if (from_string(value, &val, nullptr))
     {
-        if (auto* spec = mxs::KeyManager::specification(val))
+        if (val == KeyManager::Type::NONE)
+        {
+            if (mxs::key_manager())
+            {
+                MXB_ERROR("The key manager cannot be disabled at runtime once enabled.");
+            }
+            else
+            {
+                ok = true;
+            }
+        }
+        else if (auto* spec = mxs::KeyManager::specification(val))
         {
             ok = spec->validate(params, pUnrecognized);
         }

@@ -37,7 +37,8 @@ export default {
         DELETE_SESSION(state, id) {
             state.query_sessions = state.query_sessions.filter(s => s.id !== id)
         },
-        UPDATE_SESSION(state, { idx, session }) {
+        UPDATE_SESSION(state, session) {
+            const idx = state.query_sessions.findIndex(s => s.id === session.id)
             state.query_sessions = this.vue.$helpers.immutableUpdate(state.query_sessions, {
                 [idx]: { $set: session },
             })
@@ -56,7 +57,7 @@ export default {
          * @param {Object} session - session to be reset
          */
         REFRESH_SESSION_OF_A_WKE(state, session) {
-            const idx = state.query_sessions.indexOf(session)
+            const idx = state.query_sessions.findIndex(s => s.id === session.id)
             let s = { ...this.vue.$helpers.lodash.cloneDeep(session) }
             // Reset the name except the session having blob_file
             if (this.vue.$typy(s, 'blob_file').isEmptyObject) s.name = `Query Tab ${s.count}`
@@ -154,7 +155,7 @@ export default {
          * Clear all session's data except active_sql_conn data
          * @param {Object} param.session - session to be cleared
          */
-        handleClearTheLastSession({ state, commit, dispatch, getters }, session) {
+        handleClearTheLastSession({ commit, dispatch, getters }, session) {
             const freshSession = {
                 ...defSessionState(session.wke_id_fk),
                 id: session.id,
@@ -162,8 +163,7 @@ export default {
                 count: 1,
                 active_sql_conn: session.active_sql_conn,
             }
-            const idx = state.query_sessions.findIndex(s => s.id === session.id)
-            commit('UPDATE_SESSION', { idx, session: freshSession })
+            commit('UPDATE_SESSION', freshSession)
             dispatch('releaseQueryModulesMem', session.id)
             // only sync if targetSession is the active session of the worksheet
             if (getters.getActiveSessionId === session.id)
@@ -237,5 +237,6 @@ export default {
                     s => s.active_sql_conn && s.active_sql_conn.id === conn_id
                 ) || {}
         },
+        getSessionById: state => id => state.query_sessions.find(s => s.id === id) || {},
     },
 }

@@ -65,7 +65,7 @@
             <br />
             Cmd/Ctrl + D
         </mxs-tooltip-btn>
-        <load-sql-ctr ref="loadSqlCtr" />
+        <file-btns-ctr :session="session" />
         <v-spacer />
         <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
@@ -155,7 +155,7 @@
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
-import LoadSqlCtr from './LoadSqlCtr.vue'
+import FileBtnsCtr from './FileBtnsCtr.vue'
 import { EventBus } from './EventBus'
 
 export default {
@@ -163,7 +163,7 @@ export default {
     components: {
         RowLimitCtr,
         'readonly-sql-editor': SqlEditor,
-        LoadSqlCtr,
+        FileBtnsCtr,
     },
     props: {
         session: { type: Object, required: true },

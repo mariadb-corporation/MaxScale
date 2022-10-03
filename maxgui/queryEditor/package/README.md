@@ -277,12 +277,29 @@ module.exports = {
 }
 ```
 
-## Change query editor base url
+## Change axios request config options
 
-Query editor base url can be changed at run time by committing the following
+Axios request config options can be changed at run time by committing the following
 mutation:
 
-`store.commit('queryEditorConfig/SET_BASE_URL', url)`
+```js
+store.commit('queryEditorConfig/SET_AXIOS_OPTS', options)
+```
+
+The provided config options will be merged with the current one which has the following default options:
+
+```js
+{
+    baseURL: '/',
+    headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+   },
+}
+```
+
+Check [axios documentation](https://github.com/axios/axios#request-config) for available options
 
 ## Change authentication cookies expired time
 

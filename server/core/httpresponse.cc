@@ -197,6 +197,8 @@ void HttpResponse::add_split_cookie(const std::string& public_name, const std::s
                                     const std::string& token, uint32_t max_age)
 {
     std::string cookie_opts = "; Path=/";
+    std::string pub_opts = "; SameSite=Lax";
+    std::string priv_opts = "; SameSite=Strict; HttpOnly";
 
     if (mxs_admin_https_enabled())
     {
@@ -208,9 +210,15 @@ void HttpResponse::add_split_cookie(const std::string& public_name, const std::s
         cookie_opts += "; Max-Age=" + std::to_string(max_age);
     }
 
+    if (mxs_admin_use_cors())
+    {
+        pub_opts = "; SameSite=None";
+        priv_opts = "; SameSite=None; HttpOnly";
+    }
+
     auto pos = token.find_last_of('.');
-    add_cookie(public_name + "=" + token.substr(0, pos) + cookie_opts + "; SameSite=Lax");
-    add_cookie(private_name + "=" + token.substr(pos) + cookie_opts + "; SameSite=Strict; HttpOnly");
+    add_cookie(public_name + "=" + token.substr(0, pos) + cookie_opts + pub_opts);
+    add_cookie(private_name + "=" + token.substr(pos) + cookie_opts + priv_opts);
 }
 
 void HttpResponse::remove_split_cookie(const std::string& public_name, const std::string& private_name)

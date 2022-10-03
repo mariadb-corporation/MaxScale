@@ -87,7 +87,8 @@ cfg::ParamCount s_port(&s_spec, CN_PORT, "Listener port", 0);
 cfg::ParamBool s_ssl(&s_spec, CN_SSL, "Enable TLS for server", false, RUNTIME);
 cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "", RUNTIME);
 cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "", RUNTIME);
-cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "", RUNTIME);
+cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA, "TLS certificate authority", cfg::ParamPath::R, "", RUNTIME);
+cfg::ParamDeprecated<cfg::ParamAlias> s_ssl_ca_cert(&s_spec, CN_SSL_CA_CERT, &s_ssl_ca);
 
 cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
     &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
