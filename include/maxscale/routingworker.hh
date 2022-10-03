@@ -76,11 +76,6 @@ public:
         int64_t total;
     };
 
-    enum
-    {
-        FIRST = -1 // Shorthand for first created RoutingWorker, for testing purposes.
-    };
-
     typedef mxs::Registry<MXS_SESSION> SessionsById;
     typedef std::vector<DCB*>          Zombies;
 
@@ -190,6 +185,17 @@ public:
      * @return The corresponding routing worker.
      */
     static RoutingWorker* get_by_index(int index);
+
+    /**
+     * Get first routing worker. As there will always be at least one routing
+     * worker, this function will return a worker if MaxScale has started.
+     *
+     * @return The first routing worker.
+     */
+    static RoutingWorker* get_first()
+    {
+        return get_by_index(0);
+    }
 
     /**
      * Starts all routing workers.
