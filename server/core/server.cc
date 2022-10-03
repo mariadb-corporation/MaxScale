@@ -20,21 +20,22 @@
 #include <string>
 #include <vector>
 
-#include <maxbase/stopwatch.hh>
 #include <maxbase/log.hh>
+#include <maxbase/stopwatch.hh>
 
 #include <maxscale/config2.hh>
-#include <maxscale/session.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/ssl.hh>
-#include <maxscale/json_api.hh>
 #include <maxscale/http.hh>
-#include <maxscale/routingworker.hh>
+#include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/routingworker.hh>
+#include <maxscale/session.hh>
+#include <maxscale/ssl.hh>
 
 #include "internal/config.hh"
-#include "internal/session.hh"
 #include "internal/monitormanager.hh"
+#include "internal/servermanager.hh"
+#include "internal/session.hh"
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
@@ -1030,6 +1031,67 @@ maxscale::ResponseDistribution Server::get_complete_response_distribution(Operat
     return ret;
 }
 
+std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
+{
+    return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
+}
+
+std::ostream& Server::persist(std::ostream& os) const
+{
+    return m_settings.persist(os, {s_type.name()});
+}
+
+
+SERVER* SERVER::find_by_unique_name(const string& name)
+{
+    return ServerManager::find_by_unique_name(name);
+}
+
+std::vector<SERVER*> SERVER::server_find_by_unique_names(const std::vector<string>& server_names)
+{
+    std::vector<SERVER*> rval;
+    rval.reserve(server_names.size());
+    for (auto elem : server_names)
+    {
+        rval.push_back(ServerManager::find_by_unique_name(elem));
+    }
+    return rval;
+}
+
+bool Server::is_mxs_service() const
+{
+    bool rval = false;
+
+    /** Do a coarse check for local server pointing to a MaxScale service */
+    if (address()[0] == '/')
+    {
+        if (service_socket_is_used(address()))
+        {
+            rval = true;
+        }
+    }
+    else if (strcmp(address(), "127.0.0.1") == 0
+             || strcmp(address(), "::1") == 0
+             || strcmp(address(), "localhost") == 0
+             || strcmp(address(), "localhost.localdomain") == 0)
+    {
+        if (service_port_is_used(port()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+mxs::ConfigParameters Server::to_params() const
+{
+    return m_settings.to_params();
+}
+
+/**
+ * ServerEndpoint
+ */
 ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)
     : m_up(up)
     , m_session(static_cast<Session*>(session))
@@ -1329,14 +1391,4 @@ Session* ServerEndpoint::session() const
 mxb::TimePoint ServerEndpoint::conn_wait_start() const
 {
     return m_conn_wait_start;
-}
-
-std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
-{
-    return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
-}
-
-std::ostream& Server::persist(std::ostream& os) const
-{
-    return m_settings.persist(os, {s_type.name()});
 }
