@@ -76,10 +76,10 @@ struct this_unit
 
 thread_local struct this_thread
 {
-    int current_worker_id;      // The worker id of the current thread
+    RoutingWorker* pCurrent_worker; // The worker of the current thread
 } this_thread =
 {
-    WORKER_ABSENT_ID
+    nullptr
 };
 
 bool can_close_dcb(mxs::BackendConnection* b)
@@ -324,21 +324,12 @@ bool RoutingWorker::remove_listener(Listener* pListener)
 
 RoutingWorker* RoutingWorker::get_current()
 {
-    RoutingWorker* pWorker = NULL;
-
-    int worker_id = get_current_id();
-
-    if (worker_id != WORKER_ABSENT_ID)
-    {
-        pWorker = RoutingWorker::get(worker_id);
-    }
-
-    return pWorker;
+    return this_thread.pCurrent_worker;
 }
 
 int RoutingWorker::get_current_id()
 {
-    return this_thread.current_worker_id;
+    return this_thread.pCurrent_worker ? this_thread.pCurrent_worker->id() : WORKER_ABSENT_ID;
 }
 
 int RoutingWorker::index() const
@@ -895,7 +886,7 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
 
 bool RoutingWorker::pre_run()
 {
-    this_thread.current_worker_id = id();
+    this_thread.pCurrent_worker = this;
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
@@ -936,7 +927,7 @@ bool RoutingWorker::pre_run()
     else
     {
         MXB_ERROR("Could not perform thread initialization for all modules. Thread exits.");
-        this_thread.current_worker_id = WORKER_ABSENT_ID;
+        this_thread.pCurrent_worker = nullptr;
     }
 
     return rv;
@@ -952,7 +943,7 @@ void RoutingWorker::post_run()
     qc_thread_end(QC_INIT_SELF);
     modules_thread_finish();
     // TODO: Add service_thread_finish().
-    this_thread.current_worker_id = WORKER_ABSENT_ID;
+    this_thread.pCurrent_worker = nullptr;
 }
 
 /**
