@@ -234,7 +234,7 @@ bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized
             }
             else
             {
-                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
                 valid = false;
             }
         }
