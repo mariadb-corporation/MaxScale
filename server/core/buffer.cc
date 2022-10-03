@@ -131,7 +131,7 @@ const std::string& GWBUF::get_canonical() const
 GWBUF::GWBUF()
 {
 #ifdef SS_DEBUG
-    m_owner = RoutingWorker::get_current_id();
+    m_owner = mxb::Worker::get_current();
 #endif
 }
 
@@ -512,7 +512,7 @@ void GWBUF::set_id(uint32_t new_id)
 }
 
 #ifdef SS_DEBUG
-void GWBUF::set_owner(int owner)
+void GWBUF::set_owner(mxb::Worker* owner)
 {
     m_owner = owner;
 }
