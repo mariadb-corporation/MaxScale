@@ -54,7 +54,7 @@ public:
 protected:
 
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const config::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -120,7 +120,7 @@ config::ParamEnumMask<regex_options> options(
     CCR_REGEX_CASE_INSENSITIVE, mxs::config::Param::AT_RUNTIME);
 
 template<class Params>
-bool CCRSpecification::do_post_validate(Params params) const
+bool CCRSpecification::do_post_validate(Params& params) const
 {
     bool rv = true;
 

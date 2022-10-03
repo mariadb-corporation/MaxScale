@@ -103,7 +103,7 @@ public:
 
 private:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -263,7 +263,7 @@ cfg::ParamBool s_log_warning(
     false, cfg::Param::Modifiable::AT_RUNTIME);
 
 template<class Params>
-bool ServiceSpec::do_post_validate(Params params) const
+bool ServiceSpec::do_post_validate(Params& params) const
 {
     bool ok = true;
     auto servers = s_servers.get(params);

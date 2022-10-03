@@ -97,7 +97,7 @@ public:
 protected:
 
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -193,7 +193,7 @@ static cfg::ParamBool s_ssl_verify_peer_host(
     &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false, AT_RUNTIME);
 
 template<class Params>
-bool ServerSpec::do_post_validate(Params params) const
+bool ServerSpec::do_post_validate(Params& params) const
 {
     bool rval = true;
     auto monuser = s_monitoruser.get(params);

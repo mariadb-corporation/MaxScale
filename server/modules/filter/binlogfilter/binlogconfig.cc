@@ -24,7 +24,7 @@ class BinlogfilterSpecification : public cfg::Specification
     using cfg::Specification::Specification;
 
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -60,7 +60,7 @@ cfg::ParamString s_rewrite_dest(
     cfg::Param::AT_RUNTIME);
 
 template<class Params>
-bool BinlogfilterSpecification::do_post_validate(Params params) const
+bool BinlogfilterSpecification::do_post_validate(Params& params) const
 {
     bool rv = s_rewrite_src.get(params).empty() == s_rewrite_dest.get(params).empty();
 

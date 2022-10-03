@@ -85,7 +85,7 @@ public:
 
 private:
     template<class Params>
-    bool do_post_validate(const cfg::Configuration* config, Params params) const;
+    bool do_post_validate(const cfg::Configuration* config, Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -278,7 +278,7 @@ private:
 ThisUnit this_unit;
 
 template<class Params>
-bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params params) const
+bool MonitorSpec::do_post_validate(const cfg::Configuration* config, Params& params) const
 {
     bool ok = true;
 

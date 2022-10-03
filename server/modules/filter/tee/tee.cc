@@ -37,7 +37,7 @@ public:
 
 protected:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -93,7 +93,7 @@ cfg::ParamBool s_sync(
     false, cfg::Param::AT_RUNTIME);
 
 template<class Params>
-bool TeeSpecification::do_post_validate(Params params) const
+bool TeeSpecification::do_post_validate(Params& params) const
 {
     bool ok = false;
 

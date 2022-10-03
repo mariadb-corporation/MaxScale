@@ -67,7 +67,7 @@ public:
 
 protected:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -138,7 +138,7 @@ cfg::ParamPath s_user_mapping_file(
     RUNTIME);
 
 template<class Params>
-bool ListenerSpecification::do_post_validate(Params params) const
+bool ListenerSpecification::do_post_validate(Params& params) const
 {
     bool ok = true;
 

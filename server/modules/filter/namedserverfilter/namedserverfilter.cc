@@ -60,7 +60,7 @@ public:
 
 private:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -209,7 +209,7 @@ std::vector<MatchAndTarget> s_match_target_specs = {
     {&s_match25, &s_target25}};
 
 template<class Params>
-bool Specification::do_post_validate(Params params) const
+bool Specification::do_post_validate(Params& params) const
 {
     bool ok = true;
 

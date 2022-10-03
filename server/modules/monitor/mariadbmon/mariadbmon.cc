@@ -75,7 +75,7 @@ public:
 
 protected:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -255,7 +255,7 @@ cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for tr
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
 
 template<class Params>
-bool Spec::do_post_validate(Params params) const
+bool Spec::do_post_validate(Params& params) const
 {
     bool ok = true;
     auto repl_user = s_replication_user.get(params);

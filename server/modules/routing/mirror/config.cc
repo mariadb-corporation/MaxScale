@@ -26,7 +26,7 @@ public:
 
 protected:
     template<class Params>
-    bool do_post_validate(Params params) const;
+    bool do_post_validate(Params& params) const;
 
     bool post_validate(const cfg::Configuration* config,
                        const mxs::ConfigParameters& params,
@@ -83,7 +83,7 @@ cfg::ParamEnum<ReportAction> s_report(
     ReportAction::REPORT_ALWAYS, cfg::Param::AT_RUNTIME);
 
 template<class Params>
-bool MirrorSpec::do_post_validate(Params params) const
+bool MirrorSpec::do_post_validate(Params& params) const
 {
     bool ok = true;
 
