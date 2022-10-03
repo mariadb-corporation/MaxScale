@@ -5,6 +5,7 @@ import logger from '@share/plugins/logger'
 import typy from '@share/plugins/typy'
 import shortkey from '@share/plugins/shortkey'
 import scopingI18n from '@share/plugins/scopingI18n'
+import txtHighlighter from '@share/plugins/txtHighlighter'
 import * as maxguiHelpers from '@rootSrc/utils/helpers'
 import * as queryEditorHelpers from '@queryEditorSrc/utils/helpers'
 import Vuex from 'vuex'
@@ -22,6 +23,7 @@ Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...queryEditorHelpers } })
 Vue.use(typy)
 Vue.use(shortkey)
 Vue.use(logger)
+Vue.use(txtHighlighter)
 Vue.use(Vuex)
 // portal-value isn't needed in test env
 if (process.env.NODE_ENV !== 'test') Vue.use(PortalVue)
