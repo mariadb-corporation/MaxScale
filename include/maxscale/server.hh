@@ -19,7 +19,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <maxscale/config_common.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/target.hh>
 
@@ -362,4 +362,9 @@ public:
      * @return The server configuration
      */
     virtual mxs::ConfigParameters to_params() const = 0;
+
+    /**
+     * @return The configuration of the server.
+     */
+    virtual mxs::config::Configuration& configuration() = 0;
 };

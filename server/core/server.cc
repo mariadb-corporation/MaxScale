@@ -1090,6 +1090,12 @@ mxs::ConfigParameters Server::to_params() const
     return m_settings.to_params();
 }
 
+
+mxs::config::Configuration& Server::configuration()
+{
+    return m_settings;
+}
+
 /**
  * ServerEndpoint
  */

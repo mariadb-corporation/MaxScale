@@ -328,6 +328,9 @@ public:
     }
 
     mxs::ConfigParameters to_params() const override;
+
+    mxs::config::Configuration& configuration() override;
+
 private:
     bool create_server_config(const char* filename) const;
 
