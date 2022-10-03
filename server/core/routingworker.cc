@@ -35,8 +35,6 @@
 #include "internal/server.hh"
 #include "internal/session.hh"
 
-#define WORKER_ABSENT_ID (-1)
-
 using maxbase::AverageN;
 using maxbase::Semaphore;
 using maxbase::Worker;
@@ -175,7 +173,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
         {
             size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
-            MXB_AT_DEBUG(int id_prev = -1);
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
@@ -184,12 +181,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
                 if (pWorker && pAverage)
                 {
-                    int id = pWorker->id();
-
-                    // We require the routing worker ids to be consequtive.
-                    mxb_assert(id_prev == -1 || (id_prev + 1 == id));
-                    MXB_AT_DEBUG(id_prev = id);
-
                     ppWorkers[i] = pWorker;
                     ppWorker_loads[i] = pAverage;
                 }
@@ -307,11 +298,6 @@ bool RoutingWorker::remove_listener(Listener* pListener)
 RoutingWorker* RoutingWorker::get_current()
 {
     return this_thread.pCurrent_worker;
-}
-
-int RoutingWorker::get_current_id()
-{
-    return this_thread.pCurrent_worker ? this_thread.pCurrent_worker->id() : WORKER_ABSENT_ID;
 }
 
 int RoutingWorker::index() const
