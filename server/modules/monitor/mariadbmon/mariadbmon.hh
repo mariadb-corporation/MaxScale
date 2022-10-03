@@ -49,6 +49,7 @@ public:
     friend class mon_op::BackupOperation;
     friend class mon_op::RebuildServer;
     friend class mon_op::CreateBackup;
+    friend class mon_op::RestoreFromBackup;
 
     // Weakly-typed enums since cast to integer.
     enum RequireLocks

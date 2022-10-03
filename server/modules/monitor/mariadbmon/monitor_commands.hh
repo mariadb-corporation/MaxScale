@@ -134,9 +134,13 @@ protected:
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
     bool               check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
     bool               check_ssh_settings();
+    bool               check_backup_storage_settings();
+    bool               check_server_buildable(const MariaDBServer* target);
+    bool               check_server_sourcable(const MariaDBServer* source);
     void               report_source_stream_status();
     MariaDBServer*     autoselect_source_srv(const MariaDBServer* target);
     bool               run_cmd_on_target(const std::string& cmd, const std::string& desc);
+    bool               prepare_target();
 
     void set_source(std::string name, std::string host);
     void set_target(std::string name, std::string host);
@@ -197,7 +201,7 @@ private:
     bool state_init();
     bool state_test_datalink();
     bool state_serve_backup();
-    bool prepare_target();
+    bool state_prepare_target();
     bool state_start_transfer();
     bool state_wait_transfer();
     void state_check_datadir_size();
@@ -254,5 +258,47 @@ private:
 
 class RestoreFromBackup : public BackupOperation
 {
+public:
+    RestoreFromBackup(MariaDBMonitor& mon, SERVER* target);
+
+    bool run() override;
+    void cancel() override;
+
+private:
+    SERVER*        m_target_srv {nullptr};
+    MariaDBServer* m_target {nullptr};
+    int            m_listen_port {0};
+    std::string    m_bu_path;
+
+    enum class State
+    {
+        INIT,
+        TEST_DATALINK,
+        CHECK_BACKUP_STORAGE,
+        SERVE_BACKUP,
+        PREPARE_TARGET,
+        START_TRANSFER,
+        WAIT_TRANSFER,
+        CHECK_DATADIR_SIZE,
+        START_BACKUP_PREPARE,
+        WAIT_BACKUP_PREPARE,
+        START_TARGET,
+        START_REPLICATION,
+        DONE,
+        CLEANUP,
+    };
+    State m_state {State::INIT};
+
+    bool state_init();
+    bool state_test_datalink();
+    bool state_check_backup_storage();
+    bool state_serve_backup();
+    bool state_prepare_target();
+    bool state_start_transfer();
+    bool state_wait_transfer();
+    bool state_check_datadir_size();
+    void state_cleanup();
+
+    bool check_preconditions();
 };
 }

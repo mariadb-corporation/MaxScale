@@ -1227,27 +1227,9 @@ bool RebuildServer::check_preconditions()
     bool rval = false;
     if (target && source)
     {
-        bool target_ok = true;
+        bool target_ok = check_server_buildable(target);
         bool source_ok = true;
         bool settings_ok = true;
-        const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
-
-        // The following do not actually prevent rebuilding, they are just safeguards against user errors.
-        if (target->is_master())
-        {
-            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
-            target_ok = false;
-        }
-        else if (target->is_relay_master())
-        {
-            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
-            target_ok = false;
-        }
-        else if (target->is_slave())
-        {
-            PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
-            target_ok = false;
-        }
 
         if (!source->is_slave() && !source->is_master())
         {
@@ -1488,7 +1470,7 @@ bool RebuildServer::run()
             break;
 
         case State::PREPARE_TARGET:
-            advance = prepare_target();
+            advance = state_prepare_target();
             break;
 
         case State::START_TRANSFER:
@@ -1579,10 +1561,17 @@ bool BackupOperation::init_operation(int listen_port)
 
         if (target_tools && source_tools)
         {
-            if (check_free_listen_port(source_name, *source_ses, listen_port))
+            if (listen_port > 0)
             {
-                m_target_ses = std::move(target_ses);
-                m_source_ses = std::move(source_ses);
+                if (check_free_listen_port(source_name, *source_ses, listen_port))
+                {
+                    m_target_ses = std::move(target_ses);
+                    m_source_ses = std::move(source_ses);
+                    init_ok = true;
+                }
+            }
+            else
+            {
                 init_ok = true;
             }
         }
@@ -1753,7 +1742,62 @@ bool BackupOperation::check_ssh_settings()
     return settings_ok;
 }
 
-bool RebuildServer::prepare_target()
+bool BackupOperation::check_backup_storage_settings()
+{
+    bool settings_ok = true;
+    const char settings_err[] = "'%s' is not set. Backup operations require a valid value for this "
+                                "setting.";
+    if (m_mon.m_settings.backup_storage_addr.empty())
+    {
+        PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_ADDR);
+        settings_ok = false;
+    }
+    if (m_mon.m_settings.backup_storage_path.empty())
+    {
+        PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_PATH);
+        settings_ok = false;
+    }
+    return settings_ok;
+}
+
+bool BackupOperation::check_server_buildable(const MariaDBServer* target)
+{
+    auto& error_out = m_result.output;
+    bool target_ok = true;
+    const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
+
+    // The following do not actually prevent rebuilding, they are just safeguards against user errors.
+    if (target->is_master())
+    {
+        PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
+        target_ok = false;
+    }
+    else if (target->is_relay_master())
+    {
+        PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
+        target_ok = false;
+    }
+    else if (target->is_slave())
+    {
+        PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
+        target_ok = false;
+    }
+    return target_ok;
+}
+
+bool BackupOperation::check_server_sourcable(const MariaDBServer* source)
+{
+    bool source_ok = true;
+    if (!source->is_slave() && !source->is_master())
+    {
+        PRINT_JSON_ERROR(m_result.output, "Server '%s' is neither a master or slave, cannot use it "
+                                          "as source.", source->name());
+        source_ok = false;
+    }
+    return source_ok;
+}
+
+bool BackupOperation::prepare_target()
 {
     bool target_prepared = false;
     string clear_datadir = mxb::string_printf("sudo rm -rf %s/*", rebuild_datadir.c_str());
@@ -1766,7 +1810,8 @@ bool RebuildServer::prepare_target()
         if (run_cmd_on_target("sudo systemctl stop mariadb", "stop MariaDB Server")
             && run_cmd_on_target(clear_datadir, "empty data directory"))
         {
-            MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.", m_target->name());
+            MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.",
+                       m_target_name.c_str());
             target_prepared = true;
         }
     }
@@ -1775,7 +1820,12 @@ bool RebuildServer::prepare_target()
         mxb_assert(!true);
         PRINT_JSON_ERROR(m_result.output, "Invalid rm-command (this should not happen!)");
     }
-    m_state = target_prepared ? State::START_TRANSFER : State::CLEANUP;
+    return target_prepared;
+}
+
+bool RebuildServer::state_prepare_target()
+{
+    m_state = prepare_target() ? State::START_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -2378,7 +2428,7 @@ bool CreateBackup::state_init()
         if (init_operation(m_listen_port))
         {
             m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
-            m_state = State::TEST_DATALINK;
+            m_state = State::CHECK_BACKUP_STORAGE;
         }
     }
     return true;
@@ -2425,13 +2475,13 @@ bool CreateBackup::state_check_backup_storage()
                                  "%s", bu_storage_path.c_str(), m_target_name.c_str(),
                          bu_storage_path.c_str(), fail_reason.c_str());
     }
-    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = success ? State::TEST_DATALINK : State::CLEANUP;
     return true;
 }
 
 bool CreateBackup::state_test_datalink()
 {
-    m_state = test_datalink(m_listen_port) ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
+    m_state = test_datalink(m_listen_port) ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
@@ -2475,32 +2525,16 @@ bool CreateBackup::check_preconditions()
     bool rval = false;
     if (source)
     {
-        bool source_ok = true;
+        bool source_ok = check_server_sourcable(source);
         bool settings_ok = true;
-
-        // The following do not actually prevent rebuilding, they are just safeguards against user errors.
-        if (!source->is_slave() && !source->is_master())
-        {
-            PRINT_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
-                                        "as source.", source->name());
-            source_ok = false;
-        }
 
         if (!check_ssh_settings())
         {
             settings_ok = false;
         }
 
-        const char settings_err[] = "'%s' is not set. Backup operations require a valid value for this "
-                                    "setting.";
-        if (m_mon.m_settings.backup_storage_addr.empty())
+        if (!check_backup_storage_settings())
         {
-            PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_ADDR);
-            settings_ok = false;
-        }
-        if (m_mon.m_settings.backup_storage_path.empty())
-        {
-            PRINT_JSON_ERROR(m_result.output, settings_err, CONFIG_BACKUP_PATH);
             settings_ok = false;
         }
 
@@ -2561,5 +2595,284 @@ bool CreateBackup::state_wait_transfer()
 void CreateBackup::state_check_backup_size()
 {
     m_state = check_directory_not_empty(rebuild_datadir) ? State::DONE : State::CLEANUP;
+}
+
+RestoreFromBackup::RestoreFromBackup(MariaDBMonitor& mon, SERVER* target)
+    : BackupOperation(mon)
+    , m_target_srv(target)
+{
+}
+
+bool RestoreFromBackup::run()
+{
+    bool command_complete = false;
+    bool advance = true;
+    while (advance)
+    {
+        switch (m_state)
+        {
+        case State::INIT:
+            advance = state_init();
+            break;
+
+        case State::TEST_DATALINK:
+            advance = state_test_datalink();
+            break;
+
+        case State::CHECK_BACKUP_STORAGE:
+            advance = state_check_backup_storage();
+            break;
+
+        case State::SERVE_BACKUP:
+            advance = state_serve_backup();
+            break;
+
+        case State::PREPARE_TARGET:
+            advance = state_prepare_target();
+            break;
+
+        case State::START_TRANSFER:
+            advance = state_start_transfer();
+            break;
+
+        case State::WAIT_TRANSFER:
+            advance = state_wait_transfer();
+            break;
+
+        case State::CHECK_DATADIR_SIZE:
+            advance = state_check_datadir_size();
+            break;
+
+        case State::START_BACKUP_PREPARE:
+            // TODO
+            break;
+
+        case State::WAIT_BACKUP_PREPARE:
+            // TODO
+            break;
+
+        case State::START_TARGET:
+            // TODO
+            break;
+
+        case State::START_REPLICATION:
+            // TODO
+            break;
+
+        case State::DONE:
+            m_result.success = true;
+            m_state = State::CLEANUP;
+            break;
+
+        case State::CLEANUP:
+            state_cleanup();
+            command_complete = true;
+            advance = false;
+            break;
+        }
+    }
+
+    return command_complete;
+}
+
+void RestoreFromBackup::cancel()
+{
+    switch (m_state)
+    {
+    case State::INIT:
+        // No need to do anything.
+        break;
+
+    case State::WAIT_TRANSFER:
+    case State::WAIT_BACKUP_PREPARE:
+        state_cleanup();
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+bool RestoreFromBackup::state_init()
+{
+    m_state = State::CLEANUP;
+    if (check_preconditions())
+    {
+        set_source("backup storage", m_mon.m_settings.backup_storage_addr);
+        set_target(m_target->name(), m_target->server->address());
+
+        if (init_operation(-1))
+        {
+            m_state = State::TEST_DATALINK;
+        }
+    }
+    return true;
+}
+
+bool RestoreFromBackup::check_preconditions()
+{
+    auto& error_out = m_result.output;
+    MariaDBServer* target = m_mon.get_server(m_target_srv);
+    if (!target)
+    {
+        PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot rebuild it.",
+                         m_target_srv->name(), m_mon.name());
+    }
+
+    bool rval = false;
+    if (target)
+    {
+        bool target_ok = check_server_buildable(target);
+        bool settings_ok = true;
+
+        if (!check_ssh_settings())
+        {
+            settings_ok = false;
+        }
+
+        if (!check_backup_storage_settings())
+        {
+            settings_ok = false;
+        }
+
+        if (target_ok && settings_ok)
+        {
+            m_target = target;
+            rval = true;
+        }
+    }
+    return rval;
+}
+
+bool RestoreFromBackup::state_test_datalink()
+{
+    m_state = test_datalink(m_listen_port) ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_check_backup_storage()
+{
+    // TODO: Check backup storage for most recent backup.
+    m_bu_path = "/tmp/dummy";
+    m_state = State::SERVE_BACKUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_serve_backup()
+{
+    auto source_name = m_source_name.c_str();
+    // Start serving the backup stream. The source will wait for a new connection. Since MariaDB Server is
+    // not running on this machine, serve the data directory as a tar archive.
+    const char stream_fmt[] = "sudo tar -zc -C %s . | socat - TCP-LISTEN:%i,reuseaddr";
+    string stream_cmd = mxb::string_printf(stream_fmt, m_bu_path.c_str(), m_listen_port);
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
+
+    auto& error_out = m_result.output;
+    bool success = false;
+    if (cmd_handle)
+    {
+        // Wait a bit, then check that command started successfully and is still running.
+        sleep(1);
+        auto status = cmd_handle->update_status();
+
+        if (status == ssh_util::AsyncCmd::Status::BUSY)
+        {
+            success = true;
+            m_source_cmd = std::move(cmd_handle);
+            MXB_NOTICE("%s serving backup on port %i.", source_name, m_listen_port);
+        }
+        else if (status == ssh_util::AsyncCmd::Status::READY)
+        {
+            // The stream serve operation ended before it should. Print all output available.
+            int rc = cmd_handle->rc();
+            string message = mxb::string_printf(
+                "Failed to stream data from %s. Command '%s' stopped before data was streamed. Return "
+                "value %i. Output: '%s' Error output: '%s'", source_name, stream_cmd.c_str(), rc,
+                cmd_handle->output().c_str(), cmd_handle->error_output().c_str());
+
+            PRINT_JSON_ERROR(error_out, "%s", message.c_str());
+        }
+        else
+        {
+            ssh_errmsg = mxb::string_printf("Failed to read output. %s",
+                                            cmd_handle->error_output().c_str());
+        }
+    }
+
+    if (!ssh_errmsg.empty())
+    {
+        mxb_assert(!m_source_cmd);
+        PRINT_JSON_ERROR(error_out, "Failed to start streaming data from %s. %s",
+                         source_name, ssh_errmsg.c_str());
+    }
+
+    m_state = success ? State::PREPARE_TARGET : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_prepare_target()
+{
+    m_state = prepare_target() ? State::START_TRANSFER : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_start_transfer()
+{
+    bool transfer_started = false;
+    // Connect to source and start stream the backup.
+    const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | sudo tar -xz -C %s/";
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), m_listen_port,
+                                            socat_timeout_s, rebuild_datadir.c_str());
+
+    bool rval = false;
+    auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
+    if (cmd_handle)
+    {
+        transfer_started = true;
+        m_target_cmd = std::move(cmd_handle);
+        MXB_NOTICE("Backup transfer from %s to %s started.", m_source_name.c_str(), m_target_name.c_str());
+    }
+    else
+    {
+        PRINT_JSON_ERROR(m_result.output, "Failed to start receiving data to %s. %s",
+                         m_target_name.c_str(), ssh_errmsg.c_str());
+    }
+
+    m_state = transfer_started ? State::WAIT_TRANSFER : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_wait_transfer()
+{
+    auto res = wait_transfer();
+    bool rval = false;
+    switch (res)
+    {
+    case StateResult::OK:
+        rval = true;
+        m_state = State::CHECK_DATADIR_SIZE;
+        break;
+
+    case StateResult::AGAIN:
+        break;
+
+    case StateResult::ERROR:
+        rval = true;
+        m_state = State::CLEANUP;
+        break;
+    }
+    return rval;
+}
+
+bool RestoreFromBackup::state_check_datadir_size()
+{
+    check_directory_not_empty(rebuild_datadir);
+    m_state = State::START_BACKUP_PREPARE;
+    return true;
+}
+
+void RestoreFromBackup::state_cleanup()
+{
+    // TODO
 }
 }

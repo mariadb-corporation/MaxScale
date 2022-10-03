@@ -57,7 +57,7 @@ struct CmdResult
     std::string error_output;           /**< Command error output or ssh error message */
 };
 
-CmdResult run_cmd(ssh::Session& read_error_stream, const std::string& cmd, std::chrono::milliseconds timeout);
+CmdResult run_cmd(ssh::Session& ses, const std::string& cmd, std::chrono::milliseconds timeout);
 
 class AsyncCmd
 {
