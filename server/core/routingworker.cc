@@ -87,6 +87,27 @@ bool can_close_dcb(mxs::BackendConnection* b)
     auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
     return idle > SHOW_SHUTDOWN_TIMEOUT || b->can_close();
 }
+
+int broadcast_recipients(int nWorkers)
+{
+    switch (nWorkers)
+    {
+    case RoutingWorker::ALL:
+        nWorkers = this_unit.nCreated.load(std::memory_order_relaxed);
+        break;
+
+    case RoutingWorker::ACTIVE:
+        nWorkers = this_unit.nActive.load(std::memory_order_relaxed);
+        break;
+
+    default:
+        mxb_assert(nWorkers >= 0);
+        break;
+    }
+
+    return nWorkers;
+}
+
 }
 
 namespace maxscale
@@ -1043,12 +1064,14 @@ uint32_t RoutingWorker::handle_poll_events(mxb::Worker* pWorker, uint32_t events
 }
 
 // static
-size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
+size_t RoutingWorker::broadcast(Task* pTask, int nWorkers, Semaphore* pSem)
 {
     // No logging here, function must be signal safe.
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1063,14 +1086,16 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
 }
 
 // static
-size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
+size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask, int nWorkers)
 {
     DisposableTask* pTask = sTask.release();
     Worker::inc_ref(pTask);
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1088,12 +1113,15 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 
 // static
 size_t RoutingWorker::broadcast(const std::function<void ()>& func,
+                                int nWorkers,
                                 mxb::Semaphore* pSem,
                                 mxb::Worker::execute_mode_t mode)
 {
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1108,12 +1136,14 @@ size_t RoutingWorker::broadcast(const std::function<void ()>& func,
 }
 
 // static
-size_t RoutingWorker::execute_serially(Task& task)
+size_t RoutingWorker::execute_serially(Task& task, int nWorkers)
 {
     Semaphore sem;
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1129,12 +1159,14 @@ size_t RoutingWorker::execute_serially(Task& task)
 }
 
 // static
-size_t RoutingWorker::execute_serially(const std::function<void()>& func)
+size_t RoutingWorker::execute_serially(const std::function<void()>& func, int nWorkers)
 {
     Semaphore sem;
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1150,27 +1182,29 @@ size_t RoutingWorker::execute_serially(const std::function<void()>& func)
 }
 
 // static
-size_t RoutingWorker::execute_concurrently(Task& task)
+size_t RoutingWorker::execute_concurrently(Task& task, int nWorkers)
 {
     Semaphore sem;
-    return sem.wait_n(RoutingWorker::broadcast(&task, &sem));
+    return sem.wait_n(RoutingWorker::broadcast(&task, nWorkers, &sem));
 }
 
 // static
-size_t RoutingWorker::execute_concurrently(const std::function<void()>& func)
+size_t RoutingWorker::execute_concurrently(const std::function<void()>& func, int nWorkers)
 {
     Semaphore sem;
-    return sem.wait_n(RoutingWorker::broadcast(func, &sem, EXECUTE_AUTO));
+    return sem.wait_n(RoutingWorker::broadcast(func, nWorkers, &sem, EXECUTE_AUTO));
 }
 
 // static
-size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
+size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2, int nWorkers)
 {
     // NOTE: No logging here, this function must be signal safe.
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1187,11 +1221,13 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 namespace
 {
 
-std::vector<Worker::STATISTICS> get_stats()
+std::vector<Worker::STATISTICS> get_stats(int nWorkers)
 {
     std::vector<Worker::STATISTICS> rval;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    nWorkers = broadcast_recipients(nWorkers);
+
+    for (int i = 0; i < nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1204,9 +1240,9 @@ std::vector<Worker::STATISTICS> get_stats()
 }
 
 // static
-Worker::STATISTICS RoutingWorker::get_statistics()
+Worker::STATISTICS RoutingWorker::get_statistics(int nWorkers)
 {
-    auto s = get_stats();
+    auto s = get_stats(nWorkers);
 
     STATISTICS cs;
 
@@ -1264,7 +1300,7 @@ bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 }
 
 // static
-void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
+void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats, int nWorkers)
 {
     class Task : public Worker::Task
     {
@@ -1272,13 +1308,12 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
         Task(std::vector<QC_CACHE_STATS>* pAll_stats)
             : m_all_stats(*pAll_stats)
         {
-            m_all_stats.resize(this_unit.nCreated);
         }
 
         void execute(Worker& worker) override final
         {
             int index = static_cast<RoutingWorker&>(worker).index();
-            mxb_assert(index >= 0 && index < this_unit.nCreated);
+            mxb_assert(index >= 0 && index < (int)m_all_stats.size());
 
             QC_CACHE_STATS& stats = m_all_stats[index];
 
@@ -1289,8 +1324,12 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
         std::vector<QC_CACHE_STATS>& m_all_stats;
     };
 
+    nWorkers = broadcast_recipients(nWorkers);
+
+    all_stats.resize(nWorkers);
+
     Task task(&all_stats);
-    mxs::RoutingWorker::execute_concurrently(task);
+    mxs::RoutingWorker::execute_concurrently(task, nWorkers);
 }
 
 namespace
@@ -1341,11 +1380,11 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json_by_index(const char*
 }
 
 // static
-std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
+std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, int nWorkers)
 {
     vector<QC_CACHE_STATS> all_stats;
 
-    get_qc_stats(all_stats);
+    get_qc_stats(all_stats, nWorkers);
 
     std::unique_ptr<json_t> sAll_stats(json_array());
 
