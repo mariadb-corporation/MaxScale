@@ -14,11 +14,11 @@ bool read_rows(TestConnections& test, std::string table, int num_msg)
 
         if (!result.empty())
         {
-            int i = 0;
+            int n = 0;
 
             for (auto row : result)
             {
-                auto expected = std::to_string(i);
+                auto expected = std::to_string(n);
 
                 if (expected != row[0])
                 {
@@ -26,10 +26,10 @@ bool read_rows(TestConnections& test, std::string table, int num_msg)
                     break;
                 }
 
-                ++i;
+                ++n;
             }
 
-            if (i == num_msg)
+            if (n == num_msg)
             {
                 ok = true;
             }
@@ -125,6 +125,49 @@ void test_table_in_key(TestConnections& test)
     conn.query("DROP TABLE test.`spaces in table name`");
 }
 
+void test_custom_engine(TestConnections& test)
+{
+    auto conn = test.repl->get_connection(0);
+    test.expect(conn.connect(), "Connection to master failed: %s", conn.error());
+    conn.query("DROP TABLE IF EXISTS test.custom_engine");
+
+    test.check_maxctrl("alter service Kafka-Importer topics=custom_engine engine=Aria");
+
+    test.tprintf("Producing some messages, table should be created with ENGINE=Aria");
+    Producer producer(test);
+    const int NUM_MSG = 10;
+
+    for (int i = 0; i < NUM_MSG; i++)
+    {
+        producer.produce_message("custom_engine", "test.custom_engine",
+                                 "{\"_id\": " + std::to_string(i) + ", \"data\": \"Aria is nice\"}");
+    }
+
+    test.tprintf("Flush messages");
+    producer.flush();
+
+    std::string engine;
+
+    for (int i = 0; i < 10; i++)
+    {
+        engine = conn.field("SELECT UPPER(engine) FROM information_schema.tables "
+                            "WHERE table_name = 'custom_engine'");
+
+        if (engine == "ARIA")
+        {
+            break;
+        }
+        else
+        {
+            sleep(2);
+        }
+    }
+
+    test.expect(engine == "ARIA", "Expected engine to be 'ARIA' but it is '%s'", engine.c_str());
+
+    conn.query("DROP TABLE test.custom_engine");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
@@ -132,10 +175,12 @@ int main(int argc, char** argv)
     Kafka kafka(test);
     kafka.create_topic("test.t1");
     kafka.create_topic("second_topic");
+    kafka.create_topic("custom_engine");
     test.maxscale->start();
 
     test_table_in_topic(test);
     test_table_in_key(test);
+    test_custom_engine(test);
 
     return test.global_result;
 }

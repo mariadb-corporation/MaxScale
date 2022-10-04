@@ -32,7 +32,7 @@ public:
     Table(const std::string& table);
     ~Table();
 
-    bool prepare(MYSQL* mysql);
+    bool prepare(MYSQL* mysql, std::string create_options);
     bool insert(const std::string& value);
     bool flush();
 

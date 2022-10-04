@@ -174,7 +174,7 @@ bool Producer::produce(const std::string& table, const std::string& value)
     {
         Table t(table);
 
-        if (t.prepare(m_mysql))
+        if (t.prepare(m_mysql, m_config.engine.get()))
         {
             MXB_INFO("Opened table '%s'", table.c_str());
             it = m_tables.emplace(table, std::move(t)).first;

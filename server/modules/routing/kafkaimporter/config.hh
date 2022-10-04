@@ -45,6 +45,7 @@ public:
     mxs::config::Count          batch_size;
     mxs::config::Enum<IDType>   table_name_in;
     mxs::config::Seconds        timeout;
+    mxs::config::String         engine;
     mxs::config::Bool           ssl;
     mxs::config::Path           ssl_ca;
     mxs::config::Path           ssl_cert;

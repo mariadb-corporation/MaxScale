@@ -57,6 +57,10 @@ cfg::ParamSeconds s_timeout(
     &s_spec, "timeout", "Connection and read timeout for network communication",
     std::chrono::seconds(5), cfg::Param::AT_RUNTIME);
 
+cfg::ParamString s_engine(
+    &s_spec, "engine", "Storage engine used when creating tables",
+    "InnoDB", cfg::Param::AT_RUNTIME);
+
 KafkaCommonConfig s_kafka(&s_spec);
 
 bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params) const
@@ -80,6 +84,7 @@ Config::Config(const std::string& name, PostConfigurable* router)
     , batch_size(this, &s_batch_size)
     , table_name_in(this, &s_table_name_in)
     , timeout(this, &s_timeout)
+    , engine(this, &s_engine)
     , ssl(this, &s_kafka.kafka_ssl)
     , ssl_ca(this, &s_kafka.kafka_ssl_ca)
     , ssl_cert(this, &s_kafka.kafka_ssl_cert)
