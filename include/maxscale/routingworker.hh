@@ -82,6 +82,12 @@ public:
     typedef std::vector<void*>           LocalData;
     typedef std::vector<void (*)(void*)> DataDeleters;
 
+    enum Workers
+    {
+        ALL    = -1,
+        ACTIVE = -2
+    };
+
     /**
      * Initialize the routing worker mechanism.
      *
@@ -214,11 +220,12 @@ public:
     static bool shutdown_complete();
 
     /**
-     * Posts a task to all workers for execution.
+     * Posts a task to workers for execution.
      *
-     * @param pTask  The task to be executed.
-     * @param pSem   If non-NULL, will be posted once per worker when the task's
-     *               `execute` return.
+     * @param pTask     The task to be executed.
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param pSem      If non-NULL, will be posted once per worker when the task's
+     *                  `execute` return.
      *
      * @return How many workers the task was posted to.
      *
@@ -233,12 +240,18 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(Task* pTask, mxb::Semaphore* pSem = NULL);
+    static size_t broadcast(Task* pTask, int nWorkers, mxb::Semaphore* pSem = nullptr);
+
+    static size_t broadcast(Task* pTask, mxb::Semaphore* pSem = nullptr)
+    {
+        return broadcast(pTask, ALL, pSem);
+    }
 
     /**
-     * Posts a task to all workers for execution.
+     * Posts a task to workers for execution.
      *
-     * @param pTask  The task to be executed.
+     * @param pTask     The task to be executed.
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -256,29 +269,42 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(std::unique_ptr<DisposableTask> sTask);
+    static size_t broadcast(std::unique_ptr<DisposableTask> sTask, int nWorkers = ALL);
 
     /**
-     * Posts a function to all workers for execution.
+     * Posts a functor to workers for execution.
      *
-     * @param pSem If non-NULL, will be posted once the task's `execute` return.
-     * @param mode Execution mode
+     * @param func      The functor to be executed.
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param pSem      If non-NULL, will be posted once the task's `execute` return.
+     * @param mode      Execution mode
      *
      * @return How many workers the task was posted to.
      */
-    static size_t broadcast(const std::function<void ()>& func, mxb::Semaphore* pSem, execute_mode_t mode);
+    static size_t broadcast(const std::function<void ()>& func,
+                            int nWorkers,
+                            mxb::Semaphore* pSem,
+                            execute_mode_t mode);
 
-    static size_t broadcast(const std::function<void ()>& func, enum execute_mode_t mode)
+    static size_t broadcast(const std::function<void ()>& func, execute_mode_t mode)
     {
-        return broadcast(func, NULL, mode);
+        return broadcast(func, ALL, nullptr, mode);
+    }
+
+    static size_t broadcast(const std::function<void ()>& func,
+                            mxb::Semaphore* pSem,
+                            execute_mode_t mode)
+    {
+        return broadcast(func, ALL, pSem, mode);
     }
 
     /**
-     * Executes a task on all workers in serial mode (the task is executed
+     * Executes a task on workers in serial mode (the task is executed
      * on at most one worker thread at a time). When the function returns
      * the task has been executed on all workers.
      *
-     * @param task  The task to be executed.
+     * @param task/func  The task/func to be executed.
+     * @param nWorkers   ALL, ACTIVE or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -292,8 +318,8 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t execute_serially(Task& task);
-    static size_t execute_serially(const std::function<void()>& func);
+    static size_t execute_serially(Task& task, int nWorkers = ALL);
+    static size_t execute_serially(const std::function<void()>& func, int nWorkers = ALL);
 
     /**
      * Executes a task on all workers concurrently and waits until all workers
@@ -310,15 +336,16 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t execute_concurrently(Task& task);
-    static size_t execute_concurrently(const std::function<void()>& func);
+    static size_t execute_concurrently(Task& task, int nWorkers = ALL);
+    static size_t execute_concurrently(const std::function<void()>& func, int nWorkers = ALL);
 
     /**
-     * Broadcast a message to all worker.
+     * Broadcast a message to workers.
      *
-     * @param msg_id  The message id.
-     * @param arg1    Message specific first argument.
-     * @param arg2    Message specific second argument.
+     * @param msg_id    The message id.
+     * @param arg1      Message specific first argument.
+     * @param arg2      Message specific second argument.
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
      *
      * @return The number of messages posted; if less that ne number of workers
      *         then some postings failed.
@@ -331,10 +358,12 @@ public:
      *
      * @attention This function is signal safe.
      */
-    static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
+    static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2, int nWorkers = ALL);
 
     /**
      * Returns statistics for all workers.
+     *
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
      *
      * @return Combined statistics.
      *
@@ -342,7 +371,7 @@ public:
      *             been returned. The returned values may also not represent a
      *             100% consistent set.
      */
-    static STATISTICS get_statistics();
+    static STATISTICS get_statistics(int nWorkers = ALL);
 
     /**
      * Get next worker
@@ -364,14 +393,19 @@ public:
     /**
      * Provides QC statistics of all workers
      *
+     * @param nWorkers   ALL, ACTIVE or a specific number of workers.
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
-    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
+    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats, int nWorkers = ALL);
 
     /**
      * Provides QC statistics of all workers as a Json object for use in the REST-API.
+     *
+     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     *
+     * @return JSON object containing statistics.
      */
-    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost);
+    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int nWorkers = ALL);
 
     /**
      * Provides QC statistics of one worker as a Json object for use in the REST-API.
