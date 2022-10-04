@@ -6,6 +6,7 @@
         :sortDesc="false"
         sortBy="id"
         :itemsPerPage="-1"
+        :customFilter="customFilter"
     >
         <template v-slot:id="{ data: { item: { id } } }">
             <router-link :key="id" :to="`/dashboard/services/${id}`" class="rsrc-link">
@@ -152,6 +153,12 @@ export default {
     methods: {
         setRoutingTargetsLength(total) {
             this.routingTargetsLength = total
+        },
+        customFilter(v, search) {
+            let value = `${v}`
+            // filter for routingTargets
+            if (this.$typy(v).isArray) value = v.map(v => v.id).join(', ')
+            return this.$help.ciStrIncludes(value, search)
         },
     },
 }
