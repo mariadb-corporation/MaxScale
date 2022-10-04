@@ -20,6 +20,7 @@
             :dense="dense"
             :no-data-text="noDataText"
             :custom-sort="customSort"
+            :custom-filter="customFilter"
             @current-items="colsHasRowSpan ? getCurrentItems : null"
             @on-drag-end="draggable ? $emit('on-drag-end', $event) : null"
         >
@@ -217,6 +218,7 @@ export default {
         // if data has child object or array, enable this props in advance
         isTree: { type: Boolean, default: false },
         expandAll: { type: Boolean, default: false },
+        customFilter: { type: Function },
     },
     data() {
         return {
