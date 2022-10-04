@@ -102,9 +102,14 @@ std::string rsa_jwk_to_pem(std::string modulus, std::string exponent)
     }
 
     RSA* rsa = RSA_new();
-    RSA_set0_key(rsa, BN_bin2bn(mod.data(), mod.size(), nullptr),
-                 BN_bin2bn(exp.data(), exp.size(), nullptr), nullptr);
-
+    BIGNUM* mod_bn = BN_bin2bn(mod.data(), mod.size(), nullptr);
+    BIGNUM* exp_bn = BN_bin2bn(exp.data(), exp.size(), nullptr);
+#ifdef OPENSSL_1_1
+    RSA_set0_key(rsa, mod_bn, exp_bn, nullptr);
+#else
+    rsa->n = mod_bn;
+    rsa->e = exp_bn;
+#endif
     BIO* bio = BIO_new(BIO_s_mem());
     PEM_write_bio_RSA_PUBKEY(bio, rsa);
 
