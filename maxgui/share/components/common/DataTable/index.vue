@@ -76,7 +76,9 @@
                                     :name="header.value"
                                     :data="{ item, header, cellIndex, rowIndex }"
                                 >
-                                    {{ getValue(item, header) }}
+                                    <span v-mxs-highlighter="search">
+                                        {{ getValue(item, header) }}
+                                    </span>
                                 </slot>
                             </template>
                             <template :slot="`${header.value}-append`">

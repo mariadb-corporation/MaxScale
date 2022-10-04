@@ -8,8 +8,13 @@
         :itemsPerPage="-1"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/listeners/${id}`" class="rsrc-link">
-                <span> {{ id }}</span>
+            <router-link
+                :key="id"
+                v-mxs-highlighter="search_keyword"
+                :to="`/dashboard/listeners/${id}`"
+                class="rsrc-link"
+            >
+                {{ id }}
             </router-link>
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
@@ -20,21 +25,21 @@
             >
                 listeners
             </icon-sprite-sheet>
-            <span>{{ state }} </span>
+            <span v-mxs-highlighter="search_keyword">{{ state }} </span>
         </template>
 
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ servicesLength }}) </span>
         </template>
-
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
             <router-link
                 v-for="serviceId in serviceIds"
                 :key="serviceId"
+                v-mxs-highlighter="search_keyword"
                 :to="`/dashboard/services/${serviceId}`"
                 class="rsrc-link"
             >
-                <span> {{ serviceId }} </span>
+                {{ serviceId }}
             </router-link>
         </template>
     </data-table>

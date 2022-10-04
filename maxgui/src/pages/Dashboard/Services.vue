@@ -9,8 +9,13 @@
         :customFilter="customFilter"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/services/${id}`" class="rsrc-link">
-                <span> {{ id }}</span>
+            <router-link
+                :key="id"
+                v-mxs-highlighter="search_keyword"
+                :to="`/dashboard/services/${id}`"
+                class="rsrc-link"
+            >
+                {{ id }}
             </router-link>
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
@@ -21,7 +26,7 @@
             >
                 services
             </icon-sprite-sheet>
-            <span>{{ state }} </span>
+            <span v-mxs-highlighter="search_keyword">{{ state }} </span>
         </template>
 
         <template v-slot:header-append-routingTargets>
@@ -30,16 +35,19 @@
             </span>
         </template>
         <template v-slot:routingTargets="{ data: { item: { routingTargets } } }">
-            <span v-if="typeof routingTargets === 'string'">{{ routingTargets }} </span>
+            <span v-if="typeof routingTargets === 'string'" v-mxs-highlighter="search_keyword">
+                {{ routingTargets }}
+            </span>
 
             <template v-else-if="routingTargets.length < 3">
                 <router-link
                     v-for="(target, i) in routingTargets"
                     :key="target.id"
+                    v-mxs-highlighter="search_keyword"
                     :to="`/dashboard/${target.type}/${target.id}`"
                     class="rsrc-link"
                 >
-                    <span> {{ target.id }}{{ i !== routingTargets.length - 1 ? ', ' : '' }} </span>
+                    {{ target.id }}{{ i !== routingTargets.length - 1 ? ', ' : '' }}
                 </router-link>
             </template>
 
@@ -67,10 +75,11 @@
                     <router-link
                         v-for="target in routingTargets"
                         :key="target.id"
+                        v-mxs-highlighter="search_keyword"
                         :to="`/dashboard/${target.type}/${target.id}`"
                         class="text-body-2 d-block rsrc-link"
                     >
-                        <span> {{ target.id }} </span>
+                        {{ target.id }}
                     </router-link>
                 </v-sheet>
             </v-menu>
@@ -143,7 +152,7 @@ export default {
                 }, [])
                 const routingTargets = targets.length
                     ? targets
-                    : this.$mxs_t('noEntity', { entityName: this.$t('routingTargets') })
+                    : this.$mxs_t('noEntity', { entityName: this.$mxs_t('routingTargets') })
 
                 if (typeof routingTargets !== 'string')
                     allRoutingTargets = [...allRoutingTargets, ...routingTargets]

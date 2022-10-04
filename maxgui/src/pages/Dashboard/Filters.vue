@@ -8,8 +8,13 @@
         :itemsPerPage="-1"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/filters/${id}`" class="rsrc-link">
-                <span> {{ id }}</span>
+            <router-link
+                :key="id"
+                v-mxs-highlighter="search_keyword"
+                :to="`/dashboard/filters/${id}`"
+                class="rsrc-link"
+            >
+                {{ id }}
             </router-link>
         </template>
 
@@ -18,18 +23,20 @@
         </template>
 
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-            <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
+            <span v-if="typeof serviceIds === 'string'" v-mxs-highlighter="search_keyword">
+                {{ serviceIds }}
+            </span>
 
             <template v-else-if="serviceIds.length < 2">
-                <template v-for="serviceId in serviceIds">
-                    <router-link
-                        :key="serviceId"
-                        :to="`/dashboard/services/${serviceId}`"
-                        class="rsrc-link"
-                    >
-                        <span>{{ serviceId }} </span>
-                    </router-link>
-                </template>
+                <router-link
+                    v-for="serviceId in serviceIds"
+                    :key="serviceId"
+                    v-mxs-highlighter="search_keyword"
+                    :to="`/dashboard/services/${serviceId}`"
+                    class="rsrc-link"
+                >
+                    {{ serviceId }}
+                </router-link>
             </template>
 
             <v-menu
@@ -53,15 +60,15 @@
                 </template>
 
                 <v-sheet class="pa-4">
-                    <template v-for="serviceId in serviceIds">
-                        <router-link
-                            :key="serviceId"
-                            :to="`/dashboard/services/${serviceId}`"
-                            class="text-body-2 d-block rsrc-link"
-                        >
-                            <span>{{ serviceId }} </span>
-                        </router-link>
-                    </template>
+                    <router-link
+                        v-for="serviceId in serviceIds"
+                        :key="serviceId"
+                        v-mxs-highlighter="search_keyword"
+                        :to="`/dashboard/services/${serviceId}`"
+                        class="text-body-2 d-block rsrc-link"
+                    >
+                        {{ serviceId }}
+                    </router-link>
                 </v-sheet>
             </v-menu>
         </template>

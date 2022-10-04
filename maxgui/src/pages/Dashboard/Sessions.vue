@@ -17,10 +17,11 @@
                 <router-link
                     v-for="serviceId in serviceIds"
                     :key="serviceId"
+                    v-mxs-highlighter="search_keyword"
                     :to="`/dashboard/services/${serviceId}`"
                     class="rsrc-link"
                 >
-                    <span>{{ serviceId }} </span>
+                    {{ serviceId }}
                 </router-link>
             </template>
         </template>
