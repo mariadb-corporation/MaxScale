@@ -52,20 +52,24 @@ namespace
  */
 struct this_unit
 {
-    bool            initialized;        // Whether the initialization has been performed.
-    int             nWorkers;           // How many routing workers there are.
-    RoutingWorker** ppWorkers;          // Array of routing worker instances.
-    mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
-    int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    bool            running;            // True if worker threads are running
+    bool             initialized;        // Whether the initialization has been performed.
+    const int        nMax;               // Hard maximum of workers
+    std::atomic<int> nCreated;           // Created amount of workers.
+    std::atomic<int> nActive;            // Active amount of workers.
+    RoutingWorker**  ppWorkers;          // Array of routing worker instances.
+    mxb::AverageN**  ppWorker_loads;     // Array of load averages for workers.
+    int              epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
+    bool             running;            // True if worker threads are running
 } this_unit =
 {
-    false,              // initialized
-    0,                  // nWorkers
-    nullptr,            // ppWorkers
-    nullptr,            // ppWorker_loads
-    -1,                 // epoll_listener_fd
-    false,
+    false,                                     // initialized
+    mxs::Config::ParamThreadsCount::MAX_COUNT, // nMax
+    0,                                         // nCreated
+    0,                                         // nActive
+    nullptr,                                   // ppWorkers
+    nullptr,                                   // ppWorker_loads
+    -1,                                        // epoll_listener_fd
+    false,                                     // running
 };
 
 thread_local struct this_thread
@@ -163,18 +167,17 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
     if (this_unit.epoll_listener_fd != -1)
     {
-        int nWorkers = config_threadcount();
-        auto max_count = Config::ParamThreadsCount::MAX_COUNT;
+        int nCreated = config_threadcount();
         // 0-inited arrays.
-        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [max_count]();
-        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [max_count];
+        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [this_unit.nMax]();
+        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [this_unit.nMax];
 
         if (ppWorkers && ppWorker_loads)
         {
             size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
             int i;
-            for (i = 0; i < nWorkers; ++i)
+            for (i = 0; i < nCreated; ++i)
             {
                 RoutingWorker* pWorker = RoutingWorker::create(i, pNotifier, this_unit.epoll_listener_fd);
                 AverageN* pAverage = new AverageN(rebalance_window);
@@ -202,7 +205,8 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             {
                 this_unit.ppWorkers = ppWorkers;
                 this_unit.ppWorker_loads = ppWorker_loads;
-                this_unit.nWorkers = nWorkers;
+                this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
+                this_unit.nActive.store(0, std::memory_order_relaxed);
 
                 this_unit.initialized = true;
             }
@@ -225,7 +229,7 @@ void RoutingWorker::finish()
 {
     mxb_assert(this_unit.initialized);
 
-    for (int i = this_unit.nWorkers - 1; i >= 0; --i)
+    for (int i = this_unit.nCreated - 1; i >= 0; --i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -237,6 +241,9 @@ void RoutingWorker::finish()
         delete pWorker_load;
     }
 
+    this_unit.nCreated.store(0, std::memory_order_relaxed);
+    this_unit.nActive.store(0, std::memory_order_relaxed);
+
     delete[] this_unit.ppWorkers;
     this_unit.ppWorkers = NULL;
 
@@ -244,6 +251,18 @@ void RoutingWorker::finish()
     this_unit.epoll_listener_fd = 0;
 
     this_unit.initialized = false;
+}
+
+// static
+int RoutingWorker::nCreated()
+{
+    return this_unit.nCreated.load(std::memory_order_relaxed);
+}
+
+// static
+int RoutingWorker::nActive()
+{
+    return this_unit.nActive.load(std::memory_order_relaxed);
 }
 
 // static
@@ -309,9 +328,9 @@ int RoutingWorker::index() const
 RoutingWorker* RoutingWorker::get_by_index(int index)
 {
     mxb_assert(index >= 0);
-    mxb_assert(index < this_unit.nWorkers);
+    mxb_assert(index < this_unit.nCreated);
 
-    return this_unit.ppWorkers[index];
+    return index < this_unit.nMax ? this_unit.ppWorkers[index] : nullptr;
 }
 
 // static
@@ -319,14 +338,16 @@ bool RoutingWorker::start_workers()
 {
     bool rv = true;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+
+    for (int i = 0; i < nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
 
         if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
         {
-            MXB_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
+            MXB_ALERT("Could not start routing worker %d of %d.", i, nCreated);
             rv = false;
             // At startup, so we don't even try to clean up.
             break;
@@ -335,6 +356,7 @@ bool RoutingWorker::start_workers()
 
     if (rv)
     {
+        this_unit.nActive.store(nCreated, std::memory_order_relaxed);
         this_unit.running = true;
     }
 
@@ -350,7 +372,8 @@ bool RoutingWorker::is_running()
 // static
 void RoutingWorker::join_workers()
 {
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+    for (int i = 0; i < nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -366,7 +389,8 @@ bool RoutingWorker::shutdown_complete()
 {
     bool rval = true;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+    for (int i = 0; i < nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -578,7 +602,7 @@ RoutingWorker::ConnectionPool::get_connection(MXS_SESSION* session)
 void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
 {
     // Capacity has changed, recalculate local capacity.
-    m_capacity = global_capacity / this_unit.nWorkers;
+    m_capacity = global_capacity / this_unit.nCreated.load(std::memory_order_relaxed);
 }
 
 mxs::BackendConnection*
@@ -1024,7 +1048,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
     // No logging here, function must be signal safe.
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1046,7 +1070,7 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1069,7 +1093,7 @@ size_t RoutingWorker::broadcast(const std::function<void ()>& func,
 {
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1089,7 +1113,7 @@ size_t RoutingWorker::execute_serially(Task& task)
     Semaphore sem;
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1110,7 +1134,7 @@ size_t RoutingWorker::execute_serially(const std::function<void()>& func)
     Semaphore sem;
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1146,7 +1170,7 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 
     size_t n = 0;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1167,7 +1191,7 @@ std::vector<Worker::STATISTICS> get_stats()
 {
     std::vector<Worker::STATISTICS> rval;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1248,13 +1272,13 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
         Task(std::vector<QC_CACHE_STATS>* pAll_stats)
             : m_all_stats(*pAll_stats)
         {
-            m_all_stats.resize(this_unit.nWorkers);
+            m_all_stats.resize(this_unit.nCreated);
         }
 
         void execute(Worker& worker) override final
         {
             int index = static_cast<RoutingWorker&>(worker).index();
-            mxb_assert(index >= 0 && index < this_unit.nWorkers);
+            mxb_assert(index >= 0 && index < this_unit.nCreated);
 
             QC_CACHE_STATS& stats = m_all_stats[index];
 
@@ -1341,7 +1365,7 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 RoutingWorker* RoutingWorker::pick_worker()
 {
     static uint32_t index_generator = 0;
-    uint32_t index = mxb::atomic::add(&index_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers;
+    uint32_t index = mxb::atomic::add(&index_generator, 1, mxb::atomic::RELAXED) % this_unit.nCreated;
 
     return this_unit.ppWorkers[index];
 }
@@ -1354,7 +1378,7 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 // static
 void RoutingWorker::collect_worker_load(size_t count)
 {
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         auto* pWorker = this_unit.ppWorkers[i];
         auto* pWorker_load = this_unit.ppWorker_loads[i];
@@ -1398,7 +1422,7 @@ bool RoutingWorker::balance_workers(int threshold)
     // and we can use it.
     bool use_average = rebalance_period != std::chrono::milliseconds(0);
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
 
@@ -1585,7 +1609,7 @@ private:
 //static
 std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
 {
-    MemoryTask task(this_unit.nWorkers);
+    MemoryTask task(this_unit.nCreated);
     RoutingWorker::execute_concurrently(task);
 
     json_t* pAttr = json_object();
@@ -1686,7 +1710,7 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
     mxb_assert(mxs::MainWorker::is_main_worker());
     RoutingWorker::ConnectionPoolStats rval;
 
-    for (int i = 0; i < this_unit.nWorkers; ++i)
+    for (int i = 0; i < this_unit.nCreated; ++i)
     {
         rval.add(this_unit.ppWorkers[i]->pool_stats(pSrv));
     }
@@ -2012,7 +2036,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 
 json_t* mxs_rworker_list_to_json(const char* host)
 {
-    RoutingWorker::InfoTask task(host, this_unit.nWorkers);
+    RoutingWorker::InfoTask task(host, this_unit.nCreated);
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }
