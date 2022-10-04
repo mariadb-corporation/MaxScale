@@ -105,6 +105,16 @@ public:
     static void finish();
 
     /**
+     * @return The number of created routing workers.
+     */
+    static int nCreated();
+
+    /**
+     * @return The number of active routing workers; less than or equal to created.
+     */
+    static int nActive();
+
+    /**
      * Add a Listener to the routing workers.
      *
      * @param pListener  The listener to be added.
