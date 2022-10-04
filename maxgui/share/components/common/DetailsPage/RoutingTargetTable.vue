@@ -25,7 +25,12 @@
                 >
                     {{ type }}
                 </icon-sprite-sheet>
-                <router-link :key="id" :to="`/dashboard/${type}/${id}`" class="rsrc-link">
+                <router-link
+                    :key="id"
+                    v-mxs-highlighter="search_keyword"
+                    :to="`/dashboard/${type}/${id}`"
+                    class="rsrc-link"
+                >
                     {{ id }}
                 </router-link>
             </template>
