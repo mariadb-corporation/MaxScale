@@ -76,6 +76,7 @@
                         />
                     </template>
                     <template v-slot:action="{ data: { cell, maxWidth, isDragging } }">
+                        <!-- TODO: Make a global tooltip for showing action column -->
                         <v-tooltip
                             top
                             transition="slide-y-transition"
@@ -261,6 +262,15 @@ export default {
                     case 'date':
                         header.width = 150
                         header.hasCustomGroup = true
+                        header.filter = (value, search) =>
+                            this.$helpers.ciStrIncludes(
+                                this.$helpers.dateFormat({
+                                    moment: this.$moment,
+                                    value,
+                                    formatType: 'ddd, DD MMM YYYY',
+                                }),
+                                search
+                            )
                         break
                     case 'connection_name':
                         header.width = 215
@@ -271,6 +281,8 @@ export default {
                         break
                     case 'action':
                         header.groupable = false
+                        header.filter = (value, search) =>
+                            this.$helpers.ciStrIncludes(JSON.stringify(value), search)
                         break
                     case 'name':
                         header.width = 240
