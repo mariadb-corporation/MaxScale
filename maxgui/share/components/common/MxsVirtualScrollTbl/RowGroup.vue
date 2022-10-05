@@ -18,6 +18,7 @@
             </v-btn>
             <!-- checkbox for selecting/deselecting all items of the group -->
             <v-checkbox
+                v-if="showSelect"
                 :input-value="isRowGroupSelected"
                 dense
                 class="v-checkbox--scale-reduce ma-0 pa-0"
