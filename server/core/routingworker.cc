@@ -274,6 +274,13 @@ void RoutingWorker::finish()
     this_unit.initialized = false;
 }
 
+//static
+bool RoutingWorker::adjust_threads(int nCount)
+{
+    MXB_ERROR("Number of routing worker threads cannot yet be changed.");
+    return false;
+}
+
 // static
 int RoutingWorker::nCreated()
 {

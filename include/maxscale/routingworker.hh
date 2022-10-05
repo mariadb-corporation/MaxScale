@@ -111,6 +111,15 @@ public:
     static void finish();
 
     /**
+     * Adjust number of routing threads.
+     *
+     * @param nCount  The number of desired routing workers.
+     *
+     * @return True, if the number could be adjusted, false, otherwise.
+     */
+    static bool adjust_threads(int nCount);
+
+    /**
      * @return The number of created routing workers.
      */
     static int nCreated();

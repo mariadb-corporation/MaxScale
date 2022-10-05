@@ -279,6 +279,15 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
         }
     }
 
+    int requested_threads = s_n_threads.get(params);
+
+    if (requested_threads > ParamThreadsCount::MAX_COUNT)
+    {
+        MXB_ERROR("MaxScale can have at most %ld routing threads; a request for %d cannot be honored.",
+                  ParamThreadsCount::MAX_COUNT, requested_threads);
+        rv = false;
+    }
+
     return rv;
 }
 
@@ -567,9 +576,9 @@ Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    get_processor_count(),
-    1,
-    std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
+    get_processor_count(), // default
+    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max(), // min, max
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamString Config::s_qc_name(
     &Config::s_specification,
@@ -1228,6 +1237,14 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // leading to problems related to initialization order
     // in the constructor, across translation units and threads.
     this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
+
+    if (this->n_threads != RoutingWorker::nActive())
+    {
+        if (RoutingWorker::is_running()) // false at startup
+        {
+            rv = RoutingWorker::adjust_threads(this->n_threads);
+        }
+    }
 
     return rv;
 }
