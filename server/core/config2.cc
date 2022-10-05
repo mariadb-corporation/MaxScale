@@ -674,7 +674,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
     // using both the actual name and the alias.
 
     mxs::ConfigParameters unrecognized;
-    mxb_assert(m_pSpecification->validate(params, &unrecognized));
+    mxb_assert(validate(params, &unrecognized));
     mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
@@ -800,7 +800,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
     prune_aliases(json, specification());
 
     set<string> unrecognized;
-    mxb_assert(m_pSpecification->validate(json, &unrecognized));
+    mxb_assert(validate(json, &unrecognized));
     mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
