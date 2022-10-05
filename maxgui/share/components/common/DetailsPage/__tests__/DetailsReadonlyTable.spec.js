@@ -28,12 +28,7 @@ const dummy_data_obj = {
     routed_packets: 0,
     total_connections: 0,
 }
-const customHeaders = [
-    { text: 'ID', value: 'id' },
-    { text: 'Client', value: 'user' },
-    { text: 'Connected', value: 'connected' },
-    { text: 'IDLE (s)', value: 'idle' },
-]
+
 const dummy_processed_data_arr = [
     {
         id: '3063265',
@@ -84,14 +79,7 @@ describe('DetailsReadonlyTable.vue', () => {
 
     it(`Should render table headers having 'Variable' and 'Value' columns with
       with as 65%, 35%, respectively`, () => {
-        expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectDefaultHeaders)
-    })
-
-    it(`Should use custom table headers`, async () => {
-        await wrapper.setProps({
-            customTableHeaders: customHeaders,
-        })
-        expect(wrapper.vm.tableHeaders).to.be.deep.equals(customHeaders)
+        expect(wrapper.vm.$data.tableHeaders).to.be.deep.equals(expectDefaultHeaders)
     })
 
     it(`Should use processed table data`, async () => {
@@ -119,9 +107,8 @@ describe('DetailsReadonlyTable.vue', () => {
 
         const {
             search_keyword,
-            tableHeaders,
             isLoading,
-            $data: { tableRows },
+            $data: { tableHeaders, tableRows },
             $props: { isTree: isTreeProps, expandAll: expandAllProps },
         } = wrapper.vm
 

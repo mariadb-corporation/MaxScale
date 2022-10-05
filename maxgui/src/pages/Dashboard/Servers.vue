@@ -20,12 +20,13 @@
         <template v-slot:groupId="{ data: { item: { groupId } } }">
             <router-link
                 v-if="groupId !== $mxs_t('not', { action: 'monitored' })"
+                v-mxs-highlighter="search_keyword"
                 :to="`/dashboard/monitors/${groupId}`"
-                class="rsrc-link"
+                class="rsrc-link font-weight-bold"
             >
-                <span class="font-weight-bold">{{ groupId }} </span>
+                {{ groupId }}
             </router-link>
-            <span v-else>{{ groupId }} </span>
+            <span v-else v-mxs-highlighter="search_keyword">{{ groupId }} </span>
         </template>
         <template v-slot:groupId-append="{ data: { item: { groupId } } }">
             <span
@@ -45,7 +46,7 @@
                 >
                     monitors
                 </icon-sprite-sheet>
-                <span>{{ monitorState }} </span>
+                <span v-mxs-highlighter="search_keyword">{{ monitorState }} </span>
             </div>
         </template>
 
@@ -57,7 +58,6 @@
                 }"
         >
             <rep-tooltip
-                v-if="isSlave || isMaster"
                 :disabled="!(isSlave || isMaster)"
                 :serverInfo="serverInfo"
                 :isMaster="isMaster"
@@ -66,23 +66,22 @@
             >
                 <template v-slot:activator="{ on }">
                     <div
-                        class="override-td--padding disable-auto-truncate"
                         :class="{
-                            pointer: isSlave || isMaster,
+                            'override-td--padding disable-auto-truncate pointer text-truncate':
+                                isSlave || isMaster,
                         }"
                         v-on="on"
                     >
-                        <div class="text-truncate">
-                            <router-link :to="`/dashboard/servers/${id}`" class="rsrc-link">
-                                {{ id }}
-                            </router-link>
-                        </div>
+                        <router-link
+                            v-mxs-highlighter="search_keyword"
+                            :to="`/dashboard/servers/${id}`"
+                            class="rsrc-link"
+                        >
+                            {{ id }}
+                        </router-link>
                     </div>
                 </template>
             </rep-tooltip>
-            <router-link v-else :to="`/dashboard/servers/${id}`" class="rsrc-link">
-                {{ id }}
-            </router-link>
         </template>
 
         <template
@@ -102,9 +101,7 @@
                 <template v-slot:activator="{ on }">
                     <div
                         class="override-td--padding"
-                        :class="{
-                            pointer: isSlave || isMaster,
-                        }"
+                        :class="{ pointer: isSlave || isMaster }"
                         v-on="on"
                     >
                         <icon-sprite-sheet
@@ -114,23 +111,26 @@
                         >
                             servers
                         </icon-sprite-sheet>
-                        {{ serverState }}
+                        <span v-mxs-highlighter="search_keyword">{{ serverState }}</span>
                     </div>
                 </template>
             </rep-tooltip>
         </template>
 
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-            <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
+            <span v-if="typeof serviceIds === 'string'" v-mxs-highlighter="search_keyword">
+                {{ serviceIds }}
+            </span>
 
             <template v-else-if="serviceIds.length < 2">
                 <router-link
                     v-for="(serviceId, i) in serviceIds"
                     :key="i"
+                    v-mxs-highlighter="search_keyword"
                     :to="`/dashboard/services/${serviceId}`"
                     class="rsrc-link"
                 >
-                    <span>{{ serviceId }} </span>
+                    {{ serviceId }}
                 </router-link>
             </template>
 
@@ -158,10 +158,11 @@
                     <router-link
                         v-for="(serviceId, i) in serviceIds"
                         :key="i"
+                        v-mxs-highlighter="search_keyword"
                         :to="`/dashboard/services/${serviceId}`"
                         class="text-body-2 d-block rsrc-link"
                     >
-                        <span>{{ serviceId }} </span>
+                        {{ serviceId }}
                     </router-link>
                 </v-sheet>
             </v-menu>

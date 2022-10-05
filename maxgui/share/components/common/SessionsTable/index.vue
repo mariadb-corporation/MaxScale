@@ -19,6 +19,7 @@
             :noDataText="$mxs_t('noEntity', { entityName: $mxs_tc('sessions', 2) })"
             showAll
             showActionsOnHover
+            :customFilter="customFilter"
             v-bind="{ ...$attrs }"
         >
             <!-- Pass on all scopedSlots of data-table -->
@@ -47,7 +48,11 @@
                     content-class="shadow-drop"
                 >
                     <template v-slot:activator="{ on }">
-                        <div class="pointer override-td--padding" v-on="on">
+                        <div
+                            v-mxs-highlighter="$typy($attrs, 'search').safeString"
+                            class="pointer override-td--padding"
+                            v-on="on"
+                        >
                             {{ memory.total }}
                         </div>
                     </template>
@@ -55,7 +60,9 @@
                         <table class="info-table px-1">
                             <tr v-for="(value, key) in memory" :key="key">
                                 <td class="pr-5">{{ key }}</td>
-                                <td>{{ value }}</td>
+                                <td v-mxs-highlighter="$typy($attrs, 'search').safeString">
+                                    {{ value }}
+                                </td>
                             </tr>
                         </table>
                     </v-sheet>
@@ -140,6 +147,12 @@ export default {
         },
         async confirmKill() {
             await this.asyncEmit('confirm-kill', this.confDlg.item)
+        },
+        customFilter(v, search) {
+            let value = `${v}`
+            // filter for memory object
+            if (this.$typy(v).isObject) value = JSON.stringify(v)
+            return this.$helpers.ciStrIncludes(value, search)
         },
     },
 }

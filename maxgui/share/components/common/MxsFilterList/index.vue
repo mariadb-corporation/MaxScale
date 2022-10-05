@@ -69,7 +69,10 @@
                     hide-details
                 >
                     <template v-slot:label>
-                        <mxs-truncate-str :tooltipItem="{ txt: `${item.text}` }" />
+                        <mxs-truncate-str
+                            v-mxs-highlighter="filterTxt"
+                            :tooltipItem="{ txt: `${item.text}` }"
+                        />
                     </template>
                 </v-checkbox>
             </v-list-item>

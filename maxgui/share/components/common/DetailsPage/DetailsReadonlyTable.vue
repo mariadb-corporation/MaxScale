@@ -16,11 +16,7 @@
             showAll
             :expandAll="expandAll"
             :isTree="isTree"
-        >
-            <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
-                <slot :name="header.value" :cellProps="cellProps"> </slot>
-            </template>
-        </data-table>
+        />
     </mxs-collapse>
 </template>
 
@@ -38,9 +34,6 @@
  * Public License.
  */
 /**
- * If customTableHeaders is not provided, this component renders table
- * with default headers name: Variable and Value
- *
  * It accepts tableData as an object or processed data array with
  * valid data-table format.
  */
@@ -58,14 +51,13 @@ export default {
         tableData: { type: [Object, Array], required: true },
         expandAll: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
-        customTableHeaders: { type: Array },
         isLoadingData: { type: Boolean, default: false },
     },
 
     data() {
         return {
             showTable: true,
-            defaultTableHeaders: [
+            tableHeaders: [
                 { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },
                 { text: 'Value', value: 'value', width: '35%', autoTruncate: true },
             ],
@@ -78,9 +70,6 @@ export default {
             overlay_type: state => state.mxsApp.overlay_type,
             search_keyword: 'search_keyword',
         }),
-        tableHeaders: function() {
-            return this.customTableHeaders ? this.customTableHeaders : this.defaultTableHeaders
-        },
         isLoading() {
             return (
                 this.isLoadingData ||

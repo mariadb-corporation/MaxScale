@@ -30,6 +30,7 @@
                         {{ iconSheet(item) }}
                     </v-icon>
                     <span
+                        v-mxs-highlighter="search_schema"
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
@@ -265,7 +266,7 @@ export default {
             SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
         filter(item, search, textKey) {
-            return item[textKey].indexOf(search) > -1
+            return this.$helpers.ciStrIncludes(item[textKey], search)
         },
         showCtxBtn(item) {
             return Boolean(this.activeCtxItem && item.id === this.activeCtxItem.id)

@@ -18,6 +18,7 @@ import helpersPlugin from '@share/plugins/helpers'
 import * as helpers from '@queryEditorSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
+import txtHighlighter from '@share/plugins/txtHighlighter'
 
 //TODO: Add more if needed
 export { default as QueryCnfGearBtn } from '@queryEditorSrc/components/QueryCnfGearBtn.vue'
@@ -53,6 +54,7 @@ export default /*#__PURE__*/ (() => {
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
         Vue.use(helpersPlugin, { addon: helpers }) // Vue.prototype.$helpers
         Vue.use(logger) // Vue.prototype.$logger
+        Vue.use(txtHighlighter) // mxs-highlighter directive
     }
     return installable
 })()
