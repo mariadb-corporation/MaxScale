@@ -418,7 +418,7 @@ async function doRequest(host, resource, obj) {
       return error("Could not connect to MaxScale");
     } else if (err.code == "ESOCKETTIMEDOUT") {
       return error("Connection to MaxScale timed out");
-    } else if (err.error.code == "ECONNRESET" && !argv.secure) {
+    } else if (err.code == "ECONNRESET" && !argv.secure) {
       return error(err.message + ". If MaxScale is configured to use HTTPS, use the --secure option.");
     } else if (err.message) {
       return error(err.message);
