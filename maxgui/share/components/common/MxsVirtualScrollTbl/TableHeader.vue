@@ -6,8 +6,8 @@
                 class="th d-flex justify-center align-center"
                 :style="{
                     ...headerStyle,
-                    maxWidth: activeGroupBy ? '82px' : '50px',
-                    minWidth: activeGroupBy ? '82px' : '50px',
+                    maxWidth: `${checkboxColWidth}px`,
+                    minWidth: `${checkboxColWidth}px`,
                 }"
             >
                 <v-checkbox
@@ -140,6 +140,7 @@ export default {
         isVertTable: { type: Boolean, default: false },
         curr2dRowsLength: { type: Number, required: true },
         showSelect: { type: Boolean, required: true },
+        checkboxColWidth: { type: Number, required: true },
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
@@ -176,7 +177,7 @@ export default {
             return this.tableHeaders.filter(h => !h.hidden)
         },
         lastVisHeader() {
-            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
+            if (this.visHeaders.length) return this.visHeaders.at(-1)
             return {}
         },
         enableSorting() {
@@ -215,9 +216,6 @@ export default {
         },
         isResizing(v) {
             this.$emit('is-resizing', v)
-        },
-        lastVisHeader(v) {
-            this.$emit('last-vis-header', v)
         },
     },
     created() {

@@ -12,13 +12,13 @@
             :headerStyle="headerStyle"
             :curr2dRowsLength="curr2dRowsLength"
             :showSelect="showSelect"
+            :checkboxColWidth="checkboxColWidth"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
             :scrollBarThicknessOffset="scrollBarThicknessOffset"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
-            @last-vis-header="lastVisHeader = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
@@ -66,6 +66,7 @@
                     :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
                     :showSelect="showSelect"
+                    :maxWidth="maxRowGroupWidth"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 />
                 <horiz-row
@@ -77,12 +78,11 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :showSelect="showSelect"
-                    :activeGroupBy="activeGroupBy"
+                    :checkboxColWidth="checkboxColWidth"
                     :activeRow="activeRow"
                     :genActivatorID="genActivatorID"
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
-                    :lastVisHeader="lastVisHeader"
                     :isDragging="isDragging"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
@@ -160,7 +160,6 @@ export default {
     data() {
         return {
             headerWidthMap: {},
-            lastVisHeader: {},
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
@@ -185,6 +184,17 @@ export default {
         },
         lineHeight() {
             return `${this.itemHeight}px`
+        },
+        maxRowGroupWidth() {
+            let width = Object.values(this.headerWidthMap).reduce((acc, v, idx) => {
+                if (idx !== this.idxOfGroupCol) acc += this.$typy(v).safeNumber
+                return acc
+            }, 0)
+            if (this.showSelect) width += this.checkboxColWidth
+            return width
+        },
+        checkboxColWidth() {
+            return this.activeGroupBy ? 82 : 50
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
@@ -439,9 +449,6 @@ export default {
                 background: white;
                 &:first-of-type {
                     border-left: thin solid $table-border;
-                }
-                &--last-cell {
-                    border-right: none;
                 }
             }
             &:hover {
