@@ -76,8 +76,7 @@
  */
 /*
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-Emit when the header has groupable and hasCustomGroup keys.
-@on-ungroup
+@on-ungroup: Emit when the header has groupable key
 */
 import TableCell from './TableCell.vue'
 

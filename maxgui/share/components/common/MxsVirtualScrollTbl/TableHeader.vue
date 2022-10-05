@@ -125,7 +125,7 @@
   resizable?: boolean, true by default
   capitalize?: boolean, capitalize first letter of the header
   groupable?: boolean
-  hasCustomGroup?: boolean, if true, mxs-virtual-scroll-tbl emits custom-group event
+  customGroup?: (data:object) => rowMap. data.rows(2d array to be grouped). data.idx(col index of the inner array)
   hidden?: boolean, hidden the column
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
   sortable?: boolean, if false, column won't be sortable

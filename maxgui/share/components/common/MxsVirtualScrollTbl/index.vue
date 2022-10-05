@@ -121,8 +121,6 @@
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
 @selected-rows: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
-Emit when the header has groupable and hasCustomGroup keys.
-@custom-group: data:{ rows:any[][], idx:number, header:object}, callback():Map
 @is-grouping: boolean
 */
 import TableHeader from './TableHeader'
@@ -345,15 +343,12 @@ export default {
         },
         handleGroupRows(rows) {
             let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
-            if (this.headers[this.idxOfGroupCol].hasCustomGroup) {
-                const data = {
+            const header = this.headers[this.idxOfGroupCol]
+            if (header.customGroup)
+                rowMap = header.customGroup({
                     rows,
                     idx: this.idxOfGroupCol,
-                    header: this.headers[this.idxOfGroupCol],
-                }
-                // emit custom-group and provide callback to assign return value of custom-group
-                this.$emit('custom-group', data, map => (rowMap = map))
-            }
+                })
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({

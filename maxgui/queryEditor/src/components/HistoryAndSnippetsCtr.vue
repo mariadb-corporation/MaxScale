@@ -48,7 +48,6 @@
                         }`
                     "
                     @on-delete-selected="handleDeleteSelectedRows"
-                    @custom-group="customGroup"
                     @on-done-editing="onDoneEditingSnippets"
                     v-on="$listeners"
                 >
@@ -261,7 +260,21 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        header.hasCustomGroup = true
+                        header.customGroup = data => {
+                            const { rows, idx } = data
+                            let map = new Map()
+                            rows.forEach(row => {
+                                const key = this.$helpers.dateFormat({
+                                    moment: this.$moment,
+                                    value: row[idx],
+                                    formatType: 'ddd, DD MMM YYYY',
+                                })
+                                let matrix = map.get(key) || [] // assign an empty arr if not found
+                                matrix.push(row)
+                                map.set(key, matrix)
+                            })
+                            return map
+                        }
                         header.filter = (value, search) =>
                             this.$helpers.ciStrIncludes(
                                 this.$helpers.dateFormat({
@@ -363,31 +376,6 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
-        },
-        /** Custom groups 2d array with same value at provided index to a Map
-         * @param {Array} data.rows - 2d array to be grouped into a Map
-         * @param {Number} data.idx - col index of the inner array
-         * @param {Object} data.header - header object
-         * @param {Function} callback - Callback function to pass the result
-         */
-        customGroup(data, callback) {
-            const { rows, idx, header } = data
-            switch (header.text) {
-                case 'date': {
-                    let map = new Map()
-                    rows.forEach(row => {
-                        const key = this.$helpers.dateFormat({
-                            moment: this.$moment,
-                            value: row[idx],
-                            formatType: 'ddd, DD MMM YYYY',
-                        })
-                        let matrix = map.get(key) || [] // assign an empty arr if not found
-                        matrix.push(row)
-                        map.set(key, matrix)
-                    })
-                    callback(map)
-                }
-            }
         },
         handleDeleteSelectedRows(itemsToBeDeleted) {
             this.itemsToBeDeleted = itemsToBeDeleted
