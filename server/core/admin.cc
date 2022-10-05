@@ -600,6 +600,7 @@ void Client::send_no_https_error() const
 void Client::add_cors_headers(MHD_Response* response) const
 {
     MHD_add_response_header(response, "Access-Control-Allow-Origin", get_header("Origin").c_str());
+    MHD_add_response_header(response, "Access-Control-Allow-Credentials", "true");
     MHD_add_response_header(response, "Vary", "Origin");
 
     auto request_headers = get_header("Access-Control-Request-Headers");

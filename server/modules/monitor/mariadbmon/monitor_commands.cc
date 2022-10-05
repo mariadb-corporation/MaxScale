@@ -1321,7 +1321,8 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
         // optional if users are not willing to give MaxScale sudo-privs.
         auto port_pid_cmd = mxb::string_printf("sudo lsof -n -P -i TCP:%i -s TCP:LISTEN | tr -s ' ' "
-                                               "| cut --fields=2 --delimiter=' ' | tail -n+2", m_port);
+                                               "| cut --fields=2 --delimiter=' ' | tail -n+2",
+                                               m_rebuild_port);
         auto port_res = ssh_util::run_cmd(ses, port_pid_cmd, m_ssh_timeout);
         if (port_res.type == RType::OK && port_res.rc == 0)
         {
@@ -1347,7 +1348,7 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
         {
             string fail_reason = ssh_util::form_cmd_error_msg(port_res, port_pid_cmd.c_str());
             PRINT_JSON_ERROR(error_out, "Could not read pid of process using port %i on %s. %s",
-                             m_port, server->name(), fail_reason.c_str());
+                             m_rebuild_port, server->name(), fail_reason.c_str());
             success = false;
         }
         return pids;
@@ -1358,8 +1359,8 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
     {
         for (auto pid : pids)
         {
-            MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.", m_port, server->name(),
-                        pid);
+            MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.",
+                        m_rebuild_port, server->name(), pid);
             auto kill_cmd = mxb::string_printf("kill -s SIGKILL %i", pid);
             auto kill_res = ssh_util::run_cmd(ses, kill_cmd, m_ssh_timeout);
             if (kill_res.type != RType::OK || kill_res.rc != 0)
@@ -1379,7 +1380,7 @@ bool RebuildServer::check_free_listen_port(ssh::Session& ses, MariaDBServer* ser
             if (success && !pids2.empty())
             {
                 PRINT_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild source.",
-                                 m_port, server->name());
+                                 m_rebuild_port, server->name());
                 success = false;
             }
         }
@@ -1418,7 +1419,7 @@ RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source
     , m_repl_master(master)
 {
     const auto& sett = m_mon.m_settings;
-    m_port = (int)sett.rebuild_port;
+    m_rebuild_port = (int)sett.rebuild_port;
     m_ssh_timeout = sett.ssh_timeout;
 }
 
@@ -1523,8 +1524,8 @@ bool RebuildServer::init()
         auto init_ssh = [this](MariaDBServer* server) {
             const auto& sett = m_mon.m_settings;
             auto [ses, errmsg_con] = ssh_util::init_ssh_session(
-                server->server->address(), sett.ssh_user, sett.ssh_keyfile, sett.ssh_host_check,
-                m_ssh_timeout);
+                server->server->address(), sett.ssh_port, sett.ssh_user, sett.ssh_keyfile,
+                sett.ssh_host_check, m_ssh_timeout);
 
             if (!ses)
             {
@@ -1570,12 +1571,13 @@ void RebuildServer::test_datalink()
     bool success = false;
     // Test the datalink between source and target by steaming some bytes.
     string test_serve_cmd = mxb::string_printf("echo \"%s\" | socat - TCP-LISTEN:%i,reuseaddr",
-                                               link_test_msg, m_port);
+                                               link_test_msg, m_rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
     {
         string test_receive_cmd = mxb::string_printf("socat -u TCP:%s:%i,connect-timeout=%i STDOUT",
-                                                     m_source->server->address(), m_port, socat_timeout_s);
+                                                     m_source->server->address(), m_rebuild_port,
+                                                     socat_timeout_s);
         auto res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
         if (res.type == RType::OK && res.rc == 0)
         {
@@ -1636,7 +1638,8 @@ bool RebuildServer::serve_backup()
     const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1, m_port);
+    string stream_cmd = mxb::string_printf(stream_fmt, cs.username.c_str(), cs.password.c_str(), 1,
+                                           m_rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -1654,13 +1657,13 @@ bool RebuildServer::serve_backup()
         {
             rval = true;
             m_source_cmd = move(cmd_handle);
-            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_port);
+            MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_rebuild_port);
         }
         else if (status == ssh_util::AsyncCmd::Status::READY)
         {
             // The stream serve operation ended before it should. Print all output available.
             // The ssh-command includes username & pw so mask those in the message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_port);
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_rebuild_port);
 
             int rc = cmd_handle->rc();
 
@@ -1722,8 +1725,8 @@ bool RebuildServer::start_transfer()
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
                                "| sudo mbstream -x --directory=%s";
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_port, socat_timeout_s,
-                                            rebuild_datadir.c_str());
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source->server->address(), m_rebuild_port,
+                                            socat_timeout_s, rebuild_datadir.c_str());
 
     bool rval = false;
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);

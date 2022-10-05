@@ -91,19 +91,28 @@ void Table::free_values()
     m_lengths.clear();
 }
 
-bool Table::prepare(MYSQL* mysql)
+bool Table::prepare(MYSQL* mysql, std::string engine)
 {
     bool ok = false;
+    mxb::upper_case(engine);
 
     // The table schema assumes the same data format that the MongoDB API in MaxScale uses. The "_id" field in
     // the JSON is expected to be populated. Currently the field is required as it has a unique index defined
     // for it. This can be changed with `ALTER TABLE ... DROP CONSTRAINT id_is_not_null`.
-    std::string create = "CREATE TABLE IF NOT EXISTS " + m_table + " ("
-        + "data LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, "
-        + "id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY, "
-        + "CONSTRAINT data_is_json CHECK(JSON_VALID(data)), "
-        + "CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL) "
-        + ")";
+    std::string create = "CREATE TABLE IF NOT EXISTS " + m_table;
+
+    if (engine == "INNODB")
+    {
+        create += "("
+                  "data JSON NOT NULL, "
+                  "id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY, "
+                  "CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL) "
+                  ") ENGINE=INNODB";
+    }
+    else
+    {
+        create += "(data JSON NOT NULL) ENGINE=" + std::move(engine);
+    }
 
     if (mysql_query(mysql, create.c_str()) == 0)
     {

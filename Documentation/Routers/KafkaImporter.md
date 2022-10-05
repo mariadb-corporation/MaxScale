@@ -7,13 +7,13 @@
 The KafkaImporter module reads messages from Kafka and streams them into a
 MariaDB server. The messages are inserted into a table designated by either the
 topic name or the message key (see [table_name_in](#table_name_in) for
-details). The table will be automatically created with the following SQL:
+details). By default the table will be automatically created with the following
+SQL:
 
 ```sql
 CREATE TABLE IF NOT EXISTS my_table (
-  data LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  data JSON NOT NULL,
   id VARCHAR(1024) AS (JSON_EXTRACT(data, '$._id')) UNIQUE KEY,
-  CONSTRAINT data_is_json CHECK(JSON_VALID(data)),
   CONSTRAINT id_is_not_null CHECK(JSON_EXTRACT(data, '$._id') IS NOT NULL)
 );
 ```
@@ -181,6 +181,26 @@ the name would be:
 - **Dynamic**: Yes
 
 Timeout for both Kafka and MariaDB network communication.
+
+### `engine`
+
+- **Type**: string
+- **Default**: `InnoDB`
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+The storage engine used for tables that are created by the KafkaImporter.
+
+This defines the `ENGINE` table option and must be the name of a valid storage
+engine in MariaDB. When the storage engine is something other than `InnoDB`, the
+table is created without the generated column and the check constraints:
+
+```sql
+CREATE TABLE IF NOT EXISTS my_table (data JSON NOT NULL);
+```
+
+This is done to avoid conflicts where the custom engine does not support all the
+features that InnoDB supports.
 
 ## Limitations
 
