@@ -1180,8 +1180,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
 
 bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out)
 {
-    MariaDBServer* rebuild_master = (m_master && m_master->is_master()) ? m_master : nullptr;
-    auto op = std::make_unique<mon_op::RebuildServer>(*this, target, source, rebuild_master);
+    auto op = std::make_unique<mon_op::RebuildServer>(*this, target, source);
     return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
@@ -1440,11 +1439,10 @@ ssh_util::SSession BackupOperation::init_ssh_session(const char* name, const str
     return ses;
 }
 
-RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master)
+RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source)
     : BackupOperation(mon)
     , m_target_srv(target)
     , m_source_srv(source)
-    , m_repl_master(master)
 {
     m_rebuild_port = (int)m_mon.m_settings.rebuild_port;
 }
@@ -1486,19 +1484,19 @@ bool RebuildServer::run()
             break;
 
         case State::START_BACKUP_PREPARE:
-            advance = start_backup_prepare();
+            advance = state_start_backup_prepare();
             break;
 
         case State::WAIT_BACKUP_PREPARE:
-            advance = wait_backup_prepare();
+            advance = state_wait_backup_prepare();
             break;
 
         case State::START_TARGET:
-            advance = start_target();
+            advance = state_start_target();
             break;
 
         case State::START_REPLICATION:
-            advance = start_replication();
+            advance = state_start_replication();
             break;
 
         case State::DONE:
@@ -2006,68 +2004,63 @@ bool BackupOperation::check_directory_not_empty(const std::string& datadir_path)
     return has_contents;
 }
 
-bool RebuildServer::start_backup_prepare()
+bool RebuildServer::state_start_backup_prepare()
 {
+    m_state = start_backup_prepare() ? State::WAIT_BACKUP_PREPARE : State::CLEANUP;
+    return true;
+}
+
+bool BackupOperation::start_backup_prepare()
+{
+    bool prepare_started = false;
     // This step can fail if the previous step failed to write files. Just looking at the return value
     // of "mbstream" is not reliable.
-    auto& cs = m_target->conn_settings();
     const char prepare_fmt[] = "sudo mariabackup --use-memory=1G --prepare --target-dir=%s";
     string prepare_cmd = mxb::string_printf(prepare_fmt, rebuild_datadir.c_str());
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, prepare_cmd);
 
-    auto& error_out = m_result.output;
-    bool need_wait = false;
-    bool success = false;
-
     if (cmd_handle)
     {
-        // Wait a bit, then check that command started/finished successfully.
+        prepare_started = true;
+        m_target_cmd = std::move(cmd_handle);
+        MXB_NOTICE("Processing backup on %s.", m_target_name.c_str());
+        // Wait a bit. This increases the likelihood that the command completes during this monitor tick.
         sleep(1);
-        auto status = cmd_handle->update_status();
-
-        if (status == ssh_util::AsyncCmd::Status::BUSY)
-        {
-            success = true;
-            need_wait = true;
-            m_target_cmd = move(cmd_handle);
-            MXB_NOTICE("Processing backup on %s.", m_target->name());
-        }
-        else if (status == ssh_util::AsyncCmd::Status::SSH_FAIL)
-        {
-            ssh_errmsg = mxb::string_printf("Failed to read output. %s",
-                                            cmd_handle->error_output().c_str());
-        }
-        else
-        {
-            // The prepare-command completed quickly, which is normal in case source was not receiving
-            // more trx during transfer.
-            if (cmd_handle->rc() == 0)
-            {
-                success = true;
-                MXB_NOTICE("Backup processed on %s.", m_target->name());
-            }
-            else
-            {
-                PRINT_JSON_ERROR(error_out, "Failed to process backup data on %s. Command '%s' failed "
-                                            "with error %i: '%s'", m_target->name(), prepare_cmd.c_str(),
-                                 cmd_handle->rc(), cmd_handle->error_output().c_str());
-            }
-        }
     }
-
-    if (!ssh_errmsg.empty())
+    else
     {
-        mxb_assert(!m_target_cmd);
-        PRINT_JSON_ERROR(error_out, "Failed to process backup data on %s. %s",
-                         m_target->name(), ssh_errmsg.c_str());
+        PRINT_JSON_ERROR(m_result.output, "Failed to start processing backup data on %s. %s",
+                         m_target_name.c_str(), ssh_errmsg.c_str());
     }
 
-    m_state = success ? (need_wait ? State::WAIT_BACKUP_PREPARE : State::START_TARGET) : State::CLEANUP;
-    return true;
+    return prepare_started;
 }
 
-bool RebuildServer::wait_backup_prepare()
+bool RestoreFromBackup::state_wait_backup_prepare()
 {
+    auto res = wait_backup_prepare();
+    bool rval = false;
+    switch (res)
+    {
+    case StateResult::OK:
+        rval = true;
+        m_state = State::START_TARGET;
+        break;
+
+    case StateResult::AGAIN:
+        break;
+
+    case StateResult::ERROR:
+        rval = true;
+        m_state = State::CLEANUP;
+        break;
+    }
+    return rval;
+}
+
+BackupOperation::StateResult BackupOperation::wait_backup_prepare()
+{
+    const char* target_name = m_target_name.c_str();
     using Status = ssh_util::AsyncCmd::Status;
     auto& error_out = m_result.output;
     bool wait_again = false;
@@ -2086,38 +2079,30 @@ bool RebuildServer::wait_backup_prepare()
             if (m_target_cmd->rc() == 0)
             {
                 target_success = true;
-                MXB_NOTICE("Backup processed on %s.", m_target->name());
+                MXB_NOTICE("Backup processed on %s.", target_name);
             }
             else
             {
                 PRINT_JSON_ERROR(error_out, "Failed to process backup on %s. Error %i: '%s'.",
-                                 m_target->name(), m_target_cmd->rc(),
+                                 target_name, m_target_cmd->rc(),
                                  m_target_cmd->error_output().c_str());
             }
         }
         else
         {
             PRINT_JSON_ERROR(error_out, "Failed to check backup processing status on %s. %s",
-                             m_target->name(), m_target_cmd->error_output().c_str());
+                             target_name, m_target_cmd->error_output().c_str());
         }
         m_target_cmd = nullptr;
     }
 
-    if (wait_again)
-    {
-        return false;
-    }
-    else
-    {
-        m_state = target_success ? State::START_TARGET : State::CLEANUP;
-        return true;
-    }
+    return wait_again ? StateResult::AGAIN : (target_success ? StateResult::OK : StateResult::ERROR);
 }
 
-bool RebuildServer::start_target()
+bool BackupOperation::start_target()
 {
     bool server_started = false;
-    // chown must be ran sudo since changing user to something else than self.
+    // chown must be run as sudo since changing user to something else than self.
     string chown_cmd = mxb::string_printf("sudo chown -R mysql:mysql %s/*", rebuild_datadir.c_str());
     // Check that the chown-command length is correct. Mainly a safeguard against later changes which could
     // cause MaxScale to change owner of every file on the system.
@@ -2135,48 +2120,43 @@ bool RebuildServer::start_target()
         mxb_assert(!true);
         PRINT_JSON_ERROR(m_result.output, "Invalid chown command (this should not happen!)");
     }
-
-    m_state = server_started ? State::START_REPLICATION : State::CLEANUP;
-    return true;
+    return server_started;
 }
 
-bool RebuildServer::start_replication()
+bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* repl_master)
 {
     // The model script reads gtid position from xtrabackup_binlog_info and writes it to gtid_slave_pos.
     // However, this does not seem necessary as gtid_slave_pos is already correct.
 
-    // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
-    // source server.
-    MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
     EndPoint ep(repl_master->server->address(), repl_master->server->port());
-    SlaveStatus::Settings slave_sett("", ep, m_target->name());
+    SlaveStatus::Settings slave_sett("", ep, target->name());
 
     bool replicating = false;
-    m_target->update_server(false, false);
-    if (m_target->is_running())
+    target->update_server(false, false);
+    if (target->is_running())
     {
         GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
-        if (m_target->create_start_slave(op, slave_sett))
+        if (target->create_start_slave(op, slave_sett))
         {
             // Wait a bit and then check that replication works. This only affects the log message. Simplified
             // from MariaDBMonitor::wait_cluster_stabilization().
             std::this_thread::sleep_for(500ms);
             string errmsg;
-            if (m_target->do_show_slave_status(&errmsg))
+            if (target->do_show_slave_status(&errmsg))
             {
-                auto slave_conn = m_target->slave_connection_status_host_port(repl_master);
+                auto slave_conn = target->slave_connection_status_host_port(repl_master);
                 if (slave_conn)
                 {
                     if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES
                         && slave_conn->slave_sql_running == true)
                     {
                         replicating = true;
-                        MXB_NOTICE("%s replicating from %s.", m_target->name(), repl_master->name());
+                        MXB_NOTICE("%s replicating from %s.", target->name(), repl_master->name());
                     }
                     else
                     {
                         MXB_WARNING("%s did not start replicating from %s. IO/SQL running: %s/%s.",
-                                    m_target->name(), repl_master->name(),
+                                    target->name(), repl_master->name(),
                                     SlaveStatus::slave_io_to_string(slave_conn->slave_io_running).c_str(),
                                     slave_conn->slave_sql_running ? "Yes" : "No");
                     }
@@ -2184,28 +2164,28 @@ bool RebuildServer::start_replication()
                 else
                 {
                     MXB_WARNING("Could not check replication from %s to %s: slave connection not found.",
-                                repl_master->name(), m_target->name());
+                                repl_master->name(), target->name());
                 }
             }
             else
             {
                 MXB_WARNING("Could not check replication from %s to %s: %s",
-                            repl_master->name(), m_target->name(), errmsg.c_str());
+                            repl_master->name(), target->name(), errmsg.c_str());
             }
         }
     }
     else
     {
-        PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", m_target->name());
+        PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", target->name());
     }
-
-    m_state = replicating ? State::DONE : State::CLEANUP;
-    return true;
+    return replicating;
 }
 
 void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
                               const SlaveStatusArray& source_slaves_old)
 {
+    mxb_assert(source_slaves_old.empty() || source);
+    const char* source_name = m_source_name.c_str();
     using Status = ssh_util::AsyncCmd::Status;
     // Target cmd may exist if rebuild is canceled while waiting for transfer/prepare.
     if (m_target_cmd)
@@ -2221,7 +2201,7 @@ void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
         if (source_status == Status::BUSY)
         {
             MXB_WARNING("%s is serving backup data stream even after transfer has ended. "
-                        "Closing ssh channel.", source->name());
+                        "Closing ssh channel.", source_name);
         }
         else if (source_status == Status::READY)
         {
@@ -2230,14 +2210,14 @@ void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
         else
         {
             PRINT_JSON_ERROR(m_result.output, "Failed to check backup transfer status on %s. %s",
-                             source->name(), m_source_cmd->error_output().c_str());
+                             source_name, m_source_cmd->error_output().c_str());
         }
         m_source_cmd = nullptr;
     }
 
     if (m_source_ses)
     {
-        check_free_listen_port(source->name(), *m_source_ses, listen_port);
+        check_free_listen_port(source_name, *m_source_ses, listen_port);
     }
 
     if (m_source_slaves_stopped && !source_slaves_old.empty())
@@ -2263,7 +2243,7 @@ void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
                     {
                         auto& slave_name = old_slave.settings.name;
                         MXB_NOTICE("Slave connection '%s' is not running on %s, starting it.",
-                                   slave_name.c_str(), source->name());
+                                   slave_name.c_str(), source_name);
                         string start_slave = mxb::string_printf("START SLAVE '%s';", slave_name.c_str());
                         source->execute_cmd(start_slave);
                     }
@@ -2351,6 +2331,43 @@ void RebuildServer::state_check_datadir_size()
 void RebuildServer::state_cleanup()
 {
     cleanup(m_source, m_rebuild_port, m_source_slaves_old);
+}
+
+bool RebuildServer::state_wait_backup_prepare()
+{
+    auto res = wait_backup_prepare();
+    bool rval = false;
+    switch (res)
+    {
+    case StateResult::OK:
+        rval = true;
+        m_state = State::START_TARGET;
+        break;
+
+    case StateResult::AGAIN:
+        break;
+
+    case StateResult::ERROR:
+        rval = true;
+        m_state = State::CLEANUP;
+        break;
+    }
+    return rval;
+}
+
+bool RebuildServer::state_start_target()
+{
+    m_state = start_target() ? State::START_REPLICATION : State::CLEANUP;
+    return true;
+}
+
+bool RebuildServer::state_start_replication()
+{
+    // If monitor has a master, replicate from it. Otherwise, replicate from the source server.
+    auto master = m_mon.m_master;
+    auto repl_master = (master && master->is_master()) ? master : m_source;
+    m_state = start_replication(m_target, repl_master) ? State::DONE : State::CLEANUP;
+    return true;
 }
 
 Result Result::deep_copy() const
@@ -2644,19 +2661,19 @@ bool RestoreFromBackup::run()
             break;
 
         case State::START_BACKUP_PREPARE:
-            // TODO
+            advance = state_start_backup_prepare();
             break;
 
         case State::WAIT_BACKUP_PREPARE:
-            // TODO
+            advance = state_wait_backup_prepare();
             break;
 
         case State::START_TARGET:
-            // TODO
+            advance = state_start_target();
             break;
 
         case State::START_REPLICATION:
-            // TODO
+            advance = state_start_replication();
             break;
 
         case State::DONE:
@@ -2871,8 +2888,37 @@ bool RestoreFromBackup::state_check_datadir_size()
     return true;
 }
 
+bool RestoreFromBackup::state_start_backup_prepare()
+{
+    m_state = start_backup_prepare() ? State::WAIT_BACKUP_PREPARE : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_start_target()
+{
+    m_state = start_target() ? State::START_REPLICATION : State::CLEANUP;
+    return true;
+}
+
+bool RestoreFromBackup::state_start_replication()
+{
+    // If monitor has a valid master, replicate from it. Otherwise, skip this step.
+    auto master = m_mon.m_master;
+    if (master && master->is_master())
+    {
+        m_state = start_replication(m_target, master) ? State::DONE : State::CLEANUP;
+    }
+    else
+    {
+        MXB_WARNING("No master for monitor %s, not starting replication on %s.",
+                    m_mon.name(), m_target_name.c_str());
+        m_state = State::DONE;
+    }
+    return true;
+}
+
 void RestoreFromBackup::state_cleanup()
 {
-    // TODO
+    cleanup(nullptr, m_listen_port, {});
 }
 }

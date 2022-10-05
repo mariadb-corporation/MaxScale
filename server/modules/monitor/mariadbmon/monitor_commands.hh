@@ -127,8 +127,13 @@ protected:
     bool        serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
     bool        start_transfer(int source_port, const std::string& destination);
     StateResult wait_transfer();
-    bool        check_directory_not_empty(const std::string& datadir_path);
-    void        cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
+    bool        start_backup_prepare();
+    StateResult wait_backup_prepare();
+    bool        start_target();
+    bool        start_replication(MariaDBServer* target, MariaDBServer* repl_master);
+
+    bool check_directory_not_empty(const std::string& datadir_path);
+    void cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
 
     ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
@@ -164,7 +169,7 @@ protected:
 class RebuildServer : public BackupOperation
 {
 public:
-    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, MariaDBServer* master);
+    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source);
 
     bool run() override;
     void cancel() override;
@@ -174,7 +179,6 @@ private:
     SERVER*        m_source_srv {nullptr};
     MariaDBServer* m_target {nullptr};
     MariaDBServer* m_source {nullptr};
-    MariaDBServer* m_repl_master {nullptr};
 
     SlaveStatusArray m_source_slaves_old;
 
@@ -205,12 +209,12 @@ private:
     bool state_start_transfer();
     bool state_wait_transfer();
     void state_check_datadir_size();
-    bool start_backup_prepare();
-    bool wait_backup_prepare();
+    bool state_start_backup_prepare();
+    bool state_wait_backup_prepare();
+    bool state_start_target();
+    bool state_start_replication();
     void state_cleanup();
 
-    bool start_target();
-    bool start_replication();
     bool check_preconditions();
 };
 
@@ -297,6 +301,10 @@ private:
     bool state_start_transfer();
     bool state_wait_transfer();
     bool state_check_datadir_size();
+    bool state_start_backup_prepare();
+    bool state_wait_backup_prepare();
+    bool state_start_target();
+    bool state_start_replication();
     void state_cleanup();
 
     bool check_preconditions();
