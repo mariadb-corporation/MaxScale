@@ -556,6 +556,9 @@ private:
 
     static RoutingWorker* create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
+    static bool increase_threads(int nDelta);
+    static bool decrease_threads(int nDelta);
+
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
