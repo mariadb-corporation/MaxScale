@@ -52,24 +52,26 @@ namespace
  */
 struct this_unit
 {
-    bool             initialized;        // Whether the initialization has been performed.
-    const int        nMax;               // Hard maximum of workers
-    std::atomic<int> nCreated;           // Created amount of workers.
-    std::atomic<int> nActive;            // Active amount of workers.
-    RoutingWorker**  ppWorkers;          // Array of routing worker instances.
-    mxb::AverageN**  ppWorker_loads;     // Array of load averages for workers.
-    int              epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    bool             running;            // True if worker threads are running
+    bool                   initialized;        // Whether the initialization has been performed.
+    bool                   running;            // True if worker threads are running
+    const int              nMax;               // Hard maximum of workers
+    std::atomic<int>       nCreated;           // Created amount of workers.
+    std::atomic<int>       nActive;            // Active amount of workers.
+    RoutingWorker**        ppWorkers;          // Array of routing worker instances.
+    mxb::AverageN**        ppWorker_loads;     // Array of load averages for workers.
+    int                    epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
+    mxb::WatchdogNotifier* pNotifier;          // Watchdog notifier.
 } this_unit =
 {
     false,                                     // initialized
+    false,                                     // running
     mxs::Config::ParamThreadsCount::MAX_COUNT, // nMax
     0,                                         // nCreated
     0,                                         // nActive
     nullptr,                                   // ppWorkers
     nullptr,                                   // ppWorker_loads
     -1,                                        // epoll_listener_fd
-    false,                                     // running
+    nullptr                                    // pNotifier
 };
 
 thread_local struct this_thread
@@ -201,7 +203,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             for (i = 0; i < nCreated; ++i)
             {
                 RoutingWorker* pWorker = RoutingWorker::create(i, pNotifier, this_unit.epoll_listener_fd);
-                AverageN* pAverage = new AverageN(rebalance_window);
+                AverageN* pAverage = new (std::nothrow) AverageN(rebalance_window);
 
                 if (pWorker && pAverage)
                 {
@@ -228,6 +230,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 this_unit.ppWorker_loads = ppWorker_loads;
                 this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
                 this_unit.nActive.store(0, std::memory_order_relaxed);
+                this_unit.pNotifier = pNotifier;
 
                 this_unit.initialized = true;
             }
@@ -271,13 +274,103 @@ void RoutingWorker::finish()
     close(this_unit.epoll_listener_fd);
     this_unit.epoll_listener_fd = 0;
 
+    this_unit.pNotifier = nullptr;
+
     this_unit.initialized = false;
 }
 
 //static
 bool RoutingWorker::adjust_threads(int nCount)
 {
-    MXB_ERROR("Number of routing worker threads cannot yet be changed.");
+    mxb_assert(this_unit.initialized);
+    mxb_assert(this_unit.running);
+
+    bool rv = false;
+
+    int nActive = this_unit.nActive.load(std::memory_order_relaxed);
+
+    if (nCount < 1)
+    {
+        MXB_ERROR("The number of threads must be at least 1.");
+    }
+    else if (nCount > this_unit.nMax)
+    {
+        MXB_ERROR("The number of threads can be at most %d.", this_unit.nMax);
+    }
+    else if (nCount < nActive)
+    {
+        rv = decrease_threads(nActive - nCount);
+    }
+    else if (nCount > nActive)
+    {
+        rv = increase_threads(nCount - nActive);
+    }
+    else
+    {
+        rv = true;
+    }
+
+    return rv;
+}
+
+//static
+bool RoutingWorker::increase_threads(int nDelta)
+{
+    mxb_assert(nDelta > 0);
+    mxb_assert(this_unit.nCreated == this_unit.nActive); // TODO: For the time being.
+
+    size_t rebalance_window = mxs::Config::get().rebalance_window.get();
+
+    int nBefore = this_unit.nCreated.load(std::memory_order_relaxed);
+    int nAfter = nBefore + nDelta;
+
+    int i = nBefore;
+    for (; i < nAfter; ++i)
+    {
+        RoutingWorker* pWorker = RoutingWorker::create(i, this_unit.pNotifier, this_unit.epoll_listener_fd);
+        AverageN* pAverage = new (std::nothrow) AverageN(rebalance_window);
+
+        if (pWorker && pAverage)
+        {
+            if (pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
+            {
+                this_unit.ppWorkers[i] = pWorker;
+                this_unit.ppWorker_loads[i] = pAverage;
+            }
+            else
+            {
+                MXB_ERROR("Could not start routing worker %d.", i);
+                delete pWorker;
+                delete pAverage;
+                break;
+            }
+        }
+        else
+        {
+            MXB_ERROR("Could not create routing worker %d.", i);
+            delete pWorker;
+            delete pAverage;
+            break;
+        }
+    }
+
+    if (i != nAfter)
+    {
+        MXB_WARNING("Could create %d new routing workers, the number of active "
+                    "routing workers is now %d.", i - nBefore, i);
+        nAfter = i;
+    }
+
+    this_unit.nCreated.store(nAfter, std::memory_order_relaxed);
+    this_unit.nActive.store(nAfter, std::memory_order_relaxed);
+
+    return i != nBefore;
+}
+
+//static
+bool RoutingWorker::decrease_threads(int nDelta)
+{
+    MXB_ERROR("Decreasing threads not supported yet.");
     return false;
 }
 
