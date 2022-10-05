@@ -91,6 +91,7 @@
                 :showSelect="showSelect"
                 :groupBy="groupBy"
                 :activeRow="activeRow"
+                :search="filterKeyword"
                 @selected-rows="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"

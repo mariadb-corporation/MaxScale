@@ -48,6 +48,7 @@
                     :cellContentWidthMap="cellContentWidthMap"
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
+                    :search="search"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -84,6 +85,7 @@
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
                     :isDragging="isDragging"
+                    :search="search"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -156,6 +158,7 @@ export default {
         groupBy: { type: String, default: '' },
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
+        search: { type: String, default: '' }, // Text input used to highlight cell
     },
     data() {
         return {

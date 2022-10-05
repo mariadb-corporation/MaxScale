@@ -42,6 +42,7 @@
                         maxWidth: valueContentWidth,
                         activatorID: genValueColID(colIdx),
                         isDragging,
+                        search,
                     }"
                     v-on="$listeners"
                 >
@@ -98,6 +99,7 @@ export default {
         genActivatorID: { type: Function, required: true },
         cellContentWidthMap: { type: Object, required: true },
         isDragging: { type: Boolean, default: true },
+        search: { type: String, required: true },
     },
     computed: {
         baseColStyle() {

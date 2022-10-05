@@ -15,6 +15,8 @@
     >
         <slot :name="slotName" :data="slotData">
             <mxs-truncate-str
+                :key="slotData.cell"
+                v-mxs-highlighter="$typy(slotData, 'search').safeString"
                 :disabled="slotData.isDragging"
                 :tooltipItem="{ txt: `${slotData.cell}`, activatorID: slotData.activatorID }"
                 :maxWidth="slotData.maxWidth"
