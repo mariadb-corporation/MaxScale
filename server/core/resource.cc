@@ -44,6 +44,7 @@
 using std::map;
 using std::string;
 using std::stringstream;
+using maxscale::Listener;
 using maxscale::Monitor;
 
 using namespace std::literals::string_literals;

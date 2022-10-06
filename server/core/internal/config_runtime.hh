@@ -80,7 +80,7 @@ bool runtime_destroy_server(Server* server, bool force);
  *
  * @return True if the listener was successfully destroyed
  */
-bool runtime_destroy_listener(const SListener& listener);
+bool runtime_destroy_listener(const mxs::SListener& listener);
 
 /**
  * Destroy a filter
@@ -247,7 +247,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service = nullptr)
  *
  * @return True if the listener was successfully modified to represent @c new_json
  */
-bool runtime_alter_listener_from_json(std::shared_ptr<Listener> listener, json_t* new_json);
+bool runtime_alter_listener_from_json(mxs::SListener listener, json_t* new_json);
 
 /**
  * @brief Get current runtime error in JSON format

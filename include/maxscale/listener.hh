@@ -97,9 +97,6 @@ public:
     const std::unique_ptr<const MappingInfo> m_mapping_info;    /**< Backend user mapping and passwords */
 };
 
-}
-
-// TODO: Move inside MaxScale namespace.
 /**
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
@@ -448,3 +445,5 @@ private:
 };
 
 using SListener = std::shared_ptr<Listener>;
+
+}

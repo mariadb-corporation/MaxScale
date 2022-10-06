@@ -46,7 +46,6 @@ using std::move;
 using std::string;
 using std::unique_ptr;
 using mxs::ListenerData;
-using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
 
@@ -259,7 +258,6 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
     , m_conn_init_sql(init_sql)
     , m_mapping_info(move(mapping))
 {
-}
 }
 
 /**
@@ -1446,4 +1444,6 @@ bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output)
     }
 
     return rval;
+}
+
 }

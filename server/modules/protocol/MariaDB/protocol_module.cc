@@ -34,7 +34,7 @@ MySQLProtocolModule::MySQLProtocolModule(const std::string& name)
 {
 }
 
-MySQLProtocolModule* MySQLProtocolModule::create(const std::string& name, Listener*)
+MySQLProtocolModule* MySQLProtocolModule::create(const std::string& name, mxs::Listener*)
 {
     return new MySQLProtocolModule(name);
 }

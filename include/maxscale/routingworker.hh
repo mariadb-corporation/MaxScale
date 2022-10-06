@@ -32,11 +32,11 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
-class Listener;
 class ServerEndpoint;
 
 namespace maxscale
 {
+class Listener;
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager

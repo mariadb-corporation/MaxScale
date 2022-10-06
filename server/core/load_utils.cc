@@ -560,7 +560,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     }
     else if (mod_info->modapi == mxs::ModuleType::PROTOCOL)
     {
-        core_params = Listener::specification()->to_json();
+        core_params = mxs::Listener::specification()->to_json();
         ignored = {CN_TYPE};
     }
     else if (mod_info->modapi == mxs::ModuleType::FILTER)

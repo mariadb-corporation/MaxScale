@@ -2253,7 +2253,7 @@ std::unordered_set<ConfigSection*> get_dependencies(const std::vector<ConfigSect
     }
     else if (type == CN_LISTENER)
     {
-        return get_spec_dependencies(objects, obj, Listener::specification());
+        return get_spec_dependencies(objects, obj, mxs::Listener::specification());
     }
 
     const MXS_MODULE* module = get_module_details(obj);
@@ -3060,7 +3060,7 @@ int create_new_monitor(ConfigSection* obj)
  */
 int create_new_listener(ConfigSection* obj)
 {
-    return Listener::create(obj->name(), obj->m_parameters) ? 0 : 1;
+    return mxs::Listener::create(obj->name(), obj->m_parameters) ? 0 : 1;
 }
 
 /**

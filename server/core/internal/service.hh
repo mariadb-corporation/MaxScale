@@ -24,10 +24,10 @@
 
 namespace maxscale
 {
+class Listener;
 class Monitor;
 }
 
-class Listener;
 
 /**
  * @file service.h - MaxScale internal service functions
@@ -517,7 +517,7 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter);
  *
  * @return True if service has the listener
  */
-std::shared_ptr<Listener>
+std::shared_ptr<mxs::Listener>
 service_find_listener(Service* service, const std::string& socket, const std::string& address,
                       unsigned short port);
 

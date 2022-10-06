@@ -391,7 +391,7 @@ HttpResponse connect(const HttpRequest& request)
     }
     else if (Service* service = Service::find(target))
     {
-        auto listeners = Listener::find_by_service(service);
+        auto listeners = mxs::Listener::find_by_service(service);
 
         if (listeners.empty())
         {
@@ -405,7 +405,7 @@ HttpResponse connect(const HttpRequest& request)
 
         auto listener = listeners.front();
 
-        if (listener->type() == Listener::Type::UNIX_SOCKET)
+        if (listener->type() == mxs::Listener::Type::UNIX_SOCKET)
         {
             return create_error("Listener for service '" + target + "' is configured with UNIX socket");
         }
@@ -414,9 +414,9 @@ HttpResponse connect(const HttpRequest& request)
         config.host = listener->address();
         config.ssl = listener->ssl_config();
     }
-    else if (auto listener = Listener::find(target))
+    else if (auto listener = mxs::Listener::find(target))
     {
-        if (listener->type() == Listener::Type::UNIX_SOCKET)
+        if (listener->type() == mxs::Listener::Type::UNIX_SOCKET)
         {
             return create_error("Listener '" + target + "' is configured with UNIX socket");
         }

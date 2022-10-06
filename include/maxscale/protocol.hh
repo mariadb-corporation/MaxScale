@@ -26,11 +26,11 @@
 class DCB;
 class SERVER;
 class GWBUF;
-class Listener;
 class MXS_SESSION;
 
 namespace maxscale
 {
+class Listener;
 class ProtocolModule;
 class ClientConnection;
 class BackendConnection;
@@ -106,7 +106,7 @@ struct MXS_PROTOCOL_API
      *
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)(const std::string& name, Listener* listener);
+    mxs::ProtocolModule* (* create_protocol_module)(const std::string& name, mxs::Listener* listener);
 };
 
 /**

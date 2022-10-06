@@ -64,7 +64,7 @@ static void test1()
     listener_params.set(CN_PROTOCOL, "mariadb");
     listener_params.set(CN_SERVICE, service->name());
 
-    mxb_assert_message(Listener::create("TestProtocol", listener_params),
+    mxb_assert_message(mxs::Listener::create("TestProtocol", listener_params),
                        "Add Protocol should succeed");
     mxb_assert_message(service_find_listener(service, "", "localhost", 9876),
                        "Service should have new protocol as requested");

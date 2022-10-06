@@ -47,7 +47,6 @@ typedef std::vector<std::string> StringVector;
 
 using std::tie;
 using maxscale::Monitor;
-using SListener = std::shared_ptr<Listener>;
 using namespace std::literals::string_literals;
 
 thread_local std::vector<std::string> runtime_errmsg;
@@ -148,7 +147,7 @@ bool save_config(Service* service)
     return ok;
 }
 
-bool save_config(const SListener& listener)
+bool save_config(const mxs::SListener& listener)
 {
     bool ok = true;
 
@@ -1353,10 +1352,10 @@ void prepare_for_destruction(Service* service)
 
     // Destroy listeners that point to the service. They are separate objects and are not managed by the
     // service which means we can't simply ignore them.
-    for (const auto& l : Listener::find_by_service(service))
+    for (const auto& l : mxs::Listener::find_by_service(service))
     {
         runtime_remove_config(l->name());
-        Listener::destroy(l);
+        mxs::Listener::destroy(l);
     }
 }
 
@@ -1398,7 +1397,7 @@ const char* get_object_type(const std::string& name)
     {
         return "filter";
     }
-    else if (Listener::find(name))
+    else if (mxs::Listener::find(name))
     {
         return "listener";
     }
@@ -1530,13 +1529,13 @@ bool runtime_destroy_server(Server* server, bool force)
     return rval;
 }
 
-bool runtime_destroy_listener(const SListener& listener)
+bool runtime_destroy_listener(const mxs::SListener& listener)
 {
     UnmaskPasswords unmask;
     bool rval = false;
     std::string name = listener->name();
     std::string service = listener->service()->name();
-    Listener::destroy(listener);
+    mxs::Listener::destroy(listener);
 
     if (runtime_remove_config(name.c_str()))
     {
@@ -2095,7 +2094,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
             // that it's expressed in the same way regardless of the way the listener is created.
             json_object_set_new(params, "service", json_string(service->name()));
 
-            if (auto listener = Listener::create(name, params))
+            if (auto listener = mxs::Listener::create(name, params))
             {
                 if (save_config(listener) && listener->listen())
                 {
@@ -2107,8 +2106,8 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
                 else
                 {
                     MXB_ERROR("Listener '%s' was created but failed to start it.", name);
-                    Listener::destroy(listener);
-                    mxb_assert(!Listener::find(name));
+                    mxs::Listener::destroy(listener);
+                    mxb_assert(!mxs::Listener::find(name));
                 }
             }
         }
@@ -2117,7 +2116,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
     return rval;
 }
 
-bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
+bool runtime_alter_listener_from_json(mxs::SListener listener, json_t* new_json)
 {
     UnmaskPasswords unmask;
     bool rval = false;

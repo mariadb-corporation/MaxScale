@@ -24,7 +24,7 @@ class ProtocolModule : public mxs::ProtocolModule
 public:
     using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
 
-    static ProtocolModule* create(const std::string& name, Listener* pListener);
+    static ProtocolModule* create(const std::string& name, mxs::Listener* pListener);
 
     mxs::config::Configuration& getConfiguration() override final
     {

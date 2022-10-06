@@ -56,7 +56,7 @@ bool ProtocolModule::post_configure()
 }
 
 // static
-ProtocolModule* ProtocolModule::create(const std::string& name, Listener* pListener)
+ProtocolModule* ProtocolModule::create(const std::string& name, mxs::Listener* pListener)
 {
     return new ProtocolModule(name, pListener->service());
 }

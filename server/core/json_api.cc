@@ -70,7 +70,7 @@ bool filter_validator(const char* str)
 
 bool listener_validator(const char* str)
 {
-    return Listener::find(str).get();
+    return mxs::Listener::find(str).get();
 }
 
 std::unordered_map<std::string, std::function<bool(const char*)>> valid_relationships =

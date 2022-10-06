@@ -39,7 +39,10 @@ void dListSessions(DCB*);
 
 void printSession(MXS_SESSION*);
 class Server;
+namespace maxscale
+{
 class Listener;
+}
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -288,7 +291,7 @@ public:
      *
      * @param listener Stop all sessions that connected via this listener
      */
-    static void kill_all(Listener* listener);
+    static void kill_all(mxs::Listener* listener);
 
     void notify_userdata_change() override;
 

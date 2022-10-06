@@ -52,7 +52,7 @@ static void test1()
     listener_params.set(CN_PROTOCOL, "mariadb");
     listener_params.set(CN_SERVICE, service->name());
 
-    auto listener_data = Listener::create_test_data(listener_params);
+    auto listener_data = mxs::Listener::create_test_data(listener_params);
     auto session = new Session(listener_data, "127.0.0.1");
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
