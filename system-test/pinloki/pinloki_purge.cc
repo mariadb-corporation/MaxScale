@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <maxbase/stopwatch.hh>
 #include "test_base.hh"
 
 class PurgeTest : public TestCase
@@ -84,9 +85,58 @@ public:
         verify_logs({log_to_keep}, unexpected_files);
     }
 
+    void test_log_expiration()
+    {
+        // These should match the config
+        const int expire_log_minimum_files = 2;
+        const maxbase::Duration expire_log_duration = 30s;
+        const maxbase::Duration purge_poll_timeout = 10s;
+        const maxbase::Duration max_wait_time = expire_log_duration + purge_poll_timeout + 5s;
+
+        const int num_new_logs = 10;
+
+        create_new_logs(num_new_logs);
+
+        maxbase::Timer timer(expire_log_duration);
+        maxbase::StopWatch stop_watch;
+
+        auto all_logs = maxscale.rows("SHOW BINARY LOGS");
+        test.expect(all_logs.size() > num_new_logs, "Too few logs from SHOW BINARY LOGS");
+
+        timer.wait_alarm();         // wait until the first moment logs could be purged
+        timer = maxbase::Timer(1s); // then check once a second
+
+        // Wait until the logs are purged, or until they should have been purged
+        while (stop_watch.split() < max_wait_time)
+        {
+            auto new_logs = maxscale.rows("SHOW BINARY LOGS");
+            if (new_logs.size() == expire_log_minimum_files)
+            {
+                break;
+            }
+            timer.wait_alarm();
+        }
+
+        std::vector<std::string> expected_files;
+        for (int i = 0; i < expire_log_minimum_files; ++i)
+        {
+            expected_files.push_back(all_logs.back()[0]);
+            all_logs.pop_back();
+        }
+
+        std::vector<std::string> unexpected_files;
+        for (const auto& old : all_logs)
+        {
+            unexpected_files.push_back(old[0]);
+        }
+
+        verify_logs(expected_files, unexpected_files);
+    }
+
     void run() override
     {
         test_purge();
+        test_log_expiration();
     }
 };
 
