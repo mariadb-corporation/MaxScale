@@ -1893,6 +1893,15 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     m_usermanager->start();
 }
 
+bool Service::set_usercache_for(mxs::RoutingWorker& worker)
+{
+    mxb_assert(MainWorker::is_main_worker());
+    return worker.call([this]() {
+            mxb_assert(!*m_usercache);
+            *m_usercache = user_account_manager()->create_user_account_cache();
+        }, mxb::Worker::EXECUTE_AUTO);
+}
+
 void Service::request_user_account_update()
 {
     user_account_manager()->update_user_accounts();
