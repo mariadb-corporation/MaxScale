@@ -97,17 +97,18 @@ struct Clock : public SteadyClock
  *  Simple stopwatch for measuring time.
  *
  *  Example usage:
- *    auto limit = maxbase::Duration(std::chrono::milliseconds(100));
+ *    auto limit = Duration(100ms);
  *
  *    maxbase::StopWatch sw;
  *    foo();
  *    auto duration = sw.split();
  *
- *    std::cout << "foo duration " << duration << std::endl;
+ *    std::cout << "foo duration " << to_string(duration) << std::endl;
  *    if (duration > limit)
  *    {
  *        maxbase::Duration diff = duration - limit; // no auto, would become Clock::duration.
- *        std::cerr << "foo exceeded the limit " << limit << " by "  << diff << std::endl;
+ *        std::cerr << "foo exceeded the limit " << to_string(limit)
+ *                  << " by "  << to_string(diff) << std::endl;
  *    }
  *  Possible output:
  *    foo duration 100.734ms
@@ -141,7 +142,7 @@ class Timer
 {
 public:
     /** Tick_duration determines the timer frequency. To reset the Timer, or change the tick, just
-     *  assign my_timer = Timer(std::chrono::seconds(5)).
+     *  assign my_timer = Timer(5s).
      */
     Timer(Duration tick_duration);
 
@@ -170,8 +171,8 @@ public:
         return m_dur * ticks;
     }
 private:
-    const Duration  m_dur;
-    const TimePoint m_start = Clock::now();
+    Duration        m_dur;
+    TimePoint       m_start = Clock::now();
     mutable int64_t m_last_alarm_ticks = 0;
 };
 
