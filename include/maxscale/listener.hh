@@ -26,14 +26,6 @@ namespace maxscale
 class ProtocolModule;
 
 /**
- * Increment the number of authentication failures from the remote address. If the number
- * exceeds the configured limit, future attempts to connect from the remote are be rejected.
- *
- * @param remote The address where the connection originated
- */
-void mark_auth_as_failed(const std::string& remote);
-
-/**
  * Listener settings and other data that is shared with all sessions created by the listener.
  * Should be referred to with shared_ptr.
  *
@@ -212,6 +204,14 @@ public:
      * @return True if certificate reload succeeded on all listeners
      */
     static bool reload_tls();
+
+    /**
+     * Increment the number of authentication failures from the remote address. If the number
+     * exceeds the configured limit, future attempts to connect from the remote are be rejected.
+     *
+     * @param remote The address where the connection originated
+     */
+    static void mark_auth_as_failed(const std::string& remote);
 
     /**
      * Get listener config

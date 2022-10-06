@@ -232,14 +232,6 @@ bool is_all_iface(const std::string& a, const std::string& b)
 
 namespace maxscale
 {
-void mark_auth_as_failed(const std::string& remote)
-{
-    if (rate_limit.mark_auth_as_failed(remote))
-    {
-        MXB_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
-                   remote.c_str(), BLOCK_TIME);
-    }
-}
 
 /**
  * ListenerData
@@ -615,6 +607,16 @@ void Listener::stop_all()
 bool Listener::reload_tls()
 {
     return s_manager.reload_tls();
+}
+
+// static
+void Listener::mark_auth_as_failed(const std::string& remote)
+{
+    if (rate_limit.mark_auth_as_failed(remote))
+    {
+        MXB_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
+                   remote.c_str(), BLOCK_TIME);
+    }
 }
 
 // Helper function that executes a function on all workers and checks the result
