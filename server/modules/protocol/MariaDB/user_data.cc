@@ -830,8 +830,9 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
 
 std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_cache()
 {
-    auto cache = new(std::nothrow) MariaDBUserCache(*this);
-    return std::unique_ptr<mxs::UserAccountCache>(cache);
+    auto cache = std::make_unique<MariaDBUserCache>(*this);
+    cache->update_from_master();
+    return cache;
 }
 
 MariaDBUserManager::UserDBInfo MariaDBUserManager::get_user_database() const
@@ -1880,7 +1881,6 @@ bool UserDatabase::check_database_exists(const std::string& db, bool case_sensit
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
     : m_master(master)
 {
-    m_userdb = std::make_shared<UserDatabase>();    // Must never be null
 }
 
 UserEntryResult

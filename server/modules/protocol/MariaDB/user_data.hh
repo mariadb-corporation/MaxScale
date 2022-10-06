@@ -356,8 +356,9 @@ public:
 private:
     void generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const;
 
-    const MariaDBUserManager& m_master;     /**< User database master copy */
+    const MariaDBUserManager&   m_master;   /**< User database master copy */
+    MariaDBUserManager::SUserDB m_userdb;   /**< Local pointer to user database */
 
-    MariaDBUserManager::SUserDB m_userdb;               /**< Local pointer to user database */
-    int                         m_userdb_version {0};   /**< Version of local copy */
+    /** Version of local copy. Starts at -1 so that it can update from master which starts at 0. */
+    int m_userdb_version {-1};
 };
