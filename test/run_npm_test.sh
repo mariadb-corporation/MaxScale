@@ -83,18 +83,9 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
 make -j $(grep -c processor /proc/cpuinfo) install || exit 1
 
 # Create required directories (we could run the postinst script but it's a bit too invasive)
-mkdir -p $maxscaledir/lib64/maxscale
-mkdir -p $maxscaledir/bin
-mkdir -p $maxscaledir/share/maxscale
-mkdir -p $maxscaledir/share/doc/MaxScale/maxscale
-mkdir -p $maxscaledir/log/maxscale
-mkdir -p $maxscaledir/lib/maxscale
-mkdir -p $maxscaledir/cache/maxscale
-mkdir -p $maxscaledir/run/maxscale
-chmod 0755 $maxscaledir/log/maxscale
-chmod 0755 $maxscaledir/lib/maxscale
-chmod 0755 $maxscaledir/cache/maxscale
-chmod 0755 $maxscaledir/run/maxscale
+mkdir -p -m 0755 $maxscaledir/{lib,lib64,share,log,cache,run}/maxscale
+mkdir -p -m 0755 $maxscaledir/bin
+mkdir -p -m 0755 $maxscaledir/share/doc/MaxScale/maxscale
 
 # This variable is used to start and stop MaxScale before each test
 export MAXSCALE_DIR=$maxscaledir

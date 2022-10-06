@@ -11,23 +11,12 @@ test -z "$MAXSCALE_DIR" && exit 1
 
 # Create directories for both MaxScales
 
-rm -r $maxscaledir/lib/maxscale
-rm -r $maxscaledir/cache/maxscale
-rm -r $maxscaledir/run/maxscale
-rm -r $maxscaledir/secondary/lib/maxscale
-rm -r $maxscaledir/secondary/cache/maxscale
-rm -r $maxscaledir/secondary/run/maxscale
+test -f $maxscaledir/data/run/maxscale.pid && kill -9 $(cat $maxscaledir/data/run/maxscale.pid)
+test -f $maxscaledir/secondary/data/run/maxscale.pid && kill -9 $(cat $maxscaledir/secondary/data/run/maxscale.pid)
 
-mkdir -m 0755 -p $maxscaledir/etc/maxscale.modules.d/
-mkdir -m 0755 -p $maxscaledir/lib/maxscale/maxscale.cnf.d
-mkdir -m 0755 -p $maxscaledir/cache/maxscale
-mkdir -m 0755 -p $maxscaledir/run/maxscale
-mkdir -m 0755 -p $maxscaledir/log/maxscale
-mkdir -m 0755 -p $maxscaledir/secondary/etc/maxscale.modules.d/
-mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale/maxscale.cnf.d
-mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
-mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale
-mkdir -m 0755 -p $maxscaledir/secondary/log/maxscale
+rm -r $maxscaledir/data/ $maxscaledir/secondary/data/
+
+mkdir -m 0755 -p $maxscaledir/{,secondary}/data/{lib,cache,language,run,maxscale.cnf.d}/
 
 if [ "`whoami`" == "root" ]
 then

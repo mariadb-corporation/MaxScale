@@ -2,13 +2,13 @@
 threads=auto
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/log/maxscale/
-datadir=@CMAKE_INSTALL_PREFIX@/lib/maxscale
-cachedir=@CMAKE_INSTALL_PREFIX@/cache/maxscale
-language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
-piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
 sharedir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
-persistdir=@CMAKE_INSTALL_PREFIX@/lib/maxscale/maxscale.cnf.d/
 module_configdir=@CMAKE_INSTALL_PREFIX@/etc/maxscale.modules.d/
+datadir=@CMAKE_INSTALL_PREFIX@/data/lib/
+cachedir=@CMAKE_INSTALL_PREFIX@/data/cache/
+language=@CMAKE_INSTALL_PREFIX@/data/language/
+piddir=@CMAKE_INSTALL_PREFIX@/data/run/
+persistdir=@CMAKE_INSTALL_PREFIX@/data/maxscale.cnf.d/
 admin_secure_gui=false
 
 [server1]
