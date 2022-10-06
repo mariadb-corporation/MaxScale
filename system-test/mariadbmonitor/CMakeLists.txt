@@ -79,7 +79,7 @@ add_test_executable_ex(NAME mysqlmon_failover_rolling_restart_slaves SOURCE mysq
 
 # MySQL Monitor failover stress
 add_test_executable_ex(NAME mysqlmon_failover_stress SOURCE mysqlmon_failover_stress.cpp
-        CONFIG mysqlmon_failover_stress.cnf VMS repl_backend LABELS mysqlmon)
+        CONFIG mysqlmon_failover_stress.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
 # MySQL Monitor switchover stress
 add_test_executable_ex(NAME mysqlmon_switchover_stress SOURCE mysqlmon_switchover_stress.cpp

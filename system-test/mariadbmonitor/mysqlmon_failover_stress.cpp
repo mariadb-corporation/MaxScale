@@ -14,22 +14,14 @@
 #include <iostream>
 #include <iterator>
 #include <string>
-#include <sstream>
 #include <thread>
 #include <vector>
 #include <random>
 #include <maxtest/testconnections.hh>
 #include "fail_switch_rejoin_common.cpp"
+#include "mariadbmon_utils.hh"
 
 using namespace std;
-
-// How often the monitor checks the server state.
-// NOTE: Ensure this is identical with the value in the configuration file.
-const time_t MONITOR_INTERVAL = 1;
-
-// After how many seconds should the failover/rejoin operation surely have
-// been performed. Not very critical.
-const time_t FAILOVER_DURATION = 5;
 
 // The test now runs only two failovers. Change for a longer time limit later.
 // TODO: add semisync to remove this limitation.
@@ -37,384 +29,12 @@ const time_t FAILOVER_DURATION = 5;
 // Number of backends
 const int N = 4;
 
-#define CMESSAGE(msg) \
-    do { \
-        stringstream ss; \
-        ss << "client(" << m_id << ") : " << msg << "\n"; \
-        cout << ss.str() << flush; \
-    } while (false)
-
-#if !defined (NDEBUG)
-
-#define ss_dassert(x) do {if (!(x)) {fprintf(stderr, "Assertion failed: %s\n", #x); abort();}} while (false)
-#define ss_debug(x)   x
-
-#else
-
-#define ss_dassert(s)
-#define ss_debug(x)
-
-#endif
-
-
-namespace
-{
-
-class Client
-{
-public:
-    enum
-    {
-        DEFAULT_N_CLIENTS = 4,
-        DEFAULT_N_ROWS    = 100
-    };
-
-    static void init(TestConnections& test, size_t nClients, size_t nRows)
-    {
-        s_nClients = nClients;
-        s_nRows = nRows;
-
-        if (create_tables(test))
-        {
-            if (insert_data(test))
-            {
-                cout << "\nSyncing slaves." << endl;
-                test.repl->sync_slaves();
-            }
-        }
-    }
-
-    static void start(bool verbose,
-                      const char* zHost,
-                      int port,
-                      const char* zUser,
-                      const char* zPassword)
-    {
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            s_threads.push_back(std::thread(&Client::thread_main,
-                                            i,
-                                            verbose,
-                                            zHost,
-                                            port,
-                                            zUser,
-                                            zPassword));
-        }
-    }
-
-    static void stop()
-    {
-        s_shutdown = true;
-
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            s_threads[i].join();
-        }
-    }
-
-private:
-    Client(int id, bool verbose)
-        : m_id(id)
-        , m_verbose(verbose)
-        , m_value(1)
-        , m_rand_dist(0.0, 1.0)
-    {
-    }
-
-    enum action_t
-    {
-        ACTION_SELECT,
-        ACTION_UPDATE
-    };
-
-    action_t action() const
-    {
-        double d = random_decimal_fraction();
-
-        // 20% updates
-        // 80% selects
-        if (d <= 0.2)
-        {
-            return ACTION_UPDATE;
-        }
-        else
-        {
-            return ACTION_SELECT;
-        }
-    }
-
-    bool run(MYSQL* pConn)
-    {
-        bool rv = false;
-
-        switch (action())
-        {
-        case ACTION_SELECT:
-            rv = run_select(pConn);
-            break;
-
-        case ACTION_UPDATE:
-            rv = run_update(pConn);
-            break;
-
-        default:
-            ss_dassert(!true);
-        }
-
-        return rv;
-    }
-
-    bool run_select(MYSQL* pConn)
-    {
-        bool rv = true;
-
-        string stmt("SELECT * FROM test.t");
-        stmt += std::to_string(m_id);
-        stmt += " WHERE id=";
-        stmt += std::to_string(get_random_id());
-
-        if (mysql_query(pConn, stmt.c_str()) == 0)
-        {
-            flush_response(pConn);
-        }
-        else
-        {
-            if (m_verbose)
-            {
-                CMESSAGE("\"" << stmt << "\" failed: " << mysql_error(pConn));
-            }
-            rv = false;
-        }
-
-        return rv;
-    }
-
-    bool run_update(MYSQL* pConn)
-    {
-        bool rv = true;
-
-        string stmt("UPDATE test.t");
-        stmt += std::to_string(m_id);
-        stmt += " SET id=";
-        stmt += std::to_string(m_value);
-        stmt += " WHERE id=";
-        stmt += std::to_string(get_random_id());
-        m_value = (m_value + 1) % s_nRows;
-
-        if (mysql_query(pConn, stmt.c_str()) == 0)
-        {
-            flush_response(pConn);
-        }
-        else
-        {
-            if (m_verbose)
-            {
-                CMESSAGE("\"" << stmt << "\" failed: " << mysql_error(pConn));
-            }
-            rv = false;
-        }
-
-        return rv;
-    }
-
-    static void flush_response(MYSQL* pConn)
-    {
-        do
-        {
-            MYSQL_RES* pRes = mysql_store_result(pConn);
-            mysql_free_result(pRes);
-        }
-        while (mysql_next_result(pConn) == 0);
-    }
-
-    int get_random_id() const
-    {
-        int id = s_nRows * random_decimal_fraction();
-
-        ss_dassert(id >= 0);
-        ss_dassert(id <= (int)s_nRows);
-
-        return id;
-    }
-
-    double random_decimal_fraction() const
-    {
-        return m_rand_dist(m_rand_gen);
-    }
-
-    void run(const char* zHost, int port, const char* zUser, const char* zPassword)
-    {
-        do
-        {
-            MYSQL* pMysql = mysql_init(NULL);
-
-            if (pMysql)
-            {
-                unsigned int timeout = 5;
-                mysql_options(pMysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-                mysql_options(pMysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
-                mysql_options(pMysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-
-                if (m_verbose)
-                {
-                    CMESSAGE("Connecting");
-                }
-
-                if (mysql_real_connect(pMysql, zHost, zUser, zPassword, "test", port, NULL, 0))
-                {
-                    if (m_verbose)
-                    {
-                        CMESSAGE("Connected.");
-                    }
-
-                    while (!s_shutdown && run(pMysql))
-                    {
-                    }
-                }
-                else
-                {
-                    if (m_verbose)
-                    {
-                        CMESSAGE("mysql_real_connect() failed: " << mysql_error(pMysql));
-                    }
-                }
-
-                if (m_verbose)
-                {
-                    CMESSAGE("Closing");
-                }
-                mysql_close(pMysql);
-            }
-            else
-            {
-                CMESSAGE("mysql_init() failed.");
-            }
-
-            // To prevent some backend from becoming overwhelmed.
-            sleep(1);
-        }
-        while (!s_shutdown);
-    }
-
-    static void thread_main(int i,
-                            bool verbose,
-                            const char* zHost,
-                            int port,
-                            const char* zUser,
-                            const char* zPassword)
-    {
-        if (mysql_thread_init() == 0)
-        {
-            Client client(i, verbose);
-
-            client.run(zHost, port, zUser, zPassword);
-
-            mysql_thread_end();
-        }
-        else
-        {
-            int m_id = i;
-            CMESSAGE("mysql_thread_init() failed.");
-        }
-    }
-
-    static bool create_tables(TestConnections& test)
-    {
-        cout << "\nCreating tables." << endl;
-
-        MYSQL* pConn = test.maxscale->conn_rwsplit;
-
-        string drop_head("DROP TABLE IF EXISTS test.t");
-        string create_head("CREATE TABLE test.t");
-        string create_tail(" (id INT)");
-
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            string drop = drop_head + std::to_string(i);
-            test.try_query(pConn, "%s", drop.c_str());
-
-            string create = create_head + std::to_string(i) + create_tail;
-            test.try_query(pConn, "%s", create.c_str());
-        }
-
-        return test.ok();
-    }
-
-    static bool insert_data(TestConnections& test)
-    {
-        cout << "\nInserting data." << endl;
-
-        MYSQL* pConn = test.maxscale->conn_rwsplit;
-
-        for (size_t i = 0; i < s_nClients; ++i)
-        {
-            string insert("insert into test.t");
-            insert += std::to_string(i);
-            insert += " values ";
-
-            for (size_t j = 0; j < s_nRows; ++j)
-            {
-                insert += "(";
-                insert += std::to_string(j);
-                insert += ")";
-
-                if (j < s_nRows - 1)
-                {
-                    insert += ", ";
-                }
-            }
-
-            test.try_query(pConn, "%s", insert.c_str());
-        }
-
-        return test.ok();
-    }
-
-private:
-    enum
-    {
-        INITSTATE_SIZE = 32
-    };
-
-    size_t                                         m_id;
-    bool                                           m_verbose;
-    size_t                                         m_value;
-    mutable std::mt19937                           m_rand_gen;
-    mutable std::uniform_real_distribution<double> m_rand_dist;
-
-    static size_t s_nClients;
-    static size_t s_nRows;
-    static bool   s_shutdown;
-
-    static std::vector<std::thread> s_threads;
-};
-
-size_t Client::s_nClients;
-size_t Client::s_nRows;
-bool Client::s_shutdown;
-std::vector<std::thread> Client::s_threads;
-}
-
 namespace
 {
 
 void list_servers(TestConnections& test)
 {
     test.print_maxctrl("list servers");
-}
-
-void sleep(int s)
-{
-    cout << "Sleeping " << s << " times 1 second" << flush;
-    do
-    {
-        ::sleep(1);
-        cout << "." << flush;
-        --s;
-    }
-    while (s > 0);
-
-    cout << endl;
 }
 
 bool check_server_status(TestConnections& test, int id)
@@ -520,28 +140,25 @@ bool is_valid_server_id(TestConnections& test, int id)
 
 void run(TestConnections& test)
 {
-    cout << "\nConnecting to MaxScale." << endl;
-    test.maxscale->connect_maxscale();
+    auto& mxs = *test.maxscale;
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    testclient::Settings sett;
+    sett.host = mxs.ip4();
+    sett.port = mxs.rwsplit_port;
+    sett.user = mxs.user_name();
+    sett.pw = mxs.password();
+    sett.rows = 100;
 
-    Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
+    testclient::ClientGroup clients(test, 4, sett);
+    clients.prepare();
 
     if (test.ok())
     {
-        const char* zHost = test.maxscale->ip4();
-        int port = test.maxscale->rwsplit_port;
-        const char* zUser = test.maxscale->user_name().c_str();
-        const char* zPassword = test.maxscale->password().c_str();
-
-        cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
-        cout << "Starting clients." << endl;
-        Client::start(test.verbose(), zHost, port, zUser, zPassword);
-
-        list_servers(test);
+        clients.start();
 
         for (int i = 0; i < 2; i++)
         {
-            test.reset_timeout();
-            test.maxscale->wait_for_monitor();
+            mxs.wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
@@ -574,24 +191,20 @@ void run(TestConnections& test)
             }
         }
 
-        test.maxscale->wait_for_monitor();
-
-        cout << "\nStopping clients.\n" << flush;
-        Client::stop();
+        mxs.wait_for_monitor();
+        clients.stop();
 
         test.repl->close_connections();
         test.repl->connect();
 
         check_server_statuses(test);
     }
+    clients.cleanup();
 }
 }
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
-
-    run(test);
-
-    return test.global_result;
+    TestConnections test;
+    return test.run_test(argc, argv, run);
 }
