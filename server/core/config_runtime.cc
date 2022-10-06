@@ -1532,7 +1532,7 @@ bool runtime_destroy_server(Server* server, bool force)
     return rval;
 }
 
-bool runtime_destroy_listener(const ListenerManager::SListener& listener)
+bool runtime_destroy_listener(const SListener& listener)
 {
     UnmaskPasswords unmask;
     bool rval = false;

@@ -423,3 +423,5 @@ private:
     json_t*        json_parameters() const;
     bool           force_config_reload();
 };
+
+using SListener = std::shared_ptr<Listener>;

@@ -20,29 +20,6 @@
 
 class Service;
 
-class ListenerManager
-{
-public:
-    using SListener = std::shared_ptr<Listener>;
-
-    template<class Params>
-    SListener create(const std::string& name, Params params);
-
-    void                   destroy_instances();
-    void                   remove(const SListener& listener);
-    json_t*                to_json_collection(const char* host);
-    SListener              find(const std::string& name);
-    std::vector<SListener> find_by_service(const SERVICE* service);
-    void                   stop_all();
-    bool                   reload_tls();
-
-private:
-    std::list<SListener> m_listeners;
-    std::mutex           m_lock;
-
-    bool listener_is_duplicate(const SListener& listener);
-};
-
 /**
  * Find a listener
  *

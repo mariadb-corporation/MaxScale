@@ -80,7 +80,7 @@ bool runtime_destroy_server(Server* server, bool force);
  *
  * @return True if the listener was successfully destroyed
  */
-bool runtime_destroy_listener(const ListenerManager::SListener& listener);
+bool runtime_destroy_listener(const SListener& listener);
 
 /**
  * Destroy a filter
