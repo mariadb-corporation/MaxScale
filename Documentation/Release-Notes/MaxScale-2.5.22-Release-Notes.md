@@ -23,7 +23,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-4283](https://jira.mariadb.org/browse/MXS-4283) Race condition in KILL command processing
 * [MXS-4279](https://jira.mariadb.org/browse/MXS-4279) "sub" field not set for JWTs
 * [MXS-4269](https://jira.mariadb.org/browse/MXS-4269) UPDATE with user variable modification is treated as a session command
-* [MXS-4240](https://jira.mariadb.org/browse/MXS-4240) MXS-4239 readconnroute module routing read queries to inconsistent slave node
+* [MXS-4240](https://jira.mariadb.org/browse/MXS-4240) MXS-4239 readconnroute module routing read queries to inconsistent slave node 
 * [MXS-4239](https://jira.mariadb.org/browse/MXS-4239) Maxscale shows replication  status  as [Slave, Running] even when replication credentials are wrong
 * [MXS-4227](https://jira.mariadb.org/browse/MXS-4227) MaxCtrl incompatibility with MemoryDenyWriteExecute=true is not documented
 * [MXS-4224](https://jira.mariadb.org/browse/MXS-4224) connection_timeout not documented to only take effect on the top level service
@@ -32,7 +32,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-4196](https://jira.mariadb.org/browse/MXS-4196) Readconnroute load balancing behavior is not well documented
 * [MXS-4156](https://jira.mariadb.org/browse/MXS-4156) Update documentation on required monitor privileges
 * [MXS-4148](https://jira.mariadb.org/browse/MXS-4148) Log warning if reverse name resolution takes significant time
-* [MXS-4094](https://jira.mariadb.org/browse/MXS-4094) MaxScale failed to login mysql user with empty password
+* [MXS-4094](https://jira.mariadb.org/browse/MXS-4094) Allow empty token when client is replying to AuthSwitchRequest
 
 ## Known Issues and Limitations
 
