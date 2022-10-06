@@ -60,8 +60,12 @@
                     <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
-                    <template v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging } }">
+                    <template
+                        v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging, search } }"
+                    >
                         <mxs-truncate-str
+                            :key="cell"
+                            v-mxs-highlighter="search"
                             :disabled="isDragging"
                             :tooltipItem="{
                                 txt: `${$helpers.dateFormat({
@@ -74,9 +78,10 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-slot:action="{ data: { cell, maxWidth, isDragging } }">
+                    <template v-slot:action="{ data: { cell, maxWidth, isDragging, search } }">
                         <!-- TODO: Make a global tooltip for showing action column -->
                         <v-tooltip
+                            :key="cell.name"
                             top
                             transition="slide-y-transition"
                             content-class="shadow-drop mxs-color-helper white text-navigation pa-2 pb-4"
@@ -84,6 +89,7 @@
                         >
                             <template v-slot:activator="{ on }">
                                 <span
+                                    v-mxs-highlighter="search"
                                     class="d-inline-block text-truncate"
                                     :style="{ maxWidth: `${maxWidth}px` }"
                                     v-on="on"
