@@ -19,5 +19,3 @@
 #include <maxscale/config2.hh>
 
 class Service;
-
-void listener_destroy_instances();

@@ -2246,7 +2246,7 @@ int main(int argc, char** argv)
                                 maxscale_start_teardown();
                                 service_destroy_instances();
                                 filter_destroy_instances();
-                                listener_destroy_instances();
+                                Listener::clear();
                                 ServerManager::destroy_all();
 
                                 MXB_NOTICE("MaxScale shutdown completed.");

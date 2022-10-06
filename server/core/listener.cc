@@ -59,7 +59,7 @@ public:
     template<class Params>
     SListener create(const std::string& name, Params params);
 
-    void                   destroy_instances();
+    void                   clear();
     void                   remove(const SListener& listener);
     json_t*                to_json_collection(const char* host);
     SListener              find(const std::string& name);
@@ -311,7 +311,7 @@ SListener ListenerManager::create(const std::string& name, Params params)
     return rval;
 }
 
-void ListenerManager::destroy_instances()
+void ListenerManager::clear()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_listeners.clear();
@@ -532,9 +532,9 @@ bool Listener::force_config_reload()
     return m_config.specification().validate(js.get_json()) && m_config.configure(js.get_json());
 }
 
-void listener_destroy_instances()
+void Listener::clear()
 {
-    this_unit.destroy_instances();
+    this_unit.clear();
 }
 
 void Listener::close_all_fds()

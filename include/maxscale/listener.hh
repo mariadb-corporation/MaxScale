@@ -180,6 +180,15 @@ public:
     static void destroy(const std::shared_ptr<Listener>& listener);
 
     /**
+     * Removes all listeners. If there are no external references to
+     * a listener, it will be deleted as well.
+     *
+     * @note Does not call @c destroy on each instance and an existing
+     *       shared_ptr to a listener continues to be valid.
+     */
+    static void clear();
+
+    /**
      * Find a listener
      *
      * @param name Name of the listener
