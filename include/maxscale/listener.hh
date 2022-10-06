@@ -179,6 +179,24 @@ public:
      */
     static void destroy(const std::shared_ptr<Listener>& listener);
 
+    /**
+     * Find a listener
+     *
+     * @param name Name of the listener
+     *
+     * @return The listener if it exists or an empty SListener if it doesn't
+     */
+    static std::shared_ptr<Listener> find(const std::string& name);
+
+    /**
+     * Find all listeners that point to a service
+     *
+     * @param service Service whose listeners are returned
+     *
+     * @return The listeners that point to the service
+     */
+    static std::vector<std::shared_ptr<Listener>> find_by_service(const SERVICE* service);
+
     // Stop all listeners
     static void stop_all();
 

@@ -88,7 +88,7 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
         break;
 
     case ObjectType::LISTENER:
-        json = listener_find(name)->to_json_resource(request.host());
+        json = Listener::find(name)->to_json_resource(request.host());
         break;
 
     default:
@@ -164,7 +164,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
                                       || target == Server::specification().module()
                                       || get_module(target, mxs::ModuleType::UNKNOWN)))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
-            || (path == ":listener" && listener_find(target.c_str()))
+            || (path == ":listener" && Listener::find(target.c_str()))
             || (path == ":connection_id" && HttpSql::is_connection(target))
             || (path == ":query_id" && HttpSql::is_query(target)))
         {
@@ -335,7 +335,7 @@ HttpResponse cb_start_service(const HttpRequest& request)
 
 HttpResponse cb_stop_listener(const HttpRequest& request)
 {
-    auto listener = listener_find(request.uri_part(1).c_str());
+    auto listener = Listener::find(request.uri_part(1).c_str());
     listener->stop();
 
     if (request.get_option(CN_FORCE) == CN_YES)
@@ -348,7 +348,7 @@ HttpResponse cb_stop_listener(const HttpRequest& request)
 
 HttpResponse cb_start_listener(const HttpRequest& request)
 {
-    auto listener = listener_find(request.uri_part(1).c_str());
+    auto listener = Listener::find(request.uri_part(1).c_str());
     listener->start();
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
@@ -526,7 +526,7 @@ HttpResponse cb_alter_filter(const HttpRequest& request)
 
 HttpResponse cb_alter_listener(const HttpRequest& request)
 {
-    auto listener = listener_find(request.uri_part(1).c_str());
+    auto listener = Listener::find(request.uri_part(1).c_str());
     mxb_assert(listener && request.get_json());
 
     if (runtime_alter_listener_from_json(listener, request.get_json()))
@@ -629,7 +629,7 @@ HttpResponse cb_delete_service_listener(const HttpRequest& request)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service);
-    auto listener = listener_find(request.uri_part(3));
+    auto listener = Listener::find(request.uri_part(3));
     mxb_assert(listener);
 
     if (listener->service() != service)
@@ -647,7 +647,7 @@ HttpResponse cb_delete_service_listener(const HttpRequest& request)
 
 HttpResponse cb_delete_listener(const HttpRequest& request)
 {
-    auto listener = listener_find(request.uri_part(1).c_str());
+    auto listener = Listener::find(request.uri_part(1).c_str());
     mxb_assert(listener);
 
     if (!runtime_destroy_listener(listener))
@@ -734,7 +734,7 @@ HttpResponse cb_get_all_listeners(const HttpRequest& request)
 
 HttpResponse cb_get_listener(const HttpRequest& request)
 {
-    auto listener = listener_find(request.uri_part(1).c_str());
+    auto listener = Listener::find(request.uri_part(1).c_str());
     return HttpResponse(MHD_HTTP_OK, listener->to_json_resource(request.host()));
 }
 

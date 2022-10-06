@@ -875,7 +875,7 @@ void ConfigManager::remove_old_object(const std::string& name, const std::string
         break;
 
     case Type::LISTENERS:
-        if (auto listener = listener_find(name))
+        if (auto listener = Listener::find(name))
         {
             if (!runtime_destroy_listener(listener))
             {
@@ -1084,7 +1084,7 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
         break;
 
     case Type::LISTENERS:
-        if (auto listener = listener_find(name))
+        if (auto listener = Listener::find(name))
         {
             if (!runtime_alter_listener_from_json(listener, js))
             {

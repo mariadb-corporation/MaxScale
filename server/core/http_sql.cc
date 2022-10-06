@@ -390,7 +390,7 @@ HttpResponse connect(const HttpRequest& request)
     }
     else if (Service* service = Service::find(target))
     {
-        auto listeners = listener_find_by_service(service);
+        auto listeners = Listener::find_by_service(service);
 
         if (listeners.empty())
         {
@@ -413,7 +413,7 @@ HttpResponse connect(const HttpRequest& request)
         config.host = listener->address();
         config.ssl = listener->ssl_config();
     }
-    else if (auto listener = listener_find(target))
+    else if (auto listener = Listener::find(target))
     {
         if (listener->type() == Listener::Type::UNIX_SOCKET)
         {

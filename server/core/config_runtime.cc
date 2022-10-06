@@ -1355,7 +1355,7 @@ void prepare_for_destruction(Service* service)
 
     // Destroy listeners that point to the service. They are separate objects and are not managed by the
     // service which means we can't simply ignore them.
-    for (const auto& l : listener_find_by_service(service))
+    for (const auto& l : Listener::find_by_service(service))
     {
         runtime_remove_config(l->name());
         Listener::destroy(l);
@@ -1400,7 +1400,7 @@ const char* get_object_type(const std::string& name)
     {
         return "filter";
     }
-    else if (listener_find(name))
+    else if (Listener::find(name))
     {
         return "listener";
     }
@@ -2110,7 +2110,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
                 {
                     MXB_ERROR("Listener '%s' was created but failed to start it.", name);
                     Listener::destroy(listener);
-                    mxb_assert(!listener_find(name));
+                    mxb_assert(!Listener::find(name));
                 }
             }
         }

@@ -615,7 +615,7 @@ bool Service::launch()
     }
 
     bool ok = true;
-    auto my_listeners = listener_find_by_service(this);
+    auto my_listeners = Listener::find_by_service(this);
 
     if (!my_listeners.empty())
     {
@@ -695,7 +695,7 @@ bool Service::launch_all()
 
 void Service::stop()
 {
-    for (const auto& listener : listener_find_by_service(this))
+    for (const auto& listener : Listener::find_by_service(this))
     {
         listener->stop();
     }
@@ -705,7 +705,7 @@ void Service::stop()
 
 void Service::start()
 {
-    for (const auto& listener : listener_find_by_service(this))
+    for (const auto& listener : Listener::find_by_service(this))
     {
         listener->start();
     }
@@ -716,7 +716,7 @@ void Service::start()
 bool service_remove_listener(Service* service, const char* target)
 {
     bool rval = false;
-    auto listener = listener_find(target);
+    auto listener = Listener::find(target);
 
     if (listener && listener->service() == service)
     {
@@ -733,7 +733,7 @@ std::shared_ptr<Listener> service_find_listener(Service* service,
                                                 unsigned short port)
 {
     std::shared_ptr<Listener> rval;
-    for (const auto& listener : listener_find_by_service(service))
+    for (const auto& listener : Listener::find_by_service(service))
     {
         if (port == listener->port() && (listener->address() == address || listener->address() == socket))
         {
@@ -747,7 +747,7 @@ std::shared_ptr<Listener> service_find_listener(Service* service,
 
 bool service_has_named_listener(Service* service, const char* name)
 {
-    auto listener = listener_find(name);
+    auto listener = Listener::find(name);
     return listener && listener->service() == service;
 }
 
@@ -776,7 +776,7 @@ bool Service::can_be_destroyed() const
         std::transform(filters.begin(), filters.end(), std::back_inserter(names),
                        std::mem_fn(&FilterDef::name));
 
-        auto listeners = listener_find_by_service(this);
+        auto listeners = Listener::find_by_service(this);
         std::transform(listeners.begin(), listeners.end(), std::back_inserter(names),
                        std::mem_fn(&Listener::name));
 
@@ -896,7 +896,7 @@ bool service_all_services_have_listeners()
 
     for (Service* service : this_unit.services)
     {
-        if (listener_find_by_service(service).empty())
+        if (Listener::find_by_service(service).empty())
         {
             MXB_ERROR("Service '%s' has no listeners.", service->name());
             rval = false;
@@ -1004,7 +1004,7 @@ bool service_port_is_used(int port)
 
     for (Service* service : this_unit.services)
     {
-        for (const auto& listener : listener_find_by_service(service))
+        for (const auto& listener : Listener::find_by_service(service))
         {
             if (listener->port() == port)
             {
@@ -1029,7 +1029,7 @@ bool service_socket_is_used(const std::string& socket_path)
 
     for (Service* service : this_unit.services)
     {
-        for (const auto& listener : listener_find_by_service(service))
+        for (const auto& listener : Listener::find_by_service(service))
         {
             if (listener->address() == socket_path)
             {
@@ -1078,7 +1078,7 @@ static json_t* service_all_listeners_json_data(const char* host, const SERVICE* 
 {
     json_t* arr = json_array();
 
-    for (const auto& listener : listener_find_by_service(service))
+    for (const auto& listener : Listener::find_by_service(service))
     {
         json_array_append_new(arr, listener->to_json(host));
     }
@@ -1088,7 +1088,7 @@ static json_t* service_all_listeners_json_data(const char* host, const SERVICE* 
 
 static json_t* service_listener_json_data(const char* host, const SERVICE* service, const char* name)
 {
-    auto listener = listener_find(name);
+    auto listener = Listener::find(name);
 
     if (listener && listener->service() == service)
     {
@@ -1214,7 +1214,7 @@ json_t* Service::json_relationships(const char* host) const
         }
     }
 
-    auto listeners = listener_find_by_service(this);
+    auto listeners = Listener::find_by_service(this);
 
     if (!listeners.empty())
     {

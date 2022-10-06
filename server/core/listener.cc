@@ -657,12 +657,14 @@ bool Listener::start()
     return rval;
 }
 
-SListener listener_find(const std::string& name)
+// static
+SListener Listener::find(const std::string& name)
 {
     return this_unit.find(name);
 }
 
-std::vector<SListener> listener_find_by_service(const SERVICE* service)
+// static
+std::vector<SListener> Listener::find_by_service(const SERVICE* service)
 {
     return this_unit.find_by_service(service);
 }
