@@ -9,16 +9,11 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
-test -f $maxscaledir/run/maxscale/maxscale.pid && kill -9 $(cat $maxscaledir/run/maxscale/maxscale.pid)
+test -f $maxscaledir/data/run/maxscale.pid && kill -9 $(cat $maxscaledir/data/run/maxscale.pid)
 
-rm -r $maxscaledir/lib/maxscale
-rm -r $maxscaledir/cache/maxscale
-rm -r $maxscaledir/run/maxscale
+rm -r $maxscaledir/data/
 
-mkdir -m 0755 -p $maxscaledir/lib/maxscale/maxscale.cnf.d
-mkdir -m 0755 -p $maxscaledir/cache/maxscale
-mkdir -m 0755 -p $maxscaledir/run/maxscale
-mkdir -m 0755 -p $maxscaledir/log/maxscale
+mkdir -m 0755 -p $maxscaledir/data/{lib,cache,language,run,maxscale.cnf.d}/
 
 if [ "`whoami`" == "root" ]
 then
