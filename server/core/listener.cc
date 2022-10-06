@@ -50,11 +50,9 @@ using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
 
-class ListenerManager
+class Listener::Manager
 {
 public:
-    using SListener = std::shared_ptr<Listener>;
-
     template<class Params>
     SListener create(const std::string& name, Params params);
 
@@ -242,7 +240,6 @@ private:
 };
 
 thread_local RateLimit rate_limit;
-static ListenerManager this_unit;
 }
 
 bool is_all_iface(const std::string& iface)
@@ -255,7 +252,7 @@ bool is_all_iface(const std::string& a, const std::string& b)
     return is_all_iface(a) || is_all_iface(b);
 }
 
-bool ListenerManager::listener_is_duplicate(const SListener& listener)
+bool Listener::Manager::listener_is_duplicate(const SListener& listener)
 {
     std::string name = listener->name();
     std::string address = listener->address();
@@ -286,7 +283,7 @@ bool ListenerManager::listener_is_duplicate(const SListener& listener)
 }
 
 template<class Params>
-SListener ListenerManager::create(const std::string& name, Params params)
+SListener Listener::Manager::create(const std::string& name, Params params)
 {
     SListener rval;
 
@@ -310,19 +307,19 @@ SListener ListenerManager::create(const std::string& name, Params params)
     return rval;
 }
 
-void ListenerManager::clear()
+void Listener::Manager::clear()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_listeners.clear();
 }
 
-void ListenerManager::remove(const SListener& listener)
+void Listener::Manager::remove(const SListener& listener)
 {
     std::lock_guard<std::mutex> guard(m_lock);
     m_listeners.remove(listener);
 }
 
-void ListenerManager::stop_all()
+void Listener::Manager::stop_all()
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -332,7 +329,7 @@ void ListenerManager::stop_all()
     }
 }
 
-bool ListenerManager::reload_tls()
+bool Listener::Manager::reload_tls()
 {
     bool ok = true;
     std::lock_guard<std::mutex> guard(m_lock);
@@ -349,7 +346,7 @@ bool ListenerManager::reload_tls()
     return ok;
 }
 
-SListener ListenerManager::find(const std::string& name)
+SListener Listener::Manager::find(const std::string& name)
 {
     SListener rval;
     std::lock_guard<std::mutex> guard(m_lock);
@@ -366,7 +363,7 @@ SListener ListenerManager::find(const std::string& name)
     return rval;
 }
 
-std::vector<SListener> ListenerManager::find_by_service(const SERVICE* service)
+std::vector<SListener> Listener::Manager::find_by_service(const SERVICE* service)
 {
     std::vector<SListener> rval;
     std::lock_guard<std::mutex> guard(m_lock);
@@ -382,7 +379,7 @@ std::vector<SListener> ListenerManager::find_by_service(const SERVICE* service)
     return rval;
 }
 
-json_t* ListenerManager::to_json_collection(const char* host)
+json_t* Listener::Manager::to_json_collection(const char* host)
 {
     json_t* arr = json_array();
     std::lock_guard<std::mutex> guard(m_lock);
@@ -474,6 +471,9 @@ bool Listener::Config::configure(json_t* json, std::set<std::string>* pUnrecogni
 }
 
 // static
+Listener::Manager Listener::s_manager;
+
+// static
 mxs::config::Specification* Listener::specification()
 {
     return &s_spec;
@@ -495,13 +495,13 @@ Listener::~Listener()
 SListener Listener::create(const std::string& name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name.c_str());
-    return this_unit.create(name, params);
+    return s_manager.create(name, params);
 }
 
 SListener Listener::create(const std::string& name, json_t* params)
 {
     mxb::LogScope scope(name.c_str());
-    return this_unit.create(name, params);
+    return s_manager.create(name, params);
 }
 
 void Listener::set_type()
@@ -533,7 +533,7 @@ bool Listener::force_config_reload()
 
 void Listener::clear()
 {
-    this_unit.clear();
+    s_manager.clear();
 }
 
 void Listener::close_all_fds()
@@ -562,19 +562,19 @@ void Listener::destroy(const SListener& listener)
     listener->close_all_fds();
     listener->m_state = DESTROYED;
 
-    this_unit.remove(listener);
+    s_manager.remove(listener);
 }
 
 // static
 void Listener::stop_all()
 {
-    this_unit.stop_all();
+    s_manager.stop_all();
 }
 
 // static
 bool Listener::reload_tls()
 {
-    return this_unit.reload_tls();
+    return s_manager.reload_tls();
 }
 
 // Helper function that executes a function on all workers and checks the result
@@ -659,13 +659,13 @@ bool Listener::start()
 // static
 SListener Listener::find(const std::string& name)
 {
-    return this_unit.find(name);
+    return s_manager.find(name);
 }
 
 // static
 std::vector<SListener> Listener::find_by_service(const SERVICE* service)
 {
-    return this_unit.find_by_service(service);
+    return s_manager.find_by_service(service);
 }
 
 std::ostream& Listener::persist(std::ostream& os) const
@@ -721,7 +721,7 @@ json_t* Listener::to_json(const char* host) const
 // static
 json_t* Listener::to_json_collection(const char* host)
 {
-    return this_unit.to_json_collection(host);
+    return s_manager.to_json_collection(host);
 }
 
 json_t* Listener::to_json_resource(const char* host) const

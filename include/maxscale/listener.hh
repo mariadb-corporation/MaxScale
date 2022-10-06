@@ -347,7 +347,7 @@ public:
     int poll_fd() const override;
 
 private:
-    friend class ListenerManager;
+    class Manager;
 
     enum State
     {
@@ -357,21 +357,6 @@ private:
         FAILED,
         DESTROYED
     };
-
-    Config      m_config;   /**< The listener configuration */
-    std::string m_name;     /**< Name of the listener */
-    State       m_state;    /**< Listener state */
-
-    // The configuration parameters given to the listener. These are not validated and are only
-    // used to construct the authenticators.
-    mxs::ConfigParameters m_params;
-
-    Type m_type;    /**< The type of the listener */
-
-    mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
-    int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
-
-    SData m_shared_data;    /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
@@ -449,6 +434,17 @@ private:
     void           set_type();
     json_t*        json_parameters() const;
     bool           force_config_reload();
+
+    Config                m_config;         /**< The listener configuration */
+    std::string           m_name;           /**< Name of the listener */
+    State                 m_state;          /**< Listener state */
+    mxs::ConfigParameters m_params;         /**< Not validated and only used to construct authenticators. */
+    Type                  m_type;           /**< The type of the listener */
+    mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
+    int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
+    SData                 m_shared_data;    /**< Data shared with sessions */
+
+    static Manager s_manager; /**< Manager of all listener instances */
 };
 
 using SListener = std::shared_ptr<Listener>;
