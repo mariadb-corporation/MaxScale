@@ -46,6 +46,8 @@ class RoutingWorker : public mxb::WatchedWorker
     RoutingWorker& operator=(const RoutingWorker&) = delete;
 
 public:
+    virtual ~RoutingWorker();
+
     class InfoTask;
 
     class MemoryUsage
@@ -552,7 +554,6 @@ private:
     } m_rebalance;
 
     RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier);
-    virtual ~RoutingWorker();
 
     static RoutingWorker* create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
