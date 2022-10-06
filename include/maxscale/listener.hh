@@ -93,6 +93,9 @@ public:
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
  */
+class Listener;
+using SListener = std::shared_ptr<Listener>;
+
 class Listener : public mxb::Pollable
 {
 public:
@@ -155,8 +158,8 @@ public:
      *
      * @return New listener or nullptr on error
      */
-    static std::shared_ptr<Listener> create(const std::string& name, const mxs::ConfigParameters& params);
-    static std::shared_ptr<Listener> create(const std::string& name, json_t* params);
+    static SListener create(const std::string& name, const mxs::ConfigParameters& params);
+    static SListener create(const std::string& name, json_t* params);
 
     /**
      * Destroy a listener
@@ -166,7 +169,7 @@ public:
      *
      * @param listener Listener to destroy
      */
-    static void destroy(const std::shared_ptr<Listener>& listener);
+    static void destroy(const SListener& listener);
 
     /**
      * Removes all listeners. If there are no external references to
@@ -184,7 +187,7 @@ public:
      *
      * @return The listener if it exists or an empty SListener if it doesn't
      */
-    static std::shared_ptr<Listener> find(const std::string& name);
+    static SListener find(const std::string& name);
 
     /**
      * Find all listeners that point to a service
@@ -193,7 +196,7 @@ public:
      *
      * @return The listeners that point to the service
      */
-    static std::vector<std::shared_ptr<Listener>> find_by_service(const SERVICE* service);
+    static std::vector<SListener> find_by_service(const SERVICE* service);
 
     // Stop all listeners
     static void stop_all();
@@ -204,6 +207,13 @@ public:
      * @return True if certificate reload succeeded on all listeners
      */
     static bool reload_tls();
+
+    /**
+     * @note Only to be called from the main worker.
+     *
+     * @return All listeners that have been started.
+     */
+    static std::vector<SListener> get_started_listeners();
 
     /**
      * Increment the number of authentication failures from the remote address. If the number
@@ -227,6 +237,19 @@ public:
      * @return True if the listener was able to start listening
      */
     bool listen();
+
+    /**
+     * Start listening at specified routing worker that was not present
+     * when the listener was started. This function can only be called
+     * from the main worker.
+     *
+     * @param worker  The routing worker where the listener should also
+                      listen.
+     *
+     * @return True if the listener could be added to the worker. True will
+     *         unconditionally be returned if the listener is not started.
+     */
+    bool listen(mxs::RoutingWorker& worker);
 
     /**
      * Stop the listener
@@ -374,11 +397,29 @@ private:
     bool listen_shared();
 
     /**
+     * Listen on a file descriptor at specified worker
+     *
+     * @param worker  The worker where the listener should also listen.
+     *
+     * @return True if the listening was started successfully
+     */
+    bool listen_shared(mxs::RoutingWorker& worker);
+
+    /**
      * Listen with a unique file descriptor for each worker
      *
      * @return True if the listening was started successfully
      */
     bool listen_unique();
+
+    /**
+     * Listen with a unique file descriptor at specified worker
+     *
+     * @param worker  The worker where the listener should also listen.
+     *
+     * @return True if the listening was started successfully
+     */
+    bool listen_unique(mxs::RoutingWorker& worker);
 
     /**
      * Close all opened file descriptors for this listener
@@ -443,7 +484,5 @@ private:
 
     static Manager s_manager; /**< Manager of all listener instances */
 };
-
-using SListener = std::shared_ptr<Listener>;
 
 }

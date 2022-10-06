@@ -45,6 +45,7 @@ using std::map;
 using std::move;
 using std::string;
 using std::unique_ptr;
+using std::vector;
 using mxs::ListenerData;
 
 constexpr int BLOCK_TIME = 60;
@@ -269,6 +270,7 @@ public:
     std::vector<SListener> find_by_service(const SERVICE* service);
     void                   stop_all();
     bool                   reload_tls();
+    std::vector<SListener> get_started_listeners();
 
 private:
     std::list<SListener> m_listeners;
@@ -369,6 +371,23 @@ bool Listener::Manager::reload_tls()
     }
 
     return ok;
+}
+
+vector<SListener> Listener::Manager::get_started_listeners()
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    vector<SListener> started_listeners;
+
+    for (auto listener : m_listeners)
+    {
+        if (listener->m_state == Listener::STARTED)
+        {
+            started_listeners.push_back(listener);
+        }
+    }
+
+    return started_listeners;
 }
 
 SListener Listener::Manager::find(const std::string& name)
@@ -566,6 +585,11 @@ bool Listener::force_config_reload()
 void Listener::clear()
 {
     s_manager.clear();
+}
+
+std::vector<std::shared_ptr<Listener>> Listener::get_started_listeners()
+{
+    return s_manager.get_started_listeners();
 }
 
 void Listener::close_all_fds()
@@ -1047,6 +1071,13 @@ bool Listener::listen_shared()
     return rval;
 }
 
+bool Listener::listen_shared(mxs::RoutingWorker& worker)
+{
+    // Nothing needs to be done, the shared fd has already been added to
+    // the epoll-set that the worker also uses.
+    return true;
+}
+
 bool Listener::listen_unique()
 {
     auto open_socket = [this]() {
@@ -1083,6 +1114,47 @@ bool Listener::listen_unique()
     return rval;
 }
 
+bool Listener::listen_unique(mxs::RoutingWorker& worker)
+{
+    bool rval = true;
+
+    if (m_state == STARTED)
+    {
+        rval = false;
+
+        auto open_socket = [&worker, this, &rval]() {
+            mxb_assert(*m_local_fd == -1);
+
+            mxb::LogScope scope(name());
+
+            int fd = start_listening(address(), port());
+
+            if (fd != -1)
+            {
+                // Set the worker-local fd to the unique value
+                *m_local_fd = fd;
+                if (worker.add_pollable(EPOLLIN, this))
+                {
+                    rval = true;
+                }
+                else
+                {
+                    *m_local_fd = -1;
+                    close(fd);
+                }
+            }
+        };
+
+        if (!worker.call(open_socket, mxb::Worker::EXECUTE_QUEUED))
+        {
+            MXB_ERROR("Could not call worker thread; it will not start listening "
+                      "on listener socket.");
+        }
+    }
+
+    return rval;
+}
+
 bool Listener::listen()
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
@@ -1109,6 +1181,28 @@ bool Listener::listen()
     {
         m_state = STARTED;
         MXB_NOTICE("Listening for connections at [%s]:%u", address(), port());
+    }
+
+    return rval;
+}
+
+bool Listener::listen(mxs::RoutingWorker& worker)
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    mxb::LogScope scope(name());
+
+    bool rval = true;
+    if (m_state == STARTED)
+    {
+        if (m_type == Type::UNIQUE_TCP)
+        {
+            rval = listen_unique(worker);
+        }
+        else
+        {
+            rval = listen_shared(worker);
+        }
     }
 
     return rval;
