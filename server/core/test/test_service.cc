@@ -22,11 +22,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/maxscale_test.h>
+#include <maxscale/listener.hh>
 #include <maxscale/paths.hh>
 
 #include "../internal/service.hh"
 #include "test_utils.hh"
-#include "../internal/listener.hh"
 
 /**
  * test1    Allocate a service and do lots of other things

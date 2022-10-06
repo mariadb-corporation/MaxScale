@@ -20,6 +20,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/paths.hh>
@@ -30,7 +31,6 @@
 #include <sys/stat.h>
 
 #include "../internal/modules.hh"
-#include "../internal/listener.hh"
 
 /**
  * Preload a module

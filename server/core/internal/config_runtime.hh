@@ -18,12 +18,12 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <maxscale/listener.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/service.hh>
 
 #include "service.hh"
 #include "filter.hh"
-#include "listener.hh"
 
 class Server;
 

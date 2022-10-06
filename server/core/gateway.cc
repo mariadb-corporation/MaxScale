@@ -53,6 +53,7 @@
 #include <maxsql/mariadb.hh>
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.hh>
 #include <maxscale/paths.hh>
@@ -74,7 +75,6 @@
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
 #include "internal/secrets.hh"
 #include "internal/servermanager.hh"
 #include "internal/configmanager.hh"

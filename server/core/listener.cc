@@ -37,7 +37,6 @@
 #include <maxscale/ssl.hh>
 
 #include "internal/config.hh"
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/session.hh"
 

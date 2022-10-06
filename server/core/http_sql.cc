@@ -12,19 +12,20 @@
  */
 
 #include "internal/http_sql.hh"
+
+#include <arpa/inet.h>
+
+#include <maxbase/format.hh>
+#include <maxbase/json.hh>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
+
 #include "internal/jwt.hh"
-#include "internal/listener.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/sql_conn_manager.hh"
 
-#include <arpa/inet.h>
-
-#include <maxbase/json.hh>
-#include <maxscale/json_api.hh>
-#include <maxscale/cn_strings.hh>
-
-#include <maxbase/format.hh>
 
 using std::string;
 using std::move;

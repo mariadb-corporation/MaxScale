@@ -13,12 +13,12 @@
 
 #include "protocolmodule.hh"
 #include <maxscale/cn_strings.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/service.hh>
 #include "../MariaDB/user_data.hh"
-#include "../../../core/internal/listener.hh"
 #include "clientconnection.hh"
 #include "nosqlcursor.hh"
 

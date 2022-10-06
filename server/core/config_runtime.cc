@@ -11,8 +11,6 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
-
 #include "internal/config_runtime.hh"
 
 #include <algorithm>
@@ -32,6 +30,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/jansson.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
@@ -39,7 +38,6 @@
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/filter.hh"
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"

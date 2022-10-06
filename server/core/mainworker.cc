@@ -20,12 +20,12 @@
 #endif
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/routingworker.hh>
 
 #include "internal/admin.hh"
 #include "internal/configmanager.hh"
 #include "internal/http_sql.hh"
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/service.hh"

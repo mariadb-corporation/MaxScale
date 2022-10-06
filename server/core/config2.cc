@@ -16,13 +16,13 @@
 #include <sys/stat.h>
 
 #include <maxbase/format.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/monitor.hh>
-#include <maxscale/secrets.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/secrets.hh>
 #include "internal/config.hh"
 #include "internal/modules.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
 
 using namespace std;
 

@@ -15,12 +15,12 @@
 
 #include <string>
 
-#include <maxscale/cn_strings.hh>
 #include <maxbase/format.hh>
+#include <maxscale/cn_strings.hh>
+#include <maxscale/listener.hh>
 
-#include "internal/monitormanager.hh"
 #include "internal/filter.hh"
-#include "internal/listener.hh"
+#include "internal/monitormanager.hh"
 
 using std::string;
 using namespace std::literals::string_literals;

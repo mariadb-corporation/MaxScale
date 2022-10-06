@@ -22,15 +22,15 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/average.hh>
 #include <maxbase/semaphore.hh>
+#include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
-#include <maxscale/clock.hh>
-#include <maxscale/mainworker.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/utils.hh>
+#include <maxscale/listener.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/statistics.hh>
+#include <maxscale/utils.hh>
 
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/session.hh"

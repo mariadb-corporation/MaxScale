@@ -29,6 +29,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/monitor.hh>
@@ -40,7 +41,6 @@
 #include <maxscale/version.hh>
 
 #include "internal/config.hh"
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"

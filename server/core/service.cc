@@ -15,7 +15,7 @@
  * @file service.c  - A representation of a service within MaxScale
  */
 
-#include <maxscale/ccdefs.hh>
+#include "internal/service.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,33 +36,30 @@
 #include <utility>
 
 #include <maxbase/jansson.hh>
-
-#include <maxscale/service.hh>
 #include <maxbase/log.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/http.hh>
+#include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
+#include <maxscale/modutil.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/router.hh>
+#include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
 #include <maxscale/users.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
-#include <maxscale/json_api.hh>
-#include <maxscale/routingworker.hh>
-#include <maxscale/modutil.hh>
-#include <maxscale/config2.hh>
-#include <maxscale/http.hh>
 
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
 #include "internal/filter.hh"
-#include "internal/listener.hh"
-#include "internal/modules.hh"
-#include "internal/service.hh"
 #include "internal/maxscale.hh"
-#include "internal/servermanager.hh"
+#include "internal/modules.hh"
 #include "internal/monitormanager.hh"
+#include "internal/servermanager.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined (UINT64_MAX)

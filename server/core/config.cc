@@ -44,6 +44,8 @@
 #include <maxscale/clock.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/key_manager.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale.hh>
 #include <maxscale/paths.hh>
@@ -52,18 +54,16 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
-#include <maxscale/key_manager.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
+#include "internal/configmanager.hh"
 #include "internal/event.hh"
 #include "internal/filter.hh"
-#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
-#include "internal/configmanager.hh"
 
 using std::move;
 using std::set;

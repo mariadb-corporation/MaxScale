@@ -20,6 +20,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
@@ -29,7 +30,9 @@
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
+#include "internal/configmanager.hh"
 #include "internal/filter.hh"
+#include "internal/http_sql.hh"
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
 #include "internal/modules.hh"
@@ -37,9 +40,6 @@
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"
-#include "internal/listener.hh"
-#include "internal/http_sql.hh"
-#include "internal/configmanager.hh"
 
 using std::map;
 using std::string;

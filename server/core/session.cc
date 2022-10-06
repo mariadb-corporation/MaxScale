@@ -14,7 +14,7 @@
 /**
  * @file session.c  - A representation of the session within the gateway.
  */
-#include <maxscale/session.hh>
+#include "internal/session.hh"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -26,25 +26,23 @@
 
 #include <maxbase/alloc.hh>
 #include <maxbase/atomic.hh>
-#include <maxbase/host.hh>
 #include <maxbase/format.hh>
+#include <maxbase/host.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "internal/dcb.hh"
 #include "internal/filter.hh"
-#include "internal/session.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
 
 using std::string;
 using std::stringstream;
