@@ -33,23 +33,6 @@ const getIdxOfDbChildNode = ({ dbIdx, db_tree, childType }) =>
 
 /**
  * @public
- * @param {String} prefixName - prefix name of the connection cookie. i.e. conn_id_body_
- * @returns {Array} an array of connection ids found from cookies
- */
-function getClientConnIds(prefixName = 'conn_id_body_') {
-    let value = '; ' + document.cookie
-    let cookiesStr = value.split('; ')
-    const connCookies = cookiesStr.filter(p => p.includes(prefixName))
-    const connIds = []
-    connCookies.forEach(str => {
-        const parts = str.split('=')
-        if (parts.length === 2) connIds.push(parts[0].replace(prefixName, ''))
-    })
-    return connIds
-}
-
-/**
- * @public
  * Use this function to update database node children. i.e. Populating children for
  * Tables||Stored Procedures node
  * @param {Array} payload.db_tree - Array of tree node to be updated
@@ -502,7 +485,6 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
     return file_handle_txt !== query_txt
 }
 export default {
-    getClientConnIds,
     updateDbChild,
     updateTblChild,
     queryTblOptsData,
