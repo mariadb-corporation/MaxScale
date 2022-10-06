@@ -41,8 +41,10 @@ using maxbase::Worker;
 using maxbase::WorkerLoad;
 using maxscale::RoutingWorker;
 using maxscale::Closer;
-using std::vector;
+using std::shared_ptr;
 using std::stringstream;
+using std::unique_ptr;
+using std::vector;
 
 namespace
 {
@@ -327,29 +329,67 @@ bool RoutingWorker::increase_threads(int nDelta)
     int i = nBefore;
     for (; i < nAfter; ++i)
     {
-        RoutingWorker* pWorker = RoutingWorker::create(i, this_unit.pNotifier, this_unit.epoll_listener_fd);
-        AverageN* pAverage = new (std::nothrow) AverageN(rebalance_window);
+        unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, this_unit.pNotifier,
+                                                                this_unit.epoll_listener_fd));
+        unique_ptr<AverageN> sAverage(new (std::nothrow) AverageN(rebalance_window));
 
-        if (pWorker && pAverage)
+        if (sWorker && sAverage)
         {
-            if (pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
+            if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
             {
-                this_unit.ppWorkers[i] = pWorker;
-                this_unit.ppWorker_loads[i] = pAverage;
+                bool success = true;
+
+                auto services = Service::get_all();
+
+                for (auto* pService : services)
+                {
+                    if (!pService->set_usercache_for(*sWorker.get()))
+                    {
+                        MXB_ERROR("Could not set usercache of service %s for new routing worker %d.",
+                                  pService->name(), i);
+                        success = false;
+                        break;
+                    }
+                }
+
+                if (success)
+                {
+                    auto listeners = Listener::get_started_listeners();
+
+                    for (auto sListener : listeners)
+                    {
+                        if (!sListener->listen(*sWorker.get()))
+                        {
+                            MXB_ERROR("Could not add listener to routing worker %d.", i);
+                            success = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (success)
+                {
+                    this_unit.ppWorkers[i] = sWorker.release();
+                    this_unit.ppWorker_loads[i] = sAverage.release();
+                }
+                else
+                {
+                    MXB_ERROR("Terminating routing worker creation");
+
+                    sWorker->shutdown();
+                    sWorker->join();
+                    break;
+                }
             }
             else
             {
                 MXB_ERROR("Could not start routing worker %d.", i);
-                delete pWorker;
-                delete pAverage;
                 break;
             }
         }
         else
         {
             MXB_ERROR("Could not create routing worker %d.", i);
-            delete pWorker;
-            delete pAverage;
             break;
         }
     }
