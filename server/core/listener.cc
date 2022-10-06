@@ -50,27 +50,6 @@ using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
 
-class Listener::Manager
-{
-public:
-    template<class Params>
-    SListener create(const std::string& name, Params params);
-
-    void                   clear();
-    void                   remove(const SListener& listener);
-    json_t*                to_json_collection(const char* host);
-    SListener              find(const std::string& name);
-    std::vector<SListener> find_by_service(const SERVICE* service);
-    void                   stop_all();
-    bool                   reload_tls();
-
-private:
-    std::list<SListener> m_listeners;
-    std::mutex           m_lock;
-
-    bool listener_is_duplicate(const SListener& listener);
-};
-
 namespace
 {
 
@@ -252,6 +231,62 @@ bool is_all_iface(const std::string& a, const std::string& b)
     return is_all_iface(a) || is_all_iface(b);
 }
 
+namespace maxscale
+{
+void mark_auth_as_failed(const std::string& remote)
+{
+    if (rate_limit.mark_auth_as_failed(remote))
+    {
+        MXB_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
+                   remote.c_str(), BLOCK_TIME);
+    }
+}
+
+/**
+ * ListenerData
+ */
+ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+                           std::unique_ptr<mxs::ProtocolModule> protocol_module,
+                           const std::string& listener_name,
+                           std::vector<SAuthenticator>&& authenticators,
+                           ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping)
+    : m_ssl(move(ssl))
+    , m_default_sql_mode(default_sql_mode)
+    , m_service(*service)
+    , m_proto_module(move(protocol_module))
+    , m_listener_name(listener_name)
+    , m_authenticators(move(authenticators))
+    , m_conn_init_sql(init_sql)
+    , m_mapping_info(move(mapping))
+{
+}
+}
+
+/**
+ * Listener::Manager
+ */
+
+class Listener::Manager
+{
+public:
+    template<class Params>
+    SListener create(const std::string& name, Params params);
+
+    void                   clear();
+    void                   remove(const SListener& listener);
+    json_t*                to_json_collection(const char* host);
+    SListener              find(const std::string& name);
+    std::vector<SListener> find_by_service(const SERVICE* service);
+    void                   stop_all();
+    bool                   reload_tls();
+
+private:
+    std::list<SListener> m_listeners;
+    std::mutex           m_lock;
+
+    bool listener_is_duplicate(const SListener& listener);
+};
+
 bool Listener::Manager::listener_is_duplicate(const SListener& listener)
 {
     std::string name = listener->name();
@@ -392,6 +427,9 @@ json_t* Listener::Manager::to_json_collection(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_LISTENERS, arr);
 }
 
+/**
+ * Listener::Config
+ */
 Listener::Config::Config(const std::string& name, Listener* listener)
     : mxs::config::Configuration(name, &s_spec)
     , m_listener(listener)
@@ -469,6 +507,10 @@ bool Listener::Config::configure(json_t* json, std::set<std::string>* pUnrecogni
     m_listener->m_params = mxs::ConfigParameters::from_json(json);
     return mxs::config::Configuration::configure(json, pUnrecognized);
 }
+
+/**
+ * Listener
+ */
 
 // static
 Listener::Manager Listener::s_manager;
@@ -1286,34 +1328,6 @@ Listener::read_connection_init_sql(const string& filepath, ListenerData::Connect
         }
     }
     return file_ok;
-}
-
-namespace maxscale
-{
-void mark_auth_as_failed(const std::string& remote)
-{
-    if (rate_limit.mark_auth_as_failed(remote))
-    {
-        MXB_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
-                   remote.c_str(), BLOCK_TIME);
-    }
-}
-
-ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                           std::unique_ptr<mxs::ProtocolModule> protocol_module,
-                           const std::string& listener_name,
-                           std::vector<SAuthenticator>&& authenticators,
-                           ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping)
-    : m_ssl(move(ssl))
-    , m_default_sql_mode(default_sql_mode)
-    , m_service(*service)
-    , m_proto_module(move(protocol_module))
-    , m_listener_name(listener_name)
-    , m_authenticators(move(authenticators))
-    , m_conn_init_sql(init_sql)
-    , m_mapping_info(move(mapping))
-{
-}
 }
 
 Listener::SData Listener::create_test_data(const mxs::ConfigParameters& params)
