@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <maxbase/stopwatch.hh>
 #include "test_base.hh"
 
 class PurgeTest : public TestCase
@@ -6,23 +7,22 @@ class PurgeTest : public TestCase
 public:
     using TestCase::TestCase;
 
-    void run() override
+    void create_new_logs(int num)
     {
-        // Make sure we have multiple binlogs
-        master.query("FLUSH LOGS");
-        master.query("FLUSH LOGS");
-        master.query("FLUSH LOGS");
-        master.query("FLUSH LOGS");
+        for (int i = 0; i < num; ++i)
+        {
+            master.query("FLUSH LOGS");
+        }
         sync(master, maxscale);
+    }
 
-        auto old_logs = maxscale.rows("SHOW BINARY LOGS");
-        test.expect(!old_logs.empty(), "Empty reply to SHOW BINARY LOGS");
-        auto log_to_keep = old_logs.back()[0];
-        old_logs.pop_back();    // Keep these around so that we can check that they don't exist
-        maxscale.query("PURGE BINARY LOGS TO '" + log_to_keep + "'");
-
+    void verify_logs(std::vector<std::string> expected_files,
+                     const std::vector<std::string>& unexpected_files)
+    {
         auto new_logs = maxscale.rows("SHOW BINARY LOGS");
-        test.expect(new_logs.size() == 1, "All but the latest binlog should be purged:\n%s",
+        test.expect(new_logs.size() == expected_files.size(),
+                    "Expected binary logs %s:\ndiffer from SHOW BINARY LOGS %s",
+                    maxbase::create_list_string(expected_files).c_str(),
                     maxscale.pretty_rows("SHOW BINARY LOGS").c_str());
 
         auto index = test.maxscale->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
@@ -30,19 +30,113 @@ public:
         test.expect(!index.output.empty(), "binlog.index should not be empty");
 
         auto files = mxb::strtok(index.output, "\n");
-        test.expect(files.size() == 1, "Only the latest binlog should be listed");
+        test.expect(files.size() == expected_files.size(),
+                    "Expected binary logs %s:\ndiffer from files in binlog.index %s",
+                    maxbase::create_list_string(expected_files).c_str(),
+                    maxbase::create_list_string(files).c_str());
+
+        if (files.empty())
+        {
+            return;
+        }
 
         auto pos = files[0].find_last_of('/');
-        auto filename = files[0].substr(pos + 1);
-        test.expect(filename == log_to_keep, "Only the requested log should exist");
+        auto filepath = files[0].substr(0, pos + 1);
 
-        auto filepath = files[0].substr(0, pos);
-
-        for (const auto& a : old_logs)
+        // add the path to the expected files
+        for (auto& expected_file : expected_files)
         {
-            auto file = test.maxscale->ssh_output("test -f " + filepath + "/" + a[0]);
-            test.expect(file.rc != 0, "File '%s' should not exist.", a[0].c_str());
+            expected_file = filepath + expected_file;
         }
+
+        std::sort(begin(expected_files), end(expected_files));
+        std::sort(begin(files), end(files));
+
+        test.expect(expected_files == files,
+                    "Expected binary logs %s:\ndiffer from files in binlog.index %s",
+                    maxbase::create_list_string(expected_files).c_str(),
+                    maxbase::create_list_string(files).c_str()
+                    );
+
+        // Finally make sure the original files have been deleted
+        for (const auto& a : unexpected_files)
+        {
+            auto file = test.maxscale->ssh_output("test -f " + filepath + a);
+            test.expect(file.rc != 0, "File '%s' should not exist.", a.c_str());
+        }
+    }
+
+    void test_purge()
+    {
+        create_new_logs(5);
+
+        auto old_logs = maxscale.rows("SHOW BINARY LOGS");
+        test.expect(!old_logs.empty(), "Empty reply to SHOW BINARY LOGS");
+        auto log_to_keep = old_logs.back()[0];
+        old_logs.pop_back();    // Keep these around so that we can check that they don't exist
+        maxscale.query("PURGE BINARY LOGS TO '" + log_to_keep + "'");
+
+        std::vector<std::string> unexpected_files;
+        for (const auto& old : old_logs)
+        {
+            unexpected_files.push_back(old[0]);
+        }
+
+        verify_logs({log_to_keep}, unexpected_files);
+    }
+
+    void test_log_expiration()
+    {
+        // These should match the config
+        const int expire_log_minimum_files = 2;
+        const maxbase::Duration expire_log_duration = 30s;
+        const maxbase::Duration purge_poll_timeout = 10s;
+        const maxbase::Duration max_wait_time = expire_log_duration + purge_poll_timeout + 5s;
+
+        const int num_new_logs = 10;
+
+        create_new_logs(num_new_logs);
+
+        maxbase::Timer timer(expire_log_duration);
+        maxbase::StopWatch stop_watch;
+
+        auto all_logs = maxscale.rows("SHOW BINARY LOGS");
+        test.expect(all_logs.size() > num_new_logs, "Too few logs from SHOW BINARY LOGS");
+
+        timer.wait_alarm();         // wait until the first moment logs could be purged
+        timer = maxbase::Timer(1s); // then check once a second
+
+        // Wait until the logs are purged, or until they should have been purged
+        while (stop_watch.split() < max_wait_time)
+        {
+            auto new_logs = maxscale.rows("SHOW BINARY LOGS");
+            if (new_logs.size() == expire_log_minimum_files)
+            {
+                break;
+            }
+            timer.wait_alarm();
+        }
+
+        std::vector<std::string> expected_files;
+        for (int i = 0; i < expire_log_minimum_files; ++i)
+        {
+            expected_files.push_back(all_logs.back()[0]);
+            all_logs.pop_back();
+        }
+
+        std::vector<std::string> unexpected_files;
+        for (const auto& old : all_logs)
+        {
+            unexpected_files.push_back(old[0]);
+        }
+
+        verify_logs(expected_files, unexpected_files);
+    }
+
+    void run() override
+    {
+        test_purge();
+        test_log_expiration();
     }
 };
 
