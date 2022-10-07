@@ -135,6 +135,16 @@ public:
      */
     static const std::vector<ServerInfo::bitfield>& default_repl_states();
 
+    struct RoleInfo
+    {
+        int         masters {0};
+        int         slaves {0};
+        int         running {0};
+        std::string master_name;
+    };
+    RoleInfo get_role_info() const;
+
+
 private:
     std::vector<ServerInfo> m_servers;
     TestLogger*             m_log {nullptr};

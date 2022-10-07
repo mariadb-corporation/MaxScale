@@ -1088,6 +1088,34 @@ const std::vector<ServerInfo::bitfield>& ServersInfo::default_repl_states()
     return def_repl_states;
 }
 
+ServersInfo::RoleInfo ServersInfo::get_role_info() const
+{
+    RoleInfo rval;
+
+    for (const auto& srv : m_servers)
+    {
+        auto status = srv.status;
+        if (status == mxt::ServerInfo::master_st)
+        {
+            rval.masters++;
+            if (rval.master_name.empty())
+            {
+                rval.master_name = srv.name;
+            }
+        }
+        else if (status == mxt::ServerInfo::slave_st)
+        {
+            rval.slaves++;
+        }
+        else if (status == mxt::ServerInfo::RUNNING)
+        {
+            rval.running++;
+        }
+    }
+
+    return rval;
+}
+
 void ServerInfo::status_from_string(const string& source, const string& details)
 {
     auto flags = mxb::strtok(source, ",");

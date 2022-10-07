@@ -11,23 +11,11 @@
  * Public License.
  */
 
-#include <iostream>
-#include <iterator>
-#include <string>
-#include <thread>
-#include <vector>
-#include <random>
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
 #include "mariadbmon_utils.hh"
-
-using namespace std;
 
 // The test now runs only two failovers. Change for a longer time limit later.
 // TODO: add semisync to remove this limitation.
-
-// Number of backends
-const int N = 4;
 
 namespace
 {
@@ -37,110 +25,11 @@ void list_servers(TestConnections& test)
     test.print_maxctrl("list servers");
 }
 
-bool check_server_status(TestConnections& test, int id)
-{
-    bool is_master = false;
-
-    MariaDBCluster* pRepl = test.repl;
-
-    string server = string("server") + std::to_string(id);
-
-    StringSet statuses = test.get_server_status(server.c_str());
-    std::ostream_iterator<string> oi(cout, " ");
-
-    cout << server << ": ";
-    std::copy(statuses.begin(), statuses.end(), oi);
-
-    cout << " => ";
-
-    if (statuses.count("Master"))
-    {
-        is_master = true;
-        cout << "OK";
-    }
-    else if (statuses.count("Slave"))
-    {
-        cout << "OK";
-    }
-    else if (statuses.count("Running"))
-    {
-        MYSQL* pConn = pRepl->nodes[id - 1];
-
-        char result[1024];
-        if (find_field(pConn, "SHOW SLAVE STATUS", "Last_IO_Error", result) == 0)
-        {
-            const char needle[] =
-                ", which is not in the master's binlog. "
-                "Since the master's binlog contains GTIDs with higher sequence numbers, "
-                "it probably means that the slave has diverged due to executing extra "
-                "erroneous transactions";
-
-            if (strstr(result, needle))
-            {
-                // A rejoin was attempted, but it failed because the node (old master)
-                // had events that were not present in the new master. That is, a rejoin
-                // is not possible in principle without corrective action.
-                cout << "OK (could not be joined due to GTID issue)";
-            }
-            else
-            {
-                cout << result;
-                test.expect(false, "Merely 'Running' node did not error in expected way.");
-            }
-        }
-        else
-        {
-            test.expect(false, "Could not execute \"SHOW SLAVE STATUS\"");
-        }
-    }
-    else
-    {
-        test.expect(false, "Unexpected server state for %s.", server.c_str());
-    }
-
-    cout << endl;
-
-    return is_master;
-}
-
-void check_server_statuses(TestConnections& test)
-{
-    int masters = 0;
-
-    masters += check_server_status(test, 1);
-    masters += check_server_status(test, 2);
-    masters += check_server_status(test, 3);
-    masters += check_server_status(test, 4);
-
-    if (masters == 0)
-    {
-        test.global_result = 0;
-        test.tprintf("No master, checking that autofail has been turned off.");
-        test.log_includes("disabling automatic failover");
-    }
-    else if (masters != 1)
-    {
-        test.expect(!true, "Unexpected number of masters: %d", masters);
-    }
-}
-
-bool is_valid_server_id(TestConnections& test, int id)
-{
-    std::set<int> ids;
-    test.repl->connect();
-
-    for (int i = 0; i < N; i++)
-    {
-        ids.insert(test.repl->get_server_id(i));
-    }
-
-    test.repl->disconnect();
-    return ids.count(id);
-}
-
 void run(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     testclient::Settings sett;
     sett.host = mxs.ip4();
@@ -155,51 +44,83 @@ void run(TestConnections& test)
     if (test.ok())
     {
         clients.start();
+        sleep(1);
+        int failovers = 0;
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3 && test.ok(); i++)
         {
-            mxs.wait_for_monitor();
+            auto servers = mxs.get_servers();
+            servers.print();
+            auto master = servers.get_master();
+            bool have_master = master.server_id > 0;
+            int slaves = servers.get_role_info().slaves;
 
-            int master_id = get_master_server_id(test);
-
-            if (is_valid_server_id(test, master_id))
+            if (have_master && slaves >= 1)
             {
-                test.reset_timeout();
-                cout << "\nStopping node: " << master_id << endl;
-                test.repl->stop_node(master_id - 1);
+                // Can do another failover.
+                test.tprintf("Stopping master '%s'", master.name.c_str());
+                int old_master_ind = master.server_id - 1;
+                repl.stop_node(old_master_ind);
+                mxs.sleep_and_wait_for_monitor(2, 3);
 
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
-
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
-
-                test.reset_timeout();
-                test.maxscale->wait_for_monitor();
-                cout << "\nStarting node: " << master_id << endl;
-                test.repl->start_node(master_id - 1);
-
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
-
-                test.maxscale->wait_for_monitor();
-                list_servers(test);
+                // Failover should have happened, check.
+                auto servers_after = mxs.get_servers();
+                auto new_master = servers_after.get_master();
+                if (new_master.server_id >= 0 && new_master.server_id != master.server_id)
+                {
+                    failovers++;
+                    test.tprintf("Failover %i successfull.", failovers);
+                }
+                else if (new_master.server_id >= 0)
+                {
+                    test.add_failure("Master did not change, '%s' is still master.", new_master.name.c_str());
+                }
+                else
+                {
+                    test.add_failure("Failover didn't happen, no master.");
+                }
+                test.tprintf("Starting old master '%s'", master.name.c_str());
+                repl.start_node(old_master_ind);
+                sleep(1);
+            }
+            else if (have_master)
+            {
+                test.tprintf("No more slaves to promote, cannot continue.");
             }
             else
             {
-                test.expect(false, "Unexpected master id: %d", master_id);
+                test.tprintf("No master, cannot continue");
             }
         }
 
+        test.expect(failovers >= 3, "Expected at least 3 failovers, but only managed %i.", failovers);
         mxs.wait_for_monitor();
         clients.stop();
-
-        test.repl->close_connections();
-        test.repl->connect();
-
-        check_server_statuses(test);
     }
     clients.cleanup();
+
+    // Restore servers.
+    auto servers = mxs.get_servers();
+    auto roles = servers.get_role_info();
+    if (roles.masters == 1 && roles.slaves == 3)
+    {
+        if (servers.get(0).status == mxt::ServerInfo::master_st)
+        {
+            // server1 is already master, no need to anything
+        }
+        else
+        {
+            mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
+        }
+    }
+    else
+    {
+        // Replication broken.
+        mxs.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
+    }
+
+    mxs.wait_for_monitor(2);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 }
 }
 
