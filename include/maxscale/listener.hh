@@ -257,10 +257,9 @@ public:
      *
      * @note This function can only be called from the main worker.
      *
-     * @param worker  The routing worker where the listener should also
-                      listen.
+     * @param worker  The routing worker that should stop listening.
      *
-     * @return True if the listener could be added to the worker. True will
+     * @return True if the listener could be removed from the worker. True will
      *         unconditionally be returned if the listener is not started.
      */
     bool unlisten(mxs::RoutingWorker& worker);

@@ -179,7 +179,7 @@ RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
-    remove_pollable(this);
+    stop_polling_on_shared_fd();
     m_callable.cancel_dcalls();
 }
 
@@ -326,6 +326,9 @@ bool RoutingWorker::increase_threads(int nDelta)
     int nBefore = this_unit.nCreated.load(std::memory_order_relaxed);
     int nAfter = nBefore + nDelta;
 
+    auto services = Service::get_all();
+    auto listeners = Listener::get_started_listeners();
+
     int i = nBefore;
     for (; i < nAfter; ++i)
     {
@@ -338,8 +341,6 @@ bool RoutingWorker::increase_threads(int nDelta)
             if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
             {
                 bool success = true;
-
-                auto services = Service::get_all();
 
                 for (auto* pService : services)
                 {
@@ -354,15 +355,18 @@ bool RoutingWorker::increase_threads(int nDelta)
 
                 if (success)
                 {
-                    auto listeners = Listener::get_started_listeners();
-
                     for (auto sListener : listeners)
                     {
-                        if (!sListener->listen(*sWorker.get()))
+                        // Other listener types are handled implicitly by the routing
+                        // worker reacting to events on the shared routing worker fd.
+                        if (sListener->type() == Listener::Type::UNIQUE_TCP)
                         {
-                            MXB_ERROR("Could not add listener to routing worker %d.", i);
-                            success = false;
-                            break;
+                            if (!sListener->listen(*sWorker.get()))
+                            {
+                                MXB_ERROR("Could not add listener to routing worker %d.", i);
+                                success = false;
+                                break;
+                            }
                         }
                     }
                 }
@@ -410,8 +414,82 @@ bool RoutingWorker::increase_threads(int nDelta)
 //static
 bool RoutingWorker::decrease_threads(int nDelta)
 {
-    MXB_ERROR("Decreasing threads not supported yet.");
-    return false;
+    mxb_assert(nDelta > 0);
+
+    int nBefore = this_unit.nActive.load(std::memory_order_relaxed);
+    int nAfter = nBefore - nDelta;
+    mxb_assert(nAfter > 0);
+
+    auto listeners = Listener::get_started_listeners();
+
+    int i = nBefore - 1;
+    for (; i > nAfter; --i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+
+        bool success = true;
+        for (auto sListener : listeners)
+        {
+            // Other listener types are handled via the stop_polling_on_shared_fd() below.
+            if (sListener->type() == Listener::Type::UNIQUE_TCP)
+            {
+                if (!sListener->unlisten(*pWorker))
+                {
+                    MXB_ERROR("Could not remove listener from routing worker %d.", i);
+                    success = false;
+                    break;
+                }
+            }
+        }
+
+        if (success)
+        {
+            if (!pWorker->stop_polling_on_shared_fd())
+            {
+                MXB_ERROR("Could not deactivate worker.");
+                break;
+            }
+        }
+    }
+
+    if (i != nAfter)
+    {
+        MXB_WARNING("Could remove %d new routing workers, the number of active "
+                    "routing workers is now %d.", nBefore - i, i);
+        nAfter = i;
+    }
+
+    this_unit.nActive.store(nAfter, std::memory_order_relaxed);
+
+    return i != nBefore;
+}
+
+bool RoutingWorker::start_polling_on_shared_fd()
+{
+    bool rv = false;
+
+    // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
+    // because we want it to be level-triggered. That way, as long as there is a single
+    // active (accept() can be called) listening socket, epoll_wait() will return an event
+    // for it.
+    if (add_pollable(EPOLLIN, this))
+    {
+        MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
+        rv = true;
+    }
+    else
+    {
+        MXB_ERROR("Could not add epoll instance for listening sockets to "
+                  "epoll instance of worker: %s",
+                  mxb_strerror(errno));
+    }
+
+    return rv;
+}
+
+bool RoutingWorker::stop_polling_on_shared_fd()
+{
+    return remove_pollable(this);
 }
 
 // static
@@ -1119,19 +1197,8 @@ RoutingWorker* RoutingWorker::create(int index, mxb::WatchdogNotifier* pNotifier
 
     if (pThis)
     {
-        // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
-        // because we want it to be level-triggered. That way, as long as there is a single
-        // active (accept() can be called) listening socket, epoll_wait() will return an event
-        // for it.
-        if (pThis->add_pollable(EPOLLIN, pThis))
+        if (!pThis->start_polling_on_shared_fd())
         {
-            MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
-        }
-        else
-        {
-            MXB_ERROR("Could not add epoll instance for listening sockets to "
-                      "epoll instance of worker: %s",
-                      mxb_strerror(errno));
             delete pThis;
             pThis = NULL;
         }
@@ -2216,7 +2283,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 json_t* mxs_rworker_list_to_json(const char* host)
 {
     RoutingWorker::InfoTask task(host, this_unit.nCreated);
-    RoutingWorker::execute_concurrently(task);
+    RoutingWorker::execute_concurrently(task, mxs::RoutingWorker::ACTIVE);
     return task.resource();
 }
 

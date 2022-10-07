@@ -560,6 +560,9 @@ private:
     static bool increase_threads(int nDelta);
     static bool decrease_threads(int nDelta);
 
+    bool start_polling_on_shared_fd();
+    bool stop_polling_on_shared_fd();
+
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
