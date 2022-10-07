@@ -204,4 +204,8 @@ private:
     void remove_fields_from_resource(json_t* obj, const std::string& type,
                                      const std::unordered_set<std::string>& fields);
     void remove_fields_from_object(json_t* obj, std::vector<std::string>&& field);
+
+    void set_split_cookie(const std::string& public_name, const std::string& private_name,
+                          const std::string& public_part, const std::string& private_part,
+                          const std::string& cookie_opts);
 };
