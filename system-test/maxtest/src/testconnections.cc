@@ -672,17 +672,13 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
 
     // Replace various items in the config file text, then write it to disk. Define a helper function.
     auto replace_text = [&file_contents](const string& what, const string& replacement) {
-            bool found = true;
-            while (found)
+            size_t pos = 0;
+            while (pos != string::npos)
             {
-                auto pos = file_contents.find(what);
+                pos = file_contents.find(what, pos);
                 if (pos != string::npos)
                 {
                     file_contents.replace(pos, what.length(), replacement);
-                }
-                else
-                {
-                    found = false;
                 }
             }
         };
@@ -713,15 +709,21 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
 
             // The following generates basic server definitions for all servers. These, confusingly,
             // use the MaxScale config file name prefix in the placeholder.
-            string all_servers_ph = mxb::string_printf("###%s###", cluster->cnf_server_prefix().c_str());
+            const char* prefix = cluster->cnf_server_prefix().c_str();
+            string all_servers_ph = mxb::string_printf("###%s###", prefix);
             string all_servers_str = cluster->cnf_servers();
             replace_text(all_servers_ph, all_servers_str);
+            // Allow also an alternate form, e.g. "server_definitions".
+            string all_servers_ph2 = mxb::string_printf("###%s_definitions###", prefix);
+            replace_text(all_servers_ph2, all_servers_str);
 
             // The following generates one line with server names. Used with monitors and services.
-            string all_servers_line_ph = mxb::string_printf("###%s_line###",
-                                                            cluster->cnf_server_prefix().c_str());
+            string all_servers_line_ph = mxb::string_printf("###%s_line###", prefix);
             string all_server_line_str = cluster->cnf_servers_line();
             replace_text(all_servers_line_ph, all_server_line_str);
+            // Allow "server_names".
+            string all_servers_line_ph2 = mxb::string_printf("###%s_names###", prefix);
+            replace_text(all_servers_line_ph2, all_server_line_str);
         }
     }
 
