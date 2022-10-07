@@ -33,6 +33,7 @@ export const lodash = {
     keyBy: require('lodash/keyBy'),
     values: require('lodash/values'),
     camelCase: require('lodash/camelCase'),
+    escapeRegExp: require('lodash/escapeRegExp'),
 }
 
 export function getCookie(name) {

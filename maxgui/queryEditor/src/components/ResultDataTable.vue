@@ -91,6 +91,7 @@
                 :showSelect="showSelect"
                 :groupBy="groupBy"
                 :activeRow="activeRow"
+                :search="filterKeyword"
                 @selected-rows="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 @on-cell-right-click="onCellRClick"
@@ -229,7 +230,7 @@ export default {
                 for (const [i, cell] of row.entries()) {
                     if (
                         (this.filterHeaderIdxs.includes(i) || !this.filterHeaderIdxs.length) &&
-                        this.$helpers.ciStrIncludes(`${cell}`, this.filterKeyword)
+                        this.handleFilter(cell, this.filterKeyword, i)
                     ) {
                         match = true
                         break
@@ -304,6 +305,12 @@ export default {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
+        },
+        handleFilter(value, search, cellIdx) {
+            const header = this.$typy(this.tableHeaders[cellIdx]).safeObjectOrEmpty
+            // use custom filter if it's provided
+            if (header.filter) return header.filter(value, search)
+            return this.$helpers.ciStrIncludes(`${value}`, search)
         },
         /**
          * @param {Object} data { e: event, row:[], cell:string, activatorID:string }

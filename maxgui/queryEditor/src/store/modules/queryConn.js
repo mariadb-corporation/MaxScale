@@ -89,15 +89,13 @@ export default {
                 const active_session = rootGetters['querySession/getActiveSession']
                 const res = await this.vue.$queryHttp.get(`/sql/`)
                 const resConnMap = this.vue.$helpers.lodash.keyBy(res.data.data, 'id')
-                const resConnIds = Object.keys(resConnMap)
-                const clientConnIds = queryHelper.getClientConnIds()
-                if (resConnIds.length === 0) {
+                const aliveConnIds = Object.keys(resConnMap)
+                if (aliveConnIds.length === 0) {
                     dispatch('resetAllStates')
                     commit('SET_SQL_CONNS', {})
                 } else {
-                    const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
                     const validSqlConns = Object.keys(state.sql_conns)
-                        .filter(id => validConnIds.includes(id))
+                        .filter(id => aliveConnIds.includes(id))
                         .reduce(
                             (acc, id) => ({
                                 ...acc,
@@ -111,9 +109,8 @@ export default {
                     const invalidCnctIds = Object.keys(state.sql_conns).filter(
                         id => !(id in validSqlConns)
                     )
-                    //delete cookies and reset sessions bound those invalid connections
+                    //reset sessions that are bound to those invalid connections
                     invalidCnctIds.forEach(id => {
-                        this.vue.$helpers.deleteCookie(`conn_id_body_${id}`)
                         dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                     })
 

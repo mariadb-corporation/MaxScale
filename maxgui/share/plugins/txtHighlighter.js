@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { lodash } from '@share/utils/helpers'
 /**
  * Create a span tag with highlighted text
  * @param {String} txt - text to have highlighted text
@@ -19,7 +20,7 @@
 function highlight({ txt, highlightTxt }) {
     let res = txt
     if (highlightTxt !== '') {
-        const regex = new RegExp('(' + highlightTxt + ')', 'gi')
+        const regex = new RegExp('(' + lodash.escapeRegExp(highlightTxt) + ')', 'gi')
         res = res.replace(regex, '<span class="mxs-txt-highlight">$&</span>')
     }
     return res

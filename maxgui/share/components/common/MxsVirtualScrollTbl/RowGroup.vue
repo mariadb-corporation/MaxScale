@@ -4,7 +4,8 @@
             class="d-flex align-center td pl-1 pr-3 mxs-color-helper border-right-table-border"
             :style="{
                 height: lineHeight,
-                width: '100%',
+                minWidth: `${maxWidth}px`,
+                maxWidth: `${maxWidth}px`,
             }"
         >
             <v-btn width="24" height="24" class="arrow-toggle" icon @click="toggleRowGroup">
@@ -18,6 +19,7 @@
             </v-btn>
             <!-- checkbox for selecting/deselecting all items of the group -->
             <v-checkbox
+                v-if="showSelect"
                 :input-value="isRowGroupSelected"
                 dense
                 class="v-checkbox--scale-reduce ma-0 pa-0"
@@ -27,18 +29,18 @@
             />
             <div
                 class="tr--group__content d-inline-flex align-center"
-                :style="{ maxWidth: `${maxRowGroupWidth}px` }"
+                :style="{ maxWidth: `${maxVisWidth}px` }"
             >
                 <mxs-truncate-str
                     class="font-weight-bold"
                     :tooltipItem="{ txt: `${row.groupBy}` }"
-                    :maxWidth="maxRowGroupWidth * 0.15"
+                    :maxWidth="maxVisWidth * 0.15"
                 />
 
                 <span class="d-inline-block val-separator mr-4">:</span>
                 <mxs-truncate-str
                     :tooltipItem="{ txt: `${row.value}` }"
-                    :maxWidth="maxRowGroupWidth * 0.85"
+                    :maxWidth="maxVisWidth * 0.85"
                 />
             </div>
             <mxs-tooltip-btn btnClass="ml-2" width="24" height="24" icon @click="handleUngroup">
@@ -79,9 +81,10 @@ export default {
         boundingWidth: { type: Number, required: true },
         lineHeight: { type: String, required: true },
         showSelect: { type: Boolean, required: true },
+        maxWidth: { type: Number, required: true },
     },
     computed: {
-        maxRowGroupWidth() {
+        maxVisWidth() {
             /** A workaround to get maximum width of row group header
              * 18 is the total width of padding and border of table
              * 24 is the width of toggle button

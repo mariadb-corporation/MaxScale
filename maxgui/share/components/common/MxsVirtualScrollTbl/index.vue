@@ -12,13 +12,13 @@
             :headerStyle="headerStyle"
             :curr2dRowsLength="curr2dRowsLength"
             :showSelect="showSelect"
+            :checkboxColWidth="checkboxColWidth"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
             :scrollBarThicknessOffset="scrollBarThicknessOffset"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
-            @last-vis-header="lastVisHeader = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
@@ -48,6 +48,7 @@
                     :cellContentWidthMap="cellContentWidthMap"
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
+                    :search="search"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -66,6 +67,7 @@
                     :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
                     :showSelect="showSelect"
+                    :maxWidth="maxRowGroupWidth"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 />
                 <horiz-row
@@ -77,13 +79,13 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :showSelect="showSelect"
-                    :activeGroupBy="activeGroupBy"
+                    :checkboxColWidth="checkboxColWidth"
                     :activeRow="activeRow"
                     :genActivatorID="genActivatorID"
                     :headerWidthMap="headerWidthMap"
                     :cellContentWidthMap="cellContentWidthMap"
-                    :lastVisHeader="lastVisHeader"
                     :isDragging="isDragging"
+                    :search="search"
                     @mousedown="onCellDragStart"
                     v-on="$listeners"
                 >
@@ -119,8 +121,6 @@
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
 @selected-rows: value:any[][]. Event is emitted when showSelect props is true
 @scroll-end: Emit when table scroll to the last row
-Emit when the header has groupable and hasCustomGroup keys.
-@custom-group: data:{ rows:any[][], idx:number, header:object}, callback():Map
 @is-grouping: boolean
 */
 import TableHeader from './TableHeader'
@@ -156,11 +156,11 @@ export default {
         groupBy: { type: String, default: '' },
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
+        search: { type: String, default: '' }, // Text input used to highlight cell
     },
     data() {
         return {
             headerWidthMap: {},
-            lastVisHeader: {},
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
@@ -185,6 +185,17 @@ export default {
         },
         lineHeight() {
             return `${this.itemHeight}px`
+        },
+        maxRowGroupWidth() {
+            let width = Object.values(this.headerWidthMap).reduce((acc, v, idx) => {
+                if (idx !== this.idxOfGroupCol) acc += this.$typy(v).safeNumber
+                return acc
+            }, 0)
+            if (this.showSelect) width += this.checkboxColWidth
+            return width
+        },
+        checkboxColWidth() {
+            return this.activeGroupBy ? 82 : 50
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
@@ -332,15 +343,12 @@ export default {
         },
         handleGroupRows(rows) {
             let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
-            if (this.headers[this.idxOfGroupCol].hasCustomGroup) {
-                const data = {
+            const header = this.headers[this.idxOfGroupCol]
+            if (header.customGroup)
+                rowMap = header.customGroup({
                     rows,
                     idx: this.idxOfGroupCol,
-                    header: this.headers[this.idxOfGroupCol],
-                }
-                // emit custom-group and provide callback to assign return value of custom-group
-                this.$emit('custom-group', data, map => (rowMap = map))
-            }
+                })
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({
@@ -439,9 +447,6 @@ export default {
                 background: white;
                 &:first-of-type {
                     border-left: thin solid $table-border;
-                }
-                &--last-cell {
-                    border-right: none;
                 }
             }
             &:hover {

@@ -12,8 +12,8 @@
             class="td d-flex align-center justify-center"
             :style="{
                 height: lineHeight,
-                maxWidth: activeGroupBy ? '82px' : '50px',
-                minWidth: activeGroupBy ? '82px' : '50px',
+                maxWidth: `${checkboxColWidth}px`,
+                minWidth: `${checkboxColWidth}px`,
             }"
         >
             <v-checkbox
@@ -35,7 +35,6 @@
             <table-cell
                 v-if="!h.hidden"
                 :key="`${h.text}_${headerWidthMap[colIdx]}_${colIdx}`"
-                :class="{ 'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString }"
                 :style="{
                     height: lineHeight,
                     minWidth: $helpers.handleAddPxUnit(headerWidthMap[colIdx]),
@@ -50,6 +49,7 @@
                     maxWidth: $typy(cellContentWidthMap[colIdx]).safeNumber,
                     activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
                     isDragging,
+                    search,
                 }"
                 v-on="$listeners"
             >
@@ -76,8 +76,7 @@
  */
 /*
 @on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-Emit when the header has groupable and hasCustomGroup keys.
-@on-ungroup
+@on-ungroup: Emit when the header has groupable key
 */
 import TableCell from './TableCell.vue'
 
@@ -92,13 +91,13 @@ export default {
         tableHeaders: { type: Array, required: true },
         lineHeight: { type: String, required: true },
         showSelect: { type: Boolean, required: true },
-        activeGroupBy: { type: String, required: true },
+        checkboxColWidth: { type: Number, required: true },
         activeRow: { type: [Array, Object], required: true },
         genActivatorID: { type: Function, required: true },
         headerWidthMap: { type: Object, required: true },
         cellContentWidthMap: { type: Object, required: true },
-        lastVisHeader: { type: Object, required: true },
         isDragging: { type: Boolean, default: true },
+        search: { type: String, required: true },
     },
     computed: {
         selectedRows: {

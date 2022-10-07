@@ -48,7 +48,6 @@
                         }`
                     "
                     @on-delete-selected="handleDeleteSelectedRows"
-                    @custom-group="customGroup"
                     @on-done-editing="onDoneEditingSnippets"
                     v-on="$listeners"
                 >
@@ -61,8 +60,12 @@
                     <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
-                    <template v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging } }">
+                    <template
+                        v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging, search } }"
+                    >
                         <mxs-truncate-str
+                            :key="cell"
+                            v-mxs-highlighter="search"
                             :disabled="isDragging"
                             :tooltipItem="{
                                 txt: `${$helpers.dateFormat({
@@ -75,8 +78,10 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-slot:action="{ data: { cell, maxWidth, isDragging } }">
+                    <template v-slot:action="{ data: { cell, maxWidth, isDragging, search } }">
+                        <!-- TODO: Make a global tooltip for showing action column -->
                         <v-tooltip
+                            :key="cell.name"
                             top
                             transition="slide-y-transition"
                             content-class="shadow-drop mxs-color-helper white text-navigation pa-2 pb-4"
@@ -84,6 +89,7 @@
                         >
                             <template v-slot:activator="{ on }">
                                 <span
+                                    v-mxs-highlighter="search"
                                     class="d-inline-block text-truncate"
                                     :style="{ maxWidth: `${maxWidth}px` }"
                                     v-on="on"
@@ -260,7 +266,30 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        header.hasCustomGroup = true
+                        header.customGroup = data => {
+                            const { rows, idx } = data
+                            let map = new Map()
+                            rows.forEach(row => {
+                                const key = this.$helpers.dateFormat({
+                                    moment: this.$moment,
+                                    value: row[idx],
+                                    formatType: 'ddd, DD MMM YYYY',
+                                })
+                                let matrix = map.get(key) || [] // assign an empty arr if not found
+                                matrix.push(row)
+                                map.set(key, matrix)
+                            })
+                            return map
+                        }
+                        header.filter = (value, search) =>
+                            this.$helpers.ciStrIncludes(
+                                this.$helpers.dateFormat({
+                                    moment: this.$moment,
+                                    value,
+                                    formatType: 'ddd, DD MMM YYYY',
+                                }),
+                                search
+                            )
                         break
                     case 'connection_name':
                         header.width = 215
@@ -271,6 +300,8 @@ export default {
                         break
                     case 'action':
                         header.groupable = false
+                        header.filter = (value, search) =>
+                            this.$helpers.ciStrIncludes(JSON.stringify(value), search)
                         break
                     case 'name':
                         header.width = 240
@@ -351,31 +382,6 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
-        },
-        /** Custom groups 2d array with same value at provided index to a Map
-         * @param {Array} data.rows - 2d array to be grouped into a Map
-         * @param {Number} data.idx - col index of the inner array
-         * @param {Object} data.header - header object
-         * @param {Function} callback - Callback function to pass the result
-         */
-        customGroup(data, callback) {
-            const { rows, idx, header } = data
-            switch (header.text) {
-                case 'date': {
-                    let map = new Map()
-                    rows.forEach(row => {
-                        const key = this.$helpers.dateFormat({
-                            moment: this.$moment,
-                            value: row[idx],
-                            formatType: 'ddd, DD MMM YYYY',
-                        })
-                        let matrix = map.get(key) || [] // assign an empty arr if not found
-                        matrix.push(row)
-                        map.set(key, matrix)
-                    })
-                    callback(map)
-                }
-            }
         },
         handleDeleteSelectedRows(itemsToBeDeleted) {
             this.itemsToBeDeleted = itemsToBeDeleted
