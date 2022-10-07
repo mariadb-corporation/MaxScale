@@ -14,8 +14,10 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <string>
 #include <unordered_map>
+#include <string>
+#include <string_view>
+
 #include <microhttpd.h>
 
 #include "httprequest.hh"
@@ -169,7 +171,7 @@ bool mxs_admin_https_enabled();
  * CORS support allows browsers to access the REST API without MaxScale being the origin. There is no
  * validation of the headers which means this is meant only for testing purposes.
  */
-bool mxs_admin_enable_cors();
+void mxs_admin_enable_cors();
 
 /**
  * @brief Check if CORS is enabled for the REST API
@@ -177,6 +179,16 @@ bool mxs_admin_enable_cors();
  * @return True if CORS is enabled
  */
 bool mxs_admin_use_cors();
+
+/**
+ * @brief Set the value of Access-Control-Allow-Origin
+ *
+ * By default the value is set to the host of the requesting host which amounts to the same as
+ * setting it to `Access-Control-Allow-Origin: *`.
+ *
+ * @param The value for Access-Control-Allow-Origin
+ */
+void mxs_admin_allow_origin(std::string_view origin);
 
 /**
  * @brief Reload administrative interface TLS certificates

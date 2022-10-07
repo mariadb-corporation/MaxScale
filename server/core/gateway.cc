@@ -183,6 +183,7 @@ static void enable_module_unloading(const char* arg);
 static void enable_statement_logging(const char* arg);
 static void disable_statement_logging(const char* arg);
 static void enable_cors(const char* arg);
+static void cors_allow_origin(const char* arg);
 static void allow_duplicate_servers(const char* arg);
 static void use_gdb(const char* arg);
 static void redirect_output_to_file(const char* arg);
@@ -269,6 +270,10 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "enable-cors", enable_cors,
         "enable CORS support in the REST API"
+    },
+    {
+        "cors-allow-origin", cors_allow_origin,
+        "enable CORS and set Access-Control-Allow-Origin header to the given value"
     },
     {
         "allow-duplicate-servers", allow_duplicate_servers,
@@ -3049,6 +3054,15 @@ static void disable_statement_logging(const char* arg)
 static void enable_cors(const char* arg)
 {
     mxs_admin_enable_cors();
+}
+
+static void cors_allow_origin(const char* arg)
+{
+    if (arg)
+    {
+        mxs_admin_enable_cors();
+        mxs_admin_allow_origin(arg);
+    }
 }
 
 static void allow_duplicate_servers(const char* arg)

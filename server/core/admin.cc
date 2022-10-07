@@ -107,6 +107,7 @@ static struct ThisUnit
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
     bool               cors = false;
+    std::string        accept_origin = "*";
     std::atomic<bool>  running {true};
 
     std::mutex             lock;
@@ -599,7 +600,7 @@ void Client::send_no_https_error() const
 
 void Client::add_cors_headers(MHD_Response* response) const
 {
-    MHD_add_response_header(response, "Access-Control-Allow-Origin", get_header("Origin").c_str());
+    MHD_add_response_header(response, "Access-Control-Allow-Origin", this_unit.accept_origin.c_str());
     MHD_add_response_header(response, "Access-Control-Allow-Credentials", "true");
     MHD_add_response_header(response, "Vary", "Origin");
 
@@ -1179,9 +1180,14 @@ bool mxs_admin_use_cors()
     return this_unit.cors;
 }
 
-bool mxs_admin_enable_cors()
+void mxs_admin_enable_cors()
 {
-    return this_unit.cors = true;
+    this_unit.cors = true;
+}
+
+void mxs_admin_allow_origin(std::string_view origin)
+{
+    this_unit.accept_origin = origin;
 }
 
 bool mxs_admin_reload_tls()
