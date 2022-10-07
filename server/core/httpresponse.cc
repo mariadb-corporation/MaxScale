@@ -218,11 +218,12 @@ void HttpResponse::set_split_cookie(const std::string& public_name, const std::s
                                     const std::string& public_part, const std::string& private_part,
                                     const std::string& cookie_opts)
 {
-    std::string secure_opt = mxs_admin_https_enabled() ? "; Secure" : "";
+    const bool cors = mxs_admin_use_cors();
+    std::string secure_opt = mxs_admin_https_enabled() || cors ? "; Secure" : "";
     std::string pub_opts = "; SameSite=Lax";
     std::string priv_opts = "; SameSite=Strict; HttpOnly";
 
-    if (mxs_admin_use_cors())
+    if (cors)
     {
         pub_opts = "; SameSite=None";
         priv_opts = "; SameSite=None; HttpOnly";
