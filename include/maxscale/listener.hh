@@ -240,8 +240,9 @@ public:
 
     /**
      * Start listening at specified routing worker that was not present
-     * when the listener was started. This function can only be called
-     * from the main worker.
+     * when the listener was started.
+     *
+     * @note This function can only be called from the main worker.
      *
      * @param worker  The routing worker where the listener should also
                       listen.
@@ -250,6 +251,19 @@ public:
      *         unconditionally be returned if the listener is not started.
      */
     bool listen(mxs::RoutingWorker& worker);
+
+    /**
+     * Stop listening at specified routing worker.
+     *
+     * @note This function can only be called from the main worker.
+     *
+     * @param worker  The routing worker where the listener should also
+                      listen.
+     *
+     * @return True if the listener could be added to the worker. True will
+     *         unconditionally be returned if the listener is not started.
+     */
+    bool unlisten(mxs::RoutingWorker& worker);
 
     /**
      * Stop the listener
@@ -420,6 +434,24 @@ private:
      * @return True if the listening was started successfully
      */
     bool listen_unique(mxs::RoutingWorker& worker);
+
+    /**
+     * Stop listening at specified worker.
+     *
+     * @param worker  The worker in question.
+     *
+     * @return True if the listening was stopped successfully.
+     */
+    bool unlisten_shared(mxs::RoutingWorker& worker);
+
+    /**
+     * Stop listening at specified worker.
+     *
+     * @param worker  The worker in question.
+     *
+     * @return True if the listening was stopped successfully.
+     */
+    bool unlisten_unique(mxs::RoutingWorker& worker);
 
     /**
      * Close all opened file descriptors for this listener

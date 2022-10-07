@@ -1073,9 +1073,18 @@ bool Listener::listen_shared()
 
 bool Listener::listen_shared(mxs::RoutingWorker& worker)
 {
-    // Nothing needs to be done, the shared fd has already been added to
-    // the epoll-set that the worker also uses.
-    return true;
+    // Nothing can to be done; whether or not the worker reacts on
+    // events on the listener fd, depends upon whether the worker
+    // listens on events on the shared routing worker fd.
+    return false;
+}
+
+bool Listener::unlisten_shared(mxs::RoutingWorker& worker)
+{
+    // Nothing can to be done; whether or not the worker reacts on
+    // events on the listener fd, depends upon whether the worker
+    // listens on events on the shared routing worker fd.
+    return false;
 }
 
 bool Listener::listen_unique()
@@ -1155,6 +1164,27 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
     return rval;
 }
 
+bool Listener::unlisten_unique(mxs::RoutingWorker& worker)
+{
+    bool rval = true;
+
+    if (m_state == STARTED)
+    {
+        rval = false;
+
+        if (!worker.call([this, &rval]() {
+                    auto worker = mxs::RoutingWorker::get_current();
+                    rval = worker->remove_pollable(this);
+                }, mxb::Worker::EXECUTE_QUEUED))
+        {
+            MXB_ERROR("Could not call worker thread; it will not stop listening "
+                      "on listener socket.");
+        }
+    }
+
+    return rval;
+}
+
 bool Listener::listen()
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
@@ -1202,6 +1232,28 @@ bool Listener::listen(mxs::RoutingWorker& worker)
         else
         {
             rval = listen_shared(worker);
+        }
+    }
+
+    return rval;
+}
+
+bool Listener::unlisten(mxs::RoutingWorker& worker)
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    mxb::LogScope scope(name());
+
+    bool rval = true;
+    if (m_state == STARTED)
+    {
+        if (m_type == Type::UNIQUE_TCP)
+        {
+            rval = unlisten_unique(worker);
+        }
+        else
+        {
+            rval = unlisten_shared(worker);
         }
     }
 
