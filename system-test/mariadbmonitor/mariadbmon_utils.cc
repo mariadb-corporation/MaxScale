@@ -358,7 +358,7 @@ void ClientGroup::prepare()
     {
         if (insert_data())
         {
-            m_test.repl->sync_slaves();
+            m_test.repl->sync_slaves(0, 30);
         }
     }
 }
@@ -435,5 +435,173 @@ bool ClientGroup::insert_data()
     }
 
     return m_test.ok();
+}
+}
+
+namespace stress_test
+{
+void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,
+                              const testclient::Settings& client_sett)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+    testclient::ClientGroup clients(test, base_sett.test_clients, client_sett);
+    clients.prepare();
+
+    if (test.ok())
+    {
+        clients.start();
+        time_t start = time(NULL);
+        sleep(1);
+        int failovers = 0;
+
+        while (test.ok() && (time(NULL) - start < base_sett.test_duration))
+        {
+            auto servers = mxs.get_servers();
+            servers.print();
+            auto master = servers.get_master();
+            bool have_master = master.server_id > 0;
+            int slaves = servers.get_role_info().slaves;
+
+            if (have_master && slaves >= 1)
+            {
+                // Can do another failover.
+                test.tprintf("Stopping master '%s'", master.name.c_str());
+                int old_master_ind = master.server_id - 1;
+                repl.stop_node(old_master_ind);
+                mxs.sleep_and_wait_for_monitor(2, 3);
+
+                // Failover should have happened, check.
+                auto servers_after = mxs.get_servers();
+                auto new_master = servers_after.get_master();
+                if (new_master.server_id >= 0 && new_master.server_id != master.server_id)
+                {
+                    failovers++;
+                    test.tprintf("Failover %i successfull.", failovers);
+                }
+                else if (new_master.server_id >= 0)
+                {
+                    test.add_failure("Master did not change, '%s' is still master.", new_master.name.c_str());
+                }
+                else
+                {
+                    test.add_failure("Failover didn't happen, no master.");
+                }
+                test.tprintf("Starting old master '%s'", master.name.c_str());
+                repl.start_node(old_master_ind);
+                sleep(1);
+            }
+            else if (have_master)
+            {
+                test.tprintf("No more slaves to promote, cannot continue.");
+            }
+            else
+            {
+                test.tprintf("No master, cannot continue");
+            }
+
+            int diverged = 3 - slaves;
+            if (diverged > 0)
+            {
+                if (base_sett.diverging_allowed)
+                {
+                    test.tprintf("%i slaves have diverged.", diverged);
+                }
+                else
+                {
+                    test.add_failure("%i slaves have diverged.", diverged);
+                }
+            }
+        }
+
+        test.expect(failovers >= base_sett.min_expected_failovers,
+                    "Expected at least %i failovers, but only managed %i.",
+                    base_sett.min_expected_failovers, failovers);
+        mxs.wait_for_monitor();
+        clients.stop();
+    }
+    clients.cleanup();
+
+    // Restore servers.
+    auto servers = mxs.get_servers();
+    auto roles = servers.get_role_info();
+    if (roles.masters == 1 && roles.slaves == 3)
+    {
+        if (servers.get(0).status == mxt::ServerInfo::master_st)
+        {
+            // server1 is already master, no need to anything
+        }
+        else
+        {
+            mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
+        }
+    }
+    else
+    {
+        // Replication broken.
+        mxs.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
+    }
+
+    mxs.wait_for_monitor(2);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+}
+
+void check_semisync_off(TestConnections& test)
+{
+    for (int i = 0; i < test.repl->N; i++)
+    {
+        check_semisync_status(test, i, false, false, 0);
+    }
+}
+
+void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients)
+{
+    const string semis_master = "Rpl_semi_sync_master_status";
+    const string semis_slave = "Rpl_semi_sync_slave_status";
+    const string semis_clients = "Rpl_semi_sync_master_clients";
+
+    auto conn = test.repl->backend(node)->open_connection();
+    auto res = conn->query("show status like 'Rpl%';");
+    if (res && res->get_col_count() == 2)
+    {
+        string master_val;
+        string slave_val;
+        int clients_val = -1;
+
+        while (res->next_row())
+        {
+            string var_name = res->get_string(0);
+            if (var_name == semis_master)
+            {
+                master_val = res->get_string(1);
+            }
+            else if (var_name == semis_slave)
+            {
+                slave_val = res->get_string(1);
+            }
+            else if (var_name == semis_clients)
+            {
+                clients_val = res->get_int(1);
+            }
+        }
+
+        const char* expected_master = master ? "ON" : "OFF";
+        const char* expected_slave = slave ? "ON" : "OFF";
+        const char fmt[] = "Wrong value for '%s' for node%i. Expected '%s', got '%s'";
+        test.expect(master_val == expected_master, fmt, semis_master.c_str(), node, expected_master,
+                    master_val.c_str());
+        test.expect(slave_val == expected_slave, fmt, semis_slave.c_str(), node, expected_slave,
+                    slave_val.c_str());
+        test.expect(clients_val == expected_clients,
+                    "Wrong value for '%s' for node%i. Expected '%i', got '%i'",
+                    semis_clients.c_str(), node, expected_clients, clients_val);
+    }
+    else
+    {
+        test.add_failure("No status variables matched name 'Rpl%%'.");
+    }
 }
 }
