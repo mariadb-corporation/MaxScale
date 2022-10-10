@@ -1175,6 +1175,11 @@ bool Listener::unlisten_unique(mxs::RoutingWorker& worker)
         if (!worker.call([this, &rval]() {
                     auto worker = mxs::RoutingWorker::get_current();
                     rval = worker->remove_pollable(this);
+
+                    mxb_assert(*m_local_fd != -1);
+
+                    close(*m_local_fd);
+                    *m_local_fd = -1;
                 }, mxb::Worker::EXECUTE_QUEUED))
         {
             MXB_ERROR("Could not call worker thread; it will not stop listening "

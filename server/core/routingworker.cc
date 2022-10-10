@@ -319,12 +319,104 @@ bool RoutingWorker::adjust_threads(int nCount)
 bool RoutingWorker::increase_threads(int nDelta)
 {
     mxb_assert(nDelta > 0);
-    mxb_assert(this_unit.nCreated == this_unit.nActive); // TODO: For the time being.
+
+    bool rv = true;
+
+    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+    int nActive = this_unit.nActive.load(std::memory_order_relaxed);
+    int nAvailable = nCreated - nActive;
+
+    if (nAvailable > 0)
+    {
+        int n = std::min(nDelta, nAvailable);
+
+        int nActivated = activate_threads(n);
+
+        if (n == nActivated)
+        {
+            nDelta -= n;
+        }
+        else
+        {
+            MXB_ERROR("Could activate %d threads of %d required. %d workers "
+                      "currently available.", nActivated, nDelta, nActive);
+            rv = false;
+        }
+    }
+
+    if (rv && (nDelta != 0))
+    {
+        rv = create_threads(nDelta);
+    }
+
+    return rv;
+}
+
+//static
+int RoutingWorker::activate_threads(int n)
+{
+    mxb_assert(this_unit.nCreated - this_unit.nActive >= n);
+
+    int nBefore = this_unit.nActive.load(std::memory_order_relaxed);
+    int i = nBefore;
+    n += i;
+
+    for (; i < n; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+
+        if (!pWorker->activate())
+        {
+            break;
+        }
+    }
+
+    this_unit.nActive.store(i, std::memory_order_relaxed);
+
+    return i - nBefore;
+}
+
+bool RoutingWorker::activate()
+{
+    auto listeners = Listener::get_started_listeners();
+
+    for (auto sListener : listeners)
+    {
+        // Other listener types are handled implicitly by the routing
+        // worker reacting to events on the shared routing worker fd.
+        if (sListener->type() == Listener::Type::UNIQUE_TCP)
+        {
+            if (!sListener->listen(*this))
+            {
+                MXB_ERROR("Could not add listener to routing worker %d, some listeners "
+                          "will not be handled by this worker.", index());
+            }
+        }
+    }
+
+    bool rv = true;
+
+    if (!call([this, &rv]() {
+                rv = start_polling_on_shared_fd();
+            }, mxb::Worker::EXECUTE_QUEUED))
+    {
+        MXB_ERROR("Could not call worker.");
+        rv = false;
+    }
+
+    return rv;
+}
+
+//static
+bool RoutingWorker::create_threads(int n)
+{
+    mxb_assert(n > 0);
+    mxb_assert(this_unit.nCreated == this_unit.nActive);
 
     size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
     int nBefore = this_unit.nCreated.load(std::memory_order_relaxed);
-    int nAfter = nBefore + nDelta;
+    int nAfter = nBefore + n;
 
     auto services = Service::get_all();
     auto listeners = Listener::get_started_listeners();
@@ -423,7 +515,7 @@ bool RoutingWorker::decrease_threads(int nDelta)
     auto listeners = Listener::get_started_listeners();
 
     int i = nBefore - 1;
-    for (; i > nAfter; --i)
+    for (; i >= nAfter; --i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
 
@@ -444,14 +536,22 @@ bool RoutingWorker::decrease_threads(int nDelta)
 
         if (success)
         {
-            if (!pWorker->stop_polling_on_shared_fd())
+            if (!pWorker->call([pWorker, &success]() {
+                        if (!pWorker->stop_polling_on_shared_fd())
+                        {
+                            MXB_ERROR("Could not deactivate worker.");
+                            success = false;
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED))
             {
-                MXB_ERROR("Could not deactivate worker.");
+                MXB_ERROR("Could not call worker.");
+                success = false;
                 break;
             }
         }
     }
 
+    ++i;
     if (i != nAfter)
     {
         MXB_WARNING("Could remove %d new routing workers, the number of active "

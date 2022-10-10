@@ -563,6 +563,11 @@ private:
     bool start_polling_on_shared_fd();
     bool stop_polling_on_shared_fd();
 
+    static int activate_threads(int n);
+    static bool create_threads(int n);
+
+    bool activate();
+
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
