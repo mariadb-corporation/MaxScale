@@ -285,7 +285,7 @@ public:
     /**
      * Set the usercache for a routing worker that was created at runtime
      * after the MaxScale startup. Should be called once and must be called
-     * only from the main worker.
+     * only from the main worker or @c worker.
      *
      * @param worker  The routing worker for which the usercache should be set.
      *

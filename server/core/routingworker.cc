@@ -467,36 +467,41 @@ bool RoutingWorker::create_threads(int n)
         {
             if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
             {
-                bool success = true;
+                bool success = false;
 
-                for (auto* pService : services)
-                {
-                    if (!pService->set_usercache_for(*sWorker.get()))
-                    {
-                        MXB_ERROR("Could not set usercache of service %s for new routing worker %d.",
-                                  pService->name(), i);
-                        success = false;
-                        break;
-                    }
-                }
+                sWorker->call([&sWorker, &services, &listeners, &success]() {
+                        success = true;
 
-                if (success)
-                {
-                    for (auto sListener : listeners)
-                    {
-                        // Other listener types are handled implicitly by the routing
-                        // worker reacting to events on the shared routing worker fd.
-                        if (sListener->type() == Listener::Type::UNIQUE_TCP)
+                        for (auto* pService : services)
                         {
-                            if (!sListener->listen(*sWorker.get()))
+                            if (!pService->set_usercache_for(*sWorker.get()))
                             {
-                                MXB_ERROR("Could not add listener to routing worker %d.", i);
+                                MXB_ERROR("Could not set usercache of service %s for new routing worker %d.",
+                                          pService->name(), sWorker->index());
                                 success = false;
                                 break;
                             }
                         }
-                    }
-                }
+
+                        if (success)
+                        {
+                            for (auto sListener : listeners)
+                            {
+                                // Other listener types are handled implicitly by the routing
+                                // worker reacting to events on the shared routing worker fd.
+                                if (sListener->type() == Listener::Type::UNIQUE_TCP)
+                                {
+                                    if (!sListener->listen(*sWorker.get()))
+                                    {
+                                        MXB_ERROR("Could not add listener to routing worker %d.",
+                                                  sWorker->index());
+                                        success = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
 
                 if (success)
                 {

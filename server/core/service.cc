@@ -1895,7 +1895,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
 
 bool Service::set_usercache_for(mxs::RoutingWorker& worker)
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_main_worker() || RoutingWorker::get_current() == &worker);
     return worker.call([this]() {
             mxb_assert(!*m_usercache);
             *m_usercache = user_account_manager()->create_user_account_cache();
