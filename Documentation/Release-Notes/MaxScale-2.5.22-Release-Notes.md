@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.5.22 Release Notes -- 2022-10-06
+# MariaDB MaxScale 2.5.22 Release Notes -- 2022-10-11
 
 Release 2.5.22 is a GA release.
 
