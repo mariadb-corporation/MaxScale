@@ -284,6 +284,7 @@ void RoutingWorker::finish()
 //static
 bool RoutingWorker::adjust_threads(int nCount)
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(this_unit.initialized);
     mxb_assert(this_unit.running);
 
@@ -318,6 +319,7 @@ bool RoutingWorker::adjust_threads(int nCount)
 //static
 bool RoutingWorker::increase_threads(int nDelta)
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(nDelta > 0);
 
     bool rv = true;
@@ -355,17 +357,25 @@ bool RoutingWorker::increase_threads(int nDelta)
 //static
 int RoutingWorker::activate_threads(int n)
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(this_unit.nCreated - this_unit.nActive >= n);
 
     int nBefore = this_unit.nActive.load(std::memory_order_relaxed);
     int i = nBefore;
     n += i;
 
+    auto listeners = Listener::get_started_listeners();
+
     for (; i < n; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
 
-        if (!pWorker->activate())
+        bool success = false;
+        pWorker->call([pWorker, &listeners, &success]() {
+                success = pWorker->activate(listeners);
+            }, mxb::Worker::EXECUTE_QUEUED);
+
+        if (!success)
         {
             break;
         }
@@ -376,9 +386,11 @@ int RoutingWorker::activate_threads(int n)
     return i - nBefore;
 }
 
-bool RoutingWorker::activate()
+bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 {
-    auto listeners = Listener::get_started_listeners();
+    mxb_assert(get_current() == this);
+
+    bool rv = false;
 
     for (auto sListener : listeners)
     {
@@ -394,14 +406,36 @@ bool RoutingWorker::activate()
         }
     }
 
+    rv = start_polling_on_shared_fd();
+    mxb_assert(rv); // Should not ever fail.
+
+    return rv;
+}
+
+bool RoutingWorker::deactivate(const std::vector<SListener>& listeners)
+{
+    mxb_assert(get_current() == this);
+
     bool rv = true;
 
-    if (!call([this, &rv]() {
-                rv = start_polling_on_shared_fd();
-            }, mxb::Worker::EXECUTE_QUEUED))
+    for (auto sListener : listeners)
     {
-        MXB_ERROR("Could not call worker.");
-        rv = false;
+        // Other listener types are handled via the stop_polling_on_shared_fd() below.
+        if (sListener->type() == Listener::Type::UNIQUE_TCP)
+        {
+            if (!sListener->unlisten(*this))
+            {
+                MXB_ERROR("Could not remove listener from routing worker %d.", index());
+                rv = false;
+                break;
+            }
+        }
+    }
+
+    if (rv)
+    {
+        rv = stop_polling_on_shared_fd();
+        mxb_assert(rv); // Should not ever fail.
     }
 
     return rv;
@@ -410,6 +444,7 @@ bool RoutingWorker::activate()
 //static
 bool RoutingWorker::create_threads(int n)
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
     mxb_assert(this_unit.nCreated == this_unit.nActive);
 
@@ -519,35 +554,14 @@ bool RoutingWorker::decrease_threads(int nDelta)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
 
-        bool success = true;
-        for (auto sListener : listeners)
-        {
-            // Other listener types are handled via the stop_polling_on_shared_fd() below.
-            if (sListener->type() == Listener::Type::UNIQUE_TCP)
-            {
-                if (!sListener->unlisten(*pWorker))
-                {
-                    MXB_ERROR("Could not remove listener from routing worker %d.", i);
-                    success = false;
-                    break;
-                }
-            }
-        }
+        bool success = false;
+        pWorker->call([pWorker, &listeners, &success]() {
+                success = pWorker->deactivate(listeners);
+            }, mxb::Worker::EXECUTE_QUEUED);
 
-        if (success)
+        if (!success)
         {
-            if (!pWorker->call([pWorker, &success]() {
-                        if (!pWorker->stop_polling_on_shared_fd())
-                        {
-                            MXB_ERROR("Could not deactivate worker.");
-                            success = false;
-                        }
-                    }, mxb::Worker::EXECUTE_QUEUED))
-            {
-                MXB_ERROR("Could not call worker.");
-                success = false;
-                break;
-            }
+            break;
         }
     }
 

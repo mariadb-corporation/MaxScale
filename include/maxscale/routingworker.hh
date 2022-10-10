@@ -566,7 +566,8 @@ private:
     static int activate_threads(int n);
     static bool create_threads(int n);
 
-    bool activate();
+    bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);
+    bool deactivate(const std::vector<std::shared_ptr<Listener>>& listeners);
 
     bool pre_run() override;
     void post_run() override;
