@@ -668,9 +668,13 @@ bool Listener::stop()
         if (m_type == Type::UNIQUE_TCP)
         {
             if (execute_and_check([this]() {
-                                      mxb_assert(*m_local_fd != -1);
-                                      auto worker = mxs::RoutingWorker::get_current();
-                                      return worker->remove_pollable(this);
+                                      bool rv = true;
+                                      if (*m_local_fd != -1)
+                                      {
+                                          auto worker = mxs::RoutingWorker::get_current();
+                                          rv = worker->remove_pollable(this);
+                                      }
+                                      return rv;
                                   }))
             {
                 m_state = STOPPED;
