@@ -242,7 +242,8 @@ public:
      * Start listening at specified routing worker that was not present
      * when the listener was started.
      *
-     * @note This function can only be called from the main worker.
+     * @note This function can only be called from the main worker or
+     *       from @c worker provided as argument.
      *
      * @param worker  The routing worker where the listener should also
                       listen.
@@ -255,7 +256,8 @@ public:
     /**
      * Stop listening at specified routing worker.
      *
-     * @note This function can only be called from the main worker.
+     * @note This function can only be called from the main worker or
+     *       from @c worker provided as argument.
      *
      * @param worker  The routing worker that should stop listening.
      *

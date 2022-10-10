@@ -1135,7 +1135,7 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
     {
         rval = false;
 
-        auto open_socket = [&worker, this, &rval]() {
+        auto open_socket = [this, &worker, &rval]() {
             mxb_assert(*m_local_fd == -1);
 
             mxb::LogScope scope(name());
@@ -1158,7 +1158,7 @@ bool Listener::listen_unique(mxs::RoutingWorker& worker)
             }
         };
 
-        if (!worker.call(open_socket, mxb::Worker::EXECUTE_QUEUED))
+        if (!worker.call(open_socket, mxb::Worker::EXECUTE_AUTO))
         {
             MXB_ERROR("Could not call worker thread; it will not start listening "
                       "on listener socket.");
@@ -1176,15 +1176,18 @@ bool Listener::unlisten_unique(mxs::RoutingWorker& worker)
     {
         rval = false;
 
-        if (!worker.call([this, &rval]() {
-                    auto worker = mxs::RoutingWorker::get_current();
-                    rval = worker->remove_pollable(this);
+        auto close_socket = [this, &worker, &rval]() {
+            mxb_assert(*m_local_fd != -1);
 
-                    mxb_assert(*m_local_fd != -1);
+            mxb::LogScope scope(name());
 
-                    close(*m_local_fd);
-                    *m_local_fd = -1;
-                }, mxb::Worker::EXECUTE_QUEUED))
+            rval = worker.remove_pollable(this);
+
+            close(*m_local_fd);
+            *m_local_fd = -1;
+        };
+
+        if (!worker.call(close_socket, mxb::Worker::EXECUTE_AUTO))
         {
             MXB_ERROR("Could not call worker thread; it will not stop listening "
                       "on listener socket.");
@@ -1227,7 +1230,7 @@ bool Listener::listen()
 
 bool Listener::listen(mxs::RoutingWorker& worker)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_main_worker() || &worker == mxs::RoutingWorker::get_current());
 
     mxb::LogScope scope(name());
 
@@ -1249,7 +1252,7 @@ bool Listener::listen(mxs::RoutingWorker& worker)
 
 bool Listener::unlisten(mxs::RoutingWorker& worker)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_main_worker() || &worker == mxs::RoutingWorker::get_current());
 
     mxb::LogScope scope(name());
 
