@@ -1103,7 +1103,7 @@ void RoutingWorker::pool_close_all_conns_by_server(SERVER* pSrv)
 
 void RoutingWorker::ConnectionPool::close_expired()
 {
-    auto* pServer = static_cast<Server*>(m_target_server);
+    auto* pServer = static_cast<Server*>(m_pTarget_server);
     auto max_age = pServer->persistmaxtime();
 
     time_t now = time(nullptr);
@@ -1143,17 +1143,17 @@ void RoutingWorker::ConnectionPool::close_expired()
 
     for (auto* pConn : expired_conns)
     {
-        m_owner->close_pooled_dcb(pConn->dcb());
+        m_pOwner->close_pooled_dcb(pConn->dcb());
     }
 }
 
-void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* conn)
+void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* pConn)
 {
-    auto it = m_contents.find(conn);
+    auto it = m_contents.find(pConn);
     mxb_assert(it != m_contents.end());
     it->second.release_conn();
     m_contents.erase(it);
-    m_owner->close_pooled_dcb(conn->dcb());
+    m_pOwner->close_pooled_dcb(pConn->dcb());
 }
 
 void RoutingWorker::ConnectionPool::close_all()
@@ -1161,8 +1161,8 @@ void RoutingWorker::ConnectionPool::close_all()
     // Close all entries in the server-specific pool.
     for (auto& pool_entry : m_contents)
     {
-        BackendDCB* dcb = pool_entry.second.release_conn()->dcb();
-        m_owner->close_pooled_dcb(dcb);
+        BackendDCB* pDcb = pool_entry.second.release_conn()->dcb();
+        m_pOwner->close_pooled_dcb(pDcb);
     }
     m_contents.clear();
 }
@@ -1178,18 +1178,19 @@ void RoutingWorker::ConnectionPool::add_connection(mxs::BackendConnection* conn)
     m_stats.max_size = std::max(m_stats.max_size, m_contents.size());
 }
 
-RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server,
+RoutingWorker::ConnectionPool::ConnectionPool(mxs::RoutingWorker* pOwner,
+                                              SERVER* pTarget_server,
                                               int global_capacity)
-    : m_owner(owner)
-    , m_target_server(target_server)
+    : m_pOwner(pOwner)
+    , m_pTarget_server(pTarget_server)
 {
     set_capacity(global_capacity);
 }
 
 RoutingWorker::ConnectionPool::ConnectionPool(RoutingWorker::ConnectionPool&& rhs)
     : m_contents(std::move(rhs.m_contents))
-    , m_owner(rhs.m_owner)
-    , m_target_server(rhs.m_target_server)
+    , m_pOwner(rhs.m_pOwner)
+    , m_pTarget_server(rhs.m_pTarget_server)
     , m_capacity(rhs.m_capacity)
     , m_stats(rhs.m_stats)
 {

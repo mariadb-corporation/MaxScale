@@ -525,14 +525,7 @@ private:
     bool try_shutdown();
 
 private:
-    int              m_index;     /*< Index of routing worker */
-    Worker::Callable m_callable;  /*< Context for own dcalls */
-    SessionsById     m_sessions;  /*< A mapping of session_id->MXS_SESSION */
-    Zombies          m_zombies;   /*< DCBs to be deleted. */
-    IndexedStorage   m_storage;   /*< The storage of this worker. */
-    DCBs             m_dcbs;      /*< DCBs managed by this worker. */
-
-    struct
+    struct Rebalance
     {
         RoutingWorker* pTo {nullptr};   /*< Worker to offload work to. */
         bool           perform = false;
@@ -551,7 +544,7 @@ private:
             perform = false;
             nSessions = 0;
         }
-    } m_rebalance;
+    };
 
     RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier);
 
@@ -642,10 +635,10 @@ private:
     class ConnectionPool
     {
     public:
-        ConnectionPool(mxs::RoutingWorker* owner, SERVER* target_server, int global_capacity);
+        ConnectionPool(mxs::RoutingWorker* pOwner, SERVER* pTarget_server, int global_capacity);
         ConnectionPool(ConnectionPool&& rhs);
 
-        void remove_and_close(mxs::BackendConnection* conn);
+        void remove_and_close(mxs::BackendConnection* pConn);
         void close_expired();
         void close_all();
         bool empty() const;
@@ -654,39 +647,42 @@ private:
 
         ConnectionPoolStats stats() const;
 
-        std::pair<uint64_t, mxs::BackendConnection*> get_connection(MXS_SESSION* session);
+        std::pair<uint64_t, mxs::BackendConnection*> get_connection(MXS_SESSION* pSession);
 
-        void add_connection(mxs::BackendConnection* conn);
+        void add_connection(mxs::BackendConnection* pConn);
 
     private:
         std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;
 
-        mxs::RoutingWorker*         m_owner {nullptr};
-        SERVER*                     m_target_server {nullptr};
+        mxs::RoutingWorker*         m_pOwner {nullptr};
+        SERVER*                     m_pTarget_server {nullptr};
         int                         m_capacity {0}; // Capacity for this pool.
         mutable ConnectionPoolStats m_stats;
     };
 
     using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
+    using EndpointsBySrv = std::map<const SERVER*, std::deque<ServerEndpoint*>>;
+    using TickFuncs = std::vector<std::function<void()>>;
 
+    int                m_index;     /*< Index of routing worker */
+    Worker::Callable   m_callable;  /*< Context for own dcalls */
+    SessionsById       m_sessions;  /*< A mapping of session_id->MXS_SESSION */
+    Zombies            m_zombies;   /*< DCBs to be deleted. */
+    IndexedStorage     m_storage;   /*< The storage of this worker. */
+    DCBs               m_dcbs;      /*< DCBs managed by this worker. */
+    Rebalance          m_rebalance;
     // Protects the connection pool. This is only contended when the REST API asks for statistics on the
     // connection pool and accessing it directly is significantly faster than waiting for the worker to finish
     // their current work and post the results.
     mutable std::mutex m_pool_lock;
-
-    ConnPoolGroup m_pool_group;     /**< Pooled connections for each server */
-
-    using EndpointsBySrv = std::map<const SERVER*, std::deque<ServerEndpoint*>>;
-
-    /** Has a ServerEndpoint activation round been scheduled already? Used to avoid adding multiple identical
-     * delayed calls. */
-    bool           m_ep_activation_scheduled {false};
-    EndpointsBySrv m_eps_waiting_for_conn;      /**< ServerEndpoints waiting for a connection */
-
-    DCBHandler m_pool_handler;
-    long       m_next_timeout_check {0};
-
-    std::vector<std::function<void()>> m_epoll_tick_funcs;
+    ConnPoolGroup      m_pool_group;     /**< Pooled connections for each server */
+    // Has a ServerEndpoint activation round been scheduled already? Used to avoid adding multiple identical
+    // delayed calls.
+    bool               m_ep_activation_scheduled {false};
+    EndpointsBySrv     m_eps_waiting_for_conn;      /**< ServerEndpoints waiting for a connection */
+    DCBHandler         m_pool_handler;
+    long               m_next_timeout_check {0};
+    TickFuncs          m_epoll_tick_funcs;
 };
 }
 
