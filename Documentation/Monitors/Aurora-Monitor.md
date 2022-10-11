@@ -1,5 +1,7 @@
 # Aurora Monitor
 
+**Note** The Aurora Monitor is deprecated in 22.08.2 and will be removed in 23.02.0.
+
 This module monitors the status of Aurora cluster replicas. These replicas do
 not use the standard MySQL protocol replication but rely on a mechanism provided
 by AWS to replicate changes.

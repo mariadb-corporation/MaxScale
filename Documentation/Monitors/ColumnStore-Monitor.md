@@ -1,5 +1,8 @@
 # ColumnStore Monitor
 
+**Note** The ColumnStore monitor is deprecated in 22.08.2 and will be removed
+in 23.02.0. It is superseded by [MariaDB Monitor](MariaDB-Monitor.md).
+
 The ColumnStore monitor, `csmon`, is a monitor module for MariaDB ColumnStore
 servers. The monitor supports ColumnStore version 1.5.
 
