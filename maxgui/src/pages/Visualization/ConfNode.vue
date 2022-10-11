@@ -16,6 +16,7 @@
             <template v-if="!isShowingFilterNodes">
                 <router-link
                     target="_blank"
+                    rel="noopener noreferrer"
                     :to="`/dashboard/${nodeType}/${node.data.id}`"
                     class="text-truncate mr-2"
                     :style="{ color: headingColor.txt }"
@@ -46,6 +47,7 @@
             <template v-if="isShowingFilterNodes">
                 <router-link
                     target="_blank"
+                    rel="noopener noreferrer"
                     :to="`/dashboard/${node.data.type}/${node.data.id}`"
                     class="text-truncate "
                 >

@@ -70,10 +70,7 @@ export default {
     },
     methods: {
         navigate(nxtRoute) {
-            const { path, url, meta } = nxtRoute
-            if (url) {
-                return window.open(url)
-            }
+            const { path, meta } = nxtRoute
             /**
              * E.g. Sidebar dashboard path is /dashboard, but it'll be redirected to /dashboard/servers
              * This checks it and prevent redundant navigation
