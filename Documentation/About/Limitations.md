@@ -111,9 +111,9 @@ transaction or change the autocommit mode using a prepared statement.
   statements. If a query by a query ID is to be killed, it needs to be done
   directly on the backend databases.
 
-* The `KILL` commands are executed asynchronously and the results are
-  ignored. Due to this, they will always appear to succeed even if the user is
-  lacking the permissions.
+* Any `KILL` commands executed using a prepared statement are ignored by
+  MaxScale. If any are executed, it is highly likely that the wrong connection
+  ends up being killed.
 
 * The change user command (COM_CHANGE_USER) only works with standard
   authentication.
