@@ -100,8 +100,6 @@ Common options for all monitor modules.
 
 Module specific documentation.
 
- - [Aurora Monitor](Monitors/Aurora-Monitor.md)
- - [ColumnStore Monitor](Monitors/ColumnStore-Monitor.md)
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
  - [Xpand Monitor](Monitors/Xpand-Monitor.md)

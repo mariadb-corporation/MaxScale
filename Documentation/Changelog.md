@@ -1,5 +1,10 @@
 # Changelog
 
+# MariaDB MaxScale 23.02
+
+* The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
+  have been removed.
+
 ## MariaDB MaxScale 22.08
 
 * Sessions can now be restarted so that added server are taken into use.
