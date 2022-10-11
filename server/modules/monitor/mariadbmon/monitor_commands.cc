@@ -1570,7 +1570,7 @@ void RebuildServer::test_datalink()
     auto& error_out = m_result.output;
     bool success = false;
     // Test the datalink between source and target by steaming some bytes.
-    string test_serve_cmd = mxb::string_printf("echo \"%s\" | socat - TCP-LISTEN:%i,reuseaddr",
+    string test_serve_cmd = mxb::string_printf("socat -u EXEC:'echo %s' TCP-LISTEN:%i,reuseaddr",
                                                link_test_msg, m_rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
@@ -1836,7 +1836,7 @@ void RebuildServer::check_datadir_size()
     // Check that target data directory has contents. This is just to get a better error message in case
     // transfer failed without any clear errors. Even if this part fails, go to next state. The size check
     // can fail simply because MaxScale cannot run "du" as sudo.
-    string du_cmd = mxb::string_printf("sudo du -sm %s/", rebuild_datadir.c_str());
+    string du_cmd = mxb::string_printf("sudo du --apparent-size -sb %s/", rebuild_datadir.c_str());
     auto res = ssh_util::run_cmd(*m_target_ses, du_cmd, m_ssh_timeout);
     if (res.type == RType::OK && res.rc == 0)
     {
@@ -1844,11 +1844,11 @@ void RebuildServer::check_datadir_size()
         auto words = mxb::strtok(res.output, " \t");
         if (words.size() > 1)
         {
-            long size_mb = -1;
-            if (mxb::get_long(words[0], &size_mb))
+            long bytes = -1;
+            if (mxb::get_long(words[0], &bytes))
             {
                 parse_ok = true;
-                if (size_mb < 1)
+                if (bytes < 1024 * 1024)
                 {
                     MXB_WARNING("Data directory '%s' on %s is empty. Transfer must have failed.",
                                 rebuild_datadir.c_str(), m_target->name());
