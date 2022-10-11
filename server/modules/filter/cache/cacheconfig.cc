@@ -97,6 +97,7 @@ config::ParamBitMask CacheConfig::s_debug(
     "debug",
     "An integer value, using which the level of debug logging made by the cache "
     "can be controlled.",
+    0,
     CACHE_DEBUG_MIN,
     CACHE_DEBUG_MAX
     );
