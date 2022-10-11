@@ -561,7 +561,16 @@ void Client::send_basic_auth_error() const
                                         auth_failure_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
+    if (auto it = m_headers.find("x-requested-with");
+        it != m_headers.end() && strcasecmp(it->second.c_str(), "XMLHttpRequest") == 0)
+    {
+        MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, resp);
+    }
+    else
+    {
+        MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
+    }
+
     MHD_destroy_response(resp);
 }
 
