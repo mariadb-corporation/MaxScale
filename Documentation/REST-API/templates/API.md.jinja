@@ -64,11 +64,10 @@ parameter in the request:
 GET /v1/auth?persist=yes
 ```
 
-When the token is stored in the cookies, it will be split into two parts: the
-JWT body will be stored in a cookie named `token_body` and the JWT signature is
-stored in `token_sig`. The JWT signature will be stored with `SameSite=Strict`
-and `HttpOnly` cookie options which means the JavaScript context of the browser
-will not have access to it. This is done to prevent CSRF attacks.
+When the token is stored in the cookies, it will be stored in the `token_sig`
+cookie using the `SameSite=Strict` and `HttpOnly` cookie options. This means the
+JavaScript context of the browser will not have access to it. This is done to
+prevent CSRF attacks.
 
 By default, the generated tokens are valid for 8 hours. The token validity
 period can be set with the `max-age` request parameter:
@@ -106,16 +105,12 @@ given in the HTTP query string.
   - Store the generated token in cookies instead of returning it as the response body.
 
     This parameter expects only one value, `yes`, as its argument. When
-    `persist=yes` is set, the token is stored in two cookies, `token_body` and
-    `token_sig`, and the response is 204 No Content instead of 200 OK.
+    `persist=yes` is set, the token is stored in the `token_sig` cookie and the
+    response is 204 No Content instead of 200 OK.
 
-    The `token_body` cookie contains the JWT header and claims sections
-    (i.e. the token body before the second period). This can be accessed by
-    JavaScript.
-
-    The `token_sig` part contains the rest of the token. The cookie is stored as
-    a HttpOnly cookie which prevents access to from JavaScript. This is done to
-    mitigate any attacks that might leak the token.
+    The `token_sig` cookie contains the JWT and is stored as a HttpOnly cookie
+    which prevents access to from JavaScript. This is done to mitigate any
+    attacks that might leak the token.
 
 ## Resources
 

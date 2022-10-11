@@ -147,7 +147,6 @@ describe("Authentication", function () {
       expect(cookies).to.not.be.empty;
 
       var keys = cookies.map((cookie) => cookie.key);
-      expect(keys).to.include("token_body");
       expect(keys).to.include("token_sig");
     });
 

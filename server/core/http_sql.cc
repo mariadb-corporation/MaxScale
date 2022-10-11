@@ -48,18 +48,13 @@ HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_BAD_REQ
 
 std::string get_conn_id_cookie(const HttpRequest& request, const std::string& id)
 {
-    std::string body = request.get_cookie(CONN_ID_BODY + id);
-    std::string sig = request.get_cookie(CONN_ID_SIG + id);
-
-    return !body.empty() && !sig.empty() ? body + sig : "";
+    return request.get_cookie(CONN_ID_SIG + id);
 }
 
 void set_conn_id_cookie(HttpResponse* response, const std::string& id,
                         const std::string& token, uint32_t max_age)
 {
-    std::string body = CONN_ID_BODY + id;
-    std::string sig = CONN_ID_SIG + id;
-    response->add_split_cookie(body, sig, token, max_age);
+    response->add_cookie(CONN_ID_SIG + id, token, max_age);
 }
 
 std::pair<std::string, std::string> get_connection_id(const HttpRequest& request,
@@ -642,7 +637,7 @@ HttpResponse disconnect(const HttpRequest& request)
         if (this_unit.manager.erase(id))
         {
             HttpResponse response(MHD_HTTP_NO_CONTENT);
-            response.remove_split_cookie(CONN_ID_BODY + id, CONN_ID_SIG + id);
+            response.remove_cookie(CONN_ID_SIG + id);
             return response;
         }
         else

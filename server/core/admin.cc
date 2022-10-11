@@ -938,7 +938,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         // CSRF attack. This also prevents JavaScript from ever accessing the token which completely prevents
         // the token from leaking.
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
-        reply.add_split_cookie(TOKEN_BODY, TOKEN_SIG, token, !max_age.empty() ? token_age : 0);
+        reply.add_cookie(TOKEN_SIG, token, !max_age.empty() ? token_age : 0);
         return reply;
     }
     else

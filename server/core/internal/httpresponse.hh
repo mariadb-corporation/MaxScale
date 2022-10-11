@@ -138,31 +138,28 @@ public:
     }
 
     /**
-     * Adds a JWT token as a cookie split into a public and private part
+     * Adds a JWT token as a cookie
      *
-     * The cookie is stored using SameSite=Lax for the public part and with SameSite=Strict; HttpOnly for the
-     * private part. If the REST API uses HTTPS, then both cookies are stored with the Secure option.
+     * The cookie is stored with SameSite=Strict; HttpOnly. If the REST API uses HTTPS, the cookie is stored
+     * with the Secure option.
      *
-     * The token must be a JWT token and it is up to the caller to make sure it is valid.
+     * The token should be a JWT token and it is up to the caller to make sure it is valid.
      *
-     * @param public_name   The name of the cookie where the public part is stored
-     * @param private_name  The name of the cookie where the private part is stored
-     * @param token         The JWT token to store in the cookie
-     * @param max_age       Maximum age of the cookie in seconds, 0 for no maximum age
+     * @param name    The name of the cookie
+     * @param token   The JWT token to store in the cookie
+     * @param max_age Maximum age of the cookie in seconds, 0 for no maximum age
      */
-    void add_split_cookie(const std::string& public_name, const std::string& private_name,
-                          const std::string& token, uint32_t max_age = 0);
+    void add_cookie(const std::string& name, const std::string& token, uint32_t max_age = 0);
 
     /**
-     * Removes a cookie split into a public and private part
+     * Removes a cookie
      *
-     * This adds cookie values with an expiration date in the past which is the canonical way of deleting
+     * This adds a cookie value with an expiration date in the past which is the canonical way of deleting
      * cookies.
      *
-     * @param public_name   The name of the cookie where the public part is stored
-     * @param private_name  The name of the cookie where the private part is stored
+     * @param name The name of the cookie
      */
-    void remove_split_cookie(const std::string& public_name, const std::string& private_name);
+    void remove_cookie(const std::string& name);
 
     /**
      * Removes fields from the response
@@ -205,7 +202,5 @@ private:
                                      const std::unordered_set<std::string>& fields);
     void remove_fields_from_object(json_t* obj, std::vector<std::string>&& field);
 
-    void set_split_cookie(const std::string& public_name, const std::string& private_name,
-                          const std::string& public_part, const std::string& private_part,
-                          const std::string& cookie_opts);
+    void set_cookie(const std::string& name, const std::string& token, const std::string& cookie_opts);
 };
