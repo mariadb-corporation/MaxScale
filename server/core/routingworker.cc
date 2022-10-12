@@ -172,6 +172,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
     , m_index(index)
+    , m_listening(false)
     , m_callable(this)
     , m_pool_handler(this)
 {
@@ -179,7 +180,10 @@ RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
-    stop_polling_on_shared_fd();
+    if (m_listening)
+    {
+        stop_polling_on_shared_fd();
+    }
     m_callable.cancel_dcalls();
 }
 
@@ -372,7 +376,7 @@ int RoutingWorker::activate_threads(int n)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                success = pWorker->activate(listeners);
+                success = pWorker->start_listening(listeners);
             }, mxb::Worker::EXECUTE_QUEUED);
 
         if (!success)
@@ -386,7 +390,7 @@ int RoutingWorker::activate_threads(int n)
     return i - nBefore;
 }
 
-bool RoutingWorker::activate(const std::vector<SListener>& listeners)
+bool RoutingWorker::start_listening(const std::vector<SListener>& listeners)
 {
     mxb_assert(get_current() == this);
 
@@ -412,7 +416,7 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
     return rv;
 }
 
-bool RoutingWorker::deactivate(const std::vector<SListener>& listeners)
+bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
 {
     mxb_assert(get_current() == this);
 
@@ -561,7 +565,7 @@ bool RoutingWorker::decrease_threads(int nDelta)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                success = pWorker->deactivate(listeners);
+                success = pWorker->stop_listening(listeners);
             }, mxb::Worker::EXECUTE_QUEUED);
 
         if (!success)
@@ -585,6 +589,8 @@ bool RoutingWorker::decrease_threads(int nDelta)
 
 bool RoutingWorker::start_polling_on_shared_fd()
 {
+    mxb_assert(!m_listening);
+
     bool rv = false;
 
     // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
@@ -594,6 +600,7 @@ bool RoutingWorker::start_polling_on_shared_fd()
     if (add_pollable(EPOLLIN, this))
     {
         MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
+        m_listening = true;
         rv = true;
     }
     else
@@ -608,7 +615,16 @@ bool RoutingWorker::start_polling_on_shared_fd()
 
 bool RoutingWorker::stop_polling_on_shared_fd()
 {
-    return remove_pollable(this);
+    mxb_assert(m_listening);
+
+    bool rv = remove_pollable(this);
+
+    if (rv)
+    {
+        m_listening = false;
+    }
+
+    return rv;
 }
 
 // static

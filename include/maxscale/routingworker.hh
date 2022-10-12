@@ -559,8 +559,8 @@ private:
     static int activate_threads(int n);
     static bool create_threads(int n);
 
-    bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);
-    bool deactivate(const std::vector<std::shared_ptr<Listener>>& listeners);
+    bool start_listening(const std::vector<std::shared_ptr<Listener>>& listeners);
+    bool stop_listening(const std::vector<std::shared_ptr<Listener>>& listeners);
 
     bool pre_run() override;
     void post_run() override;
@@ -665,6 +665,7 @@ private:
     using TickFuncs = std::vector<std::function<void()>>;
 
     int                m_index;     /*< Index of routing worker */
+    bool               m_listening; /*< Listening for new clients */
     Worker::Callable   m_callable;  /*< Context for own dcalls */
     SessionsById       m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies            m_zombies;   /*< DCBs to be deleted. */
