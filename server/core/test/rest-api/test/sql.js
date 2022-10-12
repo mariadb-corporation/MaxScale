@@ -200,15 +200,14 @@ describe("Query API ", function () {
 
     it("cookies contain a valid JWT", async function () {
       var cookies = c.defaults.jar.getCookiesSync(base_url + "/sql");
-      expect(cookies).to.have.lengthOf(2);
+      expect(cookies).to.have.lengthOf(1);
 
       var names = cookies.map((cookie) => cookie.key);
-      expect(names).to.have.members(["conn_id_sig_" + conn.data.id, "conn_id_body_" + conn.data.id]);
+      expect(names).to.have.members(["conn_id_sig_" + conn.data.id]);
 
-      var body = cookies.find((cookie) => cookie.key == "conn_id_body_" + conn.data.id).value;
       var sig = cookies.find((cookie) => cookie.key == "conn_id_sig_" + conn.data.id).value;
 
-      var webtoken = jwt.decode(body + sig);
+      var webtoken = jwt.decode(sig);
       expect(webtoken).to.be.an("object").that.has.keys("aud", "iss", "exp", "iat", "sub");
       expect(webtoken.aud).to.equal(conn.data.id);
     });

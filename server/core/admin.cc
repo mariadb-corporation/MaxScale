@@ -561,7 +561,16 @@ void Client::send_basic_auth_error() const
                                         auth_failure_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
+    if (auto it = m_headers.find("x-requested-with");
+        it != m_headers.end() && strcasecmp(it->second.c_str(), "XMLHttpRequest") == 0)
+    {
+        MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, resp);
+    }
+    else
+    {
+        MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
+    }
+
     MHD_destroy_response(resp);
 }
 
@@ -929,7 +938,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         // CSRF attack. This also prevents JavaScript from ever accessing the token which completely prevents
         // the token from leaking.
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
-        reply.add_split_cookie(TOKEN_BODY, TOKEN_SIG, token, !max_age.empty() ? token_age : 0);
+        reply.add_cookie(TOKEN_SIG, token, !max_age.empty() ? token_age : 0);
         return reply;
     }
     else
