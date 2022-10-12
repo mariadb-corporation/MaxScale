@@ -31,7 +31,7 @@ import store from '@rootSrc/store'
 import AppLayout from '@rootSrc/layouts/AppLayout'
 import NoLayout from '@rootSrc/layouts/NoLayout'
 import Overlay from '@share/components/overlay'
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
     store,
@@ -66,10 +66,13 @@ export default {
     async created() {
         this.logger.info(this.$store.state.app_config.asciiLogo)
         this.logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
+        // Check if user is authenticated
+        await this.authCheck()
     },
 
     methods: {
         ...mapMutations(['SET_UPDATE_AVAILABILITY', 'SET_SEARCH_KEYWORD']),
+        ...mapActions({ authCheck: 'user/authCheck' }),
         confirmUpdate() {
             this.SET_UPDATE_AVAILABILITY(false)
             window.location.reload()

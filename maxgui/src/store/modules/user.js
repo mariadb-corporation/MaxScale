@@ -43,6 +43,18 @@ export default {
         },
     },
     actions: {
+        // To be called before app is mounted
+        async authCheck({ commit, state }) {
+            try {
+                await authHttp.get('/maxscale')
+            } catch (e) {
+                const isUnauthorized = this.vue.$typy(e, 'response.status').safeNumber === 401
+                commit('SET_LOGGED_IN_USER', {
+                    ...state.logged_in_user,
+                    isLoggedIn: !isUnauthorized,
+                })
+            }
+        },
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
                 let url = '/auth?persist=yes'
@@ -53,7 +65,7 @@ export default {
                     commit('SET_LOGGED_IN_USER', {
                         name: auth.username,
                         rememberMe: rememberMe,
-                        isLoggedIn: Boolean(this.vue.$helpers.getCookie('token_body')),
+                        isLoggedIn: true,
                     })
                     router.push(router.app.$route.query.redirect || '/dashboard/servers')
                     await dispatch('fetchLoggedInUserAttrs')
@@ -113,7 +125,6 @@ export default {
                 persisted: persisted,
             })
             await localForage.clear()
-            this.vue.$helpers.deleteAllCookies()
             await localForage.setItem('query-editor', queryEditorPersistedState)
             await localForage.setItem('maxgui-app', maxguiPersistedState)
         },

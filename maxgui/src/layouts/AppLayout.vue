@@ -21,7 +21,7 @@
                 <span class="footer__separator" />
                 <a
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     href="https://mariadb.com/privacy-policy/"
                     class="rsrc-link"
                 >
@@ -30,7 +30,7 @@
                 <span class="footer__separator" />
                 <a
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     href="https://mariadb.com/product-terms-condition/"
                     class="rsrc-link"
                 >

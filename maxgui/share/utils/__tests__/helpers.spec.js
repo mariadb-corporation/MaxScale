@@ -14,11 +14,6 @@ import Vue from 'vue'
 import * as commonHelpers from '@share/utils/helpers'
 
 describe('common helpers unit tests', () => {
-    it(`Should return token_body cookie when getCookie is called`, () => {
-        document.cookie = 'token_body=eyJhbGcI1NiJ9.eyJhdWsZSJ9; SameSite=Lax'
-        expect(commonHelpers.getCookie('token_body')).to.be.not.undefined
-    })
-
     it('strReplaceAt should return new string accurately', () => {
         expect(commonHelpers.strReplaceAt({ str: 'Servers', index: 6, newChar: '' })).to.be.equals(
             'Server'

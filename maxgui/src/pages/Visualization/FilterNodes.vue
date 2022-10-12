@@ -24,6 +24,7 @@
                 >
                     <router-link
                         target="_blank"
+                        rel="noopener noreferrer"
                         :to="`/dashboard/${filter.type}/${filter.id}`"
                         class="text-truncate mr-2"
                         :style="{ color: '#fff' }"

@@ -55,15 +55,11 @@ async function showLoadingOverlay(overlay_type) {
  * @param {Function} next - Function must be called to resolve the hook
  */
 async function resolvingGuardedRoutes(to, from, next) {
-    // Check if user is logged in
     const {
-        vue: { $helpers, $typy },
+        vue: { $typy },
         state,
     } = store
-    const user = $typy(state, 'user.logged_in_user').safeObjectOrEmpty
-    const isAuthenticated =
-        $helpers.getCookie('token_body') && $typy(user, 'isLoggedIn').safeBoolean
-
+    const isAuthenticated = $typy(state, 'user.logged_in_user.isLoggedIn').safeBoolean
     if (isAuthenticated) {
         // show overlay loading screen after successfully authenticating
         if (from.name === 'login') {

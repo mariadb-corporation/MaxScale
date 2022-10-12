@@ -25,6 +25,7 @@
                 </v-icon>
                 <router-link
                     target="_blank"
+                    rel="noopener noreferrer"
                     :to="`/dashboard/servers/${node.id}`"
                     class="text-truncate rsrc-link"
                 >
