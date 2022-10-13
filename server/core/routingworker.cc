@@ -58,7 +58,7 @@ struct this_unit
     bool                   running;            // True if worker threads are running
     const int              nMax;               // Hard maximum of workers
     std::atomic<int>       nCreated;           // Created amount of workers.
-    std::atomic<int>       nActive;            // Active amount of workers.
+    std::atomic<int>       nRunning;           // Running amount of workers.
     RoutingWorker**        ppWorkers;          // Array of routing worker instances.
     mxb::AverageN**        ppWorker_loads;     // Array of load averages for workers.
     int                    epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
@@ -69,7 +69,7 @@ struct this_unit
     false,                                     // running
     mxs::Config::ParamThreadsCount::MAX_COUNT, // nMax
     0,                                         // nCreated
-    0,                                         // nActive
+    0,                                         // nRunning
     nullptr,                                   // ppWorkers
     nullptr,                                   // ppWorker_loads
     -1,                                        // epoll_listener_fd
@@ -100,8 +100,8 @@ int broadcast_recipients(int nWorkers)
         nWorkers = this_unit.nCreated.load(std::memory_order_relaxed);
         break;
 
-    case RoutingWorker::ACTIVE:
-        nWorkers = this_unit.nActive.load(std::memory_order_relaxed);
+    case RoutingWorker::RUNNING:
+        nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
         break;
 
     default:
@@ -235,7 +235,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 this_unit.ppWorkers = ppWorkers;
                 this_unit.ppWorker_loads = ppWorker_loads;
                 this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
-                this_unit.nActive.store(0, std::memory_order_relaxed);
+                this_unit.nRunning.store(0, std::memory_order_relaxed);
                 this_unit.pNotifier = pNotifier;
 
                 this_unit.initialized = true;
@@ -272,7 +272,7 @@ void RoutingWorker::finish()
     }
 
     this_unit.nCreated.store(0, std::memory_order_relaxed);
-    this_unit.nActive.store(0, std::memory_order_relaxed);
+    this_unit.nRunning.store(0, std::memory_order_relaxed);
 
     delete[] this_unit.ppWorkers;
     this_unit.ppWorkers = NULL;
@@ -294,7 +294,7 @@ bool RoutingWorker::adjust_threads(int nCount)
 
     bool rv = false;
 
-    int nActive = this_unit.nActive.load(std::memory_order_relaxed);
+    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
 
     if (nCount < 1)
     {
@@ -304,13 +304,13 @@ bool RoutingWorker::adjust_threads(int nCount)
     {
         MXB_ERROR("The number of threads can be at most %d.", this_unit.nMax);
     }
-    else if (nCount < nActive)
+    else if (nCount < nRunning)
     {
-        rv = decrease_threads(nActive - nCount);
+        rv = decrease_threads(nRunning - nCount);
     }
-    else if (nCount > nActive)
+    else if (nCount > nRunning)
     {
-        rv = increase_threads(nCount - nActive);
+        rv = increase_threads(nCount - nRunning);
     }
     else
     {
@@ -329,8 +329,8 @@ bool RoutingWorker::increase_threads(int nDelta)
     bool rv = true;
 
     int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    int nActive = this_unit.nActive.load(std::memory_order_relaxed);
-    int nAvailable = nCreated - nActive;
+    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    int nAvailable = nCreated - nRunning;
 
     if (nAvailable > 0)
     {
@@ -345,7 +345,7 @@ bool RoutingWorker::increase_threads(int nDelta)
         else
         {
             MXB_ERROR("Could activate %d threads of %d required. %d workers "
-                      "currently available.", nActivated, nDelta, nActive);
+                      "currently available.", nActivated, nDelta, nRunning);
             rv = false;
         }
     }
@@ -362,9 +362,9 @@ bool RoutingWorker::increase_threads(int nDelta)
 int RoutingWorker::activate_threads(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    mxb_assert(this_unit.nCreated - this_unit.nActive >= n);
+    mxb_assert(this_unit.nCreated - this_unit.nRunning >= n);
 
-    int nBefore = this_unit.nActive.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
     int i = nBefore;
     n += i;
 
@@ -385,7 +385,7 @@ int RoutingWorker::activate_threads(int n)
         }
     }
 
-    this_unit.nActive.store(i, std::memory_order_relaxed);
+    this_unit.nRunning.store(i, std::memory_order_relaxed);
 
     return i - nBefore;
 }
@@ -450,7 +450,7 @@ bool RoutingWorker::create_threads(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
-    mxb_assert(this_unit.nCreated == this_unit.nActive);
+    mxb_assert(this_unit.nCreated == this_unit.nRunning);
 
     size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
@@ -542,7 +542,7 @@ bool RoutingWorker::create_threads(int n)
     }
 
     this_unit.nCreated.store(nAfter, std::memory_order_relaxed);
-    this_unit.nActive.store(nAfter, std::memory_order_relaxed);
+    this_unit.nRunning.store(nAfter, std::memory_order_relaxed);
 
     return i != nBefore;
 }
@@ -552,7 +552,7 @@ bool RoutingWorker::decrease_threads(int nDelta)
 {
     mxb_assert(nDelta > 0);
 
-    int nBefore = this_unit.nActive.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
     int nAfter = nBefore - nDelta;
     mxb_assert(nAfter > 0);
 
@@ -582,7 +582,7 @@ bool RoutingWorker::decrease_threads(int nDelta)
         nAfter = i;
     }
 
-    this_unit.nActive.store(nAfter, std::memory_order_relaxed);
+    this_unit.nRunning.store(nAfter, std::memory_order_relaxed);
 
     return i != nBefore;
 }
@@ -634,9 +634,9 @@ int RoutingWorker::nCreated()
 }
 
 // static
-int RoutingWorker::nActive()
+int RoutingWorker::nRunning()
 {
-    return this_unit.nActive.load(std::memory_order_relaxed);
+    return this_unit.nRunning.load(std::memory_order_relaxed);
 }
 
 // static
@@ -730,7 +730,7 @@ bool RoutingWorker::start_workers()
 
     if (rv)
     {
-        this_unit.nActive.store(nCreated, std::memory_order_relaxed);
+        this_unit.nRunning.store(nCreated, std::memory_order_relaxed);
         this_unit.running = true;
     }
 
@@ -2419,7 +2419,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 json_t* mxs_rworker_list_to_json(const char* host)
 {
     RoutingWorker::InfoTask task(host, this_unit.nCreated);
-    RoutingWorker::execute_concurrently(task, mxs::RoutingWorker::ACTIVE);
+    RoutingWorker::execute_concurrently(task, mxs::RoutingWorker::RUNNING);
     return task.resource();
 }
 

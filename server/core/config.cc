@@ -1238,7 +1238,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // in the constructor, across translation units and threads.
     this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
 
-    if (this->n_threads != RoutingWorker::nActive())
+    if (this->n_threads != RoutingWorker::nRunning())
     {
         if (RoutingWorker::is_running()) // false at startup
         {

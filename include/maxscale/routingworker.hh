@@ -86,8 +86,8 @@ public:
 
     enum Workers
     {
-        ALL    = -1,
-        ACTIVE = -2
+        ALL     = -1,
+        RUNNING = -2
     };
 
     /**
@@ -129,7 +129,7 @@ public:
     /**
      * @return The number of active routing workers; less than or equal to created.
      */
-    static int nActive();
+    static int nRunning();
 
     /**
      * Add a Listener to the routing workers.
