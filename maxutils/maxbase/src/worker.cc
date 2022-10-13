@@ -790,9 +790,9 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
     // TODO: Enable and fix this in develop and/or 2.4: The deletion of rworker_local is done after the
     // workers have stopped and it triggers this assertion.
-    // mxb_assert(state() != Worker::FINISHED);
+    // mxb_assert(event_loop_state() != EventLoop::FINISHED);
 
-    if (state() != Worker::FINISHED)
+    if (event_loop_state() != EventLoop::FINISHED)
     {
         MessageQueue::Message message(msg_id, arg1, arg2);
         rval = m_pQueue->post(message);
@@ -803,7 +803,7 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 
 void Worker::run(mxb::Semaphore* pSem)
 {
-    mxb_assert(m_state == STOPPED || m_state == FINISHED);
+    mxb_assert(m_event_loop_state == EventLoop::NOT_STARTED || m_event_loop_state == EventLoop::FINISHED);
     this_thread.pCurrent_worker = this;
 
     if (pre_run())
@@ -813,11 +813,11 @@ void Worker::run(mxb::Semaphore* pSem)
             pSem->post();
         }
 
-        m_state = POLLING;
+        m_event_loop_state = EventLoop::RUNNING;
 
         poll_waitevents();
 
-        m_state = FINISHED;
+        m_event_loop_state = EventLoop::FINISHED;
 
         post_run();
         MXB_INFO("Worker %p has shut down.", this);
@@ -1378,7 +1378,7 @@ void Worker::restore_dcall(DCall* pCall)
 
 void Worker::cancel_dcall(DCall* pCall, bool call)
 {
-    mxb_assert(Worker::get_current() == this || m_state == FINISHED);
+    mxb_assert(Worker::get_current() == this || m_event_loop_state == EventLoop::FINISHED);
 
     remove_dcall(pCall);
 

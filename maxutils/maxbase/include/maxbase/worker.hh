@@ -473,10 +473,10 @@ public:
         PMethod m_pMethod;
     };
 
-    enum state_t
+    enum class EventLoop
     {
-        STOPPED,
-        POLLING,
+        NOT_STARTED,
+        RUNNING,
         FINISHED
     };
 
@@ -524,9 +524,9 @@ public:
      *
      * @attentions The state might have changed the moment after the function returns.
      */
-    state_t state() const
+    EventLoop event_loop_state() const
     {
-        return m_state;
+        return m_event_loop_state;
     }
 
     /**
@@ -751,8 +751,8 @@ public:
     void lcall(std::function<void ()>&& f);
 
 protected:
-    const int m_epoll_fd;               /*< The epoll file descriptor. */
-    state_t   m_state {STOPPED};        /*< The state of the worker */
+    const     int m_epoll_fd;                              /*< The epoll file descriptor. */
+    EventLoop m_event_loop_state {EventLoop::NOT_STARTED}; /*< The event loop state of the worker */
 
     static void inc_ref(WorkerDisposableTask* pTask)
     {

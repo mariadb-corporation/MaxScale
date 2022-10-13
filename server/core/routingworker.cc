@@ -769,7 +769,7 @@ bool RoutingWorker::shutdown_complete()
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
 
-        if (pWorker->state() != Worker::FINISHED && pWorker->state() != Worker::STOPPED)
+        if (pWorker->event_loop_state() == Worker::EventLoop::RUNNING)
         {
             rval = false;
         }

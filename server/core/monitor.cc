@@ -1951,7 +1951,7 @@ MonitorWorker::~MonitorWorker()
 
 bool MonitorWorker::is_running() const
 {
-    return Worker::state() != Worker::STOPPED && Worker::state() != Worker::FINISHED;
+    return Worker::event_loop_state() == Worker::EventLoop::RUNNING;
 }
 
 void MonitorWorker::do_stop()
