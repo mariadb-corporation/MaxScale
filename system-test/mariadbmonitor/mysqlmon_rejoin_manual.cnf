@@ -4,7 +4,7 @@ threads=2
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
-servers= ###server_line###
+servers= ###server_names###
 user=mariadbmon
 password=mariadbmon
 monitor_interval=1000ms
@@ -19,7 +19,7 @@ auto_failover=true
 [RW-Split-Router]
 type=service
 router= readwritesplit
-servers=###server_line###
+servers=###server_names###
 user=maxskysql
 password=skysql
 
@@ -29,4 +29,4 @@ service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
-###server###
+###server_definitions###
