@@ -477,7 +477,6 @@ public:
     {
         STOPPED,
         POLLING,
-        PROCESSING,
         FINISHED
     };
 

@@ -808,12 +808,12 @@ void Worker::run(mxb::Semaphore* pSem)
 
     if (pre_run())
     {
-        m_state = PROCESSING;
-
         if (pSem)
         {
             pSem->post();
         }
+
+        m_state = POLLING;
 
         poll_waitevents();
 
@@ -1078,8 +1078,6 @@ void Worker::poll_waitevents()
 
     while (!m_should_shutdown)
     {
-        m_state = POLLING;
-
         ++m_statistics.n_polls;
 
         auto now = mxb::Clock::now();
@@ -1130,8 +1128,6 @@ void Worker::poll_waitevents()
             m_statistics.evq_max = std::max(m_statistics.evq_max, int64_t(nfds));   // evq_max could be int
 
             ++m_statistics.n_pollev;
-
-            m_state = PROCESSING;
 
             ++m_statistics.n_fds[std::min(nfds - 1, STATISTICS::MAXNFDS - 1)];
         }

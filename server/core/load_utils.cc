@@ -879,8 +879,7 @@ bool run_module_thread_init(MXS_MODULE* mod_info)
         if (main_worker)
         {
             auto mw_state = main_worker->state();
-            if (mw_state == mxb::Worker::state_t::POLLING
-                || mw_state == mxb::Worker::state_t::PROCESSING)
+            if (mw_state == mxb::Worker::state_t::POLLING)
             {
                 auto run_thread_init = [&thread_init_ok, thread_init_func]() {
                         if (thread_init_func() != 0)
