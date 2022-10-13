@@ -298,6 +298,7 @@ public:
     mxb::ssl_version::Version admin_ssl_version;    /**< Admin allowed SSL versions */
     mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
     std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
+    seconds                   admin_jwt_max_age;    /**< Maximum JWT lifetime */
     std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
     std::string               admin_verify_url;     /**< URL that points to a verification server */
 
@@ -434,6 +435,7 @@ private:
     static config::ParamDeprecated<config::ParamAlias>  s_admin_ssl_ca_cert;// -> s_admin_ca
     static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;
     static config::ParamString                          s_admin_jwt_key;
+    static config::ParamSeconds                         s_admin_jwt_max_age;
     static config::ParamString                          s_admin_oidc_url;
     static config::ParamString                          s_admin_verify_url;
     static config::ParamString                          s_local_address;

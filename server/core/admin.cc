@@ -915,7 +915,7 @@ int Client::queue_delayed_response(const HttpResponse::Callback& cb)
 
 HttpResponse Client::generate_token(const HttpRequest& request)
 {
-    int token_age = 28800;
+    int64_t token_age = 28800;
     auto max_age = request.get_option("max-age");
 
     if (!max_age.empty())
@@ -928,6 +928,8 @@ HttpResponse Client::generate_token(const HttpRequest& request)
             token_age = l;
         }
     }
+
+    token_age = std::min(token_age, mxs::Config::get().admin_jwt_max_age.count());
 
     auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age);
 

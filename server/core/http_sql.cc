@@ -325,7 +325,8 @@ json_t* all_connections_to_json(const std::string& host, const std::vector<std::
 
 HttpResponse create_connect_response(const std::string& host, const std::string& id, bool persist, int age)
 {
-    int max_age = age > 0 ? age : 28800;
+    int64_t max_age = age > 0 ? age : 28800;
+    max_age = std::min(max_age, mxs::Config::get().admin_jwt_max_age.count());
     auto token = mxs::jwt::create(TOKEN_ISSUER, id, max_age);
 
     json_t* data = one_connection_to_json(host, id);

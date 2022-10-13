@@ -79,6 +79,12 @@ GET /v1/auth?max-age=28800
 When `max-age` is combined with `persist`, the `Max-Age` cookie option is
 also set to the same value.
 
+The maximum lifetime of the tokens is controlled by the `admin_jwt_max_age`
+parameter. If the configured value is less than 8 hours, the default token
+lifetime is also lowered to it. A request for a token with a lifetime longer
+than `admin_jwt_max_age` will be accepted but the token will have its lifetime
+set to `admin_jwt_max_age`.
+
 To use the token for authentication, the generated token must be presented in
 the Authorization header with the Bearer authentication scheme. For example, the
 token above would be used in the following manner:
