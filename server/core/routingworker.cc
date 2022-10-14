@@ -2416,6 +2416,29 @@ public:
 private:
     static void add_stats(const RoutingWorker& rworker, json_t* pStats)
     {
+        std::string state;
+        bool l = rworker.is_listening();
+        bool r = rworker.is_routing();
+
+        if (l && r)
+        {
+            state = "Active";
+        }
+        else if (!l && r)
+        {
+            state = "Draining";
+        }
+        else if (!l && !r)
+        {
+            state = "Inactive";
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
+
+        json_object_set_new(pStats, "state", json_string(state.c_str()));
+
         const Worker::STATISTICS& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
         json_object_set_new(pStats, "writes", json_integer(s.n_write));

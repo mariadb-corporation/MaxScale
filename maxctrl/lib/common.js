@@ -211,6 +211,9 @@ async function getTransposedCollection(host, resource, fields) {
       else if (summary == "avg") {
         val = _.mean(values).toFixed(1);
       }
+      else if (summary == "N/A") {
+        val = "N/A";
+      }
       else
       {
         val = _.sum(values);

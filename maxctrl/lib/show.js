@@ -424,6 +424,12 @@ const thread_fields = [
     description: "Thread ID",
   },
   {
+    name: "State",
+    path: "attributes.stats.state",
+    description: "The state of the thread",
+    summary: "N/A"
+  },
+  {
     name: "Accepts",
     path: "attributes.stats.accepts",
     description: "Number of TCP accepts done by this thread",
