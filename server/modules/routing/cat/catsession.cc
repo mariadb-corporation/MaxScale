@@ -20,7 +20,6 @@ using namespace maxscale;
 
 CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends)
     : RouterSession(session)
-    , m_session(session)
     , m_backends(std::move(backends))
     , m_completed(0)
     , m_packet_num(0)

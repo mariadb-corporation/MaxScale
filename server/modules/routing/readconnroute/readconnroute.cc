@@ -163,7 +163,6 @@ RCR* RCR::create(SERVICE* service)
 RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
                        const mxs::Endpoints& endpoints, uint32_t bitvalue)
     : mxs::RouterSession(session)
-    , m_instance(inst)
     , m_bitvalue(bitvalue)
     , m_backend(backend)
     , m_endpoints(endpoints)

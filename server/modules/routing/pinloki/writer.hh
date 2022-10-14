@@ -52,7 +52,6 @@ public:
 
 private:
     InventoryWriter&  m_inventory;
-    bool              m_is_bootstrap = false;
     bool              m_commit_on_query = false;
     bool              m_was_ddl = false;
     maxsql::GtidList  m_current_gtid_list;

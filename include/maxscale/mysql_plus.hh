@@ -509,8 +509,7 @@ public:
     // successive call, initialized to false before the first call. This is used to track split packets,
     // but the client should use the is_split_xx() functions and not assume anything about the bool.
     ComPacket(GWBUF* pPacket, bool* client_split_flag)
-        : m_pPacket(pPacket)
-        , m_pPayload(GWBUF_DATA(pPacket))
+        : m_pPayload(GWBUF_DATA(pPacket))
         , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pPayload))
         , m_packet_no(MYSQL_GET_PACKET_NO(m_pPayload))
         , m_split_flag_at_entry(*client_split_flag)
@@ -567,7 +566,6 @@ public:
         return m_split_flag_at_entry && m_payload_len < GW_MYSQL_MAX_PACKET_LEN;
     }
 private:
-    GWBUF*   m_pPacket;
     uint8_t* m_pPayload;
     uint32_t m_payload_len;
     uint8_t  m_packet_no;

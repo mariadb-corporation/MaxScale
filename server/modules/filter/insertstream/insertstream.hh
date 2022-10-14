@@ -51,15 +51,13 @@ public:
     InsertStreamSession(const InsertStreamSession&) = delete;
     InsertStreamSession& operator=(const InsertStreamSession&) = delete;
 
-    InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter);
+    InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream*);
 
     bool routeQuery(GWBUF* pPacket) override;
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    InsertStream* m_filter;
     mxs::Buffer   m_queue;
-    bool          m_active {true};              /**< Whether the session is active */
     uint8_t       m_packet_num;                 /**< If stream is open, the current packet sequence number */
     ds_state      m_state {DS_STREAM_CLOSED};   /**< The current state of the stream */
     std::string   m_target;                     /**< Current target table */

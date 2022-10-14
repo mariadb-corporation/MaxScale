@@ -188,7 +188,6 @@ public:
         std::string      m_unified_filename;            /* Filename of the unified log file */
         SFile            m_sUnified_file;               /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
-        bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
 
         QlaLog m_qlalog;
     };

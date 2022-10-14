@@ -354,7 +354,6 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager(log))
-    , m_log(log)
 {
 }
 
