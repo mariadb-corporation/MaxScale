@@ -1616,7 +1616,7 @@ bool BackupOperation::test_datalink(int listen_port)
 
     bool success = false;
     // Test the datalink between source and target by steaming some bytes.
-    string test_serve_cmd = mxb::string_printf("echo \"%s\" | socat - TCP-LISTEN:%i,reuseaddr",
+    string test_serve_cmd = mxb::string_printf("socat -u EXEC:'echo %s' TCP-LISTEN:%i,reuseaddr",
                                                link_test_msg, listen_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
@@ -1917,7 +1917,7 @@ bool BackupOperation::check_directory_not_empty(const std::string& datadir_path)
     bool has_contents = false;
     const char* path = datadir_path.c_str();
     const char* target_name = m_target_name.c_str();
-    string du_cmd = mxb::string_printf("sudo du -sm %s/", path);
+    string du_cmd = mxb::string_printf("sudo du --apparent-size -sb %s/", path);
     auto res = ssh_util::run_cmd(*m_target_ses, du_cmd, m_ssh_timeout);
     if (res.type == RType::OK && res.rc == 0)
     {
@@ -1925,11 +1925,11 @@ bool BackupOperation::check_directory_not_empty(const std::string& datadir_path)
         auto words = mxb::strtok(res.output, " \t");
         if (words.size() > 1)
         {
-            long size_mb = -1;
-            if (mxb::get_long(words[0], &size_mb))
+            long bytes = -1;
+            if (mxb::get_long(words[0], &bytes))
             {
                 parse_ok = true;
-                if (size_mb >= 1)
+                if (bytes >= 1024 * 1024)
                 {
                     // Assume that the directory should contain at least 1MB.
                     has_contents = true;

@@ -1070,21 +1070,24 @@ present (e.g. `mariabackup -v` should succeed).
 2. Check that the port used for transferring the backup is free on the source
 server. If not, kill the process holding it. This requires running *lsof* and
 *kill*.
-3. Launch Mariabackup on the source machine, compress the stream and listen
+3. Test the connection by streaming a short message from the source host to the
+target.
+4. Launch Mariabackup on the source machine, compress the stream and listen
 for an incoming connection. This is performed with a command like
 `mariabackup --backup --safe-slave-backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
-4. Stop MariaDB-server on the target machine and delete all contents of the data
+5. Stop MariaDB-server on the target machine and delete all contents of the data
 directory */var/lib/mysql*.
-5. On the target machine, connect to the source machine, read the backup stream,
+6. On the target machine, connect to the source machine, read the backup stream,
 decompress it and write to the data directory. This is performed with a command
 like `socat -u TCP:<host>:<port> STDOUT | pigz -dc | mbstream -x`. This step can
 take a long time if there is much data to transfer.
-6. Prepare the backup on the target server with a command like
+7. Check that the data directory is not empty.
+8. Prepare the backup on the target server with a command like
 `mariabackup --use-memory=1G --prepare`. This step can also take some time if
 the source server performed writes during data transfer.
-7. On the target server, change ownership of datadir contents to the
+9. On the target server, change ownership of datadir contents to the
 *mysql*-user and start MariaDB-server.
-8. Have the target server start replicating from the master.
+10. Have the target server start replicating from the master.
 
 The rebuild-operation is a monitor module command and is best launched with
 MaxCtrl. The command takes three arguments: the monitor name, target server name
@@ -1098,7 +1101,7 @@ maxctrl call command mariadbmon async-rebuild-server MariaDB-Monitor MyServer3 M
 The operation does not launch if the target server is already replicating or if
 the source server is not a master or slave.
 
-Steps 5 and 6 can take a long time depending on the size of the database and if
+Steps 6 and 8 can take a long time depending on the size of the database and if
 writes are ongoing. During these steps, the monitor will continue monitoring the
 cluster normally. After each monitor tick the monitor checks if the
 rebuild-operation can proceed. No other monitor operations, either manual or
@@ -1154,6 +1157,7 @@ johnny ALL= NOPASSWD: /usr/sbin/lsof
 johnny ALL= NOPASSWD: /bin/kill
 johnny ALL= NOPASSWD: /usr/bin/mariabackup
 johnny ALL= NOPASSWD: /bin/mbstream
+johnny ALL= NOPASSWD: /bin/du
 johnny ALL= NOPASSWD: /bin/rm -rf /var/lib/mysql/*
 johnny ALL= NOPASSWD: /bin/chown -R mysql\:mysql /var/lib/mysql/*
 ```
