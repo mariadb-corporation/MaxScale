@@ -149,7 +149,7 @@ OptionValue find_option(std::string line)
     }
     else
     {
-        return {Option::NONE, ""s};
+        return {{Option::NONE}, ""s};
     }
 }
 
