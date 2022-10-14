@@ -1848,7 +1848,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
     auto func = [this, info, ref, origin, send_ok]() {
         // First, gather the list of servers where the KILL should be sent
         mxs::RoutingWorker::execute_concurrently(
-            [info, ref]() {
+            [info] {
             dcb_foreach_local(info->cb, info.get());
         });
 
@@ -1857,7 +1857,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
 
         // Then move execution back to the original worker to keep all connections on the same thread
         origin->call(
-            [this, info, ref, origin, send_ok]() {
+            [this, info, ref, send_ok] {
             for (const auto& a : info->targets)
             {
                 std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
