@@ -74,31 +74,93 @@ namespace
  * following will hold: nDesired == nRunning. Further, if the number of threads has not
  * been decreased, the following will hold: nRunning == nCreated.
  */
-struct this_unit
+class ThisUnit
 {
-    bool                   initialized;        // Whether the initialization has been performed.
-    bool                   running;            // True if worker threads are running
-    const int              nMax;               // Hard maximum of workers
-    std::atomic<int>       nCreated;           // Created amount of workers.
-    std::atomic<int>       nRunning;           // "Running" amount of workers.
-    std::atomic<int>       nDesired;           // The desired amount of workers.
-    RoutingWorker**        ppWorkers;          // Array of routing worker instances.
-    mxb::AverageN**        ppWorker_loads;     // Array of load averages for workers.
-    int                    epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    mxb::WatchdogNotifier* pNotifier;          // Watchdog notifier.
-} this_unit =
-{
-    false,                                     // initialized
-    false,                                     // running
-    mxs::Config::ParamThreadsCount::MAX_COUNT, // nMax
-    0,                                         // nCreated
-    0,                                         // nRunning
-    0,                                         // nDesired
-    nullptr,                                   // ppWorkers
-    nullptr,                                   // ppWorker_loads
-    -1,                                        // epoll_listener_fd
-    nullptr                                    // pNotifier
-};
+public:
+    static const auto MAX_COUNT = mxs::Config::ParamThreadsCount::MAX_COUNT;
+
+    using WN = mxb::WatchdogNotifier;
+
+    bool init(mxb::WatchdogNotifier* pNotifier)
+    {
+        mxb_assert(!this->initialized);
+
+        bool rv = false;
+        int fd = epoll_create(mxb::Worker::MAX_EVENTS);
+
+        if (fd != -1)
+        {
+            std::unique_ptr<RoutingWorker*> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
+            std::unique_ptr<AverageN*> spWorker_loads(new(std::nothrow) AverageN* [this->nMax]());
+
+            if (spWorkers && spWorker_loads)
+            {
+                this->epoll_listener_fd = fd;
+                this->ppWorkers = spWorkers.release();
+                this->ppWorker_loads = spWorker_loads.release();
+                this->pNotifier = pNotifier;
+                this->initialized = true;
+            }
+            else
+            {
+                close(fd);
+                MXB_OOM();
+            }
+        }
+        else
+        {
+            MXB_ALERT("Could not allocate an epoll instance.");
+        }
+
+        return this->initialized;
+    }
+
+    void finish()
+    {
+        mxb_assert(this->initialized);
+
+        for (int i = this->nCreated - 1; i >= 0; --i)
+        {
+            RoutingWorker* pWorker = this->ppWorkers[i];
+            mxb_assert(pWorker);
+            delete pWorker;
+            this->ppWorkers[i] = nullptr;
+
+            mxb::Average* pWorker_load = this->ppWorker_loads[i];
+            mxb_assert(pWorker_load);
+            delete pWorker_load;
+            this->ppWorker_loads[i] = nullptr;
+        }
+
+        this->nCreated.store(0, std::memory_order_relaxed);
+        this->nRunning.store(0, std::memory_order_relaxed);
+        this->nDesired.store(0, std::memory_order_relaxed);
+
+        delete[] this->ppWorkers;
+        this->ppWorkers = nullptr;
+
+        delete[] this->ppWorker_loads;
+        this->ppWorker_loads = nullptr;
+
+        close(this->epoll_listener_fd);
+        this->epoll_listener_fd = -1;
+
+        this->pNotifier = nullptr;
+
+        this->initialized = false;
+    }
+
+    bool             initialized {false};      // Whether the initialization has been performed.
+    bool             running {false};          // True if worker threads are running
+    const int        nMax {MAX_COUNT};         // Hard maximum of workers
+    std::atomic<int> nCreated {0};             // Created amount of workers.
+    std::atomic<int> nRunning {0};             // "Running" amount of workers.
+    std::atomic<int> nDesired {0};             // The desired amount of workers.
+    RoutingWorker**  ppWorkers {nullptr};      // Array of routing worker instances.
+    mxb::AverageN**  ppWorker_loads {nullptr}; // Array of load averages for workers.
+    int              epoll_listener_fd {-1};   // Shared epoll descriptor for listening descriptors.
+    WN*              pNotifier {nullptr};      // Watchdog notifier.
+} this_unit;
 
 thread_local struct this_thread
 {
@@ -215,66 +277,46 @@ RoutingWorker::~RoutingWorker()
 // static
 bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 {
-    mxb_assert(!this_unit.initialized);
-
-    this_unit.epoll_listener_fd = epoll_create(MAX_EVENTS);
-
-    if (this_unit.epoll_listener_fd != -1)
+    if (this_unit.init(pNotifier))
     {
         int nCreated = config_threadcount();
-        // 0-inited arrays.
-        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [this_unit.nMax]();
-        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [this_unit.nMax];
 
-        if (ppWorkers && ppWorker_loads)
+        size_t rebalance_window = mxs::Config::get().rebalance_window.get();
+        int fd = this_unit.epoll_listener_fd;
+
+        int i;
+        for (i = 0; i < nCreated; ++i)
         {
-            size_t rebalance_window = mxs::Config::get().rebalance_window.get();
+            std::unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, pNotifier, fd));
+            std::unique_ptr<AverageN> sAverage(new (std::nothrow) AverageN(rebalance_window));
 
-            int i;
-            for (i = 0; i < nCreated; ++i)
+            if (sWorker && sAverage)
             {
-                RoutingWorker* pWorker = RoutingWorker::create(i, pNotifier, this_unit.epoll_listener_fd);
-                AverageN* pAverage = new (std::nothrow) AverageN(rebalance_window);
-
-                if (pWorker && pAverage)
-                {
-                    ppWorkers[i] = pWorker;
-                    ppWorker_loads[i] = pAverage;
-                }
-                else
-                {
-                    for (int j = i - 1; j >= 0; --j)
-                    {
-                        delete ppWorker_loads[j];
-                        delete ppWorkers[j];
-                    }
-
-                    delete[] ppWorkers;
-                    ppWorkers = NULL;
-                    break;
-                }
+                this_unit.ppWorkers[i] = sWorker.release();
+                this_unit.ppWorker_loads[i] = sAverage.release();
             }
-
-            if (ppWorkers && ppWorker_loads)
+            else
             {
-                this_unit.ppWorkers = ppWorkers;
-                this_unit.ppWorker_loads = ppWorker_loads;
-                this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
-                // nRunning and nDesired are set in start_workers().
-                this_unit.pNotifier = pNotifier;
-
-                this_unit.initialized = true;
+                for (int j = i - 1; j >= 0; --j)
+                {
+                    delete this_unit.ppWorker_loads[j];
+                    delete this_unit.ppWorkers[j];
+                    this_unit.ppWorker_loads[j] = nullptr;
+                    this_unit.ppWorkers[j] = nullptr;
+                }
+                break;
             }
+        }
+
+        if (i == nCreated)
+        {
+            this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
+            // nRunning and nDesired are set in start_workers().
         }
         else
         {
-            MXB_OOM();
-            close(this_unit.epoll_listener_fd);
+            this_unit.finish();
         }
-    }
-    else
-    {
-        MXB_ALERT("Could not allocate an epoll instance.");
     }
 
     return this_unit.initialized;
@@ -282,32 +324,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
 void RoutingWorker::finish()
 {
-    mxb_assert(this_unit.initialized);
-
-    for (int i = this_unit.nCreated - 1; i >= 0; --i)
-    {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        mxb_assert(pWorker);
-
-        delete pWorker;
-        this_unit.ppWorkers[i] = NULL;
-
-        mxb::Average* pWorker_load = this_unit.ppWorker_loads[i];
-        delete pWorker_load;
-    }
-
-    this_unit.nCreated.store(0, std::memory_order_relaxed);
-    this_unit.nRunning.store(0, std::memory_order_relaxed);
-
-    delete[] this_unit.ppWorkers;
-    this_unit.ppWorkers = NULL;
-
-    close(this_unit.epoll_listener_fd);
-    this_unit.epoll_listener_fd = 0;
-
-    this_unit.pNotifier = nullptr;
-
-    this_unit.initialized = false;
+    this_unit.finish();
 }
 
 //static
