@@ -111,9 +111,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService)
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
 {
     bool succp = false;
-    int servers_found = 0;
     int servers_connected = 0;
-    int slaves_connected = 0;
 
     /**
      * Scan server list and connect each of them. None should fail or session
@@ -123,15 +121,8 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
     {
         if (b->target()->is_connectable())
         {
-            servers_found += 1;
-
-            /** Server is already connected */
-            if (b->in_use())
-            {
-                slaves_connected += 1;
-            }
             /** New server connection */
-            else
+            if (!b->in_use())
             {
                 if (b->connect())
                 {
