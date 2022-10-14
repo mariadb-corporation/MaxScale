@@ -1883,7 +1883,7 @@ bool ParamModule::validate_parameters(const std::string& value,
         // The module does not expect nested parameters.
         valid = Param::validate_parameters(value, params, pUnrecognized);
     }
-    else if (pSpecification)
+    else
     {
         valid = pSpecification->validate(params, pUnrecognized);
     }
@@ -1904,7 +1904,7 @@ bool ParamModule::validate_parameters(const std::string& value,
         // The module does not expect nested parameters.
         valid = Param::validate_parameters(value, pParams, pUnrecognized);
     }
-    else if (pSpecification)
+    else
     {
         valid = pSpecification->validate(pParams, pUnrecognized);
     }

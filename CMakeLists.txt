@@ -192,7 +192,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overloaded-virtual")
 
 # Temporarily disabled warnings for clang. These will be removed one by one as
 # the code is changed.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-uninitialized")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-bitwise-instead-of-logical")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-constant-conversion")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-mismatched-tags")
