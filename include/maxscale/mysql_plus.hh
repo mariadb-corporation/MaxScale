@@ -1311,62 +1311,6 @@ private:
 };
 
 /**
- * @template CQRResultsetRow
- *
- * A template that when instantiated either represents a textual or a
- * binary resultset row.
- */
-template<class Iterator>
-class CQRResultsetRow : public ComPacket
-{
-public:
-    typedef typename Iterator::Value Value;
-    typedef Iterator                 iterator;
-
-    CQRResultsetRow(GWBUF* pPacket,
-                    const std::vector<enum_field_types>& types)
-        : ComPacket(pPacket)
-        , m_types(types)
-    {
-    }
-
-    CQRResultsetRow(const ComResponse& packet,
-                    const std::vector<enum_field_types>& types)
-        : ComPacket(packet)
-        , m_types(types)
-    {
-    }
-
-    iterator begin()
-    {
-        return iterator(payload(), m_types);
-    }
-
-    iterator end()
-    {
-        uint8_t* pEnd = GWBUF_DATA(m_pPacket) + gwbuf_link_length(m_pPacket);
-        return iterator(pEnd);
-    }
-
-private:
-    const std::vector<enum_field_types>& m_types;
-};
-
-/**
- * @class CQRTextResultsetRow
- *
- * An instance of this class represents a textual resultset row.
- */
-typedef CQRResultsetRow<CQRTextResultsetRowIterator> CQRTextResultsetRow;
-
-/**
- * @class CQRBinaryResultsetRow
- *
- * An instance of this class represents a binary resultset row.
- */
-typedef CQRResultsetRow<CQRBinaryResultsetRowIterator> CQRBinaryResultsetRow;
-
-/**
  * @class ComQueryResponse
  *
  * An instance of this class represents the response to a @c ComQuery.
@@ -1374,10 +1318,6 @@ typedef CQRResultsetRow<CQRBinaryResultsetRowIterator> CQRBinaryResultsetRow;
 class ComQueryResponse : public ComPacket
 {
 public:
-    typedef CQRColumnDef          ColumnDef;
-    typedef CQRTextResultsetRow   TextResultsetRow;
-    typedef CQRBinaryResultsetRow BinaryResultsetRow;
-
     ComQueryResponse(const ComPacket& com_packet)
         : ComPacket(com_packet)
         , m_nFields(payload())
