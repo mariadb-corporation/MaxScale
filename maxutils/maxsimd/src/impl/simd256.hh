@@ -81,10 +81,10 @@ __m256i make_ascii_bitmap(const std::string& chars);
 inline __m256i bitmask_lookup_const()
 {
     static const __m256i bitmask = _mm256_setr_epi8(
-        1, 2, 4, 8, 16, 32, 64, 128,
-        1, 2, 4, 8, 16, 32, 64, 128,
-        1, 2, 4, 8, 16, 32, 64, 128,
-        1, 2, 4, 8, 16, 32, 64, 128
+        1, 2, 4, 8, 16, 32, 64, char(128),
+        1, 2, 4, 8, 16, 32, 64, char(128),
+        1, 2, 4, 8, 16, 32, 64, char(128),
+        1, 2, 4, 8, 16, 32, 64, char(128)
         );
 
     return bitmask;
