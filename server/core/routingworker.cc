@@ -58,7 +58,7 @@ struct this_unit
     bool                   running;            // True if worker threads are running
     const int              nMax;               // Hard maximum of workers
     std::atomic<int>       nCreated;           // Created amount of workers.
-    std::atomic<int>       nRunning;           // Running amount of workers.
+    std::atomic<int>       nRunning;           // "Running" amount of workers.
     RoutingWorker**        ppWorkers;          // Array of routing worker instances.
     mxb::AverageN**        ppWorker_loads;     // Array of load averages for workers.
     int                    epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
@@ -173,6 +173,7 @@ RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
     , m_index(index)
     , m_listening(false)
+    , m_routing(false)
     , m_callable(this)
     , m_pool_handler(this)
 {
@@ -180,7 +181,7 @@ RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
-    if (m_listening)
+    if (is_listening())
     {
         stop_polling_on_shared_fd();
     }
@@ -413,6 +414,11 @@ bool RoutingWorker::start_listening(const std::vector<SListener>& listeners)
     rv = start_polling_on_shared_fd();
     mxb_assert(rv); // Should not ever fail.
 
+    if (rv)
+    {
+        set_listening(true);
+    }
+
     return rv;
 }
 
@@ -442,7 +448,60 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
         mxb_assert(rv); // Should not ever fail.
     }
 
+    if (rv)
+    {
+        set_listening(false);
+    }
+
     return rv;
+}
+
+void RoutingWorker::deactivate()
+{
+    // TODO: Release as much memory as possible.
+
+    clear_routing();
+
+    MainWorker* pMain = MainWorker::get();
+    mxb_assert(pMain);
+
+    pMain->execute([this]() {
+            // Cross-worker call, so we may no longer be inactive.
+            if (is_inactive())
+            {
+                int i = this->index();
+                mxb_assert(i > 0);
+
+                MXB_NOTICE("Routing worker %d has been deactivated.", i);
+
+                auto n = this_unit.nRunning.load(std::memory_order_relaxed);
+
+                if (i == n - 1)
+                {
+                    // This was the last running worker. Now we can reduce nRunning.
+                    --n;
+                    --i;
+
+                    // And "remove" any intermediate inactive workers as well.
+                    while (i > 0)
+                    {
+                        auto* pWorker = this_unit.ppWorkers[i];
+
+                        if (pWorker->is_inactive())
+                        {
+                            --n;
+                            --i;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                this_unit.nRunning.store(n, std::memory_order_relaxed);
+            }
+        }, mxb::Worker::EXECUTE_QUEUED);
 }
 
 //static
@@ -548,12 +607,14 @@ bool RoutingWorker::create_threads(int n)
 }
 
 //static
-bool RoutingWorker::decrease_threads(int nDelta)
+bool RoutingWorker::decrease_threads(int n)
 {
-    mxb_assert(nDelta > 0);
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(n > 0);
+    mxb_assert(this_unit.nCreated == this_unit.nRunning);
 
     int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
-    int nAfter = nBefore - nDelta;
+    int nAfter = nBefore - n;
     mxb_assert(nAfter > 0);
 
     auto listeners = Listener::get_started_listeners();
@@ -566,6 +627,11 @@ bool RoutingWorker::decrease_threads(int nDelta)
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
                 success = pWorker->stop_listening(listeners);
+
+                if (success && pWorker->can_deactivate())
+                {
+                    pWorker->deactivate();
+                }
             }, mxb::Worker::EXECUTE_QUEUED);
 
         if (!success)
@@ -582,14 +648,12 @@ bool RoutingWorker::decrease_threads(int nDelta)
         nAfter = i;
     }
 
-    this_unit.nRunning.store(nAfter, std::memory_order_relaxed);
-
     return i != nBefore;
 }
 
 bool RoutingWorker::start_polling_on_shared_fd()
 {
-    mxb_assert(!m_listening);
+    mxb_assert(!is_listening());
 
     bool rv = false;
 
@@ -600,7 +664,6 @@ bool RoutingWorker::start_polling_on_shared_fd()
     if (add_pollable(EPOLLIN, this))
     {
         MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
-        m_listening = true;
         rv = true;
     }
     else
@@ -1333,7 +1396,11 @@ RoutingWorker* RoutingWorker::create(int index, mxb::WatchdogNotifier* pNotifier
 
     if (pThis)
     {
-        if (!pThis->start_polling_on_shared_fd())
+        if (pThis->start_polling_on_shared_fd())
+        {
+            pThis->set_listening(true);
+        }
+        else
         {
             delete pThis;
             pThis = NULL;
@@ -2067,8 +2134,12 @@ void RoutingWorker::register_session(MXS_SESSION* ses)
 
 void RoutingWorker::deregister_session(uint64_t session_id)
 {
-    MXB_AT_DEBUG(bool rv = ) m_sessions.remove(session_id);
-    mxb_assert(rv);
+    bool rv = m_sessions.remove(session_id);
+
+    if (rv && can_deactivate())
+    {
+        deactivate();
+    }
 }
 
 void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)

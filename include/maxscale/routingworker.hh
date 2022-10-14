@@ -158,6 +158,31 @@ public:
 
     const SessionsById& session_registry() const;
 
+    bool is_listening() const
+    {
+        return m_listening.load(std::memory_order_relaxed);
+    }
+
+    bool is_routing() const
+    {
+        return m_routing.load(std::memory_order_relaxed);
+    }
+
+    bool is_draining() const
+    {
+        return !is_listening() && is_routing();
+    }
+
+    bool is_active() const
+    {
+        return is_listening() && is_routing();
+    }
+
+    bool is_inactive() const
+    {
+        return !is_listening() && !is_routing();
+    }
+
     /**
      * Add a session to the current routing worker's session container.
      *
@@ -550,6 +575,23 @@ private:
 
     static RoutingWorker* create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
+    void set_listening(bool b)
+    {
+        m_listening.store(b, std::memory_order_relaxed);
+
+        if (b)
+        {
+            // If worker is listening, then it is also routing. However, even
+            // if it is not listening, it may still be routing.
+            m_routing.store(true, std::memory_order_relaxed);
+        }
+    }
+
+    void clear_routing()
+    {
+        m_routing.store(false, std::memory_order_relaxed);
+    }
+
     static bool increase_threads(int nDelta);
     static bool decrease_threads(int nDelta);
 
@@ -561,6 +603,13 @@ private:
 
     bool start_listening(const std::vector<std::shared_ptr<Listener>>& listeners);
     bool stop_listening(const std::vector<std::shared_ptr<Listener>>& listeners);
+
+    bool can_deactivate() const
+    {
+        return !is_listening() && m_sessions.empty();
+    }
+
+    void deactivate();
 
     bool pre_run() override;
     void post_run() override;
@@ -665,7 +714,8 @@ private:
     using TickFuncs = std::vector<std::function<void()>>;
 
     int                m_index;     /*< Index of routing worker */
-    bool               m_listening; /*< Listening for new clients */
+    std::atomic<bool>  m_listening; /*< Is the routing worker listening. */
+    std::atomic<bool>  m_routing;   /*< Is the routing worker routing. */
     Worker::Callable   m_callable;  /*< Context for own dcalls */
     SessionsById       m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies            m_zombies;   /*< DCBs to be deleted. */
