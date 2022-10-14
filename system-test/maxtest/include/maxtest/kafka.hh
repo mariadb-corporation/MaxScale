@@ -229,7 +229,7 @@ public:
                 // Topic doesn't exist yet, sleep for a few seconds
                 sleep(5);
             }
-            else if (err != RdKafka::ERR_REQUEST_TIMED_OUT || err != RdKafka::ERR__TIMED_OUT)
+            else if (err != RdKafka::ERR_REQUEST_TIMED_OUT && err != RdKafka::ERR__TIMED_OUT)
             {
                 std::cout << "Error from Kafka: " << RdKafka::err2str(err) << std::endl;
                 break;
