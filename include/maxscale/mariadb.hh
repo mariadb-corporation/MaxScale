@@ -151,9 +151,6 @@ public:
     }
 
 private:
-    int64_t                  m_total;
-    int64_t                  m_used;
-    int64_t                  m_available;
     std::vector<std::string> m_paths;
 };
 

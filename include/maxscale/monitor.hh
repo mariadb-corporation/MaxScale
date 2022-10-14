@@ -976,7 +976,6 @@ protected:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
 
 private:
-    int32_t        m_shutdown;      /**< Non-zero if the monitor should shut down. */
     bool           m_checked;       /**< Whether server access has been checked. */
     mxb::Semaphore m_semaphore;     /**< Semaphore for synchronizing with monitor thread. */
     int64_t        m_loop_called;   /**< When was the loop called the last time. */

@@ -252,7 +252,6 @@ private:
     Worker*        m_pW1;
     Worker*        m_pW2;
     Worker*        m_pW3;
-    Worker::DCId   m_dcid { 0 };
     int32_t        m_nMoves { 0 };
     mxb::StopWatch m_stopwatch;
     bool           m_moving { false };

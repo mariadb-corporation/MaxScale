@@ -97,7 +97,6 @@ private:
     st_mysql*         m_conn {nullptr};
     st_mariadb_rpl*   m_rpl {nullptr};
     ConnectionDetails m_details;
-    int               m_nesting_level = 0;
 
     void connect();
 };

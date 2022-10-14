@@ -42,8 +42,6 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 private:
-
-    MXS_SESSION*               m_session;
     mxs::SRWBackends           m_backends;
     uint64_t                   m_completed;
     uint8_t                    m_packet_num;
