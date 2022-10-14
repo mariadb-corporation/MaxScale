@@ -35,7 +35,7 @@ class Monitor;
 
 class DCB;
 struct json_t;
-struct ExternalCmd;
+class ExternalCmd;
 typedef struct st_mysql MYSQL;
 
 /**
