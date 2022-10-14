@@ -190,10 +190,6 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb -Wno-uni
 # be a compilation error, so the warning is not very important.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overloaded-virtual")
 
-# Temporarily disabled warnings for clang. These will be removed one by one as
-# the code is changed.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-bitwise-instead-of-logical")
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${FLAGS} ${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wsuggest-override")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
