@@ -1050,14 +1050,12 @@ static int read_log(const char* name, char** err_log_content_p)
 int TestConnections::find_connected_slave1()
 {
     int conn_num;
-    int all_conn = 0;
     int current_slave = -1;
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
         conn_num = get_conn_num(repl->nodes[i], maxscale->ip(), maxscale->hostname(), (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
-        all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
         {
             current_slave = i;

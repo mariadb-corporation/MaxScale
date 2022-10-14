@@ -329,5 +329,5 @@ int main(int argc, char** argv)
     int errors = 0;
     errors += test1();
     errors += test2();
-    return 0;
+    return errors;
 }
