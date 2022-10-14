@@ -16,7 +16,7 @@ typedef std::set<std::string> StringSet;
 
 namespace maxtest
 {
-class SharedData;
+struct SharedData;
 class TestLogger;
 
 using NetworkConfig = std::map<std::string, std::string>;

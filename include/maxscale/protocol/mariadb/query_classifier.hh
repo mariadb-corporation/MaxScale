@@ -17,7 +17,7 @@
 
 #define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
 
-struct GWBUF;
+class GWBUF;
 struct json_t;
 
 /**

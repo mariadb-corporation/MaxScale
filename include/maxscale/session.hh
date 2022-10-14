@@ -27,7 +27,7 @@ class SERVICE;
 class SERVER;
 namespace maxscale
 {
-struct Routable;
+class Routable;
 class ListenerData;
 }
 
@@ -52,7 +52,7 @@ typedef struct
  */
 namespace maxscale
 {
-struct Routable;
+class Routable;
 class RoutingWorker;
 }
 
