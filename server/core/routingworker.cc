@@ -21,6 +21,7 @@
 #include <sys/epoll.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/average.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
@@ -501,7 +502,12 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
 
 void RoutingWorker::deactivate()
 {
-    // TODO: Release as much memory as possible.
+    int64_t cleared = qc_clear_thread_cache();
+
+    MXB_NOTICE("%s of memory used by the query classifier cache released when routing worker "
+               "%d was deactivated.", mxb::pretty_size(cleared).c_str(), index());
+
+    // TODO: Release additional resources and memory.
 
     clear_routing();
 
