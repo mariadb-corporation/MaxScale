@@ -248,10 +248,7 @@ export default {
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 // create the connection
-                const res = await this.vue.$queryHttp.post(
-                    `/sql?persist=yes&max-age=${rootState.queryEditorConfig.auth_cookies_max_age}`,
-                    body
-                )
+                const res = await this.vue.$queryHttp.post(`/sql?persist=yes&max-age=604800`, body)
                 if (res.status === 201) {
                     dispatch('unbindConn')
                     commit(
@@ -351,13 +348,12 @@ export default {
          * @param {Function} param.getCloneObjRes - get the result of the clone object
          */
         async cloneConn(
-            { commit, rootState },
+            { commit },
             { conn_to_be_cloned, binding_type, session_id_fk, getCloneObjRes }
         ) {
             try {
-                const max_age = rootState.queryEditorConfig.auth_cookies_max_age
                 const res = await this.vue.$queryHttp.post(
-                    `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=${max_age}`
+                    `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=604800`
                 )
                 if (res.status === 201) {
                     const connId = res.data.data.id

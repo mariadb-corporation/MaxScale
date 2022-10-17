@@ -301,13 +301,6 @@ The provided config options will be merged with the current one which has the fo
 
 Check [axios documentation](https://github.com/axios/axios#request-config) for available options
 
-## Change authentication cookies expired time
-
-The default expired time for the authentication cookies of SQL connections is
-24 hours (86400). To change it, committing the following mutation:
-
-`store.commit('queryEditorConfig/SET_AUTH_COOKIES_MAX_AGE', 86400)`
-
 ## Reserved keywords
 
 Certain keywords are reserved in order to make the query editor work properly.

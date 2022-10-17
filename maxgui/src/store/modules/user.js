@@ -58,7 +58,7 @@ export default {
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
                 let url = '/auth?persist=yes'
-                let res = await authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
+                let res = await authHttp.get(`${url}${rememberMe ? '&max-age=604800' : ''}`, {
                     auth,
                 })
                 if (res.status === 204) {

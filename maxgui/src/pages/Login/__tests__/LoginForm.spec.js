@@ -126,7 +126,7 @@ describe('LoginForm.vue', () => {
         await wrapper.find('.login-btn').trigger('click') //submit
         await wrapper.vm.$nextTick(() =>
             expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-                '/auth?persist=yes&max-age=86400'
+                '/auth?persist=yes&max-age=604800'
             )
         )
     })
@@ -137,7 +137,7 @@ describe('LoginForm.vue', () => {
         await wrapper.find('.login-btn').trigger('click') //submit
         await wrapper.vm.$nextTick(() => {
             expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-                '/auth?persist=yes&max-age=86400'
+                '/auth?persist=yes&max-age=604800'
             )
             expect(wrapper.vm.$route.path).to.be.equals('/dashboard/servers')
         })

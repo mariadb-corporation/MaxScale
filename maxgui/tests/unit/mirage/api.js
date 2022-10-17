@@ -31,7 +31,7 @@ export function makeServer({ environment = 'test' }) {
             })
             this.get(`/`, () => new Response(200))
             this.get(`/auth?persist=yes`, () => new Response(204))
-            this.get(`/auth?persist=yes&max-age=86400`, () => new Response(204))
+            this.get(`/auth?persist=yes&max-age=604800`, () => new Response(204))
         },
     })
 
