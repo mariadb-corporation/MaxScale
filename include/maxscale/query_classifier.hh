@@ -616,3 +616,10 @@ bool qc_alter_from_json(json_t* pJson);
  * @return A json object containing information about the query classifier cache.
  */
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
+
+/**
+ * Clear query classifier cache for current thread.
+ *
+ * @return The amount of memory freed.
+ */
+int64_t qc_clear_thread_cache();

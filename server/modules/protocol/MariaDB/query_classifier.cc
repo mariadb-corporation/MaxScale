@@ -275,6 +275,21 @@ public:
         }
     }
 
+    int64_t clear()
+    {
+        int64_t rv = 0;
+
+        for (auto& kv : m_infos)
+        {
+            rv += entry_size(kv.second.pInfo);
+            this_unit.classifier->qc_info_close(kv.second.pInfo);
+        }
+
+        m_infos.clear();
+
+        return rv;
+    }
+
 private:
     struct Entry
     {
@@ -1696,4 +1711,17 @@ void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
     {
         pCache->get_state(state);
     }
+}
+
+int64_t qc_clear_thread_cache()
+{
+    int64_t rv = 0;
+    QCInfoCache* pCache = this_thread.pInfo_cache;
+
+    if (pCache)
+    {
+        rv = pCache->clear();
+    }
+
+    return rv;
 }
