@@ -131,9 +131,9 @@ std::vector<UserInfo> Users::get_all() const
     return rval;
 }
 
-bool Users::authenticate(const std::string& user, const std::string& password)
+user_account_type Users::authenticate(const std::string& user, const std::string& password)
 {
-    bool rval = false;
+    user_account_type rval = USER_ACCOUNT_UNKNOWN;
     Guard guard(m_lock);
 
     if (auto it = m_data.find(user); it != m_data.end())
@@ -144,8 +144,8 @@ bool Users::authenticate(const std::string& user, const std::string& password)
 
         if (stored == crypted)
         {
-            rval = true;
             it->second.last_login = time(nullptr);
+            rval = it->second.permissions;
         }
     }
 

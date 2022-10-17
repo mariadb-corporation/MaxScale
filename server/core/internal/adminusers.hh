@@ -26,8 +26,8 @@ const char* admin_add_inet_user(const char* uname, const char* password, mxs::us
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
 bool        admin_inet_user_exists(const char* uname);
-bool        admin_verify_inet_user(const char* uname, const char* password);
-bool        admin_user_is_inet_admin(const char* username, const char* password);
+
+mxs::user_account_type admin_verify_inet_user(const char* uname, const char* password);
 
 /**
  * @brief Convert all admin users to JSON
@@ -47,19 +47,6 @@ json_t* admin_all_users_to_json(const char* host);
  * @return The user converted to JSON
  */
 json_t* admin_user_to_json(const char* host, const char* user);
-
-/**
- * Check if user credentials are accepted by any of the configured REST API PAM services. By default, both
- * the read-only and read-write services are attempted.
- *
- * @param username Username
- * @param password Password
- * @param min_acc_type Minimum account type required. If BASIC, authentication succeeds if
- * either read-only or readwrite service succeeds. If ADMIN, only the readwrite service is attempted.
- * @return True if user & password logged in successfully
- */
-bool admin_user_is_pam_account(const std::string& username, const std::string& password,
-                               mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);
 
 /**
  * Get the raw admin users data

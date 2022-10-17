@@ -77,7 +77,7 @@ public:
     bool                  remove(const std::string& user);
     bool                  get(const std::string& user, UserInfo* output = NULL) const;
     std::vector<UserInfo> get_all() const;
-    bool                  authenticate(const std::string& user, const std::string& password);
+    user_account_type     authenticate(const std::string& user, const std::string& password);
     int                   admin_count() const;
     bool                  check_permissions(const std::string& user, const std::string& password,
                                             user_account_type perm) const;
