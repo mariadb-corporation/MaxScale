@@ -927,7 +927,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         char* end;
         auto l = strtol(max_age.c_str(), &end, 10);
 
-        if (l > 0 && *end == '\0')
+        if (l > 0 && l < INT_MAX && *end == '\0')
         {
             token_age = l;
         }
