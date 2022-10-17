@@ -984,12 +984,14 @@ bool Client::auth_with_token(const std::string& token, const char* method, const
     else
     {
         // Normal token authentication, tokens are generated and verified by MaxScale
-        if (auto [ok, user] = mxs::jwt::get_subject(TOKEN_ISSUER, token); ok)
+        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token))
         {
-            if (authorize_user(user.c_str(), method, client_url))
+            auto user = claims->get("sub");
+
+            if (user && authorize_user(user->c_str(), method, client_url))
             {
                 rval = true;
-                m_user = std::move(user);
+                m_user = std::move(user.value());
             }
             else
             {

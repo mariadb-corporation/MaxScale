@@ -67,13 +67,16 @@ std::pair<std::string, std::string> get_connection_id(const HttpRequest& request
     std::string token = request.get_option("token");
     std::string cookie = get_conn_id_cookie(request, requested_id);
 
-    if (!token.empty())
+    if (!token.empty() || !cookie.empty())
     {
-        std::tie(ok, aud) = mxs::jwt::get_subject(TOKEN_ISSUER, token);
-    }
-    else if (!cookie.empty())
-    {
-        std::tie(ok, aud) = mxs::jwt::get_subject(TOKEN_ISSUER, cookie);
+        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token.empty() ? cookie : token))
+        {
+            if (auto sub = claims->get("sub"))
+            {
+                ok = true;
+                aud = sub.value();
+            }
+        }
     }
     else if (!requested_id.empty())
     {
