@@ -1584,7 +1584,7 @@ are required if `config_sync_cluster` is configured.
 
 ### `config_sync_interval`
 
-- **Type**: duration
+- **Type**: [duration](#durations)
 - **Default**: 5s
 - **Dynamic**: Yes
 
@@ -1597,7 +1597,7 @@ how much load it places on the database.
 
 ### `config_sync_timeout`
 
-- **Type**: duration
+- **Type**: [duration](#durations)
 - **Default**: 10s
 - **Dynamic**: Yes
 

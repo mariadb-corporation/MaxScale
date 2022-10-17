@@ -1082,21 +1082,19 @@ json_t* Config::object_source_to_json(const std::string& name)
         source_file = json_string(mxs::ConfigManager::get()->dynamic_config_filename().c_str());
         source_type = json_string("cluster");
     }
-    else if (mxs::Config::get().load_persisted_configs || is_static_object(name))
+    else if (auto it = this_unit.source_files.find(name); it != this_unit.source_files.end())
     {
-        // We expect the file to be there but in case it isn't, use the bracket operator to be safe. This
-        // also covers the case where load_persisted_configs is disabled but the object was found in a static
-        // file.
-        mxb_assert(this_unit.source_files.find(name) != this_unit.source_files.end());
-        source_file = json_string(this_unit.source_files[name].c_str());
+        source_file = json_string(it->second.c_str());
         source_type = json_string(is_dynamic_object(name) ? "runtime" : "static");
     }
     else
     {
-        // load_persisted_configs has been disabled which means we don't know if the object was modified, only
-        // if it originated from a config file or not. This branch should only be reached with objects that
-        // were created at runtime.
-        mxb_assert(!mxs::Config::get().load_persisted_configs && !is_static_object(name));
+        // load_persisted_configs or persist_runtime_changes has been disabled which means we don't know if
+        // the object was modified, only if it originated from a config file or not. This branch should only
+        // be reached with objects that were created at runtime.
+        mxb_assert(!is_static_object(name)
+                   && (!mxs::Config::get().load_persisted_configs
+                       || !mxs::Config::get().persist_runtime_changes));
         source_file = json_null();
         source_type = json_string("runtime");
     }

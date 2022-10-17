@@ -15,7 +15,6 @@ const char* bad_configs[] =
     "bug495",
     "bug526",
     "bug479",
-    "bug493",
     "bad_ssl",
     "mxs710_bad_socket",
     "mxs711_two_ports",
