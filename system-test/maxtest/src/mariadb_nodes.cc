@@ -372,11 +372,13 @@ std::string MariaDBCluster::block_command(int node) const
 {
     const char FORMAT[] =
         "iptables -I INPUT -p tcp --dport %d -j REJECT;"
-        "ip6tables -I INPUT -p tcp --dport %d -j REJECT";
+        "iptables -I OUTPUT -p tcp --sport %d -j REJECT;"
+        "ip6tables -I INPUT -p tcp --dport %d -j REJECT;"
+        "ip6tables -I OUTPUT -p tcp --sport %d -j REJECT;";
 
     char command[sizeof(FORMAT) + 20];
 
-    sprintf(command, FORMAT, port[node], port[node]);
+    sprintf(command, FORMAT, port[node], port[node], port[node], port[node]);
 
     return command;
 }
@@ -385,11 +387,13 @@ std::string MariaDBCluster::unblock_command(int node) const
 {
     const char FORMAT[] =
         "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
-        "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT";
+        "iptables -I OUTPUT -p tcp --sport %d -j ACCEPT;"
+        "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT;"
+        "ip6tables -I OUTPUT -p tcp --sport %d -j ACCEPT;";
 
     char command[sizeof(FORMAT) + 20];
 
-    sprintf(command, FORMAT, port[node], port[node]);
+    sprintf(command, FORMAT, port[node], port[node], port[node], port[node]);
 
     return command;
 }
