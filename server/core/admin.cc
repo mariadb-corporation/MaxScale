@@ -1006,6 +1006,10 @@ bool Client::auth_with_token(const std::string& token, const char* method, const
                     type = mxs::USER_ACCOUNT_BASIC;
                 }
             }
+            else if (user)
+            {
+                type = admin_inet_user_exists(user->c_str());
+            }
 
             if (user && authorize_user(user->c_str(), type, method, client_url))
             {

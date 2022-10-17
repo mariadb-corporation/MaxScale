@@ -25,8 +25,8 @@ void        rest_users_init();
 const char* admin_add_inet_user(const char* uname, const char* password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
-bool        admin_inet_user_exists(const char* uname);
 
+mxs::user_account_type admin_inet_user_exists(const char* uname);
 mxs::user_account_type admin_verify_inet_user(const char* uname, const char* password);
 
 /**

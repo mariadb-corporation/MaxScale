@@ -358,9 +358,18 @@ const char* admin_remove_inet_user(const char* uname)
  *
  * @return True if the user exists, false otherwise.
  */
-bool admin_inet_user_exists(const char* uname)
+mxs::user_account_type admin_inet_user_exists(const char* uname)
 {
-    return rest_users.get(uname);
+    mxs::user_account_type rval = mxs::USER_ACCOUNT_UNKNOWN;
+    mxs::UserInfo users;
+
+    if (rest_users.get(uname, &users))
+    {
+        rval = users.permissions;
+    }
+
+
+    return rval;
 }
 
 mxs::user_account_type admin_user_is_pam_account(const std::string& username, const std::string& password)
