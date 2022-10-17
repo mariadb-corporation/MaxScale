@@ -46,7 +46,7 @@ describe('wke-ctr', () => {
             const { value, minPercent, split, disable } = wrapper.findComponent({
                 name: 'mxs-split-pane',
             }).vm.$props
-            expect(value).to.be.equals(wrapper.vm.$data.sidebarPct)
+            expect(value).to.be.equals(wrapper.vm.sidebarPct)
             expect(minPercent).to.be.equals(wrapper.vm.minSidebarPct)
             expect(split).to.be.equals('vert')
             expect(disable).to.be.equals(wrapper.vm.is_sidebar_collapsed)
@@ -138,18 +138,15 @@ describe('wke-ctr', () => {
             describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {
                 it(`Should return accurate value for minSidebarPct`, () => {
                     wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
-                    const minValueInPx = v ? 40 : 200
-                    const minPct = (minValueInPx / dummyCtrDim.width) * 100
+
+                    const minPct = v ? wrapper.vm.collapsedSidebarPct : wrapper.vm.sidebarPctLimit
                     expect(wrapper.vm.minSidebarPct).to.be.equals(minPct)
                 })
-                it(`Should assign accurate value for sidebarPct`, () => {
+                it(`Should return accurate value for sidebarPct`, () => {
                     wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
-                    const defValue = 240
-                    wrapper.vm.handleSetSidebarPct()
                     // if is_sidebar_collapsed is true, use minSidebarPct value
-                    const sidebarPct = v
-                        ? wrapper.vm.minSidebarPct
-                        : (defValue / dummyCtrDim.width) * 100
+                    const sidebarPct = v ? wrapper.vm.minSidebarPct : wrapper.vm.defSidebarPct
+
                     expect(wrapper.vm.sidebarPct).to.be.equals(sidebarPct)
                 })
             })

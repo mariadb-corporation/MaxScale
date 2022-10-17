@@ -7,12 +7,7 @@
         :searchSchema="search_schema"
         @set-search-schema="SET_SEARCH_SCHEMA({ payload: $event, id: active_wke_id })"
         @reload-schemas="fetchSchemas"
-        @toggle-sidebar="
-            SET_IS_SIDEBAR_COLLAPSED({
-                payload: !is_sidebar_collapsed,
-                id: active_wke_id,
-            })
-        "
+        @toggle-sidebar="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
         @get-node-data="handleGetNodeData"
         @load-children="handleLoadChildren"
         @use-db="useDb"
@@ -62,7 +57,7 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
             active_wke_id: state => state.wke.active_wke_id,
@@ -82,7 +77,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
-            SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
+            SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',

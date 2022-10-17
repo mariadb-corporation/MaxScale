@@ -22,6 +22,8 @@ export default {
         query_snippets: [],
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
+        is_sidebar_collapsed: false,
+        sidebar_pct: 0, // width of the sidebar in percentages
     },
     mutations: {
         SET_QUERY_ROW_LIMIT(state, payload) {
@@ -49,6 +51,12 @@ export default {
         },
         SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(state, payload) {
             state.query_show_sys_schemas_flag = payload
+        },
+        SET_IS_SIDEBAR_COLLAPSED(state, payload) {
+            state.is_sidebar_collapsed = payload
+        },
+        SET_SIDEBAR_PCT(state, payload) {
+            state.sidebar_pct = payload
         },
     },
     actions: {

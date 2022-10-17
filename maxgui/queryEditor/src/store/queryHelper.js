@@ -298,7 +298,6 @@ function syncStateCreator(namespace) {
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
         case 'schemaSidebar':
             return {
-                is_sidebar_collapsed: false,
                 search_schema: '',
                 expanded_nodes: [],
             }

@@ -140,7 +140,6 @@ export default {
         ...mapState({
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
-            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             query_snippets: state => state.queryPersisted.query_snippets,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
             SQL_CHART_TYPES: state => state.queryEditorConfig.config.SQL_CHART_TYPES,

@@ -80,7 +80,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
@@ -103,7 +103,6 @@ export default {
     },
     data() {
         return {
-            sidebarPct: 0, // mxs-split-pane states
             sessTabCtrHeight: 30,
             execSqlDlg: {
                 isOpened: false,
@@ -117,7 +116,8 @@ export default {
     },
     computed: {
         ...mapState({
-            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
+            sidebar_pct: state => state.queryPersisted.sidebar_pct,
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             query_sessions: state => state.querySession.query_sessions,
@@ -128,10 +128,18 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
+        collapsedSidebarPct() {
+            return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
+        },
+        sidebarPctLimit() {
+            return this.$helpers.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+        },
         minSidebarPct() {
-            if (this.is_sidebar_collapsed)
-                return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
-            else return this.$helpers.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+            if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
+            return this.sidebarPctLimit
+        },
+        defSidebarPct() {
+            return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
         stmtI18nPluralization() {
             const statementCounts = (this.execSqlDlg.sql.match(/;/g) || []).length
@@ -153,31 +161,33 @@ export default {
                 height: this.ctrDim.height - this.sessTabCtrHeight,
             }
         },
-    },
-    watch: {
-        'ctrDim.width'() {
-            this.handleSetSidebarPct()
+        sidebarPct: {
+            get() {
+                /**
+                 * sidebarPct can only be changed when sidebar isn't collapsed so SET_SIDEBAR_PCT won't be triggered
+                 */
+                if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
+                return this.sidebar_pct
+            },
+            set(v) {
+                this.SET_SIDEBAR_PCT(v)
+            },
         },
     },
     mounted() {
-        this.$nextTick(() => this.handleSetSidebarPct())
+        this.$nextTick(() => this.handleSetDefSidebarPct())
     },
     activated() {
-        this.watch_is_sidebar_collapsed()
         this.watch_active_sql_conn()
     },
     deactivated() {
-        this.$typy(this.unwatch_is_sidebar_collapsed).safeFunction()
         this.$typy(this.unwatch_active_sql_conn).safeFunction()
     },
     methods: {
         ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
-        //Watchers to work with multiple worksheets which are kept alive
-        watch_is_sidebar_collapsed() {
-            this.unwatch_is_sidebar_collapsed = this.$watch('is_sidebar_collapsed', () =>
-                this.handleSetSidebarPct()
-            )
-        },
+        ...mapMutations({
+            SET_SIDEBAR_PCT: 'queryPersisted/SET_SIDEBAR_PCT',
+        }),
         /**
          * A watcher on active_sql_conn state that is triggered immediately
          * to behave like a created hook. The watcher is watched/unwatched based on
@@ -192,10 +202,8 @@ export default {
             )
         },
         // panes dimension/percentages calculation functions
-        handleSetSidebarPct() {
-            if (this.is_sidebar_collapsed) this.sidebarPct = this.minSidebarPct
-            else
-                this.sidebarPct = this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
+        handleSetDefSidebarPct() {
+            if (!this.sidebar_pct) this.sidebarPct = this.defSidebarPct
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
