@@ -31,6 +31,7 @@
   monitors are deprecated in 22.08.2 and will be removed in 23.02.0.
 
 For more details, please refer to:
+* [MariaDB MaxScale 22.08.2 Release Notes](Release-Notes/MaxScale-22.08.2-Release-Notes.md)
 * [MariaDB MaxScale 22.08.1 Release Notes](Release-Notes/MaxScale-22.08.1-Release-Notes.md)
 * [MariaDB MaxScale 22.08.0 Release Notes](Release-Notes/MaxScale-22.08.0-Release-Notes.md)
 
