@@ -27,6 +27,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4355](https://jira.mariadb.org/browse/MXS-4355) Token authentication does not work correctly with PAM users
 * [MXS-4353](https://jira.mariadb.org/browse/MXS-4353) /maxscale/logs/data endpoint doesn't filter syslog contents correctly
 * [MXS-4350](https://jira.mariadb.org/browse/MXS-4350) The rebalancing functionality is claimed to be disabled
 * [MXS-4349](https://jira.mariadb.org/browse/MXS-4349) The documentation of the behaviour of 'threads=auto' in containers is incorrect
