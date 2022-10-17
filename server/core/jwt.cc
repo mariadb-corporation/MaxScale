@@ -242,7 +242,8 @@ struct Jwt
 {
     virtual ~Jwt() = default;
 
-    virtual std::string sign(const std::string& issuer, const std::string& subject, int max_age) = 0;
+    virtual std::string sign(const std::string& issuer, const std::string& subject, int max_age,
+                             std::map<std::string, std::string>) = 0;
 
     virtual std::optional<mxs::jwt::Claims>
     get_claims(const std::string& issuer, const std::string& token) = 0;
@@ -257,19 +258,24 @@ public:
     {
     }
 
-    std::string sign(const std::string& issuer,
-                     const std::string& subject,
-                     int max_age) override
+    std::string sign(const std::string& issuer, const std::string& subject, int max_age,
+                     std::map<std::string, std::string> claims) override final
     {
         auto now = std::chrono::system_clock::now();
 
-        return ::jwt::create()
-               .set_issuer(issuer)
-               .set_audience(subject)
-               .set_subject(subject)
-               .set_issued_at(now)
-               .set_expires_at(now + std::chrono::seconds {max_age})
-               .sign(m_algo);
+        auto tok = ::jwt::create()
+            .set_issuer(issuer)
+            .set_audience(subject)
+            .set_subject(subject)
+            .set_issued_at(now)
+            .set_expires_at(now + std::chrono::seconds {max_age});
+
+        for (auto [k, v] : claims)
+        {
+            tok.set_payload_claim(k, ::jwt::claim(v));
+        }
+
+        return tok.sign(m_algo);
     }
 
     std::optional<mxs::jwt::Claims>
@@ -708,10 +714,11 @@ bool init()
     return this_unit.jwt.get();
 }
 
-std::string create(const std::string& issuer, const std::string& subject, int max_age)
+std::string create(const std::string& issuer, const std::string& subject, int max_age,
+                   std::map<std::string, std::string> claims)
 {
     std::lock_guard guard(this_unit.lock);
-    return this_unit.jwt->sign(issuer, subject, max_age);
+    return this_unit.jwt->sign(issuer, subject, max_age, std::move(claims));
 }
 
 std::optional<Claims> decode(const std::string& issuer, const std::string& token)

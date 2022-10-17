@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -77,11 +78,12 @@ bool init();
  * @param subject  The recipient of the token. The information stored here is not encrypted so don't store
  *                 anything sensitive in it.
  * @param max_age  The age in seconds the token is valid for.
+ * @param claims   Extra claims to be added to the token. These MUST NOT conflict with any well-known claims.
  *
  * @return A JSON web token in the encoded format.
  */
-std::string create(const std::string& issuer, const std::string& subject, int max_age);
-
+std::string create(const std::string& issuer, const std::string& subject, int max_age,
+                   std::map<std::string, std::string> claims = {});
 
 /**
  * Decode and validate a JSON Web Token
