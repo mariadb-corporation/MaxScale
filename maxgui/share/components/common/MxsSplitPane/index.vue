@@ -1,8 +1,7 @@
 <template>
     <div
         class="mxs-split-pane-container"
-        :class="{ 'no-userSelect': active }"
-        :style="{ cursor }"
+        :style="{ cursor, ...resizingStyle }"
         @mouseup="onMouseUp"
         @mousemove="onMouseMove"
     >
@@ -76,10 +75,15 @@ export default {
             return { [this.panePosType]: `${100 - this.currPct}%` }
         },
         resizerStyle() {
-            return {
+            let style = {
                 [this.resizerPosType]: `${this.currPct}%`,
-                ...(this.disable && { cursor: 'unset', pointerEvents: 'none' }),
+                ...this.resizingStyle,
             }
+            if (this.disable) {
+                style.cursor = 'unset'
+                style.pointerEvents = 'none'
+            }
+            return style
         },
         cursor() {
             return this.active ? (this.split === 'vert' ? 'col-resize' : 'row-resize') : ''
@@ -90,6 +94,11 @@ export default {
         rightPaneStyle() {
             return this.revertRender ? this.leftPanelPos : this.rightPanelPos
         },
+        resizingStyle() {
+            return {
+                pointerEvents: this.active ? 'all !important' : 'auto',
+            }
+        },
     },
     watch: {
         active(v, oV) {
@@ -98,6 +107,8 @@ export default {
                 // only emit when user finishes resizing
                 this.$emit('input', this.currPct)
             }
+            if (v) document.body.classList.add('no-userSelect--all', 'no-pointerEvent--all')
+            else document.body.classList.remove('no-userSelect--all', 'no-pointerEvent--all')
         },
         value(v) {
             // update current pecent when value change. e.g when pane is toggled

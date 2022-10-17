@@ -64,8 +64,23 @@
 .no-userSelect {
     user-select: none !important;
 }
+
+.no-userSelect--all {
+    user-select: none !important;
+    * {
+        user-select: none !important;
+    }
+}
+
 .no-pointerEvent {
     pointer-events: none !important;
+}
+
+.no-pointerEvent--all {
+    pointer-events: none !important;
+    * {
+        pointer-events: none !important;
+    }
 }
 
 .grayed-out-info {
