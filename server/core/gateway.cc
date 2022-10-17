@@ -760,7 +760,7 @@ static bool init_log()
     {
         print_alert(errno, "Cannot create log directory '%s'", mxs::logdir());
     }
-    else if (mxs_log_init(NULL, mxs::logdir(), cnf.log_target))
+    else if (mxs_log_init("maxscale", mxs::logdir(), cnf.log_target))
     {
         // Since init_log() may be called more than once, we need to ensure
         // that the cleanup-function is not registered more than once.

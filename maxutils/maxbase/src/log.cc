@@ -405,6 +405,7 @@ struct this_unit
     std::unique_ptr<MessageRegistry> sMessage_registry;
     size_t                           (* context_provider)(char* buffer, size_t len);
     mxb_in_memory_log_t              in_memory_log;
+    const char*                      syslog_identifier = "";
     bool                             (* should_log)(int priority) = return_false;
 } this_unit =
 {
@@ -501,6 +502,15 @@ bool mxb_log_init(const char* ident,
         filepath = std::string(logdir) + "/" + suffix;
     }
 
+    if (!ident)
+    {
+#ifdef __GNUC__
+        ident = program_invocation_short_name;
+#else
+        ident = "mxb_log";      // Better than nothing
+#endif
+    }
+
     this_unit.sMessage_registry.reset(new(std::nothrow) MessageRegistry);
 
     switch (target)
@@ -531,6 +541,7 @@ bool mxb_log_init(const char* ident,
     {
         this_unit.context_provider = context_provider;
         this_unit.in_memory_log = in_memory_log;
+        this_unit.syslog_identifier = ident;
 
         if (should_log)
         {
@@ -966,6 +977,7 @@ int mxb_log_message(int priority,
                                         "MODULE=%s", modname_len ? modname : "",
                                         "OBJECT=%s", scope_len ? scope : "",
                                         "TIMESTAMP=%s", timestamp.c_str(),
+                                        "SYSLOG_IDENTIFIER=%s", this_unit.syslog_identifier,
                                         LOG_FAC(priority) ? "SYSLOG_FACILITY=%d" : nullptr, LOG_FAC(priority),
                                         nullptr);
 #else
