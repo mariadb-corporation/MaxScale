@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
 
         std::thread([&test]() {
             sleep(3);
+            test.log_printf("Blocking server4");
             test.repl->block_node(3);
         }).detach();
 
