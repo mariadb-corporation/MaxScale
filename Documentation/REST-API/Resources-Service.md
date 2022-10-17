@@ -40,7 +40,7 @@ Get a single service.
                             "socket": null,
                             "sql_mode": "default",
                             "ssl": false,
-                            "ssl_ca_cert": null,
+                            "ssl_ca": null,
                             "ssl_cert": null,
                             "ssl_cert_verify_depth": 9,
                             "ssl_cipher": null,
@@ -119,7 +119,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Fri Sep  2 06:19:08 2022",
+            "started": "Mon Oct 17 17:36:00 2022",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -181,7 +181,8 @@ Get a single service.
                     "super_priv": true,
                     "user": "root"
                 }
-            ]
+            ],
+            "users_last_update": "Mon Oct 17 17:36:01 2022"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -273,7 +274,7 @@ Get all services.
                                 "socket": null,
                                 "sql_mode": "default",
                                 "ssl": false,
-                                "ssl_ca_cert": null,
+                                "ssl_ca": null,
                                 "ssl_cert": null,
                                 "ssl_cert_verify_depth": 9,
                                 "ssl_cipher": null,
@@ -399,7 +400,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri Sep  2 06:19:08 2022",
+                "started": "Mon Oct 17 17:36:00 2022",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -461,7 +462,8 @@ Get all services.
                         "super_priv": true,
                         "user": "root"
                     }
-                ]
+                ],
+                "users_last_update": "Mon Oct 17 17:36:01 2022"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -512,7 +514,7 @@ Get all services.
                                 "socket": null,
                                 "sql_mode": "default",
                                 "ssl": false,
-                                "ssl_ca_cert": null,
+                                "ssl_ca": null,
                                 "ssl_cert": null,
                                 "ssl_cert_verify_depth": 9,
                                 "ssl_cipher": null,
@@ -591,7 +593,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri Sep  2 06:19:08 2022",
+                "started": "Mon Oct 17 17:36:00 2022",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -653,7 +655,8 @@ Get all services.
                         "super_priv": true,
                         "user": "root"
                     }
-                ]
+                ],
+                "users_last_update": "Mon Oct 17 17:36:01 2022"
             },
             "id": "Read-Connection-Router",
             "links": {
