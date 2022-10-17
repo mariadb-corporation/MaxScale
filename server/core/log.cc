@@ -122,6 +122,8 @@ sd_journal* open_journal(const std::string& cursor)
     else
     {
         sd_journal_add_match(j, "_COMM=maxscale", 0);
+        sd_journal_add_conjunction(j);
+        sd_journal_add_match(j, "SYSLOG_IDENTIFIER=maxscale", 0);
 
         if (cursor.empty())
         {
@@ -139,9 +141,7 @@ sd_journal* open_journal(const std::string& cursor)
 
 json_t* entry_to_json(sd_journal* j, const std::set<std::string>& priorities)
 {
-    json_t* obj = json_object();
-    json_object_set_new(obj, "id", json_string(get_cursor(j).c_str()));
-
+    std::map<std::string, std::string> values;
     const void* data;
     size_t length;
 
@@ -168,14 +168,27 @@ json_t* entry_to_json(sd_journal* j, const std::set<std::string>& priorities)
 
                 if (!priorities.empty() && priorities.find(value) == priorities.end())
                 {
-                    json_decref(obj);
-                    obj = nullptr;
-                    break;
+                    return nullptr;
                 }
             }
 
             std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-            json_object_set_new(obj, key.c_str(), json_string(value.c_str()));
+            values.emplace(key, value);
+        }
+    }
+
+    json_t* obj = nullptr;
+
+    // MaxScale 2.5 and older did not have the TIMESTAMP field in the log messages. If we don't find it, we
+    // know this is from an older version of MaxScale and we shouldn't return it.
+    if (values.find("timestamp") != values.end())
+    {
+        obj = json_object();
+        json_object_set_new(obj, "id", json_string(get_cursor(j).c_str()));
+
+        for (const auto& kv : values)
+        {
+            json_object_set_new(obj, kv.first.c_str(), json_string(kv.second.c_str()));
         }
     }
 

@@ -21,6 +21,7 @@ static void change_master(int next, int current)
     test.repl->change_master(next, current);
     test.repl->close_connections();
     test.maxctrl("start monitor MySQL-Monitor");
+    test.maxscale->wait_for_monitor();
 }
 
 struct Query
@@ -119,19 +120,19 @@ int main(int argc, char** argv)
     });
 
     // Create a table for testing
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscale->disconnect();
 
     for (auto& i : tests)
     {
-        test.tprintf("Running test: %s", i.description);
-        test.maxscale->connect();
+        test.log_printf("Running test: %s", i.description);
+        test.maxscale->connect_rwsplit();
 
         for (auto t : i.steps)
         {
-            cout << t.description << endl;
+            test.log_printf("%s", t.description);
             t.func();
             for (auto q : t.queries)
             {
@@ -147,7 +148,7 @@ int main(int argc, char** argv)
 
         if (test.global_result)
         {
-            test.tprintf("Test '%s' failed", i.description);
+            test.log_printf("Test '%s' failed", i.description);
             break;
         }
     }
@@ -155,7 +156,7 @@ int main(int argc, char** argv)
     // Wait for the monitoring to stabilize before dropping the table
     sleep(5);
 
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
     test.maxscale->disconnect();
 
