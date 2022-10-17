@@ -131,7 +131,11 @@ export default {
         // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchLoggedInUserAttrs({ commit, state }) {
             try {
-                const res = await this.vue.$http.get(`/users/inet/${state.logged_in_user.name}`)
+                /**
+                 * If the logged in user isn't an inet user, e.g. unix user or pam user, this returns 404.
+                 * Using authHttp so that it won't redirect to 404 page.
+                 */
+                const res = await authHttp.get(`/users/inet/${state.logged_in_user.name}`)
                 // response ok
                 if (res.status === 200)
                     commit('SET_LOGGED_IN_USER', {
