@@ -1073,7 +1073,6 @@ private:
     State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse);
     State handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse);
 
-    State              m_state { State::READY };
     Context            m_context;
     Config&            m_config;
     std::deque<GWBUF*> m_requests;
