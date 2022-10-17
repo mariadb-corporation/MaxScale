@@ -1935,7 +1935,7 @@ protected:
                 ss <<   "COMMIT;"
                    << "END";
 
-                query = Query(Query::COMPOUND, nStatements, std::move(ss.str()));
+                query = Query(Query::COMPOUND, nStatements, ss.str());
             }
             else
             {
@@ -1955,7 +1955,7 @@ protected:
                 ss << "COMMIT;";
                 ++nStatements;
 
-                query = Query(Query::MULTI, nStatements, std::move(ss.str()));
+                query = Query(Query::MULTI, nStatements, ss.str());
             }
         }
         else
@@ -1978,7 +1978,7 @@ protected:
                 sql << convert_document_data(doc);
             }
 
-            query = Query(std::move(sql.str()));
+            query = Query(sql.str());
         }
 
         return query;
