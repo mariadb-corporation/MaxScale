@@ -76,7 +76,6 @@ const char* gui_not_secure_page =
 )EOF";
 
 const std::string TOKEN_ISSUER = "maxscale";
-const std::string TOKEN_BODY = "token_body";
 const std::string TOKEN_SIG = "token_sig";
 
 const char* CN_ADMIN = "admin";
@@ -1043,7 +1042,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         if (!is_auth_endpoint(m_request))
         {
             // Not the /auth endpoint, use the cookie or Bearer token
-            auto cookie_token = m_request.get_cookie(TOKEN_BODY) + m_request.get_cookie(TOKEN_SIG);
+            auto cookie_token = m_request.get_cookie(TOKEN_SIG);
             auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
             if (!cookie_token.empty())
