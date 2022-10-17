@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from './queryHelper'
-import allMemStatesModules from './allMemStatesModules'
-import init, { defSessionState } from './initQueryEditorState'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
+import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
+import init, { defSessionState } from '@queryEditorSrc/store/initQueryEditorState'
 
 export default {
     namespaced: true,

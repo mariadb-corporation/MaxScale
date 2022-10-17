@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from './queryHelper'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 import { supported } from 'browser-fs-access'
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
 const memStates = queryHelper.memStateCreator('editor')

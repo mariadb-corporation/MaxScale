@@ -1,5 +1,5 @@
 import { lodash } from '@share/utils/helpers'
-import queryHelper from './queryHelper'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 /**
  * @returns Return a new worksheet state

@@ -1,4 +1,4 @@
-import queryHelper from './queryHelper'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 const modules = ['editor', 'queryConn', 'queryResult', 'schemaSidebar']
 

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from './queryHelper'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
 const memStates = queryHelper.memStateCreator('queryConn')

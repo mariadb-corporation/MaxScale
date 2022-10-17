@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import * as config from '@queryEditorSrc/store/config'
 
-import * as config from '../config'
 export default {
     namespaced: true,
     state: {

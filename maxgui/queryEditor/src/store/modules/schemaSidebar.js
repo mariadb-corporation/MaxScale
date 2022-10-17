@@ -11,7 +11,7 @@
  * Public License.
  */
 import { lodash } from '@share/utils/helpers'
-import queryHelper from './queryHelper'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 

@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from './queryHelper'
-import allMemStatesModules from './allMemStatesModules'
-import init, { defWorksheetState } from './initQueryEditorState'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
+import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
+import init, { defWorksheetState } from '@queryEditorSrc/store/initQueryEditorState'
 
 const def_worksheets_arr = init.get_def_worksheets_arr
 export default {
