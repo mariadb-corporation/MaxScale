@@ -467,29 +467,6 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
     return algo;
 }
 
-template<class Algo, class Decoded>
-bool verify_with_alg(const std::string& issuer, Decoded& d)
-{
-    bool ok = false;
-
-    for (const auto& cert : this_unit.extra_certs)
-    {
-        try
-        {
-            ::jwt::verify().allow_algorithm(Algo {cert}).verify(d);
-
-            ok = true;
-            break;
-        }
-        catch (const std::exception& e)
-        {
-            MXB_DEBUG("JWT verify failed: %s", e.what());
-        }
-    }
-
-    return ok;
-}
-
 std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::string& token)
 {
     bool ok = false;
