@@ -500,14 +500,32 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
     return rv;
 }
 
-void RoutingWorker::deactivate()
+void RoutingWorker::clear()
 {
     int64_t cleared = qc_clear_thread_cache();
 
-    MXB_NOTICE("%s of memory used by the query classifier cache released when routing worker "
-               "%d was deactivated.", mxb::pretty_size(cleared).c_str(), index());
+    std::unique_lock<std::mutex> guard(m_pool_lock);
 
-    // TODO: Release additional resources and memory.
+    size_t nClosed = 0;
+    for (auto& kv : m_pool_group)
+    {
+        ConnectionPool& pool = kv.second;
+        nClosed += pool.close_all();
+    }
+
+    guard.release();
+
+    MXB_NOTICE("%s of memory used by the query classifier cache released and "
+               "%lu pooled connections closed "
+               "when routing worker %d was deactivated.",
+               mxb::pretty_size(cleared).c_str(),
+               nClosed,
+               index());
+}
+
+void RoutingWorker::deactivate()
+{
+    clear();
 
     clear_routing();
 
@@ -1288,8 +1306,10 @@ void RoutingWorker::ConnectionPool::remove_and_close(mxs::BackendConnection* pCo
     m_pOwner->close_pooled_dcb(pConn->dcb());
 }
 
-void RoutingWorker::ConnectionPool::close_all()
+size_t RoutingWorker::ConnectionPool::close_all()
 {
+    size_t rv = m_contents.size();
+
     // Close all entries in the server-specific pool.
     for (auto& pool_entry : m_contents)
     {
@@ -1297,6 +1317,8 @@ void RoutingWorker::ConnectionPool::close_all()
         m_pOwner->close_pooled_dcb(pDcb);
     }
     m_contents.clear();
+
+    return rv;
 }
 
 bool RoutingWorker::ConnectionPool::empty() const

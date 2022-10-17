@@ -609,6 +609,7 @@ private:
         return !is_listening() && m_sessions.empty();
     }
 
+    void clear();
     void deactivate();
 
     bool pre_run() override;
@@ -689,7 +690,7 @@ private:
 
         void remove_and_close(mxs::BackendConnection* pConn);
         void close_expired();
-        void close_all();
+        size_t close_all();
         bool empty() const;
         bool has_space() const;
         void set_capacity(int global_capacity);
