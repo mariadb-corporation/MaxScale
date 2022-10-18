@@ -1,5 +1,7 @@
 [maxscale]
 threads=###threads###
+retain_last_statements=10
+session_trace=300
 
 [Galera-Monitor]
 type=monitor
