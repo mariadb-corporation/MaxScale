@@ -280,7 +280,11 @@ std::string XpandCluster::block_command(int node) const
     command += ";";
     command += "iptables -I INPUT -p tcp --dport 3581 -j REJECT";
     command += ";";
+    command += "iptables -I OUTPUT -p tcp --sport 3581 -j REJECT";
+    command += ";";
     command += "ip6tables -I INPUT -p tcp --dport 3581 -j REJECT";
+    command += ";";
+    command += "ip6tables -I OUTPUT -p tcp --sport 3581 -j REJECT";
 
     return command;
 }
@@ -293,7 +297,11 @@ std::string XpandCluster::unblock_command(int node) const
     command += ";";
     command += "iptables -I INPUT -p tcp --dport 3581 -j ACCEPT";
     command += ";";
+    command += "iptables -I OUTPUT -p tcp --sport 3581 -j ACCEPT";
+    command += ";";
     command += "ip6tables -I INPUT -p tcp --dport 3581 -j ACCEPT";
+    command += ";";
+    command += "ip6tables -I OUTPUT -p tcp --sport 3581 -j ACCEPT";
 
     return command;
 }
