@@ -139,7 +139,9 @@ describe('wke-ctr', () => {
                 it(`Should return accurate value for minSidebarPct`, () => {
                     wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
 
-                    const minPct = v ? wrapper.vm.collapsedSidebarPct : wrapper.vm.sidebarPctLimit
+                    const minPct = v
+                        ? wrapper.vm.collapsedSidebarPct
+                        : wrapper.vm.expandedMinSidebarPct
                     expect(wrapper.vm.minSidebarPct).to.be.equals(minPct)
                 })
                 it(`Should return accurate value for sidebarPct`, () => {

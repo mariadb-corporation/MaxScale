@@ -1,12 +1,13 @@
 <template>
     <div class="fill-height">
         <mxs-split-pane
-            v-model="sidebarPct"
+            :value="sidebarPct"
             class="query-view__content"
             :minPercent="minSidebarPct"
             split="vert"
-            :disable="is_sidebar_collapsed"
+            progress
             revertRender
+            @resizing="onResizing"
         >
             <template slot="pane-left">
                 <sidebar-ctr
@@ -131,12 +132,12 @@ export default {
         collapsedSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
         },
-        sidebarPctLimit() {
-            return this.$helpers.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+        expandedMinSidebarPct() {
+            return this.$helpers.pxToPct({ px: 120, containerPx: this.ctrDim.width })
         },
         minSidebarPct() {
             if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
-            return this.sidebarPctLimit
+            return this.expandedMinSidebarPct
         },
         defSidebarPct() {
             return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
@@ -161,17 +162,9 @@ export default {
                 height: this.ctrDim.height - this.sessTabCtrHeight,
             }
         },
-        sidebarPct: {
-            get() {
-                /**
-                 * sidebarPct can only be changed when sidebar isn't collapsed so SET_SIDEBAR_PCT won't be triggered
-                 */
-                if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
-                return this.sidebar_pct
-            },
-            set(v) {
-                this.SET_SIDEBAR_PCT(v)
-            },
+        sidebarPct() {
+            if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
+            return this.sidebar_pct
         },
     },
     mounted() {
@@ -187,6 +180,7 @@ export default {
         ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
         ...mapMutations({
             SET_SIDEBAR_PCT: 'queryPersisted/SET_SIDEBAR_PCT',
+            SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
         }),
         /**
          * A watcher on active_sql_conn state that is triggered immediately
@@ -203,7 +197,7 @@ export default {
         },
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
-            if (!this.sidebar_pct) this.sidebarPct = this.defSidebarPct
+            if (!this.sidebar_pct) this.SET_SIDEBAR_PCT(this.defSidebarPct)
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
@@ -211,6 +205,15 @@ export default {
                 const { width, height } = editor.$el.getBoundingClientRect()
                 if (width !== 0 || height !== 0) this.editorDim = { width, height }
             }
+        },
+        handleAutoCollapse(pct) {
+            if (this.$helpers.pctToPx({ pct, containerPx: this.ctrDim.width }) <= 50)
+                this.SET_IS_SIDEBAR_COLLAPSED(true)
+            else this.SET_IS_SIDEBAR_COLLAPSED(false)
+        },
+        onResizing(v) {
+            if (v >= this.expandedMinSidebarPct) this.SET_SIDEBAR_PCT(v)
+            this.handleAutoCollapse(v)
         },
     },
 }

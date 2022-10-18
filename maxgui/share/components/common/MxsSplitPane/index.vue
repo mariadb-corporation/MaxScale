@@ -51,6 +51,7 @@ export default {
         },
         disable: { type: Boolean, default: false },
         revertRender: { type: Boolean, default: false },
+        progress: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -147,6 +148,7 @@ export default {
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
                 if (percent >= this.minPercent && percent <= 100 - this.minPercent)
                     this.currPct = percent
+                if (this.progress) this.$emit('resizing', percent)
             }
         },
     },

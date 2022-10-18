@@ -52,6 +52,10 @@ export function pxToPct({ px, containerPx }) {
     return (px / containerPx) * 100
 }
 
+export function pctToPx({ pct, containerPx }) {
+    return (pct * containerPx) / 100
+}
+
 /**
  * This adds number of days to current date
  * @param {Number} days - Number of days
