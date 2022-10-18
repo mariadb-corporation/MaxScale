@@ -1,9 +1,10 @@
 <template>
     <div class="fill-height">
         <mxs-split-pane
-            :value="sidebarPct"
+            v-model="sidebarPct"
             class="query-view__content"
             :minPercent="minSidebarPct"
+            :maxPercent="maxSidebarPct"
             split="vert"
             progress
             revertRender
@@ -139,6 +140,9 @@ export default {
             if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
             return this.expandedMinSidebarPct
         },
+        maxSidebarPct() {
+            return 100 - this.$helpers.pxToPct({ px: 370, containerPx: this.ctrDim.width })
+        },
         defSidebarPct() {
             return this.$helpers.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
@@ -162,9 +166,14 @@ export default {
                 height: this.ctrDim.height - this.sessTabCtrHeight,
             }
         },
-        sidebarPct() {
-            if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
-            return this.sidebar_pct
+        sidebarPct: {
+            get() {
+                if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
+                return this.sidebar_pct
+            },
+            set(v) {
+                this.SET_SIDEBAR_PCT(v)
+            },
         },
     },
     mounted() {
@@ -197,7 +206,7 @@ export default {
         },
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
-            if (!this.sidebar_pct) this.SET_SIDEBAR_PCT(this.defSidebarPct)
+            if (!this.sidebar_pct) this.sidebarPct = this.defSidebarPct
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
@@ -212,7 +221,16 @@ export default {
             else this.SET_IS_SIDEBAR_COLLAPSED(false)
         },
         onResizing(v) {
-            if (v >= this.expandedMinSidebarPct) this.SET_SIDEBAR_PCT(v)
+            /**
+             * If the sidebar is collapsed and the previous user preferences sidebar
+             * percent > the minimum expanded sidebar percent. Ignore user preferences value and
+             * use the expandedMinSidebarPct as the new value. Without this, if the user preferences
+             * value is larger than the minimum expanded sidebar percent, then the use the collapse
+             * button to collapse the sidebar. The resizing action will pick the user preferences value
+             * while resizing which causes an uneven transition.
+             */
+            if (this.is_sidebar_collapsed && this.sidebar_pct > this.expandedMinSidebarPct)
+                this.sidebarPct = this.expandedMinSidebarPct
             this.handleAutoCollapse(v)
         },
     },

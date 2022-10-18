@@ -41,8 +41,9 @@ export default {
     name: 'mxs-split-pane',
     components: { Resizer, Pane },
     props: {
-        minPercent: { type: Number, default: 10 },
         value: { type: Number, default: 50 },
+        minPercent: { type: Number, default: 0 },
+        maxPercent: { type: Number, default: 100 },
         split: {
             validator(value) {
                 return ['vert', 'horiz'].indexOf(value) !== -1
@@ -51,6 +52,10 @@ export default {
         },
         disable: { type: Boolean, default: false },
         revertRender: { type: Boolean, default: false },
+        /**
+         * let the resize action continue but the value props is stopped at minPercent or maxPercent.
+         * This emits @resizing with current percent value that go beyond min/max threshold
+         */
         progress: { type: Boolean, default: false },
     },
     data() {
@@ -146,8 +151,8 @@ export default {
                 const { currentTarget: { offsetWidth, offsetHeight } = {} } = e
                 const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
                 const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
-                if (percent >= this.minPercent && percent <= 100 - this.minPercent)
-                    this.currPct = percent
+                const matchThreshold = percent >= this.minPercent && percent <= this.maxPercent
+                if (matchThreshold) this.currPct = percent
                 if (this.progress) this.$emit('resizing', percent)
             }
         },
