@@ -1290,6 +1290,13 @@ void TestConnections::timeout_thread_func()
         if (now - timeout_start > timeout_limit)
         {
             logger().add_failure("**** Timeout reached! Copying logs and exiting. ****");
+
+            for (int i = 0; i < n_maxscales(); i++)
+            {
+                // Anything in /var/log/maxscale with a .log suffix will get copied over.
+                my_maxscale(i)->maxctrl("create report /var/log/maxscale/maxctrl-report.log");
+            }
+
             copy_all_logs();
             exit(250);
         }
