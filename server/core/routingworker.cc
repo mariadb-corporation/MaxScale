@@ -834,10 +834,7 @@ int RoutingWorker::index() const
 // static
 RoutingWorker* RoutingWorker::get_by_index(int index)
 {
-    mxb_assert(index >= 0);
-    mxb_assert(index < this_unit.nCreated);
-
-    return index < this_unit.nMax ? this_unit.ppWorkers[index] : nullptr;
+    return (index >= 0 && index < this_unit.nMax) ? this_unit.ppWorkers[index] : nullptr;
 }
 
 // static
@@ -2580,6 +2577,7 @@ protected:
 json_t* mxs_rworker_to_json(const char* zHost, int index)
 {
     Worker* target = RoutingWorker::get_by_index(index);
+    mxb_assert(target); // REST-API should have checked the validity.
     RoutingWorker::InfoTask task(zHost, index + 1);
     Semaphore sem;
 
