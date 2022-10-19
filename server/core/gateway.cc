@@ -464,17 +464,14 @@ static void sigfatal_handler(int i)
     }
 
     MXS_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
+    DCB* dcb = dcb_get_current();
+    MXS_SESSION* ses = dcb ? dcb->session() : session_get_current();
 
-    if (DCB* dcb = dcb_get_current())
+    if (ses)
     {
-        auto ses = dcb->session();
-        if (ses)
-        {
-            ses->dump_statements();
-            ses->dump_session_log();
-            MXS_ALERT("DCB: %p Session: %lu Service: %s",
-                      dcb, dcb->session()->id(), dcb->session()->service->name());
-        }
+        ses->dump_statements();
+        ses->dump_session_log();
+        MXS_ALERT("Session: %lu Service: %s", ses->id(), ses->service->name());
     }
 
     thread_local std::string msg;

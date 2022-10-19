@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
+#include <utility>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
@@ -74,6 +75,13 @@ struct
     SESSION_DUMP_STATEMENTS_NEVER,
     0
 };
+
+struct ThisThread
+{
+    MXS_SESSION* session = nullptr;
+};
+
+thread_local ThisThread this_thread;
 }
 
 // static
@@ -458,7 +466,7 @@ MXS_SESSION* session_get_current()
 {
     DCB* dcb = dcb_get_current();
 
-    return dcb ? dcb->session() : NULL;
+    return dcb ? dcb->session() : this_thread.session;
 }
 
 uint64_t session_get_current_id()
@@ -466,6 +474,16 @@ uint64_t session_get_current_id()
     MXS_SESSION* session = session_get_current();
 
     return session ? session->id() : 0;
+}
+
+MXS_SESSION::Scope::Scope(MXS_SESSION* session)
+    : m_prev(std::exchange(this_thread.session, session))
+{
+}
+
+MXS_SESSION::Scope::~Scope()
+{
+    this_thread.session = m_prev;
 }
 
 void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer)
@@ -557,22 +575,18 @@ public:
 
     Action execute()
     {
+        MXS_SESSION::Scope scope(m_session);
         Action action = DISPOSE;
 
         if (m_session->state() == MXS_SESSION::State::STARTED)
         {
             if (mxs::RoutingWorker::get_current() == m_session->worker())
             {
+                MXS_SESSION::Scope scope(m_session);
                 GWBUF* buffer = m_buffer;
                 m_buffer = NULL;
 
-                // Setting the current client DCB adds the session ID to the log messages
-                DCB* old_dcb = dcb_get_current();
-                dcb_set_current(m_session->client_dcb);
-
                 int rc = m_down->routeQuery(buffer);
-
-                dcb_set_current(old_dcb);
 
                 if (rc == 0)
                 {
@@ -1752,6 +1766,7 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
     bool call_again = true;
     if (action == Worker::Call::action_t::EXECUTE)
     {
+        MXS_SESSION::Scope scope(this);
         // Session has been idle for long enough, check that the connections have not had
         // any activity.
         auto* client = client_dcb;

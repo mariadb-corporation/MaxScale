@@ -113,6 +113,32 @@ public:
         FREE,       /*< The session is freed, only for completeness sake */
     };
 
+    // RAII class for managing the currently active session
+    class Scope
+    {
+    public:
+        Scope(const Scope&) = delete;
+        Scope& operator=(const Scope&) = delete;
+        Scope(Scope&&) = delete;
+        Scope& operator=(Scope&&) = delete;
+
+        /**
+         * Opens a new session scope
+         *
+         * The session scope is used for determining the currently active session. This is automatically done
+         * for all normal routing but whenever something is delayed with Worker::dcall() or Worker::execute(),
+         * this information is lost and must be set explicitly.
+         *
+         * @param session The session that is currently active
+         */
+        Scope(MXS_SESSION* session);
+
+        ~Scope();
+
+    private:
+        MXS_SESSION* m_prev;
+    };
+
     /**
      * If a protocol wants to define custom session-level data, the data should inherit from this class.
      */

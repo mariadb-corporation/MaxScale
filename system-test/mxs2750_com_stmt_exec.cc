@@ -113,6 +113,11 @@ void mxs3565(TestConnections& test)
     test.expect(value != -1, "SELECT should return one row");
     test.expect(it != ids.end(), "Server ID %d was not returned by any of the servers", value);
 
+    if (!test.ok())
+    {
+        return;
+    }
+
     int first_target = std::distance(ids.begin(), it);
     test.repl->block_node(first_target);
     test.maxscale->wait_for_monitor();
@@ -131,6 +136,11 @@ void mxs3565(TestConnections& test)
     test.expect(value != -1, "SELECT should return one row");
     test.expect(it != ids.end(), "Server ID %d was not returned by any of the servers", value);
     test.expect(second_target != first_target, "The second response arrived from the same server");
+
+    if (!test.ok())
+    {
+        return;
+    }
 
     test.repl->unblock_node(first_target);
 
