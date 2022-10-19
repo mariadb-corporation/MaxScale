@@ -1509,7 +1509,7 @@ bool RebuildServer::run()
             break;
 
         case State::CHECK_DATADIR_SIZE:
-            state_check_datadir_size();
+            state_check_datadir();
             break;
 
         case State::START_BACKUP_PREPARE:
@@ -1982,48 +1982,41 @@ bool RebuildServer::state_wait_transfer()
     return rval;
 }
 
-bool BackupOperation::check_directory_not_empty(const std::string& datadir_path)
+bool BackupOperation::check_datadir(std::shared_ptr<ssh::Session> ses, const string& datadir_path)
 {
-    bool has_contents = false;
-    const char* path = datadir_path.c_str();
-    const char* target_name = m_target_name.c_str();
-    string du_cmd = mxb::string_printf("sudo du --apparent-size -sb %s/", path);
-    auto res = ssh_util::run_cmd(*m_target_ses, du_cmd, m_ssh_timeout);
-    if (res.type == RType::OK && res.rc == 0)
-    {
-        bool parse_ok = false;
-        auto words = mxb::strtok(res.output, " \t");
-        if (words.size() > 1)
+    auto& output = m_result.output;
+    const string search_file = "backup-my.cnf";
+    bool file_found = false;
+    auto bu_check_func = [&file_found, &search_file](const ssh_util::FileInfo& info) {
+        if (info.name == search_file)
         {
-            long bytes = -1;
-            if (mxb::get_long(words[0], &bytes))
-            {
-                parse_ok = true;
-                if (bytes >= 1024 * 1024)
-                {
-                    // Assume that the directory should contain at least 1MB.
-                    has_contents = true;
-                }
-                else
-                {
-                    MXB_WARNING("Directory '%s' on %s is empty. Transfer must have failed.",
-                                path, target_name);
-                }
-            }
+            file_found = true;
+            return false;
         }
+        return true;
+    };
 
-        if (!parse_ok)
+    bool success = false;
+    if (check_directory_entries(ses, m_target_name, datadir_path, bu_check_func))
+    {
+        if (file_found)
         {
-            MXB_WARNING("Could not check size of directory '%s' on %s. Command '%s' returned '%s.",
-                        path, target_name, du_cmd.c_str(), res.output.c_str());
+            success = true;
+        }
+        else
+        {
+            PRINT_JSON_ERROR(output, "Directory '%s' on %s does not contain file '%s'. Transfer must "
+                                     "have failed.", datadir_path.c_str(), m_target_name.c_str(),
+                             search_file.c_str());
         }
     }
     else
     {
-        string errmsg = ssh_util::form_cmd_error_msg(res, du_cmd.c_str());
-        MXB_WARNING("Could not check size of directory '%s' on %s. %s", path, target_name, errmsg.c_str());
+        PRINT_JSON_ERROR(output, "Could not check contents of '%s' on %s.",
+                         datadir_path.c_str(), m_target_name.c_str());
     }
-    return has_contents;
+
+    return success;
 }
 
 bool RebuildServer::state_start_backup_prepare()
@@ -2375,13 +2368,10 @@ bool RebuildServer::state_serve_backup()
     return true;
 }
 
-void RebuildServer::state_check_datadir_size()
+void RebuildServer::state_check_datadir()
 {
-    // This is just to get a better error message in case transfer failed without any clear errors.
-    // Even if this part fails, go to next state. The size check can fail simply because MaxScale cannot
-    // run "du" as sudo.
-    check_directory_not_empty(rebuild_datadir);
-    m_state = State::START_BACKUP_PREPARE;
+    m_state = check_datadir(m_target_ses, rebuild_datadir) ? State::START_BACKUP_PREPARE :
+        State::CLEANUP;
 }
 
 void RebuildServer::state_cleanup()
@@ -2472,7 +2462,7 @@ bool CreateBackup::run()
             break;
 
         case State::CHECK_BACKUP_SIZE:
-            state_check_backup_size();
+            state_check_backup();
             break;
 
         case State::DONE:
@@ -2649,9 +2639,9 @@ bool CreateBackup::state_wait_transfer()
     return rval;
 }
 
-void CreateBackup::state_check_backup_size()
+void CreateBackup::state_check_backup()
 {
-    m_state = check_directory_not_empty(rebuild_datadir) ? State::DONE : State::CLEANUP;
+    m_state = check_datadir(m_target_ses, m_bu_path) ? State::DONE : State::CLEANUP;
 }
 
 RestoreFromBackup::RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, string bu_name)
@@ -2700,7 +2690,7 @@ bool RestoreFromBackup::run()
             break;
 
         case State::CHECK_DATADIR_SIZE:
-            advance = state_check_datadir_size();
+            state_check_datadir();
             break;
 
         case State::START_BACKUP_PREPARE:
@@ -2992,11 +2982,10 @@ bool RestoreFromBackup::state_wait_transfer()
     return rval;
 }
 
-bool RestoreFromBackup::state_check_datadir_size()
+void RestoreFromBackup::state_check_datadir()
 {
-    check_directory_not_empty(rebuild_datadir);
-    m_state = State::START_BACKUP_PREPARE;
-    return true;
+    m_state = check_datadir(m_target_ses, rebuild_datadir) ? State::START_BACKUP_PREPARE :
+        State::CLEANUP;
 }
 
 bool RestoreFromBackup::state_start_backup_prepare()

@@ -131,9 +131,8 @@ protected:
     StateResult wait_backup_prepare();
     bool        start_target();
     bool        start_replication(MariaDBServer* target, MariaDBServer* repl_master);
-
-    bool check_directory_not_empty(const std::string& datadir_path);
-    void cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
+    bool        check_datadir(std::shared_ptr<ssh::Session> ses, const std::string& datadir_path);
+    void        cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
 
     ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
@@ -212,7 +211,7 @@ private:
     bool state_prepare_target();
     bool state_start_transfer();
     bool state_wait_transfer();
-    void state_check_datadir_size();
+    void state_check_datadir();
     bool state_start_backup_prepare();
     bool state_wait_backup_prepare();
     bool state_start_target();
@@ -259,7 +258,7 @@ private:
     bool state_serve_backup();
     bool state_start_transfer();
     bool state_wait_transfer();
-    void state_check_backup_size();
+    void state_check_backup();
     void state_cleanup();
 
     bool check_preconditions();
@@ -306,7 +305,7 @@ private:
     bool state_prepare_target();
     bool state_start_transfer();
     bool state_wait_transfer();
-    bool state_check_datadir_size();
+    void state_check_datadir();
     bool state_start_backup_prepare();
     bool state_wait_backup_prepare();
     bool state_start_target();
