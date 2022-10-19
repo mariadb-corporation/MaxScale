@@ -76,8 +76,10 @@ const char* gui_not_secure_page =
 )EOF";
 
 const std::string TOKEN_ISSUER = "maxscale";
-const std::string TOKEN_BODY = "token_body";
 const std::string TOKEN_SIG = "token_sig";
+
+const char* CN_ADMIN = "admin";
+const char* CN_BASIC = "basic";
 
 // Wrapper for managing GnuTLS certificates and keys
 struct Creds
@@ -500,13 +502,14 @@ bool Client::is_basic_endpoint() const
     return m_request.uri_part(0) == "sql";
 }
 
-bool Client::authorize_user(const char* user, const char* method, const char* url) const
+bool Client::authorize_user(const char* user, mxs::user_account_type type, const char* method,
+                            const char* url) const
 {
     bool rval = true;
 
     if (modifies_data(method))
     {
-        if (!admin_user_is_inet_admin(user, nullptr) && !is_basic_endpoint())
+        if (type != mxs::USER_ACCOUNT_ADMIN && !is_basic_endpoint())
         {
             if (mxs::Config::get().admin_log_auth_failures.get())
             {
@@ -517,7 +520,7 @@ bool Client::authorize_user(const char* user, const char* method, const char* ur
             rval = false;
         }
     }
-    else if (!admin_inet_user_exists(user))
+    else if (type == mxs::USER_ACCOUNT_UNKNOWN)
     {
         if (mxs::Config::get().admin_log_auth_failures.get())
         {
@@ -923,7 +926,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         char* end;
         auto l = strtol(max_age.c_str(), &end, 10);
 
-        if (l > 0 && *end == '\0')
+        if (l > 0 && l < INT_MAX && *end == '\0')
         {
             token_age = l;
         }
@@ -931,7 +934,9 @@ HttpResponse Client::generate_token(const HttpRequest& request)
 
     token_age = std::min(token_age, mxs::Config::get().admin_jwt_max_age.count());
 
-    auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age);
+    mxb_assert(m_account != mxs::USER_ACCOUNT_UNKNOWN);
+    const char* type = m_account == mxs::USER_ACCOUNT_ADMIN ? CN_ADMIN : CN_BASIC;
+    auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age, {{"account", type}});
 
     if (request.get_option("persist") == "yes")
     {
@@ -986,12 +991,32 @@ bool Client::auth_with_token(const std::string& token, const char* method, const
     else
     {
         // Normal token authentication, tokens are generated and verified by MaxScale
-        if (auto [ok, user] = mxs::jwt::get_subject(TOKEN_ISSUER, token); ok)
+        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token))
         {
-            if (authorize_user(user.c_str(), method, client_url))
+            auto user = claims->get("sub");
+            mxs::user_account_type type = mxs::USER_ACCOUNT_UNKNOWN;
+
+            if (auto account = claims->get("account"))
+            {
+                if (*account == CN_ADMIN)
+                {
+                    type = mxs::USER_ACCOUNT_ADMIN;
+                }
+                else if (*account == CN_BASIC)
+                {
+                    type = mxs::USER_ACCOUNT_BASIC;
+                }
+            }
+            else if (user)
+            {
+                type = admin_inet_user_exists(user->c_str());
+            }
+
+            if (user && authorize_user(user->c_str(), type, method, client_url))
             {
                 rval = true;
-                m_user = std::move(user);
+                m_user = std::move(user.value());
+                m_account = type;
             }
             else
             {
@@ -1019,7 +1044,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         if (!is_auth_endpoint(m_request))
         {
             // Not the /auth endpoint, use the cookie or Bearer token
-            auto cookie_token = m_request.get_cookie(TOKEN_BODY) + m_request.get_cookie(TOKEN_SIG);
+            auto cookie_token = m_request.get_cookie(TOKEN_SIG);
             auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
             if (!cookie_token.empty())
@@ -1046,8 +1071,9 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             rval = false;
             char* pw = NULL;
             char* user = MHD_basic_auth_get_username_password(connection, &pw);
+            mxs::user_account_type type;
 
-            if (!user || !pw || !admin_verify_inet_user(user, pw))
+            if (!user || !pw || (type = admin_verify_inet_user(user, pw)) == mxs::USER_ACCOUNT_UNKNOWN)
             {
                 if (mxs::Config::get().admin_log_auth_failures.get())
                 {
@@ -1057,7 +1083,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                                 method, url);
                 }
             }
-            else if (authorize_user(user, method, url))
+            else if (authorize_user(user, type, method, url))
             {
                 MXB_INFO("Accept authentication from '%s', %s. Request: %s",
                          user ? user : "",
@@ -1066,6 +1092,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
                 // Store the username for later in case we are generating a token
                 m_user = user ? user : "";
+                m_account = type;
                 rval = true;
             }
             MXB_FREE(user);

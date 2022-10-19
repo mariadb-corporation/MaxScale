@@ -3,6 +3,7 @@ threads=###threads###
 admin_pam_readwrite_service=pam_config_msg
 log_info=1
 users_refresh_time=2s
+admin_secure_gui=false
 
 [MySQL-Monitor]
 type=monitor

@@ -358,9 +358,55 @@ const char* admin_remove_inet_user(const char* uname)
  *
  * @return True if the user exists, false otherwise.
  */
-bool admin_inet_user_exists(const char* uname)
+mxs::user_account_type admin_inet_user_exists(const char* uname)
 {
-    return rest_users.get(uname);
+    mxs::user_account_type rval = mxs::USER_ACCOUNT_UNKNOWN;
+    mxs::UserInfo users;
+
+    if (rest_users.get(uname, &users))
+    {
+        rval = users.permissions;
+    }
+
+
+    return rval;
+}
+
+mxs::user_account_type admin_user_is_pam_account(const std::string& username, const std::string& password)
+{
+    mxs::user_account_type rval = USER_ACCOUNT_UNKNOWN;
+    mxs::user_account_type user_type = USER_ACCOUNT_UNKNOWN;
+    const auto& config = mxs::Config::get();
+    auto pam_ro_srv = config.admin_pam_ro_service;
+    auto pam_rw_srv = config.admin_pam_rw_service;
+
+    bool auth_attempted = false;
+    mxb::pam::AuthResult pam_res;
+
+    if (!pam_rw_srv.empty())
+    {
+        pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
+        user_type = USER_ACCOUNT_ADMIN;
+        auth_attempted = true;
+    }
+
+    if (!pam_ro_srv.empty() && pam_res.type != mxb::pam::AuthResult::Result::SUCCESS)
+    {
+        pam_res = mxb::pam::authenticate(username, password, pam_ro_srv);
+        user_type = USER_ACCOUNT_BASIC;
+        auth_attempted = true;
+    }
+
+    if (pam_res.type == mxb::pam::AuthResult::Result::SUCCESS)
+    {
+        rval = user_type;
+    }
+    else if (auth_attempted)
+    {
+        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", pam_res.error.c_str());
+    }
+
+    return rval;
 }
 
 /**
@@ -371,93 +417,19 @@ bool admin_inet_user_exists(const char* uname)
  *
  * @return True if the username/password combination is valid
  */
-bool admin_verify_inet_user(const char* username, const char* password)
+mxs::user_account_type admin_verify_inet_user(const char* username, const char* password)
 {
-    bool authenticated = rest_users.authenticate(username, password);
+    auto rv = rest_users.authenticate(username, password);
 
     // If normal authentication didn't work, try PAM.
     // TODO: The reason for 'users_auth' failing is not known here. If the username existed but pw was wrong,
     // should PAM even be attempted?
-    if (!authenticated)
+    if (rv == USER_ACCOUNT_UNKNOWN)
     {
-        authenticated = admin_user_is_pam_account(username, password);
+        rv = admin_user_is_pam_account(username, password);
     }
 
-    return authenticated;
-}
-
-bool admin_user_is_inet_admin(const char* username, const char* password)
-{
-    if (!password)
-    {
-        password = "";
-    }
-
-    bool is_admin = users_is_admin(&rest_users, username, password);
-    if (!is_admin)
-    {
-        is_admin = admin_user_is_pam_account(username, password, USER_ACCOUNT_ADMIN);
-    }
-    return is_admin;
-}
-
-bool admin_user_is_pam_account(const std::string& username, const std::string& password,
-                               user_account_type min_acc_type)
-{
-    mxb_assert(min_acc_type == USER_ACCOUNT_BASIC || min_acc_type == USER_ACCOUNT_ADMIN);
-    const auto& config = mxs::Config::get();
-    auto pam_ro_srv = config.admin_pam_ro_service;
-    auto pam_rw_srv = config.admin_pam_rw_service;
-    bool have_ro_srv = !pam_ro_srv.empty();
-    bool have_rw_srv = !pam_rw_srv.empty();
-
-    if (!have_ro_srv && !have_rw_srv)
-    {
-        // PAM auth is not configured.
-        return false;
-    }
-
-    bool auth_attempted = false;
-    mxb::pam::AuthResult pam_res;
-    if (min_acc_type == USER_ACCOUNT_ADMIN)
-    {
-        // Must be a readwrite user.
-        if (have_rw_srv)
-        {
-            pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
-            auth_attempted = true;
-        }
-    }
-    else
-    {
-        // Either account type is ok.
-        if (have_ro_srv != have_rw_srv)
-        {
-            // One PAM service is configured.
-            auto pam_srv = have_ro_srv ? pam_ro_srv : pam_rw_srv;
-            pam_res = mxb::pam::authenticate(username, password, pam_srv);
-        }
-        else
-        {
-            // Have both, try ro first.
-            pam_res = mxb::pam::authenticate(username, password, pam_ro_srv);
-            if (pam_res.type != mxb::pam::AuthResult::Result::SUCCESS)
-            {
-                pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
-            }
-        }
-        auth_attempted = true;
-    }
-
-    if (pam_res.type == mxb::pam::AuthResult::Result::SUCCESS)
-    {
-        return true;
-    }
-    else if (auth_attempted)
-    {
-        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", pam_res.error.c_str());
-    }
-    return false;
+    return rv;
 }
 
 mxb::Json admin_raw_users()

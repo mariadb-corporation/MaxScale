@@ -39,7 +39,8 @@ Get a single monitor.
                         "name": "server1",
                         "read_only": false,
                         "server_id": 3000,
-                        "slave_connections": []
+                        "slave_connections": [],
+                        "state_details": null
                     },
                     {
                         "gtid_binlog_pos": "0-3000-5",
@@ -63,7 +64,8 @@ Get a single monitor.
                                 "slave_io_running": "Yes",
                                 "slave_sql_running": "Yes"
                             }
-                        ]
+                        ],
+                        "state_details": null
                     }
                 ],
                 "state": "Idle"
@@ -109,6 +111,7 @@ Get a single monitor.
                 "slave_conditions": "",
                 "ssh_check_host_key": true,
                 "ssh_keyfile": null,
+                "ssh_port": 22,
                 "ssh_timeout": "10000ms",
                 "ssh_user": null,
                 "switchover_on_low_disk_space": false,
@@ -122,7 +125,7 @@ Get a single monitor.
                 "type": "static"
             },
             "state": "Running",
-            "ticks": 3
+            "ticks": 4
         },
         "id": "MariaDB-Monitor",
         "links": {
@@ -197,7 +200,8 @@ Get all monitors.
                             "name": "server1",
                             "read_only": false,
                             "server_id": 3000,
-                            "slave_connections": []
+                            "slave_connections": [],
+                            "state_details": null
                         },
                         {
                             "gtid_binlog_pos": "0-3000-5",
@@ -221,7 +225,8 @@ Get all monitors.
                                     "slave_io_running": "Yes",
                                     "slave_sql_running": "Yes"
                                 }
-                            ]
+                            ],
+                            "state_details": null
                         }
                     ],
                     "state": "Idle"
@@ -267,6 +272,7 @@ Get all monitors.
                     "slave_conditions": "",
                     "ssh_check_host_key": true,
                     "ssh_keyfile": null,
+                    "ssh_port": 22,
                     "ssh_timeout": "10000ms",
                     "ssh_user": null,
                     "switchover_on_low_disk_space": false,
@@ -280,7 +286,7 @@ Get all monitors.
                     "type": "static"
                 },
                 "state": "Running",
-                "ticks": 3
+                "ticks": 4
             },
             "id": "MariaDB-Monitor",
             "links": {
