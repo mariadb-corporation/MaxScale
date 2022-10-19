@@ -15,6 +15,8 @@
 #include <maxscale/ccdefs.hh>
 #include <memory>
 
+struct sftp_session_struct;
+
 namespace ssh
 {
 class Session;
@@ -94,4 +96,30 @@ std::tuple<std::unique_ptr<AsyncCmd>, std::string>
 start_async_cmd(std::shared_ptr<ssh::Session> ses, const std::string& cmd);
 
 std::string form_cmd_error_msg(const CmdResult& res, const char* cmd);
+
+enum class FileType {REG, DIR, OTHER};
+struct FileInfo
+{
+    std::string name;
+    std::string owner;
+    uint64_t    size {0};
+    FileType    type {FileType::OTHER};
+};
+
+// Helper class for sftp operations
+class SFTPSession
+{
+public:
+    SFTPSession(std::shared_ptr<ssh::Session> ses, sftp_session_struct* sftp);
+    ~SFTPSession();
+    SFTPSession(const SFTPSession& rhs) = delete;
+    SFTPSession& operator=(const SFTPSession& rhs) = delete;
+
+    std::tuple<std::vector<FileInfo>, std::string> list_directory(const std::string& path);
+
+private:
+    std::shared_ptr<ssh::Session> m_ses;
+    sftp_session_struct*          m_sftp {nullptr};
+};
+std::tuple<std::unique_ptr<SFTPSession>, std::string> start_sftp_ses(std::shared_ptr<ssh::Session> ses);
 }

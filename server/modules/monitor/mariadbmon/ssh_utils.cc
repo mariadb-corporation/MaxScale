@@ -14,6 +14,7 @@
 #include "ssh_utils.hh"
 #include <utility>
 #include <libssh/libsshpp.hpp>
+#include <libssh/sftp.h>
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
 
@@ -319,5 +320,94 @@ string form_cmd_error_msg(const CmdResult& res, const char* cmd)
         rval = mxb::string_printf("Failed to send command '%s'. %s", cmd, res.error_output.c_str());
     }
     return rval;
+}
+
+std::tuple<std::unique_ptr<SFTPSession>, std::string> start_sftp_ses(std::shared_ptr<ssh::Session> ses)
+{
+    std::unique_ptr<SFTPSession> new_ses;
+    string errmsg;
+
+    sftp_session sftp_ses = sftp_new(ses->getCSession());
+    if (sftp_ses)
+    {
+        int rc = sftp_init(sftp_ses);
+        if (rc == SSH_OK)
+        {
+            new_ses = std::make_unique<SFTPSession>(std::move(ses), sftp_ses);
+        }
+        else
+        {
+            errmsg = mxb::string_printf("Error initializing SFTP session: code %d.",
+                                        sftp_get_error(sftp_ses));
+            sftp_free(sftp_ses);
+        }
+    }
+    else
+    {
+        errmsg = mxb::string_printf("Error allocating SFTP session: %s", ssh_get_error(ses->getCSession()));
+    }
+    return {std::move(new_ses), std::move(errmsg)};
+}
+
+SFTPSession::SFTPSession(std::shared_ptr<ssh::Session> ses, sftp_session_struct* sftp)
+    : m_ses(std::move(ses))
+    , m_sftp(sftp)
+{
+}
+
+SFTPSession::~SFTPSession()
+{
+    if (m_sftp)
+    {
+        sftp_free(m_sftp);
+    }
+}
+
+std::tuple<std::vector<FileInfo>, std::string> SFTPSession::list_directory(const std::string& path)
+{
+    std::vector<FileInfo> rval;
+    string errmsg;
+
+    auto cses = m_ses->getCSession();
+    sftp_dir dir = sftp_opendir(m_sftp, path.c_str());
+    if (dir)
+    {
+        std::vector<FileInfo> dir_contents;
+        sftp_attributes attr {nullptr};
+        while ((attr = sftp_readdir(m_sftp, dir)) != nullptr)
+        {
+            auto attr_type = attr->type;
+            auto type = (attr_type == SSH_FILEXFER_TYPE_REGULAR) ? FileType::REG :
+                (attr_type == SSH_FILEXFER_TYPE_DIRECTORY) ? FileType::DIR : FileType::OTHER;
+
+            FileInfo info {attr->name, attr->owner, attr->size, type};
+            dir_contents.emplace_back(std::move(info));
+            sftp_attributes_free(attr);
+        }
+
+        if (sftp_dir_eof(dir))
+        {
+            int rc = sftp_closedir(dir);
+            if (rc == SSH_OK)
+            {
+                rval = std::move(dir_contents);
+            }
+            else
+            {
+                errmsg = mxb::string_printf("Can't close directory: %s", ssh_get_error(cses));
+            }
+        }
+        else
+        {
+            errmsg = mxb::string_printf("Can't list directory: %s", ssh_get_error(cses));
+            sftp_closedir(dir);
+        }
+    }
+    else
+    {
+        errmsg = mxb::string_printf("Directory not opened: %s", ssh_get_error(cses));
+    }
+
+    return {std::move(rval), std::move(errmsg)};
 }
 }
