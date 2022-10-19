@@ -37,7 +37,7 @@ add_template_manual(mxs710_bad_socket mxs711_two_ports)
 add_template_manual(mxs720_line_with_no_equal mxs720_line_with_no_equal)
 add_template_manual(mxs720_wierd_line mxs720_wierd_line)
 add_template_manual(mxs710_bad_socket mxs799)
-add_test_executable(config_test.cpp config_test replication LABELS LIGHT CONFIG)
+add_test_executable(config_test.cpp config_test minimal LABELS LIGHT CONFIG)
 
 add_subdirectory(cdc_datatypes)
 

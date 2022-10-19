@@ -117,6 +117,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     int rc = prepare_for_test(argc, argv);
     if (rc != 0)
     {
+        cleanup();
         exit(rc);
     }
 }
@@ -247,6 +248,11 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
             logger().reset_timer();
             rc = 0;
         }
+    }
+
+    if (!ok())
+    {
+        rc = 1;
     }
 
     return rc;
