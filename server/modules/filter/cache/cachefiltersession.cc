@@ -1680,6 +1680,7 @@ void CacheFilterSession::ready_for_another_call()
         Worker* pWorker = Worker::get_current();
 
         m_did = pWorker->dcall(0, [this](Worker::Call::action_t action) {
+                MXS_SESSION::Scope scope(m_pSession);
                 m_did = 0;
 
                 if (action == Worker::Call::EXECUTE)

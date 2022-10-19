@@ -986,6 +986,7 @@ void SchemaRouterSession::route_queued_query()
 
 bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
 {
+    MXS_SESSION::Scope scope(m_pSession);
     bool rv = false;
 
     if (action == mxb::Worker::Call::EXECUTE)

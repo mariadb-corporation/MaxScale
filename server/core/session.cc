@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
+#include <utility>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
@@ -72,6 +73,13 @@ struct
     SESSION_DUMP_STATEMENTS_NEVER,
     0
 };
+
+struct ThisThread
+{
+    MXS_SESSION* session = nullptr;
+};
+
+thread_local ThisThread this_thread;
 }
 
 // static
@@ -526,7 +534,7 @@ MXS_SESSION* session_get_current()
 {
     DCB* dcb = dcb_get_current();
 
-    return dcb ? dcb->session() : NULL;
+    return dcb ? dcb->session() : this_thread.session;
 }
 
 uint64_t session_get_current_id()
@@ -534,6 +542,16 @@ uint64_t session_get_current_id()
     MXS_SESSION* session = session_get_current();
 
     return session ? session->id() : 0;
+}
+
+MXS_SESSION::Scope::Scope(MXS_SESSION* session)
+    : m_prev(std::exchange(this_thread.session, session))
+{
+}
+
+MXS_SESSION::Scope::~Scope()
+{
+    this_thread.session = m_prev;
 }
 
 bool session_add_variable(MXS_SESSION* session,
@@ -687,6 +705,7 @@ public:
 
     Action execute()
     {
+        MXS_SESSION::Scope scope(m_session);
         Action action = DISPOSE;
 
         if (m_session->state() == MXS_SESSION::State::STARTED)
