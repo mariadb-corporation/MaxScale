@@ -122,17 +122,17 @@ public:
 protected:
     enum class StateResult {OK, AGAIN, ERROR};
 
-    bool        init_operation(int listen_port);
-    bool        test_datalink(int listen_port);
-    bool        serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw, int listen_port);
-    bool        start_transfer(int source_port, const std::string& destination);
+    bool        init_operation();
+    bool        test_datalink();
+    bool        serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw);
+    bool        start_transfer(const std::string& destination);
     StateResult wait_transfer();
     bool        start_backup_prepare();
     StateResult wait_backup_prepare();
     bool        start_target();
     bool        start_replication(MariaDBServer* target, MariaDBServer* repl_master);
     bool        check_datadir(std::shared_ptr<ssh::Session> ses, const std::string& datadir_path);
-    void        cleanup(MariaDBServer* source, int listen_port, const SlaveStatusArray& source_slaves_old);
+    void        cleanup(MariaDBServer* source, const SlaveStatusArray& source_slaves_old);
 
     ssh_util::SSession init_ssh_session(const char* name, const std::string& host);
     bool               check_rebuild_tools(const char* srvname, ssh::Session& ssh);
@@ -153,6 +153,8 @@ protected:
     void set_source(std::string name, std::string host);
     void set_target(std::string name, std::string host);
 
+    int source_port() const;
+
     MariaDBMonitor&      m_mon;
     std::chrono::seconds m_ssh_timeout {0};
     bool                 m_source_slaves_stopped {false};
@@ -167,6 +169,9 @@ protected:
     std::string                         m_target_host;
     ssh_util::SSession                  m_target_ses;
     std::unique_ptr<ssh_util::AsyncCmd> m_target_cmd;
+
+private:
+    int m_source_port {0};
 };
 
 class RebuildServer : public BackupOperation
@@ -178,14 +183,11 @@ public:
     void cancel() override;
 
 private:
-    SERVER*        m_target_srv {nullptr};
-    SERVER*        m_source_srv {nullptr};
-    MariaDBServer* m_target {nullptr};
-    MariaDBServer* m_source {nullptr};
-
+    SERVER*          m_target_srv {nullptr};
+    SERVER*          m_source_srv {nullptr};
+    MariaDBServer*   m_target {nullptr};
+    MariaDBServer*   m_source {nullptr};
     SlaveStatusArray m_source_slaves_old;
-
-    int m_rebuild_port {0};
 
     enum class State
     {
@@ -230,12 +232,10 @@ public:
     void cancel() override;
 
 private:
-    SERVER*        m_source_srv {nullptr};
-    MariaDBServer* m_source {nullptr};
-    std::string    m_bu_name;
-    int            m_listen_port {0};
-
+    SERVER*          m_source_srv {nullptr};
+    MariaDBServer*   m_source {nullptr};
     SlaveStatusArray m_source_slaves_old;
+    std::string      m_bu_name;
     std::string      m_bu_path;
 
     enum class State
@@ -275,7 +275,6 @@ public:
 private:
     SERVER*        m_target_srv {nullptr};
     MariaDBServer* m_target {nullptr};
-    int            m_listen_port {0};
     std::string    m_bu_name;
     std::string    m_bu_path;
 

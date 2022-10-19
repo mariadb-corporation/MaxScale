@@ -1441,6 +1441,7 @@ BackupOperation::BackupOperation(MariaDBMonitor& mon)
     : m_mon(mon)
 {
     m_ssh_timeout = m_mon.m_settings.ssh_timeout;
+    m_source_port = m_mon.m_settings.rebuild_port;
 }
 
 void BackupOperation::set_source(string name, string host)
@@ -1473,7 +1474,6 @@ RebuildServer::RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source
     , m_target_srv(target)
     , m_source_srv(source)
 {
-    m_rebuild_port = (int)m_mon.m_settings.rebuild_port;
 }
 
 bool RebuildServer::run()
@@ -1567,7 +1567,7 @@ Result BackupOperation::result()
     return m_result;
 }
 
-bool BackupOperation::init_operation(int listen_port)
+bool BackupOperation::init_operation()
 {
     const char* source_name = m_source_name.c_str();
     const char* target_name = m_target_name.c_str();
@@ -1588,7 +1588,7 @@ bool BackupOperation::init_operation(int listen_port)
 
         if (target_tools && source_tools)
         {
-            if (check_free_listen_port(source_name, *source_ses, listen_port))
+            if (check_free_listen_port(source_name, *source_ses, m_source_port))
             {
                 m_target_ses = std::move(target_ses);
                 m_source_ses = std::move(source_ses);
@@ -1607,7 +1607,7 @@ bool RebuildServer::state_init()
         set_source(m_source->name(), m_source->server->address());
         set_target(m_target->name(), m_target->server->address());
 
-        if (init_operation(m_rebuild_port))
+        if (init_operation())
         {
             m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
             m_state = State::TEST_DATALINK;
@@ -1616,7 +1616,7 @@ bool RebuildServer::state_init()
     return true;
 }
 
-bool BackupOperation::test_datalink(int listen_port)
+bool BackupOperation::test_datalink()
 {
     using Status = ssh_util::AsyncCmd::Status;
     auto source_name = m_source_name.c_str();
@@ -1624,14 +1624,14 @@ bool BackupOperation::test_datalink(int listen_port)
     auto& error_out = m_result.output;
 
     bool success = false;
-    // Test the datalink between source and target by steaming some bytes.
+    // Test the datalink between source and target by streaming a message.
     string test_serve_cmd = mxb::string_printf("socat -u EXEC:'echo %s' TCP-LISTEN:%i,reuseaddr",
-                                               link_test_msg, listen_port);
+                                               link_test_msg, m_source_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
     {
         string test_receive_cmd = mxb::string_printf("socat -u TCP:%s:%i,connect-timeout=%i STDOUT",
-                                                     m_source_host.c_str(), listen_port, socat_timeout_s);
+                                                     m_source_host.c_str(), m_source_port, socat_timeout_s);
         auto res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
         if (res.type == RType::OK && res.rc == 0)
         {
@@ -1685,7 +1685,7 @@ bool BackupOperation::test_datalink(int listen_port)
     return success;
 }
 
-bool BackupOperation::serve_backup(const string& mariadb_user, const string& mariadb_pw, int listen_port)
+bool BackupOperation::serve_backup(const string& mariadb_user, const string& mariadb_pw)
 {
     auto source_name = m_source_name.c_str();
     // Start serving the backup stream. The source will wait for a new connection.
@@ -1693,7 +1693,7 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
     string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), mariadb_pw.c_str(), 1,
-                                           listen_port);
+                                           m_source_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -1711,13 +1711,13 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
         {
             rval = true;
             m_source_cmd = std::move(cmd_handle);
-            MXB_NOTICE("%s serving backup on port %i.", source_name, listen_port);
+            MXB_NOTICE("%s serving backup on port %i.", source_name, m_source_port);
         }
         else if (status == ssh_util::AsyncCmd::Status::READY)
         {
             // The stream serve operation ended before it should. Print all output available.
             // The ssh-command includes username & pw so mask those in the message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, listen_port);
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_source_port);
 
             int rc = cmd_handle->rc();
 
@@ -1849,14 +1849,14 @@ bool RebuildServer::state_prepare_target()
     return true;
 }
 
-bool BackupOperation::start_transfer(int source_port, const string& destination)
+bool BackupOperation::start_transfer(const string& destination)
 {
     bool transfer_started = false;
 
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
                                "| sudo mbstream -x --directory=%s";
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), source_port,
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), m_source_port,
                                             socat_timeout_s, destination.c_str());
 
     bool rval = false;
@@ -1877,7 +1877,7 @@ bool BackupOperation::start_transfer(int source_port, const string& destination)
 
 bool RebuildServer::state_start_transfer()
 {
-    m_state = start_transfer(m_rebuild_port, rebuild_datadir) ? State::WAIT_TRANSFER : State::CLEANUP;
+    m_state = start_transfer(rebuild_datadir) ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -2196,8 +2196,7 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
     return replicating;
 }
 
-void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
-                              const SlaveStatusArray& source_slaves_old)
+void BackupOperation::cleanup(MariaDBServer* source, const SlaveStatusArray& source_slaves_old)
 {
     mxb_assert(source_slaves_old.empty() || source);
     const char* source_name = m_source_name.c_str();
@@ -2232,7 +2231,7 @@ void BackupOperation::cleanup(MariaDBServer* source, int listen_port,
 
     if (m_source_ses)
     {
-        check_free_listen_port(source_name, *m_source_ses, listen_port);
+        check_free_listen_port(source_name, *m_source_ses, m_source_port);
     }
 
     if (m_source_slaves_stopped && !source_slaves_old.empty())
@@ -2355,16 +2354,21 @@ bool BackupOperation::check_directory_entries(std::shared_ptr<ssh::Session> ses,
     return fetch_success;
 }
 
+int BackupOperation::source_port() const
+{
+    return m_source_port;
+}
+
 bool RebuildServer::state_test_datalink()
 {
-    m_state = test_datalink(m_rebuild_port) ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = test_datalink() ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
 bool RebuildServer::state_serve_backup()
 {
     auto& cs = m_source->conn_settings();
-    m_state = serve_backup(cs.username, cs.password, m_rebuild_port) ? State::PREPARE_TARGET : State::CLEANUP;
+    m_state = serve_backup(cs.username, cs.password) ? State::PREPARE_TARGET : State::CLEANUP;
     return true;
 }
 
@@ -2376,7 +2380,7 @@ void RebuildServer::state_check_datadir()
 
 void RebuildServer::state_cleanup()
 {
-    cleanup(m_source, m_rebuild_port, m_source_slaves_old);
+    cleanup(m_source, m_source_slaves_old);
 }
 
 bool RebuildServer::state_wait_backup_prepare()
@@ -2426,7 +2430,7 @@ CreateBackup::CreateBackup(MariaDBMonitor& mon, SERVER* source, std::string bu_n
     , m_source_srv(source)
     , m_bu_name(std::move(bu_name))
 {
-    m_listen_port = (int)m_mon.m_settings.rebuild_port;
+    mxb_assert(!m_bu_name.empty());
 }
 
 bool CreateBackup::run()
@@ -2489,7 +2493,7 @@ bool CreateBackup::state_init()
         set_source(m_source->name(), m_source->server->address());
         set_target("backup storage", m_mon.m_settings.backup_storage_addr);
 
-        if (init_operation(m_listen_port))
+        if (init_operation())
         {
             m_source_slaves_old = m_source->m_slave_status;     // Backup slave conns
             m_state = State::CHECK_BACKUP_STORAGE;
@@ -2541,21 +2545,21 @@ bool CreateBackup::state_check_backup_storage()
 
 bool CreateBackup::state_test_datalink()
 {
-    m_state = test_datalink(m_listen_port) ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = test_datalink() ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
 bool CreateBackup::state_serve_backup()
 {
     auto& cs = m_source->conn_settings();
-    m_state = serve_backup(cs.username, cs.password, m_listen_port) ? State::START_TRANSFER :
+    m_state = serve_backup(cs.username, cs.password) ? State::START_TRANSFER :
         State::CLEANUP;
     return true;
 }
 
 void CreateBackup::state_cleanup()
 {
-    cleanup(m_source, m_listen_port, m_source_slaves_old);
+    cleanup(m_source, m_source_slaves_old);
 }
 
 bool CreateBackup::check_preconditions()
@@ -2613,7 +2617,7 @@ void CreateBackup::cancel()
 
 bool CreateBackup::state_start_transfer()
 {
-    m_state = start_transfer(m_listen_port, m_bu_path) ? State::WAIT_TRANSFER : State::CLEANUP;
+    m_state = start_transfer(m_bu_path) ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -2650,7 +2654,6 @@ RestoreFromBackup::RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, string
     , m_bu_name(std::move(bu_name))
 {
     mxb_assert(!m_bu_name.empty());
-    m_listen_port = (int)m_mon.m_settings.rebuild_port;
 }
 
 bool RestoreFromBackup::run()
@@ -2751,7 +2754,7 @@ bool RestoreFromBackup::state_init()
         set_source("backup storage", m_mon.m_settings.backup_storage_addr);
         set_target(m_target->name(), m_target->server->address());
 
-        if (init_operation(m_listen_port))
+        if (init_operation())
         {
             m_state = State::TEST_DATALINK;
         }
@@ -2796,7 +2799,7 @@ bool RestoreFromBackup::check_preconditions()
 
 bool RestoreFromBackup::state_test_datalink()
 {
-    m_state = test_datalink(m_listen_port) ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
+    m_state = test_datalink() ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
     return true;
 }
 
@@ -2882,7 +2885,7 @@ bool RestoreFromBackup::state_serve_backup()
     // Start serving the backup stream. The source will wait for a new connection. Since MariaDB Server is
     // not running on this machine, serve the data directory as a tar archive.
     const char stream_fmt[] = "sudo tar -zc -C %s . | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, m_bu_path.c_str(), m_listen_port);
+    string stream_cmd = mxb::string_printf(stream_fmt, m_bu_path.c_str(), source_port());
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -2897,7 +2900,7 @@ bool RestoreFromBackup::state_serve_backup()
         {
             success = true;
             m_source_cmd = std::move(cmd_handle);
-            MXB_NOTICE("%s serving backup on port %i.", source_name, m_listen_port);
+            MXB_NOTICE("%s serving backup on port %i.", source_name, source_port());
         }
         else if (status == ssh_util::AsyncCmd::Status::READY)
         {
@@ -2939,7 +2942,7 @@ bool RestoreFromBackup::state_start_transfer()
     bool transfer_started = false;
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | sudo tar -xz -C %s/";
-    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), m_listen_port,
+    string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), source_port(),
                                             socat_timeout_s, rebuild_datadir.c_str());
 
     bool rval = false;
@@ -3019,6 +3022,6 @@ bool RestoreFromBackup::state_start_replication()
 
 void RestoreFromBackup::state_cleanup()
 {
-    cleanup(nullptr, m_listen_port, {});
+    cleanup(nullptr, {});
 }
 }
