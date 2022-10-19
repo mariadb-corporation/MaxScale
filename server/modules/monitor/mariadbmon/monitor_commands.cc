@@ -48,6 +48,7 @@ const char cs_set_readonly_cmd[] = "cs-set-readonly";
 const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 const char rebuild_server_cmd[] = "rebuild-server";
 const char create_backup_cmd[] = "create-backup";
+const char restore_from_backup_cmd[] = "restore-from-backup";
 const char mask[] = "******";
 
 const string rebuild_datadir = "/var/lib/mysql";    // configurable?
@@ -240,8 +241,17 @@ bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
 bool handle_async_create_backup(const MODULECMD_ARG* args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
-    SERVER* source = args->argc > 1 ? args->argv[1].value.server : nullptr;
-    return mon->schedule_create_backup(source, output);
+    SERVER* source = args->argv[1].value.server;
+    string bu_name = args->argv[2].value.string;
+    return mon->schedule_create_backup(source, bu_name, output);
+}
+
+bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output)
+{
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    SERVER* target = args->argv[1].value.server;
+    string bu_name = args->argv[2].value.string;
+    return mon->schedule_restore_from_backup(target, bu_name, output);
 }
 
 /**
@@ -640,12 +650,24 @@ void register_monitor_commands()
     const modulecmd_arg_type_t create_backup_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Source server (optional)" }
+        { MODULECMD_ARG_SERVER, "Source server" },
+        { MODULECMD_ARG_STRING, "Backup name"}
     };
     modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", MODULECMD_TYPE_ACTIVE,
                                handle_async_create_backup,
                                MXS_ARRAY_NELEMS(create_backup_argv), create_backup_argv,
                                "Create a backup with Mariabackup. Does not wait for completion.");
+
+    const modulecmd_arg_type_t restore_backup_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER, "Target server" },
+        { MODULECMD_ARG_STRING, "Backup name"}
+    };
+    modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", MODULECMD_TYPE_ACTIVE,
+                               handle_async_restore_from_backup,
+                               MXS_ARRAY_NELEMS(restore_backup_argv), restore_backup_argv,
+                               "Restore a server from a backup. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -1184,10 +1206,17 @@ bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, jso
     return schedule_manual_command(move(op), rebuild_server_cmd, error_out);
 }
 
-bool MariaDBMonitor::schedule_create_backup(SERVER* source, json_t** error_out)
+bool MariaDBMonitor::schedule_create_backup(SERVER* source, const std::string& bu_name, json_t** error_out)
 {
-    auto op = std::make_unique<mon_op::CreateBackup>(*this, source);
+    auto op = std::make_unique<mon_op::CreateBackup>(*this, source, bu_name);
     return schedule_manual_command(std::move(op), create_backup_cmd, error_out);
+}
+
+bool MariaDBMonitor::schedule_restore_from_backup(SERVER* target, const std::string& bu_name,
+                                                  json_t** error_out)
+{
+    auto op = std::make_unique<mon_op::RestoreFromBackup>(*this, target, bu_name);
+    return schedule_manual_command(std::move(op), restore_from_backup_cmd, error_out);
 }
 
 namespace mon_op
@@ -1226,14 +1255,12 @@ bool RebuildServer::check_preconditions()
     bool rval = false;
     if (target && source)
     {
-        bool target_ok = check_server_buildable(target);
+        bool target_ok = check_server_is_valid_target(target);
         bool source_ok = true;
         bool settings_ok = true;
 
-        if (!source->is_slave() && !source->is_master())
+        if (!check_server_is_valid_source(source))
         {
-            PRINT_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it "
-                                        "as source.", source->name());
             source_ok = false;
         }
 
@@ -1559,17 +1586,10 @@ bool BackupOperation::init_operation(int listen_port)
 
         if (target_tools && source_tools)
         {
-            if (listen_port > 0)
+            if (check_free_listen_port(source_name, *source_ses, listen_port))
             {
-                if (check_free_listen_port(source_name, *source_ses, listen_port))
-                {
-                    m_target_ses = std::move(target_ses);
-                    m_source_ses = std::move(source_ses);
-                    init_ok = true;
-                }
-            }
-            else
-            {
+                m_target_ses = std::move(target_ses);
+                m_source_ses = std::move(source_ses);
                 init_ok = true;
             }
         }
@@ -1758,7 +1778,7 @@ bool BackupOperation::check_backup_storage_settings()
     return settings_ok;
 }
 
-bool BackupOperation::check_server_buildable(const MariaDBServer* target)
+bool BackupOperation::check_server_is_valid_target(const MariaDBServer* target)
 {
     auto& error_out = m_result.output;
     bool target_ok = true;
@@ -1783,7 +1803,7 @@ bool BackupOperation::check_server_buildable(const MariaDBServer* target)
     return target_ok;
 }
 
-bool BackupOperation::check_server_sourcable(const MariaDBServer* source)
+bool BackupOperation::check_server_is_valid_source(const MariaDBServer* source)
 {
     bool source_ok = true;
     if (!source->is_slave() && !source->is_master())
@@ -2375,9 +2395,10 @@ Result Result::deep_copy() const
     return {success, output.deep_copy()};
 }
 
-CreateBackup::CreateBackup(MariaDBMonitor& mon, SERVER* source)
+CreateBackup::CreateBackup(MariaDBMonitor& mon, SERVER* source, std::string bu_name)
     : BackupOperation(mon)
     , m_source_srv(source)
+    , m_bu_name(std::move(bu_name))
 {
     m_listen_port = (int)m_mon.m_settings.rebuild_port;
 }
@@ -2517,32 +2538,13 @@ void CreateBackup::state_cleanup()
 
 bool CreateBackup::check_preconditions()
 {
-    auto& error_out = m_result.output;
-    MariaDBServer* source = nullptr;
-    if (m_source_srv)
-    {
-        source = m_mon.get_server(m_source_srv);
-        if (!source)
-        {
-            PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as backup source.",
-                             m_source_srv->name(), m_mon.name());
-        }
-    }
-    else
-    {
-        // User did not give a source server, so autoselect. Prefer a slave.
-        source = autoselect_source_srv(nullptr);
-        if (!source)
-        {
-            PRINT_JSON_ERROR(error_out, "Could not autoselect backup source server. A valid source must "
-                                        "be either a master or slave.");
-        }
-    }
-
     bool rval = false;
+    auto& error_out = m_result.output;
+
+    MariaDBServer* source = m_mon.get_server(m_source_srv);
     if (source)
     {
-        bool source_ok = check_server_sourcable(source);
+        bool source_ok = check_server_is_valid_source(source);
         bool settings_ok = true;
 
         if (!check_ssh_settings())
@@ -2561,6 +2563,12 @@ bool CreateBackup::check_preconditions()
             rval = true;
         }
     }
+    else
+    {
+        PRINT_JSON_ERROR(error_out, "%s is not monitored by %s, cannot use it as backup source.",
+                         m_source_srv->name(), m_mon.name());
+    }
+
     return rval;
 }
 
@@ -2614,10 +2622,13 @@ void CreateBackup::state_check_backup_size()
     m_state = check_directory_not_empty(rebuild_datadir) ? State::DONE : State::CLEANUP;
 }
 
-RestoreFromBackup::RestoreFromBackup(MariaDBMonitor& mon, SERVER* target)
+RestoreFromBackup::RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, string bu_name)
     : BackupOperation(mon)
     , m_target_srv(target)
+    , m_bu_name(std::move(bu_name))
 {
+    mxb_assert(!m_bu_name.empty());
+    m_listen_port = (int)m_mon.m_settings.rebuild_port;
 }
 
 bool RestoreFromBackup::run()
@@ -2718,7 +2729,7 @@ bool RestoreFromBackup::state_init()
         set_source("backup storage", m_mon.m_settings.backup_storage_addr);
         set_target(m_target->name(), m_target->server->address());
 
-        if (init_operation(-1))
+        if (init_operation(m_listen_port))
         {
             m_state = State::TEST_DATALINK;
         }
@@ -2739,7 +2750,7 @@ bool RestoreFromBackup::check_preconditions()
     bool rval = false;
     if (target)
     {
-        bool target_ok = check_server_buildable(target);
+        bool target_ok = check_server_is_valid_target(target);
         bool settings_ok = true;
 
         if (!check_ssh_settings())

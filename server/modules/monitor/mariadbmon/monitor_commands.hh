@@ -140,8 +140,8 @@ protected:
     bool               check_free_listen_port(const char* srvname, ssh::Session& ssh, int port);
     bool               check_ssh_settings();
     bool               check_backup_storage_settings();
-    bool               check_server_buildable(const MariaDBServer* target);
-    bool               check_server_sourcable(const MariaDBServer* source);
+    bool               check_server_is_valid_target(const MariaDBServer* target);
+    bool               check_server_is_valid_source(const MariaDBServer* source);
     void               report_source_stream_status();
     MariaDBServer*     autoselect_source_srv(const MariaDBServer* target);
     bool               run_cmd_on_target(const std::string& cmd, const std::string& desc);
@@ -221,7 +221,7 @@ private:
 class CreateBackup : public BackupOperation
 {
 public:
-    CreateBackup(MariaDBMonitor& mon, SERVER* source);
+    CreateBackup(MariaDBMonitor& mon, SERVER* source, std::string bu_name);
 
     bool run() override;
     void cancel() override;
@@ -229,6 +229,7 @@ public:
 private:
     SERVER*        m_source_srv {nullptr};
     MariaDBServer* m_source {nullptr};
+    std::string    m_bu_name;
     int            m_listen_port {0};
 
     SlaveStatusArray m_source_slaves_old;
@@ -263,7 +264,7 @@ private:
 class RestoreFromBackup : public BackupOperation
 {
 public:
-    RestoreFromBackup(MariaDBMonitor& mon, SERVER* target);
+    RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, std::string bu_name);
 
     bool run() override;
     void cancel() override;
@@ -272,6 +273,7 @@ private:
     SERVER*        m_target_srv {nullptr};
     MariaDBServer* m_target {nullptr};
     int            m_listen_port {0};
+    std::string    m_bu_name;
     std::string    m_bu_path;
 
     enum class State
