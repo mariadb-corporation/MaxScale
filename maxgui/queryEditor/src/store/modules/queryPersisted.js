@@ -12,6 +12,21 @@
  */
 import { addDaysToNow } from '@queryEditorSrc/utils/helpers'
 
+const getUserPrefStates = () => ({
+    sidebar_pct_width: 0,
+    query_pane_pct_height: 60,
+})
+
+function userPrefMutationCreator(states) {
+    return Object.keys(states).reduce(
+        (mutations, name) => ({
+            ...mutations,
+            [`SET_${name.toUpperCase()}`]: (state, payload) => (state[name] = payload),
+        }),
+        {}
+    )
+}
+
 // Place here any query editor states need to be persisted without being cleared when logging out
 export default {
     namespaced: true,
@@ -23,7 +38,7 @@ export default {
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
         is_sidebar_collapsed: false,
-        sidebar_pct: 0, // width of the sidebar in percentages
+        ...getUserPrefStates(),
     },
     mutations: {
         SET_QUERY_ROW_LIMIT(state, payload) {
@@ -55,9 +70,7 @@ export default {
         SET_IS_SIDEBAR_COLLAPSED(state, payload) {
             state.is_sidebar_collapsed = payload
         },
-        SET_SIDEBAR_PCT(state, payload) {
-            state.sidebar_pct = payload
-        },
+        ...userPrefMutationCreator(getUserPrefStates()),
     },
     actions: {
         /**

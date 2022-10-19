@@ -120,7 +120,7 @@ export default {
     computed: {
         ...mapState({
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
-            sidebar_pct: state => state.queryPersisted.sidebar_pct,
+            sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             query_sessions: state => state.querySession.query_sessions,
@@ -170,10 +170,10 @@ export default {
         sidebarPct: {
             get() {
                 if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
-                return this.sidebar_pct
+                return this.sidebar_pct_width
             },
             set(v) {
-                this.SET_SIDEBAR_PCT(v)
+                this.SET_SIDEBAR_PCT_WIDTH(v)
             },
         },
     },
@@ -189,7 +189,7 @@ export default {
     methods: {
         ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
         ...mapMutations({
-            SET_SIDEBAR_PCT: 'queryPersisted/SET_SIDEBAR_PCT',
+            SET_SIDEBAR_PCT_WIDTH: 'queryPersisted/SET_SIDEBAR_PCT_WIDTH',
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
         }),
         /**
@@ -207,7 +207,7 @@ export default {
         },
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
-            if (!this.sidebar_pct) this.sidebarPct = this.defSidebarPct
+            if (!this.sidebar_pct_width) this.sidebarPct = this.defSidebarPct
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
@@ -230,7 +230,7 @@ export default {
              * button to collapse the sidebar. The resizing action will pick the user preferences value
              * while resizing which causes an uneven transition.
              */
-            if (this.is_sidebar_collapsed && this.sidebar_pct > this.expandedMinSidebarPct)
+            if (this.is_sidebar_collapsed && this.sidebar_pct_width > this.expandedMinSidebarPct)
                 this.sidebarPct = this.expandedMinSidebarPct
             this.handleAutoCollapse(v)
         },

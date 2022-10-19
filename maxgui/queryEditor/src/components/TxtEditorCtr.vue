@@ -6,7 +6,7 @@
         </txt-editor-toolbar-ctr>
         <!-- Main panel contains editor pane and chart-config -->
         <mxs-split-pane
-            v-model="mainPanePct"
+            :value="mainPanePct"
             :boundary="panesDim.width"
             class="main-pane__content d-flex"
             split="vert"
@@ -16,16 +16,16 @@
                 <!-- Editor pane contains editor and result pane -->
                 <mxs-split-pane
                     ref="editorResultPane"
-                    v-model="editorPct"
+                    v-model="queryPanePctHeight"
                     :boundary="panesDim.height"
                     split="horiz"
-                    :minPercent="minEditorPct"
+                    :minPercent="queryPaneMinPctHeight"
                 >
                     <template slot="pane-left">
                         <mxs-split-pane
-                            v-model="queryPanePct"
+                            v-model="editorPanePctWidth"
                             class="editor__content"
-                            :minPercent="minQueryPanePct"
+                            :minPercent="editorPaneMinPctWidth"
                             :boundary="panesDim.width"
                             split="vert"
                             :disable="isChartMaximized || !showVisChart"
@@ -43,7 +43,7 @@
                             </template>
                             <template slot="pane-right">
                                 <chart-pane
-                                    v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
+                                    v-if="showVisChart"
                                     v-model="chartOpt"
                                     :containerHeight="chartContainerHeight"
                                     :chartTypes="SQL_CHART_TYPES"
@@ -117,15 +117,11 @@ export default {
     data() {
         return {
             // mxs-split-pane states
-            mainPanePct: 100,
             minMainPanePct: 0,
-            editorPct: 60,
-            minEditorPct: 0,
-            queryPanePct: 100,
-            minQueryPanePct: 0,
+            editorPanePctWidth: 100,
             mouseDropDOM: null, // mouse drop DOM node
             mouseDropWidget: null, // mouse drop widget while dragging to editor
-            maxVisSidebarPx: 250,
+            visSidebarWidth: 250,
             txtEditorToolbarHeight: 28,
             // chart-config and chart-pane state
             defChartOpt: {
@@ -143,6 +139,7 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             query_snippets: state => state.queryPersisted.query_snippets,
+            query_pane_pct_height: state => state.queryPersisted.query_pane_pct_height,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
             SQL_CHART_TYPES: state => state.queryEditorConfig.config.SQL_CHART_TYPES,
             SQL_CHART_AXIS_TYPES: state => state.queryEditorConfig.config.SQL_CHART_AXIS_TYPES,
@@ -181,13 +178,33 @@ export default {
             return { width: this.dim.width, height: this.dim.height - this.txtEditorToolbarHeight }
         },
         chartContainerHeight() {
-            return (this.panesDim.height * this.editorPct) / 100
+            return (this.panesDim.height * this.queryPanePctHeight) / 100
         },
-        maxVisSidebarPct() {
+        visSidebarPct() {
             return this.$helpers.pxToPct({
-                px: this.maxVisSidebarPx,
+                px: this.visSidebarWidth,
                 containerPx: this.panesDim.width,
             })
+        },
+        mainPanePct() {
+            if (this.show_vis_sidebar) return 100 - this.visSidebarPct
+            return 100
+        },
+        queryPaneMinPctHeight() {
+            return this.$helpers.pxToPct({ px: 26, containerPx: this.panesDim.height })
+        },
+        queryPanePctHeight: {
+            get() {
+                return this.query_pane_pct_height
+            },
+            set(v) {
+                this.SET_QUERY_PANE_PCT_HEIGHT(v)
+            },
+        },
+        editorPaneMinPctWidth() {
+            return this.showVisChart
+                ? this.$helpers.pxToPct({ px: 32, containerPx: this.panesDim.width })
+                : 0
         },
         allQueryTxt: {
             get() {
@@ -198,35 +215,21 @@ export default {
             },
         },
         resultPaneDim() {
-            const visSideBarWidth = this.show_vis_sidebar ? this.maxVisSidebarPx : 0
+            const visSideBarWidth = this.show_vis_sidebar ? this.visSidebarWidth : 0
             return {
                 width: this.panesDim.width - visSideBarWidth,
-                height: (this.panesDim.height * (100 - this.editorPct)) / 100,
+                height: (this.panesDim.height * (100 - this.queryPanePctHeight)) / 100,
             }
         },
     },
     watch: {
         isChartMaximized(v) {
-            if (v) this.queryPanePct = this.minQueryPanePct
-            else this.queryPanePct = 50
+            if (v) this.editorPanePctWidth = this.editorPaneMinPctWidth
+            else this.editorPanePctWidth = 50
         },
         showVisChart(v) {
-            if (v) {
-                this.queryPanePct = 50
-                this.minQueryPanePct = this.$helpers.pxToPct({
-                    px: 32,
-                    containerPx: this.panesDim.width,
-                })
-            } else this.queryPanePct = 100
-        },
-        'panesDim.height'(v) {
-            if (v) this.handleSetMinEditorPct()
-        },
-        'panesDim.width'() {
-            this.handleSetVisSidebar(this.show_vis_sidebar)
-        },
-        show_vis_sidebar(v) {
-            this.handleSetVisSidebar(v)
+            if (v) this.editorPanePctWidth = 50
+            else this.editorPanePctWidth = 100
         },
     },
     created() {
@@ -236,19 +239,10 @@ export default {
         ...mapMutations({
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
             SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
+            SET_QUERY_PANE_PCT_HEIGHT: 'queryPersisted/SET_QUERY_PANE_PCT_HEIGHT',
         }),
         setDefChartOptState() {
             this.chartOpt = this.$helpers.lodash.cloneDeep(this.defChartOpt)
-        },
-        handleSetMinEditorPct() {
-            this.minEditorPct = this.$helpers.pxToPct({
-                px: 26,
-                containerPx: this.panesDim.height,
-            })
-        },
-        handleSetVisSidebar(showVisSidebar) {
-            if (!showVisSidebar) this.mainPanePct = 100
-            else this.mainPanePct = 100 - this.maxVisSidebarPct
         },
         // editor related functions
         placeToEditor(text) {
