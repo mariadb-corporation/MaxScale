@@ -3,6 +3,7 @@
         <mxs-split-pane
             v-model="sidebarPct"
             class="query-view__content"
+            :boundary="ctrDim.width"
             :minPercent="minSidebarPct"
             :maxPercent="maxSidebarPct"
             split="vert"

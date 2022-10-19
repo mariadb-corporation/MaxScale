@@ -1,10 +1,5 @@
 <template>
-    <div
-        class="mxs-split-pane-container"
-        :style="{ cursor, ...resizingStyle }"
-        @mouseup="onMouseUp"
-        @mousemove="onMouseMove"
-    >
+    <div class="mxs-split-pane-container" :style="{ cursor, ...resizingStyle }">
         <pane :isLeft="!revertRender" :split="split" :style="leftPaneStyle">
             <slot :name="`pane-${revertRender ? 'right' : 'left'}`" />
         </pane>
@@ -41,9 +36,11 @@ export default {
     name: 'mxs-split-pane',
     components: { Resizer, Pane },
     props: {
-        value: { type: Number, default: 50 },
+        value: { type: Number, required: true },
+        boundary: { type: Number, required: true }, // boundary value in pixel unit
         minPercent: { type: Number, default: 0 },
         maxPercent: { type: Number, default: 100 },
+
         split: {
             validator(value) {
                 return ['vert', 'horiz'].indexOf(value) !== -1
@@ -54,7 +51,7 @@ export default {
         revertRender: { type: Boolean, default: false },
         /**
          * let the resize action continue but the value props is stopped at minPercent or maxPercent.
-         * This emits @resizing with current percent value that go beyond min/max threshold
+         * This emits @resizing with value beyond minPercent/maxPercent threshold
          */
         progress: { type: Boolean, default: false },
     },
@@ -62,6 +59,9 @@ export default {
         return {
             active: false,
             currPct: 0,
+            // initial value when mousedown
+            startPoint: 0,
+            initialValueInPx: 0,
         }
     },
     computed: {
@@ -124,37 +124,39 @@ export default {
     created() {
         this.currPct = this.value
     },
-
     methods: {
-        onMouseDown() {
+        addEvents() {
+            window.addEventListener('mousemove', this.onMouseMove)
+            window.addEventListener('mouseup', this.onMouseUp)
+        },
+        rmEvents() {
+            window.removeEventListener('mousemove', this.onMouseMove)
+            window.removeEventListener('mouseup', this.onMouseUp)
+        },
+        onMouseDown(e) {
+            this.initialValueInPx = (this.currPct * this.boundary) / 100
+            this.startPoint = this.isVertSplit ? e.pageX : e.pageY
+            this.addEvents()
             this.active = true
         },
         onMouseUp() {
+            this.rmEvents()
             this.active = false
         },
+        calCurrPct(offset) {
+            return ((this.initialValueInPx + offset) / this.boundary) * 100
+        },
         onMouseMove(e) {
-            if (e.buttons === 0 || e.which === 0) this.active = false
-            if (this.active) {
-                let offset = 0
-                let target = e.currentTarget
-                if (this.isVertSplit)
-                    while (target) {
-                        offset += target.offsetLeft
-                        target = target.offsetParent
-                    }
-                else
-                    while (target) {
-                        offset += target.offsetTop
-                        target = target.offsetParent
-                    }
-                const currPage = this.isVertSplit ? e.pageX : e.pageY
-                const { currentTarget: { offsetWidth, offsetHeight } = {} } = e
-                const targetOffset = this.isVertSplit ? offsetWidth : offsetHeight
-                const percent = Math.floor(((currPage - offset) / targetOffset) * 10000) / 100
-                const matchThreshold = percent >= this.minPercent && percent <= this.maxPercent
-                if (matchThreshold) this.currPct = percent
-                if (this.progress) this.$emit('resizing', percent)
-            }
+            const endpoint = this.isVertSplit ? e.pageX : e.pageY
+            const offset = endpoint - this.startPoint
+            let percent = this.calCurrPct(offset)
+            // prevent currPct from having value beyond the minPercent/maxPercent threshold
+            if (percent <= this.minPercent) percent = this.minPercent
+            if (percent >= this.maxPercent) percent = this.maxPercent
+            this.currPct = percent
+
+            // emit event that returns value beyond the minPercent/maxPercent threshold
+            if (this.progress) this.$emit('resizing', this.calCurrPct(offset))
         },
     },
 }

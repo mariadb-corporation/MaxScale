@@ -43,13 +43,24 @@ describe('wke-ctr', () => {
         let wrapper
         it(`Should pass accurate data to mxs-split-pane via props`, () => {
             wrapper = mountFactory()
-            const { value, minPercent, split, disable } = wrapper.findComponent({
+            const {
+                value,
+                boundary,
+                minPercent,
+                maxPercent,
+                split,
+                progress,
+                revertRender,
+            } = wrapper.findComponent({
                 name: 'mxs-split-pane',
             }).vm.$props
             expect(value).to.be.equals(wrapper.vm.sidebarPct)
+            expect(boundary).to.be.equals(wrapper.vm.$props.ctrDim.width)
             expect(minPercent).to.be.equals(wrapper.vm.minSidebarPct)
+            expect(maxPercent).to.be.equals(wrapper.vm.maxSidebarPct)
             expect(split).to.be.equals('vert')
-            expect(disable).to.be.equals(wrapper.vm.is_sidebar_collapsed)
+            expect(progress).to.be.equals(true)
+            expect(revertRender).to.be.equals(true)
         })
 
         it(`Should pass accurate data to execute-sql-dialog via props`, () => {

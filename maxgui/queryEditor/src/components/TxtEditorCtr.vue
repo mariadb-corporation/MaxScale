@@ -7,8 +7,8 @@
         <!-- Main panel contains editor pane and chart-config -->
         <mxs-split-pane
             v-model="mainPanePct"
+            :boundary="panesDim.width"
             class="main-pane__content d-flex"
-            :minPercent="minMainPanePct"
             split="vert"
             disable
         >
@@ -17,6 +17,7 @@
                 <mxs-split-pane
                     ref="editorResultPane"
                     v-model="editorPct"
+                    :boundary="panesDim.height"
                     split="horiz"
                     :minPercent="minEditorPct"
                 >
@@ -25,6 +26,7 @@
                             v-model="queryPanePct"
                             class="editor__content"
                             :minPercent="minQueryPanePct"
+                            :boundary="panesDim.width"
                             split="vert"
                             :disable="isChartMaximized || !showVisChart"
                         >
