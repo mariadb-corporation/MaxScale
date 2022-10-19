@@ -654,7 +654,9 @@ static bool execute_and_check(const std::function<bool ()>& func)
             }
         };
 
-    size_t n_executed = mxs::RoutingWorker::execute_concurrently(wrapper);
+    // DESIRED and not RUNNING, so as not to poke routing workers that are in
+    // the process of going down.
+    size_t n_executed = mxs::RoutingWorker::execute_concurrently(wrapper, mxs::RoutingWorker::DESIRED);
     return n_executed == n_ok;
 }
 
