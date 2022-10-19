@@ -904,6 +904,7 @@ void SchemaRouterSession::route_queued_query()
 
 bool SchemaRouterSession::delay_routing()
 {
+    MXS_SESSION::Scope scope(m_pSession);
     bool rv = false;
 
     mxb_assert(m_shard.empty());
