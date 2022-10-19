@@ -147,6 +147,10 @@ protected:
     bool               run_cmd_on_target(const std::string& cmd, const std::string& desc);
     bool               prepare_target();
 
+    using DirCheckFunc = std::function<bool (const ssh_util::FileInfo&)>;
+    bool check_directory_entries(std::shared_ptr<ssh::Session> ses, const std::string& srv_name,
+                                 const std::string& path, const DirCheckFunc& check_func);
+
     void set_source(std::string name, std::string host);
     void set_target(std::string name, std::string host);
 

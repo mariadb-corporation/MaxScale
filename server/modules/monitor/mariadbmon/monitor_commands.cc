@@ -54,6 +54,8 @@ const char mask[] = "******";
 const string rebuild_datadir = "/var/lib/mysql";    // configurable?
 const char link_test_msg[] = "Test message";
 const int socat_timeout_s = 5;      // TODO: configurable?
+const char list_dir_err_fmt[] = "Could not list contents of '%s' on %s. '%s' must exist and "
+                                "be accessible. %s";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -2123,10 +2125,10 @@ bool BackupOperation::start_target()
 {
     bool server_started = false;
     // chown must be run as sudo since changing user to something else than self.
-    string chown_cmd = mxb::string_printf("sudo chown -R mysql:mysql %s/*", rebuild_datadir.c_str());
+    string chown_cmd = mxb::string_printf("sudo chown -R mysql:mysql %s", rebuild_datadir.c_str());
     // Check that the chown-command length is correct. Mainly a safeguard against later changes which could
     // cause MaxScale to change owner of every file on the system.
-    if (chown_cmd.length() == 42)
+    if (chown_cmd.length() == 40)
     {
         if (run_cmd_on_target(chown_cmd, "change ownership of datadir contents")
             && run_cmd_on_target("sudo systemctl start mariadb", "start MariaDB Server"))
@@ -2326,6 +2328,40 @@ void BackupOperation::report_source_stream_status()
     }
 }
 
+bool BackupOperation::check_directory_entries(std::shared_ptr<ssh::Session> ses, const std::string& srv_name,
+                                              const string& path, const DirCheckFunc& check_func)
+{
+    bool fetch_success = false;
+    auto& output = m_result.output;
+
+    auto [sftp, errmsg] = ssh_util::start_sftp_ses(std::move(ses));
+    if (sftp)
+    {
+        auto [dir_contents, dir_errmsg] = sftp->list_directory(path);
+        if (dir_errmsg.empty())
+        {
+            fetch_success = true;
+            for (const auto& elem : dir_contents)
+            {
+                if (!check_func(elem))
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            PRINT_JSON_ERROR(output, "Error fetching contents of '%s': %s", path.c_str(), dir_errmsg.c_str());
+        }
+    }
+    else
+    {
+        PRINT_JSON_ERROR(output, "Error starting sftp session on %s: %s", srv_name.c_str(), errmsg.c_str());
+    }
+
+    return fetch_success;
+}
+
 bool RebuildServer::state_test_datalink()
 {
     m_state = test_datalink(m_rebuild_port) ? State::SERVE_BACKUP : State::CLEANUP;
@@ -2474,45 +2510,41 @@ bool CreateBackup::state_init()
 
 bool CreateBackup::state_check_backup_storage()
 {
-    // Check that the backup-folder exists and that it does not already contain a backup with the same tag
-    // as the one currently being generated.
+    // Check that the backup storage directory exists and that it does not already contain a backup with
+    // the same name.
     bool success = false;
     auto& output = m_result.output;
     string bu_storage_path = m_mon.m_settings.backup_storage_path;
-    string cmd = mxb::string_printf("ls %s", bu_storage_path.c_str());
-    auto ls_res = ssh_util::run_cmd(*m_target_ses, cmd, m_ssh_timeout);
-    if (ls_res.type == RType::OK && ls_res.rc == 0)
-    {
-        auto dirs = mxb::strtok(ls_res.output, " ");
 
-        // The final folder where a backup is saved is <monitor-name>. TODO: add timestamp.
-        string subdir = m_mon.name();
-        auto it = std::find(dirs.begin(), dirs.end(), subdir);
-        if (it == dirs.end())
+    bool dir_free = true;
+    auto check_dir_free_func = [this, &dir_free](const ssh_util::FileInfo& info) {
+        if (info.name == m_bu_name)
         {
-            // Directory is free, create it.
-            string backup_dir = bu_storage_path + "/" + subdir;
-            string mkdir = mxb::string_printf("mkdir %s", backup_dir.c_str());
+            dir_free = false;
+            return false;
+        }
+        return true;
+    };
+
+    if (check_directory_entries(m_target_ses, m_target_name, bu_storage_path, check_dir_free_func))
+    {
+        string full_path = bu_storage_path + "/" + m_bu_name;
+        if (dir_free)
+        {
+            string mkdir = mxb::string_printf("mkdir %s", full_path.c_str());
             if (run_cmd_on_target(mkdir, "create backup directory"))
             {
                 success = true;
-                m_bu_path = bu_storage_path + "/" + subdir;
+                m_bu_path = full_path;
             }
         }
         else
         {
-            PRINT_JSON_ERROR(output, "Backup storage directory '%s/%s' already exists on %s. Cannot save "
-                                     "backup.", bu_storage_path.c_str(), subdir.c_str(),
-                             m_target_name.c_str());
+            PRINT_JSON_ERROR(output, "Backup storage directory '%s' already exists on %s. Cannot save "
+                                     "backup.", full_path.c_str(), m_target_name.c_str());
         }
     }
-    else
-    {
-        string fail_reason = ssh_util::form_cmd_error_msg(ls_res, cmd.c_str());
-        PRINT_JSON_ERROR(output, "Could not list contents of '%s' on %s. '%s' must exist and be accessible. "
-                                 "%s", bu_storage_path.c_str(), m_target_name.c_str(),
-                         bu_storage_path.c_str(), fail_reason.c_str());
-    }
+
     m_state = success ? State::TEST_DATALINK : State::CLEANUP;
     return true;
 }
@@ -2780,9 +2812,77 @@ bool RestoreFromBackup::state_test_datalink()
 
 bool RestoreFromBackup::state_check_backup_storage()
 {
-    // TODO: Check backup storage for most recent backup.
-    m_bu_path = "/tmp/dummy";
-    m_state = State::SERVE_BACKUP;
+    bool success = false;
+    auto& output = m_result.output;
+    const string& bu_storage_path = m_mon.m_settings.backup_storage_path;
+
+    bool bu_dir_found = false;
+    bool bu_dir_ok = true;
+    auto bu_storage_check_func = [&](const ssh_util::FileInfo& info) {
+        bool check_next = true;
+        const string& ssh_user = m_mon.m_settings.ssh_user;
+
+        if (info.name == m_bu_name)
+        {
+            bu_dir_found = true;
+            if (info.owner != ssh_user)
+            {
+                bu_dir_ok = false;
+                PRINT_JSON_ERROR(output, "Backup storage directory '%s/%s' is not owned by '%s'. "
+                                         "Cannot use backup.", bu_storage_path.c_str(),
+                                 m_bu_name.c_str(), ssh_user.c_str());
+            }
+            if (info.type != ssh_util::FileType::DIR)
+            {
+                bu_dir_ok = false;
+                PRINT_JSON_ERROR(output, "Backup storage path '%s/%s' is not a directory. "
+                                         "Cannot use backup.", bu_storage_path.c_str(),
+                                 m_bu_name.c_str());
+            }
+            check_next = false;
+        }
+        return check_next;
+    };
+
+    if (check_directory_entries(m_source_ses, m_source_name, bu_storage_path, bu_storage_check_func))
+    {
+        if (!bu_dir_found)
+        {
+            PRINT_JSON_ERROR(output, "Main backup storage directory '%s' does not contain '%s'. "
+                                     "Cannot use backup.", bu_storage_path.c_str(), m_bu_name.c_str());
+        }
+        else if (bu_dir_ok)
+        {
+            // Finally, check that "backup-my.cnf" exists.
+            const string search_file = "backup-my.cnf";
+            bool file_found = false;
+            auto bu_check_func = [&file_found, &search_file](const ssh_util::FileInfo& info) {
+                if (info.name == search_file)
+                {
+                    file_found = true;
+                    return false;
+                }
+                return true;
+            };
+
+            string full_path = bu_storage_path + "/" + m_bu_name;
+            if (check_directory_entries(m_source_ses, m_source_name, full_path, bu_check_func))
+            {
+                if (file_found)
+                {
+                    success = true;
+                    m_bu_path = full_path;
+                }
+                else
+                {
+                    PRINT_JSON_ERROR(output, "Directory '%s' does not contain file '%s'. Cannot use "
+                                             "backup.", full_path.c_str(), search_file.c_str());
+                }
+            }
+        }
+    }
+
+    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
