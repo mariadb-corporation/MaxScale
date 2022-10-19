@@ -14,6 +14,9 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 
@@ -21,6 +24,38 @@ namespace maxscale
 {
 namespace jwt
 {
+
+
+class Claims
+{
+public:
+    struct Imp
+    {
+        virtual ~Imp() = default;
+        virtual std::optional<std::string> get(const std::string& name) = 0;
+    };
+
+    Claims(std::unique_ptr<Imp> imp)
+        : m_imp(std::move(imp))
+    {
+    }
+
+    /**
+     * Get a claim from the token
+     *
+     * @param name The name of the claim
+     *
+     * @return The claim value, if found, formatted as a string
+     */
+    std::optional<std::string> get(const std::string& name)
+    {
+        mxb_assert(m_imp.get());
+        return m_imp->get(name);
+    }
+
+private:
+    std::unique_ptr<Imp> m_imp;
+};
 
 /**
  * Initialize JWT singing keys
@@ -43,21 +78,23 @@ bool init();
  * @param subject  The recipient of the token. The information stored here is not encrypted so don't store
  *                 anything sensitive in it.
  * @param max_age  The age in seconds the token is valid for.
+ * @param claims   Extra claims to be added to the token. These MUST NOT conflict with any well-known claims.
  *
  * @return A JSON web token in the encoded format.
  */
-std::string create(const std::string& issuer, const std::string& subject, int max_age);
+std::string create(const std::string& issuer, const std::string& subject, int max_age,
+                   std::map<std::string, std::string> claims = {});
 
 /**
- * Extract the subject value from a JSON Web Token
+ * Decode and validate a JSON Web Token
  *
  * The function checks that the issuer of the token is the same as the one who created it.
  *
  * @param issuer The issuer who created this token
  * @param token  A JWT token that is validated before the subject value is extracted
  *
- * @return A boolean indicating whether the token is valid and the subject value if it is
+ * @return The claims found in the token if decoding and validation was successful
  */
-std::pair<bool, std::string> get_subject(const std::string& issuer, const std::string& token);
+std::optional<Claims> decode(const std::string& issuer, const std::string& token);
 }
 }

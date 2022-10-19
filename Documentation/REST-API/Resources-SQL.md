@@ -174,14 +174,8 @@ This endpoint supports the following request parameters.
   - Store the connection token in cookies instead of returning it as the response body.
 
     This parameter expects only one value, `yes`, as its argument. When
-    `persist=yes` is set, the token is stored in two cookies,
-    `conn_id_body_<id>` and `conn_id_sig_<id>` where the `<id>` part is replaced
-    by the ID of the connection.
-
-    The `conn_id_body_<id>` cookie contains the JWT header and claims sections
-    and contains the connection ID in the `aud` value. This can be used to
-    retrieve the connection ID from the cookies if the browser session is
-    closed.
+    `persist=yes` is set, the token is stored in the `conn_id_sig_<id>` cookie
+    where the `<id>` part is replaced by the ID of the connection.
 
 - `max-age`
 

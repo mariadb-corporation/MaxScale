@@ -148,6 +148,16 @@ void test_main(TestConnections& test)
         {
             cout << "'maxctrl " << cmd << "' works.\n";
         }
+
+        // MXS-4355: Token authentication does not work with PAM users
+        auto res = test.maxctrl(mxb::string_printf("-u %s -p %s api get auth meta.token", pam_user, pam_pw));
+        test.expect(res.rc == 0, "'maxctrl api get' failed: %s", res.output.c_str());
+
+        auto token = res.output.substr(1, res.output.size() - 2);
+        int rc = test.maxscale->ssh_node_f(
+            false, "curl -f -s -H 'Authorization: Bearer %s' localhost:8989/v1/maxscale", token.c_str());
+        test.expect(rc == 0, "Token authentication with PAM user failed.");
+        test.tprintf("Token authentication with PAM: %s", rc == 0 ? "OK" : "Failed");
     }
 
     const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";

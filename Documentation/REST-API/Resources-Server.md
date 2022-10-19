@@ -96,7 +96,7 @@ Get a single server.
                             {
                                 "count": 1,
                                 "time": "0.001000",
-                                "total": 0.00016102900000000001
+                                "total": 0.00026678900000000002
                             },
                             {
                                 "count": 0,
@@ -167,7 +167,7 @@ Get a single server.
                             {
                                 "count": 1,
                                 "time": "0.010000",
-                                "total": 0.0011592760000000001
+                                "total": 0.001274311
                             },
                             {
                                 "count": 0,
@@ -213,8 +213,8 @@ Get a single server.
                 "routed_packets": 2,
                 "total_connections": 1
             },
-            "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
-            "uptime": 57,
+            "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+            "uptime": 27,
             "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
         },
         "id": "server1",
@@ -348,7 +348,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.001000",
-                                    "total": 0.00016102900000000001
+                                    "total": 0.00026678900000000002
                                 },
                                 {
                                     "count": 0,
@@ -419,7 +419,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.0011592760000000001
+                                    "total": 0.001274311
                                 },
                                 {
                                     "count": 0,
@@ -465,8 +465,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 2,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
-                "uptime": 57,
+                "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+                "uptime": 27,
                 "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
             },
             "id": "server1",
@@ -598,7 +598,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.001097462
+                                    "total": 0.0018231790000000001
                                 },
                                 {
                                     "count": 0,
@@ -710,8 +710,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 02 Sep 2022 06:19:08 GMT",
-                "uptime": 57,
+                "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+                "uptime": 27,
                 "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
             },
             "id": "server2",

@@ -172,15 +172,81 @@ std::string ec_jwk_to_pem(std::string curve, std::string x_coord, std::string y_
     return cert;
 }
 
+// Simple wrapper for the jwt-cpp types. Since the library uses template types and has a similar-ish
+// namespace, this class hides it from the rest of MaxScale to avoid any problems.
+template<class LibraryJwt>
+class RealImp : public mxs::jwt::Claims::Imp
+{
+public:
+    RealImp(LibraryJwt&& jwt)
+        : m_jwt(std::move(jwt))
+    {
+    }
+
+    std::optional<std::string> get(const std::string& name) override final
+    {
+        if (m_jwt.has_payload_claim(name))
+        {
+            return value_to_str(m_jwt.get_payload_claim(name));
+        }
+        else if (m_jwt.has_header_claim(name))
+        {
+            return value_to_str(m_jwt.get_header_claim(name));
+        }
+
+        return {};
+    }
+
+private:
+    template<class Value>
+    std::string value_to_str(Value v)
+    {
+        using type = ::jwt::json::type;
+        std::ostringstream ss;
+
+        switch (v.get_type())
+        {
+        case type::string:
+            // The string types are surrounded by double quotes if streamed into a ostream. We
+            // want the values without them since we'll be using them for string comparisons.
+            ss << v.as_string();
+            break;
+
+        case type::boolean:
+            // Format booleans in the same way as JSON.
+            ss << (v.as_bool() ? "true" : "false");
+            break;
+
+        default:
+            mxb_assert(!true);
+            // fallthrough
+
+        case type::integer:
+        case type::number:
+        case type::array:
+        case type::object:
+            // Everything else gets formatted using the type's built-in formatter. This works as
+            // expected for integers and numbers and is also adequate for objects and arrays.
+            ss << v;
+            break;
+        }
+
+        return ss.str();
+    }
+
+    LibraryJwt m_jwt;
+};
+
 // Abstract base class for signature creation and verification
 struct Jwt
 {
     virtual ~Jwt() = default;
 
-    virtual std::string sign(const std::string& issuer, const std::string& subject, int max_age) = 0;
+    virtual std::string sign(const std::string& issuer, const std::string& subject, int max_age,
+                             std::map<std::string, std::string>) = 0;
 
-    virtual std::pair<bool, std::string>
-    get_subject(const std::string& issuer, const std::string& token) = 0;
+    virtual std::optional<mxs::jwt::Claims>
+    get_claims(const std::string& issuer, const std::string& token) = 0;
 };
 
 template<class Algorithm>
@@ -192,27 +258,29 @@ public:
     {
     }
 
-    std::string sign(const std::string& issuer,
-                     const std::string& subject,
-                     int max_age) override
+    std::string sign(const std::string& issuer, const std::string& subject, int max_age,
+                     std::map<std::string, std::string> claims) override final
     {
         auto now = std::chrono::system_clock::now();
 
-        return ::jwt::create()
-               .set_issuer(issuer)
-               .set_audience(subject)
-               .set_subject(subject)
-               .set_issued_at(now)
-               .set_expires_at(now + std::chrono::seconds {max_age})
-               .sign(m_algo);
+        auto tok = ::jwt::create()
+            .set_issuer(issuer)
+            .set_audience(subject)
+            .set_subject(subject)
+            .set_issued_at(now)
+            .set_expires_at(now + std::chrono::seconds {max_age});
+
+        for (auto [k, v] : claims)
+        {
+            tok.set_payload_claim(k, ::jwt::claim(v));
+        }
+
+        return tok.sign(m_algo);
     }
 
-    std::pair<bool, std::string>
-    get_subject(const std::string& issuer, const std::string& token) override
+    std::optional<mxs::jwt::Claims>
+    get_claims(const std::string& issuer, const std::string& token) override
     {
-        bool rval = false;
-        std::string subject;
-
         try
         {
             auto d = ::jwt::decode(token) ;
@@ -222,14 +290,14 @@ public:
             .with_issuer(issuer)
             .verify(d);
 
-            subject = d.get_subject();
-            rval = true;
+            return mxs::jwt::Claims(std::unique_ptr<mxs::jwt::Claims::Imp>(new RealImp(std::move(d))));
         }
         catch (const std::exception& e)
         {
+            MXB_DEBUG("%s: %s", __func__, e.what());
         }
 
-        return {rval, subject};
+        return {};
     }
 
 private:
@@ -467,41 +535,15 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
     return algo;
 }
 
-template<class Algo, class Decoded>
-bool verify_with_alg(const std::string& issuer, Decoded& d)
+std::optional<mxs::jwt::Claims> verify_extra(const std::string& issuer, const std::string& token)
 {
-    bool ok = false;
-
-    for (const auto& cert : this_unit.extra_certs)
-    {
-        try
-        {
-            ::jwt::verify().allow_algorithm(Algo {cert}).verify(d);
-
-            ok = true;
-            break;
-        }
-        catch (const std::exception& e)
-        {
-            MXB_DEBUG("JWT verify failed: %s", e.what());
-        }
-    }
-
-    return ok;
-}
-
-std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::string& token)
-{
-    bool ok = false;
-    std::string sub;
-
     try
     {
         auto d = ::jwt::decode(token);
 
         if (auto it = this_unit.extra_certs.find(d.get_key_id()); it != this_unit.extra_certs.end())
         {
-            std::tie(ok, sub) = it->second->get_subject(issuer, token);
+            return it->second->get_claims(issuer, token);
         }
     }
     catch (const std::exception& e)
@@ -509,7 +551,7 @@ std::pair<bool, std::string> verify_extra(const std::string& issuer, const std::
         MXB_INFO("Token verification failed: %s", e.what());
     }
 
-    return {ok, sub};
+    return {};
 }
 }
 
@@ -672,23 +714,24 @@ bool init()
     return this_unit.jwt.get();
 }
 
-std::string create(const std::string& issuer, const std::string& subject, int max_age)
+std::string create(const std::string& issuer, const std::string& subject, int max_age,
+                   std::map<std::string, std::string> claims)
 {
     std::lock_guard guard(this_unit.lock);
-    return this_unit.jwt->sign(issuer, subject, max_age);
+    return this_unit.jwt->sign(issuer, subject, max_age, std::move(claims));
 }
 
-std::pair<bool, std::string> get_subject(const std::string& issuer, const std::string& token)
+std::optional<Claims> decode(const std::string& issuer, const std::string& token)
 {
     std::lock_guard guard(this_unit.lock);
-    auto [ok, sub] = this_unit.jwt->get_subject(issuer, token);
+    auto claims = this_unit.jwt->get_claims(issuer, token);
 
-    if (!ok && !this_unit.extra_certs.empty())
+    if (!claims && !this_unit.extra_certs.empty())
     {
-        std::tie(ok, sub) = verify_extra(this_unit.extra_issuer, token);
+        claims = verify_extra(this_unit.extra_issuer, token);
     }
 
-    return {ok, sub};
+    return claims;
 }
 }
 }

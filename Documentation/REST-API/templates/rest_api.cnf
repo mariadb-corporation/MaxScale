@@ -1,6 +1,7 @@
 [maxscale]
-threads=auto
+threads=3
 syslog=false
+users_refresh_time=0s
 
 [server1]
 type=server

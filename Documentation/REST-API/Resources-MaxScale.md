@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Fri, 02 Sep 2022 06:19:08 GMT",
-            "commit": "e9118b83aaaca68bce91d0543230e4dd0136f1bf",
+            "activated_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+            "commit": "d6662b78821027046876bedd0d2b687908fef091",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -35,6 +35,7 @@ file locations, configuration options and version information.
                 "admin_jwt_algorithm": "auto",
                 "admin_jwt_key": null,
                 "admin_log_auth_failures": true,
+                "admin_oidc_url": null,
                 "admin_pam_readonly_service": null,
                 "admin_pam_readwrite_service": null,
                 "admin_port": 8989,
@@ -43,6 +44,7 @@ file locations, configuration options and version information.
                 "admin_ssl_cert": null,
                 "admin_ssl_key": null,
                 "admin_ssl_version": "MAX",
+                "admin_verify_url": null,
                 "auth_connect_timeout": "10000ms",
                 "auth_read_timeout": "10000ms",
                 "auth_write_timeout": "10000ms",
@@ -85,7 +87,7 @@ file locations, configuration options and version information.
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5004691046,
+                "query_classifier_cache_size": 5004690432,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -97,16 +99,36 @@ file locations, configuration options and version information.
                 "skip_permission_checks": false,
                 "sql_mode": "default",
                 "syslog": false,
-                "threads": 8,
+                "threads": 3,
                 "users_refresh_interval": "0ms",
-                "users_refresh_time": "30000ms",
+                "users_refresh_time": "0ms",
                 "writeq_high_water": 16777216,
                 "writeq_low_water": 8192
             },
-            "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Fri, 02 Sep 2022 06:19:08 GMT",
-            "uptime": 10,
-            "version": "22.08.0"
+            "process_datadir": "/var/lib/maxscale/data21",
+            "started_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+            "system": {
+                "machine": {
+                    "cores_available": 8,
+                    "cores_physical": 8,
+                    "cores_virtual": 8.0,
+                    "memory_available": 33364602880,
+                    "memory_physical": 33364602880
+                },
+                "maxscale": {
+                    "query_classifier_cache_size": 5004690432,
+                    "threads": 3
+                },
+                "os": {
+                    "machine": "x86_64",
+                    "nodename": "monolith",
+                    "release": "5.19.14-200.fc36.x86_64",
+                    "sysname": "Linux",
+                    "version": "#1 SMP PREEMPT_DYNAMIC Wed Oct 5 21:31:17 UTC 2022"
+                }
+            },
+            "uptime": 15,
+            "version": "22.08.2"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -170,6 +192,12 @@ value of `threads`.
                 "max_event_queue_length": 1,
                 "max_exec_time": 0,
                 "max_queue_time": 0,
+                "memory": {
+                    "query_classifier": 0,
+                    "sessions": 0,
+                    "total": 0,
+                    "zombies": 0
+                },
                 "query_classifier_cache": {
                     "evictions": 0,
                     "hits": 0,
@@ -177,9 +205,11 @@ value of `threads`.
                     "misses": 0,
                     "size": 0
                 },
-                "reads": 30,
+                "reads": 34,
+                "sessions": 0,
                 "total_descriptors": 5,
-                "writes": 0
+                "writes": 0,
+                "zombies": 0
             }
         },
         "id": "0",
@@ -225,6 +255,12 @@ Get the information for all threads. Returns a collection of threads resources.
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
                     "max_queue_time": 0,
+                    "memory": {
+                        "query_classifier": 0,
+                        "sessions": 0,
+                        "total": 0,
+                        "zombies": 0
+                    },
                     "query_classifier_cache": {
                         "evictions": 0,
                         "hits": 0,
@@ -232,9 +268,11 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 31,
+                    "reads": 35,
+                    "sessions": 0,
                     "total_descriptors": 5,
-                    "writes": 0
+                    "writes": 0,
+                    "zombies": 0
                 }
             },
             "id": "0",
@@ -246,9 +284,9 @@ Get the information for all threads. Returns a collection of threads resources.
         {
             "attributes": {
                 "stats": {
-                    "accepts": 0,
+                    "accepts": 1,
                     "avg_event_queue_length": 1,
-                    "current_descriptors": 5,
+                    "current_descriptors": 8,
                     "errors": 0,
                     "hangups": 0,
                     "load": {
@@ -256,19 +294,27 @@ Get the information for all threads. Returns a collection of threads resources.
                         "last_minute": 0,
                         "last_second": 0
                     },
-                    "max_event_queue_length": 1,
+                    "max_event_queue_length": 3,
                     "max_exec_time": 0,
                     "max_queue_time": 0,
+                    "memory": {
+                        "query_classifier": 448,
+                        "sessions": 69671,
+                        "total": 70119,
+                        "zombies": 0
+                    },
                     "query_classifier_cache": {
                         "evictions": 0,
                         "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
+                        "inserts": 1,
+                        "misses": 2,
+                        "size": 448
                     },
-                    "reads": 30,
-                    "total_descriptors": 5,
-                    "writes": 0
+                    "reads": 47,
+                    "sessions": 1,
+                    "total_descriptors": 8,
+                    "writes": 10,
+                    "zombies": 0
                 }
             },
             "id": "1",
@@ -293,6 +339,12 @@ Get the information for all threads. Returns a collection of threads resources.
                     "max_event_queue_length": 1,
                     "max_exec_time": 0,
                     "max_queue_time": 0,
+                    "memory": {
+                        "query_classifier": 0,
+                        "sessions": 0,
+                        "total": 0,
+                        "zombies": 0
+                    },
                     "query_classifier_cache": {
                         "evictions": 0,
                         "hits": 0,
@@ -300,184 +352,16 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 29,
+                    "reads": 34,
+                    "sessions": 0,
                     "total_descriptors": 5,
-                    "writes": 0
+                    "writes": 0,
+                    "zombies": 0
                 }
             },
             "id": "2",
             "links": {
                 "self": "http://localhost:8989/v1/threads/2/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 5,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 29,
-                    "total_descriptors": 5,
-                    "writes": 0
-                }
-            },
-            "id": "3",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/3/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 5,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 29,
-                    "total_descriptors": 5,
-                    "writes": 0
-                }
-            },
-            "id": "4",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/4/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 5,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 30,
-                    "total_descriptors": 5,
-                    "writes": 0
-                }
-            },
-            "id": "5",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/5/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 1,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 8,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 2,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 1,
-                        "misses": 2,
-                        "size": 448
-                    },
-                    "reads": 40,
-                    "total_descriptors": 8,
-                    "writes": 12
-                }
-            },
-            "id": "6",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/6/"
-            },
-            "type": "threads"
-        },
-        {
-            "attributes": {
-                "stats": {
-                    "accepts": 0,
-                    "avg_event_queue_length": 1,
-                    "current_descriptors": 5,
-                    "errors": 0,
-                    "hangups": 0,
-                    "load": {
-                        "last_hour": 0,
-                        "last_minute": 0,
-                        "last_second": 0
-                    },
-                    "max_event_queue_length": 1,
-                    "max_exec_time": 0,
-                    "max_queue_time": 0,
-                    "query_classifier_cache": {
-                        "evictions": 0,
-                        "hits": 0,
-                        "inserts": 0,
-                        "misses": 0,
-                        "size": 0
-                    },
-                    "reads": 30,
-                    "total_descriptors": 5,
-                    "writes": 0
-                }
-            },
-            "id": "7",
-            "links": {
-                "self": "http://localhost:8989/v1/threads/7/"
             },
             "type": "threads"
         }
@@ -604,19 +488,19 @@ This endpoint supports the following parameters:
                     "id": "37",
                     "message": "Service 'Read-Connection-Router' started (2/2)",
                     "priority": "notice",
-                    "timestamp": "2022-09-02 06:19:08"
+                    "timestamp": "2022-10-17 17:36:00"
                 },
                 {
                     "id": "38",
-                    "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
+                    "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-09-02 06:19:09"
+                    "timestamp": "2022-10-17 17:36:01"
                 },
                 {
                     "id": "39",
-                    "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
+                    "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
                     "priority": "notice",
-                    "timestamp": "2022-09-02 06:19:09"
+                    "timestamp": "2022-10-17 17:36:01"
                 }
             ],
             "log_source": "maxlog"
@@ -806,6 +690,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                         "none",
                         "local",
                         "global",
+                        "fast_global",
                         "fast",
                         "universal"
                     ],
@@ -1370,6 +1255,13 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
+                        "description": "Extra public certificates used to validate externally signed JWTs",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "admin_oidc_url",
+                        "type": "string"
+                    },
+                    {
                         "description": "PAM service for read-only users.",
                         "mandatory": false,
                         "modifiable": false,
@@ -1442,6 +1334,13 @@ one to see the parameters of a module before the object is created.
                         "modifiable": false,
                         "name": "admin_ssl_version",
                         "type": "enum"
+                    },
+                    {
+                        "description": "URL for third-party verification of client tokens",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "admin_verify_url",
+                        "type": "string"
                     },
                     {
                         "default_value": "10000ms",
@@ -1683,7 +1582,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5004691046,
+                        "default_value": 5004690432,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1827,7 +1726,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "22.08.0"
+                "version": "22.08.2"
             },
             "id": "maxscale",
             "links": {
@@ -2052,7 +1951,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "22.08.0"
+                "version": "22.08.2"
             },
             "id": "servers",
             "links": {
@@ -2836,11 +2735,19 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "description": "SSH keyfile. Used for accessing servers.",
+                        "description": "SSH keyfile. Used for running remote commands on servers.",
                         "mandatory": false,
                         "modifiable": false,
                         "name": "ssh_keyfile",
                         "type": "path"
+                    },
+                    {
+                        "default_value": 22,
+                        "description": "SSH port. Used for running remote commands on servers.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "ssh_port",
+                        "type": "count"
                     },
                     {
                         "default_value": "10000ms",
@@ -2852,7 +2759,7 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
-                        "description": "SSH username. Used for accessing servers.",
+                        "description": "SSH username. Used for running remote commands on servers.",
                         "mandatory": false,
                         "modifiable": false,
                         "name": "ssh_user",
@@ -3116,6 +3023,14 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "description": "TLS certificate authority",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "ssl_ca",
+                        "type": "path"
+                    },
+                    {
+                        "deprecated": true,
+                        "description": "Alias for 'ssl_ca'",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "ssl_ca_cert",
@@ -3702,6 +3617,7 @@ one to see the parameters of a module before the object is created.
                             "none",
                             "local",
                             "global",
+                            "fast_global",
                             "fast",
                             "universal"
                         ],

@@ -20,6 +20,8 @@
 
 #include <microhttpd.h>
 
+#include <maxscale/users.hh>
+
 #include "httprequest.hh"
 #include "httpresponse.hh"
 #include "websocket.hh"
@@ -107,31 +109,33 @@ private:
      */
     bool serve_file(const std::string& url) const;
 
-    MHD_Connection* m_connection;   /**< Connection handle */
-    std::string     m_data;         /**< Uploaded data */
-    state           m_state;        /**< Client state */
-    std::string     m_user;         /**< The user account */
-    Headers         m_headers;
-    HttpRequest     m_request;
+    MHD_Connection*        m_connection;/**< Connection handle */
+    std::string            m_data;      /**< Uploaded data */
+    state                  m_state;     /**< Client state */
+    std::string            m_user;      /**< The user account */
+    mxs::user_account_type m_account {mxs::USER_ACCOUNT_UNKNOWN};
+    Headers                m_headers;
+    HttpRequest            m_request;
 
     WebSocket::Handler m_ws_handler;
 
     HttpResponse generate_token(const HttpRequest& request);
     bool         auth_with_token(const std::string& token, const char* method, const char* url);
-    bool         authorize_user(const char* user, const char* method, const char* url) const;
-    bool         is_basic_endpoint() const;
-    bool         send_cors_preflight_request(const std::string& verb);
-    std::string  get_header(const std::string& key) const;
-    size_t       request_data_length() const;
-    void         send_shutting_down_error() const;
-    void         send_basic_auth_error() const;
-    void         send_token_auth_error() const;
-    void         send_write_access_error() const;
-    void         send_no_https_error() const;
-    void         add_cors_headers(MHD_Response*) const;
-    void         upgrade_to_ws();
-    int          queue_response(const HttpResponse& response);
-    int          queue_delayed_response(const HttpResponse::Callback& cb);
+    bool         authorize_user(const char* user, mxs::user_account_type type, const char* method,
+                                const char* url) const;
+    bool        is_basic_endpoint() const;
+    bool        send_cors_preflight_request(const std::string& verb);
+    std::string get_header(const std::string& key) const;
+    size_t      request_data_length() const;
+    void        send_shutting_down_error() const;
+    void        send_basic_auth_error() const;
+    void        send_token_auth_error() const;
+    void        send_write_access_error() const;
+    void        send_no_https_error() const;
+    void        add_cors_headers(MHD_Response*) const;
+    void        upgrade_to_ws();
+    int         queue_response(const HttpResponse& response);
+    int         queue_delayed_response(const HttpResponse::Callback& cb);
 
     static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                   const char* extra_in, size_t extra_in_size,
