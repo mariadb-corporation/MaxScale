@@ -513,7 +513,7 @@ void RoutingWorker::clear()
         nClosed += pool.close_all();
     }
 
-    guard.release();
+    guard.unlock();
 
     MXB_NOTICE("%s of memory used by the query classifier cache released and "
                "%lu pooled connections closed "
