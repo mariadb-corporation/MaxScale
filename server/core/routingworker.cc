@@ -2587,10 +2587,11 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
     return task.resource(index);
 }
 
-json_t* mxs_rworker_list_to_json(const char* host)
+json_t* mxs_rworker_list_to_json(const char* host, mxs::RoutingWorker::Which which)
 {
-    RoutingWorker::InfoTask task(host, this_unit.nCreated);
-    RoutingWorker::execute_concurrently(task, mxs::RoutingWorker::RUNNING);
+    int n = (which == mxs::RoutingWorker::RUNNING) ? this_unit.nRunning : this_unit.nCreated;
+    RoutingWorker::InfoTask task(host, n);
+    RoutingWorker::execute_concurrently(task, n);
     return task.resource();
 }
 

@@ -966,7 +966,14 @@ HttpResponse cb_reload_users(const HttpRequest& request)
 
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
+    mxs::RoutingWorker::Which which = mxs::RoutingWorker::RUNNING;
+
+    if (request.get_option(CN_KIND) == CN_ALL)
+    {
+        which = mxs::RoutingWorker::ALL;
+    }
+
+    return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host(), which));
 }
 
 HttpResponse cb_qc(const HttpRequest& request)

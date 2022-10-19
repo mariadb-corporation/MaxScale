@@ -84,7 +84,7 @@ public:
     typedef std::vector<void*>           LocalData;
     typedef std::vector<void (*)(void*)> DataDeleters;
 
-    enum Workers
+    enum Which
     {
         ALL     = -1,
         RUNNING = -2
@@ -259,7 +259,7 @@ public:
      * Posts a task to workers for execution.
      *
      * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      * @param pSem      If non-NULL, will be posted once per worker when the task's
      *                  `execute` return.
      *
@@ -287,7 +287,7 @@ public:
      * Posts a task to workers for execution.
      *
      * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -311,7 +311,7 @@ public:
      * Posts a functor to workers for execution.
      *
      * @param func      The functor to be executed.
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      * @param pSem      If non-NULL, will be posted once the task's `execute` return.
      * @param mode      Execution mode
      *
@@ -340,7 +340,7 @@ public:
      * the task has been executed on all workers.
      *
      * @param task/func  The task/func to be executed.
-     * @param nWorkers   ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers   ALL, RUNNING or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -381,7 +381,7 @@ public:
      * @param msg_id    The message id.
      * @param arg1      Message specific first argument.
      * @param arg2      Message specific second argument.
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      *
      * @return The number of messages posted; if less that ne number of workers
      *         then some postings failed.
@@ -399,7 +399,7 @@ public:
     /**
      * Returns statistics for all workers.
      *
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      *
      * @return Combined statistics.
      *
@@ -429,7 +429,7 @@ public:
     /**
      * Provides QC statistics of all workers
      *
-     * @param nWorkers   ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers   ALL, RUNNING or a specific number of workers.
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
     static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats, int nWorkers = ALL);
@@ -437,7 +437,7 @@ public:
     /**
      * Provides QC statistics of all workers as a Json object for use in the REST-API.
      *
-     * @param nWorkers  ALL, ACTIVE or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING or a specific number of workers.
      *
      * @return JSON object containing statistics.
      */
@@ -751,13 +751,14 @@ json_t* mxs_rworker_to_json(const char* host, int index);
 /**
  * Convert routing workers into JSON format
  *
- * @param host Hostname of this server
+ * @param host   Hostname of this server
+ * @param which  Which worker should be returned, all or running.
  *
  * @return A JSON resource collection of workers
  *
  * @see mxs_json_resource()
  */
-json_t* mxs_rworker_list_to_json(const char* host);
+json_t* mxs_rworker_list_to_json(const char* host, mxs::RoutingWorker::Which which);
 
 /**
  * @brief MaxScale worker watchdog
