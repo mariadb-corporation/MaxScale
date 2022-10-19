@@ -1672,6 +1672,7 @@ void CacheFilterSession::ready_for_another_call()
         Worker* pWorker = Worker::get_current();
 
         pWorker->lcall([this]() {
+                MXS_SESSION::Scope scope(m_pSession);
                 // We may already be processing, if a packet arrived from the client
                 // and processed, before the delayed call got handled.
                 if (!m_processing)

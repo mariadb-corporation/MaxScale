@@ -37,6 +37,7 @@ void finish(TestConnections& test, Connection& c)
 const size_t N_THREADS = 10;
 const size_t N_INSERTS = 100;
 const size_t N_SELECTS = 10;
+const size_t N_UNIQUE_SELECTS = 3;
 
 void thread_stress(TestConnections* pTest, int id)
 {
@@ -60,9 +61,17 @@ void thread_stress(TestConnections* pTest, int id)
 
         pTest->expect(c.query(query), "Thread %d failed to execute INSERT: %s", id, c.error());
 
-        for (size_t i = 0; i < N_SELECTS; ++i)
+        for (size_t j = 0; j < N_SELECTS; ++j)
         {
-            pTest->expect(c.query("SELECT * FROM sq"), "Thread %d failed to SELECT: %s", id, c.error());
+            // Use a unique field name in a subset of the queries. This stress tests the measurement as well
+            // as the cached response processing.
+            std::ostringstream ss;
+            ss << "SELECT *, 1 AS `"
+               << c.thread_id() << "-" << i << "-" << j % N_UNIQUE_SELECTS
+               << "` FROM sq";
+
+            pTest->expect(c.query(ss.str()), "Thread %d (%u) failed to SELECT: %s",
+                          id, c.thread_id(), c.error());
         }
     }
 

@@ -109,6 +109,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
 
 bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Callable::Action action, GWBUF* buffer)
 {
+    MXS_SESSION::Scope scope(m_pSession);
     m_delayed_call_id = 0;
     switch (action)
     {

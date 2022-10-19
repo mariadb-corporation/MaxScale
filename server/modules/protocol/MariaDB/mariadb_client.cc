@@ -1858,6 +1858,8 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
         // Then move execution back to the original worker to keep all connections on the same thread
         origin->call(
             [this, info, ref, origin, send_ok]() {
+            MXS_SESSION::Scope scope(m_session);
+
             for (const auto& a : info->targets)
             {
                 std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
@@ -1867,11 +1869,15 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     if (client->connect())
                     {
                         auto ok_cb = [this, send_ok, cl = client.get()](
-                            GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&){
+                            GWBUF* buf, const mxs::ReplyRoute& route, const mxs::Reply& reply){
+                            MXB_INFO("Reply to KILL from '%s': %s",
+                                     route.empty() ? "<none>" : route.front()->target()->name(),
+                                     reply.error() ? reply.error().message().c_str() : "OK");
                             kill_complete(send_ok, cl);
                         };
                         auto err_cb = [this, send_ok, cl = client.get()](
-                            GWBUF*, mxs::Target*, const mxs::Reply&) {
+                            GWBUF* buf, mxs::Target* tgt, const mxs::Reply& reply) {
+                            MXB_INFO("KILL error on '%s'", tgt->name());
                             kill_complete(send_ok, cl);
                         };
 
@@ -2961,6 +2967,8 @@ void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
     // This needs to be executed once we return from the clientReply or the handleError callback of the
     // LocalClient.
     auto fn = [=]() {
+        MXS_SESSION::Scope scope(m_session);
+
         m_local_clients.erase(
             std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
             return c.get() == client;
