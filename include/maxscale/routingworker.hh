@@ -87,7 +87,8 @@ public:
     enum Which
     {
         ALL     = -1,
-        RUNNING = -2
+        RUNNING = -2,
+        DESIRED = -3
     };
 
     /**
@@ -259,7 +260,7 @@ public:
      * Posts a task to workers for execution.
      *
      * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      * @param pSem      If non-NULL, will be posted once per worker when the task's
      *                  `execute` return.
      *
@@ -287,7 +288,7 @@ public:
      * Posts a task to workers for execution.
      *
      * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -311,7 +312,7 @@ public:
      * Posts a functor to workers for execution.
      *
      * @param func      The functor to be executed.
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      * @param pSem      If non-NULL, will be posted once the task's `execute` return.
      * @param mode      Execution mode
      *
@@ -340,7 +341,7 @@ public:
      * the task has been executed on all workers.
      *
      * @param task/func  The task/func to be executed.
-     * @param nWorkers   ALL, RUNNING or a specific number of workers.
+     * @param nWorkers   ALL, RUNNING, DESIRED or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -381,7 +382,7 @@ public:
      * @param msg_id    The message id.
      * @param arg1      Message specific first argument.
      * @param arg2      Message specific second argument.
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      *
      * @return The number of messages posted; if less that ne number of workers
      *         then some postings failed.
@@ -399,7 +400,7 @@ public:
     /**
      * Returns statistics for all workers.
      *
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      *
      * @return Combined statistics.
      *
@@ -429,7 +430,7 @@ public:
     /**
      * Provides QC statistics of all workers
      *
-     * @param nWorkers   ALL, RUNNING or a specific number of workers.
+     * @param nWorkers   ALL, RUNNING, DESIRED or a specific number of workers.
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
     static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats, int nWorkers = ALL);
@@ -437,7 +438,7 @@ public:
     /**
      * Provides QC statistics of all workers as a Json object for use in the REST-API.
      *
-     * @param nWorkers  ALL, RUNNING or a specific number of workers.
+     * @param nWorkers  ALL, RUNNING, DESIRED or a specific number of workers.
      *
      * @return JSON object containing statistics.
      */

@@ -191,6 +191,10 @@ int broadcast_recipients(int nWorkers)
         nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
         break;
 
+    case RoutingWorker::DESIRED:
+        nWorkers = this_unit.nDesired.load(std::memory_order_relaxed);
+        break;
+
     default:
         mxb_assert(nWorkers >= 0);
         break;
@@ -2589,7 +2593,8 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 
 json_t* mxs_rworker_list_to_json(const char* host, mxs::RoutingWorker::Which which)
 {
-    int n = (which == mxs::RoutingWorker::RUNNING) ? this_unit.nRunning : this_unit.nCreated;
+    int n = broadcast_recipients(which);
+
     RoutingWorker::InfoTask task(host, n);
     RoutingWorker::execute_concurrently(task, n);
     return task.resource();
