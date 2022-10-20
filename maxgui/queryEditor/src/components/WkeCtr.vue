@@ -5,6 +5,7 @@
             class="query-view__content"
             :boundary="ctrDim.width"
             :minPercent="minSidebarPct"
+            :deactivatedMinPctZone="deactivatedMinSizeBarPoint"
             :maxPercent="maxSidebarPct"
             split="vert"
             progress
@@ -131,15 +132,11 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
-        collapsedSidebarPct() {
+        minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
         },
-        expandedMinSidebarPct() {
-            return this.$helpers.pxToPct({ px: 120, containerPx: this.ctrDim.width })
-        },
-        minSidebarPct() {
-            if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
-            return this.expandedMinSidebarPct
+        deactivatedMinSizeBarPoint() {
+            return this.minSidebarPct * 3
         },
         maxSidebarPct() {
             return 100 - this.$helpers.pxToPct({ px: 370, containerPx: this.ctrDim.width })
@@ -169,12 +166,22 @@ export default {
         },
         sidebarPct: {
             get() {
-                if (this.is_sidebar_collapsed) return this.collapsedSidebarPct
+                if (this.is_sidebar_collapsed) return this.minSidebarPct
                 return this.sidebar_pct_width
             },
             set(v) {
                 this.SET_SIDEBAR_PCT_WIDTH(v)
             },
+        },
+    },
+    watch: {
+        /**
+         * When sidebar is expanded by clicking the expand button,
+         * if the current sidebar percent width <= the minimum sidebar percent
+         * assign the default percent
+         */
+        is_sidebar_collapsed(v) {
+            if (!v && this.sidebarPct <= this.minSidebarPct) this.sidebarPct = this.defSidebarPct
         },
     },
     mounted() {
@@ -207,7 +214,7 @@ export default {
         },
         // panes dimension/percentages calculation functions
         handleSetDefSidebarPct() {
-            if (!this.sidebar_pct_width) this.sidebarPct = this.defSidebarPct
+            if (!this.sidebarPct) this.sidebarPct = this.defSidebarPct
         },
         setEditorDim() {
             const editor = this.$typy(this.$refs, 'editor[0]').safeObjectOrEmpty
@@ -216,23 +223,10 @@ export default {
                 if (width !== 0 || height !== 0) this.editorDim = { width, height }
             }
         },
-        handleAutoCollapse(pct) {
-            if (this.$helpers.pctToPx({ pct, containerPx: this.ctrDim.width }) <= 50)
-                this.SET_IS_SIDEBAR_COLLAPSED(true)
-            else this.SET_IS_SIDEBAR_COLLAPSED(false)
-        },
         onResizing(v) {
-            /**
-             * If the sidebar is collapsed and the previous user preferences sidebar
-             * percent > the minimum expanded sidebar percent. Ignore user preferences value and
-             * use the expandedMinSidebarPct as the new value. Without this, if the user preferences
-             * value is larger than the minimum expanded sidebar percent, then the use the collapse
-             * button to collapse the sidebar. The resizing action will pick the user preferences value
-             * while resizing which causes an uneven transition.
-             */
-            if (this.is_sidebar_collapsed && this.sidebar_pct_width > this.expandedMinSidebarPct)
-                this.sidebarPct = this.expandedMinSidebarPct
-            this.handleAutoCollapse(v)
+            //auto collapse sidebar
+            if (v <= this.minSidebarPct) this.SET_IS_SIDEBAR_COLLAPSED(true)
+            else if (v >= this.deactivatedMinSizeBarPoint) this.SET_IS_SIDEBAR_COLLAPSED(false)
         },
     },
 }

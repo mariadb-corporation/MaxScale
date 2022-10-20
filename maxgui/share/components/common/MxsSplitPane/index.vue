@@ -40,8 +40,16 @@ export default {
         boundary: { type: Number, required: true }, // boundary value in pixel unit
         minPercent: { type: Number, default: 0 },
         maxPercent: { type: Number, default: 100 },
-
+        /**
+         * The value for each prop must meet the condition to take effect
+         * deactivatedMinPctZone > minPercent
+         * deactivatedMaxPctZone < maxPercent
+         * If the props are not used, it will use minPercent/maxPercent as the value
+         */
+        deactivatedMinPctZone: { type: Number },
+        deactivatedMaxPctZone: { type: Number },
         split: {
+            type: String,
             validator(value) {
                 return ['vert', 'horiz'].indexOf(value) !== -1
             },
@@ -105,6 +113,12 @@ export default {
                 pointerEvents: this.active ? 'all !important' : 'auto',
             }
         },
+        deactMinPctZone() {
+            return this.deactivatedMinPctZone || this.minPercent
+        },
+        deactMaxPctZone() {
+            return this.deactivatedMaxPctZone || this.maxPercent
+        },
     },
     watch: {
         active(v, oV) {
@@ -146,14 +160,38 @@ export default {
         calCurrPct(offset) {
             return ((this.initialValueInPx + offset) / this.boundary) * 100
         },
+        isInThreshold(v) {
+            return v <= this.minPercent && v >= this.maxPercent
+        },
+        /**
+         * prevent currPct from having value beyond the minPercent threshold
+         * currPct stops updating when the percent <= minPercent
+         */
+        handleBrakeOnMinPct(v) {
+            if (v <= this.minPercent) this.currPct = this.minPercent
+        },
+        /**
+         * prevent currPct from having value beyond the maxPercent threshold
+         * currPct stops updating when the percent >= maxPercent
+         */
+        handleBrakeOnMaxPct(v) {
+            if (v >= this.maxPercent) this.currPct = this.maxPercent
+        },
+
         onMouseMove(e) {
             const endpoint = this.isVertSplit ? e.pageX : e.pageY
             const offset = endpoint - this.startPoint
             let percent = this.calCurrPct(offset)
-            // prevent currPct from having value beyond the minPercent/maxPercent threshold
-            if (percent <= this.minPercent) percent = this.minPercent
-            if (percent >= this.maxPercent) percent = this.maxPercent
-            this.currPct = percent
+
+            // stop updating currPct on deactivated zone but continue if it reaches minPercent/maxPercent
+            if (this.deactMinPctZone && percent <= this.deactMinPctZone)
+                this.handleBrakeOnMinPct(percent)
+            else if (this.deactMaxPctZone && percent >= this.deactMaxPctZone)
+                this.handleBrakeOnMaxPct(percent)
+            else if (this.isInThreshold(percent)) {
+                this.handleBrakeOnMinPct(percent)
+                this.handleBrakeOnMaxPct(percent)
+            } else this.currPct = percent
 
             // emit event that returns value beyond the minPercent/maxPercent threshold
             if (this.progress) this.$emit('resizing', this.calCurrPct(offset))

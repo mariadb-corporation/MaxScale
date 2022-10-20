@@ -147,14 +147,6 @@ describe('wke-ctr', () => {
         const is_sidebar_collapsed_values = [false, true]
         is_sidebar_collapsed_values.forEach(v => {
             describe(`When sidebar is${v ? '' : ' not'} collapsed`, () => {
-                it(`Should return accurate value for minSidebarPct`, () => {
-                    wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
-
-                    const minPct = v
-                        ? wrapper.vm.collapsedSidebarPct
-                        : wrapper.vm.expandedMinSidebarPct
-                    expect(wrapper.vm.minSidebarPct).to.be.equals(minPct)
-                })
                 it(`Should return accurate value for sidebarPct`, () => {
                     wrapper = mountFactory({ computed: { is_sidebar_collapsed: () => v } })
                     // if is_sidebar_collapsed is true, use minSidebarPct value
