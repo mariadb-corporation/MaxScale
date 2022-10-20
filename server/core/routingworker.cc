@@ -424,11 +424,7 @@ int RoutingWorker::activate_threads(int n)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                success = pWorker->start_listening(listeners);
-                if (success)
-                {
-                    pWorker->make_dcalls();
-                }
+                success = pWorker->activate(listeners);
             }, mxb::Worker::EXECUTE_QUEUED);
 
         if (!success)
@@ -533,10 +529,14 @@ void RoutingWorker::clear()
 
 void RoutingWorker::deactivate()
 {
+    mxb_assert(get_current() == this);
+
     clear();
     cancel_dcalls();
 
     clear_routing();
+
+    reset_statistics();
 
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
@@ -578,6 +578,25 @@ void RoutingWorker::deactivate()
                 this_unit.nRunning.store(n, std::memory_order_relaxed);
             }
         }, mxb::Worker::EXECUTE_QUEUED);
+}
+
+bool RoutingWorker::activate(const std::vector<SListener>& listeners)
+{
+    mxb_assert(get_current() == this);
+
+    bool success = start_listening(listeners);
+
+    if (success)
+    {
+        make_dcalls();
+
+        // When the worker was deactivated, the statistics were reset. However,
+        // as there will be some activity even if it is inactive, the statistics
+        // are reset also at activation.
+        reset_statistics();
+    }
+
+    return success;
 }
 
 //static

@@ -612,6 +612,7 @@ private:
 
     void clear();
     void deactivate();
+    bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);
 
     void make_dcalls();
     void cancel_dcalls();
