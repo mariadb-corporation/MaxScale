@@ -538,6 +538,10 @@ void RoutingWorker::deactivate()
 
     reset_statistics();
 
+    // Set epoll-timeout to 1000ms, i.e. 1000 times longer than
+    // the default 1ms.
+    set_min_timeout(1000);
+
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
 
@@ -594,6 +598,9 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
         // as there will be some activity even if it is inactive, the statistics
         // are reset also at activation.
         reset_statistics();
+
+        // Set epoll-timeout to the default 1ms.
+        set_min_timeout(1);
     }
 
     return success;
