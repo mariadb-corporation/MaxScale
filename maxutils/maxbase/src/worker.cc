@@ -1084,7 +1084,7 @@ void Worker::poll_waitevents()
 
         int timeout = duration_cast<milliseconds>(m_load.about_to_wait(now)).count();
         // Don't allow a 0 timeout as that would cause fast looping for 1ms
-        timeout = std::max(timeout, 1);
+        timeout = std::max(timeout, m_min_timeout);
 
         if (!m_incomplete_polls.empty())
         {

@@ -814,6 +814,31 @@ protected:
     }
 
     /**
+     * Set minimum timeout when calling epoll_wait() in the Worker
+     * event-loop.
+     *
+     * @note The granularity of the worker load calculatation is
+     *       1000ms. Unless the minimum timeout is significantly
+     *       less than that, the load calculation will not work
+     *       properly.
+     *
+     * @param timeout  The minimum timeout in milliseconds. If less
+     *                 than 1, will silently be set to 1.
+     */
+    void set_min_timeout(int timeout)
+    {
+        mxb_assert(get_current() == this);
+        mxb_assert(timeout >= 1);
+
+        if (timeout < 1)
+        {
+            timeout = 1;
+        }
+
+        m_min_timeout = timeout;
+    }
+
+    /**
      * Helper for resolving epoll-errors. In case of fatal ones, SIGABRT
      * will be raised.
      *
@@ -1207,5 +1232,6 @@ private:
     LCalls        m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
     PendingPolls  m_scheduled_polls;           /*< Calls to be made during current epoll_wait(). */
     PendingPolls  m_incomplete_polls;          /*< Calls to be made at next epoll_wait(). */
+    int           m_min_timeout {1};           /*< Minimum timeout when calling epoll_wait(). */
 };
 }
