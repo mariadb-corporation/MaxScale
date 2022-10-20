@@ -204,79 +204,47 @@ Client::Action Client::action() const
     }
 }
 
-bool Client::run_query(MYSQL* pConn)
+bool Client::run_query(mxt::MariaDB& conn)
 {
     bool rv = false;
 
     switch (action())
     {
     case Action::SELECT:
-        rv = run_select(pConn);
+        rv = run_select(conn);
         break;
 
     case Action::UPDATE:
-        rv = run_update(pConn);
+        rv = run_update(conn);
         break;
     }
 
     return rv;
 }
 
-bool Client::run_select(MYSQL* pConn)
+bool Client::run_select(mxt::MariaDB& conn)
 {
     bool rv = true;
-
-    string stmt = mxb::string_printf("SELECT * FROM test.t%d WHERE id=%i;",
-                                     m_id, get_random_id());
-
-    if (mysql_query(pConn, stmt.c_str()) == 0)
+    auto res = conn.try_query_f("SELECT * FROM test.t%d WHERE id=%i;", m_id, get_random_id());
+    if (!res)
     {
-        flush_response(pConn);
-    }
-    else
-    {
-        if (m_verbose)
-        {
-            m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
-        }
         rv = false;
     }
-
     return rv;
 }
 
-bool Client::run_update(MYSQL* pConn)
+bool Client::run_update(mxt::MariaDB& conn)
 {
-    bool rv = true;
-
-    string stmt = mxb::string_printf("UPDATE test.t%d SET id=%zu WHERE id=%i;",
-                                     m_id, m_value, get_random_id());
+    bool rv = false;
     m_value = (m_value + 1) % m_settings.rows;
-
-    if (mysql_query(pConn, stmt.c_str()) == 0)
+    int id = get_random_id();
+    bool res = conn.try_cmd_f("UPDATE test.t%d SET value=%zu WHERE id=%i;", m_id, m_value, id);
+    if (res)
     {
-        flush_response(pConn);
+        m_values[id] = m_value;
+        rv = true;
     }
-    else
-    {
-        if (m_verbose)
-        {
-            m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
-        }
-        rv = false;
-    }
-
     return rv;
-}
-
-void Client::flush_response(MYSQL* pConn)
-{
-    do
-    {
-        MYSQL_RES* pRes = mysql_store_result(pConn);
-        mysql_free_result(pRes);
-    }
-    while (mysql_next_result(pConn) == 0);
 }
 
 int Client::get_random_id() const
@@ -296,53 +264,76 @@ double Client::random_decimal_fraction() const
 
 void Client::run()
 {
-    do
+    mxt::MariaDB conn(m_test.logger());
+    conn.set_log_query_fails(false);
+    auto& sett = conn.connection_settings();
+    sett.timeout = 5;
+    sett.user = m_settings.user;
+    sett.password = m_settings.pw;
+
+    while (m_keep_running)
     {
-        MYSQL* pMysql = mysql_init(NULL);
-
-        if (pMysql)
+        if (conn.try_open(m_settings.host, m_settings.port, "test"))
         {
-            unsigned int timeout = 5;
-            mysql_options(pMysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-            mysql_options(pMysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
-            mysql_options(pMysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-
-            if (mysql_real_connect(pMysql, m_settings.host.c_str(), m_settings.user.c_str(),
-                                   m_settings.pw.c_str(), "test", m_settings.port, NULL, 0))
-            {
-                if (m_verbose)
-                {
-                    m_test.tprintf("Client %i connected, starting queries.", m_id);
-                }
-
-                while (m_keep_running && run_query(pMysql))
-                {
-                }
-            }
-            else
-            {
-                if (m_verbose)
-                {
-                    m_test.tprintf("mysql_real_connect() on client %i failed: %s",
-                                   m_id, mysql_error(pMysql));
-                }
-            }
-
-            mysql_close(pMysql);
             if (m_verbose)
             {
-                m_test.tprintf("Client %i connection closed.", m_id);
+                m_test.tprintf("Client %i connected, starting queries.", m_id);
+            }
+            while (m_keep_running && run_query(conn))
+            {
             }
         }
-        else
+        else if (m_verbose)
         {
-            m_test.tprintf("mysql_init() failed on client %i.", m_id);
+            m_test.tprintf("Test client %i connection failed: %s", m_id, conn.error());
         }
 
-        // To prevent some backend from becoming overwhelmed.
+        // Wait a bit before opening another connection.
         sleep(1);
+        if (m_verbose)
+        {
+            m_test.tprintf("Client %i connection closed.", m_id);
+        }
     }
-    while (m_keep_running);
+}
+
+bool Client::create_table(mxt::MariaDB& conn)
+{
+    bool rval = false;
+
+    // Make a table with two integer columns, both with values 0 -- (rows - 1).
+    string tbl = mxb::string_printf("test.t%d", m_id);
+    if (conn.try_cmd_f("create or replace table %s (id int, value int);", tbl.c_str()))
+    {
+        string insert = mxb::string_printf("insert into %s values ", tbl.c_str());
+        for (int i = 0; i < m_settings.rows; i++)
+        {
+            string val = std::to_string(i);
+            insert.append("(").append(val).append(",").append(val).append(")");
+
+            if (i < m_settings.rows - 1)
+            {
+                insert += ", ";
+            }
+        }
+        insert.append(";");
+        rval = conn.try_cmd(insert);
+
+        if (rval)
+        {
+            m_values.resize(m_settings.rows);
+            for (int i = 0; i < m_settings.rows; i++)
+            {
+                m_values[i] = i;
+            }
+        }
+    }
+    return rval;
+}
+
+bool Client::drop_table(mxt::MariaDB& conn)
+{
+    return conn.try_cmd_f("drop table test.t%d;", m_id);
 }
 
 ClientGroup::ClientGroup(TestConnections& test, int nClients, Settings settings)
@@ -352,26 +343,36 @@ ClientGroup::ClientGroup(TestConnections& test, int nClients, Settings settings)
 {
 }
 
-void ClientGroup::prepare()
+bool ClientGroup::prepare()
 {
-    if (create_tables())
+    mxb_assert(m_clients.empty());
+    for (int i = 0; i < m_nClients; i++)
     {
-        if (insert_data())
-        {
-            m_test.repl->sync_slaves(0, 30);
-        }
+        auto new_client = std::make_unique<Client>(m_test, m_settings, i, m_test.verbose());
+        m_clients.emplace_back(std::move(new_client));
     }
+
+    bool success = create_tables();
+    if (success)
+    {
+        m_test.repl->sync_slaves(0, 30);
+    }
+    m_test.expect(success, "Test client preparation failed.");
+    return success;
 }
 
 void ClientGroup::cleanup()
 {
     m_test.tprintf("Dropping tables.");
     auto sConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
+    if (sConn->is_open())
     {
-        sConn->cmd_f("drop table test.t%d;", i);
+        for (auto& client : m_clients)
+        {
+            client->drop_table(*sConn);
+        }
     }
+    m_clients.clear();
 }
 
 void ClientGroup::start()
@@ -379,62 +380,37 @@ void ClientGroup::start()
     m_test.tprintf("Starting %i clients. Connecting to %s:%i as '%s'.",
                    m_nClients, m_settings.host.c_str(), m_settings.port, m_settings.user.c_str());
 
-    for (int i = 0; i < m_nClients; i++)
+    for (auto& client : m_clients)
     {
-        auto new_client = std::make_unique<Client>(m_test, m_settings, i, m_test.verbose());
-        new_client->start();
-        m_clients.emplace_back(std::move(new_client));
+        client->start();
     }
 }
 
 void ClientGroup::stop()
 {
-    for (int i = 0; i < m_nClients; i++)
+    for (auto& client : m_clients)
     {
-        m_clients[i]->stop();
+        client->stop();
     }
-    m_clients.clear();
 }
 
 bool ClientGroup::create_tables()
 {
-    m_test.tprintf("Creating tables.");
+    m_test.tprintf("Creating %zu tables.", m_clients.size());
+    bool rval = false;
     auto sConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
+    if (sConn->is_open())
     {
-        sConn->cmd_f("create or replace table test.t%d (id int);", i);
-    }
-
-    return m_test.ok();
-}
-
-bool ClientGroup::insert_data()
-{
-    m_test.tprintf("Inserting data.");
-
-    auto pConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
-    {
-        string insert = mxb::string_printf("insert into test.t%d values ", i);
-
-        for (int j = 0; j < m_settings.rows; ++j)
+        rval = true;
+        for (auto& client : m_clients)
         {
-            insert += "(";
-            insert += std::to_string(j);
-            insert += ")";
-
-            if (j < m_settings.rows - 1)
+            if (!client->create_table(*sConn))
             {
-                insert += ", ";
+                rval = false;
             }
         }
-
-        pConn->cmd(insert);
     }
-
-    return m_test.ok();
+    return rval;
 }
 }
 

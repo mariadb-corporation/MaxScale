@@ -40,6 +40,8 @@ class Client
 public:
     Client(TestConnections& test, const Settings& sett, int id, bool verbose);
 
+    bool create_table(mxt::MariaDB& conn);
+    bool drop_table(mxt::MariaDB& conn);
     void start();
     void stop();
 
@@ -52,13 +54,9 @@ private:
 
     Action action() const;
 
-    bool run_query(MYSQL* pConn);
-
-    bool run_select(MYSQL* pConn);
-
-    bool run_update(MYSQL* pConn);
-
-    static void flush_response(MYSQL* pConn);
+    bool run_query(mxt::MariaDB& conn);
+    bool run_select(mxt::MariaDB& conn);
+    bool run_update(mxt::MariaDB& conn);
 
     int get_random_id() const;
 
@@ -76,6 +74,8 @@ private:
     std::thread      m_thread;
     std::atomic_bool m_keep_running {true};
 
+    std::vector<int> m_values;      /**< The values the table should have */
+
     mutable std::mt19937                           m_rand_gen;
     mutable std::uniform_real_distribution<double> m_rand_dist;
 };
@@ -85,7 +85,7 @@ class ClientGroup
 public:
     ClientGroup(TestConnections& test, int nClients, Settings settings);
 
-    void prepare();
+    bool prepare();
     void cleanup();
     void start();
     void stop();
@@ -97,7 +97,6 @@ private:
     const Settings                       m_settings;
 
     bool create_tables();
-    bool insert_data();
 };
 }
 

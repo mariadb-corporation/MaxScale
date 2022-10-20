@@ -85,7 +85,10 @@ public:
      */
     ScopedTable create_table(const std::string& name, const std::string& col_defs);
 
+    void set_log_query_fails(bool value);
+
 private:
+    bool        m_log_query_fails {true};   /**< Log query failures even when it's not a test failure? */
     TestLogger& m_log;
 };
 

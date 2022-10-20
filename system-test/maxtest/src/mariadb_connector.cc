@@ -37,7 +37,7 @@ bool maxtest::MariaDB::open(const std::string& host, int port, const std::string
 bool maxtest::MariaDB::try_open(const std::string& host, int port, const std::string& db)
 {
     auto ret = mxq::MariaDB::open(host, port, db);
-    if (!ret)
+    if (!ret && m_log_query_fails)
     {
         m_log.log_msgf("%s", error());
     }
@@ -63,7 +63,7 @@ bool maxtest::MariaDB::cmd(const std::string& sql, Expect expect)
     }
     else
     {
-        if (!ret)
+        if (!ret && m_log_query_fails)
         {
             // Report query error, but don't classify it as a test error.
             m_log.log_msgf("%s", error());
@@ -112,7 +112,7 @@ std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& que
     }
     else
     {
-        if (!ret)
+        if (!ret && m_log_query_fails)
         {
             // Report query error, but don't classify it as a test error.
             m_log.log_msgf("%s", error());
@@ -205,6 +205,11 @@ std::string maxtest::MariaDB::simple_query(const string& q)
         }
     }
     return rval;
+}
+
+void maxtest::MariaDB::set_log_query_fails(bool value)
+{
+    m_log_query_fails = value;
 }
 
 maxtest::ScopedUser::ScopedUser(std::string user_host, maxtest::MariaDB* conn)
