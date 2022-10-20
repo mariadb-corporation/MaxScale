@@ -16,6 +16,11 @@ const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
     query_pane_pct_height: 60,
     is_fullscreen: false,
+    query_row_limit: 10000,
+    query_confirm_flag: 1, //  either 0 or 1
+    query_history_expired_time: addDaysToNow(30), // Unix time
+    query_show_sys_schemas_flag: 1,
+    is_sidebar_collapsed: false,
 })
 
 function userPrefMutationCreator(states) {
@@ -32,22 +37,11 @@ function userPrefMutationCreator(states) {
 export default {
     namespaced: true,
     state: {
-        query_row_limit: 10000,
-        query_confirm_flag: 1,
         query_history: [],
         query_snippets: [],
-        query_history_expired_time: addDaysToNow(30),
-        query_show_sys_schemas_flag: 1,
-        is_sidebar_collapsed: false,
         ...getUserPrefStates(),
     },
     mutations: {
-        SET_QUERY_ROW_LIMIT(state, payload) {
-            state.query_row_limit = payload
-        },
-        SET_QUERY_CONFIRM_FLAG(state, payload) {
-            state.query_confirm_flag = payload // payload is either 0 or 1
-        },
         SET_QUERY_HISTORY(state, payload) {
             state.query_history = payload
         },
@@ -55,21 +49,12 @@ export default {
             if (idx) state.query_history.splice(idx, 1)
             else state.query_history.unshift(payload)
         },
-        SET_QUERY_HISTORY_EXPIRED_TIME(state, timestamp) {
-            state.query_history_expired_time = timestamp // Unix time
-        },
         UPDATE_QUERY_SNIPPETS(state, { idx, payload }) {
             if (idx) state.query_snippets.splice(idx, 1)
             else state.query_snippets.unshift(payload)
         },
         SET_QUERY_SNIPPETS(state, payload) {
             state.query_snippets = payload
-        },
-        SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(state, payload) {
-            state.query_show_sys_schemas_flag = payload
-        },
-        SET_IS_SIDEBAR_COLLAPSED(state, payload) {
-            state.is_sidebar_collapsed = payload
         },
         ...userPrefMutationCreator(getUserPrefStates()),
     },
