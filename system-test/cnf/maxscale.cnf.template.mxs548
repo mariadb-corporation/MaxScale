@@ -1,6 +1,7 @@
 [maxscale]
 threads=1
-log_warning=1
+session_trace=300
+retain_last_statements=50
 
 [MySQL-Monitor]
 type=monitor
