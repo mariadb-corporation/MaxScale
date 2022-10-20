@@ -20,12 +20,19 @@
                     :boundary="panesDim.height"
                     split="horiz"
                     :minPercent="queryPaneMinPctHeight"
+                    :maxPercent="queryPaneMaxPctHeight"
+                    :deactivatedMaxPctZone="
+                        queryPaneMaxPctHeight - (100 - queryPaneMaxPctHeight) * 2
+                    "
                 >
                     <template slot="pane-left">
                         <mxs-split-pane
                             v-model="editorPanePctWidth"
                             class="editor__content"
                             :minPercent="editorPaneMinPctWidth"
+                            :maxPercent="
+                                100 - $helpers.pxToPct({ px: 100, containerPx: panesDim.width })
+                            "
                             :boundary="panesDim.width"
                             split="vert"
                             :disable="isChartMaximized || !showVisChart"
@@ -192,6 +199,9 @@ export default {
         },
         queryPaneMinPctHeight() {
             return this.$helpers.pxToPct({ px: 26, containerPx: this.panesDim.height })
+        },
+        queryPaneMaxPctHeight() {
+            return 100 - this.queryPaneMinPctHeight
         },
         queryPanePctHeight: {
             get() {
