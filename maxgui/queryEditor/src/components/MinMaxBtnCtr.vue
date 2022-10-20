@@ -1,5 +1,5 @@
 <template>
-    <mxs-tooltip-btn btnClass="min-max-btn" icon small @click="SET_FULLSCREEN(!is_fullscreen)">
+    <mxs-tooltip-btn btnClass="min-max-btn" icon small @click="SET_IS_FULLSCREEN(!is_fullscreen)">
         <template v-slot:btn-content>
             <v-icon size="22" color="accent-dark">
                 mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
@@ -25,7 +25,7 @@ import { mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'min-max-btn-ctr',
-    computed: { ...mapState({ is_fullscreen: state => state.wke.is_fullscreen }) },
-    methods: { ...mapMutations({ SET_FULLSCREEN: 'wke/SET_FULLSCREEN' }) },
+    computed: { ...mapState({ is_fullscreen: state => state.queryPersisted.is_fullscreen }) },
+    methods: { ...mapMutations({ SET_IS_FULLSCREEN: 'queryPersisted/SET_IS_FULLSCREEN' }) },
 }
 </script>

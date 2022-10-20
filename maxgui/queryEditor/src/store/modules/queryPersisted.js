@@ -15,6 +15,7 @@ import { addDaysToNow } from '@queryEditorSrc/utils/helpers'
 const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
     query_pane_pct_height: 60,
+    is_fullscreen: false,
 })
 
 function userPrefMutationCreator(states) {

@@ -17,9 +17,9 @@ import MinMaxBtnCtr from '../MinMaxBtnCtr.vue'
 const mountFactory = opts => mount({ shallow: false, component: MinMaxBtnCtr, ...opts })
 
 describe(`min-max-btn-ctr`, () => {
-    it(`Should call SET_FULLSCREEN mutation`, () => {
+    it(`Should call SET_IS_FULLSCREEN mutation`, () => {
         let wrapper = mountFactory()
-        const spy = sinon.spy(wrapper.vm, 'SET_FULLSCREEN')
+        const spy = sinon.spy(wrapper.vm, 'SET_IS_FULLSCREEN')
         const btn = wrapper.find('.min-max-btn')
         btn.trigger('click')
         spy.should.have.been.calledOnce

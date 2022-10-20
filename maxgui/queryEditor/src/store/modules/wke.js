@@ -18,17 +18,11 @@ const def_worksheets_arr = init.get_def_worksheets_arr
 export default {
     namespaced: true,
     state: {
-        // Toolbar states
-        is_fullscreen: false,
         // worksheet states
         worksheets_arr: def_worksheets_arr, // persisted
         active_wke_id: def_worksheets_arr[0].id, // persisted
     },
     mutations: {
-        //Toolbar mutations
-        SET_FULLSCREEN(state, payload) {
-            state.is_fullscreen = payload
-        },
         // worksheet mutations
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())
