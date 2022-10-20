@@ -425,6 +425,10 @@ int RoutingWorker::activate_threads(int n)
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
                 success = pWorker->start_listening(listeners);
+                if (success)
+                {
+                    pWorker->make_dcalls();
+                }
             }, mxb::Worker::EXECUTE_QUEUED);
 
         if (!success)
@@ -530,6 +534,7 @@ void RoutingWorker::clear()
 void RoutingWorker::deactivate()
 {
     clear();
+    cancel_dcalls();
 
     clear_routing();
 
@@ -683,7 +688,6 @@ bool RoutingWorker::decrease_threads(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
-    mxb_assert(this_unit.nCreated == this_unit.nRunning);
 
     int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
     int nAfter = nBefore - n;
@@ -1390,6 +1394,66 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
     notify_connection_available(srv);
 }
 
+void RoutingWorker::make_dcalls()
+{
+    mxb_assert(m_check_pool_dcid == 0);
+    mxb_assert(m_activate_eps_dcid == 0);
+    mxb_assert(m_timeout_eps_dcid == 0);
+
+    // Every second, check connection pool for expired connections. Ideally, every pooled
+    // connection would set their own timer.
+    auto check_pool_cb = [this](Callable::Action action){
+        if (action == Callable::EXECUTE)
+        {
+            pool_close_expired();
+        }
+        return true;
+    };
+    m_check_pool_dcid = m_callable.dcall(1s, check_pool_cb);
+
+    // The normal connection availability notification is not fool-proof, as it's only sent to the
+    // current worker. Every now and then, each worker should check for connections regardless since
+    // some may be available.
+    auto activate_eps_cb = [this](Callable::Action action) {
+        if (action == Callable::Action::EXECUTE)
+        {
+            activate_waiting_endpoints();
+        }
+        return true;
+    };
+    m_activate_eps_dcid = m_callable.dcall(5s, activate_eps_cb);
+
+    auto timeout_eps_cb = [this](Callable::Action action) {
+        if (action == Callable::Action::EXECUTE)
+        {
+            fail_timed_out_endpoints();
+        }
+        return true;
+    };
+    m_timeout_eps_dcid = m_callable.dcall(10s, timeout_eps_cb);
+}
+
+void RoutingWorker::cancel_dcalls()
+{
+    if (m_check_pool_dcid)
+    {
+        m_callable.cancel_dcall(m_check_pool_dcid);
+        m_check_pool_dcid = 0;
+    }
+
+    if (m_activate_eps_dcid)
+    {
+        m_callable.cancel_dcall(m_activate_eps_dcid);
+        m_activate_eps_dcid = 0;
+    }
+
+    if (m_timeout_eps_dcid)
+    {
+        m_callable.cancel_dcall(m_timeout_eps_dcid);
+        m_timeout_eps_dcid = 0;
+    }
+}
+
 bool RoutingWorker::pre_run()
 {
     this_thread.pCurrent_worker = this;
@@ -1398,37 +1462,7 @@ bool RoutingWorker::pre_run()
 
     if (rv)
     {
-        // Every second, check connection pool for expired connections. Ideally, every pooled
-        // connection would set their own timer.
-        auto check_pool_cb = [this](Callable::Action action){
-                if (action == Callable::EXECUTE)
-                {
-                    pool_close_expired();
-                }
-                return true;
-            };
-        m_callable.dcall(1s, check_pool_cb);
-
-        // The normal connection availability notification is not fool-proof, as it's only sent to the
-        // current worker. Every now and then, each worker should check for connections regardless since
-        // some may be available.
-        auto activate_eps_cb = [this](Callable::Action action) {
-                if (action == Callable::Action::EXECUTE)
-                {
-                    activate_waiting_endpoints();
-                }
-                return true;
-            };
-        m_callable.dcall(5s, activate_eps_cb);
-
-        auto timeout_eps_cb = [this](Callable::Action action) {
-                if (action == Callable::Action::EXECUTE)
-                {
-                    fail_timed_out_endpoints();
-                }
-                return true;
-            };
-        m_callable.dcall(10s, timeout_eps_cb);
+        make_dcalls();
     }
     else
     {

@@ -613,6 +613,9 @@ private:
     void clear();
     void deactivate();
 
+    void make_dcalls();
+    void cancel_dcalls();
+
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
@@ -736,6 +739,9 @@ private:
     DCBHandler         m_pool_handler;
     long               m_next_timeout_check {0};
     TickFuncs          m_epoll_tick_funcs;
+    DCId               m_check_pool_dcid {0};
+    DCId               m_activate_eps_dcid {0};
+    DCId               m_timeout_eps_dcid {0};
 };
 }
 
