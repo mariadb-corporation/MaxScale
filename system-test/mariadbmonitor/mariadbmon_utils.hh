@@ -100,3 +100,20 @@ private:
     bool insert_data();
 };
 }
+
+namespace stress_test
+{
+struct BaseSettings
+{
+    time_t test_duration {0};
+    int    test_clients {0};
+    int    min_expected_failovers {-1};
+    bool   diverging_allowed {false};
+};
+
+void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,
+                              const testclient::Settings& client_sett);
+
+void check_semisync_off(TestConnections& test);
+void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients);
+}
