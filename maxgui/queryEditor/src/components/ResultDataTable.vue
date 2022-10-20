@@ -77,10 +77,8 @@
             </mxs-tooltip-btn>
             <slot name="right-table-tools-append" />
         </div>
-        <!-- Keep it in memory, negative height crashes v-virtual-scroll -->
         <keep-alive>
             <mxs-virtual-scroll-tbl
-                v-if="tableHeight > 0"
                 class="pb-2"
                 :headers="visibleHeaders"
                 :rows="filteredRows"
