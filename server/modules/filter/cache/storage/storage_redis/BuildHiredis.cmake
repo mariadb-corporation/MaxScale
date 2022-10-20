@@ -25,6 +25,7 @@ ExternalProject_add(hiredis
 # definitely not wanted and in addition to that it can break the generated
 # package by changing the ownership of home directories to root.
   INSTALL_COMMAND ""
+  UPDATE_COMMAND ""
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
   LOG_CONFIGURE 1
