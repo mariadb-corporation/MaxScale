@@ -1741,9 +1741,9 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 namespace
 {
 
-std::vector<Worker::STATISTICS> get_stats(int nWorkers)
+std::vector<Worker::Statistics> get_stats(int nWorkers)
 {
-    std::vector<Worker::STATISTICS> rval;
+    std::vector<Worker::Statistics> rval;
 
     nWorkers = broadcast_recipients(nWorkers);
 
@@ -1760,28 +1760,28 @@ std::vector<Worker::STATISTICS> get_stats(int nWorkers)
 }
 
 // static
-Worker::STATISTICS RoutingWorker::get_statistics(int nWorkers)
+Worker::Statistics RoutingWorker::get_statistics(int nWorkers)
 {
     auto s = get_stats(nWorkers);
 
-    STATISTICS cs;
+    Statistics cs;
 
-    cs.n_read = mxs::sum(s, &STATISTICS::n_read);
-    cs.n_write = mxs::sum(s, &STATISTICS::n_write);
-    cs.n_error = mxs::sum(s, &STATISTICS::n_error);
-    cs.n_hup = mxs::sum(s, &STATISTICS::n_hup);
-    cs.n_accept = mxs::sum(s, &STATISTICS::n_accept);
-    cs.n_polls = mxs::sum(s, &STATISTICS::n_polls);
-    cs.n_pollev = mxs::sum(s, &STATISTICS::n_pollev);
-    cs.evq_avg = mxs::avg(s, &STATISTICS::evq_avg);
-    cs.evq_max = mxs::max(s, &STATISTICS::evq_max);
-    cs.maxqtime = mxs::max(s, &STATISTICS::maxqtime);
-    cs.maxexectime = mxs::max(s, &STATISTICS::maxexectime);
-    cs.n_fds = mxs::sum_element(s, &STATISTICS::n_fds);
-    cs.n_fds = mxs::min_element(s, &STATISTICS::n_fds);
-    cs.n_fds = mxs::max_element(s, &STATISTICS::n_fds);
-    cs.qtimes = mxs::avg_element(s, &STATISTICS::qtimes);
-    cs.exectimes = mxs::avg_element(s, &STATISTICS::exectimes);
+    cs.n_read = mxs::sum(s, &Statistics::n_read);
+    cs.n_write = mxs::sum(s, &Statistics::n_write);
+    cs.n_error = mxs::sum(s, &Statistics::n_error);
+    cs.n_hup = mxs::sum(s, &Statistics::n_hup);
+    cs.n_accept = mxs::sum(s, &Statistics::n_accept);
+    cs.n_polls = mxs::sum(s, &Statistics::n_polls);
+    cs.n_pollev = mxs::sum(s, &Statistics::n_pollev);
+    cs.evq_avg = mxs::avg(s, &Statistics::evq_avg);
+    cs.evq_max = mxs::max(s, &Statistics::evq_max);
+    cs.maxqtime = mxs::max(s, &Statistics::maxqtime);
+    cs.maxexectime = mxs::max(s, &Statistics::maxexectime);
+    cs.n_fds = mxs::sum_element(s, &Statistics::n_fds);
+    cs.n_fds = mxs::min_element(s, &Statistics::n_fds);
+    cs.n_fds = mxs::max_element(s, &Statistics::n_fds);
+    cs.qtimes = mxs::avg_element(s, &Statistics::qtimes);
+    cs.exectimes = mxs::avg_element(s, &Statistics::exectimes);
 
     return cs;
 }
@@ -2553,7 +2553,7 @@ private:
 
         json_object_set_new(pStats, "state", json_string(state.c_str()));
 
-        const Worker::STATISTICS& s = rworker.statistics();
+        const Worker::Statistics& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
         json_object_set_new(pStats, "writes", json_integer(s.n_write));
         json_object_set_new(pStats, "errors", json_integer(s.n_error));

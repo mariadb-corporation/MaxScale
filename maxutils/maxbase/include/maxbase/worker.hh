@@ -44,23 +44,30 @@ enum mxb_worker_msg_id_t
 namespace maxbase
 {
 
-struct WORKER_STATISTICS
+class WorkerStatistics final
 {
+public:
     static const int     MAXNFDS = 10;
     static const int64_t N_QUEUE_TIMES = 30;
 
-    int64_t n_read = 0;            /*< Number of read events   */
-    int64_t n_write = 0;           /*< Number of write events  */
-    int64_t n_error = 0;           /*< Number of error events  */
-    int64_t n_hup = 0;             /*< Number of hangup events */
-    int64_t n_accept = 0;          /*< Number of accept events */
-    int64_t n_polls = 0;           /*< Number of poll cycles   */
-    int64_t n_pollev = 0;          /*< Number of polls returning events */
-    int64_t n_incomplete_read = 0; /*< Number of times reading was not completed in one callback */
-    int64_t evq_avg = 0;           /*< Average event queue length */
-    int64_t evq_max = 0;           /*< Maximum event queue length */
-    int64_t maxqtime = 0;          /*< Maximum duration from epoll_wait() -> handling. */
-    int64_t maxexectime = 0;       /*< Maximum duration of event handling (callback). */
+    void reset()
+    {
+        WorkerStatistics empty;
+        *this = empty;
+    }
+
+    int64_t n_read {0};            /*< Number of read events   */
+    int64_t n_write {0};           /*< Number of write events  */
+    int64_t n_error {0};           /*< Number of error events  */
+    int64_t n_hup {0};             /*< Number of hangup events */
+    int64_t n_accept {0};          /*< Number of accept events */
+    int64_t n_polls {0};           /*< Number of poll cycles   */
+    int64_t n_pollev {0};          /*< Number of polls returning events */
+    int64_t n_incomplete_read {0}; /*< Number of times reading was not completed in one callback */
+    int64_t evq_avg {0};           /*< Average event queue length */
+    int64_t evq_max {0};           /*< Maximum event queue length */
+    int64_t maxqtime {0};          /*< Maximum duration from epoll_wait() -> handling. */
+    int64_t maxexectime {0};       /*< Maximum duration of event handling (callback). */
 
     std::array<int64_t, MAXNFDS>            n_fds {};   /*< Number of wakeups with particular n_fds value */
     std::array<uint32_t, N_QUEUE_TIMES + 1> qtimes {};
@@ -260,7 +267,7 @@ class Worker : private MessageQueue::Handler
     Worker& operator=(const Worker&) = delete;
 
 public:
-    using STATISTICS = WORKER_STATISTICS;
+    using Statistics = WorkerStatistics;
     using Task = WorkerTask;
     using DisposableTask = WorkerDisposableTask;
     using Load = WorkerLoad;
@@ -536,7 +543,7 @@ public:
      *
      * @attentions The statistics may change at any time.
      */
-    const STATISTICS& statistics() const
+    const Statistics& statistics() const
     {
         return m_statistics;
     }
@@ -795,6 +802,16 @@ protected:
      * Default implementation does nothing.
      */
     virtual void epoll_tick();
+
+    /**
+     * Reset statistics as if worker would just have been started.
+     */
+    void reset_statistics()
+    {
+        mxb_assert(get_current() == this);
+        m_nTotal_descriptors = m_nCurrent_descriptors;
+        m_statistics.reset();
+    }
 
     /**
      * Helper for resolving epoll-errors. In case of fatal ones, SIGABRT
@@ -1143,6 +1160,7 @@ private:
     void poll_waitevents();
 
     void tick();
+
 private:
     class LaterAt : public std::binary_function<const DCall*, const DCall*, bool>
     {
@@ -1173,7 +1191,7 @@ private:
     std::atomic_bool m_started {false};  /*< Whether the thread has been started or not. */
 
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
-    STATISTICS    m_statistics;                /*< Worker statistics. */
+    Statistics    m_statistics;                /*< Worker statistics. */
     bool          m_should_shutdown {false};   /*< Whether shutdown should be performed. */
     bool          m_shutdown_initiated {false};/*< Whether shutdown has been initated. */
     int64_t       m_nCurrent_descriptors {0};  /*< Current number of descriptors. */

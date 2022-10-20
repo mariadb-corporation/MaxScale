@@ -162,8 +162,8 @@ string epoll_events_to_string(EPOLL_EVENTS events)
 }
 
 
-const int WORKER_STATISTICS::MAXNFDS;
-const int64_t WORKER_STATISTICS::N_QUEUE_TIMES;
+const int WorkerStatistics::MAXNFDS;
+const int64_t WorkerStatistics::N_QUEUE_TIMES;
 
 WorkerLoad::WorkerLoad()
     : m_load_1_hour(60)                     // 60 minutes in an hour
@@ -1034,7 +1034,7 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     int64_t started = time_in_100ms_ticks(loop_now);
     int64_t qtime = started - cycle_start;
 
-    ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
+    ++m_statistics.qtimes[std::min(qtime, Statistics::N_QUEUE_TIMES)];
     m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
     int fd = pPollable->poll_fd();
@@ -1058,7 +1058,7 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     loop_now = maxbase::Clock::now();
     qtime = time_in_100ms_ticks(loop_now) - started;
 
-    ++m_statistics.exectimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
+    ++m_statistics.exectimes[std::min(qtime, Statistics::N_QUEUE_TIMES)];
     m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
 
     return loop_now;
@@ -1129,7 +1129,7 @@ void Worker::poll_waitevents()
 
             ++m_statistics.n_pollev;
 
-            ++m_statistics.n_fds[std::min(nfds - 1, STATISTICS::MAXNFDS - 1)];
+            ++m_statistics.n_fds[std::min(nfds - 1, Statistics::MAXNFDS - 1)];
         }
 
         mxb_assert(m_scheduled_polls.empty());

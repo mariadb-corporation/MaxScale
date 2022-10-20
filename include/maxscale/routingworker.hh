@@ -408,7 +408,7 @@ public:
      *             been returned. The returned values may also not represent a
      *             100% consistent set.
      */
-    static STATISTICS get_statistics(int nWorkers = ALL);
+    static Statistics get_statistics(int nWorkers = ALL);
 
     /**
      * Get next worker
