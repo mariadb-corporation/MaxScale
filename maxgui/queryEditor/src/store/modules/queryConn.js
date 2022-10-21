@@ -408,11 +408,17 @@ export default {
                     const allRes = await Promise.all(
                         cnnIdsToBeDeleted.map(id => {
                             commit('DELETE_SQL_CONN', state.sql_conns[id])
-                            dispatch(
-                                'querySession/resetSessionStates',
-                                { conn_id: id },
-                                { root: true }
-                            )
+                            /**
+                             * Don't reset session states for worksheet connection.
+                             * Only connections with binding_type === SESSION need
+                             * to be reset
+                             */
+                            if (id !== wkeConnId)
+                                dispatch(
+                                    'querySession/resetSessionStates',
+                                    { conn_id: id },
+                                    { root: true }
+                                )
                             return this.vue.$queryHttp.delete(`/sql/${id}`)
                         })
                     )
