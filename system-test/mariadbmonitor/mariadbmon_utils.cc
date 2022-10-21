@@ -167,13 +167,17 @@ void cleanup_log_bin_failover_test(TestConnections& test)
 namespace testclient
 {
 Client::Client(TestConnections& test, const Settings& sett, int id, bool verbose)
-    : m_test(test)
+    : m_id(id)
+    , m_test(test)
     , m_settings(sett)
-    , m_id(id)
     , m_verbose(verbose)
-    , m_value(1)
-    , m_rand_dist(0.0, 1.0)
+    , m_row_gen(0, m_settings.rows - 1)
+    , m_val_gen(1, 1000)
+    , m_action_gen(1, 100)
 {
+    std::random_device dev;
+    m_rand_gen.seed(dev());
+    m_tbl = mxb::string_printf("test.t%d", m_id);
 }
 
 void Client::start()
@@ -188,47 +192,53 @@ void Client::stop()
     m_thread.join();
 }
 
-Client::Action Client::action() const
+bool Client::run_query(mxt::MariaDB& conn)
 {
-    double d = random_decimal_fraction();
-
-    // 20% updates
-    // 80% selects
-    if (d <= 0.2)
+    bool rv;
+    // 20% updates, 80% selects
+    int action_ind = m_action_gen(m_rand_gen);
+    if (action_ind <= 20)
     {
-        return Action::UPDATE;
+        rv = run_update(conn);
     }
     else
     {
-        return Action::SELECT;
-    }
-}
-
-bool Client::run_query(mxt::MariaDB& conn)
-{
-    bool rv = false;
-
-    switch (action())
-    {
-    case Action::SELECT:
         rv = run_select(conn);
-        break;
-
-    case Action::UPDATE:
-        rv = run_update(conn);
-        break;
     }
-
     return rv;
 }
 
 bool Client::run_select(mxt::MariaDB& conn)
 {
-    bool rv = true;
-    auto res = conn.try_query_f("SELECT * FROM test.t%d WHERE id=%i;", m_id, get_random_id());
-    if (!res)
+    bool rv = false;
+    int row_ind = m_row_gen(m_rand_gen);
+    auto res = conn.try_query_f("SELECT value FROM %s WHERE id=%i;", m_tbl.c_str(), row_ind);
+    if (res && res->next_row())
     {
-        rv = false;
+        int expected = m_values[row_ind];
+        int found = res->get_int(0);
+        if (found == expected)
+        {
+            m_stats.selects_good++;
+        }
+        else
+        {
+            if (m_verbose)
+            {
+                m_test.tprintf("Client %i got wrong answer. Row %i had value %i when %i was expected.",
+                               m_id, row_ind, found, expected);
+            }
+            m_stats.selects_bad++;
+        }
+        rv = true;
+    }
+    else
+    {
+        m_stats.selects_bad++;
+        if (res)
+        {
+            m_test.add_failure("Table %s does not contain id %i when it should.", m_tbl.c_str(), row_ind);
+        }
     }
     return rv;
 }
@@ -236,30 +246,20 @@ bool Client::run_select(mxt::MariaDB& conn)
 bool Client::run_update(mxt::MariaDB& conn)
 {
     bool rv = false;
-    m_value = (m_value + 1) % m_settings.rows;
-    int id = get_random_id();
-    bool res = conn.try_cmd_f("UPDATE test.t%d SET value=%zu WHERE id=%i;", m_id, m_value, id);
+    int row_ind = m_row_gen(m_rand_gen);
+    int new_val = m_val_gen(m_rand_gen);
+    bool res = conn.try_cmd_f("UPDATE %s SET value=%d WHERE id=%i;", m_tbl.c_str(), new_val, row_ind);
     if (res)
     {
-        m_values[id] = m_value;
+        m_values[row_ind] = new_val;
+        m_stats.updates_good++;
         rv = true;
     }
+    else
+    {
+        m_stats.updates_bad++;
+    }
     return rv;
-}
-
-int Client::get_random_id() const
-{
-    int id = m_settings.rows * random_decimal_fraction();
-
-    mxb_assert(id >= 0);
-    mxb_assert(id <= m_settings.rows);
-
-    return id;
-}
-
-double Client::random_decimal_fraction() const
-{
-    return m_rand_dist(m_rand_gen);
 }
 
 void Client::run()
@@ -303,7 +303,8 @@ bool Client::create_table(mxt::MariaDB& conn)
 
     // Make a table with two integer columns, both with values 0 -- (rows - 1).
     string tbl = mxb::string_printf("test.t%d", m_id);
-    if (conn.try_cmd_f("create or replace table %s (id int, value int);", tbl.c_str()))
+    if (conn.try_cmd_f("create or replace table %s (id int unsigned not null, value int, primary key (id));",
+                       tbl.c_str()))
     {
         string insert = mxb::string_printf("insert into %s values ", tbl.c_str());
         for (int i = 0; i < m_settings.rows; i++)
@@ -334,6 +335,16 @@ bool Client::create_table(mxt::MariaDB& conn)
 bool Client::drop_table(mxt::MariaDB& conn)
 {
     return conn.try_cmd_f("drop table test.t%d;", m_id);
+}
+
+Client::Stats Client::stats() const
+{
+    return m_stats;
+}
+
+int Client::id() const
+{
+    return m_id;
 }
 
 ClientGroup::ClientGroup(TestConnections& test, int nClients, Settings settings)
@@ -411,6 +422,40 @@ bool ClientGroup::create_tables()
         }
     }
     return rval;
+}
+
+Client::Stats ClientGroup::total_stats() const
+{
+    Client::Stats rval;
+    for (auto& client : m_clients)
+    {
+        rval += client->stats();
+    }
+    return rval;
+}
+
+void ClientGroup::print_stats()
+{
+    m_test.tprintf("Total stats from test clients:");
+    printf("Client | Read (success) | Read (fail) | Update (success) | Update (fail) \n");
+    for (const auto& client : m_clients)
+    {
+        auto stats = client->stats();
+        printf("%6i | %14i | %11i | %16i | %13i \n", client->id(), stats.selects_good, stats.selects_bad,
+               stats.updates_good, stats.updates_bad);
+    }
+    auto totals = total_stats();
+    printf("   All | %14i | %11i | %16i | %13i \n", totals.selects_good, totals.selects_bad,
+           totals.updates_good, totals.updates_bad);
+}
+
+Client::Stats& Client::Stats::operator+=(const Client::Stats& rhs)
+{
+    selects_good += rhs.selects_good;
+    selects_bad += rhs.selects_bad;
+    updates_good += rhs.updates_good;
+    updates_bad += rhs.updates_bad;
+    return *this;
 }
 }
 
@@ -499,6 +544,7 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
         mxs.wait_for_monitor();
         clients.stop();
     }
+    clients.print_stats();
     clients.cleanup();
 
     // Restore servers.

@@ -95,7 +95,7 @@ void run(TestConnections& test)
     sett.port = mxs.rwsplit_port;
     sett.user = CLIENT_USER;
     sett.pw = CLIENT_PASSWORD;
-    sett.rows = 100;
+    sett.rows = 20;
     testclient::ClientGroup clients(test, 4, sett);
     clients.prepare();
 
@@ -134,6 +134,7 @@ void run(TestConnections& test)
         drop_client_user(test);
     }
 
+    clients.print_stats();
     clients.cleanup();
 }
 }

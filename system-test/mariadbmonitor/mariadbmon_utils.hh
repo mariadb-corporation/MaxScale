@@ -45,39 +45,44 @@ public:
     void start();
     void stop();
 
-private:
-    enum class Action
+    int id() const;
+
+    struct Stats
     {
-        SELECT,
-        UPDATE
+        int selects_good {0};   /**< Selects that succeeded and gave expected answer. */
+        int selects_bad {0};    /**< Selects that failed or gave wrong answer. */
+        int updates_good {0};   /**< Successful updates */
+        int updates_bad {0};    /**< Failed updates */
+
+        Stats& operator+=(const Stats& rhs);
     };
+    Stats stats() const;
 
-    Action action() const;
-
+private:
     bool run_query(mxt::MariaDB& conn);
     bool run_select(mxt::MariaDB& conn);
     bool run_update(mxt::MariaDB& conn);
 
-    int get_random_id() const;
-
-    double random_decimal_fraction() const;
-
     void run();
 
 private:
+    const int        m_id {-1};
     TestConnections& m_test;
     const Settings&  m_settings;
-
-    int              m_id {-1};
     bool             m_verbose;
-    size_t           m_value;
+
+    std::string      m_tbl;
     std::thread      m_thread;
     std::atomic_bool m_keep_running {true};
 
     std::vector<int> m_values;      /**< The values the table should have */
 
-    mutable std::mt19937                           m_rand_gen;
-    mutable std::uniform_real_distribution<double> m_rand_dist;
+    std::mt19937                       m_rand_gen;
+    std::uniform_int_distribution<int> m_row_gen;
+    std::uniform_int_distribution<int> m_val_gen;
+    std::uniform_int_distribution<int> m_action_gen;
+
+    Stats m_stats;
 };
 
 class ClientGroup
@@ -89,6 +94,9 @@ public:
     void cleanup();
     void start();
     void stop();
+
+    Client::Stats total_stats() const;
+    void          print_stats();
 
 private:
     TestConnections&                     m_test;
