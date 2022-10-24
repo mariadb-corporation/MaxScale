@@ -70,7 +70,7 @@
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
-                            v-mxs-highlighter="filterTxt"
+                            v-mxs-highlighter="{ keyword: filterTxt, txt: item.text }"
                             :tooltipItem="{ txt: `${item.text}` }"
                         />
                     </template>

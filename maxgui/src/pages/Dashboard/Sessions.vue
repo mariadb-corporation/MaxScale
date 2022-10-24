@@ -17,7 +17,7 @@
                 <router-link
                     v-for="serviceId in serviceIds"
                     :key="serviceId"
-                    v-mxs-highlighter="search_keyword"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
                     :to="`/dashboard/services/${serviceId}`"
                     class="rsrc-link"
                 >

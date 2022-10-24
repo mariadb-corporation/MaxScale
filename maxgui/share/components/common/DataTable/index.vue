@@ -76,7 +76,12 @@
                                     :name="header.value"
                                     :data="{ item, header, cellIndex, rowIndex }"
                                 >
-                                    <span v-mxs-highlighter="search">
+                                    <span
+                                        v-mxs-highlighter="{
+                                            keyword: search,
+                                            txt: getValue(item, header),
+                                        }"
+                                    >
                                         {{ getValue(item, header) }}
                                     </span>
                                 </slot>

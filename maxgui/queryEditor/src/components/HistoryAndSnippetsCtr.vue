@@ -65,14 +65,10 @@
                     >
                         <mxs-truncate-str
                             :key="cell"
-                            v-mxs-highlighter="search"
+                            v-mxs-highlighter="{ keyword: search, txt: formatDate(cell) }"
                             :disabled="isDragging"
                             :tooltipItem="{
-                                txt: `${$helpers.dateFormat({
-                                    moment: $moment,
-                                    value: cell,
-                                    formatType: 'ddd, DD MMM YYYY',
-                                })}`,
+                                txt: `${formatDate(cell)}`,
                                 activatorID,
                             }"
                             :maxWidth="maxWidth"
@@ -89,7 +85,7 @@
                         >
                             <template v-slot:activator="{ on }">
                                 <span
-                                    v-mxs-highlighter="search"
+                                    v-mxs-highlighter="{ keyword: search, txt: cell.name }"
                                     class="d-inline-block text-truncate"
                                     :style="{ maxWidth: `${maxWidth}px` }"
                                     v-on="on"
@@ -442,6 +438,13 @@ export default {
                     snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
             })
             this.SET_QUERY_SNIPPETS(snippets)
+        },
+        formatDate(cell) {
+            return this.$helpers.dateFormat({
+                moment: this.$moment,
+                value: cell,
+                formatType: 'ddd, DD MMM YYYY',
+            })
         },
     },
 }

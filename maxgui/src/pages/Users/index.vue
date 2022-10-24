@@ -64,7 +64,7 @@
                     <template v-for="h in tableHeaders" v-slot:[`${h.value}`]="{ data: { item } }">
                         <span
                             :key="h.value"
-                            v-mxs-highlighter="search_keyword"
+                            v-mxs-highlighter="{ keyword: search_keyword, txt: item[h.value] }"
                             :class="{
                                 'font-weight-bold': isLoggedInUser(item), // Bold active user
                             }"

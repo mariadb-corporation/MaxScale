@@ -30,7 +30,7 @@
                         {{ iconSheet(item) }}
                     </v-icon>
                     <span
-                        v-mxs-highlighter="search_schema"
+                        v-mxs-highlighter="{ keyword: search_schema, txt: item.name }"
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':

@@ -11,7 +11,7 @@
         <template v-slot:id="{ data: { item: { id } } }">
             <router-link
                 :key="id"
-                v-mxs-highlighter="search_keyword"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
                 :to="`/dashboard/services/${id}`"
                 class="rsrc-link"
             >
@@ -26,7 +26,7 @@
             >
                 services
             </icon-sprite-sheet>
-            <span v-mxs-highlighter="search_keyword">{{ state }} </span>
+            <span v-mxs-highlighter="{ keyword: search_keyword, txt: state }">{{ state }} </span>
         </template>
 
         <template v-slot:header-append-routingTargets>
@@ -35,7 +35,10 @@
             </span>
         </template>
         <template v-slot:routingTargets="{ data: { item: { routingTargets } } }">
-            <span v-if="typeof routingTargets === 'string'" v-mxs-highlighter="search_keyword">
+            <span
+                v-if="typeof routingTargets === 'string'"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: routingTargets }"
+            >
                 {{ routingTargets }}
             </span>
 
@@ -43,7 +46,7 @@
                 <router-link
                     v-for="(target, i) in routingTargets"
                     :key="target.id"
-                    v-mxs-highlighter="search_keyword"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: target.id }"
                     :to="`/dashboard/${target.type}/${target.id}`"
                     class="rsrc-link"
                 >
@@ -75,7 +78,7 @@
                     <router-link
                         v-for="target in routingTargets"
                         :key="target.id"
-                        v-mxs-highlighter="search_keyword"
+                        v-mxs-highlighter="{ keyword: search_keyword, txt: target.id }"
                         :to="`/dashboard/${target.type}/${target.id}`"
                         class="text-body-2 d-block rsrc-link"
                     >

@@ -20,13 +20,15 @@
         <template v-slot:groupId="{ data: { item: { groupId } } }">
             <router-link
                 v-if="groupId !== $mxs_t('not', { action: 'monitored' })"
-                v-mxs-highlighter="search_keyword"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: groupId }"
                 :to="`/dashboard/monitors/${groupId}`"
                 class="rsrc-link font-weight-bold"
             >
                 {{ groupId }}
             </router-link>
-            <span v-else v-mxs-highlighter="search_keyword">{{ groupId }} </span>
+            <span v-else v-mxs-highlighter="{ keyword: search_keyword, txt: groupId }">
+                {{ groupId }}
+            </span>
         </template>
         <template v-slot:groupId-append="{ data: { item: { groupId } } }">
             <span
@@ -46,7 +48,9 @@
                 >
                     monitors
                 </icon-sprite-sheet>
-                <span v-mxs-highlighter="search_keyword">{{ monitorState }} </span>
+                <span v-mxs-highlighter="{ keyword: search_keyword, txt: monitorState }">
+                    {{ monitorState }}
+                </span>
             </div>
         </template>
 
@@ -73,7 +77,7 @@
                         v-on="on"
                     >
                         <router-link
-                            v-mxs-highlighter="search_keyword"
+                            v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
                             :to="`/dashboard/servers/${id}`"
                             class="rsrc-link"
                         >
@@ -111,14 +115,19 @@
                         >
                             servers
                         </icon-sprite-sheet>
-                        <span v-mxs-highlighter="search_keyword">{{ serverState }}</span>
+                        <span v-mxs-highlighter="{ keyword: search_keyword, txt: serverState }">
+                            {{ serverState }}
+                        </span>
                     </div>
                 </template>
             </rep-tooltip>
         </template>
 
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-            <span v-if="typeof serviceIds === 'string'" v-mxs-highlighter="search_keyword">
+            <span
+                v-if="typeof serviceIds === 'string'"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: serviceIds }"
+            >
                 {{ serviceIds }}
             </span>
 
@@ -126,7 +135,7 @@
                 <router-link
                     v-for="(serviceId, i) in serviceIds"
                     :key="i"
-                    v-mxs-highlighter="search_keyword"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
                     :to="`/dashboard/services/${serviceId}`"
                     class="rsrc-link"
                 >
@@ -158,7 +167,7 @@
                     <router-link
                         v-for="(serviceId, i) in serviceIds"
                         :key="i"
-                        v-mxs-highlighter="search_keyword"
+                        v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
                         :to="`/dashboard/services/${serviceId}`"
                         class="text-body-2 d-block rsrc-link"
                     >
