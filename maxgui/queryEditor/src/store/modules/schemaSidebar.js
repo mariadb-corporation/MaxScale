@@ -129,7 +129,7 @@ export default {
                         grandChildNodeType = TABLE
                         rowName = 'TABLE_NAME'
                         // eslint-disable-next-line vue/max-len
-                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}'`
+                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
                         break
                     case SPS:
                         grandChildNodeType = SP
@@ -269,7 +269,7 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getTreeData({ dispatch, rootState }, { node, db_tree, cmpList }) {
+        async getChildNodes({ dispatch, rootState }, { node, db_tree, cmpList }) {
             try {
                 const {
                     TABLES,
@@ -309,14 +309,14 @@ export default {
                     }
                 }
             } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getTreeData').error(e)
+                this.vue.$logger('store-schemaSidebar-getChildNodes').error(e)
                 return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
-        async updateTreeNodes({ commit, dispatch, rootState, getters }, node) {
+        async loadChildNodes({ commit, dispatch, rootState, getters }, node) {
             const active_wke_id = rootState.wke.active_wke_id
             try {
-                const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                const { new_db_tree, new_cmp_list } = await dispatch('getChildNodes', {
                     node,
                     db_tree: getters.getDbTreeData,
                     cmpList: getters.getDbCmplList,
@@ -329,7 +329,7 @@ export default {
                     },
                 })
             } catch (e) {
-                this.vue.$logger(`store-schemaSidebar-updateTreeNodes`).error(e)
+                this.vue.$logger(`store-schemaSidebar-loadChildNodes`).error(e)
             }
         },
         async fetchSchemas({ commit, dispatch, state, rootState }) {
@@ -357,7 +357,7 @@ export default {
                     const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
                     for (const node of expanded_nodes) {
                         if (nodesHaveChild.includes(node.type)) {
-                            const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                            const { new_db_tree, new_cmp_list } = await dispatch('getChildNodes', {
                                 node,
                                 db_tree: tree,
                                 cmpList: completionList,

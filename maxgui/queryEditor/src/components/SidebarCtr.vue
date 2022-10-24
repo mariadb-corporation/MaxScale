@@ -88,7 +88,7 @@ export default {
             fetchSchemas: 'schemaSidebar/fetchSchemas',
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
-            updateTreeNodes: 'schemaSidebar/updateTreeNodes',
+            loadChildNodes: 'schemaSidebar/loadChildNodes',
             useDb: 'queryConn/useDb',
             queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
@@ -110,7 +110,7 @@ export default {
             }
         },
         async handleLoadChildren(node) {
-            await this.updateTreeNodes(node)
+            await this.loadChildNodes(node)
         },
         async onAlterTable(node) {
             await this.handleAddNewSession({

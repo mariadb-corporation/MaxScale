@@ -132,11 +132,11 @@ describe('sidebar-ctr', () => {
                 prvwMode: mockParam.SQL_QUERY_MODE,
             })
         })
-        it(`Should call updateTreeNodes when handleLoadChildren is called`, () => {
-            let updateTreeNodesParam
+        it(`Should call loadChildNodes when handleLoadChildren is called`, () => {
+            let loadChildNodesParam
             wrapper = mountFactory({
                 methods: {
-                    updateTreeNodes: param => (updateTreeNodesParam = param),
+                    loadChildNodes: param => (loadChildNodesParam = param),
                 },
             })
             const mockNode = {
@@ -146,7 +146,7 @@ describe('sidebar-ctr', () => {
                 id: 'test.Tables',
             }
             wrapper.vm.handleLoadChildren(mockNode)
-            expect(updateTreeNodesParam).to.be.deep.equals(mockNode)
+            expect(loadChildNodesParam).to.be.deep.equals(mockNode)
         })
         it(`Should process onAlterTable method as expected`, async () => {
             let queryTblCreationInfoParam
