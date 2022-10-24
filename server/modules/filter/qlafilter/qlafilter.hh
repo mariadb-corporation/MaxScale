@@ -46,27 +46,29 @@ public:
     QlaInstance(const std::string& name);
     ~QlaInstance();
 
-    /* Log file save mode flags. */
-    static const int64_t LOG_FILE_SESSION = (1 << 0);   /**< Default value, session specific files */
-    static const int64_t LOG_FILE_UNIFIED = (1 << 1);   /**< One file shared by all sessions */
-    static const int64_t LOG_FILE_STDOUT = (1 << 2);    /**< Same as unified, but to stdout */
-
     /* Flags for controlling extra log entry contents */
-    static const int64_t LOG_DATA_SERVICE = (1 << 0);
-    static const int64_t LOG_DATA_SESSION = (1 << 1);
-    static const int64_t LOG_DATA_DATE = (1 << 2);
-    static const int64_t LOG_DATA_USER = (1 << 3);
-    static const int64_t LOG_DATA_QUERY = (1 << 4);
-    static const int64_t LOG_DATA_REPLY_TIME = (1 << 5);
-    static const int64_t LOG_DATA_TOTAL_REPLY_TIME = (1 << 6);
-    static const int64_t LOG_DATA_DEFAULT_DB = (1 << 7);
-    static const int64_t LOG_DATA_NUM_ROWS = (1 << 8);
-    static const int64_t LOG_DATA_REPLY_SIZE = (1 << 9);
-    static const int64_t LOG_DATA_NUM_WARNINGS = (1 << 10);
-    static const int64_t LOG_DATA_ERR_MSG = (1 << 11);
-    static const int64_t LOG_DATA_TRANSACTION = (1 << 12);
-    static const int64_t LOG_DATA_TRANSACTION_DUR = (1 << 13);
-    static const int64_t LOG_DATA_SERVER = (1 << 14);
+    enum int64_t
+    {
+        LOG_FILE_SESSION = (1 << 0),    /**< Default value, session specific files */
+        LOG_FILE_UNIFIED = (1 << 1),    /**< One file shared by all sessions */
+        LOG_FILE_STDOUT  = (1 << 2),    /**< Same as unified, but to stdout */
+
+        LOG_DATA_SERVICE          = (1 << 0),
+        LOG_DATA_SESSION          = (1 << 1),
+        LOG_DATA_DATE             = (1 << 2),
+        LOG_DATA_USER             = (1 << 3),
+        LOG_DATA_QUERY            = (1 << 4),
+        LOG_DATA_REPLY_TIME       = (1 << 5),
+        LOG_DATA_TOTAL_REPLY_TIME = (1 << 6),
+        LOG_DATA_DEFAULT_DB       = (1 << 7),
+        LOG_DATA_NUM_ROWS         = (1 << 8),
+        LOG_DATA_REPLY_SIZE       = (1 << 9),
+        LOG_DATA_NUM_WARNINGS     = (1 << 10),
+        LOG_DATA_ERR_MSG          = (1 << 11),
+        LOG_DATA_TRANSACTION      = (1 << 12),
+        LOG_DATA_TRANSACTION_DUR  = (1 << 13),
+        LOG_DATA_SERVER           = (1 << 14)
+    };
 
     enum DurationMultiplier
     {
@@ -186,7 +188,6 @@ public:
         std::string      m_unified_filename;            /* Filename of the unified log file */
         SFile            m_sUnified_file;               /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
-        bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
 
         QlaLog m_qlalog;
     };

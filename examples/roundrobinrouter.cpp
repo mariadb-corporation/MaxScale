@@ -132,7 +132,6 @@ private:
 
     mxs::Endpoints m_backends;
     mxs::Endpoint* m_write_backend;
-    MXS_SESSION*   m_session;
 
     void decide_target(GWBUF* querybuf, mxs::Endpoint*& target, bool& route_to_all);
 };
@@ -174,7 +173,6 @@ public:
 private:
     friend class RRRouterSession;
 
-    SERVICE* m_service;             /* Service this router is part of */
     Config   m_config;
 
     /* Methods */
@@ -199,8 +197,7 @@ Config::Config(const char* name)
  * Constructs a new router instance, called by the static `create` method.
  */
 RRRouter::RRRouter(SERVICE* service)
-    : m_service(service)
-    , m_config(service->name())
+    : m_config(service->name())
     , m_routing_s(0)
     , m_routing_f(0)
     , m_routing_c(0)
@@ -440,7 +437,6 @@ RRRouterSession::RRRouterSession(RRRouter* router, const mxs::Endpoints& backend
     , m_router(router)
     , m_backends(backends)
     , m_write_backend(write_backend)
-    , m_session(session)
 {
 }
 

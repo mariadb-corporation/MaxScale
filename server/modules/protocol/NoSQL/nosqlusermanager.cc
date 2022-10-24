@@ -2201,7 +2201,7 @@ vector<UserManager::Account> UserManagerMariaDB::do_get_accounts(const string& d
 
 bool UserManagerMariaDB::do_remove_accounts(const vector<Account>& accounts) const
 {
-    bool rv;
+    bool rv = true;
 
     if (!accounts.empty())
     {

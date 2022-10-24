@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-struct GWBUF;
+class GWBUF;
 
 namespace maxsql
 {

@@ -317,7 +317,6 @@ public:
 
 private:
     SRowEventHandler  m_handler;
-    SERVICE*          m_service;
     uint8_t           m_binlog_checksum;
     uint8_t           m_event_types;
     Bytes             m_event_type_hdr_lens;

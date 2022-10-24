@@ -77,7 +77,6 @@ int dst_report(const DISK_SPACE_THRESHOLD_TEST& test,
                 {
                     cout << "error: " << i->first << " was found, although not expected." << endl;
                     ++nErrors;
-                    ++i;
                 }
             }
         }

@@ -238,9 +238,8 @@ mxs::config::Configuration& InsertStream::getConfiguration()
     return m_config;
 }
 
-InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter)
+InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream*)
     : mxs::FilterSession(pSession, pService)
-    , m_filter(filter)
 {
 }
 

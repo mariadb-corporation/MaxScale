@@ -103,7 +103,6 @@ protected:
 
 private:
     Avro&    m_router;
-    SERVICE* m_service;
 };
 
 class Avro : public mxs::Router

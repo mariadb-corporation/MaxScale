@@ -101,36 +101,9 @@ private:
     std::string m_password = "skysql";
     /** Request master to send a binlog event at this interval , default 5min*/
     maxbase::Duration m_heartbeat_interval = maxbase::Duration(300s);
-    /** Max data sent to a lagging slave at a time, default 10Mib.
-     *  Does this mean pinloki should buffer things up before sending, but only
-     *  up to this amount?
-     *  What about buffering up too much to send back to the client - there is already
-     *  some kind of method low/high, right?
-     *  This will complicate things as inotify should be turned off, then turned on again.
-     */
-    int m_burst_size = 10 * 1024 * 1024;
-    // std::string       m_mariadb10_compatibility; It's always 10.
-    // std::string       m_transaction_safety; GTID only, always safe
-    /** Each slave will request a heartbeat interval (I think?) */
-    bool m_send_slave_heartbeat = true;
-    /** Ask the master for semi-sync replication. Only related to master comm. TODO? */
-    bool m_semisync = false;
-    /** Hm. */
-    int  m_ssl_cert_verification_depth = 9;
-    bool m_encrypt_binlog = false;
-    /**
-     *  bool m_encrypt_binlog = false;
-     *  std::string m_encryption_algorithm;
-     *  std::string m_encryption_key_file;
-     */
-    // bool mariadb10_master_gtid; GTID only.
 
-    /** Number of connection retries to Master.  What should happen when the retries
-     *  have been exhausted?
-     */
-    int m_master_retry_count = 1000;
     /**
-     *  Master connection retyr timout. Default 60s.
+     *  Master connection retry timout. Default 60s.
      */
     maxbase::Duration m_connect_retry_tmo = 60s;
 

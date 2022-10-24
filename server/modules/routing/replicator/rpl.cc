@@ -1637,7 +1637,6 @@ Rpl::Rpl(SERVICE* service,
          pcre2_code* exclude,
          gtid_pos_t gtid)
     : m_handler(std::move(handler))
-    , m_service(service)
     , m_binlog_checksum(0)
     , m_event_types(0)
     , m_gtid(gtid)

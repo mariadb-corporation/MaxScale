@@ -74,7 +74,7 @@ int main(int argc, char** argv)
             sleep(10);
         };
 
-    Func master_change = [&test]() {
+    Func master_change = [] {
             change_master(1, 0);
             sleep(10);
         };

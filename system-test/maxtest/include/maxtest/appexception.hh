@@ -28,12 +28,10 @@ public:
                  int line)
         : std::runtime_error(msg)
         , m_file(file)
-        , m_line(line)
     {
     }
 private:
     std::string m_file;
-    int         m_line;
 };
 }   // base
 

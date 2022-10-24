@@ -1860,7 +1860,6 @@ MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
     , m_callable(this)
     , m_thread_running(false)
-    , m_shutdown(0)
     , m_checked(false)
     , m_loop_called(get_time_ms())
 {

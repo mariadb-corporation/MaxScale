@@ -509,8 +509,7 @@ public:
     // successive call, initialized to false before the first call. This is used to track split packets,
     // but the client should use the is_split_xx() functions and not assume anything about the bool.
     ComPacket(GWBUF* pPacket, bool* client_split_flag)
-        : m_pPacket(pPacket)
-        , m_pPayload(GWBUF_DATA(pPacket))
+        : m_pPayload(GWBUF_DATA(pPacket))
         , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pPayload))
         , m_packet_no(MYSQL_GET_PACKET_NO(m_pPayload))
         , m_split_flag_at_entry(*client_split_flag)
@@ -567,7 +566,6 @@ public:
         return m_split_flag_at_entry && m_payload_len < GW_MYSQL_MAX_PACKET_LEN;
     }
 private:
-    GWBUF*   m_pPacket;
     uint8_t* m_pPayload;
     uint32_t m_payload_len;
     uint8_t  m_packet_no;
@@ -1311,62 +1309,6 @@ private:
 };
 
 /**
- * @template CQRResultsetRow
- *
- * A template that when instantiated either represents a textual or a
- * binary resultset row.
- */
-template<class Iterator>
-class CQRResultsetRow : public ComPacket
-{
-public:
-    typedef typename Iterator::Value Value;
-    typedef Iterator                 iterator;
-
-    CQRResultsetRow(GWBUF* pPacket,
-                    const std::vector<enum_field_types>& types)
-        : ComPacket(pPacket)
-        , m_types(types)
-    {
-    }
-
-    CQRResultsetRow(const ComResponse& packet,
-                    const std::vector<enum_field_types>& types)
-        : ComPacket(packet)
-        , m_types(types)
-    {
-    }
-
-    iterator begin()
-    {
-        return iterator(payload(), m_types);
-    }
-
-    iterator end()
-    {
-        uint8_t* pEnd = GWBUF_DATA(m_pPacket) + gwbuf_link_length(m_pPacket);
-        return iterator(pEnd);
-    }
-
-private:
-    const std::vector<enum_field_types>& m_types;
-};
-
-/**
- * @class CQRTextResultsetRow
- *
- * An instance of this class represents a textual resultset row.
- */
-typedef CQRResultsetRow<CQRTextResultsetRowIterator> CQRTextResultsetRow;
-
-/**
- * @class CQRBinaryResultsetRow
- *
- * An instance of this class represents a binary resultset row.
- */
-typedef CQRResultsetRow<CQRBinaryResultsetRowIterator> CQRBinaryResultsetRow;
-
-/**
  * @class ComQueryResponse
  *
  * An instance of this class represents the response to a @c ComQuery.
@@ -1374,10 +1316,6 @@ typedef CQRResultsetRow<CQRBinaryResultsetRowIterator> CQRBinaryResultsetRow;
 class ComQueryResponse : public ComPacket
 {
 public:
-    typedef CQRColumnDef          ColumnDef;
-    typedef CQRTextResultsetRow   TextResultsetRow;
-    typedef CQRBinaryResultsetRow BinaryResultsetRow;
-
     ComQueryResponse(const ComPacket& com_packet)
         : ComPacket(com_packet)
         , m_nFields(payload())

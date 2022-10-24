@@ -2962,7 +2962,7 @@ State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResp
     log_in("Request(Delete)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
     State state = m_sDatabase->handle_delete(pRequest, std::move(req), ppResponse);
 
@@ -2979,7 +2979,7 @@ State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResp
     log_in("Request(Insert)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
     State state = m_sDatabase->handle_insert(pRequest, std::move(req), ppResponse);
 
@@ -2996,7 +2996,7 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResp
     log_in("Request(Update)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
     State state = m_sDatabase->handle_update(pRequest, std::move(req), ppResponse);
 
@@ -3013,7 +3013,7 @@ State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppRespon
     log_in("Request(Query)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
     State state = m_sDatabase->handle_query(pRequest, std::move(req), ppResponse);
 
@@ -3030,7 +3030,7 @@ State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppR
     log_in("Request(GetMore)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+    m_sDatabase = Database::create(extract_database(req.collection()), &m_context, &m_config);
 
     State state = m_sDatabase->handle_get_more(pRequest, std::move(req), ppResponse);
 
@@ -3047,7 +3047,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWB
     log_in("Request(KillCursors)", req);
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
+    m_sDatabase = Database::create("admin", &m_context, &m_config);
 
     State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), ppResponse);
 
@@ -3078,7 +3078,7 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
             string name(utf8.value.data(), utf8.value.size());
 
             mxb_assert(!m_sDatabase.get());
-            m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
+            m_sDatabase = Database::create(name, &m_context, &m_config);
 
             state = m_sDatabase->handle_msg(pRequest, std::move(req), ppResponse);
 

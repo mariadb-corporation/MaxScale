@@ -49,7 +49,6 @@ public:
     }
 
 private:
-    RCR*           m_instance;  /**< Router instance */
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
     mxs::Endpoint* m_backend;
     mxs::Endpoints m_endpoints;

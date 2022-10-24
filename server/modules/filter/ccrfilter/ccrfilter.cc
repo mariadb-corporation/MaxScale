@@ -148,8 +148,6 @@ public:
     {
     }
 
-    CCRConfig(CCRConfig&& rhs) = default;
-
     mxs::config::Regex                        match;
     mxs::config::Regex                        ignore;
     mxs::config::Seconds                      time;
