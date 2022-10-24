@@ -42,6 +42,7 @@ using maxbase::Worker;
 using maxbase::WorkerLoad;
 using maxscale::RoutingWorker;
 using maxscale::Closer;
+using std::lock_guard;
 using std::shared_ptr;
 using std::stringstream;
 using std::unique_ptr;
@@ -208,6 +209,11 @@ int broadcast_recipients(int nWorkers)
 namespace maxscale
 {
 
+//static
+RoutingWorker::Datas RoutingWorker::s_datas;
+//static
+std::mutex RoutingWorker::s_datas_lock;
+
 json_t* RoutingWorker::MemoryUsage::to_json() const
 {
     json_t* pMu = json_object();
@@ -333,6 +339,39 @@ void RoutingWorker::finish()
 }
 
 //static
+void RoutingWorker::register_data(Data* pData)
+{
+    std::unique_lock guard(s_datas_lock);
+
+    mxb_assert(std::find(s_datas.begin(), s_datas.end(), pData) == s_datas.end());
+    s_datas.push_back(pData);
+
+    guard.unlock();
+
+    execute_concurrently([pData]() {
+            auto* pWorker = get_current();
+            pData->init_for(pWorker);
+        }, DESIRED);
+}
+
+//static
+void RoutingWorker::deregister_data(Data* pData)
+{
+    std::unique_lock guard(s_datas_lock);
+
+    auto it = std::find(s_datas.begin(), s_datas.end(), pData);
+    mxb_assert(it != s_datas.end());
+    s_datas.erase(it);
+
+    guard.unlock();
+
+    execute_concurrently([pData]() {
+            auto* pWorker = get_current();
+            pData->finish_for(pWorker);
+        }, DESIRED);
+}
+
+//static
 bool RoutingWorker::adjust_threads(int nCount)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
@@ -365,6 +404,26 @@ bool RoutingWorker::adjust_threads(int nCount)
     }
 
     return rv;
+}
+
+void RoutingWorker::init_datas()
+{
+    lock_guard guard(s_datas_lock);
+
+    for (Data* pData : s_datas)
+    {
+        pData->init_for(this);
+    }
+}
+
+void RoutingWorker::finish_datas()
+{
+    lock_guard guard(s_datas_lock);
+
+    for (Data* pData : s_datas)
+    {
+        pData->finish_for(this);
+    }
 }
 
 //static
@@ -542,6 +601,8 @@ void RoutingWorker::deactivate()
     // the default 1ms.
     set_min_timeout(1000);
 
+    finish_datas();
+
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
 
@@ -601,6 +662,8 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 
         // Set epoll-timeout to the default 1ms.
         set_min_timeout(1);
+
+        init_datas();
     }
 
     return success;
@@ -1489,6 +1552,7 @@ bool RoutingWorker::pre_run()
     if (rv)
     {
         make_dcalls();
+        init_datas();
     }
     else
     {
@@ -1501,6 +1565,11 @@ bool RoutingWorker::pre_run()
 
 void RoutingWorker::post_run()
 {
+    if (is_active())
+    {
+        finish_datas();
+    }
+
     pool_close_all_conns();
 
     // See MainWorker::post_run for an explanation why this is done here

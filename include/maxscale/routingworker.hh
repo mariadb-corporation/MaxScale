@@ -92,6 +92,48 @@ public:
     };
 
     /**
+     * Class to be derived from, in case there is data to be
+     * initialized separately for each worker.
+     */
+    class Data
+    {
+    public:
+        virtual ~Data() = default;
+
+        /**
+         * Called when the data should be initialized for a worker.
+         * The call takes place in the thread context of the worker.
+         *
+         * @param pWorker  The worker for which @c Data should be initialized,
+         *                 and in whose thread-context the call is made.
+         */
+        virtual void init_for(RoutingWorker* pWorker) = 0;
+
+        /**
+         * Called when the data should be finalized for a worker.
+         * The call takes place in the thread context of the worker.
+         *
+         * @param pWorker  The worker for which @c Data should be finalized,
+         *                 and in whose thread-context the call is made.
+         */
+        virtual void finish_for(RoutingWorker*) = 0;
+    };
+
+    /**
+     * Register data that needs to be initialized/finalized for each worker.
+     *
+     * @param pData  The data.
+     */
+    static void register_data(Data* pData);
+
+    /**
+     * De-register data that needs to be initialized/finalized for each worker.
+     *
+     * @param pData  The data.
+     */
+    static void deregister_data(Data* pData);
+
+    /**
      * Initialize the routing worker mechanism.
      *
      * To be called once at process startup. This will cause as many workers
@@ -593,6 +635,9 @@ private:
         m_routing.store(false, std::memory_order_relaxed);
     }
 
+    void init_datas();
+    void finish_datas();
+
     static bool increase_threads(int nDelta);
     static bool decrease_threads(int nDelta);
 
@@ -718,6 +763,10 @@ private:
     using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
     using EndpointsBySrv = std::map<const SERVER*, std::deque<ServerEndpoint*>>;
     using TickFuncs = std::vector<std::function<void()>>;
+    using Datas = std::vector<Data*>;
+
+    static Datas       s_datas;     /*< Datas that need to be inited/finishe for each worker. */
+    static std::mutex  s_datas_lock;
 
     int                m_index;     /*< Index of routing worker */
     std::atomic<bool>  m_listening; /*< Is the routing worker listening. */
