@@ -54,6 +54,10 @@ public:
         int updates_good {0};   /**< Successful updates */
         int updates_bad {0};    /**< Failed updates */
 
+        int trx_good {0};
+        int trx_selects_bad {0};
+        int trx_updates_bad {0};
+
         Stats& operator+=(const Stats& rhs);
     };
     Stats stats() const;
@@ -62,7 +66,7 @@ private:
     bool run_query(mxt::MariaDB& conn);
     bool run_select(mxt::MariaDB& conn);
     bool run_update(mxt::MariaDB& conn);
-
+    bool run_trx(mxt::MariaDB& conn);
     void run();
 
 private:

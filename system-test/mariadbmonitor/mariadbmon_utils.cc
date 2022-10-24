@@ -26,6 +26,11 @@ enum class SyncMxs
 };
 
 bool generate_traffic_and_check(TestConnections& test, mxt::MariaDB* conn, int insert_count, SyncMxs sync);
+
+const char select_fmt[] = "SELECT value FROM %s WHERE id=%i;";
+const char update_fmt[] = "UPDATE %s SET value=%d WHERE id=%i;";
+const char unexpected_val_fmt[] = "Client %i got wrong answer. Row %i had value %i when %i was expected.";
+const char row_not_found_fmt[] = "Table %s does not contain id %i when it should.";
 }
 
 /**
@@ -195,11 +200,15 @@ void Client::stop()
 bool Client::run_query(mxt::MariaDB& conn)
 {
     bool rv;
-    // 20% updates, 80% selects
+    // 20% simple updates, 20% trx updates, 60% selects
     int action_ind = m_action_gen(m_rand_gen);
     if (action_ind <= 20)
     {
         rv = run_update(conn);
+    }
+    else if (action_ind <= 40)
+    {
+        rv = run_trx(conn);
     }
     else
     {
@@ -212,7 +221,7 @@ bool Client::run_select(mxt::MariaDB& conn)
 {
     bool rv = false;
     int row_ind = m_row_gen(m_rand_gen);
-    auto res = conn.try_query_f("SELECT value FROM %s WHERE id=%i;", m_tbl.c_str(), row_ind);
+    auto res = conn.try_query_f(select_fmt, m_tbl.c_str(), row_ind);
     if (res && res->next_row())
     {
         int expected = m_values[row_ind];
@@ -225,8 +234,7 @@ bool Client::run_select(mxt::MariaDB& conn)
         {
             if (m_verbose)
             {
-                m_test.tprintf("Client %i got wrong answer. Row %i had value %i when %i was expected.",
-                               m_id, row_ind, found, expected);
+                m_test.tprintf(unexpected_val_fmt, m_id, row_ind, found, expected);
             }
             m_stats.selects_bad++;
         }
@@ -237,7 +245,7 @@ bool Client::run_select(mxt::MariaDB& conn)
         m_stats.selects_bad++;
         if (res)
         {
-            m_test.add_failure("Table %s does not contain id %i when it should.", m_tbl.c_str(), row_ind);
+            m_test.add_failure(row_not_found_fmt, m_tbl.c_str(), row_ind);
         }
     }
     return rv;
@@ -248,7 +256,7 @@ bool Client::run_update(mxt::MariaDB& conn)
     bool rv = false;
     int row_ind = m_row_gen(m_rand_gen);
     int new_val = m_val_gen(m_rand_gen);
-    bool res = conn.try_cmd_f("UPDATE %s SET value=%d WHERE id=%i;", m_tbl.c_str(), new_val, row_ind);
+    bool res = conn.try_cmd_f(update_fmt, m_tbl.c_str(), new_val, row_ind);
     if (res)
     {
         m_values[row_ind] = new_val;
@@ -260,6 +268,90 @@ bool Client::run_update(mxt::MariaDB& conn)
         m_stats.updates_bad++;
     }
     return rv;
+}
+
+bool Client::run_trx(mxt::MariaDB& conn)
+{
+    bool rval = false;
+    if (conn.try_cmd("START TRANSACTION;"))
+    {
+        bool trx_complete = false;
+        int row_ind = m_row_gen(m_rand_gen);
+
+        string select = mxb::string_printf(select_fmt, m_tbl.c_str(), row_ind);
+        auto res = conn.try_query(select);
+        if (res && res->next_row())
+        {
+            int expected = m_values[row_ind];
+            int found = res->get_int(0);
+            if (found == expected)
+            {
+                m_stats.selects_good++;
+            }
+            else
+            {
+                m_stats.selects_bad++;
+                if (m_verbose)
+                {
+                    m_test.tprintf(unexpected_val_fmt, m_id, row_ind, found, expected);
+                }
+            }
+
+            // Regardless of the answer, update the value.
+            int new_val = found++;
+            bool update_ok = conn.try_cmd_f(update_fmt, m_tbl.c_str(), new_val, row_ind);
+            if (update_ok)
+            {
+                // Check the value again.
+                auto res_after = conn.try_query(select);
+                if (res_after && res_after->next_row())
+                {
+                    int found_after = res_after->get_int(0);
+                    if (found_after == new_val)
+                    {
+                        m_stats.trx_good++;
+                        trx_complete = true;
+                    }
+                    else
+                    {
+                        m_stats.trx_selects_bad++;
+                        m_test.tprintf("Client %i got wrong answer after trx. Row %i had value %i when %i "
+                                       "was expected.", m_id, row_ind, found_after, new_val);
+                    }
+                }
+                else
+                {
+                    m_stats.trx_selects_bad++;
+                    if (res_after)
+                    {
+                        m_test.tprintf(row_not_found_fmt, m_tbl.c_str(), row_ind);
+                    }
+                }
+            }
+            else
+            {
+                m_stats.trx_updates_bad++;
+            }
+        }
+        else
+        {
+            m_stats.selects_bad++;
+            if (res)
+            {
+                m_test.tprintf(row_not_found_fmt, m_tbl.c_str(), row_ind);
+            }
+        }
+
+        if (trx_complete)
+        {
+            rval = conn.try_cmd("COMMIT;");
+        }
+        else
+        {
+            rval = conn.try_cmd("ROLLBACK;");
+        }
+    }
+    return rval;
 }
 
 void Client::run()
@@ -437,16 +529,19 @@ Client::Stats ClientGroup::total_stats() const
 void ClientGroup::print_stats()
 {
     m_test.tprintf("Total stats from test clients:");
-    printf("Client | Read (success) | Read (fail) | Update (success) | Update (fail) \n");
+    printf("Client | Read (success) | Read (fail) | Update (success) | Update (fail) | Trx (success) | "
+           "Trx (read fail) | Trx (update fail) \n");
     for (const auto& client : m_clients)
     {
         auto stats = client->stats();
-        printf("%6i | %14i | %11i | %16i | %13i \n", client->id(), stats.selects_good, stats.selects_bad,
-               stats.updates_good, stats.updates_bad);
+        printf("%6i | %14i | %11i | %16i | %13i | %13i | %15i | %17i \n", client->id(),
+               stats.selects_good, stats.selects_bad, stats.updates_good, stats.updates_bad,
+               stats.trx_good, stats.trx_selects_bad, stats.trx_updates_bad);
     }
     auto totals = total_stats();
-    printf("   All | %14i | %11i | %16i | %13i \n", totals.selects_good, totals.selects_bad,
-           totals.updates_good, totals.updates_bad);
+    printf("   All | %14i | %11i | %16i | %13i | %13i | %15i | %17i \n",
+           totals.selects_good, totals.selects_bad, totals.updates_good, totals.updates_bad,
+           totals.trx_good, totals.trx_selects_bad, totals.trx_updates_bad);
 }
 
 Client::Stats& Client::Stats::operator+=(const Client::Stats& rhs)
@@ -455,6 +550,9 @@ Client::Stats& Client::Stats::operator+=(const Client::Stats& rhs)
     selects_bad += rhs.selects_bad;
     updates_good += rhs.updates_good;
     updates_bad += rhs.updates_bad;
+    trx_good += rhs.trx_good;
+    trx_selects_bad += rhs.trx_selects_bad;
+    trx_updates_bad += rhs.trx_updates_bad;
     return *this;
 }
 }
