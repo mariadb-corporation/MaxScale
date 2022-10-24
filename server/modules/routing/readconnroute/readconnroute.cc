@@ -427,7 +427,7 @@ maxscale::TargetSessionStats RCR::combined_target_stats() const
 {
     maxscale::TargetSessionStats stats;
 
-    for (const auto& a : m_target_stats.values())
+    for (const auto& a : m_target_stats.collect_values())
     {
         for (const auto& b : a)
         {

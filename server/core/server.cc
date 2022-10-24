@@ -1014,7 +1014,7 @@ maxscale::ResponseDistribution Server::get_complete_response_distribution(Operat
 
     const auto& distr = (opr == Operation::READ) ? m_read_distributions : m_write_distributions;
 
-    for (auto rhs : distr.values())
+    for (auto rhs : distr.collect_values())
     {
         ret += rhs;
     }

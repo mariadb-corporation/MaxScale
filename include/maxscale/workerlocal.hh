@@ -183,18 +183,18 @@ public:
         // Update the local value of all workers from the master copy
         mxs::RoutingWorker::execute_concurrently(
             [this]() {
-                update_local_value();
-            });
+            update_local_value();
+        });
     }
 
     /**
-     * Get all local values
+     * Collect local values from all active RoutingWorkers
      *
      * @note: This method must only be called from the MainWorker.
      *
      * @return A vector containing the individual values for each routing worker
      */
-    std::vector<T> values() const
+    std::vector<T> collect_values() const
     {
         mxb_assert_message(MainWorker::is_main_worker() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
@@ -203,9 +203,9 @@ public:
 
         mxs::RoutingWorker::execute_concurrently(
             [&]() {
-                std::lock_guard<std::mutex> guard(lock);
-                rval.push_back(*this->get_local_value());
-            });
+            std::lock_guard<std::mutex> guard(lock);
+            rval.push_back(*this->get_local_value());
+        });
 
         return rval;
     }

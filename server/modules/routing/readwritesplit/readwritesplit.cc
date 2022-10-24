@@ -133,7 +133,7 @@ maxscale::TargetSessionStats RWSplit::all_server_stats() const
 {
     TargetSessionStats stats;
 
-    for (const auto& a : m_server_stats.values())
+    for (const auto& a : m_server_stats.collect_values())
     {
         for (const auto& b : a)
         {
@@ -151,7 +151,7 @@ int64_t RWSplit::avg_sescmd_sz() const
 {
     maxbase::CumulativeAverage ave;
 
-    for (const auto& worker_ave : m_avg_sescmd_sz.values())
+    for (const auto& worker_ave : m_avg_sescmd_sz.collect_values())
     {
         ave += worker_ave;
     }
