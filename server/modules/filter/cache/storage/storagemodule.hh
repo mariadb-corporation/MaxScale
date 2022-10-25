@@ -28,6 +28,11 @@ public:
         StorageType::finalize();
     }
 
+    bool get_limits(const std::string& arguments, Storage::Limits* pLimits) const override final
+    {
+        return StorageType::get_limits(arguments, pLimits);
+    }
+
     Storage* create_storage(const char* zName,
                             const Storage::Config& config,
                             const std::string& arguments) override final

@@ -1397,6 +1397,13 @@ void RedisStorage::finalize()
 }
 
 // static
+bool RedisStorage::get_limits(const std::string&, Limits* pLimits)
+{
+    *pLimits = this_unit.default_limits;
+    return true;
+}
+
+//static
 RedisStorage* RedisStorage::create(const string& name,
                                    const Config& config,
                                    const std::string& argument_string)

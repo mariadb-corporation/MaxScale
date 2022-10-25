@@ -18,13 +18,15 @@
 class RedisStorage : public Storage
 {
 public:
+    ~RedisStorage();
+
     RedisStorage(const RedisStorage&) = delete;
     RedisStorage& operator=(const RedisStorage&) = delete;
 
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
-    ~RedisStorage();
+    static bool get_limits(const std::string& arguments, Limits* pLimits);
 
     static RedisStorage* create(const std::string& name,
                                 const Config& config,

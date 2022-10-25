@@ -154,6 +154,21 @@ static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
 
 const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
 
+struct StorageLimits
+{
+    StorageLimits() = default;
+
+    StorageLimits(uint32_t max_value_size)
+        : max_value_size(max_value_size)
+    {
+    }
+
+    /**
+     * The maximum size of a single value.
+     */
+    uint32_t max_value_size = std::numeric_limits<uint32_t>::max();
+};
+
 class Storage
 {
 public:
@@ -250,22 +265,7 @@ public:
         std::chrono::milliseconds timeout { 0 };
     };
 
-    struct Limits
-    {
-        Limits()
-        {
-        }
-
-        Limits(uint32_t max_value_size)
-            : max_value_size(max_value_size)
-        {
-        }
-
-        /**
-         * The maximum size of a single value.
-         */
-        uint32_t max_value_size = std::numeric_limits<uint32_t>::max();
-    };
+    using Limits = StorageLimits;
 
     virtual ~Storage();
 
@@ -526,6 +526,16 @@ public:
      * Called immediately before the storage module will be unloaded.
      */
     virtual void finalize() = 0;
+
+    /**
+     * Returns the limits of a storage created with this factory.
+     *
+     * @param arguments  Arguments for the storage.
+     * @param pLimits    Pointer to object that will be updated.
+     *
+     * @return True, if the arguments were valid and sufficient, false otherwise.
+     */
+    virtual bool get_limits(const std::string& arguments, Storage::Limits* pLimits) const = 0;
 
     /**
      * Creates an instance of cache storage. This function should, if necessary,

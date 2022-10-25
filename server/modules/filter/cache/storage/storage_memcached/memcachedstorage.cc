@@ -499,6 +499,44 @@ void MemcachedStorage::finalize()
 }
 
 //static
+bool MemcachedStorage::get_limits(const std::string& argument_string, Limits* pLimits)
+{
+    bool rv = false;
+    map<string, string> arguments;
+
+    if (Storage::split_arguments(argument_string, &arguments))
+    {
+        rv = true;
+
+        int max_value_size = DEFAULT_MAX_VALUE_SIZE;
+
+        auto it = arguments.find(CN_MEMCACHED_MAX_VALUE_SIZE);
+
+        if (it != arguments.end())
+        {
+            uint64_t size;
+            if (get_suffixed_size(it->second, &size) && (size <= std::numeric_limits<uint32_t>::max()))
+            {
+                max_value_size = size;
+            }
+            else
+            {
+                MXB_ERROR("'%s' is not a valid value for '%s'.",
+                          it->second.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            *pLimits = Limits(max_value_size);
+        }
+    }
+
+    return rv;
+}
+
+//static
 MemcachedStorage* MemcachedStorage::create(const string& name,
                                            const Config& config,
                                            const std::string& argument_string)
@@ -590,7 +628,7 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
         }
         else
         {
-            MXB_ERROR("Could not create memcached handle.");
+            MXB_ERROR("Invalid argument string: '%s'", argument_string.c_str());
         }
     }
 

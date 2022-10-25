@@ -18,13 +18,15 @@
 class MemcachedStorage : public Storage
 {
 public:
+    ~MemcachedStorage();
+
     MemcachedStorage(const MemcachedStorage&) = delete;
     MemcachedStorage& operator=(const MemcachedStorage&) = delete;
 
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
-    ~MemcachedStorage();
+    static bool get_limits(const std::string& arguments, Limits* pLimits);
 
     static MemcachedStorage* create(const std::string& name,
                                     const Config& config,

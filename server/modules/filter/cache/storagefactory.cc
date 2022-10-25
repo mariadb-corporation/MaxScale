@@ -148,6 +148,12 @@ StorageFactory* StorageFactory::open(const char* zName)
     return pFactory;
 }
 
+bool StorageFactory::get_limits(const std::string& arguments, StorageLimits* pLimits) const
+{
+    mxb_assert(m_pModule);
+    return m_pModule->get_limits(arguments, pLimits);
+}
+
 Storage* StorageFactory::create_storage(const char* zName,
                                         const Storage::Config& config,
                                         const std::string& arguments)

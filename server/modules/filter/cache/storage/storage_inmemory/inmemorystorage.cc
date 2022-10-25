@@ -67,6 +67,13 @@ void InMemoryStorage::finalize()
 }
 
 //static
+bool InMemoryStorage::get_limits(const std::string&, Limits* pLimits)
+{
+    *pLimits = this_unit.default_limits;
+    return true;
+}
+
+//static
 InMemoryStorage* InMemoryStorage::create(const char* zName,
                                          const Config& config,
                                          const std::string& arguments)

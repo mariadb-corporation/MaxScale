@@ -27,6 +27,8 @@ public:
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
+    static bool get_limits(const std::string& arguments, Limits* pLimits);
+
     static InMemoryStorage* create(const char* zName,
                                    const Config& config,
                                    const std::string& arguments);

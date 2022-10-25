@@ -16,6 +16,7 @@
 #include "cache_storage_api.hh"
 
 class Storage;
+class StorageLimits;
 
 class StorageFactory
 {
@@ -53,6 +54,16 @@ public:
     {
         return m_storage_caps;
     }
+
+    /**
+     * Returns the limits of a storage created with this factory.
+     *
+     * @param arguments  Arguments for the storage.
+     * @param pLimits    Pointer to object that will be updated.
+     *
+     * @return True, if the arguments were valid and sufficient, false otherwise.
+     */
+    bool get_limits(const std::string& arguments, StorageLimits* pLimits) const;
 
     /**
      * Create storage instance.
