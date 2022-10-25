@@ -15,9 +15,12 @@
 #include <maxscale/ccdefs.hh>
 #include <memory>
 #include <vector>
+#include <maxscale/routingworker.hh>
+#include <maxscale/workerlocal.hh>
 #include "cache.hh"
 
 class CachePT : public Cache
+              , private mxs::RoutingWorker::Data
 {
 public:
     ~CachePT();
@@ -65,31 +68,29 @@ public:
     cache_result_t clear(Token* pToken) override final;
 
 private:
-    typedef std::shared_ptr<Cache> SCache;
-    typedef std::vector<SCache>    Caches;
-
     CachePT(const std::string& name,
             const CacheConfig* pConfig,
             const std::vector<SCacheRules>& rules,
-            SStorageFactory sFactory,
-            const Caches& caches);
+            SStorageFactory sFactory);
 
-    static CachePT* create(const std::string& name,
-                           const CacheConfig* pConfig,
-                           const std::vector<SCacheRules>& rules,
-                           SStorageFactory sFactory);
+    Cache& worker_cache();
 
-    Cache& thread_cache();
-
-    const Cache& thread_cache() const
+    const Cache& worker_cache() const
     {
-        return const_cast<CachePT*>(this)->thread_cache();
+        return const_cast<CachePT*>(this)->worker_cache();
     }
+
+    void init_for(mxs::RoutingWorker*) override final;
+    void finish_for(mxs::RoutingWorker*) override final;
 
 private:
     CachePT(const Cache&);
     CachePT& operator=(const CachePT&);
 
 private:
-    Caches m_caches;
+    using SCache = std::unique_ptr<Cache>;
+    using WorkerCache = mxs::WorkerLocal<SCache, mxs::DefaultConstructor<SCache>>;
+
+    std::mutex  m_mutex;
+    WorkerCache m_spWorker_cache;
 };

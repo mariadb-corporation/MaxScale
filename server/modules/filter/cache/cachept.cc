@@ -22,43 +22,22 @@
 
 using std::shared_ptr;
 using std::string;
-
-namespace
-{
-
-std::atomic_int u_current_thread_id {0};
-thread_local int u_thread_id = -1;
-
-/**
- * Get the thread index of the current thread.
- *
- * @return The index of the current thread.
- */
-inline int thread_index()
-{
-    // A value of -1 indicates that the value has not been initialized,
-    if (u_thread_id == -1)
-    {
-        u_thread_id = u_current_thread_id.fetch_add(1);
-    }
-
-    return u_thread_id;
-}
-}
+using std::vector;
 
 CachePT::CachePT(const std::string& name,
                  const CacheConfig* pConfig,
                  const std::vector<SCacheRules>& rules,
-                 SStorageFactory sFactory,
-                 const Caches& caches)
+                 SStorageFactory sFactory)
     : Cache(name, pConfig, rules, sFactory)
-    , m_caches(caches)
 {
     MXB_NOTICE("Created cache per thread.");
+
+    mxs::RoutingWorker::register_data(this);
 }
 
 CachePT::~CachePT()
 {
+    mxs::RoutingWorker::deregister_data(this);
 }
 
 // static
@@ -75,7 +54,7 @@ CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = create(name, pConfig, rules, sFactory);
+        pCache = new (std::nothrow) CachePT(name, pConfig, rules, sFactory);
     }
 
     return pCache;
@@ -83,24 +62,23 @@ CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
 
 bool CachePT::create_token(std::shared_ptr<Cache::Token>* psToken)
 {
-    return thread_cache().create_token(psToken);
+    return worker_cache().create_token(psToken);
 }
 
 bool CachePT::must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
 {
-    return thread_cache().must_refresh(key, pSession);
+    return worker_cache().must_refresh(key, pSession);
 }
 
 void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 {
-    thread_cache().refreshed(key, pSession);
+    worker_cache().refreshed(key, pSession);
 }
 
 void CachePT::get_limits(Storage::Limits* pLimits) const
 {
-    // We return the limits of the first thread Cache. The limits will be the
-    // same for all.
-    m_caches.front()->get_limits(pLimits);
+    MXB_AT_DEBUG(bool rv=) m_sFactory->get_limits(m_config.storage_options, pLimits);
+    mxb_assert(rv);
 }
 
 json_t* CachePT::get_info(uint32_t what) const
@@ -113,19 +91,40 @@ json_t* CachePT::get_info(uint32_t what) const
         {
             what &= ~INFO_RULES;    // The rules are the same, we don't want them duplicated.
 
-            for (size_t i = 0; i < m_caches.size(); ++i)
+            int nRunning = mxs::RoutingWorker::nRunning();
+            vector<json_t*> infos(nRunning, nullptr);
+            vector<string> keys(nRunning);
+
+            mxs::RoutingWorker::execute_concurrently([this, &infos, &keys, what]() {
+                    json_t* pThread_info = worker_cache().get_info(what);
+
+                    if (pThread_info)
+                    {
+                        unsigned i = mxs::RoutingWorker::get_current()->index();
+                        mxb_assert(i < infos.size());
+
+                        char key[20];   // Surely enough.
+                        sprintf(key, "thread-%u", i);
+
+                        infos[i] = pThread_info;
+                        keys[i] = key;
+                    }
+                }, nRunning);
+
+            auto it = infos.begin();
+            auto jt = keys.begin();
+
+            while (it != infos.end())
             {
-                char key[20];   // Surely enough.
-                sprintf(key, "thread-%u", (unsigned int)i + 1);
+                json_t* pThread_info = *it;
 
-                SCache sCache = m_caches[i];
-
-                json_t* pThreadInfo = sCache->get_info(what);
-
-                if (pThreadInfo)
+                if (pThread_info)
                 {
-                    json_object_set_new(pInfo, key, pThreadInfo);
+                    json_object_set_new(pInfo, jt->c_str(), pThread_info);
                 }
+
+                ++it;
+                ++jt;
             }
         }
     }
@@ -139,7 +138,7 @@ cache_result_t CachePT::get_key(const std::string& user,
                                 const GWBUF* pQuery,
                                 CacheKey* pKey) const
 {
-    return thread_cache().get_key(user, host, zDefault_db, pQuery, pKey);
+    return worker_cache().get_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 cache_result_t CachePT::get_value(Token* pToken,
@@ -150,7 +149,7 @@ cache_result_t CachePT::get_value(Token* pToken,
                                   GWBUF** ppValue,
                                   const std::function<void (cache_result_t, GWBUF*)>& cb) const
 {
-    return thread_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
+    return worker_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
 }
 
 cache_result_t CachePT::put_value(Token* pToken,
@@ -159,85 +158,52 @@ cache_result_t CachePT::put_value(Token* pToken,
                                   const GWBUF* pValue,
                                   const std::function<void (cache_result_t)>& cb)
 {
-    return thread_cache().put_value(pToken, key, invalidation_words, pValue, cb);
+    return worker_cache().put_value(pToken, key, invalidation_words, pValue, cb);
 }
 
 cache_result_t CachePT::del_value(Token* pToken,
                                   const CacheKey& key,
                                   const std::function<void (cache_result_t)>& cb)
 {
-    return thread_cache().del_value(pToken, key, cb);
+    return worker_cache().del_value(pToken, key, cb);
 }
 
 cache_result_t CachePT::invalidate(Token* pToken,
                                    const std::vector<std::string>& words,
                                    const std::function<void (cache_result_t)>& cb)
 {
-    return thread_cache().invalidate(pToken, words, cb);
+    return worker_cache().invalidate(pToken, words, cb);
 }
 
 cache_result_t CachePT::clear(Token* pToken)
 {
-    return thread_cache().clear(pToken);
+    return worker_cache().clear(pToken);
 }
 
-// static
-CachePT* CachePT::create(const std::string& name,
-                         const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory)
+Cache& CachePT::worker_cache()
 {
-    CachePT* pCache = NULL;
-
-    try
-    {
-        int n_threads = config_threadcount();
-
-        Caches caches;
-
-        bool error = false;
-        int i = 0;
-
-        while (!error && (i < n_threads))
-        {
-            char suffix[12];    // Enough for 99999 threads
-            sprintf(suffix, "%d", i);
-
-            string namest(name + "-" + suffix);
-
-            CacheST* pCacheST = 0;
-
-            MXS_EXCEPTION_GUARD(pCacheST = CacheST::create(namest, rules, sFactory, pConfig));
-
-            if (pCacheST)
-            {
-                shared_ptr<Cache> sCache(pCacheST);
-
-                caches.push_back(sCache);
-            }
-            else
-            {
-                error = true;
-            }
-
-            ++i;
-        }
-
-        if (!error)
-        {
-            pCache = new CachePT(name, pConfig, rules, sFactory, caches);
-        }
-    }
-    catch (const std::exception&)
-    {
-    }
-
-    return pCache;
+    mxb_assert(*m_spWorker_cache);
+    return **m_spWorker_cache;
 }
 
-Cache& CachePT::thread_cache()
+void CachePT::init_for(mxs::RoutingWorker* pWorker)
 {
-    int i = thread_index();
-    mxb_assert(i < (int)m_caches.size());
-    return *m_caches[i].get();
+    CacheST* pCacheST = 0;
+
+    string namest(m_name + "-" + std::to_string(pWorker->index()));
+
+    m_mutex.lock();
+    auto rules = m_rules;
+    auto sFactory = m_sFactory;
+    m_mutex.unlock();
+
+    mxb_assert(!*m_spWorker_cache);
+    MXS_EXCEPTION_GUARD(pCacheST = CacheST::create(namest, rules, sFactory, &m_config));
+    m_spWorker_cache->reset(pCacheST);
+}
+
+void CachePT::finish_for(mxs::RoutingWorker* pWorker)
+{
+    mxb_assert(*m_spWorker_cache);
+    m_spWorker_cache->reset();
 }
