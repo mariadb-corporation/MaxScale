@@ -20,6 +20,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/threadpool.hh>
 
 #include "internal/jwt.hh"
 #include "internal/servermanager.hh"
@@ -248,21 +249,26 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int64_t max_rows)
 
 HttpResponse
 construct_result_response(json_t* resultdata, const string& host, const std::string& self,
-                          const string& query_id, const mxb::Duration& query_exec_time)
+                          const string& sql, const string& query_id, const mxb::Duration& query_exec_time)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
     json_object_set_new(obj, CN_TYPE, json_string("queries"));
 
     json_t* attr = json_object();
-    json_object_set_new(attr, "results", resultdata);
-    auto exec_time = mxb::to_secs(query_exec_time);
-    json_object_set_new(attr, "execution_time", json_real(exec_time));
+
+    if (resultdata)
+    {
+        json_object_set_new(attr, "results", resultdata);
+        json_object_set_new(attr, "execution_time", json_real(mxb::to_secs(query_exec_time)));
+    }
+
+    json_object_set_new(attr, "sql", json_string(sql.c_str()));
+
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
 
-    HttpResponse response(MHD_HTTP_OK, rval);
-    return response;
+    return HttpResponse(MHD_HTTP_CREATED, rval);
 }
 
 bool is_zero_address(const std::string& ip)
@@ -291,6 +297,8 @@ struct ThisUnit
     HttpSql::ConnectionManager manager;
 };
 ThisUnit this_unit;
+
+using Reason = HttpSql::ConnectionManager::Reason;
 
 json_t* connection_json_data(const std::string& host, const std::string& id)
 {
@@ -470,7 +478,7 @@ HttpResponse reconnect(const HttpRequest& request)
     auto cb = [id, host = string(request.host())]() {
         HttpResponse response;
 
-        if (auto managed_conn = this_unit.manager.get_connection(id))
+        if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
             if (managed_conn->conn.reconnect())
             {
@@ -485,8 +493,9 @@ HttpResponse reconnect(const HttpRequest& request)
         }
         else
         {
-            response = create_error(mxb::string_printf("ID %s not found or is busy.", id.c_str()),
-                                    MHD_HTTP_SERVICE_UNAVAILABLE);
+            const char* why = reason == Reason::BUSY ? "is busy" : "was not found";
+            string errmsg = mxb::string_printf("ID %s %s.", id.c_str(), why);
+            response = create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
         }
 
         return response;
@@ -576,13 +585,19 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("`max_rows` cannot be negative."));
     }
 
+    bool async = request.get_option("async") == "true";
     string host = request.host();
     string self = request.get_uri();
 
-    auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self)]() {
-        auto managed_conn = this_unit.manager.get_connection(id);
-        if (managed_conn)
+    auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self), async]() {
+        if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
+            // Ignore any results that have not yet been read
+            while (managed_conn->conn.current_result_type() != mxq::MariaDB::ResultType::NONE)
+            {
+                managed_conn->conn.next_result();
+            }
+
             if (managed_conn->last_max_rows != max_rows)
             {
                 std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
@@ -591,40 +606,105 @@ HttpResponse query(const HttpRequest& request)
             }
 
             int64_t query_id = ++managed_conn->current_query_id;
-            auto time_before = mxb::Clock::now();
-            managed_conn->conn.streamed_query(sql);
-            auto time_after = mxb::Clock::now();
-            auto exec_time = time_after - time_before;
-            managed_conn->last_query_time = time_after;
-
-            json_t* result_data = generate_json_representation(managed_conn->conn,
-                                                               managed_conn->last_max_rows);
-            managed_conn->release();
-            // 'managed_conn' is now effectively back in storage and should not be used.
-
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
+            json_t* result_data = nullptr;
+            mxb::Duration exec_time {0};
+
+            managed_conn->sql = sql;
+            managed_conn->last_query_started = mxb::Clock::now();
+
+            if (async)
+            {
+                mxs::thread_pool().execute(
+                    [managed_conn, sql, max_rows]() {
+                    managed_conn->conn.streamed_query(sql);
+                    managed_conn->last_query_time = mxb::Clock::now();
+                    managed_conn->release();
+                }, "sql" + id_str);
+            }
+            else
+            {
+                managed_conn->conn.streamed_query(sql);
+                managed_conn->last_query_time = mxb::Clock::now();
+                exec_time = managed_conn->last_query_started - managed_conn->last_query_time;
+                result_data = generate_json_representation(managed_conn->conn, managed_conn->last_max_rows);
+                managed_conn->release();
+                // 'managed_conn' is now effectively back in storage and should not be used.
+            }
+
             string self_id = self;
             self_id.append("/").append(id_str);
-            HttpResponse response = construct_result_response(result_data,
-                                                              host, self_id, id_str, exec_time);
-            response.set_code(MHD_HTTP_CREATED);
 
-            // Add the request SQL into the initial response
-            json_t* attr = mxb::json_ptr(response.get_response(), "/data/attributes");
-            mxb_assert(attr);
-            json_object_set_new(attr, "sql", json_string(sql.c_str()));
+            HttpResponse response = construct_result_response(result_data, host, self_id,
+                                                              sql, id_str, exec_time);
+
+            if (async)
+            {
+                response.set_code(MHD_HTTP_ACCEPTED);
+                response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
+            }
 
             return response;
         }
         else
         {
-            string errmsg = mxb::string_printf("ID %s not found or is busy.", id.c_str());
+            const char* why = reason == Reason::BUSY ? "is busy" : "was not found";
+            string errmsg = mxb::string_printf("ID %s %s.", id.c_str(), why);
             return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
         }
     };
+
     return HttpResponse(std::move(exec_query_cb));
 }
 
+HttpResponse query_result(const HttpRequest& request)
+{
+    auto [id, err] = get_connection_id(request, request.uri_part(1));
+
+    if (id.empty())
+    {
+        return create_error(err);
+    }
+
+    std::string host = request.host();
+    std::string self = request.get_uri();
+    std::string query_id = request.uri_part(3);
+
+    auto result_cb = [id, query_id = std::move(query_id), host = std::move(host), self = std::move(self)]() {
+        HttpResponse response;
+
+        if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
+        {
+            if (conn->conn.current_result_type() == mxq::MariaDB::ResultType::NONE)
+            {
+                response = create_error("No async query results found.", MHD_HTTP_BAD_REQUEST);
+            }
+            else
+            {
+                json_t* result_data = generate_json_representation(conn->conn, conn->last_max_rows);
+                auto exec_time = conn->last_query_started - conn->last_query_time;
+                response = construct_result_response(result_data, host, self, sql, query_id, exec_time);
+            }
+
+            conn->release();
+        }
+        else if (reason == Reason::BUSY)
+        {
+            response = construct_result_response(nullptr, host, self, sql, query_id, 0s);
+            response.set_code(MHD_HTTP_ACCEPTED);
+            response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self);
+        }
+        else
+        {
+            response = create_error(mxb::string_printf("ID %s was not found.", id.c_str()),
+                                    MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return response;
+    };
+
+    return HttpResponse(std::move(result_cb));
+}
 // static
 HttpResponse disconnect(const HttpRequest& request)
 {

@@ -60,9 +60,18 @@ public:
         std::atomic_bool busy {false};
         mxq::MariaDB     conn;
         int64_t          current_query_id {0};
+        mxb::TimePoint   last_query_started;
         mxb::TimePoint   last_query_time;
         int64_t          last_max_rows {0};
         ConnectionConfig config;
+        std::string      sql;
+    };
+
+    enum class Reason
+    {
+        OK,
+        NOT_FOUND,
+        BUSY
     };
 
     /**
@@ -71,12 +80,16 @@ public:
      * to be used again.
      *
      * @param id Connection id
-     * @return Pointer to connection when id found and connection is not busy, null otherwise.
+     *
+     * @return Pointer to connection if found not busy, null otherwise. The Reason explains why a nullptr was
+     *         returned. If the connection is busy executing a SQL query, the query is also returned.
      */
-    Connection* get_connection(const std::string& id);
+    std::tuple<Connection*, Reason, std::string> get_connection(const std::string& id);
 
     /**
      * Get the configuration of a connection
+     *
+     * @param id The connection ID
      *
      * @return The configuration of the given connection if one with the given ID exists
      */

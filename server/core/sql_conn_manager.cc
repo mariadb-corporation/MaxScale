@@ -21,21 +21,27 @@ using LockGuard = std::lock_guard<std::mutex>;
 namespace HttpSql
 {
 
-ConnectionManager::Connection* ConnectionManager::get_connection(const std::string& id)
+std::tuple<ConnectionManager::Connection*, ConnectionManager::Reason, std::string>
+ConnectionManager::get_connection(const std::string& id)
 {
     Connection* rval = nullptr;
+    Reason reason = Reason::NOT_FOUND;
+    std::string sql;
     LockGuard guard(m_connection_lock);
     auto it = m_connections.find(id);
     if (it != m_connections.end())
     {
+        reason = Reason::BUSY;
         auto elem = it->second.get();
+        sql = elem->sql;
         if (!elem->busy.load(std::memory_order_acquire))
         {
+            reason = Reason::OK;
             rval = elem;
             elem->busy.store(true, std::memory_order_release);
         }
     }
-    return rval;
+    return {rval, reason, sql};
 }
 
 std::optional<ConnectionConfig> ConnectionManager::get_configuration(const std::string& id)
@@ -159,8 +165,7 @@ void ConnectionManager::cleanup_thread_func()
 
         for (auto id : suspect_idle_ids)
         {
-            auto managed_conn = get_connection(id);
-            if (managed_conn)
+            if (auto [managed_conn, reason, _] = get_connection(id); managed_conn)
             {
                 // It's possible that the connection was used just after the previous loop, so check again.
                 bool should_close = false;
@@ -238,10 +243,25 @@ void ConnectionManager::Connection::release()
 
 json_t* ConnectionManager::Connection::to_json() const
 {
-    auto idle = std::chrono::duration_cast<std::chrono::seconds>(mxb::Clock::now() - last_query_time);
+    auto now = mxb::Clock::now();
+    double idle = 0;
+    double exec_time = 0;
+
+    if (busy.load(std::memory_order_acquire))
+    {
+        exec_time = mxb::to_secs(now - last_query_started);
+    }
+    else
+    {
+        exec_time = mxb::to_secs(last_query_time - last_query_started);
+        idle = mxb::to_secs(now - last_query_time);
+    }
+
     json_t* obj = json_object();
     json_object_set_new(obj, "thread_id", json_integer(conn.thread_id()));
-    json_object_set_new(obj, "seconds_idle", json_integer(idle.count()));
+    json_object_set_new(obj, "seconds_idle", json_real(idle));
+    json_object_set_new(obj, "sql", json_string(sql.c_str()));
+    json_object_set_new(obj, "execution_time", json_real(exec_time));
     return obj;
 }
 }

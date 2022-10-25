@@ -32,6 +32,7 @@ HttpResponse clone(const HttpRequest& request);
 HttpResponse show_connection(const HttpRequest& request);
 HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);
+HttpResponse query_result(const HttpRequest& request);
 HttpResponse disconnect(const HttpRequest& request);
 
 bool is_query(const std::string& id);

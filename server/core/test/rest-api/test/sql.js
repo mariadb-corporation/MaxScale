@@ -132,6 +132,56 @@ describe("Query API ", function () {
       expect(result.sqlstate).to.equal("42S22");
     });
 
+    it("executes async query", async function () {
+      var query = "SELECT SLEEP(0.5)";
+      var post_res = await c.post(conn.data.links.related + "?async=true&token=" + conn.meta.token, {
+        sql: query,
+      });
+      expect(post_res.status).to.equal(202);
+
+      // The first GET should complete before the query itself completes
+      var res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      expect(res.status).to.equal(202);
+      expect(res.data.data.attributes.sql).to.equal(query);
+
+      // Wait for a while and then check the result again
+      await new Promise((res) => setTimeout(res, 1000));
+      res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      check_resultset(res.data, query);
+    });
+
+    it("async result can only be read once", async function () {
+      var query = "SELECT 1";
+      var post_res = await c.post(conn.data.links.related + "?async=true&token=" + conn.meta.token, {
+        sql: query,
+      });
+      expect(post_res.status).to.equal(202);
+
+      await new Promise((res) => setTimeout(res, 100));
+      var res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      expect(res.status).to.equal(201);
+
+      // Reading a result that has already been read should return a 400 Bad Request
+      expect(c.get(post_res.data.links.self + "?token=" + conn.meta.token)).to.be.rejected;
+    });
+
+    it("gets connections during async query", async function () {
+      var query = "SELECT SLEEP(0.5)";
+      var post_res = await c.post(conn.data.links.related + "?async=true&token=" + conn.meta.token, {
+        sql: query,
+      });
+      expect(post_res.status).to.equal(202);
+
+      var res = await c.get(base_url + "/sql");
+      expect(res.data.data).to.be.an("array");
+      expect(res.data.data[0]).to.be.an("object").that.has.keys("id", "links", "type", "attributes");
+
+      // Wait for a while and then check the result again
+      await new Promise((res) => setTimeout(res, 1000));
+      res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      check_resultset(res.data, query);
+    });
+
     it("reconnects", async function () {
       var query = "SELECT @@pseudo_thread_id";
       var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
