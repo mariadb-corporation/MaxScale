@@ -1139,14 +1139,18 @@ static bool cache_rule_compare_n(CACHE_RULE* self, int thread_id, const char* va
 
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
-        mxb_assert((thread_id >= 0) && (thread_id < config_threadcount()));
-        compares = (pcre2_match(self->regexp.code,
-                                (PCRE2_SPTR)value,
-                                length,
-                                0,
-                                0,
-                                self->regexp.datas[thread_id],
-                                NULL) >= 0);
+        {
+            mxb_assert((thread_id >= 0) && (thread_id < config_threadcount()));
+            pcre2_match_data* data = pcre2_match_data_create_from_pattern(self->regexp.code, NULL);
+            compares = (pcre2_match(self->regexp.code,
+                                    (PCRE2_SPTR)value,
+                                    length,
+                                    0,
+                                    0,
+                                    data,
+                                    NULL) >= 0);
+            pcre2_match_data_free(data);
+        }
         break;
 
     default:
