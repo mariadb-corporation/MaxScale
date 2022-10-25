@@ -23,7 +23,7 @@ const getDbName = node => node.id.split('.')[0]
 
 /**
  * @public
- * @param {Object} node - TRIGGERS || COLS node
+ * @param {Object} node - TRIGGER_G || COL_G node
  * @returns {String} table name
  */
 const getTblName = node => node.id.split('.')[1]
@@ -36,11 +36,11 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
 /**
  * @private
  * @param {Boolean} param.isRoot - If the node is a SCHEMA node
- * @param {Object} param.node - TABLES || SPS || TRIGGERS || COLS node
+ * @param {Object} param.node - TBL_G || SP_G || TRIGGER_G || COL_G node
  * @returns {Object} { type, level, colName, sql }
  */
 function getNodeInfo({ scope, node, isRoot }) {
-    const { SCHEMA, TABLES, TABLE, SPS, SP, TRIGGERS, TRIGGER, COLS, COL } = SQL_NODE_TYPES
+    const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER_G, TRIGGER, COL_G, COL } = SQL_NODE_TYPES
     if (isRoot)
         return {
             type: SCHEMA,
@@ -54,20 +54,20 @@ function getNodeInfo({ scope, node, isRoot }) {
         level = 0,
         colName = '',
         tblName = ''
-    if (node.type === TRIGGERS || node.type === COLS) tblName = getTblName(node)
+    if (node.type === TRIGGER_G || node.type === COL_G) tblName = getTblName(node)
     let cols = '',
         from = '',
         cond = ''
     switch (node.type) {
-        case TABLES:
-            type = TABLE
+        case TBL_G:
+            type = TBL
             level = 2
             colName = 'TABLE_NAME'
             cols = 'TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE'
             from = 'FROM information_schema.TABLES'
             cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
             break
-        case SPS:
+        case SP_G:
             type = SP
             level = 2
             colName = 'ROUTINE_NAME'
@@ -75,15 +75,15 @@ function getNodeInfo({ scope, node, isRoot }) {
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
             break
-        case TRIGGERS:
+        case TRIGGER_G:
             type = TRIGGER
             level = 4
             colName = 'TRIGGER_NAME'
             cols = 'TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT'
-            from = 'FROM information_schema.TRIGGERS'
+            from = 'FROM information_schema.TRIGGER_G'
             cond = `WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
-        case COLS:
+        case COL_G:
             type = COL
             level = 4
             colName = 'COLUMN_NAME'
@@ -106,7 +106,7 @@ function getNodeInfo({ scope, node, isRoot }) {
  * @returns {Object}  schema node
  */
 function genNode({ data, type, level, name, dbName, tblName }) {
-    const { SCHEMA, TABLES, TABLE, SPS, SP, TRIGGER, COL, COLS, TRIGGERS } = SQL_NODE_TYPES
+    const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER, COL, COL_G, TRIGGER_G } = SQL_NODE_TYPES
     let node = {
         key: genNodeKey(),
         type,
@@ -119,7 +119,7 @@ function genNode({ data, type, level, name, dbName, tblName }) {
     }
 
     switch (type) {
-        case TABLE:
+        case TBL:
         case SP:
             node.id = `${dbName}.${node.name}`
             break
@@ -132,24 +132,24 @@ function genNode({ data, type, level, name, dbName, tblName }) {
             break
     }
 
-    if (type === TABLE) {
-        // TABLE node canBeHighlighted and has children props
+    if (type === TBL) {
+        // TBL node canBeHighlighted and has children props
         node.canBeHighlighted = true
         node.children = [
             {
                 key: genNodeKey(),
-                type: COLS,
-                name: COLS,
-                id: `${dbName}.${node.name}.${COLS}`, // only use to identify active node
+                type: COL_G,
+                name: COL_G,
+                id: `${dbName}.${node.name}.${COL_G}`, // only use to identify active node
                 draggable: false,
                 children: [],
                 level: node.level + 1,
             },
             {
                 key: genNodeKey(),
-                type: TRIGGERS,
-                name: TRIGGERS,
-                id: `${dbName}.${node.name}.${TRIGGERS}`, // only use to identify active node
+                type: TRIGGER_G,
+                name: TRIGGER_G,
+                id: `${dbName}.${node.name}.${TRIGGER_G}`, // only use to identify active node
                 draggable: false,
                 children: [],
                 level: node.level + 1,
@@ -160,18 +160,18 @@ function genNode({ data, type, level, name, dbName, tblName }) {
         node.children = [
             {
                 key: genNodeKey(),
-                type: TABLES,
-                name: TABLES,
-                id: `${dbName}.${TABLES}`, // only use to identify active node
+                type: TBL_G,
+                name: TBL_G,
+                id: `${dbName}.${TBL_G}`, // only use to identify active node
                 draggable: false,
                 level: 1,
                 children: [],
             },
             {
                 key: genNodeKey(),
-                type: SPS,
-                name: SPS,
-                id: `${dbName}.${SPS}`, // only use to identify active node
+                type: SP_G,
+                name: SP_G,
+                id: `${dbName}.${SP_G}`, // only use to identify active node
                 draggable: false,
                 level: 1,
                 children: [],
@@ -289,7 +289,7 @@ function updateTblChild({ db_tree, dbName, tblName, nodes, childType }) {
         const idxOfTablesNode = getIdxOfDbChildNode({
             dbIdx,
             db_tree,
-            childType: SQL_NODE_TYPES.TABLES,
+            childType: SQL_NODE_TYPES.TBL_G,
         })
         const tblIdx = db_tree[dbIdx].children[idxOfTablesNode].children.findIndex(
             tbl => tbl.name === tblName

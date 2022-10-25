@@ -43,7 +43,7 @@ export default {
          */
         async getNewDbTree({ rootState }, { node, db_tree, cmpList }) {
             const {
-                SQL_NODE_TYPES: { TABLES, SPS, COLS, TRIGGERS },
+                SQL_NODE_TYPES: { TBL_G, SP_G, COL_G, TRIGGER_G },
             } = rootState.queryEditorConfig.config
             try {
                 const dbName = queryHelper.getDbName(node)
@@ -58,8 +58,8 @@ export default {
 
                 //TODO: DRY these, so VIEWS and VIEW nodes can be updated
                 switch (node.type) {
-                    case TABLES:
-                    case SPS: {
+                    case TBL_G:
+                    case SP_G: {
                         const new_db_tree = queryHelper.updateDbChild({
                             db_tree,
                             dbName,
@@ -68,8 +68,8 @@ export default {
                         })
                         return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
                     }
-                    case COLS:
-                    case TRIGGERS: {
+                    case COL_G:
+                    case TRIGGER_G: {
                         const new_db_tree = queryHelper.updateTblChild({
                             db_tree,
                             dbName,
@@ -123,12 +123,12 @@ export default {
                     let tree = nodes
                     let completionList = cmpList
                     const {
-                        TABLES,
-                        SPS,
-                        COLS,
-                        TRIGGERS,
+                        TBL_G,
+                        SP_G,
+                        COL_G,
+                        TRIGGER_G,
                     } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
-                    const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
+                    const nodesHaveChild = [TBL_G, SP_G, COL_G, TRIGGER_G]
                     for (const node of expanded_nodes) {
                         if (nodesHaveChild.includes(node.type)) {
                             const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {

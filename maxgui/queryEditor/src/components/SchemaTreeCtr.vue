@@ -143,8 +143,8 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         nodesHaveCtxMenu() {
-            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
-            return [SCHEMA, TABLE, SP, COL, TRIGGER]
+            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            return [SCHEMA, TBL, SP, COL, TRIGGER]
         },
         queryOpts() {
             const {
@@ -180,7 +180,7 @@ export default {
         },
         // basic node options for different node types
         baseOptsMap() {
-            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
             const {
                 ADMIN: { USE },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -190,7 +190,7 @@ export default {
                     ...this.insertOpts,
                     ...this.clipboardOpts,
                 ],
-                [TABLE]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
+                [TBL]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
                 [SP]: [...this.insertOpts, ...this.clipboardOpts],
                 [COL]: [...this.insertOpts, ...this.clipboardOpts],
                 [TRIGGER]: [...this.insertOpts, ...this.clipboardOpts],
@@ -198,13 +198,13 @@ export default {
         },
         // more node options for user's nodes
         userNodeOptsMap() {
-            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
             const {
                 DDL: { DD },
             } = this.SQL_NODE_CTX_OPT_TYPES
             return {
                 [SCHEMA]: [{ text: this.$mxs_t('dropSchema'), type: DD }],
-                [TABLE]: [
+                [TBL]: [
                     { text: this.$mxs_t('alterTbl'), type: DD },
                     { text: this.$mxs_t('dropTbl'), type: DD },
                     { text: this.$mxs_t('truncateTbl'), type: DD },
@@ -468,14 +468,13 @@ export default {
             }
         },
         iconSheet(item) {
-            const { SCHEMA, TABLES, SPS } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL_G, SP_G } = this.SQL_NODE_TYPES
             switch (item.type) {
                 case SCHEMA:
                     return '$vuetify.icons.mxs_database'
-                //TODO: a separate icon for Tables
-                case TABLES:
+                case TBL_G:
                     return '$vuetify.icons.mxs_table'
-                case SPS:
+                case SP_G:
                     return '$vuetify.icons.mxs_storedProcedures'
                 //TODO: an icon for Column
             }

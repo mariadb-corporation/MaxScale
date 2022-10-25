@@ -35,13 +35,13 @@ export const QUERY_SHORTCUT_KEYS = Object.freeze({
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 export const SQL_NODE_TYPES = Object.freeze({
     SCHEMA: 'Schema',
-    TABLES: 'Tables',
-    TABLE: 'Table',
-    COLS: 'Columns',
+    TBL_G: 'Tables',
+    TBL: 'Table',
+    COL_G: 'Columns',
     COL: 'Column',
-    TRIGGERS: 'Triggers',
+    TRIGGER_G: 'Triggers',
     TRIGGER: 'Trigger',
-    SPS: 'Stored Procedures',
+    SP_G: 'Stored Procedures',
     SP: 'Stored Procedure',
 })
 export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
