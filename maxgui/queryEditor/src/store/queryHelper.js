@@ -11,7 +11,163 @@
  * Public License.
  */
 import { immutableUpdate } from '@share/utils/helpers'
-import { SQL_NODE_TYPES, SQL_EDITOR_MODES } from '@queryEditorSrc/store/config'
+import { SQL_NODE_TYPES, SQL_EDITOR_MODES, SQL_SYS_SCHEMAS } from '@queryEditorSrc/store/config'
+import { lodash } from '@share/utils/helpers'
+
+/**
+ * @public
+ * @param {Object} node - schema node
+ * @returns {String} database name
+ */
+const getDbName = node => node.id.split('.')[0]
+
+/**
+ * @public
+ * @param {Object} node - TRIGGERS || COLS node
+ * @returns {String} table name
+ */
+const getTblName = node => node.id.split('.')[1]
+
+const genNodeKey = () => lodash.uniqueId('node_key_')
+/**
+ * @public
+ * @param {Object} node - TABLES || SPS || TRIGGERS || COLS node
+ * @returns {Object} { type, level, colName, sql }
+ */
+function getChildNodeInfo(node) {
+    const { TABLES, TABLE, SPS, SP, TRIGGERS, TRIGGER, COLS, COL } = SQL_NODE_TYPES
+    const dbName = getDbName(node)
+    let type = '',
+        level = 0,
+        colName = '',
+        tblName = ''
+    if (node.type === TRIGGERS || node.type === COLS) tblName = getTblName(node)
+    let cols = '',
+        from = '',
+        cond = ''
+    switch (node.type) {
+        case TABLES:
+            type = TABLE
+            level = 2
+            colName = 'TABLE_NAME'
+            cols = 'TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE'
+            from = 'FROM information_schema.TABLES'
+            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
+            break
+        case SPS:
+            type = SP
+            level = 2
+            colName = 'ROUTINE_NAME'
+            cols = 'ROUTINE_NAME, CREATED'
+            from = 'FROM information_schema.ROUTINES'
+            cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
+            break
+        case TRIGGERS:
+            type = TRIGGER
+            level = 4
+            colName = 'TRIGGER_NAME'
+            cols = 'TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT'
+            from = 'FROM information_schema.TRIGGERS'
+            cond = `WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
+            break
+        case COLS:
+            type = COL
+            level = 4
+            colName = 'COLUMN_NAME'
+            cols = 'COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES'
+            from = 'FROM information_schema.COLUMNS'
+            cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
+            break
+    }
+    return { type, level, colName, sql: `SELECT ${cols} ${from} ${cond} ORDER BY ${colName};` }
+}
+/**
+ * @public
+ * @param {Object} param.data - data of node
+ * @param {Object} param.type - type of node to be generated
+ * @param {Object} param.level - hierarchy level of node to be generated
+ * @param {Object} param.name - name of the node
+ * @param {Object} param.dbName - the name of the db to which the node to be generated belongs
+ * @param {Object} param.tblName - the name of the table to which the node to be generated belongs. Required when
+ * param.type === TRIGGER or COL
+ * @returns {Object}  schema node
+ */
+function genSchemaNode({ data, type, level, name, dbName, tblName }) {
+    const { SCHEMA, TABLES, TABLE, SPS, SP, TRIGGER, COL, COLS, TRIGGERS } = SQL_NODE_TYPES
+    let node = {
+        key: genNodeKey(),
+        type,
+        name,
+        id: '',
+        draggable: true,
+        data,
+        level,
+        isSys: SQL_SYS_SCHEMAS.includes(dbName.toLowerCase()),
+    }
+
+    switch (type) {
+        case TABLE:
+        case SP:
+            node.id = `${dbName}.${node.name}`
+            break
+        case TRIGGER:
+        case COL:
+            node.id = `${tblName}.${node.name}`
+            break
+        case SCHEMA:
+            node.id = node.name
+            break
+    }
+
+    if (type === TABLE) {
+        // TABLE node canBeHighlighted and has children props
+        node.canBeHighlighted = true
+        node.children = [
+            {
+                key: genNodeKey(),
+                type: COLS,
+                name: COLS,
+                id: `${dbName}.${node.name}.${COLS}`, // only use to identify active node
+                draggable: false,
+                children: [],
+                level: level + 1,
+            },
+            {
+                key: genNodeKey(),
+                type: TRIGGERS,
+                name: TRIGGERS,
+                id: `${dbName}.${node.name}.${TRIGGERS}`, // only use to identify active node
+                draggable: false,
+                children: [],
+                level: level + 1,
+            },
+        ]
+    }
+    if (type === SCHEMA) {
+        node.children = [
+            {
+                key: genNodeKey(),
+                type: TABLES,
+                name: TABLES,
+                id: `${dbName}.${TABLES}`, // only use to identify active node
+                draggable: false,
+                level: 1,
+                children: [],
+            },
+            {
+                key: genNodeKey(),
+                type: SPS,
+                name: SPS,
+                id: `${dbName}.${SPS}`, // only use to identify active node
+                draggable: false,
+                level: 1,
+                children: [],
+            },
+        ]
+    }
+
+    return node
+}
 
 /**
  * @private
@@ -38,16 +194,16 @@ const getIdxOfDbChildNode = ({ dbIdx, db_tree, childType }) =>
  * @param {Array} payload.db_tree - Array of tree node to be updated
  * @param {String} payload.dbName - Database name
  * @param {String} payload.childType - Child type of the node to be updated. i.e. Tables||Stored Procedures
- * @param {Array} payload.gch - Array of grand child nodes (Table|Store Procedure) to be added
+ * @param {Array} payload.nodes - Array of grand child nodes (Table|Store Procedure) to be added
  * @returns {Array} new array of db_tree
  */
-function updateDbChild({ db_tree, dbName, childType, gch }) {
+function updateDbChild({ db_tree, dbName, childType, nodes }) {
     try {
         const dbIdx = getDbIdx({ dbName, db_tree })
         // Tables or Stored Procedures node
         const childIndex = getIdxOfDbChildNode({ dbIdx, db_tree, childType })
         const new_db_tree = immutableUpdate(db_tree, {
-            [dbIdx]: { children: { [childIndex]: { children: { $set: gch } } } },
+            [dbIdx]: { children: { [childIndex]: { children: { $set: nodes } } } },
         })
         return new_db_tree
     } catch (e) {
@@ -63,10 +219,10 @@ function updateDbChild({ db_tree, dbName, childType, gch }) {
  * @param {String} payload.dbName - Database name
  * @param {String} payload.tblName - Table name
  * @param {String} payload.childType Child type of the node to be updated. i.e. Columns or Triggers node
- * @param {Array} payload.gch -  Array of grand child nodes (column or trigger)
+ * @param {Array} payload.nodes -  Array of grand child nodes (column or trigger)
  * @returns {Array} new array of db_tree
  */
-function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
+function updateTblChild({ db_tree, dbName, tblName, nodes, childType }) {
     try {
         const dbIdx = getDbIdx({ dbName, db_tree })
         // idx of Tables node
@@ -91,7 +247,7 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
                         children: {
                             [tblIdx]: {
                                 children: {
-                                    [idxOfChild]: { children: { $set: gch } },
+                                    [idxOfChild]: { children: { $set: nodes } },
                                 },
                             },
                         },
@@ -484,6 +640,11 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
     return file_handle_txt !== query_txt
 }
 export default {
+    genNodeKey,
+    getDbName,
+    getTblName,
+    getChildNodeInfo,
+    genSchemaNode,
     updateDbChild,
     updateTblChild,
     queryTblOptsData,

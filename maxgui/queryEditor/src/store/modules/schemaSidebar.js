@@ -16,9 +16,7 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 
 const memStates = queryHelper.memStateCreator('schemaSidebar')
-function genNodeKey(scope) {
-    return scope.vue.$helpers.lodash.uniqueId('node_key_')
-}
+
 export default {
     namespaced: true,
     state: {
@@ -46,221 +44,45 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 const {
-                    SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
+                    SQL_NODE_TYPES: { SCHEMA },
                     SQL_SYS_SCHEMAS: SYS_S,
                 } = rootState.queryEditorConfig.config
+
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.queryPersisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
                 sql += ' ORDER BY SCHEMA_NAME;'
+
                 const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
+
                 let cmpList = []
-                let db_tree = []
-                if (res.data.data.attributes.results[0].data) {
-                    const dataRows = this.vue.$helpers.getObjectRows({
-                        columns: res.data.data.attributes.results[0].fields,
-                        rows: res.data.data.attributes.results[0].data,
+                let nodes = []
+                const dataRows = this.vue.$helpers.getObjectRows({
+                    columns: this.vue.$typy(res, 'data.data.attributes.results[0].fields')
+                        .safeArray,
+                    rows: this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray,
+                })
+                dataRows.forEach(row => {
+                    const childNode = queryHelper.genSchemaNode({
+                        data: row,
+                        type: SCHEMA,
+                        level: 0,
+                        name: row.SCHEMA_NAME,
+                        dbName: row.SCHEMA_NAME,
                     })
-                    dataRows.forEach(row => {
-                        db_tree.push({
-                            key: genNodeKey(this),
-                            type: SCHEMA,
-                            name: row.SCHEMA_NAME,
-                            id: row.SCHEMA_NAME,
-                            data: row,
-                            draggable: true,
-                            level: 0,
-                            isSys: SYS_S.includes(row.SCHEMA_NAME.toLowerCase()),
-                            children: [
-                                {
-                                    key: genNodeKey(this),
-                                    type: TABLES,
-                                    name: TABLES,
-                                    // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.${TABLES}`,
-                                    draggable: false,
-                                    level: 1,
-                                    children: [],
-                                },
-                                {
-                                    key: genNodeKey(this),
-                                    type: SPS,
-                                    name: SPS,
-                                    // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.${SPS}`,
-                                    draggable: false,
-                                    level: 1,
-                                    children: [],
-                                },
-                            ],
-                        })
-                        cmpList.push({
-                            label: row.SCHEMA_NAME,
-                            detail: 'SCHEMA',
-                            insertText: `\`${row.SCHEMA_NAME}\``,
-                            type: SCHEMA,
-                        })
+                    nodes.push(childNode)
+                    cmpList.push({
+                        label: row.SCHEMA_NAME,
+                        detail: 'SCHEMA',
+                        insertText: `${row.SCHEMA_NAME}`,
+                        type: SCHEMA,
                     })
-                }
-                return { db_tree, cmpList }
+                })
+                return { db_tree: nodes, cmpList }
             } catch (e) {
                 this.vue.$logger('store-schemaSidebar-getDbs').error(e)
-            }
-        },
-        /**
-         * @param {Object} node - node child of db node object. Either type TABLES or SPS
-         * @returns {Object} { dbName, gch, cmpList }
-         */
-        async getDbGrandChild({ rootState }, node) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                let dbName, grandChildNodeType, rowName, query
-                const {
-                    SQL_NODE_TYPES: { TABLES, TABLE, SPS, SP, COLS, TRIGGERS },
-                    SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.queryEditorConfig.config
-                // a db node id is formed by dbName.node_type So getting dbName by removing node type part from id.
-                let reg = `\\b.${node.type}\\b`
-                dbName = node.id.replace(new RegExp(reg, 'g'), '')
-                switch (node.type) {
-                    case TABLES:
-                        grandChildNodeType = TABLE
-                        rowName = 'TABLE_NAME'
-                        // eslint-disable-next-line vue/max-len
-                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
-                        break
-                    case SPS:
-                        grandChildNodeType = SP
-                        rowName = 'ROUTINE_NAME'
-                        // eslint-disable-next-line vue/max-len
-                        query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
-                        break
-                }
-                query += ` ORDER BY ${rowName};`
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: query,
-                })
-                const dataRows = this.vue.$helpers.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
-
-                let gch = []
-                let cmpList = []
-                dataRows.forEach(row => {
-                    let grandChildNode = {
-                        key: genNodeKey(this),
-                        type: grandChildNodeType,
-                        name: row[rowName],
-                        id: `${dbName}.${row[rowName]}`,
-                        draggable: true,
-                        data: row,
-                        level: 2,
-                        isSys: SYS_S.includes(dbName.toLowerCase()),
-                    }
-                    // For child node of TABLES, it has canBeHighlighted and children props
-                    if (node.type === TABLES) {
-                        grandChildNode.canBeHighlighted = true
-                        grandChildNode.children = [
-                            {
-                                key: genNodeKey(this),
-                                type: COLS,
-                                name: COLS,
-                                // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.${COLS}`,
-                                draggable: false,
-                                children: [],
-                                level: 3,
-                            },
-                            {
-                                key: genNodeKey(this),
-                                type: TRIGGERS,
-                                name: TRIGGERS,
-                                // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.${TRIGGERS}`,
-                                draggable: false,
-                                children: [],
-                                level: 3,
-                            },
-                        ]
-                    }
-                    gch.push(grandChildNode)
-                    cmpList.push({
-                        label: row[rowName],
-                        detail: grandChildNodeType.toUpperCase(),
-                        insertText: `\`${row[rowName]}\``,
-                        type: grandChildNodeType,
-                    })
-                })
-                return { dbName, gch, cmpList }
-            } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getDbGrandChild').error(e)
-            }
-        },
-        /**
-         * @param {Object} node - node object. Either type `Triggers` or `Columns`
-         * @returns {Object} { dbName, tblName, gch, cmpList }
-         */
-        async getTableGrandChild({ rootState }, node) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const dbName = node.id.split('.')[0]
-                const tblName = node.id.split('.')[1]
-                const {
-                    SQL_NODE_TYPES: { COLS, COL, TRIGGERS, TRIGGER },
-                    SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.queryEditorConfig.config
-                let grandChildNodeType, rowName, query
-                switch (node.type) {
-                    case TRIGGERS:
-                        grandChildNodeType = TRIGGER
-                        rowName = 'TRIGGER_NAME'
-                        // eslint-disable-next-line vue/max-len
-                        query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
-                        break
-                    case COLS:
-                        grandChildNodeType = COL
-                        rowName = 'COLUMN_NAME'
-                        // eslint-disable-next-line vue/max-len
-                        query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
-                        break
-                }
-                query += ` ORDER BY ${rowName};`
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: query,
-                })
-
-                const dataRows = this.vue.$helpers.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
-
-                let gch = []
-                let cmpList = []
-
-                dataRows.forEach(row => {
-                    gch.push({
-                        key: genNodeKey(this),
-                        type: grandChildNodeType,
-                        name: row[rowName],
-                        id: `${tblName}.${row[rowName]}`,
-                        draggable: true,
-                        data: row,
-                        level: 4,
-                        isSys: SYS_S.includes(dbName.toLowerCase()),
-                    })
-                    cmpList.push({
-                        label: row[rowName],
-                        detail: grandChildNodeType.toUpperCase(),
-                        insertText: row[rowName],
-                        type: grandChildNodeType,
-                    })
-                })
-                return { dbName, tblName, gch, cmpList }
-            } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getTableGrandChild').error(e)
             }
         },
         /**
@@ -269,41 +91,70 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getChildNodes({ dispatch, rootState }, { node, db_tree, cmpList }) {
+        async getChildNodes({ rootState }, { node, db_tree, cmpList }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
+            const {
+                SQL_NODE_TYPES: { TABLES, SPS, COLS, TRIGGERS },
+            } = rootState.queryEditorConfig.config
             try {
+                const dbName = queryHelper.getDbName(node)
+                const tblName = queryHelper.getTblName(node)
                 const {
-                    TABLES,
-                    SPS,
-                    COLS,
-                    TRIGGERS,
-                } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
+                    type: childType,
+                    level: childLevel,
+                    colName,
+                    sql,
+                } = queryHelper.getChildNodeInfo(node)
+
+                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                    sql,
+                })
+                const dataRows = this.vue.$helpers.getObjectRows({
+                    columns: this.vue.$typy(res, 'data.data.attributes.results[0].fields')
+                        .safeArray,
+                    rows: this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray,
+                })
+
+                let nodes = []
+                let partCmpList = []
+
+                dataRows.forEach(row => {
+                    const childNode = queryHelper.genSchemaNode({
+                        data: row,
+                        type: childType,
+                        level: childLevel,
+                        name: row[colName],
+                        dbName,
+                        tblName,
+                    })
+                    nodes.push(childNode)
+                    partCmpList.push({
+                        label: row[colName],
+                        detail: childType.toUpperCase(),
+                        insertText: row[colName],
+                        type: childType,
+                    })
+                })
+                //TODO: DRY these, so VIEWS and VIEW nodes can be updated
                 switch (node.type) {
                     case TABLES:
                     case SPS: {
-                        const { gch, cmpList: partCmpList, dbName } = await dispatch(
-                            'getDbGrandChild',
-                            node
-                        )
                         const new_db_tree = queryHelper.updateDbChild({
                             db_tree,
                             dbName,
                             childType: node.type,
-                            gch,
+                            nodes,
                         })
                         return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
                     }
                     case COLS:
                     case TRIGGERS: {
-                        const { gch, cmpList: partCmpList, dbName, tblName } = await dispatch(
-                            'getTableGrandChild',
-                            node
-                        )
                         const new_db_tree = queryHelper.updateTblChild({
                             db_tree,
                             dbName,
                             tblName,
                             childType: node.type,
-                            gch,
+                            nodes,
                         })
                         return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
                     }
