@@ -1,21 +1,76 @@
 <template>
-    <sidebar
-        :disabled="isSidebarDisabled"
-        :isCollapsed="is_sidebar_collapsed"
-        :hasConn="hasConn"
-        :isLoading="getLoadingDbTree"
-        :searchSchema="search_schema"
-        @set-search-schema="SET_SEARCH_SCHEMA({ payload: $event, id: active_wke_id })"
-        @reload-schemas="fetchSchemas"
-        @toggle-sidebar="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
-        @get-node-data="handleGetNodeData"
-        @load-children="handleLoadChildren"
-        @use-db="useDb"
-        @alter-tbl="onAlterTable"
-        @drop-action="onDropAction"
-        @truncate-tbl="onTruncateTbl"
-        v-on="$listeners"
-    />
+    <div
+        class="sidebar-wrapper d-flex flex-column fill-height mxs-color-helper border-right-table-border"
+        :class="{ 'not-allowed': isSidebarDisabled }"
+    >
+        <div class="sidebar-toolbar" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
+            <div class="d-flex align-center justify-center">
+                <span
+                    v-if="!is_sidebar_collapsed"
+                    class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-uppercase"
+                >
+                    {{ $mxs_t('schemas') }}
+                </span>
+                <mxs-tooltip-btn
+                    v-if="!is_sidebar_collapsed"
+                    btnClass="reload-schemas"
+                    icon
+                    small
+                    :disabled="reloadDisabled"
+                    @click="fetchSchemas"
+                >
+                    <template v-slot:btn-content>
+                        <v-icon size="12" :color="reloadDisabled ? '' : 'deep-ocean'">
+                            $vuetify.icons.mxs_reload
+                        </v-icon>
+                    </template>
+                    {{ $mxs_t('reload') }}
+                </mxs-tooltip-btn>
+                <mxs-tooltip-btn
+                    btnClass="toggle-sidebar"
+                    icon
+                    small
+                    @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
+                >
+                    <template v-slot:btn-content>
+                        <v-icon
+                            size="22"
+                            color="deep-ocean"
+                            class="collapse-icon"
+                            :class="[is_sidebar_collapsed ? 'rotate-right' : 'rotate-left']"
+                        >
+                            mdi-chevron-double-down
+                        </v-icon>
+                    </template>
+                    {{ is_sidebar_collapsed ? $mxs_t('expand') : $mxs_t('collapse') }}
+                </mxs-tooltip-btn>
+            </div>
+            <v-text-field
+                v-if="!is_sidebar_collapsed"
+                v-model="filterTxt"
+                name="searchSchema"
+                dense
+                outlined
+                height="28"
+                class="vuetify-input--override filter-objects"
+                :placeholder="$mxs_t('filterSchemaObjects')"
+                :disabled="!hasConn"
+            />
+        </div>
+        <keep-alive>
+            <schema-tree-ctr
+                v-show="!is_sidebar_collapsed"
+                class="schema-list-ctr"
+                @get-node-data="handleGetNodeData"
+                @load-children="handleLoadChildren"
+                @use-db="useDb"
+                @alter-tbl="onAlterTable"
+                @drop-action="onDropAction"
+                @truncate-tbl="onTruncateTbl"
+                v-on="$listeners"
+            />
+        </keep-alive>
+    </div>
 </template>
 
 <script>
@@ -38,10 +93,10 @@
  * update:execSqlDlg?: (object)
  */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
-import Sidebar from './Sidebar.vue'
+import SchemaTreeCtr from './SchemaTreeCtr.vue'
 export default {
     name: 'sidebar-ctr',
-    components: { Sidebar },
+    components: { SchemaTreeCtr },
     props: {
         execSqlDlg: { type: Object, required: true },
     },
@@ -67,6 +122,17 @@ export default {
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
+        filterTxt: {
+            get() {
+                return this.search_schema
+            },
+            set(v) {
+                this.SET_SEARCH_SCHEMA({ payload: v, id: this.active_wke_id })
+            },
+        },
+        reloadDisabled() {
+            return !this.hasConn || this.getLoadingDbTree
+        },
         isSidebarDisabled() {
             return this.getIsConnBusy && !this.getLoadingDbTree
         },
@@ -187,3 +253,29 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.sidebar-wrapper {
+    width: 100%;
+    .sidebar-toolbar {
+        height: 60px;
+        padding-top: 2px !important;
+        &__title {
+            font-size: 12px;
+            margin-right: auto;
+        }
+    }
+    .schema-list-ctr {
+        font-size: 12px;
+        overflow-y: auto;
+        z-index: 1;
+    }
+}
+</style>
+
+<style lang="scss">
+.vuetify-input--override.filter-objects {
+    input {
+        font-size: 12px !important;
+    }
+}
+</style>

@@ -48,12 +48,12 @@ describe('sidebar-ctr', () => {
         const onDropActionParam = { id: dummyNode.id, type: dummyNode.type }
         const onTruncateTblParam = 't1'
         Object.keys(fnEvtMap).forEach(key => {
-            it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar`, () => {
+            it(`Should call ${key} if ${fnEvtMap[key]} is emitted from schema-tree-ctr`, () => {
                 const spyFn = sinon.spy(SidebarCtr.methods, key)
                 wrapper = mountFactory({
                     computed: { ...mockShowingDbListTree() },
                 })
-                const dbListTree = wrapper.findComponent({ name: 'sidebar' })
+                const dbListTree = wrapper.findComponent({ name: 'schema-tree-ctr' })
                 let param
                 switch (key) {
                     case 'handleGetNodeData':
@@ -80,18 +80,6 @@ describe('sidebar-ctr', () => {
         })
     })
 
-    it(`Should pass accurate data to sidebar via props`, () => {
-        wrapper = mountFactory()
-        const { disabled, isCollapsed, hasConn, isLoading, searchSchema } = wrapper.findComponent({
-            name: 'sidebar',
-        }).vm.$props
-        expect(disabled).to.be.equals(wrapper.vm.isSidebarDisabled)
-        expect(isCollapsed).to.be.equals(wrapper.vm.is_sidebar_collapsed)
-        expect(hasConn).to.be.equals(wrapper.vm.hasConn)
-        expect(isLoading).to.be.equals(wrapper.vm.getLoadingDbTree)
-        expect(searchSchema).to.be.deep.equals(wrapper.vm.search_schema)
-    })
-
     describe(`computed properties tests`, () => {
         let wrapper
         it(`Should return accurate value for hasConn`, () => {
@@ -103,6 +91,24 @@ describe('sidebar-ctr', () => {
                 computed: { ...mockShowingDbListTree() },
             })
             expect(wrapper.vm.hasConn).to.be.true
+        })
+        it(`Should return accurate value for reloadDisabled`, async () => {
+            // has connection
+            wrapper = mountFactory({
+                computed: {
+                    hasConn: () => true,
+                },
+            })
+            expect(wrapper.vm.reloadDisabled).to.be.false
+            // have no connection and still loading for data
+            await wrapper.setProps({ hasConn: false, isLoading: true })
+            wrapper = mountFactory({
+                computed: {
+                    hasConn: () => false,
+                    getLoadingDbTree: () => true,
+                },
+            })
+            expect(wrapper.vm.reloadDisabled).to.be.true
         })
     })
 
@@ -225,6 +231,48 @@ describe('sidebar-ctr', () => {
                 id: mockActive_wke_id,
             })
             wrapper.vm.PATCH_EXE_STMT_RESULT_MAP.restore()
+        })
+    })
+
+    describe(`Button tests`, () => {
+        it(`Should disable reload-schemas button`, () => {
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { reloadDisabled: () => true },
+            })
+            expect(wrapper.find('.reload-schemas').attributes().disabled).to.be.equals('disabled')
+        })
+        it(`Should disable filter-objects input`, () => {
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { reloadDisabled: () => true },
+            })
+            expect(
+                wrapper
+                    .find('.filter-objects')
+                    .find('input')
+                    .attributes().disabled
+            ).to.be.equals('disabled')
+        })
+
+        const btnHandlerMap = {
+            'reload-schemas': 'fetchSchemas',
+            'toggle-sidebar': 'SET_IS_SIDEBAR_COLLAPSED',
+        }
+        Object.keys(btnHandlerMap).forEach(btn => {
+            it(`Should call ${btnHandlerMap[btn]} when ${btn} button is clicked`, async () => {
+                let callCount = 0
+                wrapper = mountFactory({
+                    shallow: false,
+                    computed: { reloadDisabled: () => false, is_sidebar_collapsed: () => false },
+                    methods: {
+                        [btnHandlerMap[btn]]: () => callCount++,
+                    },
+                })
+                await wrapper.find(`.${btn}`).trigger('click')
+                console.log('callCount', callCount)
+                expect(callCount).to.be.equals(1)
+            })
         })
     })
 })
