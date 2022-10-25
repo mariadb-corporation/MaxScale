@@ -90,6 +90,27 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
 
     MXS_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(gwbuf_length(pBuf)));
 
+    if (m_mode == Mode::Kill)
+    {
+        // The KILL commands are still being executed, queue the query for later execution. This isn't the
+        // neatest solution but it's simple enough of a fix.
+        //
+        // TODO: This doesn't work if the client sends multiple queries before waiting for their results.
+        // If/when support for this is added for the smartrouter, the query should be placed into a queue and
+        // the queue should be processed when the KILL commands have finished.
+        mxs::Downstream down;
+        down.instance = (mxs_filter*)&m_router;
+        down.routeQuery = (mxs::DOWNSTREAMFUNC)SmartRouter::routeQuery;
+        down.session = (mxs_filter_session*)static_cast<MXS_ROUTER_SESSION*>(this);
+
+        session_delay_routing(m_pSession, down, pBuf, 0);
+        return 1;
+    }
+    else if (m_mode == Mode::KillDone)
+    {
+        m_mode = Mode::Idle;
+    }
+
     if (expecting_request_packets())
     {
         ret = write_split_packets(pBuf);
@@ -218,15 +239,21 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
             // If the query is still going on, an error packet is received, else the
             // whole query might play out (and be discarded).
             kill_all_others(cluster);
+            m_mode = Mode::Kill;
         }
-
-        m_mode = Mode::CollectResults;
+        else
+        {
+            m_mode = Mode::CollectResults;
+        }
     }
 
     if (very_last_response_packet)
     {
         will_reply = true;
-        m_mode = Mode::Idle;
+        if (m_mode != Mode::Kill)
+        {
+            m_mode = Mode::Idle;
+        }
         mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
         if (m_pDelayed_packet)
         {
@@ -375,7 +402,10 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
     auto protocol = static_cast<MariaDBClientConnection*>(m_pSession->client_connection());
-    protocol->mxs_mysql_execute_kill(m_pSession->id(), KT_QUERY);
+    protocol->mxs_mysql_execute_kill(m_pSession->id(), KT_QUERY, [this](){
+        mxb_assert(m_mode == Mode::Kill);
+        m_mode = Mode::KillDone;
+    });
 }
 
 bool SmartRouterSession::handleError(mxs::ErrorType type,

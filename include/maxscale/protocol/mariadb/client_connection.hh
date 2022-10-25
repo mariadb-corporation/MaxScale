@@ -60,10 +60,11 @@ public:
      *
      * @param target_id The session ID in MaxScale to kill
      * @param type      The type of the KILL to perform
+     * @param cb        Callback that is called once the KILL is complete
      *
      * @see kill_type_t
      */
-    void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
+    void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type, std::function<void()> cb);
 
     bool in_routing_state() const;
 
@@ -117,13 +118,14 @@ private:
     SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
     void          add_local_client(LocalClient* client);
     bool          have_local_clients();
-    void          kill_complete(bool send_ok, LocalClient* client);
-    void          maybe_send_kill_response(bool send_ok);
+    void          kill_complete(const std::function<void()>& cb, LocalClient* client);
+    void          maybe_send_kill_response(const std::function<void()>& cb);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
-    void execute_kill(std::shared_ptr<KillInfo> info, bool send_ok);
+    void execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> cb);
+    void send_ok_for_kill();
     void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;

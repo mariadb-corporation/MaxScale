@@ -1729,12 +1729,12 @@ GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int err
     return buf;
 }
 
-void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool send_ok)
+void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> cb)
 {
     MXS_SESSION* ref = session_get_ref(m_session);
     auto origin = mxs::RoutingWorker::get_current();
 
-    auto func = [this, info, ref, origin, send_ok]() {
+    auto func = [this, info, ref, origin, cb = std::move(cb)]() {
         // First, gather the list of servers where the KILL should be sent
         mxs::RoutingWorker::execute_concurrently(
             [info, ref]() {
@@ -1746,7 +1746,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
 
         // Then move execution back to the original worker to keep all connections on the same thread
         origin->call(
-            [this, info, ref, origin, send_ok]() {
+            [this, info, ref, origin, cb = std::move(cb)]() {
             MXS_SESSION::Scope scope(m_session);
 
             for (const auto& a : info->targets)
@@ -1756,15 +1756,15 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     if (client->connect())
                     {
                         client->set_notify(
-                            [this, send_ok, client](
+                            [this, cb, client](
                                 GWBUF* buf, const mxs::ReplyRoute& route, const mxs::Reply& reply){
                             MXB_INFO("Reply to KILL from '%s': %s",
                                      route.empty() ? "<none>" : route.front()->target()->name(),
                                      reply.error() ? reply.error().message().c_str() : "OK");
-                            kill_complete(send_ok, client);
-                        }, [this, send_ok, client](GWBUF* buf, mxs::Target* tgt, const mxs::Reply& reply){
+                            kill_complete(cb, client);
+                        }, [this, cb, client](GWBUF* buf, mxs::Target* tgt, const mxs::Reply& reply){
                             MXB_INFO("KILL error on '%s'", tgt->name());
-                            kill_complete(send_ok, client);
+                            kill_complete(cb, client);
                         });
 
                         // TODO: There can be multiple connections to the same server. Currently only one
@@ -1783,7 +1783,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
             }
 
             // If we ended up not sending any KILL commands, the OK packet can be generated immediately.
-            maybe_send_kill_response(send_ok);
+            maybe_send_kill_response(cb);
 
             // The reference can now be freed as the execution is back on the worker that owns it
             session_put_ref(ref);
@@ -1802,11 +1802,12 @@ std::string kill_query_prefix(kill_type_t type)
     return ss.str();
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type,
+                                                     std::function<void()> cb)
 {
     auto str = kill_query_prefix(type);
     auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
-    execute_kill(info, false);
+    execute_kill(info, std::move(cb));
 }
 
 /**
@@ -1821,7 +1822,7 @@ void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
 {
     auto str = kill_query_prefix(type);
     auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, keep_protocol_thread_id);
-    execute_kill(info, true);
+    execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
 void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t type)
@@ -1831,7 +1832,18 @@ void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t ty
     str += user;
 
     auto info = std::make_shared<UserKillInfo>(user, str, m_session);
-    execute_kill(info, true);
+    execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
+}
+
+void MariaDBClientConnection::send_ok_for_kill()
+{
+    // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
+    // already closed when this callback is called and an error about a write to a
+    // closed DCB would be logged.
+    if (!m_dcb->is_closed())
+    {
+        write_ok_packet(1);
+    }
 }
 
 std::string MariaDBClientConnection::current_db() const
@@ -2538,7 +2550,7 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
     m_local_clients.emplace_back(client);
 }
 
-void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
+void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, LocalClient* client)
 {
     // This needs to be executed once we return from the clientReply or the handleError callback of the
     // LocalClient. In 6.4 this can be changed to use Worker::lcall to make it execute right after the
@@ -2551,26 +2563,19 @@ void MariaDBClientConnection::kill_complete(bool send_ok, LocalClient* client)
             std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
             return c.get() == client;
         }), m_local_clients.end());
-        maybe_send_kill_response(send_ok);
+        maybe_send_kill_response(cb);
         session_put_ref(ref);
     };
 
     m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED);
 }
 
-void MariaDBClientConnection::maybe_send_kill_response(bool send_ok)
+void MariaDBClientConnection::maybe_send_kill_response(const std::function<void()>& cb)
 {
     if (!have_local_clients())
     {
-        // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
-        // already closed when this callback is called and an error about a write to a
-        // closed DCB would be logged.
-        if (!m_dcb->is_closed() && send_ok)
-        {
-            write_ok_packet(1);
-        }
-
         MXS_INFO("All KILL commands finished");
+        cb();
     }
 }
 

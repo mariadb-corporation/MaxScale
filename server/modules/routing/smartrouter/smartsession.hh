@@ -46,7 +46,7 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
-    enum class Mode {Idle, Query, MeasureQuery, CollectResults};
+    enum class Mode {Idle, Query, MeasureQuery, CollectResults, Kill, KillDone};
 
     /** struct Cluster represents a cluster of mariadb servers as a Maxscale internal Server.
      *  TODO In the next iteration a directly callable "Thing" should be implemented (Router, Backend
