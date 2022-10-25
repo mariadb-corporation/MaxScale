@@ -36,105 +36,26 @@ export default {
             await dispatch('queryConn/updateActiveDb', {}, { root: true })
         },
         /**
-         *
-         * @param {Object} payload.state  query module state
-         * @returns {Object} { dbTree, cmpList }
-         */
-        async getDbs({ rootState }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const {
-                    SQL_NODE_TYPES: { SCHEMA },
-                    SQL_SYS_SCHEMAS: SYS_S,
-                } = rootState.queryEditorConfig.config
-
-                let sql = 'SELECT * FROM information_schema.SCHEMATA'
-                if (!rootState.queryPersisted.query_show_sys_schemas_flag)
-                    sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
-                sql += ' ORDER BY SCHEMA_NAME;'
-
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                })
-
-                let cmpList = []
-                let nodes = []
-                const dataRows = this.vue.$helpers.getObjectRows({
-                    columns: this.vue.$typy(res, 'data.data.attributes.results[0].fields')
-                        .safeArray,
-                    rows: this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray,
-                })
-                dataRows.forEach(row => {
-                    const childNode = queryHelper.genSchemaNode({
-                        data: row,
-                        type: SCHEMA,
-                        level: 0,
-                        name: row.SCHEMA_NAME,
-                        dbName: row.SCHEMA_NAME,
-                    })
-                    nodes.push(childNode)
-                    cmpList.push({
-                        label: row.SCHEMA_NAME,
-                        detail: 'SCHEMA',
-                        insertText: `${row.SCHEMA_NAME}`,
-                        type: SCHEMA,
-                    })
-                })
-                return { db_tree: nodes, cmpList }
-            } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getDbs').error(e)
-            }
-        },
-        /**
          * @param {Object} payload.node - A node object having children nodes
          * @param {Array} payload.db_tree - Array of tree node to be updated
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getChildNodes({ rootState }, { node, db_tree, cmpList }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+        async getNewDbTree({ rootState }, { node, db_tree, cmpList }) {
             const {
                 SQL_NODE_TYPES: { TABLES, SPS, COLS, TRIGGERS },
             } = rootState.queryEditorConfig.config
             try {
                 const dbName = queryHelper.getDbName(node)
                 const tblName = queryHelper.getTblName(node)
-                const {
-                    type: childType,
-                    level: childLevel,
-                    colName,
-                    sql,
-                } = queryHelper.getChildNodeInfo(node)
 
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                })
-                const dataRows = this.vue.$helpers.getObjectRows({
-                    columns: this.vue.$typy(res, 'data.data.attributes.results[0].fields')
-                        .safeArray,
-                    rows: this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray,
+                const { nodes, cmpList: partCmpList } = await queryHelper.getNodeData({
+                    scope: this,
+                    node,
+                    dbName,
+                    tblName,
                 })
 
-                let nodes = []
-                let partCmpList = []
-
-                dataRows.forEach(row => {
-                    const childNode = queryHelper.genSchemaNode({
-                        data: row,
-                        type: childType,
-                        level: childLevel,
-                        name: row[colName],
-                        dbName,
-                        tblName,
-                    })
-                    nodes.push(childNode)
-                    partCmpList.push({
-                        label: row[colName],
-                        detail: childType.toUpperCase(),
-                        insertText: row[colName],
-                        type: childType,
-                    })
-                })
                 //TODO: DRY these, so VIEWS and VIEW nodes can be updated
                 switch (node.type) {
                     case TABLES:
@@ -160,14 +81,14 @@ export default {
                     }
                 }
             } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getChildNodes').error(e)
+                this.vue.$logger('store-schemaSidebar-getNewDbTree').error(e)
                 return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
         async loadChildNodes({ commit, dispatch, rootState, getters }, node) {
             const active_wke_id = rootState.wke.active_wke_id
             try {
-                const { new_db_tree, new_cmp_list } = await dispatch('getChildNodes', {
+                const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
                     node,
                     db_tree: getters.getDbTreeData,
                     cmpList: getters.getDbCmplList,
@@ -187,7 +108,6 @@ export default {
             const active_wke_id = rootState.wke.active_wke_id
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
-
             try {
                 commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
@@ -195,9 +115,12 @@ export default {
                         loading_db_tree: true,
                     },
                 })
-                const { db_tree, cmpList } = await dispatch('getDbs')
-                if (db_tree.length) {
-                    let tree = db_tree
+                const { nodes, cmpList } = await queryHelper.getNodeData({
+                    scope: this,
+                    isRoot: true,
+                })
+                if (nodes.length) {
+                    let tree = nodes
                     let completionList = cmpList
                     const {
                         TABLES,
@@ -208,7 +131,7 @@ export default {
                     const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
                     for (const node of expanded_nodes) {
                         if (nodesHaveChild.includes(node.type)) {
-                            const { new_db_tree, new_cmp_list } = await dispatch('getChildNodes', {
+                            const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
                                 node,
                                 db_tree: tree,
                                 cmpList: completionList,
@@ -300,6 +223,14 @@ export default {
     },
     getters: {
         // sidebar getters
+        getDbSql: (state, getters, rootState) => {
+            const { SQL_SYS_SCHEMAS: SYS_S } = rootState.queryEditorConfig.config
+            let sql = 'SELECT * FROM information_schema.SCHEMATA'
+            if (!rootState.queryPersisted.query_show_sys_schemas_flag)
+                sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
+            sql += ' ORDER BY SCHEMA_NAME;'
+            return sql
+        },
         getCurrDbTree: (state, getters, rootState) =>
             state.db_tree_map[rootState.wke.active_wke_id] || {},
         getActivePrvwTblNode: (state, getters) => {

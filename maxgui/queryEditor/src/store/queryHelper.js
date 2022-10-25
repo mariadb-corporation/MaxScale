@@ -28,14 +28,27 @@ const getDbName = node => node.id.split('.')[0]
  */
 const getTblName = node => node.id.split('.')[1]
 
+/**
+ * @private
+ * @returns {String} node key
+ */
 const genNodeKey = () => lodash.uniqueId('node_key_')
 /**
- * @public
- * @param {Object} node - TABLES || SPS || TRIGGERS || COLS node
+ * @private
+ * @param {Boolean} param.isRoot - If the node is a SCHEMA node
+ * @param {Object} param.node - TABLES || SPS || TRIGGERS || COLS node
  * @returns {Object} { type, level, colName, sql }
  */
-function getChildNodeInfo(node) {
-    const { TABLES, TABLE, SPS, SP, TRIGGERS, TRIGGER, COLS, COL } = SQL_NODE_TYPES
+function getNodeInfo({ scope, node, isRoot }) {
+    const { SCHEMA, TABLES, TABLE, SPS, SP, TRIGGERS, TRIGGER, COLS, COL } = SQL_NODE_TYPES
+    if (isRoot)
+        return {
+            type: SCHEMA,
+            level: 0,
+            colName: 'SCHEMA_NAME',
+            sql: scope.getters['schemaSidebar/getDbSql'],
+        }
+
     const dbName = getDbName(node)
     let type = '',
         level = 0,
@@ -82,17 +95,17 @@ function getChildNodeInfo(node) {
     return { type, level, colName, sql: `SELECT ${cols} ${from} ${cond} ORDER BY ${colName};` }
 }
 /**
- * @public
+ * @private
  * @param {Object} param.data - data of node
- * @param {Object} param.type - type of node to be generated
- * @param {Object} param.level - hierarchy level of node to be generated
- * @param {Object} param.name - name of the node
- * @param {Object} param.dbName - the name of the db to which the node to be generated belongs
- * @param {Object} param.tblName - the name of the table to which the node to be generated belongs. Required when
+ * @param {String} param.type - type of node to be generated
+ * @param {Number} param.level - hierarchy level of node to be generated
+ * @param {String} param.name - name of the node
+ * @param {String} param.dbName - the name of the db to which the node to be generated belongs
+ * @param {String} param.tblName - the name of the table to which the node to be generated belongs. Required when
  * param.type === TRIGGER or COL
  * @returns {Object}  schema node
  */
-function genSchemaNode({ data, type, level, name, dbName, tblName }) {
+function genNode({ data, type, level, name, dbName, tblName }) {
     const { SCHEMA, TABLES, TABLE, SPS, SP, TRIGGER, COL, COLS, TRIGGERS } = SQL_NODE_TYPES
     let node = {
         key: genNodeKey(),
@@ -130,7 +143,7 @@ function genSchemaNode({ data, type, level, name, dbName, tblName }) {
                 id: `${dbName}.${node.name}.${COLS}`, // only use to identify active node
                 draggable: false,
                 children: [],
-                level: level + 1,
+                level: node.level + 1,
             },
             {
                 key: genNodeKey(),
@@ -139,7 +152,7 @@ function genSchemaNode({ data, type, level, name, dbName, tblName }) {
                 id: `${dbName}.${node.name}.${TRIGGERS}`, // only use to identify active node
                 draggable: false,
                 children: [],
-                level: level + 1,
+                level: node.level + 1,
             },
         ]
     }
@@ -169,6 +182,53 @@ function genSchemaNode({ data, type, level, name, dbName, tblName }) {
     return node
 }
 
+/**
+ * @public
+ * @param {Object} param.scope - vuex scope
+ * @param {Boolean} param.isRoot - if fetching root node, other params won't be used
+ * @param {Object} param.node -  A node object having children nodes
+ * @param {String} param.dbName - the name of the db to which the node to be fetched belongs
+ * @param {String} param.tblName - the name of the table to which the node to be fetched belongs.
+ * @returns {Object} - return {nodes, cmpList}.
+ */
+async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
+    const conn_id = scope.state.queryConn.active_sql_conn.id
+    const {
+        vue: { $queryHttp, $helpers, $typy },
+    } = scope
+
+    const { type, level, colName, sql } = getNodeInfo({ scope, isRoot, node })
+
+    const res = await $queryHttp.post(`/sql/${conn_id}/queries`, {
+        sql,
+    })
+    const data = $helpers.getObjectRows({
+        columns: $typy(res, 'data.data.attributes.results[0].fields').safeArray,
+        rows: $typy(res, 'data.data.attributes.results[0].data').safeArray,
+    })
+    return data.reduce(
+        (acc, row) => {
+            acc.nodes.push(
+                genNode({
+                    data: row,
+                    type,
+                    level,
+                    name: row[colName],
+                    dbName: isRoot ? row[colName] : dbName,
+                    tblName,
+                })
+            )
+            acc.cmpList.push({
+                label: row[colName],
+                detail: type.toUpperCase(),
+                insertText: row[colName],
+                type,
+            })
+            return acc
+        },
+        { nodes: [], cmpList: [] }
+    )
+}
 /**
  * @private
  * @param {String} payload.dbName - Database name to be found
@@ -640,11 +700,9 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
     return file_handle_txt !== query_txt
 }
 export default {
-    genNodeKey,
     getDbName,
     getTblName,
-    getChildNodeInfo,
-    genSchemaNode,
+    getNodeData,
     updateDbChild,
     updateTblChild,
     queryTblOptsData,
