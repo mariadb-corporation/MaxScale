@@ -32,23 +32,6 @@
 
 using mxb::sv_case_eq;
 
-namespace
-{
-std::atomic_int next_thread_id {0};
-thread_local int current_thread_id = -1;
-}
-
-
-inline int get_current_thread_id()
-{
-    if (current_thread_id == -1)
-    {
-        current_thread_id = next_thread_id.fetch_add(1);
-    }
-
-    return current_thread_id;
-}
-
 static const char KEY_ATTRIBUTE[] = "attribute";
 static const char KEY_OP[] = "op";
 static const char KEY_STORE[] = "store";
@@ -93,8 +76,8 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
 
 static bool cache_rule_op_get(const char* s, cache_rule_op_t* op);
 
-static bool        cache_rule_compare(CACHE_RULE* rule, int thread_id, const std::string_view& value);
-static bool        cache_rule_compare_n(CACHE_RULE* rule, int thread_id, const char* value, size_t length);
+static bool        cache_rule_compare(CACHE_RULE* rule, const std::string_view& value);
+static bool        cache_rule_compare_n(CACHE_RULE* rule, const char* value, size_t length);
 static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                             cache_rule_op_t op,
                                             const char* value,
@@ -120,38 +103,31 @@ static CACHE_RULE* cache_rule_create(cache_rule_attribute_t attribute,
                                      const char* value,
                                      uint32_t debug);
 static bool cache_rule_matches_column_regexp(CACHE_RULE* rule,
-                                             int thread_id,
                                              const char* default_db,
                                              const GWBUF* query);
 static bool cache_rule_matches_column_simple(CACHE_RULE* rule,
                                              const char* default_db,
                                              const GWBUF* query);
 static bool cache_rule_matches_column(CACHE_RULE* rule,
-                                      int thread_id,
                                       const char* default_db,
                                       const GWBUF* query);
 static bool cache_rule_matches_database(CACHE_RULE* rule,
-                                        int thread_id,
                                         const char* default_db,
                                         const GWBUF* query);
 static bool cache_rule_matches_query(CACHE_RULE* rule,
-                                     int thread_id,
                                      const char* default_db,
                                      const GWBUF* query);
 static bool cache_rule_matches_table(CACHE_RULE* rule,
-                                     int thread_id,
                                      const char* default_db,
                                      const GWBUF* query);
 static bool cache_rule_matches_table_regexp(CACHE_RULE* rule,
-                                            int thread_id,
                                             const char* default_db,
                                             const GWBUF* query);
 static bool cache_rule_matches_table_simple(CACHE_RULE* rule,
                                             const char* default_db,
                                             const GWBUF* query);
-static bool cache_rule_matches_user(CACHE_RULE* rule, int thread_id, const char* user);
+static bool cache_rule_matches_user(CACHE_RULE* rule, const char* user);
 static bool cache_rule_matches(CACHE_RULE* rule,
-                               int thread_id,
                                const char* default_db,
                                const GWBUF* query);
 
@@ -172,9 +148,6 @@ static bool cache_rules_parse_array(CACHE_RULES * self, json_t* store, const cha
                                     cache_rules_parse_element_t);
 static bool cache_rules_parse_store_element(CACHE_RULES* self, json_t* object, size_t index);
 static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, size_t index);
-
-static pcre2_match_data** alloc_match_datas(int count, pcre2_code* code);
-static void               free_match_datas(int count, pcre2_match_data** datas);
 
 /*
  * API begin
@@ -344,7 +317,7 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules)
     MXB_FREE(ppRules);
 }
 
-bool cache_rules_should_store(CACHE_RULES* self, int thread_id, const char* default_db, const GWBUF* query)
+bool cache_rules_should_store(CACHE_RULES* self, const char* default_db, const GWBUF* query)
 {
     bool should_store = false;
 
@@ -354,7 +327,7 @@ bool cache_rules_should_store(CACHE_RULES* self, int thread_id, const char* defa
     {
         while (rule && !should_store)
         {
-            should_store = cache_rule_matches(rule, thread_id, default_db, query);
+            should_store = cache_rule_matches(rule, default_db, query);
             rule = rule->next;
         }
     }
@@ -366,7 +339,7 @@ bool cache_rules_should_store(CACHE_RULES* self, int thread_id, const char* defa
     return should_store;
 }
 
-bool cache_rules_should_use(CACHE_RULES* self, int thread_id, const MXS_SESSION* session)
+bool cache_rules_should_use(CACHE_RULES* self, const MXS_SESSION* session)
 {
     bool should_use = false;
 
@@ -381,7 +354,7 @@ bool cache_rules_should_use(CACHE_RULES* self, int thread_id, const MXS_SESSION*
 
         while (rule && !should_use)
         {
-            should_use = cache_rule_matches_user(rule, thread_id, account);
+            should_use = cache_rule_matches_user(rule, account);
             rule = rule->next;
         }
     }
@@ -500,12 +473,12 @@ const json_t* CacheRules::json() const
 
 bool CacheRules::should_store(const char* zDefault_db, const GWBUF* pQuery) const
 {
-    return cache_rules_should_store(m_pRules, get_current_thread_id(), zDefault_db, pQuery);
+    return cache_rules_should_store(m_pRules, zDefault_db, pQuery);
 }
 
 bool CacheRules::should_use(const MXS_SESSION* pSession) const
 {
-    return cache_rules_should_use(m_pRules, get_current_thread_id(), pSession);
+    return cache_rules_should_use(m_pRules, pSession);
 }
 
 /*
@@ -611,37 +584,21 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
         // complained about it already.
         pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
 
-        int n_threads = config_threadcount();
-        mxb_assert(n_threads > 0);
+        rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+        char* value = MXB_STRDUP(cvalue);
 
-        pcre2_match_data** datas = alloc_match_datas(n_threads, code);
-
-        if (datas)
+        if (rule && value)
         {
-            rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
-            char* value = MXB_STRDUP(cvalue);
-
-            if (rule && value)
-            {
-                rule->attribute = attribute;
-                rule->op = op;
-                rule->value = value;
-                rule->regexp.code = code;
-                rule->regexp.datas = datas;
-                rule->debug = debug;
-            }
-            else
-            {
-                MXB_FREE(value);
-                MXB_FREE(rule);
-                free_match_datas(n_threads, datas);
-                pcre2_code_free(code);
-            }
+            rule->attribute = attribute;
+            rule->op = op;
+            rule->value = value;
+            rule->regexp.code = code;
+            rule->debug = debug;
         }
         else
         {
-            MXB_ERROR("PCRE2 match data creation failed. Most likely due to a "
-                      "lack of available memory.");
+            MXB_FREE(value);
+            MXB_FREE(rule);
             pcre2_code_free(code);
         }
     }
@@ -1076,7 +1033,6 @@ static void cache_rule_free(CACHE_RULE* rule)
         }
         else if ((rule->op == CACHE_OP_LIKE) || (rule->op == CACHE_OP_UNLIKE))
         {
-            free_match_datas(config_threadcount(), rule->regexp.datas);
             pcre2_code_free(rule->regexp.code);
         }
 
@@ -1088,18 +1044,17 @@ static void cache_rule_free(CACHE_RULE* rule)
  * Check whether a value matches a rule.
  *
  * @param self       The rule object.
- * @param thread_id  The thread id of the calling thread.
  * @param value      The value to check.
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const std::string_view& value)
+static bool cache_rule_compare(CACHE_RULE* self, const std::string_view& value)
 {
     bool rv;
 
     if (!value.empty())
     {
-        rv = cache_rule_compare_n(self, thread_id, value.data(), value.length());
+        rv = cache_rule_compare_n(self, value.data(), value.length());
     }
     else
     {
@@ -1120,13 +1075,12 @@ static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const std::strin
  * Check whether a value matches a rule.
  *
  * @param self       The rule object.
- * @param thread_id  The thread id of the calling thread.
  * @param value      The value to check.
  * @param len        The length of value.
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare_n(CACHE_RULE* self, int thread_id, const char* value, size_t length)
+static bool cache_rule_compare_n(CACHE_RULE* self, const char* value, size_t length)
 {
     bool compares = false;
 
@@ -1140,7 +1094,6 @@ static bool cache_rule_compare_n(CACHE_RULE* self, int thread_id, const char* va
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
         {
-            mxb_assert((thread_id >= 0) && (thread_id < config_threadcount()));
             pcre2_match_data* data = pcre2_match_data_create_from_pattern(self->regexp.code, NULL);
             compares = (pcre2_match(self->regexp.code,
                                     (PCRE2_SPTR)value,
@@ -1169,14 +1122,12 @@ static bool cache_rule_compare_n(CACHE_RULE* self, int thread_id, const char* va
  * Returns boolean indicating whether the column rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
-                                             int thread_id,
                                              const char* default_db,
                                              const GWBUF* query)
 {
@@ -1278,7 +1229,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
 
         strncat(buffer, info->column.data(), info->column.length());
 
-        matches = cache_rule_compare(self, thread_id, buffer);
+        matches = cache_rule_compare(self, buffer);
 
         ++i;
     }
@@ -1430,14 +1381,12 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
  * Returns boolean indicating whether the column rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_column(CACHE_RULE* self,
-                                      int thread_id,
                                       const char* default_db,
                                       const GWBUF* query)
 {
@@ -1454,7 +1403,7 @@ static bool cache_rule_matches_column(CACHE_RULE* self,
 
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
-        matches = cache_rule_matches_column_regexp(self, thread_id, default_db, query);
+        matches = cache_rule_matches_column_regexp(self, default_db, query);
         break;
 
     default:
@@ -1468,14 +1417,12 @@ static bool cache_rule_matches_column(CACHE_RULE* self,
  * Returns boolean indicating whether the database rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_database(CACHE_RULE* self,
-                                        int thread_id,
                                         const char* default_db,
                                         const GWBUF* query)
 {
@@ -1491,11 +1438,11 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
 
         if (pos != std::string_view::npos)
         {
-            matches = cache_rule_compare(self, thread_id, name.substr(0, pos));
+            matches = cache_rule_compare(self, name.substr(0, pos));
         }
         else
         {
-            matches = cache_rule_compare(self, thread_id, default_db ? default_db : "");
+            matches = cache_rule_compare(self, default_db ? default_db : "");
         }
 
         if (matches)
@@ -1511,14 +1458,12 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
  * Returns boolean indicating whether the query rule matches the query or not.
  *
  * @param self        The CACHE_RULE object.
- * @param thread_id   The thread id of the calling thread.
  * @param default_db  The current default db.
  * @param query       The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_query(CACHE_RULE* self,
-                                     int thread_id,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1530,21 +1475,19 @@ static bool cache_rule_matches_query(CACHE_RULE* self,
     // Will succeed, query contains a contiguous COM_QUERY.
     modutil_extract_SQL(*query, &sql, &len);
 
-    return cache_rule_compare_n(self, thread_id, sql, len);
+    return cache_rule_compare_n(self, sql, len);
 }
 
 /**
  * Returns boolean indicating whether the table regexp rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
-                                            int thread_id,
                                             const char* default_db,
                                             const GWBUF* query)
 {
@@ -1570,17 +1513,17 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
 
                 if (default_db)
                 {
-                    matches = cache_rule_compare(self, thread_id, db + '.' + std::string(name));
+                    matches = cache_rule_compare(self, db + '.' + std::string(name));
                 }
                 else
                 {
-                    matches = cache_rule_compare(self, thread_id, name);
+                    matches = cache_rule_compare(self, name);
                 }
             }
             else
             {
                 // A qualified name "db.tbl".
-                matches = cache_rule_compare(self, thread_id, name);
+                matches = cache_rule_compare(self, name);
             }
 
             if (matches)
@@ -1662,14 +1605,12 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
  * Returns boolean indicating whether the table rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
 static bool cache_rule_matches_table(CACHE_RULE* self,
-                                     int thread_id,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1686,7 +1627,7 @@ static bool cache_rule_matches_table(CACHE_RULE* self,
 
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
-        matches = cache_rule_matches_table_regexp(self, thread_id, default_db, query);
+        matches = cache_rule_matches_table_regexp(self, default_db, query);
         break;
 
     default:
@@ -1700,16 +1641,15 @@ static bool cache_rule_matches_table(CACHE_RULE* self,
  * Returns boolean indicating whether the user rule matches the account or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of current thread.
  * @param account    The account.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_user(CACHE_RULE* self, int thread_id, const char* account)
+static bool cache_rule_matches_user(CACHE_RULE* self, const char* account)
 {
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_USER);
 
-    bool matches = cache_rule_compare(self, thread_id, account);
+    bool matches = cache_rule_compare(self, account);
 
     if ((matches && (self->debug & CACHE_DEBUG_MATCHING))
         || (!matches && (self->debug & CACHE_DEBUG_NON_MATCHING)))
@@ -1739,32 +1679,31 @@ static bool cache_rule_matches_user(CACHE_RULE* self, int thread_id, const char*
  * Returns boolean indicating whether the rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
- * @param thread_id  The thread id of the calling thread.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches(CACHE_RULE* self, int thread_id, const char* default_db, const GWBUF* query)
+static bool cache_rule_matches(CACHE_RULE* self, const char* default_db, const GWBUF* query)
 {
     bool matches = false;
 
     switch (self->attribute)
     {
     case CACHE_ATTRIBUTE_COLUMN:
-        matches = cache_rule_matches_column(self, thread_id, default_db, query);
+        matches = cache_rule_matches_column(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_DATABASE:
-        matches = cache_rule_matches_database(self, thread_id, default_db, query);
+        matches = cache_rule_matches_database(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_TABLE:
-        matches = cache_rule_matches_table(self, thread_id, default_db, query);
+        matches = cache_rule_matches_table(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_QUERY:
-        matches = cache_rule_matches_query(self, thread_id, default_db, query);
+        matches = cache_rule_matches_query(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_USER:
@@ -2189,60 +2128,4 @@ static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, siz
     }
 
     return rule != NULL;
-}
-
-/**
- * Allocates array of pcre2 match datas
- *
- * @param count  How many match datas should be allocated.
- * @param code   The pattern to be used.
- *
- * @return Array of specified length, or NULL.
- */
-static pcre2_match_data** alloc_match_datas(int count, pcre2_code* code)
-{
-    pcre2_match_data** datas = (pcre2_match_data**)MXB_CALLOC(count, sizeof(pcre2_match_data*));
-
-    if (datas)
-    {
-        int i;
-        for (i = 0; i < count; ++i)
-        {
-            datas[i] = pcre2_match_data_create_from_pattern(code, NULL);
-
-            if (!datas[i])
-            {
-                break;
-            }
-        }
-
-        if (i != count)
-        {
-            for (; i >= 0; --i)
-            {
-                pcre2_match_data_free(datas[i]);
-            }
-
-            MXB_FREE(datas);
-            datas = NULL;
-        }
-    }
-
-    return datas;
-}
-
-/**
- * Frees array of pcre2 match datas
- *
- * @param count  The length of the array.
- * @param datas  The array of pcre2 match datas.
- */
-static void free_match_datas(int count, pcre2_match_data** datas)
-{
-    for (int i = 0; i < count; ++i)
-    {
-        pcre2_match_data_free(datas[i]);
-    }
-
-    MXB_FREE(datas);
 }

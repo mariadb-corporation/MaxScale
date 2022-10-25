@@ -391,7 +391,7 @@ int test_store()
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 
-            bool matches = cache_rules_should_store(pRules, 0, test_case.default_db, pPacket);
+            bool matches = cache_rules_should_store(pRules, test_case.default_db, pPacket);
 
             if (matches != test_case.matches)
             {

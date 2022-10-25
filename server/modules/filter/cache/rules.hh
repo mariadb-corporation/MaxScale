@@ -52,8 +52,7 @@ struct CACHE_RULE
     } simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
     struct
     {
-        pcre2_code*        code;
-        pcre2_match_data** datas;
+        pcre2_code* code;
     }           regexp;                 // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
     uint32_t    debug;                  // The debug level.
     CACHE_RULE* next;
@@ -159,24 +158,22 @@ void cache_rules_print(const CACHE_RULES* rules, DCB* dcb, size_t indent);
  * Returns boolean indicating whether the result of the query should be stored.
  *
  * @param rules      The CACHE_RULES object.
- * @param thread_id  The thread id of current thread.
  * @param default_db The current default database, NULL if there is none.
  * @param query      The query, expected to contain a COM_QUERY.
  *
  * @return True, if the results should be stored.
  */
-bool cache_rules_should_store(CACHE_RULES* rules, int thread_id, const char* default_db, const GWBUF* query);
+bool cache_rules_should_store(CACHE_RULES* rules, const char* default_db, const GWBUF* query);
 
 /**
  * Returns boolean indicating whether the cache should be used, that is consulted.
  *
  * @param rules      The CACHE_RULES object.
- * @param thread_id  The thread id of current thread.
  * @param session    The current session.
  *
  * @return True, if the cache should be used.
  */
-bool cache_rules_should_use(CACHE_RULES* rules, int thread_id, const MXS_SESSION* session);
+bool cache_rules_should_use(CACHE_RULES* rules, const MXS_SESSION* session);
 
 class CacheRules
 {
