@@ -276,7 +276,6 @@ public:
         uint64_t          m_load_data_sent = 0;
         bool              m_large_query = false;
         bool              m_next_large_query = false;
-        bool              m_prev_large_query = false;
         bool              m_trx_is_read_only = true;
         bool              m_ps_continuation = false;
         TableSet          m_tmp_tables;
@@ -514,7 +513,5 @@ private:
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
-
-    Log m_log = Log::ALL;
 };
 }

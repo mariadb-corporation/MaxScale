@@ -74,7 +74,8 @@ void Config::destroy_server(int num)
 void Config::create_server(int num)
 {
     auto homedir = test_->maxscale->access_homedir();
-    char ssl_line[200 + 3 * strlen(homedir)] = "";
+    char ssl_line[200 + 3 * strlen(homedir)];
+    ssl_line[0] = '\0';
     if (test_->backend_ssl)
     {
         sprintf(ssl_line,

@@ -627,7 +627,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
             return pRule ? true : false;
         };
 
-    auto pred2 = [this, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
+    auto pred2 = [&pred1](const QC_FUNCTION_INFO& function_info) {
             const QC_FIELD_INFO* begin = function_info.fields;
             const QC_FIELD_INFO* end = begin + function_info.n_fields;
 

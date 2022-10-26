@@ -40,44 +40,49 @@ class Client
 public:
     Client(TestConnections& test, const Settings& sett, int id, bool verbose);
 
+    bool create_table(mxt::MariaDB& conn);
+    bool drop_table(mxt::MariaDB& conn);
     void start();
     void stop();
 
-private:
-    enum class Action
+    int id() const;
+
+    struct Stats
     {
-        SELECT,
-        UPDATE
+        int selects_good {0};   /**< Selects that succeeded and gave expected answer. */
+        int selects_bad {0};    /**< Selects that failed or gave wrong answer. */
+        int updates_good {0};   /**< Successful updates */
+        int updates_bad {0};    /**< Failed updates */
+
+        Stats& operator+=(const Stats& rhs);
     };
+    Stats stats() const;
 
-    Action action() const;
-
-    bool run_query(MYSQL* pConn);
-
-    bool run_select(MYSQL* pConn);
-
-    bool run_update(MYSQL* pConn);
-
-    static void flush_response(MYSQL* pConn);
-
-    int get_random_id() const;
-
-    double random_decimal_fraction() const;
+private:
+    bool run_query(mxt::MariaDB& conn);
+    bool run_select(mxt::MariaDB& conn);
+    bool run_update(mxt::MariaDB& conn);
 
     void run();
 
 private:
+    const int        m_id {-1};
     TestConnections& m_test;
     const Settings&  m_settings;
-
-    int              m_id {-1};
     bool             m_verbose;
-    size_t           m_value;
+
+    std::string      m_tbl;
     std::thread      m_thread;
     std::atomic_bool m_keep_running {true};
 
-    mutable std::mt19937                           m_rand_gen;
-    mutable std::uniform_real_distribution<double> m_rand_dist;
+    std::vector<int> m_values;      /**< The values the table should have */
+
+    std::mt19937                       m_rand_gen;
+    std::uniform_int_distribution<int> m_row_gen;
+    std::uniform_int_distribution<int> m_val_gen;
+    std::uniform_int_distribution<int> m_action_gen;
+
+    Stats m_stats;
 };
 
 class ClientGroup
@@ -85,10 +90,13 @@ class ClientGroup
 public:
     ClientGroup(TestConnections& test, int nClients, Settings settings);
 
-    void prepare();
+    bool prepare();
     void cleanup();
     void start();
     void stop();
+
+    Client::Stats total_stats() const;
+    void          print_stats();
 
 private:
     TestConnections&                     m_test;
@@ -97,6 +105,22 @@ private:
     const Settings                       m_settings;
 
     bool create_tables();
-    bool insert_data();
 };
+}
+
+namespace stress_test
+{
+struct BaseSettings
+{
+    time_t test_duration {0};
+    int    test_clients {0};
+    int    min_expected_failovers {-1};
+    bool   diverging_allowed {false};
+};
+
+void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,
+                              const testclient::Settings& client_sett);
+
+void check_semisync_off(TestConnections& test);
+void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients);
 }

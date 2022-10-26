@@ -105,7 +105,6 @@ config::ParamBool treat_string_arg_as_field(
 
 MaskingFilterConfig::MaskingFilterConfig(const char* zName, MaskingFilter& filter)
     : mxs::config::Configuration(zName, &masking::specification)
-    , m_filter(filter)
 {
     using Cfg = MaskingFilterConfig;
 

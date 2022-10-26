@@ -31,7 +31,7 @@
 
                 <template v-slot:id="{ data: { item } }">
                     <parameter-tooltip-activator
-                        v-mxs-highlighter="search_keyword"
+                        v-mxs-highlighter="{ keyword: search_keyword, txt: item.id }"
                         :isTree="isTree"
                         :item="item"
                         :componentId="componentId"

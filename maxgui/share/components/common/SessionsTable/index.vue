@@ -49,7 +49,10 @@
                 >
                     <template v-slot:activator="{ on }">
                         <div
-                            v-mxs-highlighter="$typy($attrs, 'search').safeString"
+                            v-mxs-highlighter="{
+                                keyword: $typy($attrs, 'search').safeString,
+                                txt: memory.total,
+                            }"
                             class="pointer override-td--padding"
                             v-on="on"
                         >
@@ -60,7 +63,12 @@
                         <table class="info-table px-1">
                             <tr v-for="(value, key) in memory" :key="key">
                                 <td class="pr-5">{{ key }}</td>
-                                <td v-mxs-highlighter="$typy($attrs, 'search').safeString">
+                                <td
+                                    v-mxs-highlighter="{
+                                        keyword: $typy($attrs, 'search').safeString,
+                                        txt: value,
+                                    }"
+                                >
                                     {{ value }}
                                 </td>
                             </tr>

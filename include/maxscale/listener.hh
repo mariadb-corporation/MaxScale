@@ -148,7 +148,7 @@ public:
         Listener* m_listener;
     };
 
-    ~Listener();
+    virtual ~Listener() override;
 
     /**
      * Create a new listener

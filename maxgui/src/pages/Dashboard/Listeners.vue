@@ -10,7 +10,7 @@
         <template v-slot:id="{ data: { item: { id } } }">
             <router-link
                 :key="id"
-                v-mxs-highlighter="search_keyword"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
                 :to="`/dashboard/listeners/${id}`"
                 class="rsrc-link"
             >
@@ -25,7 +25,7 @@
             >
                 listeners
             </icon-sprite-sheet>
-            <span v-mxs-highlighter="search_keyword">{{ state }} </span>
+            <span v-mxs-highlighter="{ keyword: search_keyword, txt: state }">{{ state }} </span>
         </template>
 
         <template v-slot:header-append-serviceIds>
@@ -35,7 +35,7 @@
             <router-link
                 v-for="serviceId in serviceIds"
                 :key="serviceId"
-                v-mxs-highlighter="search_keyword"
+                v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
                 :to="`/dashboard/services/${serviceId}`"
                 class="rsrc-link"
             >

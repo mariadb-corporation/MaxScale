@@ -506,7 +506,6 @@ private:
     vector<scram::Mechanism> m_mechanisms;
     vector<role::Role>       m_roles;
     vector<string>           m_statements;
-    uint32_t                 m_dcid = { 0 };
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/

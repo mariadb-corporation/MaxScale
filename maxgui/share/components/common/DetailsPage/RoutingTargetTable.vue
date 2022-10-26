@@ -27,7 +27,7 @@
                 </icon-sprite-sheet>
                 <router-link
                     :key="id"
-                    v-mxs-highlighter="search_keyword"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
                     :to="`/dashboard/${type}/${id}`"
                     class="rsrc-link"
                 >

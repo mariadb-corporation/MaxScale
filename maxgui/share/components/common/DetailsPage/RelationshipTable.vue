@@ -23,7 +23,7 @@
             <template v-slot:id="{ data: { item: { id } } }">
                 <router-link
                     :key="id"
-                    v-mxs-highlighter="search_keyword"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
                     :to="`/dashboard/${relationshipType}/${id}`"
                     class="rsrc-link"
                 >

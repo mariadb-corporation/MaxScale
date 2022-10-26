@@ -73,7 +73,6 @@ SmartRouter::Config::Config(const std::string& name, SmartRouter* router)
     : config::Configuration(name, &smartrouter::specification)
     , m_master(this, &smartrouter::master)
     , m_persist_performance_data(this, &smartrouter::persist_performance_data)
-    , m_router(router)
 {
 }
 

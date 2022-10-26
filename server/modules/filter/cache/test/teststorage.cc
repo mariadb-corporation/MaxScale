@@ -48,7 +48,7 @@ int TestStorage::run(int argc, char** argv)
 {
     int rv = EXIT_FAILURE;
 
-    if ((argc >= 2) || (argc <= 7))
+    if ((argc >= 2) && (argc <= 7))
     {
         if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {

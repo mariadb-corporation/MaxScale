@@ -13,7 +13,7 @@
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import localForage from 'localforage'
-import { authHttp, abortRequests } from '@rootSrc/utils/axios'
+import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
 
 export default {
     namespaced: true,
@@ -44,16 +44,20 @@ export default {
     },
     actions: {
         // To be called before app is mounted
-        async authCheck({ commit, state }) {
-            try {
-                await authHttp.get('/maxscale')
-            } catch (e) {
-                const isUnauthorized = this.vue.$typy(e, 'response.status').safeNumber === 401
-                commit('SET_LOGGED_IN_USER', {
-                    ...state.logged_in_user,
-                    isLoggedIn: !isUnauthorized,
-                })
-            }
+        async authCheck({ commit }) {
+            let http = getBaseHttp()
+            http.interceptors.response.use(
+                response => response,
+                async error => {
+                    const { response: { status = null } = {} } = error || {}
+                    if (status === 401) {
+                        abortRequests() // abort all requests created by $http instance
+                        commit('CLEAR_USER')
+                        router.push('/login')
+                    }
+                }
+            )
+            await http.get('/maxscale')
         },
         async login({ commit, dispatch }, { rememberMe, auth }) {
             try {

@@ -209,7 +209,7 @@ struct MasterGtidWait
 using Show = x3::variant<ShowType, ShowVariables>;
 
 // The root type that is returned as the result of parsing
-using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show, MasterGtidWait>;
+using Command = x3::variant<std::nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show, MasterGtidWait>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -503,7 +503,7 @@ struct ResultVisitor : public boost::static_visitor<>
         m_handler->master_gtid_wait(s.gtid, s.timeout);
     }
 
-    void operator()(nullptr_t&)
+    void operator()(std::nullptr_t&)
     {
         assert(!true);
     }

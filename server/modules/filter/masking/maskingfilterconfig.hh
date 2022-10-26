@@ -80,8 +80,6 @@ protected:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
-    MaskingFilter& m_filter;
-
     Values                    m_v;
     mxs::WorkerGlobal<Values> m_values;
 };

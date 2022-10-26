@@ -21,7 +21,7 @@ const abortRequests = () => {
     controller = new AbortController()
 }
 
-function baseConf() {
+function getBaseHttp() {
     return ax.create({
         baseURL: '/',
         headers: {
@@ -33,7 +33,7 @@ function baseConf() {
 }
 
 // axios instance for `/auth` endpoint
-const authHttp = baseConf()
+const authHttp = getBaseHttp()
 authHttp.interceptors.request.use(
     config => ({ ...config }),
     error => Promise.reject(error)
@@ -41,7 +41,7 @@ authHttp.interceptors.request.use(
 
 // axios instance for all endpoints except `/sql`
 function http(store) {
-    let http = baseConf()
+    let http = getBaseHttp()
 
     http.interceptors.request.use(
         config => ({ ...config, signal: controller.signal }),
@@ -71,4 +71,4 @@ function http(store) {
     return http
 }
 
-export { authHttp, http, abortRequests }
+export { authHttp, http, abortRequests, getBaseHttp }

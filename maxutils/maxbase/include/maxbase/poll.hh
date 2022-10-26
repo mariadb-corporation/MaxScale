@@ -114,6 +114,8 @@ public:
      */
     virtual uint32_t handle_poll_events(Worker* pWorker, uint32_t events, Context context) = 0;
 
+    virtual ~Pollable() = default;
+
 private:
     friend class Worker;
     void set_polling_worker(Worker* pWorker)

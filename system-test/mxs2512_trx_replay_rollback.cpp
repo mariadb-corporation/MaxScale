@@ -46,7 +46,7 @@ bool execute(MYSQL* pConn, const char* zStmt)
 
 bool start_execute(MYSQL* pConn, const char* zStmt)
 {
-    bool rv;
+    bool rv = false;
 
     if (mysql_send_query(pConn, zStmt, strlen(zStmt)) == 0)
     {

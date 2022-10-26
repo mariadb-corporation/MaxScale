@@ -23,7 +23,7 @@ void mxs1985(TestConnections& test)
 
     for (int i = 0; i < 20 && test.global_result == 0; i++)
     {
-        threads.emplace_back([&, i]() {
+        threads.emplace_back([&] {
                                  while (running && test.global_result == 0)
                                  {
                                      MYSQL* c = test.maxscale->open_rwsplit_connection();
@@ -61,7 +61,7 @@ void mxs3251(TestConnections& test)
     for (int i = 0; i < 20 && test.global_result == 0; i++)
     {
         threads.emplace_back(
-            [&, i]() {
+            [&] {
                 while (running && test.global_result == 0)
                 {
                     MYSQL* c = test.maxscale->open_rwsplit_connection();

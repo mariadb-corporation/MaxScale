@@ -167,13 +167,17 @@ void cleanup_log_bin_failover_test(TestConnections& test)
 namespace testclient
 {
 Client::Client(TestConnections& test, const Settings& sett, int id, bool verbose)
-    : m_test(test)
+    : m_id(id)
+    , m_test(test)
     , m_settings(sett)
-    , m_id(id)
     , m_verbose(verbose)
-    , m_value(1)
-    , m_rand_dist(0.0, 1.0)
+    , m_row_gen(0, m_settings.rows - 1)
+    , m_val_gen(1, 1000)
+    , m_action_gen(1, 100)
 {
+    std::random_device dev;
+    m_rand_gen.seed(dev());
+    m_tbl = mxb::string_printf("test.t%d", m_id);
 }
 
 void Client::start()
@@ -188,161 +192,159 @@ void Client::stop()
     m_thread.join();
 }
 
-Client::Action Client::action() const
+bool Client::run_query(mxt::MariaDB& conn)
 {
-    double d = random_decimal_fraction();
-
-    // 20% updates
-    // 80% selects
-    if (d <= 0.2)
+    bool rv;
+    // 20% updates, 80% selects
+    int action_ind = m_action_gen(m_rand_gen);
+    if (action_ind <= 20)
     {
-        return Action::UPDATE;
+        rv = run_update(conn);
     }
     else
     {
-        return Action::SELECT;
+        rv = run_select(conn);
     }
+    return rv;
 }
 
-bool Client::run_query(MYSQL* pConn)
+bool Client::run_select(mxt::MariaDB& conn)
 {
     bool rv = false;
-
-    switch (action())
+    int row_ind = m_row_gen(m_rand_gen);
+    auto res = conn.try_query_f("SELECT value FROM %s WHERE id=%i;", m_tbl.c_str(), row_ind);
+    if (res && res->next_row())
     {
-    case Action::SELECT:
-        rv = run_select(pConn);
-        break;
-
-    case Action::UPDATE:
-        rv = run_update(pConn);
-        break;
-    }
-
-    return rv;
-}
-
-bool Client::run_select(MYSQL* pConn)
-{
-    bool rv = true;
-
-    string stmt = mxb::string_printf("SELECT * FROM test.t%d WHERE id=%i;",
-                                     m_id, get_random_id());
-
-    if (mysql_query(pConn, stmt.c_str()) == 0)
-    {
-        flush_response(pConn);
+        int expected = m_values[row_ind];
+        int found = res->get_int(0);
+        if (found == expected)
+        {
+            m_stats.selects_good++;
+        }
+        else
+        {
+            if (m_verbose)
+            {
+                m_test.tprintf("Client %i got wrong answer. Row %i had value %i when %i was expected.",
+                               m_id, row_ind, found, expected);
+            }
+            m_stats.selects_bad++;
+        }
+        rv = true;
     }
     else
     {
-        if (m_verbose)
+        m_stats.selects_bad++;
+        if (res)
         {
-            m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
+            m_test.add_failure("Table %s does not contain id %i when it should.", m_tbl.c_str(), row_ind);
         }
-        rv = false;
     }
-
     return rv;
 }
 
-bool Client::run_update(MYSQL* pConn)
+bool Client::run_update(mxt::MariaDB& conn)
 {
-    bool rv = true;
-
-    string stmt = mxb::string_printf("UPDATE test.t%d SET id=%zu WHERE id=%i;",
-                                     m_id, m_value, get_random_id());
-    m_value = (m_value + 1) % m_settings.rows;
-
-    if (mysql_query(pConn, stmt.c_str()) == 0)
+    bool rv = false;
+    int row_ind = m_row_gen(m_rand_gen);
+    int new_val = m_val_gen(m_rand_gen);
+    bool res = conn.try_cmd_f("UPDATE %s SET value=%d WHERE id=%i;", m_tbl.c_str(), new_val, row_ind);
+    if (res)
     {
-        flush_response(pConn);
+        m_values[row_ind] = new_val;
+        m_stats.updates_good++;
+        rv = true;
     }
     else
     {
-        if (m_verbose)
-        {
-            m_test.tprintf("\"%s\" failed: %s", stmt.c_str(), mysql_error(pConn));
-        }
-        rv = false;
+        m_stats.updates_bad++;
     }
-
     return rv;
-}
-
-void Client::flush_response(MYSQL* pConn)
-{
-    do
-    {
-        MYSQL_RES* pRes = mysql_store_result(pConn);
-        mysql_free_result(pRes);
-    }
-    while (mysql_next_result(pConn) == 0);
-}
-
-int Client::get_random_id() const
-{
-    int id = m_settings.rows * random_decimal_fraction();
-
-    mxb_assert(id >= 0);
-    mxb_assert(id <= m_settings.rows);
-
-    return id;
-}
-
-double Client::random_decimal_fraction() const
-{
-    return m_rand_dist(m_rand_gen);
 }
 
 void Client::run()
 {
-    do
+    mxt::MariaDB conn(m_test.logger());
+    conn.set_log_query_fails(false);
+    auto& sett = conn.connection_settings();
+    sett.timeout = 5;
+    sett.user = m_settings.user;
+    sett.password = m_settings.pw;
+
+    while (m_keep_running)
     {
-        MYSQL* pMysql = mysql_init(NULL);
-
-        if (pMysql)
+        if (conn.try_open(m_settings.host, m_settings.port, "test"))
         {
-            unsigned int timeout = 5;
-            mysql_options(pMysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-            mysql_options(pMysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
-            mysql_options(pMysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-
-            if (mysql_real_connect(pMysql, m_settings.host.c_str(), m_settings.user.c_str(),
-                                   m_settings.pw.c_str(), "test", m_settings.port, NULL, 0))
-            {
-                if (m_verbose)
-                {
-                    m_test.tprintf("Client %i connected, starting queries.", m_id);
-                }
-
-                while (m_keep_running && run_query(pMysql))
-                {
-                }
-            }
-            else
-            {
-                if (m_verbose)
-                {
-                    m_test.tprintf("mysql_real_connect() on client %i failed: %s",
-                                   m_id, mysql_error(pMysql));
-                }
-            }
-
-            mysql_close(pMysql);
             if (m_verbose)
             {
-                m_test.tprintf("Client %i connection closed.", m_id);
+                m_test.tprintf("Client %i connected, starting queries.", m_id);
+            }
+            while (m_keep_running && run_query(conn))
+            {
             }
         }
-        else
+        else if (m_verbose)
         {
-            m_test.tprintf("mysql_init() failed on client %i.", m_id);
+            m_test.tprintf("Test client %i connection failed: %s", m_id, conn.error());
         }
 
-        // To prevent some backend from becoming overwhelmed.
+        // Wait a bit before opening another connection.
         sleep(1);
+        if (m_verbose)
+        {
+            m_test.tprintf("Client %i connection closed.", m_id);
+        }
     }
-    while (m_keep_running);
+}
+
+bool Client::create_table(mxt::MariaDB& conn)
+{
+    bool rval = false;
+
+    // Make a table with two integer columns, both with values 0 -- (rows - 1).
+    string tbl = mxb::string_printf("test.t%d", m_id);
+    if (conn.try_cmd_f("create or replace table %s (id int unsigned not null, value int, primary key (id));",
+                       tbl.c_str()))
+    {
+        string insert = mxb::string_printf("insert into %s values ", tbl.c_str());
+        for (int i = 0; i < m_settings.rows; i++)
+        {
+            string val = std::to_string(i);
+            insert.append("(").append(val).append(",").append(val).append(")");
+
+            if (i < m_settings.rows - 1)
+            {
+                insert += ", ";
+            }
+        }
+        insert.append(";");
+        rval = conn.try_cmd(insert);
+
+        if (rval)
+        {
+            m_values.resize(m_settings.rows);
+            for (int i = 0; i < m_settings.rows; i++)
+            {
+                m_values[i] = i;
+            }
+        }
+    }
+    return rval;
+}
+
+bool Client::drop_table(mxt::MariaDB& conn)
+{
+    return conn.try_cmd_f("drop table test.t%d;", m_id);
+}
+
+Client::Stats Client::stats() const
+{
+    return m_stats;
+}
+
+int Client::id() const
+{
+    return m_id;
 }
 
 ClientGroup::ClientGroup(TestConnections& test, int nClients, Settings settings)
@@ -352,26 +354,36 @@ ClientGroup::ClientGroup(TestConnections& test, int nClients, Settings settings)
 {
 }
 
-void ClientGroup::prepare()
+bool ClientGroup::prepare()
 {
-    if (create_tables())
+    mxb_assert(m_clients.empty());
+    for (int i = 0; i < m_nClients; i++)
     {
-        if (insert_data())
-        {
-            m_test.repl->sync_slaves();
-        }
+        auto new_client = std::make_unique<Client>(m_test, m_settings, i, m_test.verbose());
+        m_clients.emplace_back(std::move(new_client));
     }
+
+    bool success = create_tables();
+    if (success)
+    {
+        m_test.repl->sync_slaves(0, 30);
+    }
+    m_test.expect(success, "Test client preparation failed.");
+    return success;
 }
 
 void ClientGroup::cleanup()
 {
     m_test.tprintf("Dropping tables.");
     auto sConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
+    if (sConn->is_open())
     {
-        sConn->cmd_f("drop table test.t%d;", i);
+        for (auto& client : m_clients)
+        {
+            client->drop_table(*sConn);
+        }
     }
+    m_clients.clear();
 }
 
 void ClientGroup::start()
@@ -379,61 +391,239 @@ void ClientGroup::start()
     m_test.tprintf("Starting %i clients. Connecting to %s:%i as '%s'.",
                    m_nClients, m_settings.host.c_str(), m_settings.port, m_settings.user.c_str());
 
-    for (int i = 0; i < m_nClients; i++)
+    for (auto& client : m_clients)
     {
-        auto new_client = std::make_unique<Client>(m_test, m_settings, i, m_test.verbose());
-        new_client->start();
-        m_clients.emplace_back(std::move(new_client));
+        client->start();
     }
 }
 
 void ClientGroup::stop()
 {
-    for (int i = 0; i < m_nClients; i++)
+    for (auto& client : m_clients)
     {
-        m_clients[i]->stop();
+        client->stop();
     }
-    m_clients.clear();
 }
 
 bool ClientGroup::create_tables()
 {
-    m_test.tprintf("Creating tables.");
+    m_test.tprintf("Creating %zu tables.", m_clients.size());
+    bool rval = false;
     auto sConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
+    if (sConn->is_open())
     {
-        sConn->cmd_f("create or replace table test.t%d (id int);", i);
+        rval = true;
+        for (auto& client : m_clients)
+        {
+            if (!client->create_table(*sConn))
+            {
+                rval = false;
+            }
+        }
     }
-
-    return m_test.ok();
+    return rval;
 }
 
-bool ClientGroup::insert_data()
+Client::Stats ClientGroup::total_stats() const
 {
-    m_test.tprintf("Inserting data.");
-
-    auto pConn = m_test.maxscale->open_rwsplit_connection2();
-
-    for (int i = 0; i < m_nClients; ++i)
+    Client::Stats rval;
+    for (auto& client : m_clients)
     {
-        string insert = mxb::string_printf("insert into test.t%d values ", i);
+        rval += client->stats();
+    }
+    return rval;
+}
 
-        for (int j = 0; j < m_settings.rows; ++j)
+void ClientGroup::print_stats()
+{
+    m_test.tprintf("Total stats from test clients:");
+    printf("Client | Read (success) | Read (fail) | Update (success) | Update (fail) \n");
+    for (const auto& client : m_clients)
+    {
+        auto stats = client->stats();
+        printf("%6i | %14i | %11i | %16i | %13i \n", client->id(), stats.selects_good, stats.selects_bad,
+               stats.updates_good, stats.updates_bad);
+    }
+    auto totals = total_stats();
+    printf("   All | %14i | %11i | %16i | %13i \n", totals.selects_good, totals.selects_bad,
+           totals.updates_good, totals.updates_bad);
+}
+
+Client::Stats& Client::Stats::operator+=(const Client::Stats& rhs)
+{
+    selects_good += rhs.selects_good;
+    selects_bad += rhs.selects_bad;
+    updates_good += rhs.updates_good;
+    updates_bad += rhs.updates_bad;
+    return *this;
+}
+}
+
+namespace stress_test
+{
+void run_failover_stress_test(TestConnections& test, const BaseSettings& base_sett,
+                              const testclient::Settings& client_sett)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+    testclient::ClientGroup clients(test, base_sett.test_clients, client_sett);
+    clients.prepare();
+
+    if (test.ok())
+    {
+        clients.start();
+        time_t start = time(NULL);
+        sleep(1);
+        int failovers = 0;
+
+        while (test.ok() && (time(NULL) - start < base_sett.test_duration))
         {
-            insert += "(";
-            insert += std::to_string(j);
-            insert += ")";
+            auto servers = mxs.get_servers();
+            servers.print();
+            auto master = servers.get_master();
+            bool have_master = master.server_id > 0;
+            int slaves = servers.get_role_info().slaves;
 
-            if (j < m_settings.rows - 1)
+            if (have_master && slaves >= 1)
             {
-                insert += ", ";
+                // Can do another failover.
+                test.tprintf("Stopping master '%s'", master.name.c_str());
+                int old_master_ind = master.server_id - 1;
+                repl.stop_node(old_master_ind);
+                mxs.sleep_and_wait_for_monitor(2, 3);
+
+                // Failover should have happened, check.
+                auto servers_after = mxs.get_servers();
+                auto new_master = servers_after.get_master();
+                if (new_master.server_id >= 0 && new_master.server_id != master.server_id)
+                {
+                    failovers++;
+                    test.tprintf("Failover %i successfull.", failovers);
+                }
+                else if (new_master.server_id >= 0)
+                {
+                    test.add_failure("Master did not change, '%s' is still master.", new_master.name.c_str());
+                }
+                else
+                {
+                    test.add_failure("Failover didn't happen, no master.");
+                }
+                test.tprintf("Starting old master '%s'", master.name.c_str());
+                repl.start_node(old_master_ind);
+                sleep(1);
+            }
+            else if (have_master)
+            {
+                test.tprintf("No more slaves to promote, cannot continue.");
+            }
+            else
+            {
+                test.tprintf("No master, cannot continue");
+            }
+
+            int diverged = 3 - slaves;
+            if (diverged > 0)
+            {
+                if (base_sett.diverging_allowed)
+                {
+                    test.tprintf("%i slaves have diverged.", diverged);
+                }
+                else
+                {
+                    test.add_failure("%i slaves have diverged.", diverged);
+                }
             }
         }
 
-        pConn->cmd(insert);
+        test.expect(failovers >= base_sett.min_expected_failovers,
+                    "Expected at least %i failovers, but only managed %i.",
+                    base_sett.min_expected_failovers, failovers);
+        mxs.wait_for_monitor();
+        clients.stop();
+    }
+    clients.print_stats();
+    clients.cleanup();
+
+    // Restore servers.
+    auto servers = mxs.get_servers();
+    auto roles = servers.get_role_info();
+    if (roles.masters == 1 && roles.slaves == 3)
+    {
+        if (servers.get(0).status == mxt::ServerInfo::master_st)
+        {
+            // server1 is already master, no need to anything
+        }
+        else
+        {
+            mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
+        }
+    }
+    else
+    {
+        // Replication broken.
+        mxs.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
     }
 
-    return m_test.ok();
+    mxs.wait_for_monitor(2);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+}
+
+void check_semisync_off(TestConnections& test)
+{
+    for (int i = 0; i < test.repl->N; i++)
+    {
+        check_semisync_status(test, i, false, false, 0);
+    }
+}
+
+void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients)
+{
+    const string semis_master = "Rpl_semi_sync_master_status";
+    const string semis_slave = "Rpl_semi_sync_slave_status";
+    const string semis_clients = "Rpl_semi_sync_master_clients";
+
+    auto conn = test.repl->backend(node)->open_connection();
+    auto res = conn->query("show status like 'Rpl%';");
+    if (res && res->get_col_count() == 2)
+    {
+        string master_val;
+        string slave_val;
+        int clients_val = -1;
+
+        while (res->next_row())
+        {
+            string var_name = res->get_string(0);
+            if (var_name == semis_master)
+            {
+                master_val = res->get_string(1);
+            }
+            else if (var_name == semis_slave)
+            {
+                slave_val = res->get_string(1);
+            }
+            else if (var_name == semis_clients)
+            {
+                clients_val = res->get_int(1);
+            }
+        }
+
+        const char* expected_master = master ? "ON" : "OFF";
+        const char* expected_slave = slave ? "ON" : "OFF";
+        const char fmt[] = "Wrong value for '%s' for node%i. Expected '%s', got '%s'";
+        test.expect(master_val == expected_master, fmt, semis_master.c_str(), node, expected_master,
+                    master_val.c_str());
+        test.expect(slave_val == expected_slave, fmt, semis_slave.c_str(), node, expected_slave,
+                    slave_val.c_str());
+        test.expect(clients_val == expected_clients,
+                    "Wrong value for '%s' for node%i. Expected '%i', got '%i'",
+                    semis_clients.c_str(), node, expected_clients, clients_val);
+    }
+    else
+    {
+        test.add_failure("No status variables matched name 'Rpl%%'.");
+    }
 }
 }

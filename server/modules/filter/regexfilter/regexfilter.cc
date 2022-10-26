@@ -113,7 +113,6 @@ struct Config : mxs::config::Configuration
 
     Config(const char* name, RegexInstance* instance)
         : mxs::config::Configuration(name, &s_spec)
-        , m_instance(instance)
     {
         add_native(&Config::m_v, &Values::match, &s_match);
         add_native(&Config::m_v, &Values::replace, &s_replace);
@@ -133,7 +132,6 @@ protected:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
 private:
-    RegexInstance*            m_instance;
     Values                    m_v;
     mxs::WorkerGlobal<Values> m_values;
 };
@@ -169,7 +167,6 @@ public:
 
 private:
     Config     m_config;
-    FILE*      m_file = nullptr;
     std::mutex m_lock;          // Protects m_file
 };
 

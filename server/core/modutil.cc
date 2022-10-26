@@ -339,7 +339,7 @@ const char* STRPACKETTYPE(int p)
         return "COM_MULTI";
     }
 
-    snprintf(unknow_type, sizeof(unknow_type), format_str, p);
+    snprintf(unknow_type, sizeof(unknow_type), format_str, static_cast<unsigned char>(p));
 
     return unknow_type;
 }
