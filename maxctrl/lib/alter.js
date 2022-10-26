@@ -170,7 +170,7 @@ exports.builder = function (yargs) {
               "in which queries pass through the filter chain. If no filters are given, all " +
               "existing filters are removed from the service." +
               "\n\n" +
-              "For example, the command `maxctrl alter service filters my-service A B C` " +
+              "For example, the command `maxctrl alter service-filters my-service A B C` " +
               "will set the filter chain for the service `my-service` so that A gets the " +
               "query first after which it is passed to B and finally to C. This behavior is " +
               "the same as if the `filters=A|B|C` parameter was defined for the service.\n" +
