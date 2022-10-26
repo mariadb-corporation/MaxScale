@@ -304,7 +304,12 @@ export default {
          * @returns {Array} minimized nodes where each node is an object with id and type props
          */
         minimizeNodes: nodes =>
-            nodes.map(node => ({ id: node.id, type: node.type, level: node.level })),
+            nodes.map(node => ({
+                id: node.id,
+                type: node.type,
+                level: node.level,
+                hrchy_id: node.hrchy_id,
+            })),
 
         async handleLoadChildren(item) {
             await this.asyncEmit('load-children', item)

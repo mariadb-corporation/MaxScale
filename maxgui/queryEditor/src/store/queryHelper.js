@@ -37,21 +37,19 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
  * @private
  * @param {Boolean} param.isRoot - If the node is a SCHEMA node
  * @param {Object} param.node - TBL_G || SP_G || TRIGGER_G || COL_G node
- * @returns {Object} { type, level, colName, sql }
+ * @returns {Object} { type, colName, sql }
  */
 function getNodeInfo({ scope, node, isRoot }) {
     const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER_G, TRIGGER, COL_G, COL } = SQL_NODE_TYPES
     if (isRoot)
         return {
             type: SCHEMA,
-            level: 0,
             colName: 'SCHEMA_NAME',
             sql: scope.getters['schemaSidebar/getDbSql'],
         }
 
     const dbName = getDbName(node)
     let type = '',
-        level = 0,
         colName = '',
         tblName = ''
     if (node.type === TRIGGER_G || node.type === COL_G) tblName = getTblName(node)
@@ -61,7 +59,6 @@ function getNodeInfo({ scope, node, isRoot }) {
     switch (node.type) {
         case TBL_G:
             type = TBL
-            level = 2
             colName = 'TABLE_NAME'
             cols = 'TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE'
             from = 'FROM information_schema.TABLES'
@@ -69,7 +66,6 @@ function getNodeInfo({ scope, node, isRoot }) {
             break
         case SP_G:
             type = SP
-            level = 2
             colName = 'ROUTINE_NAME'
             cols = 'ROUTINE_NAME, CREATED'
             from = 'FROM information_schema.ROUTINES'
@@ -77,7 +73,6 @@ function getNodeInfo({ scope, node, isRoot }) {
             break
         case TRIGGER_G:
             type = TRIGGER
-            level = 4
             colName = 'TRIGGER_NAME'
             cols = 'TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT'
             from = 'FROM information_schema.TRIGGER_G'
@@ -85,17 +80,17 @@ function getNodeInfo({ scope, node, isRoot }) {
             break
         case COL_G:
             type = COL
-            level = 4
             colName = 'COLUMN_NAME'
             cols = 'COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES'
             from = 'FROM information_schema.COLUMNS'
             cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
             break
     }
-    return { type, level, colName, sql: `SELECT ${cols} ${from} ${cond} ORDER BY ${colName};` }
+    return { type, colName, sql: `SELECT ${cols} ${from} ${cond} ORDER BY ${colName};` }
 }
 /**
  * @private
+ * @param {Object} param.parentNode - parent node. Undefined of param.type === SCHEMA
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
  * @param {Number} param.level - hierarchy level of node to be generated
@@ -105,18 +100,21 @@ function getNodeInfo({ scope, node, isRoot }) {
  * param.type === TRIGGER or COL
  * @returns {Object}  schema node
  */
-function genNode({ data, type, level, name, dbName, tblName }) {
+function genNode({ parentNode, data, type, name, dbName, tblName }) {
     const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER, COL, COL_G, TRIGGER_G } = SQL_NODE_TYPES
     let node = {
         key: genNodeKey(),
         type,
         name,
+        //TODO: Rename id to `qualified_name` and hrchy_id to id
         id: '',
         draggable: true,
         data,
-        level,
         isSys: SQL_SYS_SCHEMAS.includes(dbName.toLowerCase()),
     }
+
+    node.hrchy_id = type === SCHEMA ? node.name : `${parentNode.hrchy_id}.${node.name}`
+    node.level = lodash.countBy(node.hrchy_id)['.'] || 0
 
     switch (type) {
         case TBL:
@@ -131,52 +129,34 @@ function genNode({ data, type, level, name, dbName, tblName }) {
             node.id = node.name
             break
     }
-
-    if (type === TBL) {
-        // TBL node canBeHighlighted and has children props
-        node.canBeHighlighted = true
-        node.children = [
-            {
+    // Create group nodes
+    switch (type) {
+        case TBL:
+            // TBL node canBeHighlighted and has children props
+            node.canBeHighlighted = true
+            node.children = [COL_G, TRIGGER_G].map(t => ({
                 key: genNodeKey(),
-                type: COL_G,
-                name: COL_G,
-                id: `${dbName}.${node.name}.${COL_G}`, // only use to identify active node
+                type: t,
+                name: t,
+                id: `${dbName}.${node.name}.${t}`, // only use to identify active node
+                hrchy_id: `${node.hrchy_id}.${t}`,
                 draggable: false,
-                children: [],
                 level: node.level + 1,
-            },
-            {
-                key: genNodeKey(),
-                type: TRIGGER_G,
-                name: TRIGGER_G,
-                id: `${dbName}.${node.name}.${TRIGGER_G}`, // only use to identify active node
-                draggable: false,
                 children: [],
+            }))
+            break
+        case SCHEMA:
+            node.children = [TBL_G, SP_G].map(t => ({
+                key: genNodeKey(),
+                type: t,
+                name: t,
+                id: `${dbName}.${t}`, // only use to identify active node
+                hrchy_id: `${node.hrchy_id}.${t}`,
+                draggable: false,
                 level: node.level + 1,
-            },
-        ]
-    }
-    if (type === SCHEMA) {
-        node.children = [
-            {
-                key: genNodeKey(),
-                type: TBL_G,
-                name: TBL_G,
-                id: `${dbName}.${TBL_G}`, // only use to identify active node
-                draggable: false,
-                level: 1,
                 children: [],
-            },
-            {
-                key: genNodeKey(),
-                type: SP_G,
-                name: SP_G,
-                id: `${dbName}.${SP_G}`, // only use to identify active node
-                draggable: false,
-                level: 1,
-                children: [],
-            },
-        ]
+            }))
+            break
     }
 
     return node
@@ -197,7 +177,7 @@ async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
         vue: { $queryHttp, $helpers, $typy },
     } = scope
 
-    const { type, level, colName, sql } = getNodeInfo({ scope, isRoot, node })
+    const { type, colName, sql } = getNodeInfo({ scope, isRoot, node })
 
     const res = await $queryHttp.post(`/sql/${conn_id}/queries`, {
         sql,
@@ -210,9 +190,9 @@ async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
         (acc, row) => {
             acc.nodes.push(
                 genNode({
+                    parentNode: node,
                     data: row,
                     type,
-                    level,
                     name: row[colName],
                     dbName: isRoot ? row[colName] : dbName,
                     tblName,
