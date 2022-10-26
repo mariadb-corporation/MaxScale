@@ -584,6 +584,8 @@ void RoutingWorker::clear()
                mxb::pretty_size(cleared).c_str(),
                nClosed,
                index());
+
+    m_storage.clear();
 }
 
 void RoutingWorker::deactivate()
