@@ -359,7 +359,7 @@ private:
 
     /** User account cache local to each worker. Each worker must initialize their own copy
      *  and update it when the master data changes. */
-    mxs::WorkerLocal<SAccountCache, mxs::DefaultConstructor<SAccountCache>> m_usercache;
+    mxs::WorkerLocal<SAccountCache, mxs::WLDefaultConstructor<SAccountCache>> m_usercache;
 
     /** Thread-local set of client connections waiting for updated user account data */
     mxs::WorkerLocal<std::unordered_set<mxs::ClientConnection*>> m_sleeping_clients;

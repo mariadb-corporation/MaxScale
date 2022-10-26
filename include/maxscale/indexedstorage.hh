@@ -38,6 +38,7 @@ class IndexedStorage
 public:
     using LocalData = std::vector<void*>;
     using DataDeleters = std::vector<void (*)(void*)>;
+    using DataSizers = std::vector<size_t (*)(void*)>;
 
     IndexedStorage() = default;
     IndexedStorage(const IndexedStorage&) = delete;
@@ -47,8 +48,10 @@ public:
 
     /**
      * Removes all stored values.
+     *
+     * @return An estimate of the size of the deleted memory.
      */
-    void clear();
+    size_t clear();
 
     /**
      * Initialize a globally unique data identifier
@@ -64,20 +67,28 @@ public:
     /**
      * Set local data
      *
-     * @param key  Key acquired with create_local_data
-     * @param data Data to store
+     * @param key      Key acquired with create_local_data
+     * @param data     Data to store
+     * @param deleter  Function for deleting @c data
+     * @param sizer    Function for obtaining the size of @c data
      */
-    void set_data(uint64_t key, void* data, void (* callback)(void*))
+    void set_data(uint64_t key, void* data, void (* deleter)(void*), size_t (* sizer)(void*))
     {
         if (m_local_data.size() <= key)
         {
             m_local_data.resize(key + 1, nullptr);
             m_data_deleters.resize(key + 1, nullptr);
+            m_data_sizers.resize(key + 1, nullptr);
         }
 
-        if (callback)
+        if (deleter)
         {
-            m_data_deleters[key] = callback;
+            m_data_deleters[key] = deleter;
+        }
+
+        if (sizer)
+        {
+            m_data_sizers[key] = sizer;
         }
 
         m_local_data[key] = data;
@@ -101,23 +112,37 @@ public:
      * If a callback was passed when the data was set, it will be called.
      *
      * @param key Key to remove
+     *
+     * @return An estimate of the amount of data that was released.
      */
-    void delete_data(uint64_t key)
+    size_t delete_data(uint64_t key)
     {
+        size_t rv = 0;
         if (key < m_local_data.size())
         {
-            if (auto deleter = m_data_deleters[key])
+            void* data = m_local_data[key];
+
+            if (auto sizer = m_data_sizers[key])
             {
-                deleter(m_local_data[key]);
+                rv += sizer(data);
             }
 
-            m_data_deleters[key] = nullptr;
+            if (auto deleter = m_data_deleters[key])
+            {
+                deleter(data);
+            }
+
             m_local_data[key] = nullptr;
+            m_data_deleters[key] = nullptr;
+            m_data_sizers[key] = nullptr;
         }
+
+        return rv;
     }
 
 private:
     LocalData    m_local_data;
     DataDeleters m_data_deleters;
+    DataSizers   m_data_sizers;
 };
 }

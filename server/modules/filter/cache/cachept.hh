@@ -85,7 +85,7 @@ private:
 
 private:
     using SCache = std::unique_ptr<Cache>;
-    using WorkerCache = mxs::WorkerLocal<SCache, mxs::DefaultConstructor<SCache>>;
+    using WorkerCache = mxs::WorkerLocal<SCache, mxs::WLDefaultConstructor<SCache>>;
 
     std::mutex  m_mutex;
     WorkerCache m_spWorker_cache;

@@ -31,7 +31,21 @@ namespace maxscale
 void worker_local_delete_data(uint64_t key);
 
 template<class T>
-struct DefaultConstructor
+struct WLConstructor
+{
+    static void delete_value(void* data)
+    {
+        delete static_cast<T*>(data);
+    }
+
+    static size_t sizeof_value(void* data)
+    {
+        return sizeof(T);
+    }
+};
+
+template<class T>
+struct WLDefaultConstructor : public WLConstructor<T>
 {
     T* operator()(const T& t)
     {
@@ -40,7 +54,7 @@ struct DefaultConstructor
 };
 
 template<class T>
-struct CopyConstructor
+struct WLCopyConstructor : public WLConstructor<T>
 {
     T* operator()(const T& t)
     {
@@ -49,7 +63,7 @@ struct CopyConstructor
 };
 
 // Data local to a routing worker
-template<class T, class TypeConstructor = CopyConstructor<T>>
+template<class T, class TypeConstructor = WLCopyConstructor<T>>
 class WorkerLocal
 {
 public:
@@ -135,16 +149,14 @@ protected:
             my_value = TypeConstructor()(m_value);
             guard.unlock();
 
-            storage->set_data(m_handle, my_value, destroy_value);
+            auto deleter = &TypeConstructor::delete_value;
+            auto sizer = &TypeConstructor::sizeof_value;
+
+            storage->set_data(m_handle, my_value, deleter, sizer);
         }
 
         mxb_assert(my_value);
         return my_value;
-    }
-
-    static void destroy_value(void* data)
-    {
-        delete static_cast<T*>(data);
     }
 };
 
