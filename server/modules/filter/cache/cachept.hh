@@ -20,7 +20,6 @@
 #include "cache.hh"
 
 class CachePT : public Cache
-              , private mxs::RoutingWorker::Data
 {
 public:
     ~CachePT();
@@ -79,9 +78,6 @@ private:
     {
         return const_cast<CachePT*>(this)->worker_cache();
     }
-
-    void init_for(mxs::RoutingWorker*) override final;
-    void finish_for(mxs::RoutingWorker*) override final;
 
 private:
     CachePT(const Cache&);

@@ -31,13 +31,10 @@ CachePT::CachePT(const std::string& name,
     : Cache(name, pConfig, rules, sFactory)
 {
     MXB_NOTICE("Created cache per thread.");
-
-    mxs::RoutingWorker::register_data(this);
 }
 
 CachePT::~CachePT()
 {
-    mxs::RoutingWorker::deregister_data(this);
 }
 
 // static
@@ -182,28 +179,19 @@ cache_result_t CachePT::clear(Token* pToken)
 
 Cache& CachePT::worker_cache()
 {
-    mxb_assert(*m_spWorker_cache);
-    return **m_spWorker_cache;
-}
+    SCache& sCache = *m_spWorker_cache;
 
-void CachePT::init_for(mxs::RoutingWorker* pWorker)
-{
-    CacheST* pCacheST = 0;
+    if (!sCache)
+    {
+        string namest(m_name + "-" + std::to_string(mxs::RoutingWorker::get_current()->index()));
 
-    string namest(m_name + "-" + std::to_string(pWorker->index()));
+        m_mutex.lock();
+        auto rules = m_rules;
+        auto sFactory = m_sFactory;
+        m_mutex.unlock();
 
-    m_mutex.lock();
-    auto rules = m_rules;
-    auto sFactory = m_sFactory;
-    m_mutex.unlock();
+        MXS_EXCEPTION_GUARD(sCache.reset(CacheST::create(namest, rules, sFactory, &m_config)));
+    }
 
-    mxb_assert(!*m_spWorker_cache);
-    MXS_EXCEPTION_GUARD(pCacheST = CacheST::create(namest, rules, sFactory, &m_config));
-    m_spWorker_cache->reset(pCacheST);
-}
-
-void CachePT::finish_for(mxs::RoutingWorker* pWorker)
-{
-    mxb_assert(*m_spWorker_cache);
-    m_spWorker_cache->reset();
+    return *sCache;
 }
