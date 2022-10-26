@@ -1,11 +1,11 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
-            <template v-if="activePrvwTblNodeId">
+            <template v-if="activePrvwNodeQualifiedName">
                 <div class="d-flex align-center mr-4">
                     <b class="mr-1">Table:</b>
                     <mxs-truncate-str
-                        :tooltipItem="{ txt: activePrvwTblNodeId, nudgeLeft: 16 }"
+                        :tooltipItem="{ txt: activePrvwNodeQualifiedName, nudgeLeft: 16 }"
                         :maxWidth="260"
                     />
                 </div>
@@ -90,7 +90,7 @@ export default {
         requestSentTime: { type: Number, required: true },
         execTime: { type: Number, required: true },
         totalDuration: { type: Number, required: true },
-        activePrvwTblNodeId: { type: String, required: true },
+        activePrvwNodeQualifiedName: { type: String, required: true },
     },
     data() {
         return {

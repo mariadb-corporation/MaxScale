@@ -46,7 +46,7 @@
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
                     :currQueryMode="curr_query_mode"
-                    :activePrvwTblNodeId="activePrvwTblNodeId"
+                    :activePrvwNodeQualifiedName="activePrvwNodeQualifiedName"
                     :isLoading="isLoading"
                     :data="queryData"
                     :requestSentTime="requestSentTime"
@@ -170,8 +170,8 @@ export default {
         totalDuration() {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
-        activePrvwTblNodeId() {
-            return this.$typy(this.getActivePrvwTblNode, 'id').safeString
+        activePrvwNodeQualifiedName() {
+            return this.$typy(this.getActivePrvwTblNode, 'qualified_name').safeString
         },
     },
 

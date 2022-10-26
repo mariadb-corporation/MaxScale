@@ -19,14 +19,14 @@ import { lodash } from '@share/utils/helpers'
  * @param {Object} node - schema node
  * @returns {String} database name
  */
-const getDbName = node => node.id.split('.')[0]
+const getDbName = node => node.qualified_name.split('.')[0]
 
 /**
  * @public
  * @param {Object} node - TRIGGER_G || COL_G node
  * @returns {String} table name
  */
-const getTblName = node => node.id.split('.')[1]
+const getTblName = node => node.qualified_name.split('.')[1]
 
 /**
  * @private
@@ -103,30 +103,29 @@ function getNodeInfo({ scope, node, isRoot }) {
 function genNode({ parentNode, data, type, name, dbName, tblName }) {
     const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER, COL, COL_G, TRIGGER_G } = SQL_NODE_TYPES
     let node = {
+        id: type === SCHEMA ? name : `${parentNode.id}.${name}`,
+        qualified_name: '',
         key: genNodeKey(),
         type,
         name,
-        //TODO: Rename id to `qualified_name` and hrchy_id to id
-        id: '',
         draggable: true,
         data,
         isSys: SQL_SYS_SCHEMAS.includes(dbName.toLowerCase()),
     }
 
-    node.hrchy_id = type === SCHEMA ? node.name : `${parentNode.hrchy_id}.${node.name}`
-    node.level = lodash.countBy(node.hrchy_id)['.'] || 0
+    node.level = lodash.countBy(node.id)['.'] || 0
 
     switch (type) {
         case TBL:
         case SP:
-            node.id = `${dbName}.${node.name}`
+            node.qualified_name = `${dbName}.${node.name}`
             break
         case TRIGGER:
         case COL:
-            node.id = `${tblName}.${node.name}`
+            node.qualified_name = `${tblName}.${node.name}`
             break
         case SCHEMA:
-            node.id = node.name
+            node.qualified_name = node.name
             break
     }
     // Create group nodes
@@ -135,11 +134,11 @@ function genNode({ parentNode, data, type, name, dbName, tblName }) {
             // TBL node canBeHighlighted and has children props
             node.canBeHighlighted = true
             node.children = [COL_G, TRIGGER_G].map(t => ({
+                id: `${node.id}.${t}`,
+                qualified_name: `${dbName}.${node.name}.${t}`,
                 key: genNodeKey(),
                 type: t,
                 name: t,
-                id: `${dbName}.${node.name}.${t}`, // only use to identify active node
-                hrchy_id: `${node.hrchy_id}.${t}`,
                 draggable: false,
                 level: node.level + 1,
                 children: [],
@@ -147,11 +146,11 @@ function genNode({ parentNode, data, type, name, dbName, tblName }) {
             break
         case SCHEMA:
             node.children = [TBL_G, SP_G].map(t => ({
+                id: `${node.id}.${t}`,
+                qualified_name: `${dbName}.${t}`,
                 key: genNodeKey(),
                 type: t,
                 name: t,
-                id: `${dbName}.${t}`, // only use to identify active node
-                hrchy_id: `${node.hrchy_id}.${t}`,
                 draggable: false,
                 level: node.level + 1,
                 children: [],
@@ -304,15 +303,14 @@ function updateTblChild({ db_tree, dbName, tblName, nodes, childType }) {
 /**
  * @public
  * @param {Object} active_sql_conn - current connecting resource
- * @param {String} nodeId - node id .i.e schema_name.tbl_name
+ * @param {String} node - TBL node
  * @param {Object} vue - vue instance
  * @param {Object} $queryHttp - $queryHttp axios instance
  * @returns {Object} - returns object row data
  */
-async function queryTblOptsData({ active_sql_conn, nodeId, vue, $queryHttp }) {
-    const schemas = nodeId.split('.')
-    const db = schemas[0]
-    const tblName = schemas[1]
+async function queryTblOptsData({ active_sql_conn, node, vue, $queryHttp }) {
+    const db = getDbName(node)
+    const tblName = getTblName(node)
     const cols =
         // eslint-disable-next-line vue/max-len
         'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
@@ -331,14 +329,13 @@ WHERE table_schema = "${db}" AND table_name = "${tblName}";`
 /**
  * @public
  * @param {Object} active_sql_conn - current connecting resource
- * @param {String} nodeId - node id .i.e schema_name.tbl_name
+ * @param {String} node - TBL node
  * @param {Object} $queryHttp - $queryHttp axios instance
  * @returns {Object} - returns object data contains `data` and `fields`
  */
-async function queryColsOptsData({ active_sql_conn, nodeId, $queryHttp }) {
-    const schemas = nodeId.split('.')
-    const db = schemas[0]
-    const tblName = schemas[1]
+async function queryColsOptsData({ active_sql_conn, node, $queryHttp }) {
+    const db = getDbName(node)
+    const tblName = getTblName(node)
     /**
      * Exception for UQ column
      * It needs to LEFT JOIN statistics and table_constraints tables to get accurate UNIQUE INDEX from constraint_name.

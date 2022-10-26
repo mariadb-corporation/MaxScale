@@ -199,10 +199,10 @@ export default {
             await this.queryTblCreationInfo(node)
         },
         /**
-         * @param {String} payload.id - identifier
+         * @param {String} payload.qualified_name - identifier
          * @param {String} payload.type - db tree node type
          */
-        onDropAction({ id, type }) {
+        onDropAction({ qualified_name, type }) {
             const { escapeIdentifiers: escape } = this.$helpers
             let sql = 'DROP'
             const { SCHEMA, TBL, SP, TRIGGER } = this.SQL_NODE_TYPES
@@ -220,16 +220,16 @@ export default {
                     sql += ' TRIGGER'
                     break
             }
-            sql = `${sql} ${escape(id)};`
+            sql = `${sql} ${escape(qualified_name)};`
             this.handleOpenExecSqlDlg(sql)
         },
 
         /**
-         * @param {String} id - identifier
+         * @param {String} qualified_name - identifier
          */
-        onTruncateTbl(id) {
+        onTruncateTbl(qualified_name) {
             const { escapeIdentifiers: escape } = this.$helpers
-            const sql = `truncate ${escape(id)};`
+            const sql = `truncate ${escape(qualified_name)};`
             this.handleOpenExecSqlDlg(sql)
         },
         handleOpenExecSqlDlg(sql) {

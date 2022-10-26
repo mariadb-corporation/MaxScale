@@ -32,6 +32,7 @@ const dummy_db_tree_data = [
         type: 'Schema',
         name: 'mysql',
         id: 'mysql',
+        qualified_name: 'mysql',
         data: {
             CATALOG_NAME: 'def',
             SCHEMA_NAME: 'mysql',
@@ -49,6 +50,7 @@ const dummy_db_tree_data = [
                 type: 'Tables',
                 name: 'Tables',
                 id: 'mysql.Tables',
+                qualified_name: 'mysql.Tables',
                 draggable: false,
                 level: 1,
                 children: [],
@@ -58,6 +60,7 @@ const dummy_db_tree_data = [
                 type: 'Stored Procedures',
                 name: 'Stored Procedures',
                 id: 'mysql.Stored Procedures',
+                qualified_name: 'mysql.Stored Procedures',
                 draggable: false,
                 level: 1,
                 children: [],
@@ -69,6 +72,7 @@ const dummy_db_tree_data = [
         type: 'Schema',
         name: 'test',
         id: 'test',
+        qualified_name: 'test',
         data: {
             CATALOG_NAME: 'def',
             SCHEMA_NAME: 'test',
@@ -86,6 +90,7 @@ const dummy_db_tree_data = [
                 type: 'Tables',
                 name: 'Tables',
                 id: 'test.Tables',
+                qualified_name: 'test.Tables',
                 draggable: false,
                 level: 1,
                 children: [],
@@ -95,6 +100,7 @@ const dummy_db_tree_data = [
                 type: 'Stored Procedures',
                 name: 'Stored Procedures',
                 id: 'test.Stored Procedures',
+                qualified_name: 'test.Stored Procedures',
                 draggable: false,
                 level: 1,
                 children: [],
@@ -412,7 +418,12 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         wrapper = mountFactory()
         const minimizeNode = wrapper.vm.minimizeNodes([node])[0]
         expect(Object.keys(minimizeNode).length).to.be.below(Object.keys(node).length)
-        expect(minimizeNode).to.be.eql({ id: node.id, type: node.type, level: node.level })
+        expect(minimizeNode).to.be.eql({
+            id: node.id,
+            qualified_name: node.qualified_name,
+            type: node.type,
+            level: node.level,
+        })
     })
     it(`Should emit load-children event when handleLoadChildren is called`, async () => {
         const tablesNode = dummy_db_tree_data.find(node => node.type === 'Schema').children[0]

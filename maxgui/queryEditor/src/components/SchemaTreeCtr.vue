@@ -103,9 +103,9 @@ This component emits the following events
 @get-node-data: { SQL_QUERY_MODE: string, schemaId:string }
 @place-to-editor: v:string. Place text to editor
 @alter-tbl: Node. Alter table node
-@drop-action: { id:string, type:string }: Node.
-@truncate-tbl: { id:string }: Node.
-@use-db: { id:string }: Node.
+@drop-action: { qualified_name:string, type:string }: Node.
+@truncate-tbl: { qualified_name:string }: Node.
+@use-db: { qualified_name:string }: Node.
 @load-children: Node. Async event.
 @on-dragging: Event.
 @on-dragend: Event.
@@ -301,14 +301,14 @@ export default {
         },
         /**
          * @param {Array} nodes - array of nodes
-         * @returns {Array} minimized nodes where each node is an object with id and type props
+         * @returns {Array} minimized nodes. each node is an object with id, qualified_name, type, level attrs
          */
         minimizeNodes: nodes =>
-            nodes.map(node => ({
-                id: node.id,
-                type: node.type,
-                level: node.level,
-                hrchy_id: node.hrchy_id,
+            nodes.map(({ id, qualified_name, type, level }) => ({
+                id,
+                qualified_name,
+                type,
+                level,
             })),
 
         async handleLoadChildren(item) {
@@ -353,13 +353,13 @@ export default {
                 case this.$mxs_t('previewData'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
-                        schemaId: item.id,
+                        schemaId: item.qualified_name,
                     })
                     break
                 case this.$mxs_t('viewDetails'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                        schemaId: item.id,
+                        schemaId: item.qualified_name,
                     })
                     break
             }
@@ -378,10 +378,10 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('qualifiedNameQuoted'):
-                    v = this.$helpers.escapeIdentifiers(item.id)
+                    v = this.$helpers.escapeIdentifiers(item.qualified_name)
                     break
                 case this.$mxs_t('qualifiedName'):
-                    v = item.id
+                    v = item.qualified_name
                     break
                 case this.$mxs_t('nameQuoted'):
                     v = this.$helpers.escapeIdentifiers(item.name)
@@ -407,7 +407,7 @@ export default {
             switch (opt.text) {
                 case this.$mxs_t('alterTbl'):
                     this.$emit('alter-tbl', {
-                        id: item.id,
+                        qualified_name: item.qualified_name,
                         type: item.type,
                         level: item.level,
                         name: item.name,
@@ -417,10 +417,13 @@ export default {
                 case this.$mxs_t('dropSchema'):
                 case this.$mxs_t('dropSp'):
                 case this.$mxs_t('dropTrigger'):
-                    this.$emit('drop-action', { id: item.id, type: item.type })
+                    this.$emit('drop-action', {
+                        qualified_name: item.qualified_name,
+                        type: item.type,
+                    })
                     break
                 case this.$mxs_t('truncateTbl'):
-                    this.$emit('truncate-tbl', item.id)
+                    this.$emit('truncate-tbl', item.qualified_name)
                     break
             }
         },
@@ -461,7 +464,7 @@ export default {
                     this.handleEmitDD_opt({ item, opt })
                     break
                 case USE:
-                    this.$emit('use-db', item.id)
+                    this.$emit('use-db', item.qualified_name)
                     break
                 case INSERT:
                 case QUERY:
@@ -496,11 +499,11 @@ export default {
             if (item.canBeHighlighted)
                 this.$emit('get-node-data', {
                     SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
-                    schemaId: this.activeNodes[0].id,
+                    schemaId: this.activeNodes[0].qualified_name,
                 })
         },
         onNodeDblClick(item) {
-            if (item.type === this.SQL_NODE_TYPES.SCHEMA) this.$emit('use-db', item.id)
+            if (item.type === this.SQL_NODE_TYPES.SCHEMA) this.$emit('use-db', item.qualified_name)
         },
         onContextMenu({ e, item }) {
             if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })

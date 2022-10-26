@@ -150,6 +150,7 @@ describe('sidebar-ctr', () => {
                 type: 'Tables',
                 name: 'Tables',
                 id: 'test.Tables',
+                qualified_name: 'test.Tables',
             }
             wrapper.vm.handleLoadChildren(mockNode)
             expect(loadChildNodesParam).to.be.deep.equals(mockNode)
@@ -168,7 +169,13 @@ describe('sidebar-ctr', () => {
                     queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
                 },
             })
-            const mockNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
+            const mockNode = {
+                key: 'node_key_20',
+                type: 'Table',
+                name: 't1',
+                id: 'test.Tables.t1',
+                qualified_name: 'test.t1',
+            }
             const fnsToBeSpied = [
                 'handleAddNewSession',
                 'queryAlterTblSuppData',
@@ -189,7 +196,7 @@ describe('sidebar-ctr', () => {
         it(`Should process onDropAction method as expected`, () => {
             wrapper = mountFactory()
             const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
-            const mockNode = { type: 'Table', id: 'test.t1' }
+            const mockNode = { type: 'Table', id: 'test.Tables.t1', qualified_name: 'test.t1' }
             wrapper.vm.onDropAction(mockNode) // trigger the method
             spy.should.have.been.calledOnceWith('DROP TABLE `test`.`t1`;')
             expect(wrapper.vm.actionName).to.be.equals('DROP TABLE `test`.`t1`')

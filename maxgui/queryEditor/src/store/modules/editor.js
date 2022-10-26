@@ -133,17 +133,18 @@ export default {
                         altered_active_node: node,
                     },
                 })
-                const schemas = node.id.split('.')
+                const schemas = node.qualified_name.split('.')
                 const db = schemas[0]
+
                 const tblOptsData = await queryHelper.queryTblOptsData({
                     active_sql_conn,
-                    nodeId: node.id,
+                    node,
                     vue: this.vue,
                     $queryHttp: this.vue.$queryHttp,
                 })
                 const colsOptsData = await queryHelper.queryColsOptsData({
                     active_sql_conn,
-                    nodeId: node.id,
+                    node,
                     $queryHttp: this.vue.$queryHttp,
                 })
                 commit(`SET_TBL_CREATION_INFO`, {
