@@ -20,26 +20,26 @@ size_t IndexedStorage::clear()
 {
     size_t rv = 0;
 
-    for (uint64_t key = 0; key < m_local_data.size(); ++key)
+    for (uint64_t key = 0; key < m_entries.size(); ++key)
     {
-        auto* pData = m_local_data[key];
-        auto deleter = m_data_deleters[key];
-        auto sizer = m_data_sizers[key];
+        Entry& entry = m_entries[key];
 
-        if (pData && sizer)
+        if (entry.data)
         {
-            rv += sizer(pData);
-        }
+            if (entry.sizer)
+            {
+                rv += entry.sizer(entry.data);
+            }
 
-        if (pData && deleter)
-        {
-            deleter(pData);
+            if (entry.deleter)
+            {
+                entry.deleter(entry.data);
+            }
         }
     }
 
-    m_local_data.clear();
-    m_data_deleters.clear();
-    m_data_sizers.clear();
+    // m_entries.clear() would not actually delete the memory.
+    Entries().swap(m_entries);
 
     return rv;
 }

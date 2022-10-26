@@ -36,9 +36,26 @@ namespace maxscale
 class IndexedStorage
 {
 public:
-    using LocalData = std::vector<void*>;
-    using DataDeleters = std::vector<void (*)(void*)>;
-    using DataSizers = std::vector<size_t (*)(void*)>;
+    struct Entry
+    {
+        void set(void* data, void (*deleter)(void*), size_t (*sizer)(void*))
+        {
+            this->data = data;
+            this->deleter = deleter;
+            this->sizer = sizer;
+        }
+
+        void reset()
+        {
+            set(nullptr, nullptr, nullptr);
+        }
+
+        void*    data { nullptr };
+        void   (*deleter)(void*) { nullptr };
+        size_t (*sizer)(void*) { nullptr };
+    };
+
+    using Entries = std::vector<Entry>;
 
     IndexedStorage() = default;
     IndexedStorage(const IndexedStorage&) = delete;
@@ -74,24 +91,12 @@ public:
      */
     void set_data(uint64_t key, void* data, void (* deleter)(void*), size_t (* sizer)(void*))
     {
-        if (m_local_data.size() <= key)
+        if (m_entries.size() <= key)
         {
-            m_local_data.resize(key + 1, nullptr);
-            m_data_deleters.resize(key + 1, nullptr);
-            m_data_sizers.resize(key + 1, nullptr);
+            m_entries.resize(key + 1);
         }
 
-        if (deleter)
-        {
-            m_data_deleters[key] = deleter;
-        }
-
-        if (sizer)
-        {
-            m_data_sizers[key] = sizer;
-        }
-
-        m_local_data[key] = data;
+        m_entries[key].set(data, deleter, sizer);
     }
 
     /**
@@ -103,7 +108,7 @@ public:
      */
     void* get_data(uint64_t key) const
     {
-        return key < m_local_data.size() ? m_local_data[key] : nullptr;
+        return key < m_entries.size() ? m_entries[key].data : nullptr;
     }
 
     /**
@@ -118,31 +123,27 @@ public:
     size_t delete_data(uint64_t key)
     {
         size_t rv = 0;
-        if (key < m_local_data.size())
+        if (key < m_entries.size())
         {
-            void* data = m_local_data[key];
+            Entry& entry = m_entries[key];
 
-            if (auto sizer = m_data_sizers[key])
+            if (entry.sizer)
             {
-                rv += sizer(data);
+                rv += entry.sizer(entry.data);
             }
 
-            if (auto deleter = m_data_deleters[key])
+            if (entry.deleter)
             {
-                deleter(data);
+                entry.deleter(entry.data);
             }
 
-            m_local_data[key] = nullptr;
-            m_data_deleters[key] = nullptr;
-            m_data_sizers[key] = nullptr;
+            entry.reset();
         }
 
         return rv;
     }
 
 private:
-    LocalData    m_local_data;
-    DataDeleters m_data_deleters;
-    DataSizers   m_data_sizers;
+    Entries m_entries;
 };
 }
