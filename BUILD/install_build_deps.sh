@@ -114,7 +114,7 @@ then
     install_libdir=/usr/lib64
     # YUM!
     sudo yum clean all
-    sudo yum update -y
+    sudo yum update -d1 -y
     unset enable_power_tools
     yum repolist all | grep "^PowerTools"
     if [ $? == 0 ]
@@ -126,7 +126,7 @@ then
     then
         enable_power_tools="--enablerepo=powertools"
     fi
-    sudo yum install -y --nogpgcheck ${enable_power_tools} \
+    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} \
          gcc gcc-c++ ncurses-devel bison glibc-devel cmake \
          libgcc perl make libtool openssl-devel libaio libaio-devel  \
          systemtap-sdt-devel rpm-sign \
@@ -135,43 +135,43 @@ then
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel
 
-    sudo yum install -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
+    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
 
     # Attempt to install systemd-devel, doesn't work on CentOS 6
-    sudo yum install -y systemd-devel
+    sudo yum install -d1 -y systemd-devel
 
     if is_arm
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
-       sudo yum -y install python3
+       sudo yum -d1 -y install python3
     fi
 
     # Enable the devtoolkit to get a newer compiler
 
     # CentOS: install the centos-release-scl repo
     # RHEL: enable the existing repo (seems to be rhui-REGION-rhel-server-rhscl on AWS)
-    sudo yum -y install centos-release-scl || \
+    sudo yum -d1 -y install centos-release-scl || \
         sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
     # Install newer compiler for CentOS 7 and 6
     grep "release [67]" /etc/redhat-release
     if [ $? -eq 0 ]
     then
-        sudo yum -y install devtoolset-7-gcc-c++
+        sudo yum -d1 -y install devtoolset-7-gcc-c++
         sudo yum -y install devtoolset-7-libasan-devel
         # Enable it by default
         echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
     else
         # CentOS 8 only needs ASAN
-        sudo yum -y install libasan-devel
+        sudo yum -d1 -y install libasan-devel
     fi
 
     grep "release [78]" /etc/redhat-release
     if [ $? -eq 0 ]
     then
         # EPEL is installed for GCOV report generation (lcov)
-        sudo yum -y install epel-release
-        sudo yum -y install lcov
+        sudo yum -d1 -y install epel-release
+        sudo yum -d1 -y install lcov
     fi
 fi
 
@@ -252,8 +252,8 @@ then
 
    tar xzf tcl8.6.5-src.tar.gz
    cd tcl8.6.5/unix
-   ./configure
-   sudo make install
+   ./configure -q || exit 1
+   sudo make -s install || exit 1
    cd ../../..
 fi
 
