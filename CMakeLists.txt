@@ -176,9 +176,11 @@ elseif (WITH_UBSAN AND UBSAN_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
 endif()
 
-# disable warnigns emanating from sqlite
-set(FLAGS "${FLAGS} -Wno-tautological-constant-out-of-range-compare")
-set(FLAGS "${FLAGS} -Wno-implicit-const-int-float-conversion")
+# disable warnings emanating from sqlite
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(FLAGS "${FLAGS} -Wno-tautological-constant-out-of-range-compare")
+  set(FLAGS "${FLAGS} -Wno-implicit-const-int-float-conversion")
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
