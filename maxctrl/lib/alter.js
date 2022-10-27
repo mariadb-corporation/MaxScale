@@ -16,39 +16,6 @@ const param_type_msg =
   "The parameters should be given in the `key=value` format. This command also supports the legacy method \n" +
   "of passing parameters as `key value` pairs but the use of this is not recommended.";
 
-// TODO: Somehow query these lists from MaxScale
-
-// List of service parameters that can be altered at runtime
-const service_params = [
-  "user",
-  "passwd",
-  "enable_root_user",
-  "max_connections",
-  "connection_timeout",
-  "auth_all_servers",
-  "optimize_wildcard",
-  "strip_db_esc",
-  "max_slave_connections",
-  "max_slave_replication_lag",
-  "retain_last_statements",
-];
-
-// List of maxscale parameters that can be altered at runtime
-const maxscale_params = [
-  "auth_connect_timeout",
-  "auth_read_timeout",
-  "auth_write_timeout",
-  "admin_auth",
-  "admin_log_auth_failures",
-  "passive",
-  "ms_timestamp",
-  "skip_permission_checks",
-  "query_retries",
-  "query_retry_timeout",
-  "retain_last_statements",
-  "dump_last_statements",
-];
-
 function setFilters(host, endpoint, argv) {
   if (argv.filters.length == 0) {
     // We're removing all filters from the service
@@ -142,16 +109,7 @@ exports.builder = function (yargs) {
       "Alter service parameters",
       function (yargs) {
         return yargs
-          .epilog(
-            "To display the service parameters, execute `show service <service>`. " +
-              "Some routers support runtime configuration changes to all parameters. " +
-              "Currently all readconnroute, readwritesplit and schemarouter parameters " +
-              "can be changed at runtime. In addition to module specific parameters, " +
-              "the following list of common service parameters can be altered at runtime:\n\n" +
-              JSON.stringify(service_params, null, 4) +
-              "\n" +
-              param_type_msg
-          )
+          .epilog("To display the service parameters, execute `show service <service\n" + param_type_msg)
           .usage("Usage: alter service <service> <key=value> ...");
       },
       function (argv) {
@@ -243,13 +201,7 @@ exports.builder = function (yargs) {
       "Alter MaxScale parameters",
       function (yargs) {
         return yargs
-          .epilog(
-            "To display the MaxScale parameters, execute `show maxscale`. " +
-              "The following list of parameters can be altered at runtime:\n\n" +
-              JSON.stringify(maxscale_params, null, 4) +
-              "\n" +
-              param_type_msg
-          )
+          .epilog("To display the MaxScale parameters, execute `show maxscale`.\n" + param_type_msg)
           .usage("Usage: alter maxscale <key=value> ...");
       },
       function (argv) {
