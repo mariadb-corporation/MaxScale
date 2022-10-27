@@ -6,16 +6,16 @@ These files can then be queried by clients for various purposes.
 
 This router is intended to be used in tandem with the
 [Binlog Server](Binlogrouter.md).
-The Binlog Server can connect to a master server and request binlog records.
+The Binlog Server can connect to a primary server and request binlog records.
 These records can then consumed by the avrorouter directly from the binlog cache
 of the Binlog Server. This allows MariaDB MaxScale to automatically transform
-binlog events on the master to local Avro format files.
+binlog events on the primary to local Avro format files.
 
 ![Binlog-Avro Translator](images/Binlog-Avro.png)
 
-The avrorouter can also consume binary logs straight from the master. This will
+The avrorouter can also consume binary logs straight from the primary. This will
 remove the need to configure the Binlog Server but it will increase the disk space
-requirement on the master server by at least a factor of two.
+requirement on the primary server by at least a factor of two.
 
 The converted Avro files can be requested with the CDC protocol. This protocol
 should be used to communicate with the avrorouter and currently it is the only
@@ -86,14 +86,14 @@ the first number is the replication domain, the second the server_id value of
 the server and the last is the GTID sequence number.
 
 This parameter has no effect in the traditional mode. If this parameter is
-defined, the replication will start from the implicit GTID that the master first
+defined, the replication will start from the implicit GTID that the primary first
 serves.
 
 #### `server_id`
 
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
-used when replicating from the master in direct replication mode. The default
+used when replicating from the primary in direct replication mode. The default
 value is 1234.
 
 #### `source`
@@ -437,7 +437,7 @@ to run the program.
 ## Examples
 
 The [Avrorouter Tutorial](../Tutorials/Avrorouter-Tutorial.md) shows you how
-the Avrorouter works with the Binlog Server to convert binlogs from a master server
+the Avrorouter works with the Binlog Server to convert binlogs from a primary server
 into easy to process Avro data.
 
 Here is a simple configuration example which reads binary logs locally from

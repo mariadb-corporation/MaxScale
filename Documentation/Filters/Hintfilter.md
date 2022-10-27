@@ -48,25 +48,25 @@ server.
 -- maxscale route to [master | slave | server <server name>]
 ```
 
-#### Route to master
+#### Route to primary
 
 ```
 -- maxscale route to master
 ```
 
-A `master` value in a routing hint will route the query to a master server. This
-can be used to direct read queries to a master server for a up-to-date result
+A `master` value in a routing hint will route the query to a primary server. This
+can be used to direct read queries to a primary server for a up-to-date result
 with no replication lag.
 
-#### Route to slave
+#### Route to replica
 
 ```
 -- maxscale route to slave
 ```
 
-A `slave` value will route the query to a slave server. Please note that the
+A `slave` value will route the query to a replica server. Please note that the
 hints will override any decisions taken by the routers which means that it is
-possible to force writes to a slave server.
+possible to force writes to a replica server.
 
 #### Route to named server
 
@@ -150,7 +150,7 @@ servers.
 
 For example, when the following prepared statement is prepared with the MariaDB
 Connector-C function `mariadb_stmt_prepare` and then executed with
-`mariadb_stmt_execute` the result is always returned from the master:
+`mariadb_stmt_execute` the result is always returned from the primary:
 
 ```
 SELECT user FROM accounts WHERE id = ? -- maxscale route to master
@@ -188,12 +188,12 @@ EXECUTE my_ps USING 123; -- maxscale route to master
 ```
 
 The `PREPARE` is routed normally and will be routed to all servers. The
-`EXECUTE` will be routed to the master as a result of it having the `route to
+`EXECUTE` will be routed to the primary as a result of it having the `route to
 master` hint.
 
 # Examples
 
-## Routing `SELECT` queries to master
+## Routing `SELECT` queries to primary
 
 In this example, MariaDB MaxScale is configured with the readwritesplit router
 and the hint filter.
@@ -212,8 +212,8 @@ type=filter
 module=hintfilter
 ```
 
-Behind MariaDB MaxScale is a master server and a slave server. If there is
-replication lag between the master and the slave, read queries sent to the slave
+Behind MariaDB MaxScale is a primary server and a replica server. If there is
+replication lag between the primary and the replica, read queries sent to the replica
 might return old data. To guarantee up-to-date data, we can add a routing hint
 to the query.
 
@@ -222,7 +222,7 @@ INSERT INTO table1 VALUES ("John","Doe",1);
 SELECT * from table1; -- maxscale route to master
 ```
 
-The first INSERT query will be routed to the master. The following SELECT query
-would normally be routed to the slave but with the added routing hint it will be
-routed to the master. This way we can do an INSERT and a SELECT right after it
+The first INSERT query will be routed to the primary. The following SELECT query
+would normally be routed to the replica but with the added routing hint it will be
+routed to the primary. This way we can do an INSERT and a SELECT right after it
 and still get up-to-date data.

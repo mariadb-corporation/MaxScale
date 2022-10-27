@@ -26,12 +26,12 @@ For details about the standard service parameters, refer to the
 ### `master`
 
 One of the clusters must be designated as the **`master`**. All writes go to the
-master cluster, which for all practical purposes should be a master-slave
+primary cluster, which for all practical purposes should be a primary-replica
 ReadWriteSplit. This document does not go into details about setting up
-master-slave clusters, but suffice to say, that when setting up the ColumnStore
-servers they should be configured to be slaves of a MariaDB server running an
+primary-replica clusters, but suffice to say, that when setting up the ColumnStore
+servers they should be configured to be replicas of a MariaDB server running an
 InnoDB engine.
-The ReadWriteSplit [documentation](ReadWriteSplit.md) has more on master-slave setup.
+The ReadWriteSplit [documentation](ReadWriteSplit.md) has more on primary-replica setup.
 
 #### Example
 

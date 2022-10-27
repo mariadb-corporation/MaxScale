@@ -97,4 +97,4 @@ The MaxScape parser treats them as any other function.
 
 However, as the parser is not aware of which JSON functions are strictly
 _read-only_ any statement using a JSON function will always be routed to
-_master_.
+_primary_.

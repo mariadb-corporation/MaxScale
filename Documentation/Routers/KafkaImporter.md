@@ -36,7 +36,7 @@ requirement that must be met is that the table contains the `data` field to
 which string values can be inserted into.
 
 The database server where the data is inserted is chosen from the set of servers
-available to the service. The first server labeled as the Master with the best
+available to the service. The first server labeled as the `Master` with the best
 rank will be chosen. This means that a monitor must be configured for the
 MariaDB server where the data is to be inserted.
 

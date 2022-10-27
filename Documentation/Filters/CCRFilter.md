@@ -11,7 +11,7 @@ done through MaxScale while still allowing scaleout of non-critical reads.
 
 When the filter detects a statement that would modify the database, it attaches
 a routing hint to all following statements done by that connection. This routing
-hint guides the routing module to route the statement to the master server where
+hint guides the routing module to route the statement to the primary server where
 data is guaranteed to be in an up-to-date state. Writes from one session do not,
 by default, propagate to other sessions.
 
@@ -47,7 +47,7 @@ The CCR filter has no mandatory parameters.
 
 ### `time`
 
-The time window during which queries are routed to the master. The duration
+The time window during which queries are routed to the primary. The duration
 can be specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations)
 but the value  will always be rounded to the nearest second.
@@ -62,15 +62,15 @@ reset to the value of _time_.
 
 Enabling this parameter in combination with the _count_ parameter causes both
 the time window and number of queries to be inspected. If either of the two
-conditions are met, the query is re-routed to the master.
+conditions are met, the query is re-routed to the primary.
 
 ### `count`
 
-The number of SQL statements to route to master after detecting a data modifying
+The number of SQL statements to route to primary after detecting a data modifying
 SQL statement. This feature is disabled by default.
 
 After processing a data modifying SQL statement, a counter is set to the value
-of _count_ and all statements are routed to the master. Each executed statement
+of _count_ and all statements are routed to the primary. Each executed statement
 after a data modifying SQL statement cause the counter to be decremented. Once
 the counter reaches zero, the statements are routed normally. If a new data
 modifying SQL statement is processed, the counter is reset to the value of
@@ -112,10 +112,10 @@ time=5
 ```
 
 With this configuration, whenever a connection does a write, all subsequent
-reads done by that connection will be forced to the master for 5 seconds.
+reads done by that connection will be forced to the primary for 5 seconds.
 
 This prevents read scaling until the modifications have been replicated to the
-slaves. For best performance, the value of _time_ should be slightly greater
-than the actual replication lag between the master and its slaves. If the number
+replicas. For best performance, the value of _time_ should be slightly greater
+than the actual replication lag between the primary and its replicas. If the number
 of critical read statements is known, the _count_ parameter could be used to
-control the number reads that are sent to the master.
+control the number reads that are sent to the primary.

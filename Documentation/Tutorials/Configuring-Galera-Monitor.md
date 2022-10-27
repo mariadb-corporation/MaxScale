@@ -22,9 +22,9 @@ to the servers. The `monitor_interval` parameter controls for how long
 the monitor waits between each monitoring loop.
 
 This monitor module will assign one node within the Galera Cluster as the
-current master and other nodes as slave. Only those nodes that are active
-members of the cluster are considered when making the choice of master node. The
-master node will be the node with the lowest value of `wsrep_local_index`.
+current primary and other nodes as replica. Only those nodes that are active
+members of the cluster are considered when making the choice of primary node. The
+primary node will be the node with the lowest value of `wsrep_local_index`.
 
 ## Monitor User
 

@@ -401,7 +401,7 @@ When MaxScale is started, if the following hold
 
 then, MaxScale will
 
-* wait until the _master_ of the service pointed to by the listener
+* wait until the _primary_ of the service pointed to by the listener
   is available,
 * connect using the credentials specified in `nosqlprotocol.user`
   and `nosqlprotocol.password`,
@@ -537,7 +537,7 @@ nosqlprotocol.authorization_enabled=true
 and start MaxScale.
 
 As the creation of the initial user can be made only after the
-monitor for the listener's service has marked one server as master,
+monitor for the listener's service has marked one server as primary,
 whether the creation succeeded or not must be checked from MaxScale'
 log file:
 ```
@@ -624,7 +624,7 @@ nosqlprotocol.authorization_enabled=true
 and start MaxScale.
 
 As the creation of the initial user can be made only after the
-monitor for the listener's service has marked one server as master,
+monitor for the listener's service has marked one server as primary,
 whether the creation succeeded or not must be checked from MaxScale'
 log file:
 ```
@@ -747,7 +747,7 @@ accounts, will be needed.
 
 In the shared case, the account information of nosqlprotocol
 is stored in the cluster of the service in front of which the
-NoSQL listener resides. The master of the cluster will be used
+NoSQL listener resides. The primary of the cluster will be used
 both for reading and writing data.
 
 A table whose name is the same as the listener's name in the

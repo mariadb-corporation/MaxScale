@@ -29,7 +29,7 @@ only affect sessions created after the change has completed.
 Below is a configuration example for the filter in indexed-mode. The legacy mode
 is not recommended and may be removed in a future release. In the example, a
 SELECT on TableOne (*match01*) results in routing hints to two named servers,
-while a SELECT on TableTwo is suggested to be routed to the master server of the
+while a SELECT on TableTwo is suggested to be routed to the primary server of the
 service. Whether a list of server names is interpreted as a route-to-any or
 route-to-all is up to the attached router. The HintRouter sees a list as a
 suggestion to route-to-any. For additional information on hints and how they can

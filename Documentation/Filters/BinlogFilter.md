@@ -7,7 +7,7 @@ This filter was introduced in MariaDB MaxScale 2.3.0.
 ## Overview
 
 The `binlogfilter` can be combined with a `binlogrouter` service to selectively
-replicate the binary log events to slave servers.
+replicate the binary log events to replica servers.
 
 The filter uses two parameters, *match* and *exclude*, to decide which events
 are replicated. If a binlog event does not match or is excluded, the event is
@@ -52,7 +52,7 @@ Both `rewrite_src` and `rewrite_dest` must be defined to enable statement rewrit
 
 When statement rewriting is enabled
 [GTID-based replication](https://mariadb.com/kb/en/library/gtid/#setting-up-a-new-slave-server-with-global-transaction-id)
-must be used. The filter will disallow replication for all slaves that attempt
+must be used. The filter will disallow replication for all replicas that attempt
 to replicate with traditional file-and-position based replication.
 
 The replacement is done both on the default database as well as the SQL

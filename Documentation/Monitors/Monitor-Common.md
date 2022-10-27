@@ -217,18 +217,18 @@ The placeholders and their substitution results are:
 * `$EVENT` -> event description, e.g. "server_up"
 * `$LIST` -> list of IPs and ports of all servers
 * `$NODELIST` -> list of IPs and ports of all running servers
-* `$SLAVELIST` -> list of IPs and ports of all slave servers
-* `$MASTERLIST` -> list of IPs and ports of all master servers
+* `$SLAVELIST` -> list of IPs and ports of all replica servers
+* `$MASTERLIST` -> list of IPs and ports of all primary servers
 * `$SYNCEDLIST` -> list of IPs and ports of all synced Galera nodes
 * `$PARENT` -> IP and port of the parent of the server which initiated the event.
-For master-slave setups, this will be the master if the initiating server is a
-slave.
+For primary-replica setups, this will be the primary if the initiating server is a
+replica.
 * `$CHILDREN` -> list of IPs and ports of the child nodes of the server who
-initiated the event. For master-slave setups, this will be a list of slave
-servers if the initiating server is a master.
+initiated the event. For primary-replica setups, this will be a list of replica
+servers if the initiating server is a primary.
 
 The expanded variable value can be an empty string if no servers match the
-variable's requirements. For example, if no masters are available `$MASTERLIST`
+variable's requirements. For example, if no primaries are available `$MASTERLIST`
 will expand into an empty string. The list-type substitutions will only contain
 servers monitored by the current monitor.
 
@@ -290,16 +290,16 @@ descriptions.
 
 Event Name  |Description
 ------------|----------
-master_down |A Master server has gone down
-master_up   |A Master server has come up
-slave_down  |A Slave server has gone down
-slave_up    |A Slave server has come up
+master_down |A Primary server has gone down
+master_up   |A Primary server has come up
+slave_down  |A Replica server has gone down
+slave_up    |A Replica server has come up
 server_down |A server with no assigned role has gone down
 server_up   |A server with no assigned role has come up
-lost_master |A server lost Master status
-lost_slave  |A server lost Slave status
-new_master  |A new Master was detected
-new_slave   |A new Slave was detected
+lost_master |A server lost Primary status
+lost_slave  |A server lost Replica status
+new_master  |A new Primary was detected
+new_slave   |A new Replica was detected
 
 ### `journal_max_age`
 
@@ -400,8 +400,8 @@ Children: $children
 Event: $event
 Node list: $node_list
 List: $list
-Master list: $master_list
-Slave list: $slave_list
+Primary list: $master_list
+Replica list: $slave_list
 Synced list: $synced_list
 EOM
 

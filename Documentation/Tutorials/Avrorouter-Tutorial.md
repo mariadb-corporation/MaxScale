@@ -13,12 +13,12 @@ over the network.
 
 # Configuration
 
-## Preparing the master server
+## Preparing the primary server
 
-The master server where we will be replicating from needs to have binary logging
+The primary server where we will be replicating from needs to have binary logging
 enabled, `binlog_format` set to `row` and `binlog_row_image` set to
 `full`. These can be enabled by adding the two following lines to the _my.cnf_
-file of the master.
+file of the primary.
 
 ```
 binlog_format=row
@@ -32,8 +32,8 @@ _You can find out more about replication formats from the
 
 We start by adding two new services into the configuration file. The first
 service is the binlogrouter service which will read the binary logs from the
-master server. The second service will read the binlogs as they are streamed
-from the master and convert them into Avro format files.
+primary server. The second service will read the binlogs as they are streamed
+from the primary and convert them into Avro format files.
 
 ```
 # The Replication Proxy service
@@ -83,10 +83,10 @@ file you are replicating is `my-binlog-file.001234`, set the parameters to
 For more information on the avrorouter options, read the [Avrorouter
 Documentation](../Routers/Avrorouter.md).
 
-# Preparing the data in the master server
+# Preparing the data in the primary server
 
 Before starting the MaxScale process, we need to make sure that the binary logs
-of the master server contain the DDL statements that define the table
+of the primary server contain the DDL statements that define the table
 layouts. What this means is that the `CREATE TABLE` statements need to be in the
 binary logs before the conversion process is started.
 
@@ -94,8 +94,8 @@ If the binary logs contain data modification events for tables that aren't
 created in the binary logs, the Avro schema of the table needs to be manually
 created. There are multiple ways to do this:
 
-- Dump the database to a slave, configure it to replicate from the master and
-  point MaxScale to this slave (this is the recommended method as it requires no
+- Dump the database to a replica, configure it to replicate from the primary and
+  point MaxScale to this replica (this is the recommended method as it requires no
   extra steps)
 
 - Use the [_cdc_schema_ Go utility](../Routers/Avrorouter.md#avro-schema-generator)
@@ -130,7 +130,7 @@ START SLAVE;
 **NOTE:** GTID replication is not currently supported and file-and-position
   replication must be used.
 
-This will start the replication of binary logs from the master server at
+This will start the replication of binary logs from the primary server at
 172.18.0.1 listening on port 3000. The first file that the binlogrouter
 replicates is `binlog.000015`. This is the same file that was configured as the
 starting file in the avrorouter.

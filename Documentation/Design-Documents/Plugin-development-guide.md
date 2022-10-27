@@ -434,12 +434,12 @@ configuration.
 [RR-Service]
 type=service
 router=roundrobinrouter
-servers=LocalMaster1,LocalSlave1,LocalSlave2
+servers=LocalPrimary1,LocalReplica1,LocalReplica2
 user=maxscale
 password=maxscale
 filters=MyLogFilter1
 max_backends=10
-write_backend=LocalMaster1
+write_backend=LocalPrimary1
 print_on_routing=true
 dummy_setting=two
 
@@ -478,7 +478,7 @@ Service cache      : /var/cache/maxscale
 .
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Session with 4 connections created.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] QUERY: SHOW VARIABLES WHERE Variable_name in ('max_allowed_packet', 'system_time_zone', 'time_zone', 'sql_mode')
-2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 110u  to backend 'LocalMaster1'.
+2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 110u  to backend 'LocalPrimary1'.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Replied to client.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] QUERY: set session autocommit=1,sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 103u to 4 backends.
@@ -487,7 +487,7 @@ Service cache      : /var/cache/maxscale
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 48u to 4 backends.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Replied to client.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] QUERY: select @@lower_case_table_names
-2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 36u  to backend 'LocalSlave1'.
+2017-02-21 10:37:37   notice : [RoundRobinRouter] Routing statement of length 36u  to backend 'LocalReplica1'.
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Replied to client.
 ```
 

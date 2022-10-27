@@ -23,7 +23,7 @@ Every MaxScale service with a MariaDB protocol listener requires knowledge of
 the user accounts defined on the backend databases. The service maintains this
 information in an internal component called the *user account manager* (UAM).
 The UAM queries relevant data from the *mysql*-database of the backends and
-stores it. Typically, only the current master server is queried, as all servers
+stores it. Typically, only the current primary server is queried, as all servers
 are assumed to have the same users. The service settings *user* and *password*
 define the credentials used when fetching user accounts.
 

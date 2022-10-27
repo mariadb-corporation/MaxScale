@@ -21,7 +21,7 @@ address=::
 service=Read-Write-Service
 authenticator=PAMAuth
 
-[Master-Server]
+[Primary-Server]
 type=server
 address=123.456.789.10
 port=12345

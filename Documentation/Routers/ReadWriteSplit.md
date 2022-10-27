@@ -15,18 +15,18 @@ splitting the query load into read and write queries. Read queries, which do not
 modify data, are spread across multiple nodes while all write queries will be
 sent to a single node.
 
-The router is designed to be used with a traditional Master-Slave replication
-cluster. It automatically detects changes in the master server and will use the
-current master server of the cluster. With a Galera cluster, one can achieve a
-resilient setup and easy master failover by using one of the Galera nodes as a
-Write-Master node, where all write queries are routed, and spreading the read
+The router is designed to be used with a traditional Primary-Replica replication
+cluster. It automatically detects changes in the primary server and will use the
+current primary server of the cluster. With a Galera cluster, one can achieve a
+resilient setup and easy primary failover by using one of the Galera nodes as a
+Write-Primary node, where all write queries are routed, and spreading the read
 load over all the nodes.
 
 ## Interaction with servers in `Maintenance` and `Draining` state
 
 When a server that readwritesplit uses is put into maintenance mode, any ongoing
 requests are allowed to finish before the connection is closed. If the server
-that is put into maintenance mode is a master, open transaction are allowed to
+that is put into maintenance mode is a primary, open transaction are allowed to
 complete before the connection is closed. Note that this means neither idle
 session nor long-running transactions will be closed by readwritesplit. To
 forcefully close the connections, use the following command:
@@ -62,9 +62,9 @@ taken into use by new sessions.
 - **Dynamic**: Yes
 - **Default**: 255
 
-`max_slave_connections` sets the maximum number of slaves a router session uses
-at any moment. The default is to use at most 255 slave connections per client
-connection. In older versions the default was to use all available slaves with
+`max_slave_connections` sets the maximum number of replicas a router session uses
+at any moment. The default is to use at most 255 replica connections per client
+connection. In older versions the default was to use all available replicas with
 no limit.
 
 For MaxScale 2.5.12 and newer, the minimum value is 0.
@@ -78,16 +78,16 @@ Starting with MaxScale 2.5.0, the use of percentage values in
 `max_slave_connections` is deprecated. The support for percentages will be
 removed in a future release.
 
-For example, if you have configured MaxScale with one master and three slaves
+For example, if you have configured MaxScale with one primary and three replicas
 and set `max_slave_connections=2`, for each client connection a connection to
-the master and two slave connections would be opened. The read query load
-balancing is then done between these two slaves and writes are sent to the
-master.
+the primary and two replica connections would be opened. The read query load
+balancing is then done between these two replicas and writes are sent to the
+primary.
 
 By tuning this parameter, you can control how dynamic the load balancing is at
 the cost of extra created connections. With a lower value of
 `max_slave_connections`, less connections per session are created and the set of
-possible slave servers is smaller. With a higher value in
+possible replica servers is smaller. With a higher value in
 `max_slave_connections`, more connections are created which requires more
 resources but load balancing will almost always give the best single query
 response time and performance. Longer sessions are less affected by a high
@@ -100,14 +100,14 @@ response time and performance. Longer sessions are less affected by a high
 - **Dynamic**: Yes
 - **Default**: 255
 
-This parameter controls how many slave connections each new session starts
+This parameter controls how many replica connections each new session starts
 with. The default value is 255 which is the same as the default value of
 `max_slave_connections`.
 
 In contrast to `max_slave_connections`, `slave_connections` serves as a
-soft limit on how many slave connections are created. The number of slave
+soft limit on how many replica connections are created. The number of replica
 connections can exceed `slave_connections` if the load balancing algorithm
-finds an unconnected slave server better than all other slaves.
+finds an unconnected replica server better than all other replicas.
 
 Setting this parameter to 1 allows faster connection creation and improved
 resource usage due to the smaller amount of initial backend
@@ -121,18 +121,18 @@ lifetime of the client connections is short.
 - **Dynamic**: Yes
 - **Default**: 0s
 
-Specify how many seconds a slave is allowed to be behind the master. The lag of
-a slave must be less than the configured value in order for it to be used for
+Specify how many seconds a replica is allowed to be behind the primary. The lag of
+a replica must be less than the configured value in order for it to be used for
 routing. If set to 0 (the default value), the feature is disabled.
 
-In MaxScale 2.5.0, the slave lag must be less than `max_slave_replication_lag`
-whereas in older versions the slave lag had to be less than or equal to
+In MaxScale 2.5.0, the replica lag must be less than `max_slave_replication_lag`
+whereas in older versions the replica lag had to be less than or equal to
 `max_slave_replication_lag`. This means that in MaxScale 2.5.0 it is possible to
-define, with `max_slave_replication_lag=1`, that all slaves must be up to date
+define, with `max_slave_replication_lag=1`, that all replicas must be up to date
 in order for them to be used for routing.
 
-Note that this feature does not guarantee that writes done on the master are
-visible for reads done on the slave. This is mainly due to the method of
+Note that this feature does not guarantee that writes done on the primary are
+visible for reads done on the replica. This is mainly due to the method of
 replication lag measurement. For a feature that guarantees this, refer to
 [`causal_reads`](#causal_reads).
 
@@ -144,9 +144,9 @@ of the lag is seconds, a lag specified in milliseconds will be rejected, even if
 the duration is longer than a second.
 
 The Readwritesplit-router does not detect the replication lag itself. A monitor
-such as the MariaDB-monitor for a Master/Slave-cluster is required. This option
-only affects Master-Slave clusters. Galera clusters do not have a concept of
-slave lag even if the application of write sets might have lag. When a server is
+such as the MariaDB-monitor for a Primary-Replica cluster is required. This option
+only affects Primary-Replica clusters. Galera clusters do not have a concept of
+replica lag even if the application of write sets might have lag. When a server is
 disqualified from routing because of replication lag, a warning is logged. Similarly,
 when the server has caught up enough to be a valid routing target, another warning
 is logged. These messages are only logged when a query is being routed and the
@@ -187,15 +187,15 @@ The possible values for this parameter are:
 * `master`
 
   * Modifications to user variables inside `SELECT` statements as well as reads
-    of user variables are routed to the master server. This forces more of the
-    traffic onto the master server but it reduces the amount of data that is
+    of user variables are routed to the primary server. This forces more of the
+    traffic onto the primary server but it reduces the amount of data that is
     discarded for any `SELECT` statement that also modifies a user
     variable. With this mode, the state of user variables is not deterministic
     if they are modified inside of a `SELECT` statement. `SET` statements that
     modify user variabels are still routed to all servers.
 
 DML statements, such as `INSERT`, `UPDATE` or `DELETE`, that modify SQL user
-variables are still treated as writes and are only routed to the master
+variables are still treated as writes and are only routed to the primary
 server. For example, after the following query the value of `@myid` is no longer
 the same on all servers and the `SELECT` statement can return different values
 depending where it ends up being executed:
@@ -225,27 +225,27 @@ a service parameter in MaxScale 2.5.0.
 - **Dynamic**: Yes
 - **Default**: false
 
-Allow the master server to change mid-session. This feature was introduced in
+Allow the primary server to change mid-session. This feature was introduced in
 MaxScale 2.3.0 and is disabled by default.
 
-When a readwritesplit session starts, it will pick a master server as the
-current master server of that session. By default, when this master server
+When a readwritesplit session starts, it will pick a primary server as the
+current primary server of that session. By default, when this primary server
 changes mid-session, the connection will be closed.
 
-If the `master_reconnection` parameter is enabled, the master server is allowed
+If the `master_reconnection` parameter is enabled, the primary server is allowed
 to change as long as the session meets the following criteria:
 
-* The session is already connected to the slave that was chosen to be the new master
+* The session is already connected to the replica that was chosen to be the new primary
 * No transaction is open
 * Autocommit is enabled
 * No `LOAD DATA LOCAL INFILE` is in progress
-* There are no queries being actively routed to the old master
+* There are no queries being actively routed to the old primary
 
 When `master_reconnection` is enabled in conjunction with either
 `master_failure_mode=fail_on_write` or `master_failure_mode=error_on_write`, the
-session can recover from the loss of a master server. This means that when a
-session starts without a master server and later a slave server that it is
-connected to is promoted as the master, the session will come out of the
+session can recover from the loss of a primary server. This means that when a
+session starts without a primary server and later a replica server that it is
+connected to is promoted as the primary, the session will come out of the
 read-only mode (described in detail in the
 [`master_failure_mode`](#master_failure_mode) documentation).
 
@@ -257,9 +257,9 @@ read-only mode (described in detail in the
 - **Values**: `LEAST_CURRENT_OPERATIONS`, `ADAPTIVE_ROUTING`, `LEAST_BEHIND_MASTER`, `LEAST_ROUTER_CONNECTIONS`, `LEAST_GLOBAL_CONNECTIONS`
 - **Default**: `LEAST_CURRENT_OPERATIONS`
 
-This option controls how the readwritesplit router chooses the slaves it
+This option controls how the readwritesplit router chooses the replicas it
 connects to and how the load balancing is done. The default behavior is to route
-read queries to the slave server with the lowest amount of ongoing queries i.e.
+read queries to the replica server with the lowest amount of ongoing queries i.e.
 `LEAST_CURRENT_OPERATIONS`.
 
 The option syntax:
@@ -270,10 +270,10 @@ slave_selection_criteria=<criteria>
 
 Where `<criteria>` is one of the following values.
 
-* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections from MariaDB MaxScale
-* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this service
-* `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
-* `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+* `LEAST_GLOBAL_CONNECTIONS`, the replica with least connections from MariaDB MaxScale
+* `LEAST_ROUTER_CONNECTIONS`, the replica with least connections from this service
+* `LEAST_BEHIND_MASTER`, the replica with smallest replication lag
+* `LEAST_CURRENT_OPERATIONS` (default), the replica with least active operations
 * `ADAPTIVE_ROUTING`, based on server average response times. See below.
 
 The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the
@@ -314,26 +314,26 @@ For `LEAST_CURRENT_OPERATIONS`, the metric is number of active queries on
 the candidate server, for `LEAST_GLOBAL_CONNECTIONS` and
 `LEAST_ROUTER_CONNECTIONS` it is the number of open connections and for
 `LEAST_BEHIND_MASTER` it is the number of seconds a server is behind the
-master.
+primary.
 
 #### Interaction Between `slave_selection_criteria` and `max_slave_connections`
 
-Depending on the value of `max_slave_connections`, the slave selection criteria
+Depending on the value of `max_slave_connections`, the replica selection criteria
 behave in different ways. Here are a few example cases of how the different
-criteria work with different amounts of slave connections.
+criteria work with different amounts of replica connections.
 
 * With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` and
-`max_slave_connections=1`, each session picks one slave and one master
+`max_slave_connections=1`, each session picks one replica and one primary
 
 * With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
-`max_slave_connections=100%`, each session picks one master and as many slaves
+`max_slave_connections=100%`, each session picks one primary and as many replicas
 as possible
 
 * With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` each read is load
-balanced based on how many queries are active on a particular slave
+balanced based on how many queries are active on a particular replica
 
 * With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` each read is sent to
-the slave with the least amount of connections
+the replica with the least amount of connections
 
 ### `max_sescmd_history`
 
@@ -360,16 +360,16 @@ in MaxScale 6.0.
 - **Dynamic**: Yes
 - **Default**: false
 
-**`master_accept_reads`** allows the master server to be used for reads. This is
+**`master_accept_reads`** allows the primary server to be used for reads. This is
 a useful option to enable if you are using a small number of servers and wish to
-use the master for reads as well.
+use the primary for reads as well.
 
-By default, no reads are sent to the master as long as there is a valid slave
-server available. If no slaves are available, reads are sent to the master
+By default, no reads are sent to the primary as long as there is a valid replica
+server available. If no replicas are available, reads are sent to the primary
 regardless of the value of `master_accept_reads`.
 
 ```
-# Use the master for reads
+# Use the primary for reads
 master_accept_reads=true
 ```
 
@@ -384,8 +384,8 @@ This option is disabled by default since MaxScale 2.2.1. In older versions, this
 option was enabled by default.
 
 When a client executes a multi-statement query, it will be treated as if it were
-a DML statement and routed to the master. If the option is enabled, all queries
-after a multi-statement query will be routed to the master to guarantee a
+a DML statement and routed to the primary. If the option is enabled, all queries
+after a multi-statement query will be routed to the primary to guarantee a
 consistent session state.
 
 If the feature is disabled, queries are routed normally after a multi-statement
@@ -407,7 +407,7 @@ strict_multi_stmt=true
 - **Default**: false
 
 Similar to `strict_multi_stmt`, this option allows all queries after a CALL
-operation on a stored procedure to be routed to the master. This option is
+operation on a stored procedure to be routed to the primary. This option is
 disabled by default and was added in MaxScale 2.1.9.
 
 All warnings and restrictions that apply to `strict_multi_stmt` also apply to
@@ -421,36 +421,36 @@ All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 - **Values**: `fail_instantly`, `fail_on_write`, `error_on_write`
 - **Default**: `fail_instantly`
 
-This option controls how the failure of a master server is handled. By default,
-the router will close the client connection as soon as the master is lost.
+This option controls how the failure of a primary server is handled. By default,
+the router will close the client connection as soon as the primary is lost.
 
 The following table describes the values for this option and how they treat the
-loss of a master server.
+loss of a primary server.
 
 | Value        | Description|
 |--------------|-----------|
-|fail_instantly | When the failure of the master server is detected, the connection will be closed immediately.|
-|fail_on_write | The client connection is closed if a write query is received when no master is available.|
-|error_on_write | If no master is available and a write query is received, an error is returned stating that the connection is in read-only mode.|
+|fail_instantly | When the failure of the primary server is detected, the connection will be closed immediately.|
+|fail_on_write | The client connection is closed if a write query is received when no primary is available.|
+|error_on_write | If no primary is available and a write query is received, an error is returned stating that the connection is in read-only mode.|
 
-These also apply to new sessions created after the master has failed. This means
+These also apply to new sessions created after the primary has failed. This means
 that in `fail_on_write` or `error_on_write` mode, connections are accepted as
-long as slave servers are available.
+long as replica servers are available.
 
 When configured with `fail_on_write` or `error_on_write`, sessions that are idle
 will not be closed even if all backend connections for that session have
 failed. This is done in the hopes that before the next query from the idle
-session arrives, a reconnection to one of the slaves is made. However, this can
+session arrives, a reconnection to one of the replicas is made. However, this can
 leave idle connections around unless the client application actively closes
 them. To prevent this, use the
 [connection_timeout](../Getting-Started/Configuration-Guide.md#connection_timeout)
 parameter.
 
 **Note:** If `master_failure_mode` is set to `error_on_write` and the connection
-to the master is lost, by default, clients will not be able to execute write
-queries without reconnecting to MariaDB MaxScale once a new master is
+to the primary is lost, by default, clients will not be able to execute write
+queries without reconnecting to MariaDB MaxScale once a new primary is
 available. If [`master_reconnection`](#master_reconnection) is enabled, the
-session can recover if one of the slaves is promoted as the master.
+session can recover if one of the replicas is promoted as the primary.
 
 ### `retry_failed_reads`
 
@@ -463,8 +463,8 @@ This option controls whether autocommit selects are retried in case of failure.
 This option is enabled by default.
 
 When a simple autocommit select is being executed outside of a transaction and
-the slave server where the query is being executed fails, readwritesplit can
-retry the read on a replacement server. This makes the failure of a slave
+the replica server where the query is being executed fails, readwritesplit can
+retry the read on a replacement server. This makes the failure of a replica
 transparent to the client.
 
 ### `delayed_retry`
@@ -487,7 +487,7 @@ behavior and returns an error.
 
 When combined with the `master_reconnection` parameter, failures of writes done
 outside of transactions can be hidden from the client connection. This allows a
-master to be replaced while a write is in progress.
+primary to be replaced while a write is in progress.
 
 The delayed query retrying mode in readwritesplit does not do any sort of
 duplicate write detection. To prevent accidental data duplication, it is highly
@@ -532,7 +532,7 @@ overriding any configured values for these parameters.
 
 When the server where the transaction is in progress fails, readwritesplit can
 migrate the transaction to a replacement server. This can completely hide the
-failure of a master node without any visible effects to the client.
+failure of a primary node without any visible effects to the client.
 
 If no replacement node becomes available, the client connection is closed.
 
@@ -699,21 +699,21 @@ Possible values are:
 
 Enable optimistic transaction execution. This parameter controls whether normal
 transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
-slaves. This feature is disabled by default and enabling it implicitly enables
+replicas. This feature is disabled by default and enabling it implicitly enables
 `transaction_replay`, `delayed_retry` and `master_reconnection` parameters.
 
-When this mode is enabled, all transactions are first attempted on slave
+When this mode is enabled, all transactions are first attempted on replica
 servers. If the transaction contains no statements that modify data, it is
-completed on the slave. If the transaction contains statements that modify data,
-it is rolled back on the slave server and restarted on the master. The rollback
+completed on the replica. If the transaction contains statements that modify data,
+it is rolled back on the replica server and restarted on the primary. The rollback
 is initiated the moment a data modifying statement is intercepted by
-readwritesplit so only read-only statements are executed on slave servers.
+readwritesplit so only read-only statements are executed on replica servers.
 
 As with `transaction_replay` and transactions that are replayed, if the results
-returned by the master server are not identical to the ones returned by the
-slave up to the point where the first data modifying statement was executed, the
-connection is closed. If the execution of ROLLBACK statement on the slave fails,
-the connection to that slave is closed.
+returned by the primary server are not identical to the ones returned by the
+replica up to the point where the first data modifying statement was executed, the
+connection is closed. If the execution of ROLLBACK statement on the replica fails,
+the connection to that replica is closed.
 
 All limitations that apply to `transaction_replay` also apply to
 `optimistic_trx`.
@@ -730,7 +730,7 @@ Enable causal reads. This parameter is disabled by default and was introduced in
 MaxScale 2.3.0.
 
 If a client connection modifies the database and `causal_reads` is enabled, any
-subsequent reads performed on slave servers will be done in a manner that
+subsequent reads performed on replica servers will be done in a manner that
 prevents replication lag from affecting the results.
 
 The following table contains a comparison of the modes.  Read the
@@ -738,19 +738,19 @@ The following table contains a comparison of the modes.  Read the
 information on what a sync consists of and why minimizing the number of them is
 important.
 
-|Mode         |Level of Causality |Latency                                                 |
-|-------------|-------------------|--------------------------------------------------------|
-|`local`      |Session            |Low, one sync per write.                                |
-|`fast`       |Session            |None, no sync at all.                                   |
-|`global`     |Service            |Medium, one sync per read.                              |
-|`fast_global`|Service            |None, no sync at all.                                   |
-|`universal`  |Cluster            |High, one sync per read plus a roundtrip to the master. |
+|Mode         |Level of Causality |Latency                                                  |
+|-------------|-------------------|---------------------------------------------------------|
+|`local`      |Session            |Low, one sync per write.                                 |
+|`fast`       |Session            |None, no sync at all.                                    |
+|`global`     |Service            |Medium, one sync per read.                               |
+|`fast_global`|Service            |None, no sync at all.                                    |
+|`universal`  |Cluster            |High, one sync per read plus a roundtrip to the primary. |
 
 The `fast` and `fast_global` modes should only be used when low latency is more
 important than proper distribution of reads. These modes should only be used
 when the workload is mostly read-only with only occasional writes. If used with
 a mixed or a write-heavy workload, the traffic will end up being routed almost
-exclusively to the master server.
+exclusively to the primary server.
 
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
   addition to this, the `session_track_system_variables` parameter must include
@@ -767,7 +767,7 @@ The possible values for this parameter are:
   * Writes are locally visible. Writes are guaranteed to be visible only to the
     connection that does it. Unrelated modifications done by other connections
     are not visible. This mode improves read scalability at the cost of latency
-    and reduces the overall load placed on the master server without breaking
+    and reduces the overall load placed on the primary server without breaking
     causality guarantees.
 
 * `global`
@@ -791,10 +791,10 @@ The possible values for this parameter are:
 * `fast`
 
   * This mode is similar to the `local` mode where it will only affect the
-    connection that does the write but where the `local` mode waits for a slave
+    connection that does the write but where the `local` mode waits for a replica
     server to catch up, the `fast` mode will only use servers that are known to
-    have replicated the write. This means that if no slave has replicated the
-    write, the master where the write was done will be used. The value of
+    have replicated the write. This means that if no replica has replicated the
+    write, the primary where the write was done will be used. The value of
     `causal_reads_timeout` is ignored in this mode. Currently the replication
     state is only updated by the mariadbmon monitor whenever the servers are
     monitored. This means that a smaller `monitor_interval` provides faster
@@ -820,18 +820,18 @@ The possible values for this parameter are:
 
   * The universal mode guarantees that all SELECT statements always see the
     latest observable transaction state on a database cluster. The basis of this
-    is the `@@gtid_current_pos` variable which is read from the current master
+    is the `@@gtid_current_pos` variable which is read from the current primary
     server before each read. This guarantees that if a transaction was visible
     at the time the read is received by readwritesplit, the transaction is
-    guaranteed to be complete on the slave server where the read is done.
+    guaranteed to be complete on the replica server where the read is done.
 
     This mode is the most consistent of all the modes. It provides consistency
     regardless of where a write originated from but it comes at the cost of
-    increased latency. For every read, a round trip to the current master server
+    increased latency. For every read, a round trip to the current primary server
     is done. This means that the latency of any given SELECT statement increases
     by roughly twice the network latency between MaxScale and the database
     cluster. In addition, an extra SELECT statement is always executed on the
-    master which places some load on the server.
+    primary which places some load on the server.
 
 Before MaxScale 2.5.0, the `causal_reads` parameter was a boolean
 parameter. False values translated to `none` and true values translated to
@@ -845,13 +845,13 @@ server-side status variables. By tracking the latest GTID that each statement
 generates, readwritesplit can then perform a synchronization operation with the
 help of the `MASTER_GTID_WAIT` function.
 
-If the slave has not caught up to the master within the configured time, it will
-be retried on the master. In MaxScale 2.3.0 an error was returned to the client
-when the slave timed out.
+If the replica has not caught up to the primary within the configured time, it will
+be retried on the primary. In MaxScale 2.3.0 an error was returned to the client
+when the replica timed out.
 
 The exception to this rule is the `fast` mode which does not do any
 synchronization at all. This can be done as any reads that would go to
-out-of-date servers will be re-routed to the current master.
+out-of-date servers will be re-routed to the current primary.
 
 ##### Normal SQL
 
@@ -864,8 +864,8 @@ SELECT * FROM test.t1 WHERE id = 1;
 ```
 
 As the statements are not executed inside a transaction, from the load balancer's
-point of view, the latter statement can be routed to a slave server. The problem
-with this is that if the value that was inserted on the master has not yet
+point of view, the latter statement can be routed to a replica server. The problem
+with this is that if the value that was inserted on the primary has not yet
 replicated to the server where the SELECT statement is being performed, it can
 appear as if the value we just inserted is not there.
 
@@ -886,7 +886,7 @@ SET @maxscale_secret_variable=(
 SELECT * FROM test.t1 WHERE id = 1;
 ```
 
-The `SET` command will synchronize the slave to a certain logical point in
+The `SET` command will synchronize the replica to a certain logical point in
 the replication stream (see
 [MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
 for more details).
@@ -923,7 +923,7 @@ the same as it is for normal SQL queries.
 
 As a result of this, each time the the synchronization query times out, the
 connection will be killed by the `KILL` statement and readwritesplit will retry
-the query on the master. This is done to prevent the execution of the prepared
+the query on the primary. This is done to prevent the execution of the prepared
 statement that follows the synchronization query from being processed by the
 MariaDB server.
 
@@ -941,7 +941,7 @@ SQLSTATE: 25006
 Message:  Causal read timed out while in a read-only transaction, cannot retry command.
 ```
 
-Older versions of MaxScale attempted to retry the command on the current master
+Older versions of MaxScale attempted to retry the command on the current primary
 server which would cause the connection to be closed and a warning to be logged.
 
 #### Limitations of Causal Reads
@@ -967,7 +967,7 @@ server which would cause the connection to be closed and a warning to be logged.
 - **Dynamic**: Yes
 - **Default**: 10s
 
-The timeout for the slave synchronization done by `causal_reads`. The
+The timeout for the replica synchronization done by `causal_reads`. The
 default value is 10 seconds.
 
 The timeout is specified as documented
@@ -993,8 +993,8 @@ By default readwritesplit opens as many connections as it can when the session
 is first opened. This makes the execution of the first query faster when all
 available connections are already created. When `lazy_connect` is enabled, this
 initial connection creation is skipped. If the client executes only read
-queries, no connection to the master is made. If only write queries are made,
-only the master connection is used.
+queries, no connection to the primary is made. If only write queries are made,
+only the primary connection is used.
 
 ### `reuse_prepared_statements`
 
@@ -1022,8 +1022,8 @@ The `router_diagnostics` output for a readwritesplit service contains the
 following fields.
 
 * `queries`: Number of queries executed through this service.
-* `route_master`: Number of writes routed to master.
-* `route_slave`: Number of reads routed to slaves.
+* `route_master`: Number of writes routed to primary.
+* `route_slave`: Number of reads routed to replicas.
 * `route_all`: Number of session commands routed to all servers.
 * `rw_transactions`: Number of explicit read-write transactions.
 * `ro_transactions`: Number of explicit read-only transactions.
@@ -1044,20 +1044,20 @@ The general rule with server ranks is that primary servers will be used before
 secondary servers. Readwritesplit is an exception to this rule. The following
 rules govern how readwritesplit behaves with servers that have different ranks.
 
-* Sessions will use the current master server as long as possible. This means
-  that sessions with a secondary master will not use the primary master as long
-  as the secondary master is available.
+* Sessions will use the current primary server as long as possible. This means
+  that sessions with a secondary primary will not use the primary primary as long
+  as the secondary primary is available.
 
-* All slave connections will use the same rank as the master connection. Any
-  stale connections with a different rank than the master will be discarded.
+* All replica connections will use the same rank as the primary connection. Any
+  stale connections with a different rank than the primary will be discarded.
 
-* If no master connection is available and `master_reconnection` is enabled, a
-  connection to the best master is created. If the new master has a different
+* If no primary connection is available and `master_reconnection` is enabled, a
+  connection to the best primary is created. If the new primary has a different
   priority than existing connections have, the connections with a different rank
   will be discarded.
 
 * If open connections exist, these will be used for routing. This means that if
-  the master is lost but the session still has slave servers with the same rank,
+  the primary is lost but the session still has replica servers with the same rank,
   they will remain in use.
 
 * If no open connections exist, the servers with the best rank will used.
@@ -1072,7 +1072,7 @@ document.
 **Note**: Routing hints will always have the highest priority when a routing
 decision is made. This means that it is possible to cause inconsistencies in
 the session state and the actual data in the database by adding routing hints
-to DDL/DML statements which are then directed to slave servers. Only use routing
+to DDL/DML statements which are then directed to replica servers. Only use routing
 hints when you are sure that they can cause no harm.
 
 An exception to this rule is `transaction_replay`: when it is enabled, all
@@ -1084,7 +1084,7 @@ routing hints to override the transaction logic.
 ### Known Limitations of Routing Hints
 
 * If a `SELECT` statement with a `maxscale route to slave` hint is received
-  while autocommit is disabled, the query will be routed to a slave server. This
+  while autocommit is disabled, the query will be routed to a replica server. This
   causes some metadata locks to be acquired on the database in question which
   will block DDL statements on the server until either the connection is closed
   or autocommit is enabled again.
@@ -1099,12 +1099,12 @@ Examples of the readwritesplit router in use can be found in the
 Here is a small explanation which shows what kinds of queries are routed to
 which type of server.
 
-### Routing to Master
+### Routing to Primary
 
-Routing to master is important for data consistency and because majority of
-writes are written to binlog and thus become replicated to slaves.
+Routing to primary is important for data consistency and because majority of
+writes are written to binlog and thus become replicated to replicas.
 
-The following operations are routed to master:
+The following operations are routed to primary:
 
 * DML statements (`INSERT`, `UPDATE`, `DELETE` etc.)
 * DDL statements (`DROP`, `CREATE`, `ALTER` etc.)
@@ -1114,10 +1114,10 @@ The following operations are routed to master:
 * Statements that use `LAST_INSERT_ID()`
 
 In addition to these, if the **readwritesplit** service is configured with the
-`max_slave_replication_lag` parameter, and if all slaves suffer from too much
-replication lag, then statements will be routed to the _Master_. (There might be
+`max_slave_replication_lag` parameter, and if all replicas suffer from too much
+replication lag, then statements will be routed to the primary. (There might be
 other similar configuration parameters in the future which limit the number of
-statements that will be routed to slaves.)
+statements that will be routed to replicas.)
 
 #### Transaction Isolation Level Tracking
 
@@ -1127,22 +1127,22 @@ recommended as it somewhat goes against the goals of load balancing.
 If either `session_track_transaction_info=CHARACTERISTICS` or
 `session_track_system_variables=tx_isolation` is configured for the MariaDB
 server, readwritesplit will track the transaction isolation level and lock the
-session to the master when the isolation level is set to serializable. This
+session to the primary when the isolation level is set to serializable. This
 retains the correctness of the isolation level which can otherwise cause
-problems. Once a session is locked to the master, it will not be unlocked. To
+problems. Once a session is locked to the primary, it will not be unlocked. To
 reinstate the normal routing behavior, a new connection must be created.
 
 For example, if transaction isolation level tracking cannot be done and an
-autocommit SELECT is routed to a slave, it no longer behaves in a serializable
-manner. This can also have an effect on the replication in the slave server.
+autocommit SELECT is routed to a replica, it no longer behaves in a serializable
+manner. This can also have an effect on the replication in the replica server.
 
-### Routing to Slaves
+### Routing to Replicas
 
-The ability to route some statements to slaves is important because it also
-decreases the load targeted to master. Moreover, it is possible to have multiple
-slaves to share the load in contrast to single master.
+The ability to route some statements to replicas is important because it also
+decreases the load targeted to _primary_. Moreover, it is possible to have multiple
+replicas to share the load in contrast to single primary.
 
-Queries which can be routed to slaves must be auto committed and belong to one
+Queries which can be routed to replicas must be auto committed and belong to one
 of the following group:
 
 * Read-only statements (i.e. `SELECT`) that only use read-only built-in functions
@@ -1168,12 +1168,12 @@ Session commands include for example:
 * Other miscellaneous commands (COM_QUIT, COM_PING etc.)
 
 **NOTE**: if variable assignment is embedded in a write statement it is routed
-to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be
-routed to _Master_ only.
+to _primary_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be
+routed to _primary_ only.
 
 The router stores all of the executed session commands so that in case of a
-slave failure, a replacement slave can be chosen and the session command history
-can be repeated on that new slave. This means that the router stores each
+replica failure, a replacement replica can be chosen and the session command history
+can be repeated on that new replica. This means that the router stores each
 executed session command for the duration of the session. Applications that use
 long-running sessions might cause MariaDB MaxScale to consume a growing amount
 of memory unless the sessions are closed. This can be solved by adjusting the
@@ -1183,7 +1183,7 @@ value of `max_sescmd_history`.
 
 In the following cases, a query is routed to the same server where the previous
 query was executed. If no previous target is found, the query is routed to the
-current master.
+current primary.
 
 * If a query uses the `FOUND_ROWS()` function, it will be routed to the server
   where the last query was executed. This is done with the assumption that a
@@ -1194,7 +1194,7 @@ current master.
 
 ## Limitations
 
-Read queries are routed to the master server in the following situations:
+Read queries are routed to the primary server in the following situations:
 
 * Query is executed inside an open read-write transaction
 * Statement includes a stored procedure or an UDF call
@@ -1203,8 +1203,8 @@ Read queries are routed to the master server in the following situations:
 
 ### Prepares Statement Limitations
 
-If a prepared statement targets a temporary table on the master, the slave
-servers will fail to execute it. This will cause all slave connections to be
+If a prepared statement targets a temporary table on the primary, the replica
+servers will fail to execute it. This will cause all replica connections to be
 closed (MXS-1816).
 
 ### Transaction Replay Limitations
@@ -1308,12 +1308,12 @@ track the state of the response.
 #### Limitations in multi-statement handling
 
 When a multi-statement query is executed through the readwritesplit router, it
-will always be routed to the master. See
+will always be routed to the primary. See
 [`strict_multi_stmt`](../Routers/ReadWriteSplit.md#strict_multi_stmt) for more
 details.
 
 If the multi-statement query creates a temporary table, it will not be
-detected and reads to this table can be routed to slave servers. To
+detected and reads to this table can be routed to replica servers. To
 prevent this, always execute the temporary table creation as an individual
 statement.
 
@@ -1322,7 +1322,7 @@ statement.
 Some of the queries that a client sends are routed to all backends instead of
 just to one. These queries include `USE <db name>` and `SET autocommit=0`, among
 many others. Readwritesplit sends a copy of these queries to each backend server
-and forwards the master's reply to the client. Below is a list of MySQL commands
+and forwards the primary's reply to the client. Below is a list of MySQL commands
 which are classified as session commands.
 
 ```
@@ -1348,10 +1348,10 @@ Prior to MaxScale 2.3.0, session commands that were 2²⁴ - 1 bytes or longer w
 not supported and caused the session to be closed.
 
 There is a possibility for misbehavior. If `USE mytable` is executed in one of
-the slaves and fails, it may be due to replication lag rather than the database
+the replicas and fails, it may be due to replication lag rather than the database
 not existing. Thus, the same command may produce different result in different
-backend servers. The slaves which fail to execute a session command will be
-dropped from the active list of slaves for this session to guarantee a
+backend servers. The replicas which fail to execute a session command will be
+dropped from the active list of replicas for this session to guarantee a
 consistent session state across all the servers used by the session. In
 addition, the server will not be used again for routing for the duration of the
 session.
@@ -1381,4 +1381,4 @@ ERROR 1064 (42000): Routing query to backend failed. See the error log for furth
 
 Allow user variable modification in SELECT queries by setting
 `use_sql_variables_in=master`. This will route all queries that use user
-variables to the master.
+variables to the primary.

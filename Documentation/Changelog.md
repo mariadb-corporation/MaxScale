@@ -2,6 +2,11 @@
 
 # MariaDB MaxScale 23.02
 
+* A transition from the traditional _master/slave_ terminology to the
+  _primary/replica_ terminology has been started. In the documentation
+  the transition has been made, but in configuration settings and command
+  output the traditional terminology is still used. Conceptually,
+  _master/slave_ and _primary/replica_ are completely interchangable.
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
   have been removed.
 

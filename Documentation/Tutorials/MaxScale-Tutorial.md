@@ -4,7 +4,7 @@ This document is designed as a quick introduction to setting up MariaDB MaxScale
 
 The installation and configuration of the MariaDB Server is not covered in this document.
 See the following MariaDB knowledgebase articles for more information on setting up a
-master-slave-cluster or a Galera-cluster:
+primary-replica-cluster or a Galera-cluster:
 [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/)
  and
  [Getting Started With MariaDB Galera Cluster](https://mariadb.com/kb/en/mariadb/getting-started-with-mariadb-galera-cluster/)
@@ -30,7 +30,7 @@ package installation can be found in the
 
 MaxScale checks that incoming clients are valid. To do this, MaxScale needs to retrieve
 user authentication information from the backend databases. Create a special user
-account for this purpose by executing the following SQL commands on the master server of
+account for this purpose by executing the following SQL commands on the primary server of
 your database cluster. The following tutorials will use these credentials.
 
 ```
@@ -109,7 +109,7 @@ configuration instructions.
 
 ## Configuring the monitor
 
-The type of monitor used depends on the type of cluster used. For a master-slave cluster
+The type of monitor used depends on the type of cluster used. For a primary-replica cluster
 read
 [Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md).
 For a Galera cluster read

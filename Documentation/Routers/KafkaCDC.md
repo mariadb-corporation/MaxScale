@@ -108,7 +108,7 @@ contain the table name and schema the event targets.
 The router stores table metadata in the MaxScale data directory. The
 default value is `/var/lib/maxscale/<service name>`. If data for a table
 is replicated before a DDL event for it is replicated, the CREATE TABLE
-will be queried from the master server.
+will be queried from the primary server.
 
 During shutdown, the Kafka event queue is flushed. This can take up to 60
 seconds if the network is slow or there are network problems.
@@ -116,10 +116,10 @@ seconds if the network is slow or there are network problems.
 ## Configuration
 
 The `servers` parameter defines the set of servers where the data is replicated
-from. The replication will be done from the first master server that is found.
+from. The replication will be done from the first primary server that is found.
 
 The `user` and `password` of the service will be used to connect to the
-master. This user requires the REPLICATION SLAVE grant.
+primary. This user requires the REPLICATION SLAVE grant.
 
 The KafkaCDC service must not be configured to use listeners. If a listener is
 configured, all attempts to start a session will fail.
@@ -173,7 +173,7 @@ from Kafka.
 
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
-used when replicating from the master in direct replication mode. The default
+used when replicating from the primary in direct replication mode. The default
 value is 1234. This parameter was added in MaxScale 2.5.7.
 
 ### `match`

@@ -34,13 +34,13 @@ is also possible to update the status of a server manually.
 Status | Description
 -------|------------
 Running       | The server is running.
-Master        | The server is the master.
-Slave         | The server is a slave.
+Master        | The server is the primary.
+Slave         | The server is a replica.
 Draining      | The server is being drained. Existing connections can continue to be used, but no new connections will be created to the server. Typically this status bit is turned on manually using _maxctrl_, but a monitor may also turn it on.
 Drained       | The server has been drained. The server was being drained and now the number of connections to the server has dropped to 0.
 Auth Error    | The monitor cannot login and query the server due to insufficient privileges.
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
-Slave of External Master | The server is a slave of a master that is not being monitored.
+Slave of External Master | The server is a replica of a primary that is not being monitored.
 
 For more information on how to manually set these states via MaxCtrl, read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
@@ -51,7 +51,7 @@ A monitor module is capable of monitoring the state of a particular kind
 of cluster and making that state available to the routers of MaxScale.
 
 Examples of monitor modules are `mariadbmon` that is capable of monitoring
-a regular master-slave cluster and in addition of performing both _switchover_
+a regular primary-replica cluster and in addition of performing both _switchover_
 and _failover_, `galeramon` that is capable of monitoring a Galera cluster,
 `csmon` that is capable of monitoring a Columnstore cluster and `xpandmon`
 that is capable of monitoring a Xpand cluster.
@@ -709,8 +709,8 @@ effect. If an attempt to enable these is made, a warning is logged.
 When enabled, a warning is logged whenever a client with SUPER-privilege
 successfully authenticates. This also applies to COM_CHANGE_USER-commands. The
 setting is intended for diagnosing situations where a client interferes with a
-master server switchover. Super-users bypass the *read_only*-flag which
-switchover uses to block writes to the master.
+primary server switchover. Super-users bypass the *read_only*-flag which
+switchover uses to block writes to the primary.
 
 ### `log_augmentation`
 
@@ -1002,7 +1002,7 @@ query_classifier_args=log_unrecognized_statements=1
 
 This will log all statements that cannot be parsed completely. This may be
 useful if you suspect that MariaDB MaxScale routes statements to the wrong
-server (e.g. to a slave instead of to a master).
+server (e.g. to a replica instead of to a primary).
 
 ### `substitute_variables`
 
@@ -1727,8 +1727,8 @@ comma separated list of options that are used to control the behavior of the
 routing algorithm. The two parameters that control the routing choice are router
 and router_options. The router options are specific to a particular router and
 are used to modify the behavior of the router. The read connection router can be
-passed options of master, slave or synced, an example of configuring a service
-to use this router and limiting the choice of servers to those in slave state
+passed options of `master`, `slave` or `synced`, an example of configuring a service
+to use this router and limiting the choice of servers to those in `slave` state
 would be as follows.
 
 ```
@@ -1736,8 +1736,8 @@ router=readconnroute
 router_options=slave
 ```
 
-To change the router to connect on to servers in the  master state as well as
-slave servers, the router options can be modified to include the master state.
+To change the router to connect on to servers in the `master` state as well as
+slave servers, the router options can be modified to include the `master` state.
 
 ```
 router=readconnroute
@@ -2184,8 +2184,8 @@ history. Currently only `readwritesplit` and `schemarouter` support it.
 - **Dynamic**: Yes
 
 This option disables the session command history. This way no history is stored
-and if a slave server fails, the router will not try to replace the failed
-slave. Disabling session command history will allow long-lived connections
+and if a replica server fails, the router will not try to replace the failed
+replica. Disabling session command history will allow long-lived connections
 without causing a constant growth in the memory consumption.
 
 This parameter should only be used when either the memory footprint must be as
@@ -2421,9 +2421,9 @@ lazy_connect=1
 transaction_replay=true
 ```
 The above settings mean that MaxScale can process roughly
-(*number of slave servers* X *max_routing_connections*) read queries
+(*number of replica servers* X *max_routing_connections*) read queries
 simultaneously. Write queries will still need to take turns as there is only one
-master server.
+primary server.
 
 The following configuration snippet shows example server and service
 configurations for connection sharing with ReadWriteSplit.
@@ -2679,7 +2679,7 @@ Readconnroute will always use primary servers before secondary servers as long
 as they match the configured server type.
 
 Readwritesplit will pick servers that have the same rank as the current
-master. Read the
+primary. Read the
 [readwritesplit documentation on server ranks](../Routers/ReadWriteSplit.md#server-ranks)
 for a detailed description of the behavior.
 
@@ -2687,30 +2687,30 @@ The following example server configuration demonstrates how `rank` can be used
 to exclude `DR-site` servers from routing.
 
 ```
-[main-site-master]
+[main-site-primary]
 type=server
 address=192.168.0.11
 rank=primary
 
-[main-site-slave]
+[main-site-replica]
 type=server
 address=192.168.0.12
 rank=primary
 
-[DR-site-master]
+[DR-site-primary]
 type=server
 address=192.168.0.21
 rank=secondary
 
-[DR-site-slave]
+[DR-site-replica]
 type=server
 address=192.168.0.22
 rank=secondary
 ```
 
-The `main-site-master` and `main-site-slave` servers will be used as long as
-they are available. When they are no longer available, the `DR-site-master` and
-`DR-site-slave` will be used.
+The `main-site-primary` and `main-site-replica` servers will be used as long as
+they are available. When they are no longer available, the `DR-site-primary` and
+`DR-site-replica` will be used.
 
 ### `priority`
 
@@ -2719,7 +2719,7 @@ they are available. When they are no longer available, the `DR-site-master` and
 - **Dynamic**: Yes
 
 Server priority. Currently only used by galeramon to choose the order in which
-nodes are selected as the current master server. Refer to the
+nodes are selected as the current primary server. Refer to the
 [Server Priorities](../Monitors/Galera-Monitor.md#interaction-with-server-priorities)
 section of the galeramon documentation for more information on how to use it.
 

@@ -5,19 +5,19 @@
           versions of MaxScale.
 
 The binlogrouter is a router that acts as a replication proxy for MariaDB
-master-slave replication. The router connects to a master, retrieves the binary
-logs and stores them locally. Slave servers can connect to MaxScale like they
-would connect to a normal master server. If the master server goes down,
-replication between MaxScale and the slaves can still continue up to the latest
-point to which the binlogrouter replicated to. The master can be changed without
-disconnecting the slaves and without them noticing that the master server has
+primary-replica replication. The router connects to a primary, retrieves the binary
+logs and stores them locally. Replica servers can connect to MaxScale like they
+would connect to a normal primary server. If the primary server goes down,
+replication between MaxScale and the replicas can still continue up to the latest
+point to which the binlogrouter replicated to. The primary can be changed without
+disconnecting the replicas and without them noticing that the primary server has
 changed. This allows for a more highly available replication setup.
 
 In addition to the high availability benefits, the binlogrouter creates only one
-connection to the master whereas with normal replication each individual slave
-will create a separate connection. This reduces the amount of work the master
+connection to the primary whereas with normal replication each individual replica
+will create a separate connection. This reduces the amount of work the primary
 database has to do which can be significant if there are a large number of
-replicating slaves.
+replicating replicas.
 
 [TOC]
 
@@ -51,8 +51,8 @@ The major differences between the new and old binlog router are:
    `select_master` is roughly equivalent.
 
  * The new binlogrouter will write its own binlog files to prevent problems that
-   could happen when the master changes. This causes the binlog names to be
-   different in the binlogrouter when compared to the ones on the master.
+   could happen when the primary changes. This causes the binlog names to be
+   different in the binlogrouter when compared to the ones on the primary.
 
 The documentation for the binlogrouter in MaxScale 2.4 is provided for reference
 [here](Binlogrouter-2.4.md).
@@ -101,7 +101,7 @@ supports. The following commands are supported:
  * `SHOW BINARY LOGS`
 
    * Lists the current files and their sizes. These will be different from the
-     ones listed by the original master where the binlogrouter is replicating
+     ones listed by the original primary where the binlogrouter is replicating
      from.
 
  * `PURGE { BINARY | MASTER } LOGS TO <filename>`
@@ -114,32 +114,32 @@ supports. The following commands are supported:
 
      The files are purged in the order they were created. If a file to be purged
      is detected to be in use, the purge stops. This means that the purge will
-     stop at the oldest file that a slave is still reading.
+     stop at the oldest file that a replica is still reading.
 
      **NOTE:** You should still take precaution not to purge files that a potential
-     slave will need in the future. MaxScale can only detect that a file is
-     in active use when a slave is connected, and requesting events from it.
+     replica will need in the future. MaxScale can only detect that a file is
+     in active use when a replica is connected, and requesting events from it.
 
  * `SHOW MASTER STATUS`
 
    * Shows the name and position of the file to which the binlogrouter will write
      the next replicated data. The name and position do not correspond to the
-     name and position in the master.
+     name and position in the primary.
 
  * `SHOW SLAVE STATUS`
 
-   * Shows the slave status information similar to what a normal MariaDB slave
+   * Shows the replica status information similar to what a normal MariaDB replica
      server shows. Some of the values are replaced with constants values that
      never change. The following values are not constant:
 
-     * `Slave_IO_State`: Set to `Waiting for master to send event` when
+     * `Slave_IO_State`: Set to `Waiting for primary to send event` when
        replication is ongoing.
 
-     * `Master_Host`: Address of the current master.
+     * `Master_Host`: Address of the current primary.
 
      * `Master_User`: The user used to replicate.
 
-     * `Master_Port`: The port the master is listening on.
+     * `Master_Port`: The port the primary is listening on.
 
      * `Master_Log_File`: The name of the latest file that the binlogrouter is
        writing to.
@@ -160,13 +160,13 @@ supports. The following commands are supported:
  * `SELECT { Field } ...`
 
    * The binlogrouter implements a small subset of the MariaDB SELECT syntax as
-     it is mainly used by the replicating slaves to query various parameters. If
+     it is mainly used by the replicating replicas to query various parameters. If
      a field queried by a client is not known to the binlogrouter, the value
      will be returned back as-is. The following list of functions and variables
      are understood by the binlogrouter and are replaced with actual values:
 
      * `@@gtid_slave_pos`, `@@gtid_current_pos` or `@@gtid_binlog_pos`: All of
-       these return the latest GTID replicated from the master.
+       these return the latest GTID replicated from the primary.
 
      * `version()` or `@@version`: The version string returned by MaxScale when
        a client connects to it.
@@ -254,32 +254,32 @@ move the old data.
 
 ### `server_id`
 
-The server ID that MaxScale uses when connecting to the master and when serving
-binary logs to the slaves. Default value is 1234.
+The server ID that MaxScale uses when connecting to the primary and when serving
+binary logs to the replicas. Default value is 1234.
 
 ### `net_timeout`
 
-Network connection and read timeout for the connection to the master. The value
+Network connection and read timeout for the connection to the primary. The value
 is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). Default value is 10
 seconds.
 
 ### `select_master`
 
-Automatically select the master server to replicate from. The default value is
+Automatically select the primary server to replicate from. The default value is
 false.
 
-When this feature is enabled, the master which binlogrouter will replicate
+When this feature is enabled, the primary which binlogrouter will replicate
 from will be selected from the servers defined by a monitor `cluster=TheMonitor`.
 Alternatively servers can be listed in `servers`. The servers should be monitored
-by a monitor. Only servers with the `Master` status are used. If multiple master
-servers are available, the first available master server will be used.
+by a monitor. Only servers with the `Master` status are used. If multiple primary
+servers are available, the first available primary server will be used.
 
 If a `CHANGE MASTER TO` command is received while `select_master` is on, the
 command will be honored and `select_master` turned off until the next reboot.
 This allows the Monitor to perform failover, and more importantly, switchover.
 It also allows the user to manually redirect the Binlogrouter. The current
-master is "sticky", meaning that the same master will be chosen on reboot.
+primary is "sticky", meaning that the same primary will be chosen on reboot.
 
 **NOTE:** Do not use the `mariadbmon` parameter
 [`auto_rejoin`](../Monitor/MariaDB-Monitor.md#auto_rejoin) if the monitor is
@@ -301,7 +301,7 @@ or no automatic removal. This is similar to the server system variable
 The duration is measured from the last modification of the log file. Files are
 purged in the order they were created. The automatic purge works in a similar
 manner to `PURGE BINARY LOGS TO <filename>` in that it will stop the purge if
-an eligible file is in active use, i.e. being read by a slave.
+an eligible file is in active use, i.e. being read by a replica.
 
 The duration can be specified as explained
 [here](../Getting-Started/Configuration-Guide.md#durations).
@@ -344,7 +344,7 @@ them are available.
 Once binary log encryption has been enabled, the encryption key ID cannot be
 changed and the key must remain available to MaxScale in order for replication
 to work. If an encryption key is not available or the key manager fails to
-retrieve it, the replication from the currently selected master server will
+retrieve it, the replication from the currently selected primary server will
 stop. If the replication is restarted manually, the encryption key retrieval is
 attempted again.
 
@@ -383,16 +383,16 @@ Possible values are:
  1. Configure and start MaxScale.
 
  1. If you have not configured `select_master=true` (automatic
-    master selection), issue a `CHANGE MASTER TO` command to binlogrouter.
+    primary selection), issue a `CHANGE MASTER TO` command to binlogrouter.
 ```
 mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
-CHANGE MASTER TO master_host="master-IP", master_port=master-PORT, master_user=USER, master_password="PASSWORD", master_use_gtid=slave_pos;
+CHANGE MASTER TO master_host="primary-IP", master_port=primary-PORT, master_user=USER, master_password="PASSWORD", master_use_gtid=slave_pos;
 START SLAVE;
 ```
 
- 1. Redirect each slave to replicate from Binlogrouter
+ 1. Redirect each replica to replicate from Binlogrouter
 ```
-mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
 master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
@@ -415,7 +415,7 @@ and store all the data.
  * Make sure that the configured data directory for the new binlogrouter
    is different from the old one, or move old data away.
    See [datadir](#datadir).
- * If the master contains binlogs from the blank state, and there
+ * If the primary contains binlogs from the blank state, and there
    is a large amount of data, consider purging old binlogs.
    See [Using and Maintaining the Binary Log](https://mariadb.com/kb/en/using-and-maintaining-the-binary-log/).
 
@@ -424,10 +424,10 @@ and store all the data.
 The method described here inflicts the least downtime. Assuming you have
 configured version 2.5, and it is ready to go:
 
- 1. Redirect each slave that replicates from Binlogrouter to replicate from the
-    master.
+ 1. Redirect each replica that replicates from Binlogrouter to replicate from the
+    primary.
 ```
-mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
 master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
@@ -441,7 +441,7 @@ SHOW SLAVE STATUS \G
  1. Issue a `CHANGE MASTER TO` command, or use [select_master](#select_master).
 ```
 mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
-CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
+CHANGE MASTER TO master_host="primary-IP", master_port=primary-PORT,
 master_user=USER,master_password="PASSWORD", master_use_gtid=slave_pos;
 ```
 
@@ -454,13 +454,13 @@ SET @@global.gtid_slave_pos = "0-1000-1234,1-1001-5678";
 START SLAVE
 ```
 **NOTE:** Even with `select_master=true` you have to set @@global.gtid_slave_pos
-if any binlog files have been purged on the master. The server will only stream
+if any binlog files have been purged on the primary. The server will only stream
 from the start of time if the first binlog file is present.
 See [select_master](#select_master).
 
- 1. Redirect each slave to replicate from Binlogrouter.
+ 1. Redirect each replica to replicate from Binlogrouter.
 ```
-mysql -u USER -pPASSWORD -h slave-IP -P slave-PORT
+mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
 master_user="USER", master_password="PASSWORD",
@@ -496,7 +496,7 @@ wsrep_gtid_domain_id = 42  # Must be the same for all servers
 
 ## Example
 
-The following is a small configuration file with automatic master selection.
+The following is a small configuration file with automatic primary selection.
 With it, the service will accept connections on port 3306.
 
 ```

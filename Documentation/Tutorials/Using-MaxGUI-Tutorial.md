@@ -130,7 +130,7 @@ the figure below.
     - Start monitor.
     - Reset Replication.
     - Release Locks.
-    - Master failover. Manually performing a master failover. This option is
+    - Master failover. Manually performing a primary failover. This option is
       visible only when the `auto_failover` parameter is disabled.
 10. Refresh rate dropdown. The frequency with which the data is refreshed.
 11. Create a new MaxScale object button.

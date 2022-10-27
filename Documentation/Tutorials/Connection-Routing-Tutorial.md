@@ -2,7 +2,7 @@
 
 The goal of this tutorial is to configure a system that has two ports available, one for
 write connections and another for read connections. The read connections are load-
-balanced across slave servers.
+balanced across replica servers.
 
 ## Setting up MariaDB MaxScale
 
@@ -12,7 +12,7 @@ Please read it and follow the instructions. Return here once basic setup is comp
 ## Configuring services
 
 We want two services and ports to which the client application can connect. One service
-routes client connections to the master server, the other load balances between slave
+routes client connections to the primary server, the other load balances between replica
 servers. To achieve this, we need to define two services in the configuration file.
 
 Create the following two sections in your configuration file. The section names are the
@@ -45,8 +45,8 @@ match the names of server sections in the configuration file and not the hostnam
 addresses of the servers.
 
 The *router_options*-parameter tells the *readconnroute*-module which servers it should
-route a client connection to. For the write service we use the _master_-type and for the
-read service the _slave_-type.
+route a client connection to. For the write service we use the `master`-type and for the
+read service the `slave`-type.
 
 The *user* and *password* parameters define the credentials the service uses to populate
 user authentication data. These users were created at the start of the

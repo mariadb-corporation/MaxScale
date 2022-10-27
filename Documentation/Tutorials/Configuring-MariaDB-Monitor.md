@@ -1,6 +1,6 @@
 # Configuring the MariaDB Monitor
 
-This document describes how to configure a MariaDB master-slave cluster monitor
+This document describes how to configure a MariaDB primary-replica cluster monitor
 to be used with MaxScale.
 
 ## Configuring the Monitor

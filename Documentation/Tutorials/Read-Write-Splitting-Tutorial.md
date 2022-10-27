@@ -2,7 +2,7 @@
 
 The goal of this tutorial is to configure a system that appears to the client as a single
 database. MariaDB MaxScale will split the statements such that write statements are sent
-to the master server and read statements are balanced across the slave servers.
+to the primary server and read statements are balanced across the replica servers.
 
 ## Setting up MariaDB MaxScale
 

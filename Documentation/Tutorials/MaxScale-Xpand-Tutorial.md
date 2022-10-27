@@ -143,8 +143,8 @@ port=4008
 ## Xpand and Readwritesplit
 
 The primary purpose of the router _readwritesplit_ is to split
-statements between one master and multiple slaves. In the case of
-Xpand, all servers will be masters, but _readwritesplit_ may still
+statements between one primary and multiple replicas. In the case of
+Xpand, all servers will be primaries, but _readwritesplit_ may still
 be the right choise.
 
 Namely, as _readwritesplit_ is transaction aware and capable of

@@ -1,14 +1,14 @@
 # Automatic Failover With MariaDB Monitor
 
 The [MariaDB Monitor](../Monitors/MariaDB-Monitor.md) is not only capable
-of monitoring the state of a MariaDB master-slave cluster but is also
+of monitoring the state of a MariaDB primary-replica cluster but is also
 capable of performing _failover_ and _switchover_. In addition, in some
-circumstances it is capable of _rejoining_ a master that has gone down and
+circumstances it is capable of _rejoining_ a primary that has gone down and
 later reappears.
 
 Note that the failover (and switchover and rejoin) functionality is only
 supported in conjunction with GTID-based replication and initially only
-for simple topologies, that is, 1 master and several slaves.
+for simple topologies, that is, 1 primary and several replicas.
 
 The failover, switchover and rejoin functionality are inherent parts of
 the _MariaDB Monitor_, but neither automatic failover nor automatic rejoin
@@ -16,7 +16,7 @@ are enabled by default.
 
 The following examples have been written with the assumption that there
 are four servers - `server1`, `server2`, `server3` and `server4` - of
-which `server1` is the initial master and the other servers are slaves.
+which `server1` is the initial primary and the other servers are replicas.
 In addition there is a monitor called _TheMonitor_ that monitors those
 servers.
 
@@ -60,7 +60,7 @@ $ maxctrl list servers
 │ server4 │ 192.168.121.201 │ 3306 │ 0           │ Slave, Running  │
 └─────────┴─────────────────┴──────┴─────────────┴─────────────────┘
 ```
-If the master now for any reason goes down, then the cluster state will
+If the primary now for any reason goes down, then the cluster state will
 look like this:
 ```
 $ maxctrl list servers
@@ -93,12 +93,12 @@ is the MariaDB Monitor),
 * `TheMonitor` is the first and only argument to that command, the name of
 the monitor as specified in the configuration file.
 
-The MariaDB Monitor will now autonomously deduce which slave is the most
-appropriate one to be promoted to master, promote it to master and modify
-the other slaves accordingly.
+The MariaDB Monitor will now autonomously deduce which replica is the most
+appropriate one to be promoted to primary, promote it to primary and modify
+the other replicas accordingly.
 
 If we now check the cluster state we will see that one of the remaining
-slaves has been made into master.
+replicas has been made into primary.
 
 ```
 $ maxctrl list servers
@@ -164,7 +164,7 @@ $ maxctrl list servers
 └─────────┴─────────────────┴──────┴─────────────┴─────────────────┘
 ```
 If `server1` now goes down, failover will automatically be performed and
-an existing slave promoted to new master.
+an existing replica promoted to new primary.
 ```
 $ maxctrl list servers
 ┌─────────┬─────────────────┬──────┬─────────────┬────────────────────────┐
@@ -197,7 +197,7 @@ auto_rejoin=true
 ```
 
 When automatic rejoin is enabled, the MariaDB Monitor will attempt to
-rejoin a failed master as a slave, if it reappears.
+rejoin a failed primary as a replica, if it reappears.
 
 When everything is running fine, the cluster state looks like follows:
 ```
@@ -232,11 +232,11 @@ $ maxctrl list servers
 └─────────┴─────────────────┴──────┴─────────────┴─────────────────┘
 ```
 If `server1` now reappears, the MariaDB Monitor will detect that and
-attempt to rejoin the old master as a slave.
+attempt to rejoin the old primary as a replica.
 
 Whether rejoining will succeed depends upon the actual state of the old
-master. For instance, if the old master was modified and the changes had
-not been replicated to the new master, before the old master went down,
+primary. For instance, if the old primary was modified and the changes had
+not been replicated to the new primary, before the old primary went down,
 then automatic rejoin will not be possible.
 
 If rejoining can be performed, then the cluster state will end up looking
@@ -258,11 +258,11 @@ $ maxctrl list servers
 
 # Switchover
 
-Switchover is for cases when you explicitly want to move the master
+Switchover is for cases when you explicitly want to move the primary
 role from one server to another.
 
 If we continue from the cluster state at the end of the previous example
-and want to make `server1` master again, then we must issue the following
+and want to make `server1` primary again, then we must issue the following
 command:
 ```
 $ maxctrl call command mariadbmon switchover TheMonitor server1 server2
@@ -276,9 +276,9 @@ There are quite a few arguments, so let's look at each one separately
 * `TheMonitor` is the first argument to the command, the name of the monitor
 as specified in the configuration file,
 * `server1` is the second argument to the command, the name of the server we
-want to make into _master_, and
+want to make into _primary_, and
 * `server2` is the third argument to the command, the name of the _current_
-_master_.
+_primary_.
 
 If the command executes successfully, we will end up with the following
 cluster state:

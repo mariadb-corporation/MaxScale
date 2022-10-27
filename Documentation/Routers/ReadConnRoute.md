@@ -46,8 +46,8 @@ Here is a list of all possible values for the `router_options`.
 
 Role|Description
 ------|---------
-master|A server assigned as a master by one of MariaDB MaxScale monitors. Depending on the monitor implementation, this could be a master server of a Master-Slave replication cluster or a Write-Master of a Galera cluster.
-slave|A server assigned as a slave of a master. If all slaves are down, but the master is still available, then the router will use the master.
+master|A server assigned as a primary by one of MariaDB MaxScale monitors. Depending on the monitor implementation, this could be a primary server of a Primary-Replica replication cluster or a Write-Primary of a Galera cluster.
+slave|A server assigned as a replica of a primary. If all replicas are down, but the primary is still available, then the router will use the primary.
 synced| A Galera cluster node which is in a synced state with the cluster.
 running|A server that is up and running. All servers that MariaDB MaxScale can connect to are labeled as running.
 
@@ -68,12 +68,12 @@ listed first in the _servers_ parameter for the service is chosen.
 - **Dynamic**: Yes
 - **Default**: true
 
-This option can be used to prevent queries from being sent to the current master.
-If `router_options` does not contain "master", the readconnroute instance is
-usually meant for reading. Setting `master_accept_reads=false` excludes the master
+This option can be used to prevent queries from being sent to the current primary.
+If `router_options` does not contain `master`, the readconnroute instance is
+usually meant for reading. Setting `master_accept_reads=false` excludes the primary
 from server selection (and thus from receiving reads).
 
-If `router_options` contains "master", the setting of `master_accept_reads` has no effect.
+If `router_options` contains `master`, the setting of `master_accept_reads` has no effect.
 
 By default `master_accept_reads=true`.
 
@@ -99,20 +99,20 @@ write port for an application. This provides a more lightweight routing
 solution than the more complex readwritesplit router but requires the
 application to be able to use distinct write and read ports.
 
-To configure a read-only service that tolerates master failures, we first
+To configure a read-only service that tolerates primary failures, we first
 need to add a new section in to the configuration file.
 
 ```
 [Read-Service]
 type=service
 router=readconnroute
-servers=slave1,slave2,slave3
+servers=replica1,replica2,replica3
 router_options=slave
 ```
 
-Here the `router_options` designates slaves as the only valid server
+Here the `router_options` designates replicas as the only valid server
 type. With this configuration, the queries are load balanced across the
-slave servers.
+replica servers.
 
 For more complex examples of the readconnroute router, take a look at the
 examples in the [Tutorials](../Tutorials) folder.
