@@ -120,6 +120,7 @@ void MXS_SESSION::kill(GWBUF* error)
 
         if (m_state == State::STARTED)
         {
+            cancel_dcalls();
             // This signals the rest of the system that the session has started the shutdown procedure.
             // Currently it mainly affects debug assertions inside the protocol code.
             m_state = State::STOPPING;
