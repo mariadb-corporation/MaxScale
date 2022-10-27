@@ -195,7 +195,6 @@ export default {
                 const data = await this.getResourceState({
                     resourceId: server.id,
                     resourceType: 'servers',
-                    caller: 'monitor-detail-page-getRelationshipData',
                 })
 
                 const { id, type, attributes: { state = null } = {} } = data

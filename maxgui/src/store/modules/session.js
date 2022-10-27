@@ -35,8 +35,7 @@ export default {
                 let res = await this.vue.$http.get(`/sessions`)
                 if (res.data.data) commit('SET_ALL_SESSIONS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-sessions-fetchAllSessions')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -58,8 +57,7 @@ export default {
                 )
                 if (res.data.data) commit('SET_SESSIONS_BY_SERVICE', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-sessions-fetchSessionsFilterByService')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -82,8 +80,7 @@ export default {
                     await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-sessions-killSession')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

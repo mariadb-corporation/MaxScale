@@ -82,8 +82,7 @@ export default {
                             ? this.vue.$mxs_t('errors.wrongCredentials')
                             : e.response.statusText
                 } else {
-                    const logger = this.vue.$logger('store-user-login')
-                    logger.error(e)
+                    this.vue.$logger.error(e)
                     errMsg = e.toString()
                 }
                 commit('SET_LOGIN_ERR_MSG', errMsg)
@@ -147,8 +146,7 @@ export default {
                         attributes: res.data.data.attributes,
                     })
             } catch (e) {
-                const logger = this.vue.$logger('store-user-fetchLoggedInUserAttrs')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchAllNetworkUsers({ commit }) {
@@ -157,8 +155,7 @@ export default {
                 // response ok
                 if (res.status === 200) commit('SET_ALL_INET_USERS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-user-fetchAllNetworkUsers')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**Only admin accounts can perform POST, PUT, DELETE and PATCH requests
@@ -206,8 +203,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-user-manageInetUser')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

@@ -31,8 +31,7 @@ export default {
                 let res = await this.vue.$http.get(`/listeners`)
                 if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-listener-fetchAllListeners')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -41,8 +40,7 @@ export default {
                 let res = await this.vue.$http.get(`/listeners/${id}`)
                 if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-listener-fetchListenerById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -80,8 +78,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-listener-createListener')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -113,8 +110,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-listener-updateListenerParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async destroyListener({ dispatch, commit }, id) {
@@ -132,8 +128,7 @@ export default {
                     )
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-listener-destroyListener')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

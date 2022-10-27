@@ -151,10 +151,7 @@ export default {
             let map = {}
             let relationshipTypes = ['services', 'servers', 'monitors']
             for (const type of relationshipTypes) {
-                const data = await this.getResourceState({
-                    resourceType: type,
-                    caller: 'routing-target-select-getAllTargetsMap',
-                })
+                const data = await this.getResourceState({ resourceType: type })
                 if (!map[type]) map[type] = []
                 map[type] = [
                     ...map[type],

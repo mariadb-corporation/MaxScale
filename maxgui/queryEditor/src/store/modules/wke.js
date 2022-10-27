@@ -77,7 +77,7 @@ export default {
                         await dispatch('editor/queryAlterTblSuppData', {}, { root: true })
                 }
             } catch (e) {
-                this.vue.$logger('store-wke-handleInitialFetch').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async addNewWs({ commit, state, dispatch }) {
@@ -91,7 +91,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                this.vue.$logger('store-wke-addNewWs').error(e)
+                this.vue.$logger.error(e)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
@@ -119,7 +119,7 @@ export default {
                 // remove the key
                 commit('querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP', { id }, { root: true })
             } catch (e) {
-                this.vue.$logger('store-wke-handleDeleteWke').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**

@@ -56,19 +56,18 @@ const store = new Vuex.Store({
          * It should be dispatched on public route when routing occurs
          */
         async checkingForUpdate({ commit }) {
-            const logger = this.vue.$logger('index-store')
             const res = await this.vue.$http.get(`/`)
-            logger.info('Checking for update')
+            this.vue.$logger.info('Checking for update')
             const resDoc = new DOMParser().parseFromString(res.data, 'text/html')
             const newCommitId = resDoc.getElementsByName('commitId')[0].content
             const currentAppCommitId = document
                 .getElementsByName('commitId')[0]
                 .getAttribute('content')
-            logger.info('MaxGUI commit id:', currentAppCommitId)
-            logger.info('MaxGUI new commit id:', newCommitId)
+            this.vue.$logger.info('MaxGUI commit id:', currentAppCommitId)
+            this.vue.$logger.info('MaxGUI new commit id:', newCommitId)
             if (currentAppCommitId !== newCommitId) {
                 commit('SET_UPDATE_AVAILABILITY', true)
-                logger.info('New version is available')
+                this.vue.$logger.info('New version is available')
             }
         },
         /**
@@ -76,10 +75,9 @@ const store = new Vuex.Store({
          * otherwise it fetch resource state of a resource based on resourceId
          * @param {String} resourceId id of the resource
          * @param {String} resourceType type of resource. e.g. servers, services, monitors
-         * @param {String} caller name of the function calling this function, for debugging purpose
          * @return {Array} Resource state data
          */
-        async getResourceState(_, { resourceId, resourceType, caller }) {
+        async getResourceState(_, { resourceId, resourceType }) {
             try {
                 let data = []
                 let res
@@ -93,8 +91,7 @@ const store = new Vuex.Store({
                 if (res.data.data) data = res.data.data
                 return data
             } catch (e) {
-                const logger = this.vue.$logger(caller)
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -110,8 +107,7 @@ const store = new Vuex.Store({
                 }
                 commit('SET_MODULE_PARAMETERS', data)
             } catch (e) {
-                const logger = this.vue.$logger(`fetchModuleParameters-for-${moduleId}`)
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

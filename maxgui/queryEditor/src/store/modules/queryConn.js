@@ -73,7 +73,7 @@ export default {
                     })
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-fetchRcTargetNames').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -177,7 +177,7 @@ export default {
                     }
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-validatingConn').error(e)
+                this.vue.$logger.error(e)
             }
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
@@ -230,7 +230,7 @@ export default {
                 // bind the chosenWkeConn
                 dispatch('bindConn', chosenWkeConn)
             } catch (e) {
-                this.vue.$logger('store-queryConn-onChangeConn').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -293,7 +293,7 @@ export default {
                     commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-openConnect').error(e)
+                this.vue.$logger.error(e)
                 commit('SET_CONN_ERR_STATE', true)
             }
         },
@@ -370,7 +370,7 @@ export default {
                     commit('ADD_SQL_CONN', conn)
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-cloneConn').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -382,7 +382,7 @@ export default {
                 const res = await this.vue.$queryHttp.delete(`/sql/${id}`)
                 if (res.status === 204) commit('DELETE_SQL_CONN', state.sql_conns[id])
             } catch (e) {
-                this.vue.$logger('store-queryConn-disconnectClone').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -434,7 +434,7 @@ export default {
                         )
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-disconnect').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async disconnectAll({ getters, dispatch }) {
@@ -442,7 +442,7 @@ export default {
                 for (const { id = '' } of getters.getWkeConns)
                     await dispatch('disconnect', { showSnackbar: false, id })
             } catch (e) {
-                this.vue.$logger('store-queryConn-disconnectAll').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async reconnect({ state, commit, dispatch }) {
@@ -472,7 +472,7 @@ export default {
                     )
                 await dispatch('validatingConn', { silentValidation: true })
             } catch (e) {
-                this.vue.$logger('store-queryConn-reconnect').error(e)
+                this.vue.$logger.error(e)
             }
         },
         clearConn({ commit, dispatch, state }) {
@@ -485,7 +485,7 @@ export default {
                 )
                 commit('DELETE_SQL_CONN', active_sql_conn)
             } catch (e) {
-                this.vue.$logger('store-queryConn-clearConn').error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -503,7 +503,7 @@ export default {
                 else if (active_db !== resActiveDb)
                     commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_session_id })
             } catch (e) {
-                this.vue.$logger('store-queryConn-updateActiveDb').error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -546,7 +546,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                this.vue.$logger('store-queryConn-useDb').error(e)
+                this.vue.$logger.error(e)
             }
         },
 

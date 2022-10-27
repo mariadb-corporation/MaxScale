@@ -75,8 +75,7 @@ export default {
                 if (res.data.data.attributes.parameters)
                     commit('SET_MAXSCALE_PARAMETERS', res.data.data.attributes.parameters)
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-fetchMaxScaleParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -88,8 +87,7 @@ export default {
                 if (res.data.data.attributes)
                     commit('SET_MAXSCALE_OVERVIEW_INFO', res.data.data.attributes)
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-fetchMaxScaleOverviewInfo')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchAllModules({ commit }) {
@@ -106,8 +104,7 @@ export default {
                     commit('SET_ALL_MODULES_MAP', hashMap)
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-fetchAllModules')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -116,8 +113,7 @@ export default {
                 let res = await this.vue.$http.get(`/maxscale/threads?fields[threads]=stats`)
                 if (res.data.data) commit('SET_THREAD_STATS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-fetchThreadStats')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -156,8 +152,7 @@ export default {
                 if (log_source) commit('SET_LOG_SOURCE', log_source)
                 commit('SET_PREV_LOG_LINK', prev)
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-fetchLatestLogs')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -177,7 +172,7 @@ export default {
                 commit('SET_PREV_LOG_DATA', log)
                 commit('SET_PREV_LOG_LINK', prev)
             } catch (e) {
-                this.vue.$logger('store-maxscale-fetchPrevLog').error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -205,7 +200,7 @@ export default {
                 commit('SET_PREV_FILTERED_LOG_DATA', log)
                 commit('SET_PREV_FILTERED_LOG_LINK', prev)
             } catch (e) {
-                this.vue.$logger('store-maxscale-fetchPrevFilteredLog').error(e)
+                this.vue.$logger.error(e)
             }
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------
@@ -238,8 +233,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-maxscale-updateMaxScaleParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

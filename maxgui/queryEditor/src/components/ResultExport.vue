@@ -271,7 +271,7 @@ export default {
                         '"'
                 )
             } catch (e) {
-                this.$logger('unescapedUserInput', e)
+                this.$logger.error(e)
             }
         },
         /**

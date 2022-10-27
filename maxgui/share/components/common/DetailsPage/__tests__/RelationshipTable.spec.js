@@ -168,9 +168,8 @@ describe('RelationshipTable.vue without removable and addable ability', () => {
 const getRelationshipDataStub = () => dummyAllServicesState
 
 describe('RelationshipTable.vue with removable and addable ability', () => {
-    let wrapper, loggerSpy, getRelationshipDataSpy
+    let wrapper, getRelationshipDataSpy
     beforeEach(() => {
-        loggerSpy = sinon.spy(RelationshipTable.computed, 'logger')
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
@@ -186,25 +185,6 @@ describe('RelationshipTable.vue with removable and addable ability', () => {
             },
         })
         getRelationshipDataSpy = sinon.spy(getRelationshipDataStub)
-    })
-
-    afterEach(() => {
-        RelationshipTable.computed.logger.restore()
-    })
-
-    it(`When removable is true, should throw error if getRelationshipData
-      props is not defined`, () => {
-        wrapper = mount({
-            shallow: false,
-            component: RelationshipTable,
-            propsData: {
-                relationshipType: 'services',
-                loading: false,
-                tableRows: serviceStateTableRowsStub,
-                removable: true,
-            },
-        })
-        loggerSpy.should.have.been.calledOnce
     })
 
     it(`Should open mxs-conf-dlg when delete button is clicked`, async () => {

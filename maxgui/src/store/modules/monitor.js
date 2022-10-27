@@ -64,8 +64,7 @@ export default {
                 let res = await this.vue.$http.get(`/monitors`)
                 if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchMonitorById({ commit }, id) {
@@ -73,8 +72,7 @@ export default {
                 let res = await this.vue.$http.get(`/monitors/${id}`)
                 if (res.data.data) commit('SET_CURRENT_MONITOR', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-fetchMonitorById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchMonitorDiagnosticsById({ commit }, id) {
@@ -84,8 +82,7 @@ export default {
                 )
                 if (res.data.data) commit('SET_MONITOR_DIAGNOSTICS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-fetchMonitorDiagnosticsById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -125,8 +122,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-createMonitor')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -160,8 +156,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-updateMonitorParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -277,8 +272,7 @@ export default {
                     }
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-manipulateMonitor')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -313,7 +307,7 @@ export default {
                     else await dispatch('handleAsyncCmdDone', { meta, successCb, showSnackbar })
                 }
             } catch (e) {
-                this.vue.$logger('store-monitor-checkAsyncCmdRes').error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -449,8 +443,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

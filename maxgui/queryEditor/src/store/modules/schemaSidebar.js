@@ -54,7 +54,7 @@ export default {
                 })
                 return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
             } catch (e) {
-                this.vue.$logger('store-schemaSidebar-getNewDbTree').error(e)
+                this.vue.$logger.error(e)
                 return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
@@ -74,7 +74,7 @@ export default {
                     },
                 })
             } catch (e) {
-                this.vue.$logger(`store-schemaSidebar-loadChildNodes`).error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchSchemas({ commit, dispatch, state, rootState }) {
@@ -131,7 +131,7 @@ export default {
                         loading_db_tree: false,
                     },
                 })
-                this.vue.$logger(`store-schemaSidebar-fetchSchemas`).error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -191,7 +191,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                this.vue.$logger(`store-schemaSidebar-exeStmtAction`).error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

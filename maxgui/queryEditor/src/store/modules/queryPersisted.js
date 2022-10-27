@@ -133,8 +133,7 @@ export default {
                     },
                 })
             } catch (e) {
-                const logger = this.vue.$logger('store-queryPersisted-pushQueryLog')
-                logger.error(e)
+                this.vue.$logger.error(e)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
@@ -160,8 +159,7 @@ export default {
                     },
                 })
             } catch (e) {
-                const logger = this.vue.$logger('store-queryPersisted-pushToQuerySnippets')
-                logger.error(e)
+                this.vue.$logger.error(e)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {

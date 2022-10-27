@@ -46,9 +46,6 @@ export default {
         updateExists: function() {
             return this.update_availability
         },
-        logger: function() {
-            return this.$logger('main')
-        },
     },
     watch: {
         $route: function() {
@@ -64,8 +61,8 @@ export default {
     },
 
     async created() {
-        this.logger.info(this.$store.state.app_config.asciiLogo)
-        this.logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
+        this.$logger.info(this.$store.state.app_config.asciiLogo)
+        this.$logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
         // Check if user is authenticated
         await this.authCheck()
     },
@@ -76,7 +73,7 @@ export default {
         confirmUpdate() {
             this.SET_UPDATE_AVAILABILITY(false)
             window.location.reload()
-            this.logger.info('App is updated')
+            this.$logger.info('App is updated')
         },
     },
 }

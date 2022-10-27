@@ -46,8 +46,7 @@ export default {
                 })
                 commit('SET_CLUSTERS', clusters)
             } catch (e) {
-                const logger = this.vue.$logger('store-visualization-discoveryClusters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchClusterById({ commit, dispatch, rootState, getters }, id) {
@@ -63,8 +62,7 @@ export default {
                     cluster = getters.getMariadbmonCluster(monitor)
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {
-                const logger = this.vue.$logger('store-visualization-fetchClusterById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         async fetchConfigData({ commit, dispatch, getters }) {
@@ -78,8 +76,7 @@ export default {
                 ])
                 commit('SET_CONFIG_GRAPH_DATA', getters.getConfigGraphData)
             } catch (e) {
-                const logger = this.vue.$logger('store-visualization-fetchConfigData')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**

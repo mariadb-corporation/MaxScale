@@ -35,7 +35,7 @@ export async function defErrStatusHandler({ store, error }) {
 export function handleNullStatusCode({ store, error }) {
     if (error.toString().includes(CANCEL_MESSAGE))
         // request is cancelled by user, so no response is received
-        return store.vue.$logger('handleNullStatusCode').info(error.toString())
+        return store.vue.$logger.info(error.toString())
     else
         return store.commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',

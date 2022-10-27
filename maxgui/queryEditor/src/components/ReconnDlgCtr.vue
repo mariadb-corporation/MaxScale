@@ -76,7 +76,7 @@ export default {
                 if (targetConn.clone_of_conn_id)
                     await this.disconnect({ id: this.getCurrWkeConn.id })
             } catch (e) {
-                this.$logger('reconn-dlg-ctr-deleteConn').error(e)
+                this.$logger.error(e)
             }
         },
     },

@@ -31,8 +31,7 @@ export default {
                 let res = await this.vue.$http.get(`/filters`)
                 if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-fetchAllFilters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -41,8 +40,7 @@ export default {
                 let res = await this.vue.$http.get(`/filters/${id}`)
                 if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-fetchFilterById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -80,8 +78,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-createFilter')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -114,8 +111,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-updateFilterParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -134,8 +130,7 @@ export default {
                     )
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-filter-destroyFilter')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

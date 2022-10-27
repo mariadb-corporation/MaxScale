@@ -124,7 +124,7 @@ export default {
                         { root: true }
                     )
             } catch (e) {
-                this.vue.$logger('store-querySession-handleAddNewSession').error(e)
+                this.vue.$logger.error(e)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     { text: [this.vue.$mxs_t('errors.persistentStorage')], type: 'error' },

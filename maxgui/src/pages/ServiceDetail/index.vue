@@ -293,7 +293,6 @@ export default {
             const data = await this.getResourceState({
                 resourceId: id,
                 resourceType: type,
-                caller: 'service-detail-page-getRelationshipData',
             })
             return data
         },

@@ -92,7 +92,7 @@ export default {
                     id: active_session_id,
                     payload: { is_loading: false },
                 })
-                this.vue.$logger(`store-queryResult-fetchPrvw`).error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**
@@ -198,7 +198,7 @@ export default {
                     id: active_session_id,
                     payload: { is_loading: false },
                 })
-                this.vue.$logger(`store-queryResult-fetchQueryResult`).error(e)
+                this.vue.$logger.error(e)
             }
         },
         async stopQuery({ commit, getters, dispatch, rootGetters, rootState }) {
@@ -236,7 +236,7 @@ export default {
                     await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
                 }
             } catch (e) {
-                this.vue.$logger(`store-queryResult-stopQuery`).error(e)
+                this.vue.$logger.error(e)
             }
         },
         /**

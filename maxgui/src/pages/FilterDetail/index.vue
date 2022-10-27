@@ -108,7 +108,6 @@ export default {
                 const data = await this.getResourceState({
                     resourceId: service.id,
                     resourceType: 'services',
-                    caller: 'filter-details-serviceTableRowProcessing',
                 })
                 const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id: id, state: state, type: type })

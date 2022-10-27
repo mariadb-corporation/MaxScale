@@ -142,9 +142,6 @@ export default {
         isLoading() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
-        logger() {
-            return this.$logger('relationship-table')
-        },
         tableRowsData() {
             // add index number for filters table only
             if (this.relationshipType === 'filters')
@@ -163,7 +160,7 @@ export default {
         getRelationshipData: {
             handler(value) {
                 if (this.removable && !this.$typy(value).isFunction)
-                    this.logger.error("property 'getRelationshipData' is required.")
+                    this.$logger.error("property 'getRelationshipData' is required.")
             },
             immediate: true,
         },

@@ -37,8 +37,7 @@ export default {
                     commit('SET_CURRENT_SERVICE', res.data.data)
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-fetchServiceById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         genDataSets({ commit, state }) {
@@ -61,8 +60,7 @@ export default {
                 let res = await this.vue.$http.get(`/services`)
                 if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-services-fetchAllServices')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -105,8 +103,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-createService')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         //-----------------------------------------------Service parameter update---------------------------------
@@ -139,8 +136,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-updateServiceParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -169,8 +165,7 @@ export default {
                     await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-updateServiceRelationship')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -190,8 +185,7 @@ export default {
                     )
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-destroyService')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -226,8 +220,7 @@ export default {
                     await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-service-stopOrStartService')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

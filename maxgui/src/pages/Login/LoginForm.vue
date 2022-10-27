@@ -130,9 +130,6 @@ export default {
         ...mapState({
             login_err_msg: state => state.user.login_err_msg,
         }),
-        logger: function() {
-            return this.$logger('Login')
-        },
     },
 
     methods: {

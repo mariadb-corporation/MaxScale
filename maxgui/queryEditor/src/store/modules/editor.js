@@ -79,7 +79,7 @@ export default {
                 })
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             } catch (e) {
-                this.vue.$logger('store-editor-queryCharsetCollationMap').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async queryDefDbCharsetMap({ rootState, commit }) {
@@ -100,7 +100,7 @@ export default {
                 })
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             } catch (e) {
-                this.vue.$logger('store-editor-queryDefDbCharsetMap').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async queryEngines({ rootState, commit }) {
@@ -111,7 +111,7 @@ export default {
                 })
                 commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
             } catch (e) {
-                this.vue.$logger('store-editor-queryEngines').error(e)
+                this.vue.$logger.error(e)
             }
         },
         async queryAlterTblSuppData({ state, dispatch }) {
@@ -171,8 +171,7 @@ export default {
                     },
                     { root: true }
                 )
-                const logger = this.vue.$logger(`store-query-queryTblCreationInfo`)
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
     },

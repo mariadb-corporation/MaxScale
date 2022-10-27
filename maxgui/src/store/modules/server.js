@@ -39,8 +39,7 @@ export default {
                 let res = await this.vue.$http.get(`/servers`)
                 if (res.data.data) commit('SET_ALL_SERVERS', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-server-fetchAllServers')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -53,7 +52,7 @@ export default {
                         res.data.data.map(o => o.attributes.name)
                     )
             } catch (e) {
-                this.vue.$logger('store-server-fetchAllServerNames').error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -62,8 +61,7 @@ export default {
                 let res = await this.vue.$http.get(`/servers/${id}`)
                 if (res.data.data) commit('SET_CURRENT_SERVER', res.data.data)
             } catch (e) {
-                const logger = this.vue.$logger('store-server-fetchServerById')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
         //-----------------------------------------------Server Create/Update/Delete----------------------------------
@@ -103,8 +101,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-server-createServer')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -138,8 +135,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-server-updateServerParameters')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -183,8 +179,7 @@ export default {
                     await this.vue.$typy(payload.callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-server-updateServerRelationship')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -203,8 +198,7 @@ export default {
                     )
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-server-destroyServer')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 
@@ -240,8 +234,7 @@ export default {
                     await this.vue.$typy(callback).safeFunction()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-server-setOrClearServerState')
-                logger.error(e)
+                this.vue.$logger.error(e)
             }
         },
 

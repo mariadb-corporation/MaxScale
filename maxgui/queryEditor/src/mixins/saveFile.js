@@ -83,9 +83,7 @@ export default {
                 return await window.chooseFileSystemEntries({ suggestedName, type: 'save-file' })
             } catch (ex) {
                 if (!ex.name === 'AbortError')
-                    this.$logger('mixins-saveFile-getNewFileHandle').error(
-                        'An error occurred trying to open the file.'
-                    )
+                    this.$logger.error('An error occurred trying to open the file.')
             }
         },
         /**
@@ -126,7 +124,7 @@ export default {
                 // update session tab name
                 this.UPDATE_SESSION({ ...session, name: fileHandle.name })
             } catch (ex) {
-                this.$logger('mixins-saveFile-saveFileAs').error('Unable to write file')
+                this.$logger.error('Unable to write file')
             }
         },
 
@@ -157,7 +155,7 @@ export default {
                     })
                 }
             } catch (e) {
-                this.$logger('mixins-saveFile-saveFileToDisk').error(e)
+                this.$logger.error(e)
             }
         },
         /**

@@ -14,47 +14,40 @@
 const stackParser = require('stacktrace-parser')
 const traceCaller = level => stackParser.parse(new Error().stack)[level]
 const defCaller = { file: 'n/a', lineNumber: 'n/a' }
-const logger = name => {
-    if (name === null || name === undefined)
-        throw new Error('You must provide name when calling new logger method')
-    return {
-        info: (...args) => {
-            const caller = traceCaller(2) || defCaller
-            const style = 'color: white; background-color: green;'
+const logger = {
+    info: (...args) => {
+        const caller = traceCaller(2) || defCaller
+        const style = 'color: white; background-color: green;'
 
-            console.info(
-                '%c INFO ',
-                style,
-                `[${name}]`,
-                `[${caller.file}:${caller.lineNumber}]`,
-                ...args
-            )
-        },
-        warn: (...args) => {
-            const caller = traceCaller(2) || defCaller
-            const style = 'color: black; background-color: yellow;'
+        console.info(
+            '%c INFO ',
+            style,
+            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            ...args
+        )
+    },
+    warn: (...args) => {
+        const caller = traceCaller(2) || defCaller
+        const style = 'color: black; background-color: yellow;'
 
-            console.warn(
-                '%c WARNING ',
-                style,
-                `[${name}]`,
-                `[${caller.file}:${caller.lineNumber}]`,
-                ...args
-            )
-        },
-        error: (...args) => {
-            const caller = traceCaller(2) || defCaller
-            const style = 'color: white; background-color: red;'
+        console.warn(
+            '%c WARNING ',
+            style,
+            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            ...args
+        )
+    },
+    error: (...args) => {
+        const caller = traceCaller(2) || defCaller
+        const style = 'color: white; background-color: red;'
 
-            console.error(
-                '%c ERROR ',
-                style,
-                `[${name}]`,
-                `[${caller.file}:${caller.lineNumber}]`,
-                ...args
-            )
-        },
-    }
+        console.error(
+            '%c ERROR ',
+            style,
+            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            ...args
+        )
+    },
 }
 
 export default {
