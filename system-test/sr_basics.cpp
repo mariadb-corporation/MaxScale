@@ -41,12 +41,7 @@ const size_t N_UNIQUE_SELECTS = 3;
 
 void thread_stress(TestConnections* pTest, int id)
 {
-    string greeting("Hello from thread ");
-    greeting += std::to_string(id);
-    greeting += "\n";
-
-    cout << greeting << flush;
-
+    pTest->tprintf("Hello from thread %d", id);
     Connection c = pTest->maxscale->rwsplit();
 
     pTest->expect(c.connect(), "Thread %d failed to connect: %s", id, c.error());
@@ -75,11 +70,7 @@ void thread_stress(TestConnections* pTest, int id)
         }
     }
 
-    string goodbye("Goodbye from thread ");
-    goodbye += std::to_string(id);
-    goodbye += "\n";
-
-    cout << goodbye << flush;
+    pTest->tprintf("Goodbye from thread %d", id);
 }
 
 void test_stress(TestConnections& test)

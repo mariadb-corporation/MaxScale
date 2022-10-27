@@ -311,6 +311,10 @@ int TestConnections::cleanup()
         printf("\nTEST FAILURES:\n");
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
+    else
+    {
+        tprintf("Test complete");
+    }
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
