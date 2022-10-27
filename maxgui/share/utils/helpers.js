@@ -17,6 +17,7 @@ export const immutableUpdate = require('immutability-helper')
 export const lodash = {
     isEmpty: require('lodash/isEmpty'),
     cloneDeep: require('lodash/cloneDeep'),
+    cloneDeepWith: require('lodash/cloneDeepWith'),
     isEqual: require('lodash/isEqual'),
     xorWith: require('lodash/xorWith'),
     uniqueId: require('lodash/uniqueId'),

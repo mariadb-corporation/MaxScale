@@ -10,19 +10,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { immutableUpdate } from '@share/utils/helpers'
 import { SQL_NODE_TYPES, SQL_EDITOR_MODES, SQL_SYS_SCHEMAS } from '@queryEditorSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 
 /**
- * @public
+ * @private
  * @param {Object} node - schema node
  * @returns {String} database name
  */
 const getDbName = node => node.qualified_name.split('.')[0]
 
 /**
- * @public
+ * @private
  * @param {Object} node - TRIGGER_G || COL_G node
  * @returns {String} table name
  */
@@ -166,11 +165,9 @@ function genNode({ parentNode, data, type, name, dbName, tblName }) {
  * @param {Object} param.scope - vuex scope
  * @param {Boolean} param.isRoot - if fetching root node, other params won't be used
  * @param {Object} param.node -  A node object having children nodes
- * @param {String} param.dbName - the name of the db to which the node to be fetched belongs
- * @param {String} param.tblName - the name of the table to which the node to be fetched belongs.
  * @returns {Object} - return {nodes, cmpList}.
  */
-async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
+async function getNodeData({ scope, isRoot = false, node }) {
     const conn_id = scope.state.queryConn.active_sql_conn.id
     const {
         vue: { $queryHttp, $helpers, $typy },
@@ -185,6 +182,7 @@ async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
         columns: $typy(res, 'data.data.attributes.results[0].fields').safeArray,
         rows: $typy(res, 'data.data.attributes.results[0].data').safeArray,
     })
+
     return data.reduce(
         (acc, row) => {
             acc.nodes.push(
@@ -193,8 +191,8 @@ async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
                     data: row,
                     type,
                     name: row[colName],
-                    dbName: isRoot ? row[colName] : dbName,
-                    tblName,
+                    dbName: isRoot ? row[colName] : getDbName(node),
+                    tblName: isRoot ? undefined : getTblName(node),
                 })
             )
             acc.cmpList.push({
@@ -208,96 +206,18 @@ async function getNodeData({ scope, isRoot = false, node, dbName, tblName }) {
         { nodes: [], cmpList: [] }
     )
 }
-/**
- * @private
- * @param {String} payload.dbName - Database name to be found
- * @param {Array} payload.db_tree - Array of tree node
- * @returns {Number} index of target db
- */
-const getDbIdx = ({ dbName, db_tree }) => db_tree.findIndex(db => db.name === dbName)
-
-/**
- * @private
- * @param {String} payload.dbIdx - database index having the child
- * @param {Array} payload.db_tree - Array of tree node
- *  @param {Array} payload.childType - Children type of the database node. i.e. Tables||Stored Procedures
- * @returns {Number} index of Tables or Stored Procedures
- */
-const getIdxOfDbChildNode = ({ dbIdx, db_tree, childType }) =>
-    db_tree[dbIdx].children.findIndex(dbChildrenNode => dbChildrenNode.type === childType)
 
 /**
  * @public
- * Use this function to update database node children. i.e. Populating children for
- * Tables||Stored Procedures node
- * @param {Array} payload.db_tree - Array of tree node to be updated
- * @param {String} payload.dbName - Database name
- * @param {String} payload.childType - Child type of the node to be updated. i.e. Tables||Stored Procedures
- * @param {Array} payload.nodes - Array of grand child nodes (Table|Store Procedure) to be added
- * @returns {Array} new array of db_tree
+ * @param {Array} param.db_tree - Array of tree nodes to be updated
+ * @param {Object} param.nodeId - id of the node to be updated
+ * @param {Array} param.children -  Array of children nodes
+ * @returns {Array} new db_tree
  */
-function updateDbChild({ db_tree, dbName, childType, nodes }) {
-    try {
-        const dbIdx = getDbIdx({ dbName, db_tree })
-        // Tables or Stored Procedures node
-        const childIndex = getIdxOfDbChildNode({ dbIdx, db_tree, childType })
-        const new_db_tree = immutableUpdate(db_tree, {
-            [dbIdx]: { children: { [childIndex]: { children: { $set: nodes } } } },
-        })
-        return new_db_tree
-    } catch (e) {
-        return {}
-    }
-}
-
-/**
- * @public
- * Use this function to update table node children. i.e. Populating children for
- * `Columns` node or `Triggers` node
- * @param {Array} payload.db_tree - Array of tree node to be updated
- * @param {String} payload.dbName - Database name
- * @param {String} payload.tblName - Table name
- * @param {String} payload.childType Child type of the node to be updated. i.e. Columns or Triggers node
- * @param {Array} payload.nodes -  Array of grand child nodes (column or trigger)
- * @returns {Array} new array of db_tree
- */
-function updateTblChild({ db_tree, dbName, tblName, nodes, childType }) {
-    try {
-        const dbIdx = getDbIdx({ dbName, db_tree })
-        // idx of Tables node
-        const idxOfTablesNode = getIdxOfDbChildNode({
-            dbIdx,
-            db_tree,
-            childType: SQL_NODE_TYPES.TBL_G,
-        })
-        const tblIdx = db_tree[dbIdx].children[idxOfTablesNode].children.findIndex(
-            tbl => tbl.name === tblName
-        )
-
-        const dbChildNodes = db_tree[dbIdx].children // Tables and Stored Procedures nodes
-        const tblNode = dbChildNodes[idxOfTablesNode].children[tblIdx] // a table node
-        // Columns and Triggers node
-        const idxOfChild = tblNode.children.findIndex(node => node.type === childType)
-
-        const new_db_tree = immutableUpdate(db_tree, {
-            [dbIdx]: {
-                children: {
-                    [idxOfTablesNode]: {
-                        children: {
-                            [tblIdx]: {
-                                children: {
-                                    [idxOfChild]: { children: { $set: nodes } },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        })
-        return new_db_tree
-    } catch (e) {
-        return {}
-    }
+function deepReplaceNode({ db_tree, nodeId, children }) {
+    return lodash.cloneDeepWith(db_tree, value => {
+        return value && value.id === nodeId ? { ...value, children } : undefined
+    })
 }
 
 /**
@@ -677,11 +597,8 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
     return file_handle_txt !== query_txt
 }
 export default {
-    getDbName,
-    getTblName,
     getNodeData,
-    updateDbChild,
-    updateTblChild,
+    deepReplaceNode,
     queryTblOptsData,
     queryColsOptsData,
     syncStateCreator,

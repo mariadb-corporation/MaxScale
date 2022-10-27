@@ -41,45 +41,18 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getNewDbTree({ rootState }, { node, db_tree, cmpList }) {
-            const {
-                SQL_NODE_TYPES: { TBL_G, SP_G, COL_G, TRIGGER_G },
-            } = rootState.queryEditorConfig.config
+        async getNewDbTree(_, { node, db_tree, cmpList }) {
             try {
-                const dbName = queryHelper.getDbName(node)
-                const tblName = queryHelper.getTblName(node)
-
-                const { nodes, cmpList: partCmpList } = await queryHelper.getNodeData({
+                const { nodes: children, cmpList: partCmpList } = await queryHelper.getNodeData({
                     scope: this,
                     node,
-                    dbName,
-                    tblName,
                 })
-
-                //TODO: DRY these, so VIEWS and VIEW nodes can be updated
-                switch (node.type) {
-                    case TBL_G:
-                    case SP_G: {
-                        const new_db_tree = queryHelper.updateDbChild({
-                            db_tree,
-                            dbName,
-                            childType: node.type,
-                            nodes,
-                        })
-                        return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
-                    }
-                    case COL_G:
-                    case TRIGGER_G: {
-                        const new_db_tree = queryHelper.updateTblChild({
-                            db_tree,
-                            dbName,
-                            tblName,
-                            childType: node.type,
-                            nodes,
-                        })
-                        return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
-                    }
-                }
+                const new_db_tree = queryHelper.deepReplaceNode({
+                    db_tree,
+                    nodeId: node.id,
+                    children,
+                })
+                return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
             } catch (e) {
                 this.vue.$logger('store-schemaSidebar-getNewDbTree').error(e)
                 return { new_db_tree: {}, new_cmp_list: [] }
@@ -111,9 +84,7 @@ export default {
             try {
                 commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
-                    payload: {
-                        loading_db_tree: true,
-                    },
+                    payload: { loading_db_tree: true },
                 })
                 const { nodes, cmpList } = await queryHelper.getNodeData({
                     scope: this,
@@ -122,22 +93,25 @@ export default {
                 if (nodes.length) {
                     let tree = nodes
                     let completionList = cmpList
+
                     const {
                         TBL_G,
                         SP_G,
                         COL_G,
                         TRIGGER_G,
                     } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
-                    const nodesHaveChild = [TBL_G, SP_G, COL_G, TRIGGER_G]
+
+                    const groupNodes = [TBL_G, SP_G, COL_G, TRIGGER_G]
+                    // fetch expanded_nodes
                     for (const node of expanded_nodes) {
-                        if (nodesHaveChild.includes(node.type)) {
+                        if (groupNodes.includes(node.type)) {
                             const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
                                 node,
                                 db_tree: tree,
                                 cmpList: completionList,
                             })
-                            if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
-                            if (completionList.length) completionList = new_cmp_list
+                            tree = new_db_tree
+                            completionList = new_cmp_list
                         }
                     }
                     commit('PATCH_DB_TREE_MAP', {
