@@ -41,6 +41,7 @@ export const NODE_TYPES = Object.freeze({
     COL: 'Column',
     TRIGGER: 'Trigger',
     SP: 'Stored Procedure',
+    VIEW: 'View',
 })
 
 export const SQL_NODE_NAME_KEYS = Object.freeze({
@@ -49,6 +50,7 @@ export const SQL_NODE_NAME_KEYS = Object.freeze({
     [NODE_TYPES.COL]: 'COLUMN_NAME',
     [NODE_TYPES.TRIGGER]: 'TRIGGER_NAME',
     [NODE_TYPES.SP]: 'ROUTINE_NAME',
+    [NODE_TYPES.VIEW]: 'TABLE_NAME',
 })
 // UI node group types
 export const NODE_GROUP_TYPES = Object.freeze({
@@ -56,10 +58,12 @@ export const NODE_GROUP_TYPES = Object.freeze({
     COL_G: 'Columns',
     TRIGGER_G: 'Triggers',
     SP_G: 'Stored Procedures',
+    VIEW_G: 'Views',
 })
 
 export const NODE_GROUP_CHILD_TYPES = Object.freeze({
     [NODE_GROUP_TYPES.TBL_G]: NODE_TYPES.TBL,
+    [NODE_GROUP_TYPES.VIEW_G]: NODE_TYPES.VIEW,
     [NODE_GROUP_TYPES.COL_G]: NODE_TYPES.COL,
     [NODE_GROUP_TYPES.TRIGGER_G]: NODE_TYPES.TRIGGER,
     [NODE_GROUP_TYPES.SP_G]: NODE_TYPES.SP,

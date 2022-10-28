@@ -180,7 +180,7 @@ export default {
         },
         // basic node options for different node types
         baseOptsMap() {
-            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
             const {
                 ADMIN: { USE },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -191,6 +191,7 @@ export default {
                     ...this.clipboardOpts,
                 ],
                 [TBL]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
+                [VIEW]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
                 [SP]: [...this.insertOpts, ...this.clipboardOpts],
                 [COL]: [...this.insertOpts, ...this.clipboardOpts],
                 [TRIGGER]: [...this.insertOpts, ...this.clipboardOpts],
@@ -198,7 +199,7 @@ export default {
         },
         // more node options for user's nodes
         userNodeOptsMap() {
-            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
             const {
                 DDL: { DD },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -209,6 +210,7 @@ export default {
                     { text: this.$mxs_t('dropTbl'), type: DD },
                     { text: this.$mxs_t('truncateTbl'), type: DD },
                 ],
+                [VIEW]: [{ text: this.$mxs_t('dropView'), type: DD }],
                 [SP]: [{ text: this.$mxs_t('dropSp'), type: DD }],
                 [COL]: [],
                 [TRIGGER]: [{ text: this.$mxs_t('dropTrigger'), type: DD }],
@@ -404,6 +406,7 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleEmitDD_opt({ item, opt }) {
+            //TODO: Remove string check for context option, replace it with context type. e.g. CTX_DROP
             switch (opt.text) {
                 case this.$mxs_t('alterTbl'):
                     this.$emit('alter-tbl', {
@@ -417,6 +420,7 @@ export default {
                 case this.$mxs_t('dropSchema'):
                 case this.$mxs_t('dropSp'):
                 case this.$mxs_t('dropTrigger'):
+                case this.$mxs_t('dropView'):
                     this.$emit('drop-action', {
                         qualified_name: item.qualified_name,
                         type: item.type,
@@ -477,15 +481,17 @@ export default {
         },
         iconSheet(item) {
             const { SCHEMA } = this.NODE_TYPES
-            const { TBL_G, SP_G } = this.NODE_GROUP_TYPES
+            const { TBL_G, VIEW_G, SP_G } = this.NODE_GROUP_TYPES
             switch (item.type) {
                 case SCHEMA:
                     return '$vuetify.icons.mxs_database'
                 case TBL_G:
                     return '$vuetify.icons.mxs_table'
+                case VIEW_G:
+                    return 'mdi-view-dashboard-outline'
                 case SP_G:
                     return '$vuetify.icons.mxs_storedProcedures'
-                //TODO: an icon for Column
+                //TODO: find icons for COL_G, TRIGGER_G
             }
         },
         getNodeOpts(node) {

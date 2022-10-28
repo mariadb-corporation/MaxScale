@@ -205,13 +205,16 @@ export default {
         onDropAction({ qualified_name, type }) {
             const { escapeIdentifiers: escape } = this.$helpers
             let sql = 'DROP'
-            const { SCHEMA, TBL, SP, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, TRIGGER } = this.NODE_TYPES
             switch (type) {
                 case SCHEMA:
                     sql += ' SCHEMA'
                     break
                 case TBL:
                     sql += ' TABLE'
+                    break
+                case VIEW:
+                    sql += ' VIEW'
                     break
                 case SP:
                     sql += ' PROCEDURE'

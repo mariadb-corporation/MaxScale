@@ -168,6 +168,7 @@
         "dropSp": "Drop Stored Procedure",
         "dropTbl": "Drop Table",
         "dropTrigger": "Drop Trigger",
+        "dropView": "Drop View",
         "edit": "Edit",
         "emptySet": "Empty set",
         "enable": "Enable",

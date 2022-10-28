@@ -327,9 +327,10 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         expect(wrapper.vm.nodesHaveCtxMenu).to.eql([
             'Schema',
             'Table',
-            'Stored Procedure',
             'Column',
             'Trigger',
+            'Stored Procedure',
+            'View',
         ])
     })
     it(`Should return accurate value for queryOpts computed property`, () => {
@@ -374,6 +375,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                 ...wrapper.vm.clipboardOpts,
             ],
             Table: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
+            View: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
             'Stored Procedure': [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
             Column: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
             Trigger: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
@@ -388,6 +390,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                 { text: wrapper.vm.$mxs_t('dropTbl'), type: 'DD' },
                 { text: wrapper.vm.$mxs_t('truncateTbl'), type: 'DD' },
             ],
+            View: [{ text: wrapper.vm.$mxs_t('dropView'), type: 'DD' }],
             'Stored Procedure': [{ text: wrapper.vm.$mxs_t('dropSp'), type: 'DD' }],
             Column: [],
             Trigger: [{ text: wrapper.vm.$mxs_t('dropTrigger'), type: 'DD' }],

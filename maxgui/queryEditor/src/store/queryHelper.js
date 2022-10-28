@@ -47,7 +47,7 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
 function getNodeGroupSQL(nodeGroup) {
-    const { TBL_G, SP_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
+    const { TBL_G, VIEW_G, SP_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
     const dbName = getDbName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
@@ -62,7 +62,12 @@ function getNodeGroupSQL(nodeGroup) {
         case TBL_G:
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
-            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
+            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE = 'BASE TABLE'`
+            break
+        case VIEW_G:
+            cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
+            from = 'FROM information_schema.TABLES'
+            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE != 'BASE TABLE'`
             break
         case SP_G:
             cols = `${colNameKey}, CREATED`
@@ -92,8 +97,8 @@ function getNodeGroupSQL(nodeGroup) {
  * @returns {Object}  A node in schema sidebar
  */
 function genNode({ nodeGroup, data, type, name }) {
-    const { SCHEMA, TBL, SP, TRIGGER, COL } = NODE_TYPES
-    const { TBL_G, SP_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
+    const { SCHEMA, TBL, VIEW, SP, TRIGGER, COL } = NODE_TYPES
+    const { TBL_G, VIEW_G, SP_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
     const dbName = nodeGroup ? getDbName(nodeGroup) : name
     let node = {
         id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
@@ -110,6 +115,7 @@ function genNode({ nodeGroup, data, type, name }) {
 
     switch (type) {
         case TBL:
+        case VIEW:
         case SP:
             node.qualified_name = `${dbName}.${node.name}`
             break
@@ -123,22 +129,31 @@ function genNode({ nodeGroup, data, type, name }) {
     }
     // Assign child node groups
     switch (type) {
+        case VIEW:
         case TBL:
-            // TBL node canBeHighlighted and has children props
+            /**
+             * VIEW and TBL nodes canBeHighlighted and has children props
+             * but only TBL node has TRIGGER_G
+             */
             node.canBeHighlighted = true
-            node.children = [COL_G, TRIGGER_G].map(t => ({
-                id: `${node.id}.${t}`,
-                qualified_name: `${dbName}.${node.name}.${t}`,
-                key: genNodeKey(),
-                type: t,
-                name: t,
-                draggable: false,
-                level: node.level + 1,
-                children: [],
-            }))
+            node.children = [COL_G, TRIGGER_G].reduce((arr, t) => {
+                if (type === VIEW && t === TRIGGER_G) return arr
+                else
+                    arr.push({
+                        id: `${node.id}.${t}`,
+                        qualified_name: `${dbName}.${node.name}.${t}`,
+                        key: genNodeKey(),
+                        type: t,
+                        name: t,
+                        draggable: false,
+                        level: node.level + 1,
+                        children: [],
+                    })
+                return arr
+            }, [])
             break
         case SCHEMA:
-            node.children = [TBL_G, SP_G].map(t => ({
+            node.children = [TBL_G, VIEW_G, SP_G].map(t => ({
                 id: `${node.id}.${t}`,
                 qualified_name: `${dbName}.${t}`,
                 key: genNodeKey(),
