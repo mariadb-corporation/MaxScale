@@ -158,7 +158,7 @@ then
     if [ $? -eq 0 ]
     then
         sudo yum -d1 -y install devtoolset-7-gcc-c++
-        sudo yum -y install devtoolset-7-libasan-devel
+        sudo yum -d1 -y install devtoolset-7-libasan-devel
         # Enable it by default
         echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
     else
