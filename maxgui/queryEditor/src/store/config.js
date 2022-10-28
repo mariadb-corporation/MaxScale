@@ -44,6 +44,14 @@ export const SQL_NODE_TYPES = Object.freeze({
     SP_G: 'Stored Procedures',
     SP: 'Stored Procedure',
 })
+
+export const SQL_NODE_NAME_KEYS = Object.freeze({
+    [SQL_NODE_TYPES.SCHEMA]: 'SCHEMA_NAME',
+    [SQL_NODE_TYPES.TBL]: 'TABLE_NAME',
+    [SQL_NODE_TYPES.COL]: 'COLUMN_NAME',
+    [SQL_NODE_TYPES.TRIGGER]: 'TRIGGER_NAME',
+    [SQL_NODE_TYPES.SP]: 'ROUTINE_NAME',
+})
 export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
 // schema tree node context option types
 export const SQL_NODE_CTX_OPT_TYPES = Object.freeze({

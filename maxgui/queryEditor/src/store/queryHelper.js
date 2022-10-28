@@ -10,8 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { SQL_NODE_TYPES, SQL_EDITOR_MODES, SQL_SYS_SCHEMAS } from '@queryEditorSrc/store/config'
+import {
+    SQL_NODE_TYPES,
+    SQL_NODE_NAME_KEYS,
+    SQL_EDITOR_MODES,
+    SQL_SYS_SCHEMAS,
+} from '@queryEditorSrc/store/config'
 import { lodash } from '@share/utils/helpers'
+import { getObjectRows } from '@queryEditorSrc/utils/helpers'
 
 /**
  * @private
@@ -32,75 +38,78 @@ const getTblName = node => node.qualified_name.split('.')[1]
  * @returns {String} node key
  */
 const genNodeKey = () => lodash.uniqueId('node_key_')
-/**
- * @private
- * @param {Boolean} param.isRoot - If the node is a SCHEMA node
- * @param {Object} param.node - TBL_G || SP_G || TRIGGER_G || COL_G node
- * @returns {Object} { type, colName, sql }
- */
-function getNodeInfo({ scope, node, isRoot }) {
-    const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER_G, TRIGGER, COL_G, COL } = SQL_NODE_TYPES
-    if (isRoot)
-        return {
-            type: SCHEMA,
-            colName: 'SCHEMA_NAME',
-            sql: scope.getters['schemaSidebar/getDbSql'],
-        }
 
+/**
+ * @public
+ * @param {Object} node - TBL_G || SP_G || TRIGGER_G || COL_G node
+ * @returns {String} SQL of the node group using for fetching its children nodes
+ */
+function getNodeGroupSQL(node) {
+    const { TBL_G, SP_G, TRIGGER_G, COL_G } = SQL_NODE_TYPES
     const dbName = getDbName(node)
-    let type = '',
-        colName = '',
-        tblName = ''
-    if (node.type === TRIGGER_G || node.type === COL_G) tblName = getTblName(node)
-    let cols = '',
+    const childNodeType = getChildNodeType(node)
+
+    let colNameKey = SQL_NODE_NAME_KEYS[childNodeType],
+        tblName = '',
+        cols = '',
         from = '',
         cond = ''
+    if (node.type === TRIGGER_G || node.type === COL_G) tblName = getTblName(node)
+
     switch (node.type) {
         case TBL_G:
-            type = TBL
-            colName = 'TABLE_NAME'
-            cols = 'TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE'
+            cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
             cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE !='VIEW'`
             break
         case SP_G:
-            type = SP
-            colName = 'ROUTINE_NAME'
-            cols = 'ROUTINE_NAME, CREATED'
+            cols = `${colNameKey}, CREATED`
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
             break
         case TRIGGER_G:
-            type = TRIGGER
-            colName = 'TRIGGER_NAME'
-            cols = 'TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT'
-            from = 'FROM information_schema.TRIGGER_G'
+            cols = `${colNameKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT`
+            from = 'FROM information_schema.TRIGGER'
             cond = `WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
-            type = COL
-            colName = 'COLUMN_NAME'
-            cols = 'COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES'
+            cols = `${colNameKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
             cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
             break
     }
-    return { type, colName, sql: `SELECT ${cols} ${from} ${cond} ORDER BY ${colName};` }
+    return `SELECT ${cols} ${from} ${cond} ORDER BY ${colNameKey};`
+}
+
+/**
+ * @private
+ * @param {Object} node - TBL_G || SP_G || TRIGGER_G || COL_G node
+ * @returns {Object} { type, name }
+ */
+function getChildNodeType(node) {
+    const { TBL_G, TBL, SP_G, SP, TRIGGER_G, TRIGGER, COL_G, COL } = SQL_NODE_TYPES
+    switch (node.type) {
+        case TBL_G:
+            return TBL
+        case SP_G:
+            return SP
+        case TRIGGER_G:
+            return TRIGGER
+        case COL_G:
+            return COL
+    }
 }
 /**
  * @private
- * @param {Object} param.parentNode - parent node. Undefined of param.type === SCHEMA
+ * @param {Object} param.parentNode - parent node. Undefined if param.type === SCHEMA
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
- * @param {Number} param.level - hierarchy level of node to be generated
  * @param {String} param.name - name of the node
- * @param {String} param.dbName - the name of the db to which the node to be generated belongs
- * @param {String} param.tblName - the name of the table to which the node to be generated belongs. Required when
- * param.type === TRIGGER or COL
- * @returns {Object}  schema node
+ * @returns {Object}  A node in schema sidebar
  */
-function genNode({ parentNode, data, type, name, dbName, tblName }) {
+function genNode({ parentNode, data, type, name }) {
     const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER, COL, COL_G, TRIGGER_G } = SQL_NODE_TYPES
+    const dbName = parentNode ? getDbName(parentNode) : name
     let node = {
         id: type === SCHEMA ? name : `${parentNode.id}.${name}`,
         qualified_name: '',
@@ -121,13 +130,13 @@ function genNode({ parentNode, data, type, name, dbName, tblName }) {
             break
         case TRIGGER:
         case COL:
-            node.qualified_name = `${tblName}.${node.name}`
+            node.qualified_name = `${getTblName(parentNode)}.${node.name}`
             break
         case SCHEMA:
             node.qualified_name = node.name
             break
     }
-    // Create group nodes
+    // Assign child node groups
     switch (type) {
         case TBL:
             // TBL node canBeHighlighted and has children props
@@ -161,44 +170,31 @@ function genNode({ parentNode, data, type, name, dbName, tblName }) {
 }
 
 /**
+ * This function returns nodes data for schema sidebar and its completion list for the editor
  * @public
- * @param {Object} param.scope - vuex scope
- * @param {Boolean} param.isRoot - if fetching root node, other params won't be used
+ * @param {Object} param.queryResult - query result data.
  * @param {Object} param.node -  A node object having children nodes
  * @returns {Object} - return {nodes, cmpList}.
  */
-async function getNodeData({ scope, isRoot = false, node }) {
-    const conn_id = scope.state.queryConn.active_sql_conn.id
-    const {
-        vue: { $queryHttp, $helpers, $typy },
-    } = scope
-
-    const { type, colName, sql } = getNodeInfo({ scope, isRoot, node })
-
-    const res = await $queryHttp.post(`/sql/${conn_id}/queries`, {
-        sql,
-    })
-    const data = $helpers.getObjectRows({
-        columns: $typy(res, 'data.data.attributes.results[0].fields').safeArray,
-        rows: $typy(res, 'data.data.attributes.results[0].data').safeArray,
-    })
-
-    return data.reduce(
+function genNodeData({ queryResult = {}, node = null }) {
+    const type = node ? getChildNodeType(node) : SQL_NODE_TYPES.SCHEMA
+    const { fields = [], data = [] } = queryResult
+    const rows = getObjectRows({ columns: fields, rows: data })
+    const nameKey = SQL_NODE_NAME_KEYS[type]
+    return rows.reduce(
         (acc, row) => {
             acc.nodes.push(
                 genNode({
                     parentNode: node,
                     data: row,
                     type,
-                    name: row[colName],
-                    dbName: isRoot ? row[colName] : getDbName(node),
-                    tblName: isRoot ? undefined : getTblName(node),
+                    name: row[nameKey],
                 })
             )
             acc.cmpList.push({
-                label: row[colName],
+                label: row[nameKey],
                 detail: type.toUpperCase(),
-                insertText: row[colName],
+                insertText: row[nameKey],
                 type,
             })
             return acc
@@ -222,38 +218,32 @@ function deepReplaceNode({ db_tree, nodeId, children }) {
 
 /**
  * @public
- * @param {Object} active_sql_conn - current connecting resource
- * @param {String} node - TBL node
- * @param {Object} vue - vue instance
- * @param {Object} $queryHttp - $queryHttp axios instance
- * @returns {Object} - returns object row data
+ * @param {Object} node - TBL node
+ * @returns {String} - SQL
  */
-async function queryTblOptsData({ active_sql_conn, node, vue, $queryHttp }) {
+function getAlterTblOptsSQL(node) {
     const db = getDbName(node)
     const tblName = getTblName(node)
-    const cols =
-        // eslint-disable-next-line vue/max-len
-        'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
-    const sql = `SELECT ${cols} FROM information_schema.tables t
-JOIN information_schema.collations c ON t.table_collation = c.collation_name
-WHERE table_schema = "${db}" AND table_name = "${tblName}";`
-    let tblOptsRes = await $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-        sql,
-    })
-    const tblOptsRows = vue.$helpers.getObjectRows({
-        columns: tblOptsRes.data.data.attributes.results[0].fields,
-        rows: tblOptsRes.data.data.attributes.results[0].data,
-    })
-    return tblOptsRows[0]
+    return `SELECT
+                table_name,
+                ENGINE AS table_engine,
+                character_set_name AS table_charset,
+                table_collation,
+                table_comment
+            FROM
+                information_schema.tables t
+                JOIN information_schema.collations c ON t.table_collation = c.collation_name
+            WHERE
+                table_schema = "${db}"
+                AND table_name = "${tblName}";`
 }
+
 /**
  * @public
- * @param {Object} active_sql_conn - current connecting resource
- * @param {String} node - TBL node
- * @param {Object} $queryHttp - $queryHttp axios instance
- * @returns {Object} - returns object data contains `data` and `fields`
+ * @param {Object} node - TBL node
+ * @returns {String} - SQL
  */
-async function queryColsOptsData({ active_sql_conn, node, $queryHttp }) {
+function getAlterColsOptsSQL(node) {
     const db = getDbName(node)
     const tblName = getTblName(node)
     /**
@@ -265,53 +255,53 @@ async function queryColsOptsData({ active_sql_conn, node, $queryHttp }) {
      * Notice: UQ column returns UNIQUE INDEX name.
      *
      */
-    const cols = `
-    UUID() AS id,
-    a.column_name,
-    REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
-    IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
-    IF(is_nullable LIKE 'YES', 'NULL', 'NOT NULL') as NN,
-    IF(column_type LIKE '%UNSIGNED%', 'UNSIGNED', '') as UN,
-    IF(c.constraint_name IS NULL, '', c.constraint_name) as UQ,
-    IF(column_type LIKE '%ZEROFILL%', 'ZEROFILL', '') as ZF,
-    IF(extra LIKE '%AUTO_INCREMENT%', 'AUTO_INCREMENT', '') as AI,
-    IF(
-        UPPER(extra) REGEXP 'VIRTUAL|STORED',
-        REGEXP_SUBSTR(UPPER(extra), 'VIRTUAL|STORED'),
-        '(none)'
-     ) AS generated,
-    COALESCE(generation_expression, column_default, '') as 'default/expression',
-    IF(character_set_name IS NULL, '', character_set_name) as charset,
-    IF(collation_name IS NULL, '', collation_name) as collation,
-    column_comment as comment
-    `
-    const colsOptsRes = await $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-        sql: `
-        SELECT ${cols} FROM information_schema.columns a
-            LEFT JOIN information_schema.statistics b ON (
-                a.table_schema = b.table_schema
-                AND a.table_name = b.table_name
-                AND a.column_name = b.column_name
-            )
-            LEFT JOIN (
-                SELECT
-                    table_name, table_schema, constraint_name
-                FROM
-                    information_schema.table_constraints
-                WHERE
-                    constraint_type = 'UNIQUE'
-            ) c ON (
-                a.table_name = c.table_name
-                AND a.table_schema = c.table_schema
-                AND b.index_name = c.constraint_name
-            )
-        WHERE
-            a.table_schema='${db}'
-            AND a.table_name='${tblName}'
-        GROUP BY a.column_name
-        ORDER BY a.ordinal_position;`,
-    })
-    return colsOptsRes.data.data.attributes.results[0]
+    return `SELECT
+                UUID() AS id,
+                a.column_name,
+                REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
+                IF(column_key LIKE '%PRI%', 'YES', 'NO') AS PK,
+                IF(is_nullable LIKE 'YES', 'NULL', 'NOT NULL') AS NN,
+                IF(column_type LIKE '%UNSIGNED%', 'UNSIGNED', '') AS UN,
+                IF(c.constraint_name IS NULL, '', c.constraint_name) AS UQ,
+                IF(column_type LIKE '%ZEROFILL%', 'ZEROFILL', '') AS ZF,
+                IF(extra LIKE '%AUTO_INCREMENT%', 'AUTO_INCREMENT', '') AS AI,
+                IF(
+                   UPPER(extra) REGEXP 'VIRTUAL|STORED',
+                   REGEXP_SUBSTR(UPPER(extra), 'VIRTUAL|STORED'),
+                   '(none)'
+                ) AS generated,
+                COALESCE(generation_expression, column_default, '') AS 'default/expression',
+                IF(character_set_name IS NULL, '', character_set_name) AS charset,
+                IF(collation_name IS NULL, '', collation_name) AS collation,
+                column_comment AS comment
+            FROM
+                information_schema.columns a
+                LEFT JOIN information_schema.statistics b ON (
+                   a.table_schema = b.table_schema
+                   AND a.table_name = b.table_name
+                   AND a.column_name = b.column_name
+                )
+                LEFT JOIN (
+                   SELECT
+                      table_name,
+                      table_schema,
+                      constraint_name
+                   FROM
+                      information_schema.table_constraints
+                   WHERE
+                      constraint_type = 'UNIQUE'
+                ) c ON (
+                   a.table_name = c.table_name
+                   AND a.table_schema = c.table_schema
+                   AND b.index_name = c.constraint_name
+                )
+            WHERE
+                a.table_schema = '${db}'
+                AND a.table_name = '${tblName}'
+            GROUP BY
+                a.column_name
+            ORDER BY
+                a.ordinal_position;`
 }
 
 /**
@@ -597,10 +587,11 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
     return file_handle_txt !== query_txt
 }
 export default {
-    getNodeData,
+    getNodeGroupSQL,
+    genNodeData,
     deepReplaceNode,
-    queryTblOptsData,
-    queryColsOptsData,
+    getAlterTblOptsSQL,
+    getAlterColsOptsSQL,
     syncStateCreator,
     syncedStateMutationsCreator,
     memStateCreator,

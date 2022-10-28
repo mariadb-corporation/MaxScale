@@ -41,10 +41,17 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getNewDbTree(_, { node, db_tree, cmpList }) {
-            try {
-                const { nodes: children, cmpList: partCmpList } = await queryHelper.getNodeData({
-                    scope: this,
+        async getNewDbTree({ rootState }, { node, db_tree, cmpList }) {
+            const sql = queryHelper.getNodeGroupSQL(node)
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                    sql,
+                })
+            )
+            if (e) return { new_db_tree: {}, new_cmp_list: [] }
+            else {
+                const { nodes: children, cmpList: partCmpList } = queryHelper.genNodeData({
+                    queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
                     node,
                 })
                 const new_db_tree = queryHelper.deepReplaceNode({
@@ -53,9 +60,6 @@ export default {
                     children,
                 })
                 return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
-            } catch (e) {
-                this.vue.$logger.error(e)
-                return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
         async loadChildNodes({ commit, dispatch, rootState, getters }, node) {
@@ -77,18 +81,31 @@ export default {
                 this.vue.$logger.error(e)
             }
         },
-        async fetchSchemas({ commit, dispatch, state, rootState }) {
+        async fetchSchemas({ commit, dispatch, state, rootState, getters }) {
             const active_wke_id = rootState.wke.active_wke_id
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
-            try {
+
+            commit('PATCH_DB_TREE_MAP', {
+                id: active_wke_id,
+                payload: { loading_db_tree: true },
+            })
+
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                    sql: getters.getDbSql,
+                })
+            )
+            if (e)
                 commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
-                    payload: { loading_db_tree: true },
+                    payload: {
+                        loading_db_tree: false,
+                    },
                 })
-                const { nodes, cmpList } = await queryHelper.getNodeData({
-                    scope: this,
-                    isRoot: true,
+            else {
+                const { nodes, cmpList } = queryHelper.genNodeData({
+                    queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
                 })
                 if (nodes.length) {
                     let tree = nodes
@@ -124,14 +141,6 @@ export default {
                         },
                     })
                 }
-            } catch (e) {
-                commit('PATCH_DB_TREE_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        loading_db_tree: false,
-                    },
-                })
-                this.vue.$logger.error(e)
             }
         },
 

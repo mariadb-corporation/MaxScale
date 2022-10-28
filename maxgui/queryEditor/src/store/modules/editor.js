@@ -56,14 +56,14 @@ export default {
     },
     actions: {
         async queryCharsetCollationMap({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const sql =
-                    // eslint-disable-next-line vue/max-len
-                    'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                    sql:
+                        // eslint-disable-next-line vue/max-len
+                        'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
                 })
+            )
+            if (!e) {
                 let charsetCollationMap = {}
                 const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
                 data.forEach(row => {
@@ -78,19 +78,17 @@ export default {
                     charsetCollationMap[charset] = charsetObj
                 })
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
-            } catch (e) {
-                this.vue.$logger.error(e)
             }
         },
         async queryDefDbCharsetMap({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const sql =
-                    // eslint-disable-next-line vue/max-len
-                    'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                    sql:
+                        // eslint-disable-next-line vue/max-len
+                        'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
                 })
+            )
+            if (!e) {
                 let defDbCharsetMap = {}
                 const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
                 data.forEach(row => {
@@ -99,20 +97,15 @@ export default {
                     defDbCharsetMap[schema_name] = default_character_set_name
                 })
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
-            } catch (e) {
-                this.vue.$logger.error(e)
             }
         },
         async queryEngines({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })
-                commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
-            } catch (e) {
-                this.vue.$logger.error(e)
-            }
+            )
+            if (!e) commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
         },
         async queryAlterTblSuppData({ state, dispatch }) {
             if (this.vue.$typy(state.engines).isEmptyArray) await dispatch('queryEngines')
@@ -124,29 +117,55 @@ export default {
         async queryTblCreationInfo({ commit, state, rootState, rootGetters }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
-            try {
+            const {
+                $queryHttp,
+                $helpers: { getObjectRows, getErrorsArr },
+                $typy,
+            } = this.vue
+
+            commit('SET_TBL_CREATION_INFO', {
+                id: active_session_id,
+                payload: {
+                    ...state.tbl_creation_info,
+                    loading_tbl_creation_info: true,
+                    altered_active_node: node,
+                },
+            })
+            let tblOptsData, colsOptsData
+            const [tblOptError, tblOptsRes] = await this.vue.$helpers.asyncTryCatch(
+                $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                    sql: queryHelper.getAlterTblOptsSQL(node),
+                })
+            )
+            const [colsOptsError, colsOptsRes] = await this.vue.$helpers.asyncTryCatch(
+                $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                    sql: queryHelper.getAlterColsOptsSQL(node),
+                })
+            )
+            if (tblOptError || colsOptsError) {
                 commit('SET_TBL_CREATION_INFO', {
                     id: active_session_id,
-                    payload: {
-                        ...state.tbl_creation_info,
-                        loading_tbl_creation_info: true,
-                        altered_active_node: node,
-                    },
+                    payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
                 })
+                let errTxt = []
+                if (tblOptError) errTxt.push(getErrorsArr(tblOptError))
+                if (colsOptsError) errTxt.push(getErrorsArr(colsOptsError))
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    { text: errTxt, type: 'error' },
+                    { root: true }
+                )
+            } else {
+                const optsRows = getObjectRows({
+                    columns: $typy(tblOptsRes, 'data.data.attributes.results[0].fields').safeArray,
+                    rows: $typy(tblOptsRes, 'data.data.attributes.results[0].data').safeArray,
+                })
+                tblOptsData = $typy(optsRows, '[0]').safeObject
+                colsOptsData = $typy(colsOptsRes, 'data.data.attributes.results[0]').safeObject
+
                 const schemas = node.qualified_name.split('.')
                 const db = schemas[0]
 
-                const tblOptsData = await queryHelper.queryTblOptsData({
-                    active_sql_conn,
-                    node,
-                    vue: this.vue,
-                    $queryHttp: this.vue.$queryHttp,
-                })
-                const colsOptsData = await queryHelper.queryColsOptsData({
-                    active_sql_conn,
-                    node,
-                    $queryHttp: this.vue.$queryHttp,
-                })
                 commit(`SET_TBL_CREATION_INFO`, {
                     id: active_session_id,
                     payload: {
@@ -158,20 +177,6 @@ export default {
                         loading_tbl_creation_info: false,
                     },
                 })
-            } catch (e) {
-                commit('SET_TBL_CREATION_INFO', {
-                    id: active_session_id,
-                    payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
-                })
-                commit(
-                    'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: this.vue.$helpers.getErrorsArr(e),
-                        type: 'error',
-                    },
-                    { root: true }
-                )
-                this.vue.$logger.error(e)
             }
         },
     },

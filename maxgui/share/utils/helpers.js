@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { logger } from '@share/plugins/logger'
 export const uuidv1 = require('uuid').v1
 
 export const immutableUpdate = require('immutability-helper')
@@ -261,4 +262,18 @@ export function preventNonNumericalVal(e) {
  */
 export function stringifyClone(data) {
     return JSON.parse(JSON.stringify(data))
+}
+
+/**
+ * A try catch wrapper
+ * @param {Promise} promise
+ * @returns { Promise }
+ */
+export function asyncTryCatch(promise) {
+    return promise
+        .then(data => [null, data])
+        .catch(err => {
+            logger.error(err)
+            return [err, undefined]
+        })
 }

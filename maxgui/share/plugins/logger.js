@@ -14,7 +14,7 @@
 const stackParser = require('stacktrace-parser')
 const traceCaller = level => stackParser.parse(new Error().stack)[level]
 const defCaller = { file: 'n/a', lineNumber: 'n/a' }
-const logger = {
+export const logger = {
     info: (...args) => {
         const caller = traceCaller(2) || defCaller
         const style = 'color: white; background-color: green;'
