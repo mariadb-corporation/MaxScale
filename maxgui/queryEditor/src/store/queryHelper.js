@@ -11,7 +11,9 @@
  * Public License.
  */
 import {
-    SQL_NODE_TYPES,
+    NODE_TYPES,
+    NODE_GROUP_TYPES,
+    NODE_GROUP_CHILD_TYPES,
     SQL_NODE_NAME_KEYS,
     SQL_EDITOR_MODES,
     SQL_SYS_SCHEMAS,
@@ -41,22 +43,22 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
 
 /**
  * @public
- * @param {Object} node - TBL_G || SP_G || TRIGGER_G || COL_G node
+ * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
-function getNodeGroupSQL(node) {
-    const { TBL_G, SP_G, TRIGGER_G, COL_G } = SQL_NODE_TYPES
-    const dbName = getDbName(node)
-    const childNodeType = getChildNodeType(node)
+function getNodeGroupSQL(nodeGroup) {
+    const { TBL_G, SP_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
+    const dbName = getDbName(nodeGroup)
+    const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
     let colNameKey = SQL_NODE_NAME_KEYS[childNodeType],
         tblName = '',
         cols = '',
         from = '',
         cond = ''
-    if (node.type === TRIGGER_G || node.type === COL_G) tblName = getTblName(node)
+    if (nodeGroup.type === TRIGGER_G || nodeGroup.type === COL_G) tblName = getTblName(nodeGroup)
 
-    switch (node.type) {
+    switch (nodeGroup.type) {
         case TBL_G:
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
@@ -83,35 +85,18 @@ function getNodeGroupSQL(node) {
 
 /**
  * @private
- * @param {Object} node - TBL_G || SP_G || TRIGGER_G || COL_G node
- * @returns {Object} { type, name }
- */
-function getChildNodeType(node) {
-    const { TBL_G, TBL, SP_G, SP, TRIGGER_G, TRIGGER, COL_G, COL } = SQL_NODE_TYPES
-    switch (node.type) {
-        case TBL_G:
-            return TBL
-        case SP_G:
-            return SP
-        case TRIGGER_G:
-            return TRIGGER
-        case COL_G:
-            return COL
-    }
-}
-/**
- * @private
- * @param {Object} param.parentNode - parent node. Undefined if param.type === SCHEMA
+ * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES). Undefined if param.type === SCHEMA
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
  * @param {String} param.name - name of the node
  * @returns {Object}  A node in schema sidebar
  */
-function genNode({ parentNode, data, type, name }) {
-    const { SCHEMA, TBL_G, TBL, SP_G, SP, TRIGGER, COL, COL_G, TRIGGER_G } = SQL_NODE_TYPES
-    const dbName = parentNode ? getDbName(parentNode) : name
+function genNode({ nodeGroup, data, type, name }) {
+    const { SCHEMA, TBL, SP, TRIGGER, COL } = NODE_TYPES
+    const { TBL_G, SP_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
+    const dbName = nodeGroup ? getDbName(nodeGroup) : name
     let node = {
-        id: type === SCHEMA ? name : `${parentNode.id}.${name}`,
+        id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
         qualified_name: '',
         key: genNodeKey(),
         type,
@@ -130,7 +115,7 @@ function genNode({ parentNode, data, type, name }) {
             break
         case TRIGGER:
         case COL:
-            node.qualified_name = `${getTblName(parentNode)}.${node.name}`
+            node.qualified_name = `${getTblName(nodeGroup)}.${node.name}`
             break
         case SCHEMA:
             node.qualified_name = node.name
@@ -173,11 +158,11 @@ function genNode({ parentNode, data, type, name }) {
  * This function returns nodes data for schema sidebar and its completion list for the editor
  * @public
  * @param {Object} param.queryResult - query result data.
- * @param {Object} param.node -  A node object having children nodes
+ * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
  * @returns {Object} - return {nodes, cmpList}.
  */
-function genNodeData({ queryResult = {}, node = null }) {
-    const type = node ? getChildNodeType(node) : SQL_NODE_TYPES.SCHEMA
+function genNodeData({ queryResult = {}, nodeGroup = null }) {
+    const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
     const rows = getObjectRows({ columns: fields, rows: data })
     const nameKey = SQL_NODE_NAME_KEYS[type]
@@ -185,7 +170,7 @@ function genNodeData({ queryResult = {}, node = null }) {
         (acc, row) => {
             acc.nodes.push(
                 genNode({
-                    parentNode: node,
+                    nodeGroup,
                     data: row,
                     type,
                     name: row[nameKey],

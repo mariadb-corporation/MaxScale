@@ -33,25 +33,38 @@ export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'mac-cmd-shift-c': ['meta', 'shift', 'c'],
 })
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
-export const SQL_NODE_TYPES = Object.freeze({
+
+// node types from database
+export const NODE_TYPES = Object.freeze({
     SCHEMA: 'Schema',
-    TBL_G: 'Tables',
     TBL: 'Table',
-    COL_G: 'Columns',
     COL: 'Column',
-    TRIGGER_G: 'Triggers',
     TRIGGER: 'Trigger',
-    SP_G: 'Stored Procedures',
     SP: 'Stored Procedure',
 })
 
 export const SQL_NODE_NAME_KEYS = Object.freeze({
-    [SQL_NODE_TYPES.SCHEMA]: 'SCHEMA_NAME',
-    [SQL_NODE_TYPES.TBL]: 'TABLE_NAME',
-    [SQL_NODE_TYPES.COL]: 'COLUMN_NAME',
-    [SQL_NODE_TYPES.TRIGGER]: 'TRIGGER_NAME',
-    [SQL_NODE_TYPES.SP]: 'ROUTINE_NAME',
+    [NODE_TYPES.SCHEMA]: 'SCHEMA_NAME',
+    [NODE_TYPES.TBL]: 'TABLE_NAME',
+    [NODE_TYPES.COL]: 'COLUMN_NAME',
+    [NODE_TYPES.TRIGGER]: 'TRIGGER_NAME',
+    [NODE_TYPES.SP]: 'ROUTINE_NAME',
 })
+// UI node group types
+export const NODE_GROUP_TYPES = Object.freeze({
+    TBL_G: 'Tables',
+    COL_G: 'Columns',
+    TRIGGER_G: 'Triggers',
+    SP_G: 'Stored Procedures',
+})
+
+export const NODE_GROUP_CHILD_TYPES = Object.freeze({
+    [NODE_GROUP_TYPES.TBL_G]: NODE_TYPES.TBL,
+    [NODE_GROUP_TYPES.COL_G]: NODE_TYPES.COL,
+    [NODE_GROUP_TYPES.TRIGGER_G]: NODE_TYPES.TRIGGER,
+    [NODE_GROUP_TYPES.SP_G]: NODE_TYPES.SP,
+})
+
 export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
 // schema tree node context option types
 export const SQL_NODE_CTX_OPT_TYPES = Object.freeze({

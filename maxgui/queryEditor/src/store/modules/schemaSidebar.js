@@ -36,13 +36,13 @@ export default {
             await dispatch('queryConn/updateActiveDb', {}, { root: true })
         },
         /**
-         * @param {Object} payload.node - A node object having children nodes
+         * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
          * @param {Array} payload.db_tree - Array of tree node to be updated
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getNewDbTree({ rootState }, { node, db_tree, cmpList }) {
-            const sql = queryHelper.getNodeGroupSQL(node)
+        async getNewDbTree({ rootState }, { nodeGroup, db_tree, cmpList }) {
+            const sql = queryHelper.getNodeGroupSQL(nodeGroup)
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
                 this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
                     sql,
@@ -52,21 +52,24 @@ export default {
             else {
                 const { nodes: children, cmpList: partCmpList } = queryHelper.genNodeData({
                     queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
-                    node,
+                    nodeGroup,
                 })
                 const new_db_tree = queryHelper.deepReplaceNode({
                     db_tree,
-                    nodeId: node.id,
+                    nodeId: nodeGroup.id,
                     children,
                 })
                 return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
             }
         },
-        async loadChildNodes({ commit, dispatch, rootState, getters }, node) {
+        /**
+         * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
+         */
+        async loadChildNodes({ commit, dispatch, rootState, getters }, nodeGroup) {
             const active_wke_id = rootState.wke.active_wke_id
             try {
                 const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
-                    node,
+                    nodeGroup,
                     db_tree: getters.getDbTreeData,
                     cmpList: getters.getDbCmplList,
                 })
@@ -111,19 +114,14 @@ export default {
                     let tree = nodes
                     let completionList = cmpList
 
-                    const {
-                        TBL_G,
-                        SP_G,
-                        COL_G,
-                        TRIGGER_G,
-                    } = rootState.queryEditorConfig.config.SQL_NODE_TYPES
-
-                    const groupNodes = [TBL_G, SP_G, COL_G, TRIGGER_G]
+                    const groupNodes = Object.values(
+                        rootState.queryEditorConfig.config.NODE_GROUP_TYPES
+                    )
                     // fetch expanded_nodes
-                    for (const node of expanded_nodes) {
-                        if (groupNodes.includes(node.type)) {
+                    for (const nodeGroup of expanded_nodes) {
+                        if (groupNodes.includes(nodeGroup.type)) {
                             const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
-                                node,
+                                nodeGroup,
                                 db_tree: tree,
                                 cmpList: completionList,
                             })

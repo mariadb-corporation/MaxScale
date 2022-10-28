@@ -34,7 +34,7 @@
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
-                                item.type === SQL_NODE_TYPES.SCHEMA && active_db === item.name,
+                                item.type === NODE_TYPES.SCHEMA && active_db === item.name,
                         }"
                     >
                         {{ item.name }}
@@ -128,7 +128,8 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
-            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
+            NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
             SQL_NODE_CTX_OPT_TYPES: state => state.queryEditorConfig.config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
@@ -143,8 +144,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         nodesHaveCtxMenu() {
-            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
-            return [SCHEMA, TBL, SP, COL, TRIGGER]
+            return Object.values(this.NODE_TYPES)
         },
         queryOpts() {
             const {
@@ -180,7 +180,7 @@ export default {
         },
         // basic node options for different node types
         baseOptsMap() {
-            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.NODE_TYPES
             const {
                 ADMIN: { USE },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -198,7 +198,7 @@ export default {
         },
         // more node options for user's nodes
         userNodeOptsMap() {
-            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL, SP, COL, TRIGGER } = this.NODE_TYPES
             const {
                 DDL: { DD },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -476,7 +476,8 @@ export default {
             }
         },
         iconSheet(item) {
-            const { SCHEMA, TBL_G, SP_G } = this.SQL_NODE_TYPES
+            const { SCHEMA } = this.NODE_TYPES
+            const { TBL_G, SP_G } = this.NODE_GROUP_TYPES
             switch (item.type) {
                 case SCHEMA:
                     return '$vuetify.icons.mxs_database'
@@ -503,7 +504,7 @@ export default {
                 })
         },
         onNodeDblClick(item) {
-            if (item.type === this.SQL_NODE_TYPES.SCHEMA) this.$emit('use-db', item.qualified_name)
+            if (item.type === this.NODE_TYPES.SCHEMA) this.$emit('use-db', item.qualified_name)
         },
         onContextMenu({ e, item }) {
             if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })

@@ -108,7 +108,7 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
-            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -205,7 +205,7 @@ export default {
         onDropAction({ qualified_name, type }) {
             const { escapeIdentifiers: escape } = this.$helpers
             let sql = 'DROP'
-            const { SCHEMA, TBL, SP, TRIGGER } = this.SQL_NODE_TYPES
+            const { SCHEMA, TBL, SP, TRIGGER } = this.NODE_TYPES
             switch (type) {
                 case SCHEMA:
                     sql += ' SCHEMA'

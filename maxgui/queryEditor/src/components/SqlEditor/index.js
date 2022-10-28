@@ -41,7 +41,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_NODE_TYPES: state => state.queryEditorConfig.config.SQL_NODE_TYPES,
+            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
         }),
         builtInCmplItems() {
@@ -61,19 +61,12 @@ export default {
         },
         custCmplList() {
             const dist = this.$helpers.lodash.cloneDeep(this.cmplList)
-            const { SCHEMA, TBL, SP, TRIGGER, COL } = this.SQL_NODE_TYPES
+            const nodeTypes = Object.values(this.NODE_TYPES)
             for (const item of dist) {
-                switch (item.type) {
-                    case SCHEMA:
-                    case TBL:
-                    case SP:
-                    case COL:
-                    case TRIGGER:
-                        item.kind = this.monaco.languages.CompletionItemKind.Text
-                        break
-                    case this.CMPL_SNIPPET_KIND:
-                        item.kind = this.monaco.languages.CompletionItemKind.Snippet
-                }
+                if (nodeTypes.includes(item.type))
+                    item.kind = this.monaco.languages.CompletionItemKind.Text
+                else if (item.type === this.CMPL_SNIPPET_KIND)
+                    item.kind = this.monaco.languages.CompletionItemKind.Snippet
             }
             return dist
         },
