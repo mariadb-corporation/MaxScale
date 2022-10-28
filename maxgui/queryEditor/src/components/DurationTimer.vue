@@ -8,8 +8,8 @@
     >
         <template v-slot:activator="{ on }">
             <span v-on="on">
-                {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span
-            >
+                {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: Math.round(duration) }) }}
+            </span>
         </template>
         <v-sheet min-width="220" max-width="450" class="mxs-color-helper text-small-text">
             <div class="d-flex align-center mxs-color-helper text-navigation font-weight-bold">
