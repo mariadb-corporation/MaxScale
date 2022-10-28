@@ -2213,80 +2213,62 @@ int main(int argc, char** argv)
     // initialized via the module initialization below.
     if (qc_process_init(QC_INIT_SELF))
     {
-        // Before we start the workers we need to check if a shutdown signal has been received
-        if (!maxscale_is_shutting_down())
+        if (RoutingWorker::init(&watchdog_notifier))
         {
-            if (RoutingWorker::init(&watchdog_notifier))
+            // Start the routing workers, each in a thread of its own.
+            if (RoutingWorker::start_workers())
             {
-                // If a shutdown signal was received while we were initializing the workers,
-                // we need to exit. After this point, the shutdown will be driven by the workers.
-                if (!maxscale_is_shutting_down())
+                MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
+
+                if (configure_normal_signals())
                 {
-
-                    // Start the routing workers, each in a thread of its own.
-                    if (RoutingWorker::start_workers())
+                    if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
                     {
-                        MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
+                        // This call will block until MaxScale is shut down.
+                        main_worker.run();
+                        MXB_NOTICE("MaxScale is shutting down.");
 
-                        if (configure_normal_signals())
-                        {
-                            if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
-                            {
-                                // This call will block until MaxScale is shut down.
-                                main_worker.run();
-                                MXB_NOTICE("MaxScale is shutting down.");
+                        disable_normal_signals();
+                        mxs_admin_finish();
 
-                                disable_normal_signals();
-                                mxs_admin_finish();
+                        // Shutting down started, wait for all routing workers.
+                        RoutingWorker::join_workers();
+                        MXB_NOTICE("All workers have shut down.");
 
-                                // Shutting down started, wait for all routing workers.
-                                RoutingWorker::join_workers();
-                                MXB_NOTICE("All workers have shut down.");
+                        MonitorManager::destroy_all_monitors();
 
-                                MonitorManager::destroy_all_monitors();
+                        maxscale_start_teardown();
+                        service_destroy_instances();
+                        filter_destroy_instances();
+                        Listener::clear();
+                        ServerManager::destroy_all();
 
-                                maxscale_start_teardown();
-                                service_destroy_instances();
-                                filter_destroy_instances();
-                                Listener::clear();
-                                ServerManager::destroy_all();
-
-                                MXB_NOTICE("MaxScale shutdown completed.");
-                            }
-                            else
-                            {
-                                log_startup_error("Failed to queue startup task.");
-                                rc = MAXSCALE_INTERNALERROR;
-                            }
-                        }
-                        else
-                        {
-                            log_startup_error("Failed to install signal handlers.");
-                            rc = MAXSCALE_INTERNALERROR;
-                        }
+                        MXB_NOTICE("MaxScale shutdown completed.");
                     }
                     else
                     {
-                        log_startup_error("Failed to start routing workers.");
+                        log_startup_error("Failed to queue startup task.");
                         rc = MAXSCALE_INTERNALERROR;
                     }
                 }
                 else
                 {
-                    rc = MAXSCALE_SHUTDOWN;
+                    log_startup_error("Failed to install signal handlers.");
+                    rc = MAXSCALE_INTERNALERROR;
                 }
-
-                RoutingWorker::finish();
             }
             else
             {
-                log_startup_error("Failed to initialize routing workers.");
+                log_startup_error("Failed to start routing workers.");
                 rc = MAXSCALE_INTERNALERROR;
             }
+
+            RoutingWorker::finish();
         }
         else
         {
-            rc = MAXSCALE_SHUTDOWN;
+            log_startup_error("Failed to initialize routing workers.");
+            rc = MAXSCALE_INTERNALERROR;
         }
 
         // Finalize the internal query classifier. The actual plugin was finalized
