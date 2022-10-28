@@ -158,7 +158,7 @@ then
     if [ $? -eq 0 ]
     then
         sudo yum -d1 -y install devtoolset-9-gcc-c++
-        sudo yum -y install devtoolset-9-libasan-devel
+        sudo yum -d1 -y install devtoolset-9-libasan-devel
         # Enable it by default
         echo "source /opt/rh/devtoolset-9/enable" >> ~/.bashrc
     else
