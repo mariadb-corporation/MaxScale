@@ -1916,10 +1916,17 @@ int main(int argc, char** argv)
 
     atexit(finish_base_libraries);
 
-    mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
-    MainWorker main_worker(&watchdog_notifier);
+    ConfigSectionMap config_context;
 
-    if (!apply_main_config(cfg_file_read_res.config))
+    if (!config_load(cnf_file_path, cfg_file_read_res.config, config_context))
+    {
+        log_startup_error("Failed to open or read the MaxScale configuration "
+                          "file. See the error log for details.");
+        rc = MAXSCALE_BADCONFIG;
+        return rc;
+    }
+
+    if (!apply_main_config(config_context))
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -2055,7 +2062,9 @@ int main(int argc, char** argv)
     /** Load the admin users */
     rest_users_init();
 
-    // Create the configuration manager
+    mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
+    MainWorker main_worker(&watchdog_notifier);
+
     mxs::ConfigManager manager(&main_worker);
 
     /**
@@ -2075,12 +2084,11 @@ int main(int argc, char** argv)
 
             if (use_static_cnf || cnf.config_check)
             {
-                ConfigSectionMap config_context;
-                if (!config_load_and_process(cnf_file_path, cfg_file_read_res.config, config_context))
+                if (!config_process(config_context))
                 {
-                    print_alert("Failed to open, read or process the MaxScale configuration "
+                    print_alert("Failed to process the MaxScale configuration "
                                 "file. See the error log for details.");
-                    MXB_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
+                    MXB_ALERT("Failed to process the MaxScale configuration file %s.",
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();

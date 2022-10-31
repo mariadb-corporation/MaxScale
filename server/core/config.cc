@@ -2130,19 +2130,23 @@ bool config_load_and_process(const string& main_cfg_file,
     return rv;
 }
 
-bool apply_main_config(const mxb::ini::map_result::Configuration& config)
+bool apply_main_config(const ConfigSectionMap& config)
 {
-    mxs::ConfigParameters params;
+    bool rv = false;
     auto it = config.find(CN_MAXSCALE);
+
     if (it != config.end())
     {
-        auto& kvs = it->second.key_values;
-        for (const auto& kv : kvs)
-        {
-            params.set(kv.first, kv.second.value);
-        }
+        const ConfigSection& maxscale_section = it->second;
+
+        rv = apply_global_config(maxscale_section.m_parameters);
     }
-    return apply_global_config(params);
+    else
+    {
+        rv = apply_global_config(mxs::ConfigParameters {});
+    }
+
+    return rv;
 }
 
 bool valid_object_type(const std::string& type)
@@ -2549,20 +2553,10 @@ static bool process_config_context(ConfigSectionMap& context)
     std::vector<ConfigSection*> objects;
     int error_count = 0;
 
+    // Ignore the 'maxscale' section when resolving dependencies.
     for (auto& elem : context)
     {
-        if (elem.first == CN_MAXSCALE)
-        {
-            // Apply main configuration again if it was overwritten by a runtime file.
-            if (elem.second.source_type == ConfigSection::SourceType::RUNTIME)
-            {
-                if (!apply_global_config(elem.second.m_parameters))
-                {
-                    error_count++;
-                }
-            }
-        }
-        else
+        if (elem.first != CN_MAXSCALE)
         {
             objects.push_back(&elem.second);
         }

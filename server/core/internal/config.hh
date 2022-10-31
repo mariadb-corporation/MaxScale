@@ -113,7 +113,7 @@ bool config_load_and_process(const std::string& main_cfg_file,
  * @param config Parsed main config file, after variable substitution.
  * @return True on success.
  */
-bool apply_main_config(const mxb::ini::map_result::Configuration& config);
+bool apply_main_config(const ConfigSectionMap& config);
 
 /**
  * @brief Convert object names to correct format
