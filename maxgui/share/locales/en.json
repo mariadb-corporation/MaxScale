@@ -232,7 +232,6 @@
             "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
             "killSessionSuccessfully": "Killed session successfully",
             "noBackslashEscapes": "Disables using the backslash character as an escape character within strings, making it equivalent to an ordinary character.",
-            "notFoundConn": "Connection is not found, please reconnect",
             "queryIncomplete": "Return fewer rows or increase query row limit",
             "reconnSuccessfully": "Reconnected successfully",
             "refreshRate": "Click to change refresh rate",

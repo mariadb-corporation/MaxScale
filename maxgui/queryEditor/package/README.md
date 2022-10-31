@@ -260,6 +260,35 @@ The `mxs-query-editor` component has the following slots:
 -   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
     but this is for DDL_EDITOR mode (editor for altering table).
 
+## Connection cleans up
+
+This package does not automatically clean up the opened connection when the
+`mxs-query-editor` component is destroyed. e.g. When leaving the page, the opened
+connections are kept.
+
+If all connections belong to one MaxScale, use the below vuex action to clear
+all connections:
+
+```js
+store.dispatch('queryConn/disconnectAll', { root: true })
+```
+
+If connections belongs to multiple MaxScale, use the below example to clear
+all connections of a MaxScale:
+
+```js
+for (const { id = '' } of connections_of_a_maxscale) {
+    commit(
+        'queryEditorConfig/SET_AXIOS_OPTS',
+        {
+            baseURL: maxscale_API_URL,
+        },
+        { root: true }
+    )
+    await dispatch('disconnect', { showSnackbar: false, id })
+}
+```
+
 ## Build the editor
 
 The query editor internally uses [monaco-editor](https://github.com/microsoft/monaco-editor)

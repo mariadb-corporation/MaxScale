@@ -30,29 +30,6 @@
                 </keep-alive>
             </template>
         </div>
-        <mxs-conf-dlg
-            v-model="isConfDlgOpened"
-            :title="$mxs_t('confirmations.leavePage')"
-            saveText="thatsRight"
-            minBodyWidth="624px"
-            :onSave="onLeave"
-            @on-close="cancelLeave"
-            @on-cancel="cancelLeave"
-        >
-            <template v-slot:confirm-text>
-                <p>{{ $mxs_t('info.disconnectAll') }}</p>
-            </template>
-            <template v-slot:body-append>
-                <v-checkbox
-                    v-model="confirmDelAll"
-                    class="v-checkbox--custom-label"
-                    :label="$mxs_t('disconnectAll')"
-                    color="primary"
-                    dense
-                    hide-details
-                />
-            </template>
-        </mxs-conf-dlg>
     </div>
 </template>
 
@@ -69,10 +46,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* Emits
- * @leave-page: v:Object. `to` object of beforeRouteLeave hook
- */
-import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters } from 'vuex'
 import '@queryEditorSrc/styles/queryEditor.scss'
 import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
 import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
@@ -86,8 +60,6 @@ export default {
     },
     data() {
         return {
-            confirmDelAll: true,
-            isConfDlgOpened: false,
             dim: {},
             queryEditorTopSlotHeight: 0,
         }
@@ -95,7 +67,6 @@ export default {
     computed: {
         ...mapState({
             active_wke_id: state => state.wke.active_wke_id,
-            sql_conns: state => state.queryConn.sql_conns,
             is_fullscreen: state => state.wke.is_fullscreen,
             is_validating_conn: state => state.queryConn.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
@@ -144,62 +115,11 @@ export default {
     },
 
     methods: {
-        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',
-            disconnectAll: 'queryConn/disconnectAll',
-            clearConn: 'queryConn/clearConn',
             handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),
-        /**
-         * sub-component doesn't have beforeRouteLeave hook, so the hook should be
-         * placed in the parent component and call this beforeRouteLeave function
-         * via ref
-         * @param {Object} to - `to` object of beforeRouteLeave hook
-         * @param {Object} from - `from` object of beforeRouteLeave hook
-         * @param {Function} next - `next` function of beforeRouteLeave hook
-         */
-        beforeRouteLeaveHandler(to, from, next) {
-            if (this.to) {
-                next()
-            } else {
-                this.to = to
-                /**
-                 * Allow to leave page immediately if next path is to login page (user logouts)
-                 * or if there is no active connections
-                 */
-                if (Object.keys(this.sql_conns).length === 0) this.leavePage()
-                else
-                    switch (to.path) {
-                        case '/login':
-                            this.leavePage()
-                            break
-                        case '/404':
-                            this.SET_SNACK_BAR_MESSAGE({
-                                text: [this.$mxs_t('info.notFoundConn')],
-                                type: 'error',
-                            })
-                            this.cancelLeave()
-                            this.clearConn()
-                            this.validatingConn()
-                            break
-                        default:
-                            this.confirmDelAll = true
-                            this.isConfDlgOpened = true
-                    }
-            }
-        },
-        async onLeave() {
-            if (this.confirmDelAll) await this.disconnectAll()
-            this.leavePage()
-        },
-        leavePage() {
-            this.$emit('leave-page', this.to)
-        },
-        cancelLeave() {
-            this.to = null
-        },
         setDim() {
             const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
