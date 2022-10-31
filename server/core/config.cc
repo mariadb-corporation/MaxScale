@@ -2061,9 +2061,9 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
     return rval;
 }
 
-bool config_load_and_process(const string& main_cfg_file,
-                             const mxb::ini::map_result::Configuration& main_cfg_in,
-                             ConfigSectionMap& output)
+bool config_load(const string& main_cfg_file,
+                 const mxb::ini::map_result::Configuration& main_cfg_in,
+                 ConfigSectionMap& output)
 {
     using Type = ConfigSection::SourceType;
     bool success = false;
@@ -2102,13 +2102,32 @@ bool config_load_and_process(const string& main_cfg_file,
                 }
             }
 
-            if (!check_config_objects(output) || !process_config_context(output))
+            if (!check_config_objects(output))
             {
                 success = false;
             }
         }
     }
     return success;
+}
+
+bool config_process(ConfigSectionMap& output)
+{
+    return process_config_context(output);
+}
+
+bool config_load_and_process(const string& main_cfg_file,
+                             const mxb::ini::map_result::Configuration& main_cfg_in,
+                             ConfigSectionMap& output)
+{
+    bool rv = config_load(main_cfg_file, main_cfg_in, output);
+
+    if (rv)
+    {
+        rv = config_process(output);
+    }
+
+    return rv;
 }
 
 bool apply_main_config(const mxb::ini::map_result::Configuration& config)
