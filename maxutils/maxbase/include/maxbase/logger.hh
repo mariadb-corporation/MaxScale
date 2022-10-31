@@ -131,22 +131,23 @@ private:
     void close(const char* msg);
 };
 
-class StdoutLogger : public Logger
+class FDLogger : public Logger
 {
 public:
-    StdoutLogger(const StdoutLogger&) = delete;
-    StdoutLogger& operator=(const StdoutLogger&) = delete;
+    FDLogger(const FDLogger&) = delete;
+    FDLogger& operator=(const FDLogger&) = delete;
 
     /**
      * Create a new logger that writes to stdout
      *
      * @param logdir Log file to open, has no functional effect on this logger
+     * @param fd     The file descriptor to write to, e.g. STDOUT_FILENO.
      *
      * @return New logger instance or an empty unique_ptr on error
      */
-    static std::unique_ptr<Logger> create(const std::string& filename)
+    static std::unique_ptr<Logger> create(const std::string& filename, int fd)
     {
-        return std::unique_ptr<Logger>(new StdoutLogger(filename));
+        return std::unique_ptr<Logger>(new FDLogger(filename, fd));
     }
 
     /**
@@ -159,7 +160,7 @@ public:
      */
     bool write(const char* msg, int len) override
     {
-        return ::write(STDOUT_FILENO, msg, len) != -1;
+        return ::write(m_fd, msg, len) != -1;
     }
 
     /**
@@ -173,9 +174,12 @@ public:
     }
 
 private:
-    StdoutLogger(const std::string& filename)
+    FDLogger(const std::string& filename, int fd)
         : Logger(filename)
+        , m_fd(fd)
     {
     }
+
+    int m_fd;
 };
 }

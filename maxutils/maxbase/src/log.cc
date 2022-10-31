@@ -529,7 +529,11 @@ bool mxb_log_init(const char* ident,
         break;
 
     case MXB_LOG_TARGET_STDOUT:
-        this_unit.sLogger = mxb::StdoutLogger::create(filepath);
+        this_unit.sLogger = mxb::FDLogger::create(filepath, STDOUT_FILENO);
+        break;
+
+    case MXB_LOG_TARGET_STDERR:
+        this_unit.sLogger = mxb::FDLogger::create(filepath, STDERR_FILENO);
         break;
 
     default:

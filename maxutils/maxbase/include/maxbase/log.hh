@@ -398,6 +398,7 @@ enum mxb_log_target_t
     MXB_LOG_TARGET_DEFAULT,
     MXB_LOG_TARGET_FS,      // File system
     MXB_LOG_TARGET_STDOUT,  // Standard output
+    MXB_LOG_TARGET_STDERR,  // Standard error
 };
 
 /**
