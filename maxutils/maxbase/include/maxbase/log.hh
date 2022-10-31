@@ -76,9 +76,9 @@ bool mxb_log_rotate();
  *
  * @return The current filename.
  *
- * @attention This function can be called only after @c mxs_log_init() has
- *            been called and @c mxs_log_finish() has not been called. The
- *            returned filename stays valid only until @c mxs_log_finish()
+ * @attention This function can be called only after @c mxb_log_init() has
+ *            been called and @c mxb_log_finish() has not been called. The
+ *            returned filename stays valid only until @c mxb_log_finish()
  *            is called.
  */
 const char* mxb_log_get_filename();
@@ -184,7 +184,7 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling);
  *
  * @param redirect Whether to redirect the output to the log file
  */
-void mxs_log_redirect_stdout(bool redirect);
+void mxb_log_redirect_stdout(bool redirect);
 
 /**
  * Set session specific in-memory log

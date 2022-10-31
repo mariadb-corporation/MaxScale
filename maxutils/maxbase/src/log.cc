@@ -641,7 +641,7 @@ void mxb_log_get_throttling(MXB_LOG_THROTTLING* throttling)
     *throttling = this_unit.throttling;
 }
 
-void mxs_log_redirect_stdout(bool redirect)
+void mxb_log_redirect_stdout(bool redirect)
 {
     this_unit.redirect_stdout = redirect;
 }

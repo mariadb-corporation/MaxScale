@@ -1898,7 +1898,7 @@ int main(int argc, char** argv)
 
     if (cnf.log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
     {
-        mxs_log_redirect_stdout(true);
+        mxb_log_redirect_stdout(true);
         this_unit.print_stacktrace_to_stdout = false;
     }
 
