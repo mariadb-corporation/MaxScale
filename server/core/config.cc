@@ -279,13 +279,33 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
         }
     }
 
-    int requested_threads = s_n_threads.get(params);
+    int nCreated = RoutingWorker::nCreated();
+    int nRequested = s_n_threads.get(params);
 
-    if (requested_threads > ParamThreadsCount::MAX_COUNT)
+    if (nRequested != nCreated)
     {
-        MXB_ERROR("MaxScale can have at most %ld routing threads; a request for %d cannot be honored.",
-                  ParamThreadsCount::MAX_COUNT, requested_threads);
-        rv = false;
+        if (nCreated != 0) // Will be 0 at startup.
+        {
+            std::vector<Service*> services = Service::get_all();
+
+            for (auto* service : services)
+            {
+                if (rcap_type_required(service->capabilities(), RCAP_TYPE_NO_THREAD_CHANGE))
+                {
+                    MXB_ERROR("The service '%s' cannot handle a change in the number of threads. "
+                              "The configuration must manually be updated and MaxScale restarted.",
+                              service->name());
+                    rv = false;
+                }
+            }
+        }
+
+        if (rv && (nRequested > ParamThreadsCount::MAX_COUNT))
+        {
+            MXB_ERROR("MaxScale can have at most %ld routing threads; a request for %d cannot be honored.",
+                      ParamThreadsCount::MAX_COUNT, nRequested);
+            rv = false;
+        }
     }
 
     return rv;

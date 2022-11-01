@@ -152,6 +152,13 @@ enum mxs_routing_capability_t
      * Binary: 0b0000010000000000
      */
     RCAP_TYPE_MULTI_STMT_SQL = (1 << 10),
+
+    /**
+     * The module (router or filter) cannot handle a change in the number of threads.
+     *
+     * Binary: 0b0000100000000000
+     */
+    RCAP_TYPE_NO_THREAD_CHANGE = (1 << 11),
 };
 
 #define RCAP_TYPE_NONE 0
