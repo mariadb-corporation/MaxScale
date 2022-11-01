@@ -166,14 +166,10 @@ static bool handle_path_arg(std::string* dest, const char* path, const char* arg
 static bool handle_debug_args(char* args);
 static void set_log_augmentation(const char* value);
 static void usage(void);
-static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-bool        check_paths();
+static bool check_paths();
 static int  set_user(const char* user);
-bool        pid_file_exists();
-void        write_child_exit_code(int fd, int code);
+static bool pid_file_exists();
+static void write_child_exit_code(int fd, int code);
 static bool change_cwd();
 static void log_exit_status();
 static int  daemonize();
@@ -464,13 +460,15 @@ static void sigfatal_handler(int i)
 
     const mxs::Config& cnf = mxs::Config::get();
 
-    print_alert("MaxScale %s received fatal signal %d. "
-                "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
+    char str[512]; // Enough
+    sprintf(str,
+            "MaxScale %s received fatal signal %d. "
+            "Commit ID: %s System name: %s Release string: %s",
+            MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
 
-    MXB_ALERT("MaxScale %s received fatal signal %d. "
-              "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
+    cerr << str << "\n" << endl;
+
+    MXB_ALERT("%s", str);
 
     const char* pStmt;
     size_t nStmt;
@@ -518,13 +516,13 @@ static void sigfatal_handler(int i)
     if (this_unit.print_stacktrace_to_stdout)
     {
         // If stdout is not redirected to the log, print the stacktrace there as well.
-        print_alert("%s\n", msg.c_str());
+        cerr << msg << endl;
     }
 
     mxb_log_fatal_error(msg.c_str());
 
+    cerr << "Writing core dump." << endl;
     /* re-raise signal to enforce core dump */
-    print_alert("Writing core dump.");
     signal_set(i, SIG_DFL);
     raise(i);
 }
@@ -685,7 +683,8 @@ string resolve_maxscale_conf_fname(const string& cnf_file_arg)
         char resolved_path[PATH_MAX + 1];
         if (realpath(cnf_file_arg.c_str(), resolved_path) == nullptr)
         {
-            log_startup_error(errno, "Failed to open read access to configuration file");
+            MXB_ALERT("Failed to open read access to configuration file '%s': %s",
+                      cnf_file_arg.c_str(), mxb_strerror(errno));
         }
         else
         {
@@ -741,7 +740,7 @@ static bool check_dir_access(const char* dirname, bool rd, bool wr)
 
     if (!err.empty())
     {
-        print_alert(errno, "%s", err.c_str());
+        MXB_ALERT("%s: %s", err.c_str(), mxb_strerror(errno));
     }
 
     return err.empty();
@@ -754,7 +753,7 @@ static bool init_log()
 
     if (!cnf.config_check && !mxs_mkdir_all(mxs::logdir(), 0777, false))
     {
-        print_alert(errno, "Cannot create log directory '%s'", mxs::logdir());
+        MXB_ALERT("Cannot create log directory '%s': %s", mxs::logdir(), mxb_strerror(errno));
     }
     else if (mxs_log_init("maxscale", mxs::logdir(), cnf.log_target))
     {
@@ -762,83 +761,6 @@ static bool init_log()
     }
 
     return rval;
-}
-
-static void print_message(const char* tag, int eno, const char* message)
-{
-    fprintf(stderr,
-            "%s: %s%s%s%s\n",
-            tag,
-            message,
-            eno == 0 ? "" : ": ",
-            eno == 0 ? "" : mxb_strerror(eno),
-            eno == 0 ? "" : ".");
-    fflush(stderr);
-}
-
-/**
- * Print message to stderr
- *
- * @param eno      Errno value, ignored if 0.
- * @param message  Message to be printed.
- */
-static void print_alert(int eno, const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("alert  ", eno, message);
-}
-
-static void print_alert(const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("alert  ", 0, message);
-}
-
-static void log_startup_message(int eno, const char* message)
-{
-    // TODO: Clean this up. With an initial stdout writing log, we will get the message twice.
-    MXB_ALERT("%s%s%s%s",
-              message,
-              eno == 0 ? "" : ": ",
-              eno == 0 ? "" : mxb_strerror(eno),
-              eno == 0 ? "" : ".");
-
-    print_alert(eno, "%s", message);
-}
-
-/**
- * Log startup error.
- *
- * - If possible, log message as an error to the log.
- * - Always print the message to stdeerr.
- *
- * @param eno     Errno value, ignored if 0.
- * @param format  Printf format string.
- * @param ...     Arguments according to @c format.
- */
-static void log_startup_error(int eno, const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    log_startup_message(eno, message);
-}
-
-/**
- * Log startup error.
- *
- * - If possible, log message as an error to the log.
- * - Always print the message to stdeerr.
- *
- * @param format  Printf format string.
- * @param ...     Arguments according to @c format.
- */
-static void log_startup_error(const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    log_startup_message(0, message);
 }
 
 namespace
@@ -865,12 +787,12 @@ bool is_file_and_readable(const string& absolute_pathname)
         }
         else
         {
-            log_startup_error("'%s' does not refer to a regular file.", absolute_pathname.c_str());
+            MXB_ALERT("'%s' does not refer to a regular file.", absolute_pathname.c_str());
         }
     }
     else
     {
-        log_startup_error(errno, "Could not access '%s'", absolute_pathname.c_str());
+        MXB_ALERT("Could not access '%s': %s", absolute_pathname.c_str(), mxb_strerror(errno));
     }
 
     return rv;
@@ -887,7 +809,8 @@ bool path_is_readable(const string& absolute_pathname)
 
     if (access(absolute_pathname.c_str(), R_OK) != 0)
     {
-        log_startup_error(errno, "Opening file '%s' for reading failed", absolute_pathname.c_str());
+        MXB_ALERT("Opening file '%s' for reading failed: %s",
+                  absolute_pathname.c_str(), mxb_strerror(errno));
         succp = false;
     }
     return succp;
@@ -915,7 +838,7 @@ string get_absolute_fname(const string& relative_path, const char* fname)
     char expanded_path[PATH_MAX];
     if (realpath(relative_path.c_str(), expanded_path) == NULL)
     {
-        log_startup_error(errno, "Failed to read the directory '%s'.", relative_path.c_str());
+        MXB_ALERT("Failed to read the directory '%s': %s", relative_path.c_str(), mxb_strerror(errno));
     }
     else
     {
@@ -1038,7 +961,8 @@ static bool delete_signal(sigset_t* sigset, int signum, const char* signame)
 
     if (rc != 0)
     {
-        log_startup_error(errno, "Failed to delete signal %s from the signal set of MaxScale", signame);
+        MXB_ALERT("Failed to delete signal %s from the signal set of MaxScale: %s",
+                  signame, mxb_strerror(errno));
     }
 
     return rc == 0;
@@ -1055,7 +979,7 @@ bool disable_signals(void)
 
     if (sigfillset(&sigset) != 0)
     {
-        log_startup_error(errno, "Failed to initialize set the signal set for MaxScale");
+        MXB_ALERT("Failed to initialize set the signal set for MaxScale: %s", mxb_strerror(errno));
         return false;
     }
 
@@ -1108,7 +1032,7 @@ bool disable_signals(void)
 
     if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
     {
-        log_startup_error(errno, "Failed to set the signal set for MaxScale");
+        MXB_ALERT("Failed to set the signal set for MaxScale: %s", mxb_strerror(errno));
         return false;
     }
 
@@ -1121,7 +1045,7 @@ bool disable_normal_signals(void)
 
     if (sigfillset(&sigset) != 0)
     {
-        log_startup_error(errno, "Failed to initialize the signal set for MaxScale");
+        MXB_ALERT("Failed to initialize the signal set for MaxScale: %s", mxb_strerror(errno));
         return false;
     }
 
@@ -1142,7 +1066,7 @@ bool disable_normal_signals(void)
 
     if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
     {
-        log_startup_error(errno, "Failed to set the signal set for MaxScale");
+        MXB_ALERT("Failed to set the signal set for MaxScale: %s", mxb_strerror(errno));
         return false;
     }
 
@@ -1164,7 +1088,7 @@ static bool configure_signal(int signum, const char* signame, void (* handler)(i
 
     if (rc != 0)
     {
-        log_startup_error("Failed to set signal handler for %s.", signame);
+        MXB_ALERT("Failed to set signal handler for %s.", signame);
     }
 
     return rc == 0;
@@ -1243,7 +1167,7 @@ bool setup_signals()
 
     if (!configure_critical_signals())
     {
-        log_startup_error("Failed to configure fatal signal handlers.");
+        MXB_ALERT("Failed to configure fatal signal handlers.");
     }
     else
     {
@@ -1255,7 +1179,7 @@ bool setup_signals()
 
         if (eno != 0)
         {
-            log_startup_error(eno, "Failed to initialise signal mask for MaxScale");
+            MXB_ALERT("Failed to initialise signal mask for MaxScale: %s", mxb_strerror(eno));
         }
         else
         {
@@ -1508,9 +1432,9 @@ int main(int argc, char** argv)
             }
             if (cnf_file_arg.empty())
             {
-                log_startup_error("Configuration file argument identifier \'-f\' was specified but "
-                                  "the argument didn't specify a valid configuration file or the "
-                                  "argument was missing.");
+                MXB_ALERT("Configuration file argument identifier \'-f\' was specified but "
+                          "the argument didn't specify a valid configuration file or the "
+                          "argument was missing.");
                 usage();
                 succp = false;
             }
@@ -1549,9 +1473,9 @@ int main(int argc, char** argv)
             }
             else
             {
-                log_startup_error("Configuration file argument identifier \'-l\' was specified but "
-                                  "the argument didn't specify a valid configuration file or the "
-                                  "argument was missing.");
+                MXB_ALERT("Configuration file argument identifier \'-l\' was specified but "
+                          "the argument didn't specify a valid configuration file or the "
+                          "argument was missing.");
                 usage();
                 succp = false;
             }
@@ -1887,8 +1811,8 @@ int main(int argc, char** argv)
 
     if (!config_load(cnf_file_path, cfg_file_read_res.config, config_context))
     {
-        log_startup_error("Failed to open or read the MaxScale configuration "
-                          "file. See the error log for details.");
+        MXB_ALERT("Failed to open or read the MaxScale configuration "
+                  "file. See the error log for details.");
         rc = MAXSCALE_BADCONFIG;
         return rc;
     }
@@ -2002,7 +1926,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            log_startup_error(errno, "Cannot create data directory '%s'", this_unit.datadir);
+            MXB_ALERT("Cannot create data directory '%s': %s", this_unit.datadir, mxb_strerror(errno));
             rc = MAXSCALE_BADCONFIG;
             return rc;
         }
@@ -2013,7 +1937,7 @@ int main(int argc, char** argv)
                   cnf.qc_name.c_str(),
                   cnf.qc_args.c_str()))
     {
-        log_startup_error("Failed to initialise query classifier library.");
+        MXB_ALERT("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
         return rc;
     }
@@ -2021,7 +1945,7 @@ int main(int argc, char** argv)
     // Load the password encryption/decryption key, as monitors and services may need it.
     if (!load_encryption_keys())
     {
-        log_startup_error("Error loading password decryption key.");
+        MXB_ALERT("Error loading password decryption key.");
         rc = MAXSCALE_SHUTDOWN;
         return rc;
     }
@@ -2053,8 +1977,6 @@ int main(int argc, char** argv)
             {
                 if (!config_process(config_context))
                 {
-                    print_alert("Failed to process the MaxScale configuration "
-                                "file. See the error log for details.");
                     MXB_ALERT("Failed to process the MaxScale configuration file %s.",
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
@@ -2134,7 +2056,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    log_startup_error("Failed to initialize REST API.");
+                    MXB_ALERT("Failed to initialize REST API.");
                     rc = MAXSCALE_INTERNALERROR;
                     maxscale_shutdown();
                     return;
@@ -2152,8 +2074,8 @@ int main(int argc, char** argv)
 
                 if (!cluster.empty() && !MonitorManager::find_monitor(cluster.c_str()))
                 {
-                    log_startup_error("The value of '%s' is not the name of a monitor: %s.",
-                                      CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
+                    MXB_ALERT("The value of '%s' is not the name of a monitor: %s.",
+                              CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();
                     return;
@@ -2164,7 +2086,7 @@ int main(int argc, char** argv)
 
                 if (!Service::launch_all())
                 {
-                    log_startup_error("Failed to start all MaxScale services.");
+                    MXB_ALERT("Failed to start all MaxScale services.");
                     rc = MAXSCALE_NOSERVICES;
                     maxscale_shutdown();
                     return;
@@ -2222,19 +2144,19 @@ int main(int argc, char** argv)
                     }
                     else
                     {
-                        log_startup_error("Failed to queue startup task.");
+                        MXB_ALERT("Failed to queue startup task.");
                         rc = MAXSCALE_INTERNALERROR;
                     }
                 }
                 else
                 {
-                    log_startup_error("Failed to install signal handlers.");
+                    MXB_ALERT("Failed to install signal handlers.");
                     rc = MAXSCALE_INTERNALERROR;
                 }
             }
             else
             {
-                log_startup_error("Failed to start routing workers.");
+                MXB_ALERT("Failed to start routing workers.");
                 rc = MAXSCALE_INTERNALERROR;
             }
 
@@ -2242,7 +2164,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            log_startup_error("Failed to initialize routing workers.");
+            MXB_ALERT("Failed to initialize routing workers.");
             rc = MAXSCALE_INTERNALERROR;
         }
 
@@ -2252,7 +2174,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        log_startup_error("Failed to initialize the internal query classifier.");
+        MXB_ALERT("Failed to initialize the internal query classifier.");
         rc = MAXSCALE_INTERNALERROR;
     }
 
@@ -2267,7 +2189,7 @@ static void unlock_pidfile()
     {
         if (flock(this_unit.pidfd, LOCK_UN | LOCK_NB) != 0)
         {
-            log_startup_error(errno, "Failed to unlock PID file '%s'", this_unit.pidfile);
+            MXB_ALERT("Failed to unlock PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
         }
         close(this_unit.pidfd);
         this_unit.pidfd = PIDFD_CLOSED;
@@ -2316,7 +2238,7 @@ bool pid_is_maxscale(int pid)
  * no PID file was found or there is no process running with the PID of the maxscale.pid
  * file. If false is returned, this process should continue normally.
  */
-bool pid_file_exists()
+static bool pid_file_exists()
 {
     const int PIDSTR_SIZE = 1024;
 
@@ -2339,14 +2261,14 @@ bool pid_file_exists()
 
         if ((fd = open(pathbuf, O_RDWR)) == -1)
         {
-            log_startup_error(errno, "Failed to open PID file '%s'", pathbuf);
+            MXB_ALERT("Failed to open PID file '%s': %s", pathbuf, mxb_strerror(errno));
             return true;
         }
         if (flock(fd, LOCK_EX | LOCK_NB))
         {
             if (errno != EWOULDBLOCK)
             {
-                log_startup_error(errno, "Failed to lock PID file '%s'", pathbuf);
+                MXB_ALERT("Failed to lock PID file '%s': %s", pathbuf, mxb_strerror(errno));
                 close(fd);
                 return true;
             }
@@ -2358,16 +2280,16 @@ bool pid_file_exists()
 
         if (b == -1)
         {
-            log_startup_error(errno, "Failed to read from PID file '%s'", pathbuf);
+            MXB_ALERT("Failed to read from PID file '%s': %s", pathbuf, mxb_strerror(errno));
             unlock_pidfile();
             return true;
         }
         else if (b == 0)
         {
             /** Empty file */
-            log_startup_error("PID file read from '%s'. File was empty. If the file is the "
-                              "correct PID file and no other MaxScale processes are running, "
-                              "please remove it manually and start MaxScale again.", pathbuf);
+            MXB_ALERT("PID file read from '%s'. File was empty. If the file is the "
+                      "correct PID file and no other MaxScale processes are running, "
+                      "please remove it manually and start MaxScale again.", pathbuf);
             unlock_pidfile();
             return true;
         }
@@ -2378,18 +2300,18 @@ bool pid_file_exists()
         if (pid < 1)
         {
             /** Bad PID */
-            log_startup_error("PID file read from '%s'. File contents not valid. If the file "
-                              "is the correct PID file and no other MaxScale processes are "
-                              "running, please remove it manually and start MaxScale again.", pathbuf);
+            MXB_ALERT("PID file read from '%s'. File contents not valid. If the file "
+                      "is the correct PID file and no other MaxScale processes are "
+                      "running, please remove it manually and start MaxScale again.", pathbuf);
             unlock_pidfile();
             return true;
         }
 
         if (pid_is_maxscale(pid))
         {
-            log_startup_error("MaxScale is already running. Process id: %d. "
-                              "Use another location for the PID file to run multiple "
-                              "instances of MaxScale on the same machine.", pid);
+            MXB_ALERT("MaxScale is already running. Process id: %d. "
+                      "Use another location for the PID file to run multiple "
+                      "instances of MaxScale on the same machine.", pid);
             unlock_pidfile();
         }
         else
@@ -2397,10 +2319,10 @@ bool pid_file_exists()
             /** no such process, old PID file */
             if (lock_failed)
             {
-                log_startup_error("Locking the PID file '%s' failed. Read PID from file "
-                                  "and no process found with PID %d. Confirm that no other "
-                                  "process holds the lock on the PID file.",
-                                  pathbuf, pid);
+                MXB_ALERT("Locking the PID file '%s' failed. Read PID from file "
+                          "and no process found with PID %d. Confirm that no other "
+                          "process holds the lock on the PID file.",
+                          pathbuf, pid);
                 close(fd);
             }
             return lock_failed;
@@ -2408,9 +2330,9 @@ bool pid_file_exists()
     }
     else
     {
-        log_startup_error("Cannot open PID file '%s', no read permissions. Please confirm "
-                          "that the user running MaxScale has read permissions on the file.",
-                          pathbuf);
+        MXB_ALERT("Cannot open PID file '%s', no read permissions. Please confirm "
+                  "that the user running MaxScale has read permissions on the file.",
+                  pathbuf);
     }
     return true;
 }
@@ -2440,7 +2362,7 @@ static int write_pid_file()
         fd = open(this_unit.pidfile, O_WRONLY | O_CREAT, 0777);
         if (fd == -1)
         {
-            log_startup_error(errno, "Failed to open PID file '%s'", this_unit.pidfile);
+            MXB_ALERT("Failed to open PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
             return -1;
         }
 
@@ -2448,14 +2370,14 @@ static int write_pid_file()
         {
             if (errno == EWOULDBLOCK)
             {
-                log_startup_error("Failed to lock PID file '%s', another process is holding a lock on it. "
-                                  "Please confirm that no other MaxScale process is using the same "
-                                  "PID file location.",
-                                  this_unit.pidfile);
+                MXB_ALERT("Failed to lock PID file '%s', another process is holding a lock on it. "
+                          "Please confirm that no other MaxScale process is using the same "
+                          "PID file location.",
+                          this_unit.pidfile);
             }
             else
             {
-                log_startup_error("Failed to lock PID file '%s'.", this_unit.pidfile);
+                MXB_ALERT("Failed to lock PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
             }
             close(fd);
             return -1;
@@ -2466,7 +2388,7 @@ static int write_pid_file()
     /* truncate pidfile content */
     if (ftruncate(this_unit.pidfd, 0))
     {
-        log_startup_error("MaxScale failed to truncate PID file '%s'.", this_unit.pidfile);
+        MXB_ALERT("MaxScale failed to truncate PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
         unlock_pidfile();
         return -1;
     }
@@ -2476,7 +2398,7 @@ static int write_pid_file()
 
     if (pwrite(this_unit.pidfd, pidstr.c_str(), len, 0) != len)
     {
-        log_startup_error(errno, "MaxScale failed to write into PID file '%s'", this_unit.pidfile);
+        MXB_ALERT("MaxScale failed to write into PID file '%s': %s", this_unit.pidfile, mxb_strerror(errno));
         unlock_pidfile();
         return -1;
     }
@@ -2515,7 +2437,7 @@ static bool handle_path_arg(std::string* dest, const char* path, const char* arg
     return rval;
 }
 
-bool check_paths()
+static bool check_paths()
 {
     // The default path for the connector_plugindir isn't valid. This doesn't matter that much as we don't
     // include the plugins in the installation.
@@ -2775,7 +2697,7 @@ static int set_user(const char* user)
  * @param fd File descriptor to write to
  * @param code Exit status of the child process
  */
-void write_child_exit_code(int fd, int code)
+static void write_child_exit_code(int fd, int code)
 {
     /** Notify the parent process that an error has occurred */
     if (write(fd, &code, sizeof(int)) == -1)
@@ -2859,13 +2781,13 @@ static int daemonize(void)
     int daemon_pipe[2] = {-1, -1};
     if (pipe(daemon_pipe) == -1)
     {
-        log_startup_error(errno, "Failed to create pipe for inter-process communication");
+        MXB_ALERT("Failed to create pipe for inter-process communication: %s", mxb_strerror(errno));
     }
     else
     {
         if (!disable_signals())
         {
-            log_startup_error("Failed to disable signals.");
+            MXB_ALERT("Failed to disable signals.");
         }
         else
         {
@@ -2873,8 +2795,8 @@ static int daemonize(void)
 
             if (pid < 0)
             {
-                log_startup_error(errno,
-                                  "Forking MaxScale failed, the process cannot be turned into a daemon");
+                MXB_ALERT("Forking MaxScale failed, the process cannot be turned into a daemon: %s",
+                          mxb_strerror(errno));
             }
             else if (pid != 0)
             {
@@ -2886,13 +2808,13 @@ static int daemonize(void)
 
                 if (nread == -1)
                 {
-                    log_startup_error(errno, "Failed to read data from child process pipe");
+                    MXB_ALERT("Failed to read data from child process pipe: %s", mxb_strerror(errno));
                     exit(MAXSCALE_INTERNALERROR);
                 }
                 else if (nread == 0)
                 {
                     /** Child process has exited or closed write pipe */
-                    log_startup_error("No data read from child process pipe.");
+                    MXB_ALERT("No data read from child process pipe.");
                     exit(MAXSCALE_INTERNALERROR);
                 }
 
@@ -2904,8 +2826,8 @@ static int daemonize(void)
                 close(daemon_pipe[0]);
                 if (setsid() < 0)
                 {
-                    log_startup_error(errno,
-                                      "Creating a new session for the daemonized MaxScale process failed");
+                    MXB_ALERT("Creating a new session for the daemonized MaxScale process failed: %s",
+                              mxb_strerror(errno));
                     close(daemon_pipe[1]);
                 }
                 else
@@ -2958,7 +2880,7 @@ SniffResult sniff_configuration(const string& filepath)
                         string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
                                                            filepath.c_str());
                         errmsg += mxb::create_list_string(subst_errors, " ");
-                        print_alert("%s", errmsg.c_str());
+                        MXB_ALERT("%s", errmsg.c_str());
                         substitution_ok = false;
                     }
                 }
@@ -2979,7 +2901,7 @@ SniffResult sniff_configuration(const string& filepath)
     else
     {
         string all_errors = mxb::create_list_string(load_res.errors, " ");
-        print_alert("Failed to read configuration file '%s'. %s", filepath.c_str(), all_errors.c_str());
+        MXB_ALERT("Failed to read configuration file '%s'. %s", filepath.c_str(), all_errors.c_str());
     }
     return rval;
 }
@@ -3073,7 +2995,7 @@ static bool handle_debug_args(char* args)
         }
         if (!found)
         {
-            log_startup_error("Unrecognized debug setting: '%s'.", token);
+            MXB_ALERT("Unrecognized debug setting: '%s'.", token);
             arg_error = true;
         }
         token = strtok_r(NULL, ",", &endptr);
@@ -3101,10 +3023,10 @@ static bool handle_debug_args(char* args)
                 strcat(arglist, ", ");
             }
         }
-        log_startup_error("Debug argument identifier '-g' or '--debug' was specified "
-                          "but no arguments were found or one of them was invalid. Supported "
-                          "arguments are: %s.",
-                          arglist);
+        MXB_ALERT("Debug argument identifier '-g' or '--debug' was specified "
+                  "but no arguments were found or one of them was invalid. Supported "
+                  "arguments are: %s.",
+                  arglist);
     }
     return !arg_error;
 }
@@ -3130,7 +3052,7 @@ static bool user_is_acceptable(const char* specified_user)
             }
             else
             {
-                log_startup_error("MaxScale cannot be run as root.");
+                MXB_ALERT("MaxScale cannot be run as root.");
             }
         }
         else
@@ -3140,7 +3062,7 @@ static bool user_is_acceptable(const char* specified_user)
     }
     else
     {
-        log_startup_error(errno, "Could not obtain user information, MaxScale will not run");
+        MXB_ALERT("Could not obtain user information, MaxScale will not run: %s", mxb_strerror(errno));
     }
 
     return acceptable;
@@ -3309,7 +3231,7 @@ static bool init_base_libraries()
             }
             else
             {
-                log_startup_error("Failed to initialize MaxScale base library.");
+                MXB_ALERT("Failed to initialize MaxScale base library.");
 
                 // No finalization of sqlite3
                 finish_ssl();
@@ -3317,14 +3239,14 @@ static bool init_base_libraries()
         }
         else
         {
-            log_startup_error("Failed to initialize sqlite3.");
+            MXB_ALERT("Failed to initialize sqlite3.");
 
             finish_ssl();
         }
     }
     else
     {
-        log_startup_error("Failed to initialize SSL.");
+        MXB_ALERT("Failed to initialize SSL.");
     }
 
     return initialized;
@@ -3350,13 +3272,13 @@ static bool redirect_stdout_and_stderr(const std::string& path)
         else
         {
             // The state of stderr is now somewhat unclear. We log nonetheless.
-            log_startup_error(errno, "Failed to redirect stderr to file");
+            MXB_ALERT("Failed to redirect stderr to file: %s", mxb_strerror(errno));
         }
     }
     else
     {
-        log_startup_error(errno,
-                          "Failed to redirect stdout (and will not attempt to redirect stderr) to file");
+        MXB_ALERT("Failed to redirect stdout (and will not attempt to redirect stderr) to file: %s",
+                  mxb_strerror(errno));
     }
 
     return rv;
