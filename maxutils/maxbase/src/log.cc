@@ -394,29 +394,23 @@ static bool return_false(int)
 
 struct this_unit
 {
-    int                              augmentation;      // Can change during the lifetime of log_manager.
-    bool                             do_highprecision;  // Can change during the lifetime of log_manager.
-    bool                             do_syslog;         // Can change during the lifetime of log_manager.
-    bool                             do_maxlog;         // Can change during the lifetime of log_manager.
-    bool                             redirect_stdout;
-    bool                             session_trace;
-    MXB_LOG_THROTTLING               throttling;        // Can change during the lifetime of log_manager.
-    std::unique_ptr<mxb::Logger>     sLogger;
-    std::unique_ptr<MessageRegistry> sMessage_registry;
-    size_t                           (* context_provider)(char* buffer, size_t len);
-    mxb_in_memory_log_t              in_memory_log;
-    const char*                      syslog_identifier = "";
-    bool                             (* should_log)(int priority) = return_false;
-} this_unit =
-{
-    DEFAULT_LOG_AUGMENTATION,   // augmentation
-    false,                      // do_highprecision
-    true,                       // do_syslog
-    true,                       // do_maxlog
-    false,                      // redirect_stdout
-    false,                      // session_trace
-    DEFAULT_LOG_THROTTLING,     // throttling
-};
+    using SLogger = std::unique_ptr<mxb::Logger>;
+    using SMessageRegistry = std::unique_ptr<MessageRegistry>;
+
+    int                        augmentation {DEFAULT_LOG_AUGMENTATION};
+    bool                       do_highprecision {false};
+    bool                       do_syslog {true};
+    bool                       do_maxlog {true};
+    bool                       redirect_stdout {false};
+    bool                       session_trace {false};
+    MXB_LOG_THROTTLING         throttling {DEFAULT_LOG_THROTTLING};
+    SLogger                    sLogger;
+    SMessageRegistry           sMessage_registry;
+    mxb_log_context_provider_t context_provider {nullptr};
+    mxb_in_memory_log_t        in_memory_log {nullptr};
+    const char*                syslog_identifier {nullptr};
+    mxb_should_log_t           should_log {return_false};
+} this_unit;
 
 class MessageRegistry
 {
@@ -471,7 +465,11 @@ bool mxb_log_init(const char* ident,
                   mxb_in_memory_log_t in_memory_log,
                   mxb_should_log_t should_log)
 {
-    assert(!this_unit.sLogger && !this_unit.sMessage_registry);
+    assert(!mxb_log_inited());
+
+    mxb_assert_message(!this_unit.session_trace || in_memory_log,
+                       "If session tracing has already been enabled, then in_memory_log "
+                       "must be provided.");
 
     // Trigger calculation of buffer lengths.
     get_timestamp();
@@ -652,6 +650,11 @@ void mxb_log_redirect_stdout(bool redirect)
 
 void mxb_log_set_session_trace(bool enabled)
 {
+    // It's always fine if session tracing is disabled or if the log
+    // has not yet been inited. But if the session tracing is enabled and
+    // the log has been inited, then an in_memory_log function *must*
+    // have been provided when the log was inited.
+    mxb_assert(!enabled || !mxb_log_inited() || this_unit.in_memory_log);
     this_unit.session_trace = enabled;
 }
 
@@ -955,7 +958,7 @@ int mxb_log_message(int priority,
                 // Add a final newline into the message
                 msg.push_back('\n');
 
-                if (this_unit.session_trace)
+                if (this_unit.session_trace && this_unit.in_memory_log)
                 {
                     this_unit.in_memory_log(msg);
                 }

@@ -415,12 +415,18 @@ enum mxb_log_target_t
  */
 using mxb_log_context_provider_t = size_t (*)(char* buffer, size_t len);
 
-using mxb_in_memory_log_t = void (*)(const std::string& buffer);
+/**
+ * Prototype for function to be called when session tracing.
+ *
+ * @param message  The message abount to be logged.
+ */
+using mxb_in_memory_log_t = void (*)(const std::string& message);
 
 /**
- * Typedef for conditional logging callback.
+ * Prototype for conditional logging callback.
  *
  * @param priority The syslog priority under which the message is logged.
+ *
  * @return True if the message should be logged, false if it should be suppressed.
  */
 using mxb_should_log_t = bool (*)(int priority);
@@ -431,19 +437,27 @@ using mxb_should_log_t = bool (*)(int priority);
  * This function must be called before any of the log function should be
  * used.
  *
- * @param ident             The syslog ident. If NULL, then the program name is used.
- * @param logdir            The directory for the log file. If NULL, file output is discarded.
- * @param filename          The name of the log-file. If NULL, the program name will be used
+ * @param ident             The syslog ident. If @c nullptr, then the program name is used.
+ * @param logdir            The directory for the log file. If @c nullptr, file output is discarded.
+ * @param filename          The name of the log-file. If @c nullptr, the program name will be used
  *                          if it can be deduced, otherwise the name will be "messages.log".
  * @param target            Logging target
  * @param context_provider  Optional function for providing contextual information
  *                          at logging time.
+ * @param in_memory_log     Optional function that will be called if session tracing will be
+ *                          enabled.
+ * @param should_log        Optional function that will be called when deciding whether to
+ *                          actually log a message or not.
  *
  * @return true if succeed, otherwise false
  */
-bool mxb_log_init(const char* ident, const char* logdir, const char* filename,
-                  mxb_log_target_t target, mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log, mxb_should_log_t should_log);
+bool mxb_log_init(const char* ident,
+                  const char* logdir,
+                  const char* filename,
+                  mxb_log_target_t target,
+                  mxb_log_context_provider_t context_provider,
+                  mxb_in_memory_log_t in_memory_log,
+                  mxb_should_log_t should_log);
 
 /**
  * @brief Finalize the log
@@ -467,7 +481,9 @@ void mxb_log_finish();
  */
 inline bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
 {
-    return mxb_log_init(nullptr, ".", nullptr, target, nullptr, nullptr, nullptr);
+    const char* log_dir = target == MXB_LOG_TARGET_FS ? "." : nullptr;
+
+    return mxb_log_init(nullptr, log_dir, nullptr, target, nullptr, nullptr, nullptr);
 }
 
 namespace maxbase
