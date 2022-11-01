@@ -181,7 +181,7 @@ export default {
             } catch (e) {
                 this.vue.$logger('store-queryConn-validatingConn').error(e)
             }
-            if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
+            commit('SET_IS_VALIDATING_CONN', false)
         },
 
         // Unbind the connection before opening/selecting new one, so that it can be used by other wke
@@ -239,7 +239,7 @@ export default {
          * Called by <conn-man-ctr/>
          * @param {Object} param.body - request body
          * @param {String} param.resourceType - services, servers or listeners.
-         * @param {String} param.meta - meta - connection meta
+         * @param {Object} param.meta - meta - connection meta
          */
         async openConnect(
             { dispatch, commit, rootState, rootGetters },
@@ -371,6 +371,7 @@ export default {
                         clone_of_conn_id: conn_to_be_cloned.id,
                         binding_type,
                         session_id_fk,
+                        meta: this.vue.$typy(conn_to_be_cloned, 'meta').safeObjectOrEmpty,
                     }
                     this.vue.$typy(getCloneObjRes).safeFunction(conn)
                     commit('ADD_SQL_CONN', conn)
