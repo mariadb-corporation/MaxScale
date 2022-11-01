@@ -1086,36 +1086,35 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
             process_array(all, grp_user, user_handler);
         }
 
-        // Db grants and roles are handled similarly.
-        auto handler_helper = [filepathc](Json& elem, int ind, const char* array_name,
-                                          const char* data_field_name, UserDatabase::StringSetMap& out,
-                                          int& n_success) {
-                // The grant or role definition must contain 'user', 'host' and data-fields.
-                string uname = elem.get_string("user");
-                string host = elem.get_string("host");
-                string data = elem.get_string(data_field_name);
-
-                if (elem.ok())
-                {
-                    string key = UserDatabase::form_db_mapping_key(uname, host);
-                    out[key].insert(data);
-                    n_success++;
-                }
-                else
-                {
-                    MXB_ERROR("Entry %i in '%s'-array in file '%s' is missing a required field: %s",
-                              ind + 1, array_name, filepathc, elem.error_msg().c_str());
-                }
-            };
-
         const char grp_db[] = "db";
         if (all.contains(grp_db))
         {
             UserDatabase::StringSetMap db_grants_temp;
             n_grants = 0;
             EntryHandler grant_handler = [&](Json& grant_data, int ind) {
-                    handler_helper(grant_data, ind, grp_db, "db", db_grants_temp, n_grants);
-                };
+                // The grant or definition must contain 'user', 'host' and 'db'-fields.
+                string uname = grant_data.get_string("user");
+                string host = grant_data.get_string("host");
+                string db = grant_data.get_string("db");
+
+                if (grant_data.ok())
+                {
+                    string key = UserDatabase::form_db_mapping_key(uname, host);
+                    db_grants_temp[key].insert(db);
+                    n_grants++;
+
+                    // The database defined in the grant will not exist if using "file-only-always"-mode.
+                    // Add it so that client won't get an "Unknown database"-error. If using
+                    // "add_when_load_ok"-mode, this should not have any effect as the entry should
+                    // exist. If it doesn't, then it's the user's problem.
+                    output->add_database_name(db);
+                }
+                else
+                {
+                    MXB_ERROR("Database grant entry %i in '%s'-array in file '%s' is missing a required "
+                              "field: %s", ind + 1, grp_db, filepathc, grant_data.error_msg().c_str());
+                }
+            };
             process_array(all, grp_db, grant_handler);
             // Add all the db grants as wildcard grants, as we cannot know which type it is.
             UserDatabase::StringSetMap dummy;
@@ -1128,8 +1127,23 @@ MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* out
             UserDatabase::StringSetMap role_map_tmp;
             n_roles = 0;
             EntryHandler role_handler = [&](Json& role_data, int ind) {
-                    handler_helper(role_data, ind, grp_roles_mapping, "role", role_map_tmp, n_roles);
-                };
+                // The role definition must contain 'user', 'host' and 'role'-fields.
+                string uname = role_data.get_string("user");
+                string host = role_data.get_string("host");
+                string data = role_data.get_string("role");
+
+                if (role_data.ok())
+                {
+                    string key = UserDatabase::form_db_mapping_key(uname, host);
+                    role_map_tmp[key].insert(data);
+                    n_roles++;
+                }
+                else
+                {
+                    MXB_ERROR("Role entry %i in '%s'-array in file '%s' is missing a required field: %s",
+                              ind + 1, grp_roles_mapping, filepathc, role_data.error_msg().c_str());
+                }
+            };
             process_array(all, grp_roles_mapping, role_handler);
             output->add_role_mapping(move(role_map_tmp));
         }
