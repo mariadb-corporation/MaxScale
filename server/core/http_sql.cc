@@ -445,7 +445,7 @@ HttpResponse connect(const HttpRequest& request)
         config.host = "127.0.0.1";
     }
 
-    bool persist = request.get_option("persist") == "yes";
+    bool persist = request.is_truthy_option("persist");
     int max_age = atoi(request.get_option("max-age").c_str());
     std::string host = request.host();
 
@@ -515,7 +515,7 @@ HttpResponse clone(const HttpRequest& request)
         return create_error(err);
     }
 
-    bool persist = request.get_option("persist") == "yes";
+    bool persist = request.is_truthy_option("persist");
     int max_age = atoi(request.get_option("max-age").c_str());
 
     auto cb = [id, host = string(request.host()), persist, max_age]() {
@@ -585,7 +585,7 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("`max_rows` cannot be negative."));
     }
 
-    bool async = request.get_option("async") == "true";
+    bool async = request.is_truthy_option("async");
     string host = request.host();
     string self = request.get_uri();
 

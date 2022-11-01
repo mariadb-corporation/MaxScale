@@ -229,6 +229,11 @@ the resource documentation.
 
 ## Common Request Parameters
 
+All parameters that use boolean values use the same rules that are used for the
+[boolean values](../Getting-Started/Configuration-Guide.md#booleans) in the
+MaxScale configuration. For example, both `pretty=off` and `pretty=false`
+disable the `pretty` option.
+
 All the resources that return JSON content also support the following
 parameters. Parameters are given in the HTTP query string:
 `https://localhost:8989/v1/servers?pretty=true&fields[servers]=state`.

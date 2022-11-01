@@ -222,7 +222,7 @@ namespace
 
 bool option_rdns_is_on(const HttpRequest& request)
 {
-    return request.get_option("rdns") == "true";
+    return request.is_truthy_option("rdns");
 }
 
 static bool drop_path_part(std::string& path)
@@ -319,7 +319,7 @@ HttpResponse cb_stop_service(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     service->stop();
 
-    if (request.get_option(CN_FORCE) == CN_YES)
+    if (request.is_truthy_option(CN_FORCE))
     {
         Session::kill_all(service);
     }
@@ -339,7 +339,7 @@ HttpResponse cb_stop_listener(const HttpRequest& request)
     auto listener = Listener::find(request.uri_part(1).c_str());
     listener->stop();
 
-    if (request.get_option(CN_FORCE) == CN_YES)
+    if (request.is_truthy_option(CN_FORCE))
     {
         Session::kill_all(listener.get());
     }
@@ -605,7 +605,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
     auto server = ServerManager::find_by_unique_name(request.uri_part(1).c_str());
     mxb_assert(server);
 
-    if (runtime_destroy_server(server, request.get_option(CN_FORCE) == CN_YES))
+    if (runtime_destroy_server(server, request.is_truthy_option(CN_FORCE)))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -618,7 +618,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
     Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor);
 
-    if (runtime_destroy_monitor(monitor, request.get_option(CN_FORCE) == CN_YES))
+    if (runtime_destroy_monitor(monitor, request.is_truthy_option(CN_FORCE)))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -664,7 +664,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service);
 
-    if (runtime_destroy_service(service, request.get_option(CN_FORCE) == CN_YES))
+    if (runtime_destroy_service(service, request.is_truthy_option(CN_FORCE)))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -677,7 +677,7 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
     auto filter = filter_find(request.uri_part(1).c_str());
     mxb_assert(filter);
 
-    if (runtime_destroy_filter(filter, request.get_option(CN_FORCE) == CN_YES))
+    if (runtime_destroy_filter(filter, request.is_truthy_option(CN_FORCE)))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -1241,7 +1241,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
         string errmsg;
         if (MonitorManager::set_server_status(server, opt, &errmsg))
         {
-            if (status_is_in_maint(opt) && request.get_option(CN_FORCE) == CN_YES)
+            if (status_is_in_maint(opt) && request.is_truthy_option(CN_FORCE))
             {
                 BackendDCB::hangup(server);
             }
@@ -1814,7 +1814,7 @@ static HttpResponse handle_request(const HttpRequest& request)
     const Resource* resource = this_unit.resources.find_resource(request);
     bool modifies_data = request_modifies_data(request.get_verb());
     bool requires_sync = false;
-    bool skip_sync = request.get_option("sync") == "false";
+    bool skip_sync = request.is_falsy_option("sync");
 
     if (resource)
     {

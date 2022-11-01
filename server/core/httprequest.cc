@@ -14,6 +14,8 @@
 #include "internal/httprequest.hh"
 #include "internal/admin.hh"
 
+#include <maxscale/config_common.hh>
+
 #include <ctype.h>
 #include <string.h>
 #include <sstream>
@@ -180,4 +182,15 @@ std::string HttpRequest::to_string() const
 
     req << get_json_str();
     return req.str();
+}
+
+bool HttpRequest::is_falsy_option(std::string option) const
+{
+    return config_truth_value(get_option(std::move(option))) == 0;
+}
+
+
+bool HttpRequest::is_truthy_option(std::string option) const
+{
+    return config_truth_value(get_option(std::move(option))) == 1;
 }

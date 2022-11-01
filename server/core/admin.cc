@@ -858,15 +858,14 @@ int Client::queue_response(const HttpResponse& reply)
     if (json_t* js = reply.get_response())
     {
         int flags = JSON_SORT_KEYS;
-        string pretty = m_request.get_option("pretty");
 
-        if (pretty == "true" || pretty.length() == 0)
+        if (m_request.is_falsy_option("pretty"))
         {
-            flags |= JSON_INDENT(4);
+            flags |= JSON_COMPACT;
         }
         else
         {
-            flags |= JSON_COMPACT;
+            flags |= JSON_INDENT(4);
         }
 
         data = json_dumps(js, flags);
@@ -938,7 +937,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
     const char* type = m_account == mxs::USER_ACCOUNT_ADMIN ? CN_ADMIN : CN_BASIC;
     auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age, {{"account", type}});
 
-    if (request.get_option("persist") == "yes")
+    if (request.is_truthy_option("persist"))
     {
         // Store the token signature part in a HttpOnly cookie and the claims in a normal one. This allows
         // the token information to be displayed while preventing the actual token from leaking due to a

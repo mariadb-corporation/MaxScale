@@ -175,6 +175,25 @@ public:
     }
 
     /**
+     * @brief Returns true if the option is set to `no`, `false`, `0` or `off`
+     *
+     * @param option The option to get
+     *
+     * @return True if the option is set and it contains a false value
+     */
+    bool is_falsy_option(std::string option) const;
+
+
+    /**
+     * @brief Returns true if the option is set to `yes`, `true`, `1` or `on`
+     *
+     * @param option The option to get
+     *
+     * @return True if the option is set and it contains a true value
+     */
+    bool is_truthy_option(std::string option) const;
+
+    /**
      * Get all options
      *
      * @return All request options

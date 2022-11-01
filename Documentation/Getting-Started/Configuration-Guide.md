@@ -257,8 +257,9 @@ changes done with `SET GLOBAL` statements are lost if the process is restarted.
 ### Booleans
 
 Boolean type parameters interpret the values `true`, `yes`, `on` and `1` as
-_true_ values and `false`, `no`, `off` and `0` as _false_ values. The REST API
-only accepts JSON boolean values for boolean type parameters.
+_true_ values and `false`, `no`, `off` and `0` as _false_ values. Starting with
+MaxScale 23.02, the REST API also accepts the same boolean values for boolean
+type parameters.
 
 ### Sizes
 
