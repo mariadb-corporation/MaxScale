@@ -168,10 +168,6 @@ static void set_log_augmentation(const char* value);
 static void usage(void);
 static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 bool        check_paths();
@@ -798,34 +794,6 @@ static void print_alert(const char* format, ...)
     VA_MESSAGE(message, format);
 
     print_message("alert  ", 0, message);
-}
-
-static void print_info(int eno, const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("info   ", eno, message);
-}
-
-static void print_info(const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("info   ", 0, message);
-}
-
-static void print_warning(int eno, const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("warning", eno, message);
-}
-
-static void print_warning(const char* format, ...)
-{
-    VA_MESSAGE(message, format);
-
-    print_message("warning", 0, message);
 }
 
 static void log_startup_message(int eno, const char* message)
@@ -1851,7 +1819,7 @@ int main(int argc, char** argv)
     int child_pipe = -1;
     if (!this_unit.daemon_mode)
     {
-        print_info("MaxScale will be run in the terminal process.");
+        MXB_NOTICE("MaxScale will be run in the terminal process.");
     }
     else
     {
@@ -1974,7 +1942,7 @@ int main(int argc, char** argv)
 
     if (!cnf.syslog.get() && !cnf.maxlog.get())
     {
-        print_warning("Both MaxScale and Syslog logging disabled.");
+        MXB_WARNING("Both MaxScale and Syslog logging disabled.");
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
