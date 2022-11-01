@@ -262,6 +262,7 @@ json_t* ConnectionManager::Connection::to_json() const
     json_object_set_new(obj, "seconds_idle", json_real(idle));
     json_object_set_new(obj, "sql", json_string(sql.c_str()));
     json_object_set_new(obj, "execution_time", json_real(exec_time));
+    json_object_set_new(obj, "target", json_string(config.target.c_str()));
     return obj;
 }
 }

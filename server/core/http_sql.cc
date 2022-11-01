@@ -389,6 +389,8 @@ HttpResponse connect(const HttpRequest& request)
         return create_error("The `target`, `user` and `password` fields are mandatory");
     }
 
+    config.target = target;
+
     if (Server* server = ServerManager::find_by_unique_name(target))
     {
         config.host = server->address();

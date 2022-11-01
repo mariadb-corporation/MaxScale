@@ -31,6 +31,7 @@ namespace HttpSql
 
 struct ConnectionConfig
 {
+    std::string    target;
     std::string    host;
     int            port;
     std::string    user;
