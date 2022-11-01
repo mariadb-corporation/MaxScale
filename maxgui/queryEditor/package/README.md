@@ -228,6 +228,7 @@ example are importable.
 </template>
 
 <script>
+import { mapActions, mapState } from 'vuex'
 import { MinMaxBtnCtr, QueryCnfGearBtn, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-query-editor'
 export default {
     name: 'query-page',
