@@ -61,13 +61,16 @@ export default {
                     case '/404':
                         this.cancelLeave()
                         this.clearConn()
-                        this.validatingConn()
+                        this.validatingConn({ sqlConns: this.sql_conns })
                         break
                     default:
                         this.shouldDelAll = true
                         this.isConfDlgOpened = true
                 }
         }
+    },
+    async created() {
+        await this.validatingConn({ sqlConns: this.sql_conns })
     },
     methods: {
         ...mapActions({

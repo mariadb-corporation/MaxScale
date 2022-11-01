@@ -45,25 +45,20 @@ describe('QueryEditor', () => {
     let wrapper
 
     describe('QueryEditor created hook tests', () => {
-        let handleAutoClearQueryHistoryCallCount = 0,
-            validatingConnCallCount = 0
+        let handleAutoClearQueryHistoryCallCount = 0
+
         before(() => {
             mountFactory({
                 shallow: true,
                 methods: {
                     ...stubModuleMethods,
                     handleAutoClearQueryHistory: () => handleAutoClearQueryHistoryCallCount++,
-                    validatingConn: () => validatingConnCallCount++,
                 },
             })
         })
-
         it(`Should call 'handleAutoClearQueryHistory' action once when
         component is created`, () => {
             expect(handleAutoClearQueryHistoryCallCount).to.be.equals(1)
-        })
-        it('Should call `validatingConn` action once when component is created', () => {
-            expect(validatingConnCallCount).to.be.equals(1)
         })
     })
 

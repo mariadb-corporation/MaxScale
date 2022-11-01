@@ -106,9 +106,8 @@ export default {
             else this.$helpers.doubleRAF(() => this.setDim())
         },
     },
-    async created() {
+    created() {
         this.handleAutoClearQueryHistory()
-        await this.validatingConn()
     },
     mounted() {
         this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())
@@ -116,7 +115,6 @@ export default {
 
     methods: {
         ...mapActions({
-            validatingConn: 'queryConn/validatingConn',
             handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),

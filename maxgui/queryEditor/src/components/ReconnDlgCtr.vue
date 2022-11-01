@@ -3,7 +3,7 @@
         v-model="showReconnDialog"
         :title="queryErrMsg"
         minBodyWidth="624px"
-        :onSave="reconnect"
+        :onSave="handleReconnect"
         cancelText="disconnect"
         saveText="reconnect"
         :showCloseIcon="false"
@@ -36,14 +36,13 @@
  * Public License.
  */
 
-import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
+import { mapActions, mapGetters, mapMutations } from 'vuex'
 export default {
     name: 'reconn-dlg-ctr',
+    props: {
+        onReconnectCb: { type: Function, default: () => null },
+    },
     computed: {
-        ...mapState({
-            active_wke_id: state => state.wke.active_wke_id,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
-        }),
         ...mapGetters({
             getLostCnnErrMsgObj: 'queryConn/getLostCnnErrMsgObj',
             getCurrWkeConn: 'queryConn/getCurrWkeConn',
@@ -70,14 +69,11 @@ export default {
             disconnect: 'queryConn/disconnect',
         }),
         async deleteConn() {
-            try {
-                const targetConn = this.active_sql_conn
-                await this.disconnect({ id: targetConn.id, showSnackbar: true })
-                if (targetConn.clone_of_conn_id)
-                    await this.disconnect({ id: this.getCurrWkeConn.id })
-            } catch (e) {
-                this.$logger('reconn-dlg-ctr-deleteConn').error(e)
-            }
+            await this.disconnect({ id: this.getCurrWkeConn.id })
+        },
+        async handleReconnect() {
+            await this.reconnect()
+            await this.onReconnectCb()
         },
     },
 }

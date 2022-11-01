@@ -170,73 +170,118 @@ export default new Vuex.Store({
 })
 ```
 
-Use `mxs-query-editor` component
+## Use `mxs-query-editor` and its sub components
 
-`mxs-query-editor` is registered at global scope.
-
-```vue
-<!-- SkyQuery.vue -->
-<template>
-    <mxs-query-editor
-        ref="queryEditor"
-        class="query-editor-page"
-        @leave-page="$router.push($event)"
-    />
-</template>
-
-<script>
-export default {
-    name: 'query-page',
-    // router hook to show confirm leaving page dialog
-    async beforeRouteLeave(to, from, next) {
-        this.$refs.queryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
-    },
-}
-</script>
-<style lang="scss" scoped>
-.query-editor-page {
-    width: 100%;
-    height: 100%;
-}
-</style>
-```
-
-## Use `mxs-query-editor` sub components
+The `mxs-query-editor` component is registered at global scope, so it can be used
+without importing.
 
 If the `hidden_comp` option is provided when registering the plugin,
 the components in the list won't be rendered. e.g. `hidden_comp: ['wke-nav-ctr']`.
+For now, only `wke-nav-ctr` will be applied.
+
 Certain components can be manually imported and placed somewhere else outside
-the `mxs-query-editor` component. At the moment, only `query-cnf-gear-btn`
-and `min-max-btn` are importable.
+the `mxs-query-editor` component. At the moment, the following components in the below
+example are importable.
 
 ```vue
 <!-- SkyQuery.vue -->
 <template>
-    <mxs-query-editor
-        ref="mxsQueryEditor"
-        class="query-editor-page"
-        @leave-page="$router.push($event)"
-    >
-        <template v-slot:query-editor-top>
-            <div class="d-flex flex-wrap">
-                <v-spacer />
-                <query-cnf-gear-btn />
-                <min-max-btn />
-            </div>
-        </template>
-    </mxs-query-editor>
+    <div class="query-editor-page">
+        <ConfirmLeaveDlg
+            v-model="isConfDlgOpened"
+            :onSave="onLeave"
+            :shouldDelAll.sync="shouldDelAll"
+            @on-close="cancelLeave"
+            @on-cancel="cancelLeave"
+        />
+        <ReconnDlgCtr :onReconnectCb="onReconnectCb" />
+        <mxs-query-editor>
+            <!-- Slot for placing content at the top of the query editor that is above the worksheet
+                 navigation tabs.
+            -->
+            <template v-slot:query-editor-top>
+                <div class="d-flex flex-wrap">
+                    <v-spacer />
+                    <QueryCnfGearBtn />
+                    <MinMaxBtnCtr />
+                </div>
+            </template>
+            <!-- txt-editor-toolbar-right-slot`: Slot for placing content on the right side of
+                 the toolbar below the query navigation tabs in TXT_EDITOR and DDL_EDITOR modes
+            -->
+            <template v-slot:txt-editor-toolbar-right-slot>
+                <div class="d-flex flex-wrap">
+                    <v-spacer />
+                    <QueryCnfGearBtn />
+                    <MinMaxBtnCtr />
+                </div>
+            </template>
+            <template v-slot:ddl-editor-toolbar-right-slot>
+                <div class="d-flex flex-wrap">
+                    <v-spacer />
+                    <QueryCnfGearBtn />
+                    <MinMaxBtnCtr />
+                </div>
+            </template>
+        </mxs-query-editor>
+    </div>
 </template>
 
 <script>
-import { MinMaxBtnCtr, QueryCnfGearBtn } from 'mxs-query-editor'
+import { MinMaxBtnCtr, QueryCnfGearBtn, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-query-editor'
 export default {
     name: 'query-page',
     components: {
-        QueryCnfGearBtn,
-        MinMaxBtnCtr,
+        QueryCnfGearBtn, // Query configuration button
+        MinMaxBtnCtr, // Toggle full-screen mode button
+        ConfirmLeaveDlg, // confirmation on leave dialog
+        ReconnDlgCtr, // reconnect dialog
     },
-    async beforeRouteLeave(to, from, next) {
-        this.$refs.mxsQueryEditor.$refs.queryEditor.beforeRouteLeaveHandler(to, from, next)
+    data() {
+        return {
+            isConfDlgOpened: false,
+            shouldDelAll: true,
+            to: '',
+        }
+    },
+    computed: {
+        ...mapState({
+            sql_conns: state => state.queryConn.sql_conns,
+        }),
+    },
+    beforeRouteLeave(to, from, next) {
+        if (this.to) {
+            next()
+        } else {
+            this.to = to
+            if (Object.keys(this.sql_conns).length === 0) this.leavePage()
+            else {
+                this.shouldDelAll = true
+                this.isConfDlgOpened = true
+            }
+        }
+    },
+    async created() {
+        await this.validatingConn({ sqlConns: this.sql_conns })
+    },
+    methods: {
+        ...mapActions({
+            disconnectAll: 'queryConn/disconnectAll',
+            validatingConn: 'queryConn/validatingConn',
+        }),
+        async onLeave() {
+            if (this.shouldDelAll) await this.disconnectAll()
+            this.leavePage()
+        },
+        leavePage() {
+            this.$router.push(this.to)
+        },
+        cancelLeave() {
+            this.to = null
+        },
+        async onReconnectCb() {
+            await this.validatingConn({ sqlConns: this.sql_conns, silentValidation: true })
+        },
     },
 }
 </script>
@@ -247,18 +292,6 @@ export default {
 }
 </style>
 ```
-
-## Slots of `mxs-query-editor` component
-
-The `mxs-query-editor` component has the following slots:
-
--   `query-editor-top`: Slot for placing content at the top of the query editor
-    that is above the worksheet navigation tabs.
--   `txt-editor-toolbar-right-slot`: Slot for placing content on the right side
-    of the toolbar below the query navigation tabs in TXT_EDITOR mode (default
-    editor mode).
--   `ddl-editor-toolbar-right-slot`: Similar to `txt-editor-toolbar-right-slot`,
-    but this is for DDL_EDITOR mode (editor for altering table).
 
 ## Connection cleans up
 

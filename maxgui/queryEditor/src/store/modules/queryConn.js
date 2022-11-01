@@ -77,11 +77,13 @@ export default {
             }
         },
         /**
+         * Validate provided sqlConns
+         * @param {Object} param.sqlConns - sql connections stored in indexedDB
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
         async validatingConn(
             { state, commit, dispatch, rootState, rootGetters },
-            { silentValidation = false } = {}
+            { sqlConns, silentValidation = false }
         ) {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
@@ -94,19 +96,19 @@ export default {
                     dispatch('resetAllStates')
                     commit('SET_SQL_CONNS', {})
                 } else {
-                    const validSqlConns = Object.keys(state.sql_conns)
+                    const validSqlConns = Object.keys(sqlConns)
                         .filter(id => aliveConnIds.includes(id))
                         .reduce(
                             (acc, id) => ({
                                 ...acc,
                                 [id]: {
-                                    ...state.sql_conns[id],
+                                    ...sqlConns[id],
                                     attributes: resConnMap[id].attributes, // update attributes
                                 },
                             }),
                             {}
                         )
-                    const invalidCnctIds = Object.keys(state.sql_conns).filter(
+                    const invalidCnctIds = Object.keys(sqlConns).filter(
                         id => !(id in validSqlConns)
                     )
                     //reset sessions that are bound to those invalid connections
@@ -443,11 +445,22 @@ export default {
                 this.vue.$logger('store-queryConn-disconnectAll').error(e)
             }
         },
-        async reconnect({ state, commit, dispatch }) {
+        async reconnect({ state, commit, dispatch, getters }) {
             const active_sql_conn = state.active_sql_conn
             try {
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
-                if (res.status === 204) {
+                let connIds = []
+                const wkeConnId = this.vue.$typy(getters.getCurrWkeConn, 'id').safeString
+                const activeConnId = this.vue.$typy(active_sql_conn, 'id').safeString
+                if (wkeConnId) connIds.push(wkeConnId)
+                if (activeConnId) connIds.push(activeConnId)
+
+                const allRes = await Promise.all(
+                    connIds.map(id => {
+                        return this.vue.$queryHttp.post(`/sql/${id}/reconnect`)
+                    })
+                )
+
+                if (allRes.length && allRes.every(promise => promise.status === 204)) {
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
@@ -456,9 +469,7 @@ export default {
                         },
                         { root: true }
                     )
-                    await dispatch('schemaSidebar/initialFetch', active_sql_conn, {
-                        root: true,
-                    })
+                    await dispatch('schemaSidebar/initialFetch', {}, { root: true })
                 } else
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
@@ -468,7 +479,6 @@ export default {
                         },
                         { root: true }
                     )
-                await dispatch('validatingConn', { silentValidation: true })
             } catch (e) {
                 this.vue.$logger('store-queryConn-reconnect').error(e)
             }

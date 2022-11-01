@@ -44,6 +44,21 @@ const mountFactory = opts =>
     )
 describe('QueryPage', () => {
     let wrapper
+
+    describe('Created hook tests', () => {
+        let validatingConnCallCount = 0
+        before(() => {
+            mountFactory({
+                shallow: true,
+                methods: {
+                    validatingConn: () => validatingConnCallCount++,
+                },
+            })
+        })
+        it('Should call `validatingConn` action once when component is created', () => {
+            expect(validatingConnCallCount).to.be.equals(1)
+        })
+    })
     describe('Leaving page tests', () => {
         it(`Should open confirmation dialog on leaving page when there
           is an active connection`, () => {
