@@ -84,6 +84,9 @@
 #endif
 
 using namespace maxscale;
+using std::cerr;
+using std::cout;
+using std::endl;
 using std::string;
 
 const int PIDFD_CLOSED = -1;
@@ -759,15 +762,6 @@ static bool init_log()
     }
     else if (mxs_log_init("maxscale", mxs::logdir(), cnf.log_target))
     {
-        // Since init_log() may be called more than once, we need to ensure
-        // that the cleanup-function is not registered more than once.
-        static bool atexit_registered = false;
-
-        if (!atexit_registered)
-        {
-            atexit(mxs_log_finish);
-            atexit_registered = true;
-        }
         rval = true;
     }
 
@@ -836,14 +830,12 @@ static void print_warning(const char* format, ...)
 
 static void log_startup_message(int eno, const char* message)
 {
-    if (mxb_log_inited() || init_log())
-    {
-        MXB_ALERT("%s%s%s%s",
-                  message,
-                  eno == 0 ? "" : ": ",
-                  eno == 0 ? "" : mxb_strerror(eno),
-                  eno == 0 ? "" : ".");
-    }
+    // TODO: Clean this up. With an initial stdout writing log, we will get the message twice.
+    MXB_ALERT("%s%s%s%s",
+              message,
+              eno == 0 ? "" : ": ",
+              eno == 0 ? "" : mxb_strerror(eno),
+              eno == 0 ? "" : ".");
 
     print_alert(eno, "%s", message);
 }
@@ -1487,6 +1479,17 @@ int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
 
+    std::ios_base::sync_with_stdio();
+
+    // Create a startup log so that MXB_ERROR and friends immediately can be used.
+    if (!mxb_log_init(MXB_LOG_TARGET_STDERR))
+    {
+        cerr << "alert: Could not initialize startup log." << endl;
+        return MAXSCALE_INTERNALERROR;
+    }
+
+    atexit(mxb_log_finish);
+
     mxs::Config& cnf = mxs::Config::init(argc, argv);
 
     maxscale_reset_starttime();
@@ -1888,19 +1891,15 @@ int main(int argc, char** argv)
     // Set the default location for plugins. Path-related settings have been read by now.
     mxq::MariaDB::set_default_plugin_dir(mxs::connector_plugindir());
 
-    if (mxb_log_inited())
-    {
-        // If the log was inited due to some error logging *and* we did not exit,
-        // we need to close it so that it can be opened again, this time with
-        // the final settings.
-        mxs_log_finish();
-    }
-
     if (cnf.log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
     {
         mxb_log_redirect_stdout(true);
         this_unit.print_stacktrace_to_stdout = false;
     }
+
+    // Now we are ready to close the initial startup log and initialize
+    // the actual MaxScale log.
+    mxb_log_finish();
 
     if (!init_log())
     {
