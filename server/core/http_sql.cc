@@ -684,7 +684,7 @@ HttpResponse query_result(const HttpRequest& request)
             else
             {
                 json_t* result_data = generate_json_representation(conn->conn, conn->last_max_rows);
-                auto exec_time = conn->last_query_started - conn->last_query_time;
+                auto exec_time = conn->last_query_time - conn->last_query_started;
                 response = construct_result_response(result_data, host, self, sql, query_id, exec_time);
             }
 
