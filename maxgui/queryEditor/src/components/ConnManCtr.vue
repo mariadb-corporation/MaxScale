@@ -171,7 +171,7 @@ export default {
             openConnect: 'queryConn/openConnect',
             disconnect: 'queryConn/disconnect',
             onChangeConn: 'queryConn/onChangeConn',
-            validatingConn: 'queryConn/validatingConn',
+            validateConns: 'queryConn/validateConns',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
@@ -213,7 +213,7 @@ export default {
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
         },
         async onReconnectCb() {
-            await this.validatingConn({ sqlConns: this.sql_conns, silentValidation: true })
+            await this.validateConns({ sqlConns: this.sql_conns, silentValidation: true })
         },
     },
 }

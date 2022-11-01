@@ -51,11 +51,11 @@ describe('QueryPage', () => {
             mountFactory({
                 shallow: true,
                 methods: {
-                    validatingConn: () => validatingConnCallCount++,
+                    validateConns: () => validatingConnCallCount++,
                 },
             })
         })
-        it('Should call `validatingConn` action once when component is created', () => {
+        it('Should call `validateConns` action once when component is created', () => {
             expect(validatingConnCallCount).to.be.equals(1)
         })
     })

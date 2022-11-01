@@ -169,7 +169,7 @@ export default {
          * @param {Object} param.sqlConns - sql connections stored in indexedDB
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
-        async validatingConn({ state, commit, dispatch }, { sqlConns, silentValidation = false }) {
+        async validateConns({ state, commit, dispatch }, { sqlConns, silentValidation = false }) {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
                 await dispatch('fetchConnStatus', sqlConns)
@@ -194,7 +194,7 @@ export default {
                     commit('SET_SQL_CONNS', alive_conn_map)
                 }
             } catch (e) {
-                this.vue.$logger('store-queryConn-validatingConn').error(e)
+                this.vue.$logger('store-queryConn-validateConns').error(e)
             }
             commit('SET_IS_VALIDATING_CONN', false)
         },

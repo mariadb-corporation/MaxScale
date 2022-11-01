@@ -17,7 +17,7 @@ import { lodash } from '@share/utils/helpers'
 
 const stubModuleMethods = {
     handleAutoClearQueryHistory: () => null,
-    validatingConn: () => null,
+    validateConns: () => null,
 }
 
 const mountFactory = opts =>

@@ -263,12 +263,12 @@ export default {
         }
     },
     async created() {
-        await this.validatingConn({ sqlConns: this.sql_conns })
+        await this.validateConns({ sqlConns: this.sql_conns })
     },
     methods: {
         ...mapActions({
             disconnectAll: 'queryConn/disconnectAll',
-            validatingConn: 'queryConn/validatingConn',
+            validateConns: 'queryConn/validateConns',
         }),
         async onLeave() {
             if (this.shouldDelAll) await this.disconnectAll()
@@ -281,7 +281,7 @@ export default {
             this.to = null
         },
         async onReconnectCb() {
-            await this.validatingConn({ sqlConns: this.sql_conns, silentValidation: true })
+            await this.validateConns({ sqlConns: this.sql_conns, silentValidation: true })
         },
     },
 }

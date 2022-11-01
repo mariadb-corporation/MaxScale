@@ -61,7 +61,7 @@ export default {
                     case '/404':
                         this.cancelLeave()
                         this.clearConn()
-                        this.validatingConn({ sqlConns: this.sql_conns })
+                        this.validateConns({ sqlConns: this.sql_conns })
                         break
                     default:
                         this.shouldDelAll = true
@@ -70,11 +70,11 @@ export default {
         }
     },
     async created() {
-        await this.validatingConn({ sqlConns: this.sql_conns })
+        await this.validateConns({ sqlConns: this.sql_conns })
     },
     methods: {
         ...mapActions({
-            validatingConn: 'queryConn/validatingConn',
+            validateConns: 'queryConn/validateConns',
             disconnectAll: 'queryConn/disconnectAll',
             clearConn: 'queryConn/clearConn',
         }),
