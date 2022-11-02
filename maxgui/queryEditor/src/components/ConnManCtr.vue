@@ -83,7 +83,7 @@
             :item="connToBeDel"
             :onSave="confirmDelConn"
         />
-        <reconn-dlg-ctr />
+        <reconn-dlg-ctr :onReconnectCb="onReconnectCb" />
     </div>
 </template>
 
@@ -122,6 +122,7 @@ export default {
         ...mapState({
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
             active_wke_id: state => state.wke.active_wke_id,
+            sql_conns: state => state.queryConn.sql_conns,
         }),
         ...mapGetters({
             getWkeConns: 'queryConn/getWkeConns',
@@ -170,6 +171,7 @@ export default {
             openConnect: 'queryConn/openConnect',
             disconnect: 'queryConn/disconnect',
             onChangeConn: 'queryConn/onChangeConn',
+            validateConns: 'queryConn/validateConns',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
@@ -209,6 +211,9 @@ export default {
         },
         async confirmDelConn() {
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
+        },
+        async onReconnectCb() {
+            await this.validateConns({ sqlConns: this.sql_conns, silentValidation: true })
         },
     },
 }

@@ -50,7 +50,7 @@ describe('ReconnDlgCtr', () => {
         expect(value).to.be.equals(wrapper.vm.showReconnDialog)
         expect(cancelText).to.be.equals('disconnect')
         expect(saveText).to.be.equals('reconnect')
-        expect(onSave).to.be.equals(wrapper.vm.reconnect)
+        expect(onSave).to.be.equals(wrapper.vm.handleReconnect)
         expect(showCloseIcon).to.be.false
     })
     it('Should call deleteConn when clicking disconnect button ', async () => {

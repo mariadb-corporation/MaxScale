@@ -23,6 +23,13 @@ export default {
         conn_err_state: false,
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
+        /**
+         * alive_conn_map: stores connections that exists in the response of a GET to /sql/
+         * and in the `fetchConnStatus` action argument sqlConns
+         * orphaned_conns: When wke connection expires but its cloned connections (query tabs)
+         * are still alive, those are orphaned connections
+         */
+        conn_status_data: { alive_conn_map: {}, expired_conn_map: {}, orphaned_conns: [] },
         ...memStates,
         ...statesToBeSynced,
     },
@@ -58,6 +65,9 @@ export default {
         SET_PRE_SELECT_CONN_RSRC(state, payload) {
             state.pre_select_conn_rsrc = payload
         },
+        SET_CONN_STATUS_DATA(state, payload) {
+            state.conn_status_data = payload
+        },
     },
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
@@ -77,109 +87,122 @@ export default {
             }
         },
         /**
-         * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
+         * @param {Array} conns - connections that were cloned from expired worksheet connections
          */
-        async validatingConn(
-            { state, commit, dispatch, rootState, rootGetters },
-            { silentValidation = false } = {}
+        async cleanUpOrphanedConns({ commit, dispatch, rootState, rootGetters }, conns) {
+            try {
+                let wkeIdsToBeReset = []
+                for (const conn of conns) {
+                    await this.vue.$queryHttp.delete(`/sql/${conn.id}`)
+                    const { wke_id_fk } = rootGetters['querySession/getSessionByConnId'](conn.id)
+                    if (wke_id_fk && !wkeIdsToBeReset.includes(wke_id_fk))
+                        wkeIdsToBeReset.push(wke_id_fk)
+                    dispatch(
+                        'querySession/resetSessionStates',
+                        { conn_id: conn.id },
+                        { root: true }
+                    )
+                }
+                wkeIdsToBeReset.forEach(id => {
+                    commit(
+                        'wke/REFRESH_WKE',
+                        rootState.wke.worksheets_arr.find(wke => wke.id === id),
+                        { root: true }
+                    )
+                    dispatch('wke/releaseQueryModulesMem', id, { root: true })
+                })
+            } catch (e) {
+                this.vue.$logger('store-queryConn-cleanUpOrphanedConns').error(e)
+            }
+        },
+        /**
+         * update active_sql_conn attributes of the active session
+         * @param {*} param0
+         * @param {*} aliveConn
+         */
+        updateAliveActiveConn({ state, commit, rootGetters }, aliveActiveConn) {
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            if (!this.vue.$helpers.lodash.isEqual(aliveActiveConn, state.active_sql_conn)) {
+                commit('SET_ACTIVE_SQL_CONN', {
+                    payload: aliveActiveConn,
+                    id: active_session_id,
+                })
+            }
+        },
+        /**
+         * This action has side effects, it also cleans up orphaned connections and
+         * reset query tabs (sessions) states for expired connections
+         * @param {Object} sqlConns - sql connections
+         */
+        async fetchConnStatus({ commit }, sqlConns) {
+            try {
+                const res = await this.vue.$queryHttp.get(`/sql/`)
+                const aliveConnMap = this.vue.$helpers.lodash.keyBy(res.data.data, 'id')
+
+                let alive_conn_map = {},
+                    expired_conn_map = {},
+                    orphaned_conns = []
+
+                if (!this.vue.$typy(aliveConnMap).isEmptyObject) {
+                    Object.values(sqlConns).forEach(conn => {
+                        const connId = conn.id
+                        if (aliveConnMap[connId]) {
+                            // if this has value, it is a cloned connection from the wke connection
+                            const wkeConnId = this.vue.$typy(conn, 'clone_of_conn_id').safeString
+                            if (wkeConnId && !aliveConnMap[wkeConnId]) orphaned_conns.push(conn)
+                            else
+                                alive_conn_map[connId] = {
+                                    ...conn,
+                                    // update attributes
+                                    attributes: aliveConnMap[connId].attributes,
+                                }
+                        } else expired_conn_map[connId] = conn
+                    })
+                }
+                commit('SET_CONN_STATUS_DATA', { alive_conn_map, expired_conn_map, orphaned_conns })
+            } catch (e) {
+                this.vue.$logger('store-queryConn-fetchConnStatus').error(e)
+            }
+        },
+        /**
+         * Validate provided sqlConns
+         * @param {Object} param.sqlConns - sql connections stored in indexedDB
+         * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
+         * @param {Function} param.customSetSqlConns - custom function for SET_SQL_CONNS mutation
+         */
+        async validateConns(
+            { state, commit, dispatch },
+            { sqlConns, silentValidation = false, customSetSqlConns }
         ) {
+            let aliveConnMap = {}
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
-                const active_session_id = rootGetters['querySession/getActiveSessionId']
-                const active_session = rootGetters['querySession/getActiveSession']
-                const res = await this.vue.$queryHttp.get(`/sql/`)
-                const resConnMap = this.vue.$helpers.lodash.keyBy(res.data.data, 'id')
-                const aliveConnIds = Object.keys(resConnMap)
-                if (aliveConnIds.length === 0) {
+                await dispatch('fetchConnStatus', sqlConns)
+
+                if (this.vue.$typy(state.conn_status_data, 'alive_conn_map').isEmptyObject)
                     dispatch('resetAllStates')
-                    commit('SET_SQL_CONNS', {})
-                } else {
-                    const validSqlConns = Object.keys(state.sql_conns)
-                        .filter(id => aliveConnIds.includes(id))
-                        .reduce(
-                            (acc, id) => ({
-                                ...acc,
-                                [id]: {
-                                    ...state.sql_conns[id],
-                                    attributes: resConnMap[id].attributes, // update attributes
-                                },
-                            }),
-                            {}
-                        )
-                    const invalidCnctIds = Object.keys(state.sql_conns).filter(
-                        id => !(id in validSqlConns)
-                    )
-                    //reset sessions that are bound to those invalid connections
-                    invalidCnctIds.forEach(id => {
+                else {
+                    const {
+                        alive_conn_map = {},
+                        expired_conn_map = {},
+                        orphaned_conns = [],
+                    } = state.conn_status_data
+                    //reset sessions that are bound to those expired connections
+                    Object.keys(expired_conn_map).forEach(id => {
                         dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
                     })
+                    await dispatch('cleanUpOrphanedConns', orphaned_conns)
 
-                    // Delete also leftover cloned connections when its wke connections are expired
-                    const wkeConnIds = Object.values(validSqlConns)
-                        .filter(
-                            c =>
-                                c.binding_type ===
-                                rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
-                                    .WORKSHEET
-                        )
-                        .map(c => c.id)
-
-                    const leftoverConns = Object.values(validSqlConns).filter(
-                        c =>
-                            !wkeConnIds.includes(c.clone_of_conn_id) &&
-                            c.binding_type ===
-                                rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.SESSION
-                    )
-
-                    let wkeIdsToBeReset = []
-                    for (const conn of leftoverConns) {
-                        await this.vue.$queryHttp.delete(`/sql/${conn.id}`)
-                        const { wke_id_fk } = rootGetters['querySession/getSessionByConnId'](
-                            conn.id
-                        )
-                        if (wke_id_fk && !wkeIdsToBeReset.includes(wke_id_fk))
-                            wkeIdsToBeReset.push(wke_id_fk)
-                        dispatch(
-                            'querySession/resetSessionStates',
-                            { conn_id: conn.id },
-                            { root: true }
-                        )
-                    }
-
-                    wkeIdsToBeReset.forEach(id => {
-                        commit(
-                            'wke/REFRESH_WKE',
-                            rootState.wke.worksheets_arr.find(wke => wke.id === id),
-                            { root: true }
-                        )
-                        dispatch('wke/releaseQueryModulesMem', id, { root: true })
-                    })
-
-                    // remove leftover conns
-                    leftoverConns.forEach(c => delete validSqlConns[c.id])
-                    commit('SET_SQL_CONNS', validSqlConns)
-                    // get the connection of the active session
-                    const session_conn = this.vue.$typy(active_session, 'active_sql_conn')
-                        .safeObjectOrEmpty
-                    // get session_conn new value after validating
-                    const session_conn_updated = validSqlConns[session_conn.id] || {}
-                    // update active_sql_conn attributes
-                    if (
-                        !this.vue.$helpers.lodash.isEqual(
-                            session_conn_updated,
-                            state.active_sql_conn
-                        )
-                    ) {
-                        commit('SET_ACTIVE_SQL_CONN', {
-                            payload: session_conn_updated,
-                            id: active_session_id,
-                        })
-                    }
+                    const aliveActiveConn = alive_conn_map[state.active_sql_conn.id] || {}
+                    await dispatch('updateAliveActiveConn', aliveActiveConn)
+                    aliveConnMap = alive_conn_map
                 }
             } catch (e) {
                 this.vue.$logger.error(e)
             }
-            if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
+            if (this.vue.$typy(customSetSqlConns).isFunction) customSetSqlConns(aliveConnMap)
+            else commit('SET_SQL_CONNS', aliveConnMap)
+            commit('SET_IS_VALIDATING_CONN', false)
         },
 
         // Unbind the connection before opening/selecting new one, so that it can be used by other wke
@@ -237,7 +260,7 @@ export default {
          * Called by <conn-man-ctr/>
          * @param {Object} param.body - request body
          * @param {String} param.resourceType - services, servers or listeners.
-         * @param {String} param.meta - meta - connection meta
+         * @param {Object} param.meta - meta - connection meta
          */
         async openConnect(
             { dispatch, commit, rootState, rootGetters },
@@ -365,6 +388,7 @@ export default {
                         clone_of_conn_id: conn_to_be_cloned.id,
                         binding_type,
                         session_id_fk,
+                        meta: this.vue.$typy(conn_to_be_cloned, 'meta').safeObjectOrEmpty,
                     }
                     this.vue.$typy(getCloneObjRes).safeFunction(conn)
                     commit('ADD_SQL_CONN', conn)
@@ -445,11 +469,22 @@ export default {
                 this.vue.$logger.error(e)
             }
         },
-        async reconnect({ state, commit, dispatch }) {
+        async reconnect({ state, commit, dispatch, getters }) {
             const active_sql_conn = state.active_sql_conn
             try {
-                const res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
-                if (res.status === 204) {
+                let connIds = []
+                const wkeConnId = this.vue.$typy(getters.getCurrWkeConn, 'id').safeString
+                const activeConnId = this.vue.$typy(active_sql_conn, 'id').safeString
+                if (wkeConnId) connIds.push(wkeConnId)
+                if (activeConnId) connIds.push(activeConnId)
+
+                const allRes = await Promise.all(
+                    connIds.map(id => {
+                        return this.vue.$queryHttp.post(`/sql/${id}/reconnect`)
+                    })
+                )
+
+                if (allRes.length && allRes.every(promise => promise.status === 204)) {
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
@@ -458,9 +493,7 @@ export default {
                         },
                         { root: true }
                     )
-                    await dispatch('schemaSidebar/initialFetch', active_sql_conn, {
-                        root: true,
-                    })
+                    await dispatch('schemaSidebar/initialFetch', {}, { root: true })
                 } else
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
@@ -470,7 +503,6 @@ export default {
                         },
                         { root: true }
                     )
-                await dispatch('validatingConn', { silentValidation: true })
             } catch (e) {
                 this.vue.$logger.error(e)
             }
