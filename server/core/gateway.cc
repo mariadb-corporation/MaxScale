@@ -1346,26 +1346,6 @@ private:
 /**
  * @mainpage
  * The main entry point into MaxScale
- *
- * Logging and error printing
- * ---
- * What is printed to the terminal is something that the user can understand,
- * and/or something what the user can do for. For example, fix configuration.
- * More detailed messages are printed to error log, and optionally to trace
- * and debug log.
- *
- * As soon as process switches to daemon process, stderr printing is stopped -
- * except when it comes to command-line argument processing.
- * This is not an obvious solution because stderr is often directed to somewhere,
- * but currently this is the case.
- *
- * The configuration file is by default /etc/maxscale.cnf
- * The name of configuration file and its location can also be specified with a
- * command-line argument.
- *
- * @param argc The argument count
- * @param argv The array of arguments themselves
- * @return 0 if process exited normally, otherwise a non-zero value is returned
  */
 int main(int argc, char** argv)
 {
