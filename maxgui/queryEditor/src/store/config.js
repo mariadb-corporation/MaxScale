@@ -36,12 +36,12 @@ export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 
 // node types from database
 export const NODE_TYPES = Object.freeze({
-    SCHEMA: 'Schema',
-    TBL: 'Table',
-    COL: 'Column',
-    TRIGGER: 'Trigger',
-    SP: 'Stored Procedure',
-    VIEW: 'View',
+    SCHEMA: 'SCHEMA',
+    TBL: 'TABLE',
+    COL: 'COLUMN',
+    TRIGGER: 'TRIGGER',
+    SP: 'PROCEDURE',
+    VIEW: 'VIEW',
 })
 
 export const SQL_NODE_NAME_KEYS = Object.freeze({

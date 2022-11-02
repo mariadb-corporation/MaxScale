@@ -29,7 +29,7 @@ const mountFactory = opts =>
 const dummy_db_tree_data = [
     {
         key: 'node_key_0',
-        type: 'Schema',
+        type: 'SCHEMA',
         name: 'mysql',
         id: 'mysql',
         qualified_name: 'mysql',
@@ -69,7 +69,7 @@ const dummy_db_tree_data = [
     },
     {
         key: 'node_key_3',
-        type: 'Schema',
+        type: 'SCHEMA',
         name: 'test',
         id: 'test',
         qualified_name: 'test',
@@ -157,7 +157,7 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
         })
     })
     it(`Should bold SCHEMA type node if active_db value equals to the name of that node`, () => {
-        const schemaNode = dummy_db_tree_data.find(node => node.type === 'Schema')
+        const schemaNode = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
         wrapper = mountFactory({
             shallow: false,
             computed: {
@@ -325,12 +325,12 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     it(`Should return accurate value for nodesHaveCtxMenu computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.nodesHaveCtxMenu).to.eql([
-            'Schema',
-            'Table',
-            'Column',
-            'Trigger',
-            'Stored Procedure',
-            'View',
+            'SCHEMA',
+            'TABLE',
+            'COLUMN',
+            'TRIGGER',
+            'PROCEDURE',
+            'VIEW',
         ])
     })
     it(`Should return accurate value for queryOpts computed property`, () => {
@@ -369,31 +369,31 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     it(`Should return accurate value for baseOptsMap computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.baseOptsMap).to.eql({
-            Schema: [
+            SCHEMA: [
                 { text: wrapper.vm.$mxs_t('useDb'), type: 'USE' },
                 ...wrapper.vm.insertOpts,
                 ...wrapper.vm.clipboardOpts,
             ],
-            Table: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
-            View: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
-            'Stored Procedure': [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
-            Column: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
-            Trigger: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            TABLE: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
+            VIEW: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
+            PROCEDURE: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            COLUMN: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            TRIGGER: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
         })
     })
     it(`Should return accurate value for userNodeOptsMap computed property`, () => {
         wrapper = mountFactory()
         expect(wrapper.vm.userNodeOptsMap).to.eql({
-            Schema: [{ text: wrapper.vm.$mxs_t('dropSchema'), type: 'DD' }],
-            Table: [
+            SCHEMA: [{ text: wrapper.vm.$mxs_t('dropSchema'), type: 'DD' }],
+            TABLE: [
                 { text: wrapper.vm.$mxs_t('alterTbl'), type: 'DD' },
                 { text: wrapper.vm.$mxs_t('dropTbl'), type: 'DD' },
                 { text: wrapper.vm.$mxs_t('truncateTbl'), type: 'DD' },
             ],
-            View: [{ text: wrapper.vm.$mxs_t('dropView'), type: 'DD' }],
-            'Stored Procedure': [{ text: wrapper.vm.$mxs_t('dropSp'), type: 'DD' }],
-            Column: [],
-            Trigger: [{ text: wrapper.vm.$mxs_t('dropTrigger'), type: 'DD' }],
+            VIEW: [{ text: wrapper.vm.$mxs_t('dropView'), type: 'DD' }],
+            PROCEDURE: [{ text: wrapper.vm.$mxs_t('dropSp'), type: 'DD' }],
+            COLUMN: [],
+            TRIGGER: [{ text: wrapper.vm.$mxs_t('dropTrigger'), type: 'DD' }],
         })
     })
     const expectedBoolVal = [true, false]
@@ -406,7 +406,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             expect(wrapper.vm.filter(mockSearchItem, searchKeyword, textKey)).to.be[v]
         })
         it(`Should return ${v} when showCtxBtn method is called`, () => {
-            const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+            const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
             wrapper = mountFactory({
                 data: () => ({
                     // mock activeCtxItem
@@ -417,7 +417,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         })
     })
     it(`Should return nodes with less properties when minimizeNodes is called`, () => {
-        const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+        const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
         wrapper = mountFactory()
         const minimizeNode = wrapper.vm.minimizeNodes([node])[0]
         expect(Object.keys(minimizeNode).length).to.be.below(Object.keys(node).length)
@@ -429,7 +429,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         })
     })
     it(`Should emit load-children event when handleLoadChildren is called`, async () => {
-        const tablesNode = dummy_db_tree_data.find(node => node.type === 'Schema').children[0]
+        const tablesNode = dummy_db_tree_data.find(node => node.type === 'SCHEMA').children[0]
         let isEmitted = false
         let expectedArg
         const handler = param => {
@@ -445,7 +445,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         expect(expectedArg).to.be.eql(tablesNode)
     })
     it(`Should handle updateActiveNode as expected`, () => {
-        const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+        const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
         wrapper = mountFactory()
         wrapper.vm.updateActiveNode(node)
         expect(wrapper.vm.activeNodes).to.be.eql(wrapper.vm.minimizeNodes([node]))
@@ -463,7 +463,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         })
     })
 
-    const prvw_node = dummy_db_tree_data.find(node => node.type === 'Schema')
+    const prvw_node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
     const mockQueryOpts = [
         { text: 'Preview Data (top 1000)', type: 'QUERY' },
         { text: 'View Details', type: 'QUERY' },

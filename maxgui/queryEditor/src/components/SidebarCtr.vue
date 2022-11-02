@@ -204,27 +204,7 @@ export default {
          */
         onDropAction({ qualified_name, type }) {
             const { escapeIdentifiers: escape } = this.$helpers
-            let sql = 'DROP'
-            const { SCHEMA, TBL, VIEW, SP, TRIGGER } = this.NODE_TYPES
-            switch (type) {
-                case SCHEMA:
-                    sql += ' SCHEMA'
-                    break
-                case TBL:
-                    sql += ' TABLE'
-                    break
-                case VIEW:
-                    sql += ' VIEW'
-                    break
-                case SP:
-                    sql += ' PROCEDURE'
-                    break
-                case TRIGGER:
-                    sql += ' TRIGGER'
-                    break
-            }
-            sql = `${sql} ${escape(qualified_name)};`
-            this.handleOpenExecSqlDlg(sql)
+            this.handleOpenExecSqlDlg(`DROP ${type} ${escape(qualified_name)};`)
         },
 
         /**

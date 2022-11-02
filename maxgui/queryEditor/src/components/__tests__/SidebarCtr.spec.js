@@ -43,7 +43,7 @@ describe('sidebar-ctr', () => {
             onTruncateTbl: 'truncate-tbl',
         }
         const getNodeDataParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
-        const dummyNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
+        const dummyNode = { key: 'node_key_20', type: 'TABLE', name: 't1', id: 'test.t1' }
         const useDbParam = 'test'
         const onDropActionParam = { id: dummyNode.id, type: dummyNode.type }
         const onTruncateTblParam = 't1'
@@ -171,7 +171,7 @@ describe('sidebar-ctr', () => {
             })
             const mockNode = {
                 key: 'node_key_20',
-                type: 'Table',
+                type: 'TABLE',
                 name: 't1',
                 id: 'test.Tables.t1',
                 qualified_name: 'test.t1',
@@ -196,7 +196,7 @@ describe('sidebar-ctr', () => {
         it(`Should process onDropAction method as expected`, () => {
             wrapper = mountFactory()
             const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
-            const mockNode = { type: 'Table', id: 'test.Tables.t1', qualified_name: 'test.t1' }
+            const mockNode = { type: 'TABLE', id: 'test.Tables.t1', qualified_name: 'test.t1' }
             wrapper.vm.onDropAction(mockNode) // trigger the method
             spy.should.have.been.calledOnceWith('DROP TABLE `test`.`t1`;')
             expect(wrapper.vm.actionName).to.be.equals('DROP TABLE `test`.`t1`')
