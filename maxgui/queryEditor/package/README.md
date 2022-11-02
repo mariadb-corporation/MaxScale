@@ -10,30 +10,32 @@ npm i mxs-query-editor
 
 Query editor peerDependencies
 
--   @mdi/font@^7.0.96
--   axios@^0.27.2
--   browser-fs-access@^0.30.1
--   chart.js@^2.9.4
--   chartjs-plugin-trendline@^0.2.2
--   deep-diff@^1.0.2
--   immutability-helper@^3.1.1
--   localforage@^1.10.0
--   lodash@^4.17.21
--   monaco-editor@^0.33.0
--   monaco-editor-webpack-plugin@^7.0.1
--   sql-formatter@^4.0.2
--   stacktrace-parser@^0.1.10
--   typy@^3.3.0
--   uuid@^8.3.2
--   vue@^2.6.14
--   vue-chartjs@^3.5.1
--   vue-i18n@^8.27.0
--   vue-moment@^4.1.0
--   vue-shortkey@^3.1.7
--   vue-template-compiler@^2.6.14
--   vuetify@^2.6.10
--   vuex@^3.6.2
--   vuex-persist@^3.1.3
+| Dependency                   | Version |
+| ---------------------------- | :-----: |
+| @mdi/font                    |  7.0.x  |
+| axios                        | 0.27.x  |
+| browser-fs-access            | 0.30.x  |
+| chart.js                     |  2.9.x  |
+| chartjs-plugin-trendline     |  0.2.x  |
+| deep-diff                    |  1.0.x  |
+| immutability-helper          |  3.1.x  |
+| localforage                  | 1.10.x  |
+| lodash                       | 4.17.x  |
+| monaco-editor                | 0.33.x  |
+| monaco-editor-webpack-plugin |  7.0.x  |
+| sql-formatter                |  4.0.x  |
+| stacktrace-parser            |  0.1.x  |
+| typy                         |  3.3.x  |
+| uuid                         |  8.3.x  |
+| vue                          |   2.x   |
+| vue-chartjs                  |  3.5.x  |
+| vue-i18n                     |   8.x   |
+| vue-moment                   |   4.x   |
+| vue-shortkey                 |   3.x   |
+| vue-template-compiler        |   2.x   |
+| vuetify                      |  2.6.x  |
+| vuex                         |  3.6.x  |
+| vuex-persist                 |  3.1.x  |
 
 ## Example of registering the plugin
 
