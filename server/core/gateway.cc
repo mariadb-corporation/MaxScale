@@ -746,18 +746,18 @@ static bool check_dir_access(const char* dirname, bool rd, bool wr)
     return err.empty();
 }
 
-static bool init_log()
+static int init_log(const mxs::Config& cnf)
 {
-    bool rval = false;
-    const mxs::Config& cnf = mxs::Config::get();
+    int rval = 0;
 
     if (!cnf.config_check && !mxs_mkdir_all(mxs::logdir(), 0777, false))
     {
-        MXB_ALERT("Cannot create log directory '%s': %s", mxs::logdir(), mxb_strerror(errno));
+        fprintf(stderr, "alert: Cannot create log directory '%s': %s\n", mxs::logdir(), mxb_strerror(errno));
+        rval = MAXSCALE_BADCONFIG;
     }
-    else if (mxs_log_init("maxscale", mxs::logdir(), cnf.log_target))
+    else if (!mxs_log_init("maxscale", mxs::logdir(), cnf.log_target))
     {
-        rval = true;
+        rval = MAXSCALE_INTERNALERROR;
     }
 
     return rval;
@@ -1356,7 +1356,7 @@ int main(int argc, char** argv)
     // Create a startup log so that MXB_ERROR and friends immediately can be used.
     if (!mxb_log_init(MXB_LOG_TARGET_STDERR))
     {
-        cerr << "alert: Could not initialize startup log." << endl;
+        cerr << "alert: Could not initialize the startup log." << endl;
         return MAXSCALE_INTERNALERROR;
     }
 
@@ -1773,9 +1773,11 @@ int main(int argc, char** argv)
     // the actual MaxScale log.
     mxb_log_finish();
 
-    if (!init_log())
+    rc = init_log(cnf);
+
+    if (rc != 0)
     {
-        rc = MAXSCALE_BADCONFIG;
+        cerr << "alert: Could not initialize the MaxScale log." << endl;
         return rc;
     }
 
