@@ -120,7 +120,15 @@ void MXS_SESSION::kill(GWBUF* error)
 
         if (m_state == State::STARTED)
         {
-            cancel_dcalls();
+            // Disable dcalls immediately after the session is killed. This simplifies the logic by removing
+            // the need to check if the session is still alive when the dcall is executed. The dcalls cannot
+            // be cancelled as it is possible that a dcall calls MXS_SESSION::kill() which ends up deleting
+            // the dcall while it's being called.
+            if (!dcalls_suspended())
+            {
+                suspend_dcalls();
+            }
+
             // This signals the rest of the system that the session has started the shutdown procedure.
             // Currently it mainly affects debug assertions inside the protocol code.
             m_state = State::STOPPING;
