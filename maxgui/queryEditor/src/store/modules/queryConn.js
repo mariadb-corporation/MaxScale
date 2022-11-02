@@ -168,15 +168,20 @@ export default {
          * Validate provided sqlConns
          * @param {Object} param.sqlConns - sql connections stored in indexedDB
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
+         * @param {Function} param.customSetSqlConns - custom function for SET_SQL_CONNS mutation
          */
-        async validateConns({ state, commit, dispatch }, { sqlConns, silentValidation = false }) {
+        async validateConns(
+            { state, commit, dispatch },
+            { sqlConns, silentValidation = false, customSetSqlConns }
+        ) {
+            let aliveConnMap = {}
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
                 await dispatch('fetchConnStatus', sqlConns)
-                if (this.vue.$typy(state.conn_status_data, 'alive_conn_map').isEmptyObject) {
+
+                if (this.vue.$typy(state.conn_status_data, 'alive_conn_map').isEmptyObject)
                     dispatch('resetAllStates')
-                    commit('SET_SQL_CONNS', {})
-                } else {
+                else {
                     const {
                         alive_conn_map = {},
                         expired_conn_map = {},
@@ -190,12 +195,13 @@ export default {
 
                     const aliveActiveConn = alive_conn_map[state.active_sql_conn.id] || {}
                     await dispatch('updateAliveActiveConn', aliveActiveConn)
-
-                    commit('SET_SQL_CONNS', alive_conn_map)
+                    aliveConnMap = alive_conn_map
                 }
             } catch (e) {
                 this.vue.$logger('store-queryConn-validateConns').error(e)
             }
+            if (this.vue.$typy(customSetSqlConns).isFunction) customSetSqlConns(aliveConnMap)
+            else commit('SET_SQL_CONNS', aliveConnMap)
             commit('SET_IS_VALIDATING_CONN', false)
         },
 
