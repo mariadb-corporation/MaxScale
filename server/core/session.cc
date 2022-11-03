@@ -457,6 +457,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     json_object_set_new(attr, "connections", connection_arr);
     json_object_set_new(attr, "client", client_connection()->diagnostics());
+    json_object_set_new(attr, "thread", json_integer(m_worker->index()));
 
     json_t* queries = queries_as_json();
     json_object_set_new(attr, "queries", queries);
