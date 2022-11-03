@@ -118,7 +118,15 @@ void MXS_SESSION::kill(GWBUF* error)
 
         if (m_state == State::STARTED)
         {
-            cancel_dcalls();
+            // Disable dcalls immediately after the session is killed. This simplifies the logic by removing
+            // the need to check if the session is still alive when the dcall is executed. The dcalls cannot
+            // be cancelled as it is possible that a dcall calls MXS_SESSION::kill() which ends up deleting
+            // the dcall while it's being called.
+            if (!dcalls_suspended())
+            {
+                suspend_dcalls();
+            }
+
             // This signals the rest of the system that the session has started the shutdown procedure.
             // Currently it mainly affects debug assertions inside the protocol code.
             m_state = State::STOPPING;
@@ -639,8 +647,7 @@ void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(G
 {
     auto session = this;
 
-    auto cb = [session, fn, buffer](mxb::Worker::Callable::Action action)
-    {
+    auto cb = [session, fn, buffer](mxb::Worker::Callable::Action action){
         if (action == mxb::Worker::Callable::EXECUTE)
         {
             MXS_SESSION::Scope scope(session);
@@ -668,8 +675,8 @@ void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(G
 void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds)
 {
     delay_routing(buffer, seconds, [down](GWBUF* buffer){
-            return down->routeQuery(buffer);
-        });
+        return down->routeQuery(buffer);
+    });
 }
 
 const char* session_get_close_reason(const MXS_SESSION* session)
@@ -1122,8 +1129,8 @@ void Session::QueryInfo::book_server_response(SERVER* pServer, bool final_respon
     mxb_assert(!m_complete);
     // A particular server may be reported only exactly once.
     mxb_assert(find_if(m_server_infos.begin(), m_server_infos.end(), [pServer](const ServerInfo& info) {
-                           return info.pServer == pServer;
-                       }) == m_server_infos.end());
+        return info.pServer == pServer;
+    }) == m_server_infos.end());
 
     timespec now;
     clock_gettime(CLOCK_REALTIME_COARSE, &now);
@@ -1536,11 +1543,11 @@ void Session::foreach(std::function<void(Session*)> func)
 {
     mxs::RoutingWorker::execute_concurrently(
         [func]() {
-            for (auto kv : mxs::RoutingWorker::get_current()->session_registry())
-            {
-                func(static_cast<Session*>(kv.second));
-            }
-        });
+        for (auto kv : mxs::RoutingWorker::get_current()->session_registry())
+        {
+            func(static_cast<Session*>(kv.second));
+        }
+    });
 }
 
 // static
@@ -1548,11 +1555,11 @@ void Session::kill_all(SERVICE* service)
 {
     Session::foreach(
         [service](Session* session) {
-            if (session->service == service)
-            {
-                session->kill();
-            }
-        });
+        if (session->service == service)
+        {
+            session->kill();
+        }
+    });
 }
 
 // static
@@ -1560,11 +1567,11 @@ void Session::kill_all(Listener* listener)
 {
     Session::foreach(
         [listener](Session* session) {
-            if (session->listener_data()->m_listener_name == listener->name())
-            {
-                session->kill();
-            }
-        });
+        if (session->listener_data()->m_listener_name == listener->name())
+        {
+            session->kill();
+        }
+    });
 }
 
 const ListenerData* Session::listener_data()
@@ -1680,35 +1687,35 @@ bool Session::move_to(RoutingWorker* pTo)
     m_worker = pTo;     // Set before the move-operation, see DelayedRoutingTask.
 
     auto receive_session = [this, pFrom, pTo, to_be_enabled]() {
-            pTo->session_registry().add(this);
+        pTo->session_registry().add(this);
 
-            m_client_conn->dcb()->set_owner(pTo);
-            m_client_conn->dcb()->set_manager(pTo);
+        m_client_conn->dcb()->set_owner(pTo);
+        m_client_conn->dcb()->set_manager(pTo);
 
-            for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        {
+            pBackend_conn->dcb()->set_owner(pTo);
+            pBackend_conn->dcb()->set_manager(pTo);
+        }
+
+        if (enable_events(to_be_enabled))
+        {
+            if (m_can_pool_backends)
             {
-                pBackend_conn->dcb()->set_owner(pTo);
-                pBackend_conn->dcb()->set_manager(pTo);
+                // Schedule another check.
+                set_can_pool_backends(true);
             }
+        }
+        else
+        {
+            kill();
+        }
 
-            if (enable_events(to_be_enabled))
-            {
-                if (m_can_pool_backends)
-                {
-                    // Schedule another check.
-                    set_can_pool_backends(true);
-                }
-            }
-            else
-            {
-                kill();
-            }
+        set_worker(pTo);
+        resume_dcalls();
 
-            set_worker(pTo);
-            resume_dcalls();
-
-            MXB_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
-        };
+        MXB_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
+    };
     bool posted = pTo->execute(receive_session, mxb::Worker::EXECUTE_QUEUED);
 
     if (!posted)
