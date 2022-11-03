@@ -103,9 +103,9 @@ This component emits the following events
 @get-node-data: { SQL_QUERY_MODE: string, schemaId:string }
 @place-to-editor: v:string. Place text to editor
 @alter-tbl: Node. Alter table node
-@drop-action: { qualified_name:string, type:string }: Node.
-@truncate-tbl: { qualified_name:string }: Node.
-@use-db: { qualified_name:string }: Node.
+@drop-action: sql:string.
+@truncate-tbl: sql:string.
+@use-db: qualified_name:string.
 @load-children: Node. Async event.
 @on-dragging: Event.
 @on-dragend: Event.
@@ -406,6 +406,7 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleEmitDD_opt({ item, opt }) {
+            const { escapeIdentifiers: escape } = this.$helpers
             //TODO: Remove string check for context option, replace it with context type. e.g. CTX_DROP
             switch (opt.text) {
                 case this.$mxs_t('alterTbl'):
@@ -421,13 +422,10 @@ export default {
                 case this.$mxs_t('dropSp'):
                 case this.$mxs_t('dropTrigger'):
                 case this.$mxs_t('dropView'):
-                    this.$emit('drop-action', {
-                        qualified_name: item.qualified_name,
-                        type: item.type,
-                    })
+                    this.$emit('drop-action', `DROP ${item.type} ${escape(item.qualified_name)};`)
                     break
                 case this.$mxs_t('truncateTbl'):
-                    this.$emit('truncate-tbl', item.qualified_name)
+                    this.$emit('truncate-tbl', `truncate ${escape(item.qualified_name)};`)
                     break
             }
         },

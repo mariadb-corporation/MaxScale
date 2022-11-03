@@ -34,47 +34,23 @@ function mockShowingDbListTree() {
 describe('sidebar-ctr', () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
-        const fnEvtMap = {
-            handleGetNodeData: 'get-node-data',
-            handleLoadChildren: 'load-children',
-            useDb: 'use-db',
-            onAlterTable: 'alter-tbl',
-            onDropAction: 'drop-action',
-            onTruncateTbl: 'truncate-tbl',
+        const evtFnMap = {
+            'get-node-data': 'fetchNodePrvwData',
+            'load-children': 'handleLoadChildren',
+            'use-db': 'useDb',
+            'alter-tbl': 'onAlterTable',
+            'drop-action': 'handleOpenExecSqlDlg',
+            'truncate-tbl': 'handleOpenExecSqlDlg',
         }
-        const getNodeDataParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
-        const dummyNode = { key: 'node_key_20', type: 'TABLE', name: 't1', id: 'test.t1' }
-        const useDbParam = 'test'
-        const onDropActionParam = { id: dummyNode.id, type: dummyNode.type }
-        const onTruncateTblParam = 't1'
-        Object.keys(fnEvtMap).forEach(key => {
-            it(`Should call ${key} if ${fnEvtMap[key]} is emitted from schema-tree-ctr`, () => {
-                const spyFn = sinon.spy(SidebarCtr.methods, key)
+        Object.keys(evtFnMap).forEach(evt => {
+            it(`Should call ${evtFnMap[evt]} if ${evt} is emitted from schema-tree-ctr`, () => {
+                const spyFn = sinon.spy(SidebarCtr.methods, evtFnMap[evt])
                 wrapper = mountFactory({
                     computed: { ...mockShowingDbListTree() },
                 })
                 const dbListTree = wrapper.findComponent({ name: 'schema-tree-ctr' })
-                let param
-                switch (key) {
-                    case 'handleGetNodeData':
-                        param = getNodeDataParam
-                        break
-                    case 'handleLoadChildren':
-                    case 'onAlterTable':
-                        param = dummyNode
-                        break
-                    case 'useDb':
-                        param = useDbParam
-                        break
-                    case 'onDropAction':
-                        param = onDropActionParam
-                        break
-                    case 'onTruncateTbl':
-                        param = onTruncateTblParam
-                        break
-                }
-                dbListTree.vm.$emit(fnEvtMap[key], param)
-                spyFn.should.have.been.calledOnceWith(param)
+                dbListTree.vm.$emit(evt)
+                spyFn.should.have.been.called
                 spyFn.restore()
             })
         })
@@ -114,7 +90,7 @@ describe('sidebar-ctr', () => {
 
     describe(`Methods tests`, () => {
         let wrapper
-        it(`Should process handleGetNodeData method as expected`, () => {
+        it(`Should process fetchNodePrvwData method as expected`, () => {
             let clearDataPreviewCallCount = 0
             let queryModeParam, fetchPrvwParams
             const active_session_id = 'SESSION_123_45'
@@ -127,7 +103,7 @@ describe('sidebar-ctr', () => {
                 computed: { getActiveSessionId: () => active_session_id },
             })
             const mockParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
-            wrapper.vm.handleGetNodeData(mockParam)
+            wrapper.vm.fetchNodePrvwData(mockParam)
             expect(clearDataPreviewCallCount).to.be.equals(1)
             expect(queryModeParam).to.be.eql({
                 payload: mockParam.SQL_QUERY_MODE,
@@ -192,23 +168,6 @@ describe('sidebar-ctr', () => {
                 wrapper.vm[fn].should.have.been.calledOnce
                 wrapper.vm[fn].restore()
             })
-        })
-        it(`Should process onDropAction method as expected`, () => {
-            wrapper = mountFactory()
-            const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
-            const mockNode = { type: 'TABLE', id: 'test.Tables.t1', qualified_name: 'test.t1' }
-            wrapper.vm.onDropAction(mockNode) // trigger the method
-            spy.should.have.been.calledOnceWith('DROP TABLE `test`.`t1`;')
-            expect(wrapper.vm.actionName).to.be.equals('DROP TABLE `test`.`t1`')
-            spy.restore()
-        })
-        it(`Should process onTruncateTbl method as expected`, () => {
-            wrapper = mountFactory()
-            const spy = sinon.spy(wrapper.vm, 'handleOpenExecSqlDlg')
-            wrapper.vm.onTruncateTbl('test.t1') // trigger the method
-            spy.should.have.been.calledOnceWith('truncate `test`.`t1`;')
-            expect(wrapper.vm.actionName).to.be.equals('truncate `test`.`t1`')
-            spy.restore()
         })
         it(`Should call exeStmtAction method when confirmExeStatements is called`, () => {
             const mockSql = 'truncate `test`.`t1`;'
@@ -277,7 +236,6 @@ describe('sidebar-ctr', () => {
                     },
                 })
                 await wrapper.find(`.${btn}`).trigger('click')
-                console.log('callCount', callCount)
                 expect(callCount).to.be.equals(1)
             })
         })

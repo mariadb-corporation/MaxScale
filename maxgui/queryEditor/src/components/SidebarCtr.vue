@@ -61,12 +61,12 @@
             <schema-tree-ctr
                 v-show="!is_sidebar_collapsed"
                 class="schema-list-ctr"
-                @get-node-data="handleGetNodeData"
+                @get-node-data="fetchNodePrvwData"
                 @load-children="handleLoadChildren"
                 @use-db="useDb"
                 @alter-tbl="onAlterTable"
-                @drop-action="onDropAction"
-                @truncate-tbl="onTruncateTbl"
+                @drop-action="handleOpenExecSqlDlg"
+                @truncate-tbl="handleOpenExecSqlDlg"
                 v-on="$listeners"
             />
         </keep-alive>
@@ -162,18 +162,10 @@ export default {
             handleAddNewSession: 'querySession/handleAddNewSession',
         }),
 
-        async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
+        async fetchNodePrvwData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
             this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.getActiveSessionId })
-            switch (SQL_QUERY_MODE) {
-                case this.SQL_QUERY_MODES.PRVW_DATA:
-                case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    await this.fetchPrvw({
-                        tblId: schemaId,
-                        prvwMode: SQL_QUERY_MODE,
-                    })
-                    break
-            }
+            await this.fetchPrvw({ tblId: schemaId, prvwMode: SQL_QUERY_MODE })
         },
         async handleLoadChildren(node) {
             await this.loadChildNodes(node)
@@ -198,23 +190,7 @@ export default {
             await this.queryAlterTblSuppData()
             await this.queryTblCreationInfo(node)
         },
-        /**
-         * @param {String} payload.qualified_name - identifier
-         * @param {String} payload.type - db tree node type
-         */
-        onDropAction({ qualified_name, type }) {
-            const { escapeIdentifiers: escape } = this.$helpers
-            this.handleOpenExecSqlDlg(`DROP ${type} ${escape(qualified_name)};`)
-        },
 
-        /**
-         * @param {String} qualified_name - identifier
-         */
-        onTruncateTbl(qualified_name) {
-            const { escapeIdentifiers: escape } = this.$helpers
-            const sql = `truncate ${escape(qualified_name)};`
-            this.handleOpenExecSqlDlg(sql)
-        },
         handleOpenExecSqlDlg(sql) {
             this.$emit('update:execSqlDlg', {
                 ...this.execSqlDlg,
