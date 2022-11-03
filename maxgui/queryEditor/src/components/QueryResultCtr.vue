@@ -116,7 +116,7 @@ export default {
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
             getActiveSessionId: 'querySession/getActiveSessionId',
-            getActivePrvwTblNode: 'schemaSidebar/getActivePrvwTblNode',
+            getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         componentDynDim() {
             /*
@@ -171,7 +171,7 @@ export default {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
         activePrvwNodeQualifiedName() {
-            return this.$typy(this.getActivePrvwTblNode, 'qualified_name').safeString
+            return this.$typy(this.getActivePrvwNode, 'qualified_name').safeString
         },
     },
 

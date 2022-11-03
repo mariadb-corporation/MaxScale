@@ -214,8 +214,8 @@ export default {
         },
         getCurrDbTree: (state, getters, rootState) =>
             state.db_tree_map[rootState.wke.active_wke_id] || {},
-        getActivePrvwTblNode: (state, getters) => {
-            return getters.getCurrDbTree.active_prvw_tbl_node || {}
+        getActivePrvwNode: (state, getters) => {
+            return getters.getCurrDbTree.active_prvw_node || {}
         },
         getDbTreeData: (state, getters) => {
             return getters.getCurrDbTree.data || []

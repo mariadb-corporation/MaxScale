@@ -45,7 +45,7 @@ export default {
             curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
         ...mapGetters({
-            getActivePrvwTblNode: 'schemaSidebar/getActivePrvwTblNode',
+            getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         activeView: {
@@ -82,7 +82,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await this.fetchPrvw({
-                            qualified_name: this.$typy(this.getActivePrvwTblNode, 'qualified_name')
+                            qualified_name: this.$typy(this.getActivePrvwNode, 'qualified_name')
                                 .safeString,
                             query_mode,
                         })

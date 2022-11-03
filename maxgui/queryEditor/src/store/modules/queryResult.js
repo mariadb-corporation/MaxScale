@@ -337,7 +337,7 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const activePrvwTblNode = rootGetters['schemaSidebar/getActivePrvwTblNode']
+            const activePrvwNode = rootGetters['schemaSidebar/getActivePrvwNode']
             for (const mode of prvwModes) {
                 const data = scope.$helpers.stringifyClone(
                     scope.$typy(getters.getPrvwData(mode), 'data.attributes.results[0]')
@@ -354,7 +354,7 @@ export default {
                             break
                     }
                     resSets.push({
-                        id: `${resName} of ${activePrvwTblNode.qualified_name}`,
+                        id: `${resName} of ${activePrvwNode.qualified_name}`,
                         ...data,
                     })
                 }
