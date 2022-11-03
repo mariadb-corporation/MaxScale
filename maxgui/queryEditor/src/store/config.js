@@ -70,18 +70,6 @@ export const NODE_GROUP_CHILD_TYPES = Object.freeze({
 })
 
 export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
-// schema tree node context option types
-export const SQL_NODE_CTX_OPT_TYPES = Object.freeze({
-    CLIPBOARD: 'CLIPBOARD',
-    TXT_EDITOR: { INSERT: 'INSERT', QUERY: 'QUERY' },
-    DDL: { DD: 'DD' }, // Data definition
-    ADMIN: { USE: 'USE' }, // Data definition
-})
-export const NODE_ACTION_TYPES = Object.freeze({
-    DROP: 'Drop',
-    ALTER: 'Alter',
-    TRUNCATE: 'Truncate',
-})
 
 // Option types for context menu in result-data-table
 export const SQL_RES_TBL_CTX_OPT_TYPES = Object.freeze({
@@ -95,6 +83,19 @@ export const SQL_QUERY_MODES = Object.freeze({
     HISTORY: 'HISTORY',
     SNIPPETS: 'SNIPPETS',
 })
+
+// schema tree node context option types
+export const NODE_CTX_TYPES = Object.freeze({
+    DROP: 'Drop',
+    ALTER: 'Alter',
+    TRUNCATE: 'Truncate',
+    USE: 'Use',
+    INSERT: 'Insert',
+    CLIPBOARD: 'Clipboard',
+    PRVW_DATA: SQL_QUERY_MODES.PRVW_DATA,
+    PRVW_DATA_DETAILS: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+})
+
 export const SQL_DDL_ALTER_SPECS = Object.freeze({
     COLUMNS: 'COLUMNS',
 })

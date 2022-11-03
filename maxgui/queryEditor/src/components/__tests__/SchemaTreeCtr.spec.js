@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import SchemaTree from '../SchemaTreeCtr.vue'
 import { lodash } from '@share/utils/helpers'
-
+import { NODE_CTX_TYPES, NODE_TYPES } from '@queryEditorSrc/store/config'
 const mountFactory = opts =>
     mount(
         lodash.merge(
@@ -108,6 +108,17 @@ const dummy_db_tree_data = [
         ],
     },
 ]
+const dummy_schema_node = dummy_db_tree_data[0]
+const dummy_tbl_node = {
+    id: 'test.Tables.t1',
+    qualified_name: 'test.t1',
+    type: 'TABLE',
+    name: 't1',
+    draggable: true,
+    canBeHighlighted: true,
+    children: [],
+}
+
 describe(`schema-tree-ctr - mxs-treeview tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
@@ -148,25 +159,23 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
           from mxs-treeview component`, () => {
             let fnSpy = sinon.spy(SchemaTree.methods, fn)
             wrapper = mountFactory({ methods: { handleOpenCtxMenu: () => null } })
-            let param = dummy_db_tree_data[0]
-            if (fnEvtMap[fn] === 'item:contextmenu')
-                param = { e: 'Event', item: dummy_db_tree_data[0] }
+            let param = dummy_schema_node
+            if (fnEvtMap[fn] === 'item:contextmenu') param = { e: 'Event', item: dummy_schema_node }
             wrapper.find('.mxs-treeview').vm.$emit(fnEvtMap[fn], param)
             fnSpy.should.have.been.calledOnceWith(param)
             fnSpy.restore()
         })
     })
     it(`Should bold SCHEMA type node if active_db value equals to the name of that node`, () => {
-        const schemaNode = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
         wrapper = mountFactory({
             shallow: false,
             computed: {
-                active_db: () => schemaNode.name,
+                active_db: () => dummy_schema_node.name,
             },
         })
         const schemaNodeNameEle = wrapper
             .find('.mxs-treeview')
-            .find(`#node-tooltip-activator-${schemaNode.key}`)
+            .find(`#node-tooltip-activator-${dummy_schema_node.key}`)
             .find('.node-name')
         expect(schemaNodeNameEle.classes()).to.include.members(['font-weight-bold'])
     })
@@ -175,7 +184,7 @@ describe(`schema-tree-ctr - node tooltip tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should pass accurate data to v-tooltip via props`, () => {
-        wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_db_tree_data[0] }) })
+        wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_schema_node }) })
         const { value, disabled, right, nudgeRight, activator } = wrapper.findComponent({
             name: 'v-tooltip',
         }).vm.$props
@@ -183,25 +192,23 @@ describe(`schema-tree-ctr - node tooltip tests`, () => {
         expect(disabled).to.be.equals(wrapper.vm.$data.isDragging)
         expect(right).to.be.true
         expect(nudgeRight).to.be.equals(45)
-        expect(activator).to.be.equals(`#node-tooltip-activator-${dummy_db_tree_data[0].key}`)
+        expect(activator).to.be.equals(`#node-tooltip-activator-${dummy_schema_node.key}`)
     })
-    it(`Should add an id attribute accurately to each first node level`, () => {
+    it(`Should add an id attribute accurately to each node`, () => {
         wrapper = mountFactory({ shallow: false })
-        const nodeKeys = dummy_db_tree_data.map(node => node.key)
-        nodeKeys.forEach(key => {
-            expect(
-                wrapper
-                    .find('.mxs-treeview')
-                    .find(`#node-tooltip-activator-${key}`)
-                    .exists()
-            ).to.be.true
-        })
+        const nodeKey = dummy_schema_node.key
+        expect(
+            wrapper
+                .find('.mxs-treeview')
+                .find(`#node-tooltip-activator-${nodeKey}`)
+                .exists()
+        ).to.be.true
     })
     it(`Should assign hovered item to hoveredNode when item:hovered event is emitted
     from mxs-treeview component`, () => {
         wrapper = mountFactory()
-        wrapper.find('.mxs-treeview').vm.$emit('item:hovered', dummy_db_tree_data[0])
-        expect(wrapper.vm.$data.hoveredNode).to.be.deep.equals(dummy_db_tree_data[0])
+        wrapper.find('.mxs-treeview').vm.$emit('item:hovered', dummy_schema_node)
+        expect(wrapper.vm.$data.hoveredNode).to.be.deep.equals(dummy_schema_node)
     })
 })
 describe(`schema-tree-ctr - draggable node tests`, () => {
@@ -214,7 +221,7 @@ describe(`schema-tree-ctr - draggable node tests`, () => {
             methods: { onNodeDragStart: e => (evtParam = e) },
         })
         sinon.spy(wrapper.vm, 'onNodeDragStart')
-        const draggableNode = dummy_db_tree_data.find(node => node.draggable)
+        const draggableNode = dummy_schema_node
         const draggableNodeEle = wrapper
             .find('.mxs-treeview')
             .find(`#node-tooltip-activator-${draggableNode.key}`)
@@ -224,7 +231,7 @@ describe(`schema-tree-ctr - draggable node tests`, () => {
 })
 describe(`schema-tree-ctr - context menu tests`, () => {
     let wrapper
-    const activeCtxNode = dummy_db_tree_data[0]
+
     /**
      * @param {Object} param.wrapper - mounted wrapper (not shallow mount)
      *  @param {Object} param.node - tree node
@@ -237,46 +244,47 @@ describe(`schema-tree-ctr - context menu tests`, () => {
     }
     afterEach(() => wrapper.destroy())
     it(`Should pass accurate data to mxs-sub-menu via props`, async () => {
-        wrapper = mountFactory({ data: () => ({ activeCtxNode }) }) // condition to render the menu
-        await wrapper.setData({ activeCtxItemOpts: wrapper.vm.getNodeOpts(activeCtxNode) })
+        // condition to render the menu
+        wrapper = mountFactory({ data: () => ({ activeCtxNode: dummy_schema_node }) })
+        await wrapper.setData({ activeCtxItemOpts: wrapper.vm.genNodeOpts(dummy_schema_node) })
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const { value, left, items, activator } = menu.vm.$props
         expect(value).to.be.equals(wrapper.vm.showCtxMenu)
         expect(left).to.be.true
         expect(items).to.be.deep.equals(wrapper.vm.$data.activeCtxItemOpts)
-        expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxNode.key}`)
-        expect(menu.vm.$vnode.key).to.be.equals(activeCtxNode.key)
+        expect(activator).to.be.equals(`#ctx-menu-activator-${dummy_schema_node.key}`)
+        expect(menu.vm.$vnode.key).to.be.equals(dummy_schema_node.key)
     })
-    it(`Should handle @item-click event emitted from mxs-sub-menu`, async () => {
-        wrapper = mountFactory({ data: () => ({ activeCtxNode }) })
+    it(`Should handle @item-click event emitted from mxs-sub-menu`, () => {
+        wrapper = mountFactory({ data: () => ({ activeCtxNode: dummy_schema_node }) })
         const fnSpy = sinon.spy(wrapper.vm, 'optionHandler')
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const mockOpt = { text: 'Qualified Name', type: 'INSERT' }
-        await menu.vm.$emit('item-click', mockOpt)
-        fnSpy.should.have.been.calledOnceWithExactly({ node: activeCtxNode, opt: mockOpt })
+        menu.vm.$emit('item-click', mockOpt)
+        fnSpy.should.have.been.calledOnceWithExactly({ node: dummy_schema_node, opt: mockOpt })
         fnSpy.restore()
     })
     it(`Should show more option icon button when hovering a tree node`, async () => {
         wrapper = mountFactory({ shallow: false })
-        const btn = await getMoreOptIcon({ wrapper, node: activeCtxNode })
+        const btn = await getMoreOptIcon({ wrapper, node: dummy_schema_node })
         expect(btn.exists()).to.be.true
     })
     it(`Should call handleOpenCtxMenu when clicking more option icon button`, async () => {
         wrapper = mountFactory({ shallow: false })
         const fnSpy = sinon.spy(wrapper.vm, 'handleOpenCtxMenu')
-        const btn = await getMoreOptIcon({ wrapper, node: activeCtxNode })
+        const btn = await getMoreOptIcon({ wrapper, node: dummy_schema_node })
         await btn.trigger('click')
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should return base opts for system node when calling getNodeOpts method`, () => {
+    it(`Should return base opts for system node when calling genNodeOpts method`, () => {
         wrapper = mountFactory()
         const sysNode = dummy_db_tree_data.find(node => node.isSys)
-        expect(wrapper.vm.getNodeOpts(sysNode)).to.be.deep.equals(
+        expect(wrapper.vm.genNodeOpts(sysNode)).to.be.deep.equals(
             wrapper.vm.baseOptsMap[sysNode.type]
         )
     })
-    it(`Should return accurate opts for user node when calling getNodeOpts method`, () => {
+    it(`Should return accurate opts for user node when calling genNodeOpts method`, () => {
         wrapper = mountFactory()
         const userNode = dummy_db_tree_data.find(node => !node.isSys)
         const expectOpts = [
@@ -284,40 +292,49 @@ describe(`schema-tree-ctr - context menu tests`, () => {
             { divider: true },
             ...wrapper.vm.genUserNodeOpts(userNode),
         ]
-        expect(wrapper.vm.getNodeOpts(userNode)).to.be.deep.equals(expectOpts)
+        expect(wrapper.vm.genNodeOpts(userNode)).to.be.deep.equals(expectOpts)
     })
-    const mockOpts = [
-        { text: 'Use database', type: 'USE' },
-        { text: 'Alter Table', type: 'DD' },
-        { text: 'Qualified Name', type: 'INSERT' },
-        { text: 'Preview Data (top 1000)', type: 'QUERY' },
-        { text: 'Qualified Name (Quoted)', type: 'CLIPBOARD' },
-    ]
+
+    const mockOpts = Object.values(NODE_CTX_TYPES).map(type => ({ type }))
     mockOpts.forEach(opt => {
-        it(`Should handle optionHandler method as expected`, () => {
-            const fnsToBeCalled = ['handleEmitDD_opt', 'handleTxtEditorOpt', 'handleTxtOpt']
-            let methods = {}
-            for (const fn of fnsToBeCalled) {
-                methods[fn] = () => null
-            }
-            wrapper = mountFactory({ methods: { ...methods } })
-            let fnSpy
-            // All types will call corresponding handler function except `USE` type
+        it(`optionHandler should emit event as expected if context type is ${opt.type}`, () => {
+            wrapper = mountFactory()
+            const node = opt.type === 'Use' ? dummy_schema_node : dummy_tbl_node
+            let fnSpy = sinon.spy(wrapper.vm, 'handleTxtOpt')
+            wrapper.vm.optionHandler({ node, opt })
             switch (opt.type) {
-                case 'DD':
-                    fnSpy = sinon.spy(wrapper.vm, 'handleEmitDD_opt')
+                case NODE_CTX_TYPES.USE:
+                    expect(wrapper.emitted()['use-db'][0][0]).to.be.eql(
+                        dummy_schema_node.qualified_name
+                    )
                     break
-                case 'INSERT':
-                case 'QUERY':
-                    fnSpy = sinon.spy(wrapper.vm, 'handleTxtEditorOpt')
+                case NODE_CTX_TYPES.PRVW_DATA:
+                case NODE_CTX_TYPES.PRVW_DATA_DETAILS:
+                    expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
+                        SQL_QUERY_MODE: opt.type,
+                        schemaId: node.qualified_name,
+                    })
                     break
-                case 'CLIPBOARD':
-                    fnSpy = sinon.spy(wrapper.vm, 'handleTxtOpt')
+                case NODE_CTX_TYPES.INSERT:
+                case NODE_CTX_TYPES.CLIPBOARD:
+                    fnSpy.should.have.been.calledWith({ node, opt })
+                    break
+                case NODE_CTX_TYPES.DROP:
+                    expect(wrapper.emitted()['drop-action'][0][0]).to.be.eql(
+                        'DROP ' + dummy_tbl_node.type + ' `test`.`t1`;'
+                    )
+                    break
+                case NODE_CTX_TYPES.ALTER:
+                    expect(wrapper.emitted()['alter-tbl'][0][0]).to.be.eql(
+                        wrapper.vm.minimizeNode(dummy_tbl_node)
+                    )
+                    break
+                case NODE_CTX_TYPES.TRUNCATE:
+                    expect(wrapper.emitted()['truncate-tbl'][0][0]).to.be.eql(
+                        'TRUNCATE TABLE `test`.`t1`;'
+                    )
                     break
             }
-            wrapper.vm.optionHandler({ node: activeCtxNode, opt })
-            if (opt.type === 'USE') expect(wrapper.emitted()).to.have.property('use-db')
-            else fnSpy.should.have.been.calledWith({ node: activeCtxNode, opt })
         })
     })
 })
@@ -325,62 +342,55 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
     let wrapper
     it(`Should return accurate value for nodesHaveCtxMenu computed property`, () => {
         wrapper = mountFactory()
-        expect(wrapper.vm.nodesHaveCtxMenu).to.eql([
-            'SCHEMA',
-            'TABLE',
-            'COLUMN',
-            'TRIGGER',
-            'PROCEDURE',
-            'VIEW',
-        ])
+        expect(wrapper.vm.nodesHaveCtxMenu).to.eql(Object.values(NODE_TYPES))
     })
-    it(`Should return accurate value for queryOpts computed property`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.queryOpts).to.eql([
-            { text: wrapper.vm.$mxs_t('previewData'), type: 'QUERY' },
-            { text: wrapper.vm.$mxs_t('viewDetails'), type: 'QUERY' },
-        ])
+    Object.values(NODE_TYPES).forEach(type => {
+        it(`baseOptsMap should return accurate value for node type ${type} `, () => {
+            wrapper = mountFactory()
+            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = NODE_TYPES
+            const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = NODE_CTX_TYPES
+            switch (type) {
+                case SCHEMA:
+                    expect(wrapper.vm.baseOptsMap[type]).to.eql([
+                        { text: wrapper.vm.$mxs_t('useDb'), type: USE },
+                        ...wrapper.vm.txtOpts,
+                    ])
+                    break
+                case TBL:
+                case VIEW:
+                    expect(wrapper.vm.baseOptsMap[type]).to.eql([
+                        {
+                            text: wrapper.vm.$mxs_t('previewData'),
+                            type: PRVW_DATA,
+                        },
+                        {
+                            text: wrapper.vm.$mxs_t('viewDetails'),
+                            type: PRVW_DATA_DETAILS,
+                        },
+                        { divider: true },
+                        ...wrapper.vm.txtOpts,
+                    ])
+                    break
+                case SP:
+                case COL:
+                case TRIGGER:
+                    expect(wrapper.vm.baseOptsMap[type]).to.eql(wrapper.vm.txtOpts)
+                    break
+            }
+        })
     })
-    it(`Should return accurate value for insertOpts computed property`, () => {
+    it(`Should return accurate value for txtOpts computed property`, () => {
         wrapper = mountFactory()
-        expect(wrapper.vm.insertOpts).to.eql([
+        expect(wrapper.vm.txtOpts).to.eql([
             {
                 text: wrapper.vm.$mxs_t('placeToEditor'),
-                children: wrapper.vm.genTxtOpts('INSERT'),
+                children: wrapper.vm.genTxtOpts(NODE_CTX_TYPES.INSERT),
             },
-        ])
-    })
-    it(`Should return accurate value for clipboardOpts computed property`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.clipboardOpts).to.eql([
             {
                 text: wrapper.vm.$mxs_t('copyToClipboard'),
-                children: wrapper.vm.genTxtOpts('CLIPBOARD'),
+                children: wrapper.vm.genTxtOpts(NODE_CTX_TYPES.CLIPBOARD),
             },
         ])
-    })
-    it(`Should return accurate value for txtEditorRelatedOpts computed property`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.txtEditorRelatedOpts).to.eql([
-            ...wrapper.vm.queryOpts,
-            { divider: true },
-            ...wrapper.vm.insertOpts,
-        ])
-    })
-    it(`Should return accurate value for baseOptsMap computed property`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.baseOptsMap).to.eql({
-            SCHEMA: [
-                { text: wrapper.vm.$mxs_t('useDb'), type: 'USE' },
-                ...wrapper.vm.insertOpts,
-                ...wrapper.vm.clipboardOpts,
-            ],
-            TABLE: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
-            VIEW: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
-            PROCEDURE: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
-            COLUMN: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
-            TRIGGER: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
-        })
     })
 
     const expectedBoolVal = [true, false]
@@ -393,7 +403,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             expect(wrapper.vm.filter(mockSearchItem, searchKeyword, textKey)).to.be[v]
         })
         it(`Should return ${v} when showCtxBtn method is called`, () => {
-            const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
+            const node = dummy_schema_node
             wrapper = mountFactory({
                 data: () => ({
                     // mock activeCtxNode
@@ -404,7 +414,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         })
     })
     it(`Should return nodes with less properties when minimizeNode is called`, () => {
-        const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
+        const node = dummy_schema_node
         wrapper = mountFactory()
         const minimizeNode = wrapper.vm.minimizeNode(node)
         expect(Object.keys(minimizeNode).length).to.be.below(Object.keys(node).length)
@@ -417,7 +427,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         })
     })
     it(`Should emit load-children event when handleLoadChildren is called`, async () => {
-        const tablesNode = dummy_db_tree_data.find(node => node.type === 'SCHEMA').children[0]
+        const tablesNode = dummy_schema_node.children[0]
         let isEmitted = false
         let expectedArg
         const handler = param => {
@@ -432,15 +442,10 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         expect(isEmitted).to.be.true
         expect(expectedArg).to.be.eql(tablesNode)
     })
-    it(`Should handle updateActiveNode as expected`, () => {
-        const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
-        wrapper = mountFactory()
-        wrapper.vm.updateActiveNode(node)
-        expect(wrapper.vm.activeNodes).to.be.eql(wrapper.vm.minimizeNodes([node]))
-    })
-    const txtOptTypes = ['INSERT', 'CLIPBOARD']
+
+    const txtOptTypes = [NODE_CTX_TYPES.INSERT, NODE_CTX_TYPES.CLIPBOARD]
     txtOptTypes.forEach(type => {
-        it(`Should return valid text option for type ${type} genTxtOpts is called`, () => {
+        it(`genTxtOpts should return valid text option for context type ${type}`, () => {
             wrapper = mountFactory()
             expect(wrapper.vm.genTxtOpts(type)).to.be.eql([
                 { text: wrapper.vm.$mxs_t('qualifiedNameQuoted'), type },
@@ -448,35 +453,6 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
                 { text: wrapper.vm.$mxs_t('nameQuoted'), type },
                 { text: wrapper.vm.$mxs_t('name'), type },
             ])
-        })
-    })
-
-    const prvw_node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
-    const mockQueryOpts = [
-        { text: 'Preview Data (top 1000)', type: 'QUERY' },
-        { text: 'View Details', type: 'QUERY' },
-    ]
-    mockQueryOpts.forEach(opt => {
-        it(`Should handle ${opt.text} option as expected when handleEmitQueryOpt is called`, () => {
-            wrapper = mountFactory()
-            let updateActiveNodeSpy = sinon.spy(wrapper.vm, 'updateActiveNode')
-            wrapper.vm.handleEmitQueryOpt({ node: prvw_node, opt })
-            updateActiveNodeSpy.should.have.been.calledOnceWithExactly(prvw_node)
-            expect(wrapper.emitted()).to.have.property('get-node-data')
-            switch (opt.text) {
-                case wrapper.vm.$mxs_t('previewData'):
-                    expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
-                        SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA,
-                        schemaId: prvw_node.id,
-                    })
-                    break
-                case wrapper.vm.$mxs_t('viewDetails'):
-                    expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
-                        SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                        schemaId: prvw_node.id,
-                    })
-                    break
-            }
         })
     })
     const mockTxtOptStrs = ['Qualified Name (Quoted)', 'Qualified Name', 'Name (Quoted)', 'Name']
@@ -487,17 +463,17 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             txtOptTypes.forEach(type => {
                 let copySpy
                 if (type === 'CLIPBOARD') copySpy = sinon.spy(document, 'execCommand')
-                wrapper.vm.handleTxtOpt({ node: prvw_node, opt: { text, type } })
+                wrapper.vm.handleTxtOpt({ node: dummy_schema_node, opt: { text, type } })
                 switch (type) {
                     case 'INSERT':
                         expect(wrapper.emitted()).to.have.property('place-to-editor')
                         if (text.includes('(Quoted)'))
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
-                                wrapper.vm.$helpers.escapeIdentifiers(prvw_node.id)
+                                wrapper.vm.$helpers.escapeIdentifiers(dummy_schema_node.id)
                             )
                         else
                             expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
-                                prvw_node.name
+                                dummy_schema_node.name
                             )
                         break
                     case 'CLIPBOARD':
@@ -508,5 +484,4 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             })
         })
     })
-    //TODO: Add more method tests
 })

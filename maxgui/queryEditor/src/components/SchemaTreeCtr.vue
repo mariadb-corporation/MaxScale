@@ -131,8 +131,7 @@ export default {
             SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
-            SQL_NODE_CTX_OPT_TYPES: state => state.queryEditorConfig.config.SQL_NODE_CTX_OPT_TYPES,
-            NODE_ACTION_TYPES: state => state.queryEditorConfig.config.NODE_ACTION_TYPES,
+            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
             active_db: state => state.queryConn.active_db,
@@ -148,58 +147,38 @@ export default {
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
         },
-        queryOpts() {
-            const {
-                TXT_EDITOR: { QUERY },
-            } = this.SQL_NODE_CTX_OPT_TYPES
-            return [
-                { text: this.$mxs_t('previewData'), type: QUERY },
-                { text: this.$mxs_t('viewDetails'), type: QUERY },
-            ]
-        },
-        insertOpts() {
-            const {
-                TXT_EDITOR: { INSERT },
-            } = this.SQL_NODE_CTX_OPT_TYPES
+        txtOpts() {
             return [
                 {
                     text: this.$mxs_t('placeToEditor'),
-                    children: this.genTxtOpts(INSERT),
+                    children: this.genTxtOpts(this.NODE_CTX_TYPES.INSERT),
                 },
-            ]
-        },
-        clipboardOpts() {
-            const { CLIPBOARD } = this.SQL_NODE_CTX_OPT_TYPES
-            return [
                 {
                     text: this.$mxs_t('copyToClipboard'),
-                    children: this.genTxtOpts(CLIPBOARD),
+                    children: this.genTxtOpts(this.NODE_CTX_TYPES.CLIPBOARD),
                 },
             ]
-        },
-        txtEditorRelatedOpts() {
-            return [...this.queryOpts, { divider: true }, ...this.insertOpts]
         },
         // basic node options for different node types
         baseOptsMap() {
             const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
-            const {
-                ADMIN: { USE },
-            } = this.SQL_NODE_CTX_OPT_TYPES
+            const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = this.NODE_CTX_TYPES
+
+            const tblViewOpts = [
+                { text: this.$mxs_t('previewData'), type: PRVW_DATA },
+                { text: this.$mxs_t('viewDetails'), type: PRVW_DATA_DETAILS },
+                { divider: true },
+                ...this.txtOpts,
+            ]
             return {
-                [SCHEMA]: [
-                    { text: this.$mxs_t('useDb'), type: USE },
-                    ...this.insertOpts,
-                    ...this.clipboardOpts,
-                ],
-                [TBL]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
-                [VIEW]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
-                [SP]: [...this.insertOpts, ...this.clipboardOpts],
-                [COL]: [...this.insertOpts, ...this.clipboardOpts],
-                [TRIGGER]: [...this.insertOpts, ...this.clipboardOpts],
+                [SCHEMA]: [{ text: this.$mxs_t('useDb'), type: USE }, ...this.txtOpts],
+                [TBL]: tblViewOpts,
+                [VIEW]: tblViewOpts,
+                [SP]: this.txtOpts,
+                [COL]: this.txtOpts,
+                [TRIGGER]: this.txtOpts,
             }
         },
-
         // Use either getActivePrvwTblNode or getAlteredActiveNode
         activeNodes: {
             get() {
@@ -251,12 +230,6 @@ export default {
             SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
             SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
-        filter(node, search, textKey) {
-            return this.$helpers.ciStrIncludes(node[textKey], search)
-        },
-        showCtxBtn(node) {
-            return Boolean(this.activeCtxNode && node.id === this.activeCtxNode.id)
-        },
         watch_expandedNodes() {
             this.unwatch_expandedNodes = this.$watch(
                 'expandedNodes',
@@ -285,7 +258,27 @@ export default {
                 { deep: true }
             )
         },
-
+        filter(node, search, textKey) {
+            return this.$helpers.ciStrIncludes(node[textKey], search)
+        },
+        showCtxBtn(node) {
+            return Boolean(this.activeCtxNode && node.id === this.activeCtxNode.id)
+        },
+        iconSheet(node) {
+            const { SCHEMA } = this.NODE_TYPES
+            const { TBL_G, VIEW_G, SP_G } = this.NODE_GROUP_TYPES
+            switch (node.type) {
+                case SCHEMA:
+                    return '$vuetify.icons.mxs_database'
+                case TBL_G:
+                    return '$vuetify.icons.mxs_table'
+                case VIEW_G:
+                    return 'mdi-view-dashboard-outline'
+                case SP_G:
+                    return '$vuetify.icons.mxs_storedProcedures'
+                //TODO: find icons for COL_G, TRIGGER_G
+            }
+        },
         /**
          * @param {Array} node - a node in db_tree_map
          * @returns {Array} minimized node
@@ -304,42 +297,18 @@ export default {
         minimizeNodes(nodes) {
             return nodes.map(this.minimizeNode)
         },
-
-        async handleLoadChildren(node) {
-            await this.asyncEmit('load-children', node)
-        },
-        handleOpenCtxMenu({ e, node }) {
-            e.stopPropagation()
-            if (this.$helpers.lodash.isEqual(this.activeCtxNode, node)) {
-                this.showCtxMenu = false
-                this.activeCtxNode = null
-            } else {
-                if (!this.showCtxMenu) this.showCtxMenu = true
-                this.activeCtxNode = node
-                this.activeCtxItemOpts = this.getNodeOpts(node)
-            }
-        },
-        updateActiveNode(node) {
-            this.activeNodes = [node]
-        },
-
         /**
          * @param {Object} node - a node in db_tree_map
          * @returns {Array} context options for non system node
          */
         genUserNodeOpts(node) {
             const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
-            //TODO: get rid of SQL_NODE_CTX_OPT_TYPES, replace it with NODE_ACTION_TYPES
-            const {
-                DDL: { DD },
-            } = this.SQL_NODE_CTX_OPT_TYPES
-
-            const { DROP, ALTER, TRUNCATE } = this.NODE_ACTION_TYPES
+            const { DROP, ALTER, TRUNCATE } = this.NODE_CTX_TYPES
             const label = this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())
 
-            const dropOpt = { text: `${DROP} ${label}`, type: DD, actionType: DROP }
-            const alterOpt = { text: `${ALTER} ${label}`, type: DD, actionType: ALTER }
-            const truncateOpt = { text: `${TRUNCATE} ${label}`, type: DD, actionType: TRUNCATE }
+            const dropOpt = { text: `${DROP} ${label}`, type: DROP }
+            const alterOpt = { text: `${ALTER} ${label}`, type: ALTER }
+            const truncateOpt = { text: `${TRUNCATE} ${label}`, type: TRUNCATE }
 
             switch (node.type) {
                 case SCHEMA:
@@ -368,27 +337,11 @@ export default {
                 { text: this.$mxs_t('name'), type },
             ]
         },
-
-        /**
-         * @param {Object} node - node
-         * @param {Object} opt - context menu option
-         */
-        handleEmitQueryOpt({ node, opt }) {
-            this.updateActiveNode(node)
-            switch (opt.text) {
-                case this.$mxs_t('previewData'):
-                    this.$emit('get-node-data', {
-                        SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
-                        schemaId: node.qualified_name,
-                    })
-                    break
-                case this.$mxs_t('viewDetails'):
-                    this.$emit('get-node-data', {
-                        SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                        schemaId: node.qualified_name,
-                    })
-                    break
-            }
+        genNodeOpts(node) {
+            const baseOpts = this.baseOptsMap[node.type]
+            return node.isSys
+                ? baseOpts
+                : [...baseOpts, { divider: true }, ...this.genUserNodeOpts(node)]
         },
         /**
          * Both INSERT and CLIPBOARD types have same options.
@@ -397,10 +350,6 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleTxtOpt({ node, opt }) {
-            const {
-                CLIPBOARD,
-                TXT_EDITOR: { INSERT },
-            } = this.SQL_NODE_CTX_OPT_TYPES
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('qualifiedNameQuoted'):
@@ -416,6 +365,7 @@ export default {
                     v = node.name
                     break
             }
+            const { INSERT, CLIPBOARD } = this.NODE_CTX_TYPES
             switch (opt.type) {
                 case INSERT:
                     this.$emit('place-to-editor', v)
@@ -425,97 +375,16 @@ export default {
                     break
             }
         },
-        /**
-         * @param {Object} node - node
-         * @param {Object} opt - context menu option
-         */
-        handleEmitDD_opt({ node, opt }) {
-            const { escapeIdentifiers: escape } = this.$helpers
-            const { DROP, ALTER, TRUNCATE } = this.NODE_ACTION_TYPES
-            const { TBL } = this.NODE_TYPES
-            switch (opt.actionType) {
-                case DROP:
-                    this.$emit('drop-action', `DROP ${node.type} ${escape(node.qualified_name)};`)
-                    break
-                case ALTER:
-                    if (node.type === TBL) this.$emit('alter-tbl', this.minimizeNode(node))
-                    break
-                case TRUNCATE:
-                    if (node.type === TBL)
-                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(node.qualified_name)};`)
-                    break
+        handleOpenCtxMenu({ e, node }) {
+            e.stopPropagation()
+            if (this.$helpers.lodash.isEqual(this.activeCtxNode, node)) {
+                this.showCtxMenu = false
+                this.activeCtxNode = null
+            } else {
+                if (!this.showCtxMenu) this.showCtxMenu = true
+                this.activeCtxNode = node
+                this.activeCtxItemOpts = this.genNodeOpts(node)
             }
-        },
-        /**
-         * @param {Object} node - node
-         * @param {Object} opt - context menu option
-         */
-        handleTxtEditorOpt({ node, opt }) {
-            const {
-                TXT_EDITOR: { INSERT, QUERY },
-            } = this.SQL_NODE_CTX_OPT_TYPES
-            this.SET_CURR_EDITOR_MODE({
-                id: this.getActiveSessionId,
-                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
-            })
-            switch (opt.type) {
-                case QUERY:
-                    this.handleEmitQueryOpt({ node, opt })
-                    break
-                case INSERT:
-                    this.handleTxtOpt({ node, opt })
-                    break
-            }
-        },
-        /**
-         * @param {Object} node - node
-         * @param {Object} opt - context menu option
-         */
-        optionHandler({ node, opt }) {
-            const {
-                CLIPBOARD,
-                TXT_EDITOR: { INSERT, QUERY },
-                DDL: { DD },
-                ADMIN: { USE },
-            } = this.SQL_NODE_CTX_OPT_TYPES
-            switch (opt.type) {
-                case DD:
-                    this.handleEmitDD_opt({ node, opt })
-                    break
-                case USE:
-                    this.$emit('use-db', node.qualified_name)
-                    break
-                case INSERT:
-                case QUERY:
-                    this.handleTxtEditorOpt({ node, opt })
-                    break
-                case CLIPBOARD:
-                    this.handleTxtOpt({ node, opt })
-                    break
-            }
-        },
-        iconSheet(node) {
-            const { SCHEMA } = this.NODE_TYPES
-            const { TBL_G, VIEW_G, SP_G } = this.NODE_GROUP_TYPES
-            switch (node.type) {
-                case SCHEMA:
-                    return '$vuetify.icons.mxs_database'
-                case TBL_G:
-                    return '$vuetify.icons.mxs_table'
-                case VIEW_G:
-                    return 'mdi-view-dashboard-outline'
-                case SP_G:
-                    return '$vuetify.icons.mxs_storedProcedures'
-                //TODO: find icons for COL_G, TRIGGER_G
-            }
-        },
-        getNodeOpts(node) {
-            if (node.isSys) return this.baseOptsMap[node.type]
-            return [
-                ...this.baseOptsMap[node.type],
-                { divider: true },
-                ...this.genUserNodeOpts(node),
-            ]
         },
         onNodeClick(node) {
             if (node.canBeHighlighted)
@@ -535,6 +404,60 @@ export default {
             // Assign value to data in customDragEvt mixin
             this.isDragging = true
             this.dragTarget = e.target
+        },
+        async handleLoadChildren(node) {
+            await this.asyncEmit('load-children', node)
+        },
+        /**
+         * @param {Object} node - node
+         * @param {Object} opt - context menu option
+         */
+        optionHandler({ node, opt }) {
+            const {
+                PRVW_DATA,
+                PRVW_DATA_DETAILS,
+                USE,
+                INSERT,
+                CLIPBOARD,
+                DROP,
+                ALTER,
+                TRUNCATE,
+            } = this.NODE_CTX_TYPES
+
+            const { escapeIdentifiers: escape } = this.$helpers
+            const { TBL } = this.NODE_TYPES
+
+            switch (opt.type) {
+                case USE:
+                    this.$emit('use-db', node.qualified_name)
+                    break
+                case PRVW_DATA:
+                case PRVW_DATA_DETAILS:
+                    this.SET_CURR_EDITOR_MODE({
+                        id: this.getActiveSessionId,
+                        payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                    })
+                    this.activeNodes = [node] // updateActiveNode
+                    this.$emit('get-node-data', {
+                        SQL_QUERY_MODE: opt.type,
+                        schemaId: node.qualified_name,
+                    })
+                    break
+                case INSERT:
+                case CLIPBOARD:
+                    this.handleTxtOpt({ node, opt })
+                    break
+                case DROP:
+                    this.$emit('drop-action', `DROP ${node.type} ${escape(node.qualified_name)};`)
+                    break
+                case ALTER:
+                    if (node.type === TBL) this.$emit('alter-tbl', this.minimizeNode(node))
+                    break
+                case TRUNCATE:
+                    if (node.type === TBL)
+                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(node.qualified_name)};`)
+                    break
+            }
         },
     },
 }
