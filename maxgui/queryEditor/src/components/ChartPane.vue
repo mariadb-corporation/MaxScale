@@ -104,7 +104,7 @@ export default {
         value: { type: Object, required: true },
         containerHeight: { type: Number, default: 0 },
         chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
-        axisTypes: { type: Object, required: true }, // SQL_CHART_AXIS_TYPES object
+        axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPES object
     },
     data() {
         return {
@@ -256,7 +256,7 @@ export default {
     methods: {
         /**
          * Check if provided axisType is either LINEAR OR TIME type.
-         * @param {String} param.axisType - SQL_CHART_AXIS_TYPES
+         * @param {String} param.axisType - CHART_AXIS_TYPES
          * @returns {Boolean} - should autoSkip the tick
          */
         autoSkipTick(axisType) {
@@ -265,7 +265,7 @@ export default {
         },
         /**
          * Get the ticks object
-         * @param {String} param.axisType - SQL_CHART_AXIS_TYPES
+         * @param {String} param.axisType - CHART_AXIS_TYPES
          * @param {String} param.axisId- x or y
          * @returns {Object} - ticks object
          */

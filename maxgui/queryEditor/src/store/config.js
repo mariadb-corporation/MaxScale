@@ -44,7 +44,7 @@ export const NODE_TYPES = Object.freeze({
     VIEW: 'VIEW',
 })
 
-export const SQL_NODE_NAME_KEYS = Object.freeze({
+export const NODE_NAME_KEYS = Object.freeze({
     [NODE_TYPES.SCHEMA]: 'SCHEMA_NAME',
     [NODE_TYPES.TBL]: 'TABLE_NAME',
     [NODE_TYPES.COL]: 'COLUMN_NAME',
@@ -69,9 +69,9 @@ export const NODE_GROUP_CHILD_TYPES = Object.freeze({
     [NODE_GROUP_TYPES.SP_G]: NODE_TYPES.SP,
 })
 
-export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
+export const SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
 
-export const SQL_QUERY_MODES = Object.freeze({
+export const QUERY_MODES = Object.freeze({
     PRVW_DATA: 'PRVW_DATA',
     PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
     QUERY_VIEW: 'QUERY_VIEW',
@@ -87,38 +87,25 @@ export const NODE_CTX_TYPES = Object.freeze({
     USE: 'Use',
     INSERT: 'Insert',
     CLIPBOARD: 'Clipboard',
-    PRVW_DATA: SQL_QUERY_MODES.PRVW_DATA,
-    PRVW_DATA_DETAILS: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+    PRVW_DATA: QUERY_MODES.PRVW_DATA,
+    PRVW_DATA_DETAILS: QUERY_MODES.PRVW_DATA_DETAILS,
 })
 
-export const SQL_DDL_ALTER_SPECS = Object.freeze({
+export const DDL_ALTER_SPECS = Object.freeze({
     COLUMNS: 'COLUMNS',
 })
-export const SQL_EDITOR_MODES = Object.freeze({
+export const EDITOR_MODES = Object.freeze({
     TXT_EDITOR: 'TXT_EDITOR',
     DDL_EDITOR: 'DDL_EDITOR',
 })
-export const SQL_DEF_ROW_LIMIT_OPTS = [
-    10,
-    50,
-    100,
-    200,
-    300,
-    400,
-    500,
-    1000,
-    2000,
-    5000,
-    10000,
-    50000,
-]
+export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
 export const SQL_CHART_TYPES = Object.freeze({
     LINE: 'Line',
     SCATTER: 'Scatter',
     BAR_VERT: 'Bar - Vertical',
     BAR_HORIZ: 'Bar - Horizontal',
 })
-export const SQL_CHART_AXIS_TYPES = Object.freeze({
+export const CHART_AXIS_TYPES = Object.freeze({
     CATEGORY: 'category', // string data type
     LINEAR: 'linear', // numerical data type
     TIME: 'time',

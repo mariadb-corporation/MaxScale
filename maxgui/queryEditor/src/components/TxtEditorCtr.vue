@@ -54,7 +54,7 @@
                                     v-model="chartOpt"
                                     :containerHeight="chartContainerHeight"
                                     :chartTypes="SQL_CHART_TYPES"
-                                    :axisTypes="SQL_CHART_AXIS_TYPES"
+                                    :axisTypes="CHART_AXIS_TYPES"
                                     class="chart-pane"
                                     @close-chart="setDefChartOptState"
                                 />
@@ -77,8 +77,8 @@
                 <chart-config
                     v-model="chartOpt"
                     :chartTypes="SQL_CHART_TYPES"
-                    :axisTypes="SQL_CHART_AXIS_TYPES"
-                    :sqlQueryModes="SQL_QUERY_MODES"
+                    :axisTypes="CHART_AXIS_TYPES"
+                    :queryModes="QUERY_MODES"
                     :resultSets="resultSets"
                     class="chart-config"
                 />
@@ -149,8 +149,8 @@ export default {
             query_pane_pct_height: state => state.queryPersisted.query_pane_pct_height,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
             SQL_CHART_TYPES: state => state.queryEditorConfig.config.SQL_CHART_TYPES,
-            SQL_CHART_AXIS_TYPES: state => state.queryEditorConfig.config.SQL_CHART_AXIS_TYPES,
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            CHART_AXIS_TYPES: state => state.queryEditorConfig.config.CHART_AXIS_TYPES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',

@@ -14,9 +14,9 @@ import {
     NODE_TYPES,
     NODE_GROUP_TYPES,
     NODE_GROUP_CHILD_TYPES,
-    SQL_NODE_NAME_KEYS,
-    SQL_EDITOR_MODES,
-    SQL_SYS_SCHEMAS,
+    NODE_NAME_KEYS,
+    EDITOR_MODES,
+    SYS_SCHEMAS,
 } from '@queryEditorSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 import { getObjectRows } from '@queryEditorSrc/utils/helpers'
@@ -51,7 +51,7 @@ function getNodeGroupSQL(nodeGroup) {
     const dbName = getDbName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
-    let colNameKey = SQL_NODE_NAME_KEYS[childNodeType],
+    let colNameKey = NODE_NAME_KEYS[childNodeType],
         tblName = '',
         cols = '',
         from = '',
@@ -108,7 +108,7 @@ function genNode({ nodeGroup, data, type, name }) {
         name,
         draggable: true,
         data,
-        isSys: SQL_SYS_SCHEMAS.includes(dbName.toLowerCase()),
+        isSys: SYS_SCHEMAS.includes(dbName.toLowerCase()),
     }
 
     node.level = lodash.countBy(node.id)['.'] || 0
@@ -180,7 +180,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
     const rows = getObjectRows({ columns: fields, rows: data })
-    const nameKey = SQL_NODE_NAME_KEYS[type]
+    const nameKey = NODE_NAME_KEYS[type]
     return rows.reduce(
         (acc, row) => {
             acc.nodes.push(
@@ -371,7 +371,7 @@ function syncStateCreator(namespace) {
                  * file_handle?: FileSystemFileHandle. File handle.
                  */
                 blob_file: {},
-                curr_editor_mode: SQL_EDITOR_MODES.TXT_EDITOR,
+                curr_editor_mode: EDITOR_MODES.TXT_EDITOR,
                 /**
                  * properties:
                  * altered_active_node?: object

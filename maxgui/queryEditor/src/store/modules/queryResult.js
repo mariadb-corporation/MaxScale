@@ -51,11 +51,11 @@ export default {
                 let sql, queryName
                 const escapedTblId = this.vue.$helpers.escapeIdentifiers(tblId)
                 switch (prvwMode) {
-                    case rootState.queryEditorConfig.config.SQL_QUERY_MODES.PRVW_DATA:
+                    case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA:
                         sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
                         queryName = `Preview ${escapedTblId} data`
                         break
-                    case rootState.queryEditorConfig.config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA_DETAILS:
                         sql = `DESCRIBE ${escapedTblId};`
                         queryName = `View ${escapedTblId} details`
                         break
@@ -331,10 +331,7 @@ export default {
                 }
             }
             // preview data
-            const {
-                PRVW_DATA,
-                PRVW_DATA_DETAILS,
-            } = rootState.queryEditorConfig.config.SQL_QUERY_MODES
+            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
             for (const mode of prvwModes) {
                 const data = scope.$helpers.stringifyClone(

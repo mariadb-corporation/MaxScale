@@ -153,8 +153,8 @@ export default {
     props: {
         value: { type: Object, required: true },
         chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
-        axisTypes: { type: Object, required: true }, // SQL_CHART_AXIS_TYPES object
-        sqlQueryModes: { type: Object, required: true }, // SQL_QUERY_MODES object
+        axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPES object
+        queryModes: { type: Object, required: true }, // QUERY_MODES object
         resultSets: { type: Array, required: true },
     },
     data() {

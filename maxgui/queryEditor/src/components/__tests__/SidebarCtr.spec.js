@@ -102,16 +102,16 @@ describe('sidebar-ctr', () => {
                 },
                 computed: { getActiveSessionId: () => active_session_id },
             })
-            const mockParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
+            const mockParam = { QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
             wrapper.vm.fetchNodePrvwData(mockParam)
             expect(clearDataPreviewCallCount).to.be.equals(1)
             expect(queryModeParam).to.be.eql({
-                payload: mockParam.SQL_QUERY_MODE,
+                payload: mockParam.QUERY_MODE,
                 id: active_session_id,
             })
             expect(fetchPrvwParams).to.be.deep.equals({
                 tblId: mockParam.schemaId,
-                prvwMode: mockParam.SQL_QUERY_MODE,
+                prvwMode: mockParam.QUERY_MODE,
             })
         })
         it(`Should call loadChildNodes when handleLoadChildren is called`, () => {

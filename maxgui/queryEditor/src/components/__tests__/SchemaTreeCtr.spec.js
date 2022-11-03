@@ -311,7 +311,7 @@ describe(`schema-tree-ctr - context menu tests`, () => {
                 case NODE_CTX_TYPES.PRVW_DATA:
                 case NODE_CTX_TYPES.PRVW_DATA_DETAILS:
                     expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
-                        SQL_QUERY_MODE: opt.type,
+                        QUERY_MODE: opt.type,
                         schemaId: node.qualified_name,
                     })
                     break

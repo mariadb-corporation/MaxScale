@@ -189,7 +189,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
@@ -285,7 +285,7 @@ export default {
          */
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
-                payload: this.SQL_QUERY_MODES.QUERY_VIEW,
+                payload: this.QUERY_MODES.QUERY_VIEW,
                 id: this.session.id,
             })
             switch (mode) {

@@ -100,7 +100,7 @@
  */
 /*
 This component emits the following events
-@get-node-data: { SQL_QUERY_MODE: string, schemaId:string }
+@get-node-data: { QUERY_MODE: string, schemaId:string }
 @place-to-editor: v:string. Place text to editor
 @alter-tbl: Node. Alter table node
 @drop-action: sql:string.
@@ -127,8 +127,8 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
-            SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
+            EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
@@ -389,7 +389,7 @@ export default {
         onNodeClick(node) {
             if (node.canBeHighlighted)
                 this.$emit('get-node-data', {
-                    SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
+                    QUERY_MODE: this.QUERY_MODES.PRVW_DATA,
                     schemaId: this.activeNodes[0].qualified_name,
                 })
         },
@@ -435,11 +435,11 @@ export default {
                 case PRVW_DATA_DETAILS:
                     this.SET_CURR_EDITOR_MODE({
                         id: this.getActiveSessionId,
-                        payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                        payload: this.EDITOR_MODES.TXT_EDITOR,
                     })
                     this.activeNodes = [node] // updateActiveNode
                     this.$emit('get-node-data', {
-                        SQL_QUERY_MODE: opt.type,
+                        QUERY_MODE: opt.type,
                         schemaId: node.qualified_name,
                     })
                     break

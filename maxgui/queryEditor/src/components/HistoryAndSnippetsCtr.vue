@@ -8,16 +8,16 @@
                 class="v-tabs--query-editor-style"
             >
                 <v-tab
-                    :key="SQL_QUERY_MODES.HISTORY"
-                    :href="`#${SQL_QUERY_MODES.HISTORY}`"
+                    :key="QUERY_MODES.HISTORY"
+                    :href="`#${QUERY_MODES.HISTORY}`"
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
                     {{ $mxs_t('history') }}
                 </v-tab>
                 <v-tab
-                    :key="SQL_QUERY_MODES.SNIPPETS"
-                    :href="`#${SQL_QUERY_MODES.SNIPPETS}`"
+                    :key="QUERY_MODES.SNIPPETS"
+                    :href="`#${QUERY_MODES.SNIPPETS}`"
                     class="tab-btn px-3 text-uppercase"
                     active-class="tab-btn--active font-weight-medium"
                 >
@@ -28,10 +28,7 @@
         <keep-alive>
             <template v-if="persistedQueryData.length">
                 <table-list
-                    v-if="
-                        activeView === SQL_QUERY_MODES.HISTORY ||
-                            activeView === SQL_QUERY_MODES.SNIPPETS
-                    "
+                    v-if="activeView === QUERY_MODES.HISTORY || activeView === QUERY_MODES.SNIPPETS"
                     :key="activeView"
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
@@ -41,10 +38,10 @@
                     showGroupBy
                     groupBy="date"
                     :menuOpts="menuOpts"
-                    :showEditBtn="activeView === SQL_QUERY_MODES.SNIPPETS"
+                    :showEditBtn="activeView === QUERY_MODES.SNIPPETS"
                     :defExportFileName="
                         `MaxScale Query ${
-                            activeView === SQL_QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+                            activeView === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
                         }`
                     "
                     @on-delete-selected="handleDeleteSelectedRows"
@@ -57,7 +54,7 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
-                    <template v-if="activeView === SQL_QUERY_MODES.SNIPPETS" v-slot:header-name>
+                    <template v-if="activeView === QUERY_MODES.SNIPPETS" v-slot:header-name>
                         {{ $mxs_t('prefix') }}
                     </template>
                     <template
@@ -124,7 +121,7 @@
                         </v-tooltip>
                     </template>
                     <template
-                        v-if="activeView === SQL_QUERY_MODES.HISTORY"
+                        v-if="activeView === QUERY_MODES.HISTORY"
                         v-slot:left-table-tools-append
                     >
                         <div class="ml-2">
@@ -143,7 +140,7 @@
             <span
                 v-else
                 v-html="
-                    activeView === SQL_QUERY_MODES.HISTORY
+                    activeView === QUERY_MODES.HISTORY
                         ? $mxs_t('historyTabGuide')
                         : $mxs_t('snippetTabGuide')
                 "
@@ -152,7 +149,7 @@
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
             :title="
-                activeView === SQL_QUERY_MODES.HISTORY
+                activeView === QUERY_MODES.HISTORY
                     ? $mxs_t('clearSelectedQueries', {
                           targetType: $mxs_t('queryHistory'),
                       })
@@ -171,7 +168,7 @@
                                     ? $mxs_t('entire')
                                     : $mxs_t('selected'),
                             targetType: $mxs_t(
-                                activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
+                                activeView === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'
                             ),
                         })
                     }}
@@ -218,7 +215,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
@@ -234,8 +231,8 @@ export default {
             },
             set(value) {
                 if (
-                    this.curr_query_mode === this.SQL_QUERY_MODES.HISTORY ||
-                    this.curr_query_mode === this.SQL_QUERY_MODES.SNIPPETS
+                    this.curr_query_mode === this.QUERY_MODES.HISTORY ||
+                    this.curr_query_mode === this.QUERY_MODES.SNIPPETS
                 )
                     this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
@@ -246,10 +243,10 @@ export default {
         headers() {
             let data = []
             switch (this.activeView) {
-                case this.SQL_QUERY_MODES.HISTORY:
+                case this.QUERY_MODES.HISTORY:
                     data = this.query_history
                     break
-                case this.SQL_QUERY_MODES.SNIPPETS:
+                case this.QUERY_MODES.SNIPPETS:
                     data = this.query_snippets
             }
             return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => {
@@ -300,21 +297,19 @@ export default {
                         break
                     case 'name':
                         header.width = 240
-                        if (this.activeView === this.SQL_QUERY_MODES.SNIPPETS)
-                            header.editableCol = true
+                        if (this.activeView === this.QUERY_MODES.SNIPPETS) header.editableCol = true
                         break
                     case 'sql':
-                        if (this.activeView === this.SQL_QUERY_MODES.SNIPPETS)
-                            header.editableCol = true
+                        if (this.activeView === this.QUERY_MODES.SNIPPETS) header.editableCol = true
                 }
                 return header
             })
         },
         persistedQueryData() {
             switch (this.activeView) {
-                case this.SQL_QUERY_MODES.HISTORY:
+                case this.QUERY_MODES.HISTORY:
                     return this.query_history
-                case this.SQL_QUERY_MODES.SNIPPETS:
+                case this.QUERY_MODES.SNIPPETS:
                     return this.query_snippets
                 default:
                     return []
@@ -326,7 +321,7 @@ export default {
         currRows() {
             let data = this.persistedQueryData
             switch (this.activeView) {
-                case this.SQL_QUERY_MODES.HISTORY: {
+                case this.QUERY_MODES.HISTORY: {
                     const types = this.selectedLogTypes.map(log => log.text)
                     data = data.filter(log => {
                         return types.includes(log.action.type)
@@ -400,12 +395,12 @@ export default {
             })
             let sql, name
             switch (this.activeView) {
-                case this.SQL_QUERY_MODES.HISTORY: {
+                case this.QUERY_MODES.HISTORY: {
                     name = rowData[0].action.name
                     sql = rowData[0].action.sql
                     break
                 }
-                case this.SQL_QUERY_MODES.SNIPPETS:
+                case this.QUERY_MODES.SNIPPETS:
                     sql = rowData[0].sql
             }
             const { INSERT, CLIPBOARD } = this.NODE_CTX_TYPES

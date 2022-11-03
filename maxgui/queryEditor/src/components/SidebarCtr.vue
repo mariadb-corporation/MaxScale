@@ -107,10 +107,10 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
-            SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
-            SQL_EDITOR_MODES: state => state.queryEditorConfig.config.SQL_EDITOR_MODES,
+            DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
+            EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
@@ -162,10 +162,10 @@ export default {
             handleAddNewSession: 'querySession/handleAddNewSession',
         }),
 
-        async fetchNodePrvwData({ SQL_QUERY_MODE, schemaId }) {
+        async fetchNodePrvwData({ QUERY_MODE, schemaId }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.getActiveSessionId })
-            await this.fetchPrvw({ tblId: schemaId, prvwMode: SQL_QUERY_MODE })
+            this.SET_CURR_QUERY_MODE({ payload: QUERY_MODE, id: this.getActiveSessionId })
+            await this.fetchPrvw({ tblId: schemaId, prvwMode: QUERY_MODE })
         },
         async handleLoadChildren(node) {
             await this.loadChildNodes(node)
@@ -181,10 +181,10 @@ export default {
             })
             this.SET_CURR_EDITOR_MODE({
                 id: this.getActiveSessionId,
-                payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
+                payload: this.EDITOR_MODES.DDL_EDITOR,
             })
             this.SET_CURR_DDL_ALTER_SPEC({
-                payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
+                payload: this.DDL_ALTER_SPECS.COLUMNS,
                 id: this.getActiveSessionId,
             })
             await this.queryAlterTblSuppData()

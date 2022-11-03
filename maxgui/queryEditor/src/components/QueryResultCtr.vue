@@ -4,25 +4,25 @@
             <v-tab
                 :disabled="getIsConnBusy && isLoading"
                 color="primary"
-                :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
+                :href="`#${QUERY_MODES.QUERY_VIEW}`"
             >
                 <span> {{ $mxs_t('results') }} </span>
             </v-tab>
             <v-tab
                 :disabled="getIsConnBusy && isLoading"
                 color="primary"
-                :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
+                :href="`#${QUERY_MODES.PRVW_DATA}`"
             >
                 <span>{{ $mxs_t('dataPrvw') }} </span>
             </v-tab>
-            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.HISTORY}`">
+            <v-tab color="primary" :href="`#${QUERY_MODES.HISTORY}`">
                 <span>{{ $mxs_t('historyAndSnippets') }} </span>
             </v-tab>
         </v-tabs>
         <v-slide-x-transition>
             <keep-alive>
                 <results-tab
-                    v-if="activeTab === SQL_QUERY_MODES.QUERY_VIEW"
+                    v-if="activeTab === QUERY_MODES.QUERY_VIEW"
                     :style="{
                         height: `calc(100% - 24px)`,
                     }"
@@ -37,8 +37,8 @@
                 />
                 <data-prvw
                     v-else-if="
-                        activeTab === SQL_QUERY_MODES.PRVW_DATA ||
-                            activeTab === SQL_QUERY_MODES.PRVW_DATA_DETAILS
+                        activeTab === QUERY_MODES.PRVW_DATA ||
+                            activeTab === QUERY_MODES.PRVW_DATA_DETAILS
                     "
                     :style="{
                         height: `calc(100% - 24px)`,
@@ -108,7 +108,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
         ...mapGetters({
@@ -128,12 +128,12 @@ export default {
         activeTab: {
             get() {
                 switch (this.curr_query_mode) {
-                    case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    case this.SQL_QUERY_MODES.PRVW_DATA:
-                        return this.SQL_QUERY_MODES.PRVW_DATA
-                    case this.SQL_QUERY_MODES.SNIPPETS:
-                    case this.SQL_QUERY_MODES.HISTORY:
-                        return this.SQL_QUERY_MODES.HISTORY
+                    case this.QUERY_MODES.PRVW_DATA_DETAILS:
+                    case this.QUERY_MODES.PRVW_DATA:
+                        return this.QUERY_MODES.PRVW_DATA
+                    case this.QUERY_MODES.SNIPPETS:
+                    case this.QUERY_MODES.HISTORY:
+                        return this.QUERY_MODES.HISTORY
                     default:
                         return this.curr_query_mode
                 }
@@ -146,7 +146,7 @@ export default {
             return this.$typy(this.queryData, 'is_loading').safeBoolean
         },
         queryData() {
-            const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.SQL_QUERY_MODES
+            const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
             switch (this.curr_query_mode) {
                 case QUERY_VIEW:
                     return this.getUserQueryRes

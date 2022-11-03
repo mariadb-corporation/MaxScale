@@ -17,12 +17,7 @@
             :height="24"
             class="v-tabs--mariadb-style"
         >
-            <v-tab
-                v-for="spec of SQL_DDL_ALTER_SPECS"
-                :key="spec"
-                color="primary"
-                :href="`#${spec}`"
-            >
+            <v-tab v-for="spec of DDL_ALTER_SPECS" :key="spec" color="primary" :href="`#${spec}`">
                 <span> {{ $mxs_t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
@@ -30,7 +25,7 @@
             <v-slide-x-transition>
                 <keep-alive>
                     <alter-cols-opts
-                        v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
+                        v-if="activeColSpec === DDL_ALTER_SPECS.COLUMNS"
                         v-model="colsOptsData"
                         :charsetCollationMap="charset_collation_map"
                         :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
@@ -86,7 +81,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_DDL_ALTER_SPECS: state => state.queryEditorConfig.config.SQL_DDL_ALTER_SPECS,
+            DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
             charset_collation_map: state => state.editor.charset_collation_map,
             engines: state => state.editor.engines,

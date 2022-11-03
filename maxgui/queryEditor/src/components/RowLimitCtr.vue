@@ -1,7 +1,7 @@
 <template>
     <row-limit
         v-model="value"
-        :items="SQL_DEF_ROW_LIMIT_OPTS"
+        :items="DEF_ROW_LIMIT_OPTS"
         v-bind="{ ...$attrs }"
         v-on="$listeners"
     />
@@ -33,7 +33,7 @@ export default {
     inheritAttrs: false,
     computed: {
         ...mapState({
-            SQL_DEF_ROW_LIMIT_OPTS: state => state.queryEditorConfig.config.SQL_DEF_ROW_LIMIT_OPTS,
+            DEF_ROW_LIMIT_OPTS: state => state.queryEditorConfig.config.DEF_ROW_LIMIT_OPTS,
             query_row_limit: state => state.queryPersisted.query_row_limit,
         }),
         value: {

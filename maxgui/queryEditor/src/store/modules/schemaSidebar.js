@@ -205,7 +205,7 @@ export default {
     getters: {
         // sidebar getters
         getDbSql: (state, getters, rootState) => {
-            const { SQL_SYS_SCHEMAS: SYS_S } = rootState.queryEditorConfig.config
+            const { SYS_SCHEMAS: SYS_S } = rootState.queryEditorConfig.config
             let sql = 'SELECT * FROM information_schema.SCHEMATA'
             if (!rootState.queryPersisted.query_show_sys_schemas_flag)
                 sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
