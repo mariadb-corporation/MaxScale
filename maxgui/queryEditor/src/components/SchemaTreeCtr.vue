@@ -16,56 +16,56 @@
             return-object
             @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
-            @item:hovered="hoveredItem = $event"
+            @item:hovered="hoveredNode = $event"
             @item:dblclick="onNodeDblClick"
         >
-            <template v-slot:label="{ item }">
+            <template v-slot:label="{ item: node }">
                 <div
-                    :id="`node-tooltip-activator-${item.key}`"
+                    :id="`node-tooltip-activator-${node.key}`"
                     class="d-flex align-center node-label"
-                    :class="{ 'cursor--grab': item.draggable }"
-                    @mousedown="item.draggable ? onNodeDragStart($event) : null"
+                    :class="{ 'cursor--grab': node.draggable }"
+                    @mousedown="node.draggable ? onNodeDragStart($event) : null"
                 >
                     <v-icon class="mr-1" size="12" color="deep-ocean">
-                        {{ iconSheet(item) }}
+                        {{ iconSheet(node) }}
                     </v-icon>
                     <span
-                        v-mxs-highlighter="{ keyword: search_schema, txt: item.name }"
+                        v-mxs-highlighter="{ keyword: search_schema, txt: node.name }"
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
-                                item.type === NODE_TYPES.SCHEMA && active_db === item.name,
+                                node.type === NODE_TYPES.SCHEMA && active_db === node.name,
                         }"
                     >
-                        {{ item.name }}
+                        {{ node.name }}
                     </span>
                 </div>
             </template>
-            <template v-slot:append="{ isHover, item }">
+            <template v-slot:append="{ isHover, item: node }">
                 <v-btn
-                    v-show="nodesHaveCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
-                    :id="`ctx-menu-activator-${item.key}`"
+                    v-show="nodesHaveCtxMenu.includes(node.type) && (isHover || showCtxBtn(node))"
+                    :id="`ctx-menu-activator-${node.key}`"
                     icon
                     x-small
-                    @click="e => handleOpenCtxMenu({ e, item })"
+                    @click="e => handleOpenCtxMenu({ e, node })"
                 >
                     <v-icon size="12" color="deep-ocean">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
         </mxs-treeview>
         <v-tooltip
-            v-if="hoveredItem && nodesHaveCtxMenu.includes(hoveredItem.type)"
-            :value="Boolean(hoveredItem)"
+            v-if="hoveredNode && nodesHaveCtxMenu.includes(hoveredNode.type)"
+            :value="Boolean(hoveredNode)"
             :disabled="isDragging"
             right
             :nudge-right="45"
             transition="slide-x-transition"
             content-class="shadow-drop mxs-color-helper white text-text py-2 px-4"
-            :activator="`#node-tooltip-activator-${hoveredItem.key}`"
+            :activator="`#node-tooltip-activator-${hoveredNode.key}`"
         >
             <table class="node-tooltip">
                 <tbody>
-                    <tr v-for="(value, key) in hoveredItem.data" :key="key">
+                    <tr v-for="(value, key) in hoveredNode.data" :key="key">
                         <td class="font-weight-bold pr-2">{{ key }}:</td>
                         <td>{{ value }}</td>
                     </tr>
@@ -73,15 +73,15 @@
             </table>
         </v-tooltip>
         <mxs-sub-menu
-            v-if="activeCtxItem"
-            :key="activeCtxItem.key"
+            v-if="activeCtxNode"
+            :key="activeCtxNode.key"
             v-model="showCtxMenu"
             left
             :nudge-right="12"
             :nudge-bottom="10"
             :items="activeCtxItemOpts"
-            :activator="`#ctx-menu-activator-${activeCtxItem.key}`"
-            @item-click="optionHandler({ item: activeCtxItem, opt: $event })"
+            :activator="`#ctx-menu-activator-${activeCtxNode.key}`"
+            @item-click="optionHandler({ node: activeCtxNode, opt: $event })"
         />
     </div>
 </template>
@@ -119,9 +119,9 @@ export default {
     data() {
         return {
             showCtxMenu: false,
-            activeCtxItem: null, // active item to show in context(options) menu
+            activeCtxNode: null,
             activeCtxItemOpts: [],
-            hoveredItem: null,
+            hoveredNode: null,
             expandedNodes: [],
         }
     },
@@ -234,7 +234,7 @@ export default {
     },
     watch: {
         showCtxMenu(v) {
-            if (!v) this.activeCtxItem = null
+            if (!v) this.activeCtxNode = null
         },
     },
     activated() {
@@ -251,11 +251,11 @@ export default {
             SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
             SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
-        filter(item, search, textKey) {
-            return this.$helpers.ciStrIncludes(item[textKey], search)
+        filter(node, search, textKey) {
+            return this.$helpers.ciStrIncludes(node[textKey], search)
         },
-        showCtxBtn(item) {
-            return Boolean(this.activeCtxItem && item.id === this.activeCtxItem.id)
+        showCtxBtn(node) {
+            return Boolean(this.activeCtxNode && node.id === this.activeCtxNode.id)
         },
         watch_expandedNodes() {
             this.unwatch_expandedNodes = this.$watch(
@@ -305,22 +305,22 @@ export default {
             return nodes.map(this.minimizeNode)
         },
 
-        async handleLoadChildren(item) {
-            await this.asyncEmit('load-children', item)
+        async handleLoadChildren(node) {
+            await this.asyncEmit('load-children', node)
         },
-        handleOpenCtxMenu({ e, item }) {
+        handleOpenCtxMenu({ e, node }) {
             e.stopPropagation()
-            if (this.$helpers.lodash.isEqual(this.activeCtxItem, item)) {
+            if (this.$helpers.lodash.isEqual(this.activeCtxNode, node)) {
                 this.showCtxMenu = false
-                this.activeCtxItem = null
+                this.activeCtxNode = null
             } else {
                 if (!this.showCtxMenu) this.showCtxMenu = true
-                this.activeCtxItem = item
-                this.activeCtxItemOpts = this.getNodeOpts(item)
+                this.activeCtxNode = node
+                this.activeCtxItemOpts = this.getNodeOpts(node)
             }
         },
-        updateActiveNode(item) {
-            this.activeNodes = [item]
+        updateActiveNode(node) {
+            this.activeNodes = [node]
         },
 
         /**
@@ -370,22 +370,22 @@ export default {
         },
 
         /**
-         * @param {Object} item - node
+         * @param {Object} node - node
          * @param {Object} opt - context menu option
          */
-        handleEmitQueryOpt({ item, opt }) {
-            this.updateActiveNode(item)
+        handleEmitQueryOpt({ node, opt }) {
+            this.updateActiveNode(node)
             switch (opt.text) {
                 case this.$mxs_t('previewData'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
-                        schemaId: item.qualified_name,
+                        schemaId: node.qualified_name,
                     })
                     break
                 case this.$mxs_t('viewDetails'):
                     this.$emit('get-node-data', {
                         SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                        schemaId: item.qualified_name,
+                        schemaId: node.qualified_name,
                     })
                     break
             }
@@ -393,10 +393,10 @@ export default {
         /**
          * Both INSERT and CLIPBOARD types have same options.
          * This handles INSERT and CLIPBOARD options
-         * @param {Object} item - node
+         * @param {Object} node - node
          * @param {Object} opt - context menu option
          */
-        handleTxtOpt({ item, opt }) {
+        handleTxtOpt({ node, opt }) {
             const {
                 CLIPBOARD,
                 TXT_EDITOR: { INSERT },
@@ -404,16 +404,16 @@ export default {
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('qualifiedNameQuoted'):
-                    v = this.$helpers.escapeIdentifiers(item.qualified_name)
+                    v = this.$helpers.escapeIdentifiers(node.qualified_name)
                     break
                 case this.$mxs_t('qualifiedName'):
-                    v = item.qualified_name
+                    v = node.qualified_name
                     break
                 case this.$mxs_t('nameQuoted'):
-                    v = this.$helpers.escapeIdentifiers(item.name)
+                    v = this.$helpers.escapeIdentifiers(node.name)
                     break
                 case this.$mxs_t('name'):
-                    v = item.name
+                    v = node.name
                     break
             }
             switch (opt.type) {
@@ -426,31 +426,31 @@ export default {
             }
         },
         /**
-         * @param {Object} item - node
+         * @param {Object} node - node
          * @param {Object} opt - context menu option
          */
-        handleEmitDD_opt({ item, opt }) {
+        handleEmitDD_opt({ node, opt }) {
             const { escapeIdentifiers: escape } = this.$helpers
             const { DROP, ALTER, TRUNCATE } = this.NODE_ACTION_TYPES
             const { TBL } = this.NODE_TYPES
             switch (opt.actionType) {
                 case DROP:
-                    this.$emit('drop-action', `DROP ${item.type} ${escape(item.qualified_name)};`)
+                    this.$emit('drop-action', `DROP ${node.type} ${escape(node.qualified_name)};`)
                     break
                 case ALTER:
-                    if (item.type === TBL) this.$emit('alter-tbl', this.minimizeNode(item))
+                    if (node.type === TBL) this.$emit('alter-tbl', this.minimizeNode(node))
                     break
                 case TRUNCATE:
-                    if (item.type === TBL)
-                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(item.qualified_name)};`)
+                    if (node.type === TBL)
+                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(node.qualified_name)};`)
                     break
             }
         },
         /**
-         * @param {Object} item - node
+         * @param {Object} node - node
          * @param {Object} opt - context menu option
          */
-        handleTxtEditorOpt({ item, opt }) {
+        handleTxtEditorOpt({ node, opt }) {
             const {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -460,18 +460,18 @@ export default {
             })
             switch (opt.type) {
                 case QUERY:
-                    this.handleEmitQueryOpt({ item, opt })
+                    this.handleEmitQueryOpt({ node, opt })
                     break
                 case INSERT:
-                    this.handleTxtOpt({ item, opt })
+                    this.handleTxtOpt({ node, opt })
                     break
             }
         },
         /**
-         * @param {Object} item - node
+         * @param {Object} node - node
          * @param {Object} opt - context menu option
          */
-        optionHandler({ item, opt }) {
+        optionHandler({ node, opt }) {
             const {
                 CLIPBOARD,
                 TXT_EDITOR: { INSERT, QUERY },
@@ -480,24 +480,24 @@ export default {
             } = this.SQL_NODE_CTX_OPT_TYPES
             switch (opt.type) {
                 case DD:
-                    this.handleEmitDD_opt({ item, opt })
+                    this.handleEmitDD_opt({ node, opt })
                     break
                 case USE:
-                    this.$emit('use-db', item.qualified_name)
+                    this.$emit('use-db', node.qualified_name)
                     break
                 case INSERT:
                 case QUERY:
-                    this.handleTxtEditorOpt({ item, opt })
+                    this.handleTxtEditorOpt({ node, opt })
                     break
                 case CLIPBOARD:
-                    this.handleTxtOpt({ item, opt })
+                    this.handleTxtOpt({ node, opt })
                     break
             }
         },
-        iconSheet(item) {
+        iconSheet(node) {
             const { SCHEMA } = this.NODE_TYPES
             const { TBL_G, VIEW_G, SP_G } = this.NODE_GROUP_TYPES
-            switch (item.type) {
+            switch (node.type) {
                 case SCHEMA:
                     return '$vuetify.icons.mxs_database'
                 case TBL_G:
@@ -517,18 +517,18 @@ export default {
                 ...this.genUserNodeOpts(node),
             ]
         },
-        onNodeClick(item) {
-            if (item.canBeHighlighted)
+        onNodeClick(node) {
+            if (node.canBeHighlighted)
                 this.$emit('get-node-data', {
                     SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
                     schemaId: this.activeNodes[0].qualified_name,
                 })
         },
-        onNodeDblClick(item) {
-            if (item.type === this.NODE_TYPES.SCHEMA) this.$emit('use-db', item.qualified_name)
+        onNodeDblClick(node) {
+            if (node.type === this.NODE_TYPES.SCHEMA) this.$emit('use-db', node.qualified_name)
         },
-        onContextMenu({ e, item }) {
-            if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
+        onContextMenu({ e, item: node }) {
+            if (this.nodesHaveCtxMenu.includes(node.type)) this.handleOpenCtxMenu({ e, node })
         },
         onNodeDragStart(e) {
             e.preventDefault()

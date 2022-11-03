@@ -175,11 +175,11 @@ describe(`schema-tree-ctr - node tooltip tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should pass accurate data to v-tooltip via props`, () => {
-        wrapper = mountFactory({ data: () => ({ hoveredItem: dummy_db_tree_data[0] }) })
+        wrapper = mountFactory({ data: () => ({ hoveredNode: dummy_db_tree_data[0] }) })
         const { value, disabled, right, nudgeRight, activator } = wrapper.findComponent({
             name: 'v-tooltip',
         }).vm.$props
-        expect(value).to.be.true // true since hoveredItem has value
+        expect(value).to.be.true // true since hoveredNode has value
         expect(disabled).to.be.equals(wrapper.vm.$data.isDragging)
         expect(right).to.be.true
         expect(nudgeRight).to.be.equals(45)
@@ -197,11 +197,11 @@ describe(`schema-tree-ctr - node tooltip tests`, () => {
             ).to.be.true
         })
     })
-    it(`Should assign hovered item to hoveredItem when item:hovered event is emitted
+    it(`Should assign hovered item to hoveredNode when item:hovered event is emitted
     from mxs-treeview component`, () => {
         wrapper = mountFactory()
         wrapper.find('.mxs-treeview').vm.$emit('item:hovered', dummy_db_tree_data[0])
-        expect(wrapper.vm.$data.hoveredItem).to.be.deep.equals(dummy_db_tree_data[0])
+        expect(wrapper.vm.$data.hoveredNode).to.be.deep.equals(dummy_db_tree_data[0])
     })
 })
 describe(`schema-tree-ctr - draggable node tests`, () => {
@@ -224,7 +224,7 @@ describe(`schema-tree-ctr - draggable node tests`, () => {
 })
 describe(`schema-tree-ctr - context menu tests`, () => {
     let wrapper
-    const activeCtxItem = dummy_db_tree_data[0]
+    const activeCtxNode = dummy_db_tree_data[0]
     /**
      * @param {Object} param.wrapper - mounted wrapper (not shallow mount)
      *  @param {Object} param.node - tree node
@@ -237,34 +237,34 @@ describe(`schema-tree-ctr - context menu tests`, () => {
     }
     afterEach(() => wrapper.destroy())
     it(`Should pass accurate data to mxs-sub-menu via props`, async () => {
-        wrapper = mountFactory({ data: () => ({ activeCtxItem }) }) // condition to render the menu
-        await wrapper.setData({ activeCtxItemOpts: wrapper.vm.getNodeOpts(activeCtxItem) })
+        wrapper = mountFactory({ data: () => ({ activeCtxNode }) }) // condition to render the menu
+        await wrapper.setData({ activeCtxItemOpts: wrapper.vm.getNodeOpts(activeCtxNode) })
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const { value, left, items, activator } = menu.vm.$props
         expect(value).to.be.equals(wrapper.vm.showCtxMenu)
         expect(left).to.be.true
         expect(items).to.be.deep.equals(wrapper.vm.$data.activeCtxItemOpts)
-        expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxItem.key}`)
-        expect(menu.vm.$vnode.key).to.be.equals(activeCtxItem.key)
+        expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxNode.key}`)
+        expect(menu.vm.$vnode.key).to.be.equals(activeCtxNode.key)
     })
     it(`Should handle @item-click event emitted from mxs-sub-menu`, async () => {
-        wrapper = mountFactory({ data: () => ({ activeCtxItem }) })
+        wrapper = mountFactory({ data: () => ({ activeCtxNode }) })
         const fnSpy = sinon.spy(wrapper.vm, 'optionHandler')
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const mockOpt = { text: 'Qualified Name', type: 'INSERT' }
         await menu.vm.$emit('item-click', mockOpt)
-        fnSpy.should.have.been.calledOnceWithExactly({ item: activeCtxItem, opt: mockOpt })
+        fnSpy.should.have.been.calledOnceWithExactly({ node: activeCtxNode, opt: mockOpt })
         fnSpy.restore()
     })
     it(`Should show more option icon button when hovering a tree node`, async () => {
         wrapper = mountFactory({ shallow: false })
-        const btn = await getMoreOptIcon({ wrapper, node: activeCtxItem })
+        const btn = await getMoreOptIcon({ wrapper, node: activeCtxNode })
         expect(btn.exists()).to.be.true
     })
     it(`Should call handleOpenCtxMenu when clicking more option icon button`, async () => {
         wrapper = mountFactory({ shallow: false })
         const fnSpy = sinon.spy(wrapper.vm, 'handleOpenCtxMenu')
-        const btn = await getMoreOptIcon({ wrapper, node: activeCtxItem })
+        const btn = await getMoreOptIcon({ wrapper, node: activeCtxNode })
         await btn.trigger('click')
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
@@ -315,9 +315,9 @@ describe(`schema-tree-ctr - context menu tests`, () => {
                     fnSpy = sinon.spy(wrapper.vm, 'handleTxtOpt')
                     break
             }
-            wrapper.vm.optionHandler({ item: activeCtxItem, opt })
+            wrapper.vm.optionHandler({ node: activeCtxNode, opt })
             if (opt.type === 'USE') expect(wrapper.emitted()).to.have.property('use-db')
-            else fnSpy.should.have.been.calledWith({ item: activeCtxItem, opt })
+            else fnSpy.should.have.been.calledWith({ node: activeCtxNode, opt })
         })
     })
 })
@@ -396,8 +396,8 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
             wrapper = mountFactory({
                 data: () => ({
-                    // mock activeCtxItem
-                    activeCtxItem: v ? node : null,
+                    // mock activeCtxNode
+                    activeCtxNode: v ? node : null,
                 }),
             })
             expect(wrapper.vm.showCtxBtn(node)).to.be[v]
@@ -460,7 +460,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
         it(`Should handle ${opt.text} option as expected when handleEmitQueryOpt is called`, () => {
             wrapper = mountFactory()
             let updateActiveNodeSpy = sinon.spy(wrapper.vm, 'updateActiveNode')
-            wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt })
+            wrapper.vm.handleEmitQueryOpt({ node: prvw_node, opt })
             updateActiveNodeSpy.should.have.been.calledOnceWithExactly(prvw_node)
             expect(wrapper.emitted()).to.have.property('get-node-data')
             switch (opt.text) {
@@ -487,7 +487,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             txtOptTypes.forEach(type => {
                 let copySpy
                 if (type === 'CLIPBOARD') copySpy = sinon.spy(document, 'execCommand')
-                wrapper.vm.handleTxtOpt({ item: prvw_node, opt: { text, type } })
+                wrapper.vm.handleTxtOpt({ node: prvw_node, opt: { text, type } })
                 switch (type) {
                     case 'INSERT':
                         expect(wrapper.emitted()).to.have.property('place-to-editor')
