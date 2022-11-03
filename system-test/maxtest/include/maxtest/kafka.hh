@@ -83,6 +83,7 @@ private:
             false,
             "kafka/bin/kafka-server-stop.sh;"
             "kafka/bin/zookeeper-server-stop.sh;"
+            "pkill -9 java;"
             "rm -rf /tmp/zookeeper /tmp/kafka-logs;");
     }
 
