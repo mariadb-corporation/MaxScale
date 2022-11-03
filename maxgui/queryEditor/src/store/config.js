@@ -71,11 +71,6 @@ export const NODE_GROUP_CHILD_TYPES = Object.freeze({
 
 export const SQL_SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
 
-// Option types for context menu in result-data-table
-export const SQL_RES_TBL_CTX_OPT_TYPES = Object.freeze({
-    CLIPBOARD: 'CLIPBOARD',
-    TXT_EDITOR: { INSERT: 'INSERT' },
-})
 export const SQL_QUERY_MODES = Object.freeze({
     PRVW_DATA: 'PRVW_DATA',
     PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',

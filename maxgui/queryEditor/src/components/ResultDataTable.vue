@@ -190,8 +190,7 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_RES_TBL_CTX_OPT_TYPES: state =>
-                state.queryEditorConfig.config.SQL_RES_TBL_CTX_OPT_TYPES,
+            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
         }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8
@@ -249,13 +248,11 @@ export default {
             return `#${this.$typy(this.ctxMenuData, 'activatorID').safeString}`
         },
         clipboardOpts() {
-            const { CLIPBOARD } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            const { CLIPBOARD } = this.NODE_CTX_TYPES
             return this.genTxtOpts(CLIPBOARD)
         },
         insertOpts() {
-            const {
-                TXT_EDITOR: { INSERT },
-            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            const { INSERT } = this.NODE_CTX_TYPES
             return this.genTxtOpts(INSERT)
         },
         baseOpts() {
@@ -348,10 +345,7 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleTxtOpt({ opt, data }) {
-            const {
-                CLIPBOARD,
-                TXT_EDITOR: { INSERT },
-            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            const { CLIPBOARD, INSERT } = this.NODE_CTX_TYPES
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('fieldQuoted'):

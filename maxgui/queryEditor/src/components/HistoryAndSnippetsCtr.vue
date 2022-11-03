@@ -220,8 +220,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
-            SQL_RES_TBL_CTX_OPT_TYPES: state =>
-                state.queryEditorConfig.config.SQL_RES_TBL_CTX_OPT_TYPES,
+            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.queryPersisted.query_history,
             query_snippets: state => state.queryPersisted.query_snippets,
@@ -338,10 +337,7 @@ export default {
             return data.map(item => Object.values(item))
         },
         menuOpts() {
-            const {
-                CLIPBOARD,
-                TXT_EDITOR: { INSERT },
-            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            const { CLIPBOARD, INSERT } = this.NODE_CTX_TYPES
             return [
                 {
                     text: this.$mxs_t('copyToClipboard'),
@@ -412,10 +408,7 @@ export default {
                 case this.SQL_QUERY_MODES.SNIPPETS:
                     sql = rowData[0].sql
             }
-            const {
-                TXT_EDITOR: { INSERT },
-                CLIPBOARD,
-            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            const { INSERT, CLIPBOARD } = this.NODE_CTX_TYPES
             // if no name is defined when storing the query, sql query is stored to name
             let sqlTxt = sql ? sql : name
             switch (opt.type) {
