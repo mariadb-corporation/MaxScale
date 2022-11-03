@@ -258,7 +258,6 @@ function program() {
     .command(require("./show.js"))
     .command(require("./set.js"))
     .command(require("./clear.js"))
-    .command(require("./drain.js"))
     .command(require("./enable.js"))
     .command(require("./disable.js"))
     .command(require("./create.js"))
@@ -271,7 +270,6 @@ function program() {
     .command(require("./rotate.js"))
     .command(require("./reload.js"))
     .command(require("./call.js"))
-    .command(require("./cluster.js"))
     .command(require("./api.js"))
     .command(require("./classify.js"))
     .epilog(

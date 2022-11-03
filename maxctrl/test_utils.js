@@ -40,19 +40,9 @@ function startMaxScale() {
   return runScript("./start_maxscale.sh");
 }
 
-// Start two MaxScales
-function startDoubleMaxScale() {
-  return runScript("./start_double_maxscale.sh");
-}
-
 // Stop MaxScale, this should be called in the `after` handler of each test unit
 function stopMaxScale() {
   return runScript("./stop_maxscale.sh");
-}
-
-// Stop two MaxScales
-function stopDoubleMaxScale() {
-  return runScript("./stop_double_maxscale.sh");
 }
 
 // Execute a single MaxCtrl command, returns a Promise
@@ -124,8 +114,6 @@ module.exports = {
   secondary_host,
   startMaxScale,
   stopMaxScale,
-  startDoubleMaxScale,
-  stopDoubleMaxScale,
   doCommand,
   verifyCommand,
   sleepFor,

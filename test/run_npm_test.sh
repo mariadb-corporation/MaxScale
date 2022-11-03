@@ -33,7 +33,7 @@ testdir=$3
 
 maxscaledir=$PWD/maxscale_test/
 
-rm -f $maxscaledir/maxscale{,1,2}.output $maxscaledir/{,secondary/}log/maxscale/maxscale.log
+rm -f $maxscaledir/maxscale1.output $maxscaledir/log/maxscale/maxscale.log
 
 # Create the test directories
 mkdir -p $maxscaledir $testdir

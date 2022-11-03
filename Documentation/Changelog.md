@@ -9,6 +9,11 @@
   _master/slave_ and _primary/replica_ are completely interchangable.
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
   have been removed.
+* The obsolete `maxctrl drain` command has been removed. Use `maxctrl set server
+  <name> drain` to use the built-in draining mechanism.
+* The `maxctrl cluster` commands have been removed. Use the built-in
+  [configuration synchronization](Getting-Started/Configuration-Guide.md#configuration-synchronization)
+  to synchronize the configurations of multiple MaxScale instances.
 
 ## MariaDB MaxScale 22.08
 
