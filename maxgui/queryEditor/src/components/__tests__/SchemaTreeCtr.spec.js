@@ -403,14 +403,15 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             expect(wrapper.vm.showCtxBtn(node)).to.be[v]
         })
     })
-    it(`Should return nodes with less properties when minimizeNodes is called`, () => {
+    it(`Should return nodes with less properties when minimizeNode is called`, () => {
         const node = dummy_db_tree_data.find(node => node.type === 'SCHEMA')
         wrapper = mountFactory()
-        const minimizeNode = wrapper.vm.minimizeNodes([node])[0]
+        const minimizeNode = wrapper.vm.minimizeNode(node)
         expect(Object.keys(minimizeNode).length).to.be.below(Object.keys(node).length)
         expect(minimizeNode).to.be.eql({
             id: node.id,
             qualified_name: node.qualified_name,
+            name: node.name,
             type: node.type,
             level: node.level,
         })

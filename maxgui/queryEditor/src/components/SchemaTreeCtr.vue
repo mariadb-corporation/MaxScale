@@ -285,17 +285,25 @@ export default {
                 { deep: true }
             )
         },
+
+        /**
+         * @param {Array} node - a node in db_tree_map
+         * @returns {Array} minimized node
+         */
+        minimizeNode: ({ id, qualified_name, name, type, level }) => ({
+            id,
+            qualified_name,
+            name,
+            type,
+            level,
+        }),
         /**
          * @param {Array} nodes - array of nodes
-         * @returns {Array} minimized nodes. each node is an object with id, qualified_name, type, level attrs
+         * @returns {Array} minimized nodes.
          */
-        minimizeNodes: nodes =>
-            nodes.map(({ id, qualified_name, type, level }) => ({
-                id,
-                qualified_name,
-                type,
-                level,
-            })),
+        minimizeNodes(nodes) {
+            return nodes.map(this.minimizeNode)
+        },
 
         async handleLoadChildren(item) {
             await this.asyncEmit('load-children', item)
@@ -321,16 +329,18 @@ export default {
          */
         genUserNodeOpts(node) {
             const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
+            //TODO: get rid of SQL_NODE_CTX_OPT_TYPES, replace it with NODE_ACTION_TYPES
             const {
                 DDL: { DD },
             } = this.SQL_NODE_CTX_OPT_TYPES
-            const { DROP } = this.NODE_ACTION_TYPES
 
-            const dropOpt = {
-                text: `${DROP} ${this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())}`,
-                type: DD,
-                actionType: DROP,
-            }
+            const { DROP, ALTER, TRUNCATE } = this.NODE_ACTION_TYPES
+            const label = this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())
+
+            const dropOpt = { text: `${DROP} ${label}`, type: DD, actionType: DROP }
+            const alterOpt = { text: `${ALTER} ${label}`, type: DD, actionType: ALTER }
+            const truncateOpt = { text: `${TRUNCATE} ${label}`, type: DD, actionType: TRUNCATE }
+
             switch (node.type) {
                 case SCHEMA:
                 case VIEW:
@@ -338,11 +348,7 @@ export default {
                 case TRIGGER:
                     return [dropOpt]
                 case TBL:
-                    return [
-                        { text: this.$mxs_t('alterTbl'), type: DD },
-                        dropOpt,
-                        { text: this.$mxs_t('truncateTbl'), type: DD },
-                    ]
+                    return [alterOpt, dropOpt, truncateOpt]
                 case COL:
                 default:
                     return []
@@ -425,24 +431,18 @@ export default {
          */
         handleEmitDD_opt({ item, opt }) {
             const { escapeIdentifiers: escape } = this.$helpers
-            const { DROP } = this.NODE_ACTION_TYPES
+            const { DROP, ALTER, TRUNCATE } = this.NODE_ACTION_TYPES
+            const { TBL } = this.NODE_TYPES
             switch (opt.actionType) {
                 case DROP:
                     this.$emit('drop-action', `DROP ${item.type} ${escape(item.qualified_name)};`)
                     break
-            }
-            //TODO: Remove string check for context option, replace it with context actionType.
-            switch (opt.text) {
-                case this.$mxs_t('alterTbl'):
-                    this.$emit('alter-tbl', {
-                        qualified_name: item.qualified_name,
-                        type: item.type,
-                        level: item.level,
-                        name: item.name,
-                    })
+                case ALTER:
+                    if (item.type === TBL) this.$emit('alter-tbl', this.minimizeNode(item))
                     break
-                case this.$mxs_t('truncateTbl'):
-                    this.$emit('truncate-tbl', `truncate ${escape(item.qualified_name)};`)
+                case TRUNCATE:
+                    if (item.type === TBL)
+                        this.$emit('truncate-tbl', `TRUNCATE TABLE ${escape(item.qualified_name)};`)
                     break
             }
         },

@@ -79,6 +79,8 @@ export const SQL_NODE_CTX_OPT_TYPES = Object.freeze({
 })
 export const NODE_ACTION_TYPES = Object.freeze({
     DROP: 'Drop',
+    ALTER: 'Alter',
+    TRUNCATE: 'Truncate',
 })
 
 // Option types for context menu in result-data-table

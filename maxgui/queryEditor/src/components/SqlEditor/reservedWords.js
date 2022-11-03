@@ -233,6 +233,7 @@ export default [
     'TRAILING',
     'TRIGGER',
     'TRUE',
+    'TRUNCATE',
     'UNDO',
     'UNION',
     'UNIQUE',
