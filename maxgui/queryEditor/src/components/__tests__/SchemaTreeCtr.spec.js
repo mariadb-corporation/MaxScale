@@ -236,13 +236,14 @@ describe(`schema-tree-ctr - context menu tests`, () => {
         return wrapper.find(`#ctx-menu-activator-${node.key}`)
     }
     afterEach(() => wrapper.destroy())
-    it(`Should pass accurate data to mxs-sub-menu via props`, () => {
+    it(`Should pass accurate data to mxs-sub-menu via props`, async () => {
         wrapper = mountFactory({ data: () => ({ activeCtxItem }) }) // condition to render the menu
+        await wrapper.setData({ activeCtxItemOpts: wrapper.vm.getNodeOpts(activeCtxItem) })
         const menu = wrapper.findComponent({ name: 'mxs-sub-menu' })
         const { value, left, items, activator } = menu.vm.$props
         expect(value).to.be.equals(wrapper.vm.showCtxMenu)
         expect(left).to.be.true
-        expect(items).to.be.deep.equals(wrapper.vm.getNodeOpts(activeCtxItem))
+        expect(items).to.be.deep.equals(wrapper.vm.$data.activeCtxItemOpts)
         expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxItem.key}`)
         expect(menu.vm.$vnode.key).to.be.equals(activeCtxItem.key)
     })
@@ -281,7 +282,7 @@ describe(`schema-tree-ctr - context menu tests`, () => {
         const expectOpts = [
             ...wrapper.vm.baseOptsMap[userNode.type],
             { divider: true },
-            ...wrapper.vm.userNodeOptsMap[userNode.type],
+            ...wrapper.vm.genUserNodeOpts(userNode),
         ]
         expect(wrapper.vm.getNodeOpts(userNode)).to.be.deep.equals(expectOpts)
     })
@@ -381,21 +382,7 @@ describe(`schema-tree-ctr - computed and other method tests`, () => {
             TRIGGER: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
         })
     })
-    it(`Should return accurate value for userNodeOptsMap computed property`, () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.userNodeOptsMap).to.eql({
-            SCHEMA: [{ text: wrapper.vm.$mxs_t('dropSchema'), type: 'DD' }],
-            TABLE: [
-                { text: wrapper.vm.$mxs_t('alterTbl'), type: 'DD' },
-                { text: wrapper.vm.$mxs_t('dropTbl'), type: 'DD' },
-                { text: wrapper.vm.$mxs_t('truncateTbl'), type: 'DD' },
-            ],
-            VIEW: [{ text: wrapper.vm.$mxs_t('dropView'), type: 'DD' }],
-            PROCEDURE: [{ text: wrapper.vm.$mxs_t('dropSp'), type: 'DD' }],
-            COLUMN: [],
-            TRIGGER: [{ text: wrapper.vm.$mxs_t('dropTrigger'), type: 'DD' }],
-        })
-    })
+
     const expectedBoolVal = [true, false]
     expectedBoolVal.forEach(v => {
         it(`Should return ${v} when filter method is called`, () => {

@@ -79,7 +79,7 @@
             left
             :nudge-right="12"
             :nudge-bottom="10"
-            :items="getNodeOpts(activeCtxItem)"
+            :items="activeCtxItemOpts"
             :activator="`#ctx-menu-activator-${activeCtxItem.key}`"
             @item-click="optionHandler({ item: activeCtxItem, opt: $event })"
         />
@@ -120,6 +120,7 @@ export default {
         return {
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
+            activeCtxItemOpts: [],
             hoveredItem: null,
             expandedNodes: [],
         }
@@ -131,6 +132,7 @@ export default {
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
             SQL_NODE_CTX_OPT_TYPES: state => state.queryEditorConfig.config.SQL_NODE_CTX_OPT_TYPES,
+            NODE_ACTION_TYPES: state => state.queryEditorConfig.config.NODE_ACTION_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
             active_db: state => state.queryConn.active_db,
@@ -197,25 +199,7 @@ export default {
                 [TRIGGER]: [...this.insertOpts, ...this.clipboardOpts],
             }
         },
-        // more node options for user's nodes
-        userNodeOptsMap() {
-            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
-            const {
-                DDL: { DD },
-            } = this.SQL_NODE_CTX_OPT_TYPES
-            return {
-                [SCHEMA]: [{ text: this.$mxs_t('dropSchema'), type: DD }],
-                [TBL]: [
-                    { text: this.$mxs_t('alterTbl'), type: DD },
-                    { text: this.$mxs_t('dropTbl'), type: DD },
-                    { text: this.$mxs_t('truncateTbl'), type: DD },
-                ],
-                [VIEW]: [{ text: this.$mxs_t('dropView'), type: DD }],
-                [SP]: [{ text: this.$mxs_t('dropSp'), type: DD }],
-                [COL]: [],
-                [TRIGGER]: [{ text: this.$mxs_t('dropTrigger'), type: DD }],
-            }
-        },
+
         // Use either getActivePrvwTblNode or getAlteredActiveNode
         activeNodes: {
             get() {
@@ -324,12 +308,46 @@ export default {
             } else {
                 if (!this.showCtxMenu) this.showCtxMenu = true
                 this.activeCtxItem = item
+                this.activeCtxItemOpts = this.getNodeOpts(item)
             }
         },
         updateActiveNode(item) {
             this.activeNodes = [item]
         },
 
+        /**
+         * @param {Object} node - a node in db_tree_map
+         * @returns {Array} context options for non system node
+         */
+        genUserNodeOpts(node) {
+            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
+            const {
+                DDL: { DD },
+            } = this.SQL_NODE_CTX_OPT_TYPES
+            const { DROP } = this.NODE_ACTION_TYPES
+
+            const dropOpt = {
+                text: `${DROP} ${this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())}`,
+                type: DD,
+                actionType: DROP,
+            }
+            switch (node.type) {
+                case SCHEMA:
+                case VIEW:
+                case SP:
+                case TRIGGER:
+                    return [dropOpt]
+                case TBL:
+                    return [
+                        { text: this.$mxs_t('alterTbl'), type: DD },
+                        dropOpt,
+                        { text: this.$mxs_t('truncateTbl'), type: DD },
+                    ]
+                case COL:
+                default:
+                    return []
+            }
+        },
         /**
          * Both INSERT and CLIPBOARD types have same options.
          * This generates txt options based on provided type
@@ -407,7 +425,13 @@ export default {
          */
         handleEmitDD_opt({ item, opt }) {
             const { escapeIdentifiers: escape } = this.$helpers
-            //TODO: Remove string check for context option, replace it with context type. e.g. CTX_DROP
+            const { DROP } = this.NODE_ACTION_TYPES
+            switch (opt.actionType) {
+                case DROP:
+                    this.$emit('drop-action', `DROP ${item.type} ${escape(item.qualified_name)};`)
+                    break
+            }
+            //TODO: Remove string check for context option, replace it with context actionType.
             switch (opt.text) {
                 case this.$mxs_t('alterTbl'):
                     this.$emit('alter-tbl', {
@@ -416,13 +440,6 @@ export default {
                         level: item.level,
                         name: item.name,
                     })
-                    break
-                case this.$mxs_t('dropTbl'):
-                case this.$mxs_t('dropSchema'):
-                case this.$mxs_t('dropSp'):
-                case this.$mxs_t('dropTrigger'):
-                case this.$mxs_t('dropView'):
-                    this.$emit('drop-action', `DROP ${item.type} ${escape(item.qualified_name)};`)
                     break
                 case this.$mxs_t('truncateTbl'):
                     this.$emit('truncate-tbl', `truncate ${escape(item.qualified_name)};`)
@@ -497,7 +514,7 @@ export default {
             return [
                 ...this.baseOptsMap[node.type],
                 { divider: true },
-                ...this.userNodeOptsMap[node.type],
+                ...this.genUserNodeOpts(node),
             ]
         },
         onNodeClick(item) {

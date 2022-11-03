@@ -77,6 +77,10 @@ export const SQL_NODE_CTX_OPT_TYPES = Object.freeze({
     DDL: { DD: 'DD' }, // Data definition
     ADMIN: { USE: 'USE' }, // Data definition
 })
+export const NODE_ACTION_TYPES = Object.freeze({
+    DROP: 'Drop',
+})
+
 // Option types for context menu in result-data-table
 export const SQL_RES_TBL_CTX_OPT_TYPES = Object.freeze({
     CLIPBOARD: 'CLIPBOARD',
