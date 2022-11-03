@@ -214,6 +214,16 @@ RoutingWorker::Datas RoutingWorker::s_datas;
 //static
 std::mutex RoutingWorker::s_datas_lock;
 
+RoutingWorker::Data::Data()
+{
+    RoutingWorker::register_data(this);
+}
+
+RoutingWorker::Data::~Data()
+{
+    RoutingWorker::deregister_data(this);
+}
+
 json_t* RoutingWorker::MemoryUsage::to_json() const
 {
     json_t* pMu = json_object();
@@ -347,11 +357,6 @@ void RoutingWorker::register_data(Data* pData)
     s_datas.push_back(pData);
 
     guard.unlock();
-
-    execute_concurrently([pData]() {
-            auto* pWorker = get_current();
-            pData->init_for(pWorker);
-        }, DESIRED);
 }
 
 //static
@@ -364,11 +369,6 @@ void RoutingWorker::deregister_data(Data* pData)
     s_datas.erase(it);
 
     guard.unlock();
-
-    execute_concurrently([pData]() {
-            auto* pWorker = get_current();
-            pData->finish_for(pWorker);
-        }, DESIRED);
 }
 
 //static

@@ -98,7 +98,10 @@ public:
     class Data
     {
     public:
-        virtual ~Data() = default;
+        Data(const Data&) = delete;
+        Data& operator=(const Data&) = delete;
+
+        virtual ~Data();
 
         /**
          * Called when the data should be initialized for a worker.
@@ -117,21 +120,10 @@ public:
          *                 and in whose thread-context the call is made.
          */
         virtual void finish_for(RoutingWorker*) = 0;
+
+    protected:
+        Data();
     };
-
-    /**
-     * Register data that needs to be initialized/finalized for each worker.
-     *
-     * @param pData  The data.
-     */
-    static void register_data(Data* pData);
-
-    /**
-     * De-register data that needs to be initialized/finalized for each worker.
-     *
-     * @param pData  The data.
-     */
-    static void deregister_data(Data* pData);
 
     /**
      * Initialize the routing worker mechanism.
@@ -593,6 +585,9 @@ private:
     bool try_shutdown();
 
 private:
+    static void register_data(Data* pData);
+    static void deregister_data(Data* pData);
+
     struct Rebalance
     {
         RoutingWorker* pTo {nullptr};   /*< Worker to offload work to. */
