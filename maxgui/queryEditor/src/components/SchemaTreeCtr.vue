@@ -100,7 +100,7 @@
  */
 /*
 This component emits the following events
-@get-node-data: { QUERY_MODE: string, schemaId:string }
+@get-node-data: { query_mode: string, qualified_name:string }
 @place-to-editor: v:string. Place text to editor
 @alter-tbl: Node. Alter table node
 @drop-action: sql:string.
@@ -389,8 +389,8 @@ export default {
         onNodeClick(node) {
             if (node.canBeHighlighted)
                 this.$emit('get-node-data', {
-                    QUERY_MODE: this.QUERY_MODES.PRVW_DATA,
-                    schemaId: this.activeNodes[0].qualified_name,
+                    query_mode: this.QUERY_MODES.PRVW_DATA,
+                    qualified_name: node.qualified_name,
                 })
         },
         onNodeDblClick(node) {
@@ -439,8 +439,8 @@ export default {
                     })
                     this.activeNodes = [node] // updateActiveNode
                     this.$emit('get-node-data', {
-                        QUERY_MODE: opt.type,
-                        schemaId: node.qualified_name,
+                        query_mode: opt.type,
+                        qualified_name: node.qualified_name,
                     })
                     break
                 case INSERT:

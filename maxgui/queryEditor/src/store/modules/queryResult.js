@@ -33,14 +33,18 @@ export default {
     },
     actions: {
         /**
-         * @param {String} tblId - Table id (database_name.table_name).
+         * @param {String} param.qualified_name - Table id (database_name.table_name).
+         * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
          */
-        async fetchPrvw({ rootState, commit, dispatch, rootGetters }, { tblId, prvwMode }) {
+        async fetchPrvw(
+            { rootState, commit, dispatch, rootGetters },
+            { qualified_name, query_mode }
+        ) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             const request_sent_time = new Date().valueOf()
             try {
-                commit(`PATCH_${prvwMode}_MAP`, {
+                commit(`PATCH_${query_mode}_MAP`, {
                     id: active_session_id,
                     payload: {
                         request_sent_time,
@@ -49,15 +53,15 @@ export default {
                     },
                 })
                 let sql, queryName
-                const escapedTblId = this.vue.$helpers.escapeIdentifiers(tblId)
-                switch (prvwMode) {
+                const escapedQN = this.vue.$helpers.escapeIdentifiers(qualified_name)
+                switch (query_mode) {
                     case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA:
-                        sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
-                        queryName = `Preview ${escapedTblId} data`
+                        sql = `SELECT * FROM ${escapedQN} LIMIT 1000;`
+                        queryName = `Preview ${escapedQN} data`
                         break
                     case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA_DETAILS:
-                        sql = `DESCRIBE ${escapedTblId};`
-                        queryName = `View ${escapedTblId} details`
+                        sql = `DESCRIBE ${escapedQN};`
+                        queryName = `View ${escapedQN} details`
                         break
                 }
 
@@ -67,7 +71,7 @@ export default {
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                commit(`PATCH_${prvwMode}_MAP`, {
+                commit(`PATCH_${query_mode}_MAP`, {
                     id: active_session_id,
                     payload: {
                         data: Object.freeze(res.data.data),
@@ -88,7 +92,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                commit(`PATCH_${prvwMode}_MAP`, {
+                commit(`PATCH_${query_mode}_MAP`, {
                     id: active_session_id,
                     payload: { is_loading: false },
                 })
@@ -333,6 +337,7 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
+            const activePrvwTblNode = rootGetters['schemaSidebar/getActivePrvwTblNode']
             for (const mode of prvwModes) {
                 const data = scope.$helpers.stringifyClone(
                     scope.$typy(getters.getPrvwData(mode), 'data.attributes.results[0]')
@@ -349,7 +354,7 @@ export default {
                             break
                     }
                     resSets.push({
-                        id: `${resName} of ${rootGetters['schemaSidebar/getActivePrvwTblNode'].id}`,
+                        id: `${resName} of ${activePrvwTblNode.qualified_name}`,
                         ...data,
                     })
                 }

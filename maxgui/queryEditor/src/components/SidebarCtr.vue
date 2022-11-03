@@ -162,10 +162,10 @@ export default {
             handleAddNewSession: 'querySession/handleAddNewSession',
         }),
 
-        async fetchNodePrvwData({ QUERY_MODE, schemaId }) {
+        async fetchNodePrvwData({ query_mode, qualified_name }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: QUERY_MODE, id: this.getActiveSessionId })
-            await this.fetchPrvw({ tblId: schemaId, prvwMode: QUERY_MODE })
+            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.getActiveSessionId })
+            await this.fetchPrvw({ qualified_name: qualified_name, query_mode })
         },
         async handleLoadChildren(node) {
             await this.loadChildNodes(node)

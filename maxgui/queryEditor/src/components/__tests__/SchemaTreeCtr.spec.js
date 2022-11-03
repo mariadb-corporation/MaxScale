@@ -311,8 +311,8 @@ describe(`schema-tree-ctr - context menu tests`, () => {
                 case NODE_CTX_TYPES.PRVW_DATA:
                 case NODE_CTX_TYPES.PRVW_DATA_DETAILS:
                     expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
-                        QUERY_MODE: opt.type,
-                        schemaId: node.qualified_name,
+                        query_mode: opt.type,
+                        qualified_name: node.qualified_name,
                     })
                     break
                 case NODE_CTX_TYPES.INSERT:

@@ -73,17 +73,18 @@ export default {
         /**
          * This function checks if there is no preview data or details data
          * before dispatching action to fetch either preview data or details
-         * data based on QUERY_MODE value.
-         * @param {String} QUERY_MODE - query mode
+         * data based on query_mode value.
+         * @param {String} query_mode - query mode
          */
-        async handleFetch(QUERY_MODE) {
-            switch (QUERY_MODE) {
+        async handleFetch(query_mode) {
+            switch (query_mode) {
                 case this.QUERY_MODES.PRVW_DATA:
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await this.fetchPrvw({
-                            tblId: this.$typy(this.getActivePrvwTblNode, 'id').safeObject,
-                            prvwMode: QUERY_MODE,
+                            qualified_name: this.$typy(this.getActivePrvwTblNode, 'qualified_name')
+                                .safeString,
+                            query_mode,
                         })
                     }
                     break
