@@ -81,6 +81,7 @@ List all servers in MaxScale.
   Connections | Current connection count
   State       | Server state
   GTID        | Current value of @@gtid_current_pos
+  Monitor     | The monitor for this server
 ```
 
 ### list services
@@ -608,6 +609,7 @@ Show detailed information about a service. The `Parameters` field contains the c
   Router              | Router that the service uses
   State               | Service state
   Started At          | When the service was started
+  Users Loaded At     | When the users for the service were loaded
   Current Connections | Current connection count
   Total Connections   | Total connection count
   Max Connections     | Historical maximum connection count
@@ -656,6 +658,7 @@ Show detailed information about all services.
   Router              | Router that the service uses
   State               | Service state
   Started At          | When the service was started
+  Users Loaded At     | When the users for the service were loaded
   Current Connections | Current connection count
   Total Connections   | Total connection count
   Max Connections     | Historical maximum connection count
@@ -1132,6 +1135,7 @@ See `--help alter maxscale` for more details about altering MaxScale parameters.
   Uptime       | Time MaxScale has been running
   Config Sync  | MaxScale configuration synchronization
   Parameters   | Global MaxScale parameters
+  System       | System Information
 ```
 
 ### show thread
@@ -1167,6 +1171,7 @@ Show detailed information about a worker thread.
   Field                  | Description
   -----                  | -----------
   Id                     | Thread ID
+  State                  | The state of the thread
   Accepts                | Number of TCP accepts done by this thread
   Reads                  | Number of EPOLLIN events
   Writes                 | Number of EPOLLOUT events
@@ -1186,6 +1191,9 @@ Show detailed information about a worker thread.
   QC cache hits          | How many times a query classification was found in the query classification cache
   QC cache misses        | How many times a query classification was not found in the query classification cache
   QC cache evictions     | How many times a query classification result was evicted from the query classification cache
+  Sessions               | The current number of sessions
+  Zombies                | The current number of zombie connections, waiting to be discarded
+  Memory                 | The current (partial) memory usage
 ```
 
 ### show threads
@@ -1214,6 +1222,7 @@ HTTPS/TLS Options:
 Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
+      --kind     The kind of threads to display, only the running or all.  [string] [choices: "running", "all"] [default: "running"]
 
 Show detailed information about all worker threads.
 
@@ -1221,6 +1230,7 @@ Show detailed information about all worker threads.
   Field                  | Description
   -----                  | -----------
   Id                     | Thread ID
+  State                  | The state of the thread
   Accepts                | Number of TCP accepts done by this thread
   Reads                  | Number of EPOLLIN events
   Writes                 | Number of EPOLLOUT events
@@ -1240,6 +1250,9 @@ Show detailed information about all worker threads.
   QC cache hits          | How many times a query classification was found in the query classification cache
   QC cache misses        | How many times a query classification was not found in the query classification cache
   QC cache evictions     | How many times a query classification result was evicted from the query classification cache
+  Sessions               | The current number of sessions
+  Zombies                | The current number of zombie connections, waiting to be discarded
+  Memory                 | The current (partial) memory usage
 ```
 
 ### show logging
@@ -1459,43 +1472,6 @@ Options:
 This command clears a server state set by the `set server <server> <state>` command
 ```
 
-## drain
-
-### drain server
-
-```
-Usage: drain server <server>
-
-Global Options:
-  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
-  -u, --user       Username to use  [string] [default: "admin"]
-  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
-  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
-  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
-  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-      --tsv        Print tab separated output  [boolean] [default: false]
-      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
-
-HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-      --tls-key                 Path to TLS private key  [string]
-      --tls-passphrase          Password for the TLS private key  [string]
-      --tls-cert                Path to TLS public certificate  [string]
-      --tls-ca-cert             Path to TLS CA certificate  [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
-
-Drain options:
-      --drain-timeout  Timeout for the drain operation in seconds. If exceeded, the server is added back to all services without putting it into maintenance mode.  [number] [default: 90]
-
-Options:
-      --version  Show version number  [boolean]
-      --help     Show help  [boolean]
-
-This command drains the server of connections by first removing it from all services after which it waits until all connections are closed. When all connections are closed, the server is put into the `maintenance` state and added back to all the services where it was removed from. To take the server back into use, execute `clear server <server> maintenance`.
-
-Warning: This command is not safe to interrupt. If interrupted, the servers might not be added back to the service. For a better alternative, use `set server <server> drain`. This command has been deprecated in MaxScale 6.0.
-```
-
 ## enable
 
 ### enable log-priority
@@ -1568,56 +1544,8 @@ The `debug` log priority is only available for debug builds of MaxScale.
 Usage: create server <name> <host|socket> [port] [params...]
 
 Create server options:
-      --services                     Link the created server to these services  [array]
-      --monitors                     Link the created server to these monitors  [array]
-      --protocol                     Protocol module name  [string] [default: "mariadbbackend"]
-      --authenticator                Authenticator module name (deprecated)  [string]
-      --authenticator-options        Option string for the authenticator (deprecated)  [string]
-      --tls                          Enable TLS  [boolean]
-      --tls-key                      Path to TLS key  [string]
-      --tls-cert                     Path to TLS certificate  [string]
-      --tls-ca-cert                  Path to TLS CA certificate  [string]
-      --tls-version                  TLS version to use  [string]
-      --tls-cert-verify-depth        TLS certificate verification depth  [number]
-      --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
-      --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
-
-Global Options:
-  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
-  -u, --user       Username to use  [string] [default: "admin"]
-  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
-  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
-  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
-  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-      --tsv        Print tab separated output  [boolean] [default: false]
-      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
-
-HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-      --tls-key                 Path to TLS key  [string]
-      --tls-passphrase          Password for the TLS private key  [string]
-      --tls-cert                Path to TLS certificate  [string]
-      --tls-ca-cert             Path to TLS CA certificate  [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
-
-Options:
-      --version  Show version number  [boolean]
-      --help     Show help  [boolean]
-
-The created server will not be used by any services or monitors unless the --services or --monitors options are given. The list of servers a service or a monitor uses can be altered with the `link` and `unlink` commands. If the <host|socket> argument is an absolute path, the server will use a local UNIX domain socket connection. In this case the [port] argument is ignored.
-
-The recommended way of declaring parameters is with the new `key=value` syntax added in MaxScale 6.2.0. Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them.
-```
-
-### create monitor
-
-```
-Usage: create monitor <name> <module> [params...]
-
-Create monitor options:
-      --servers           Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
-      --monitor-user      Username for the monitor user  [string]
-      --monitor-password  Password for the monitor user  [string]
+      --services  Link the created server to these services  [array]
+      --monitors  Link the created server to these monitors  [array]
 
 Global Options:
   -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1641,7 +1569,42 @@ Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
 
-The list of servers given with the --servers option should not contain any servers that are already monitored by another monitor. The last argument to this command is a list of key=value parameters given as the monitor parameters.
+The created server will not be used by any services or monitors unless the --services or --monitors options are given. The list of servers a service or a monitor uses can be altered with the `link` and `unlink` commands. If the <host|socket> argument is an absolute path, the server will use a local UNIX domain socket connection. In this case the [port] argument is ignored.
+
+The recommended way of declaring parameters is with the new `key=value` syntax added in MaxScale 6.2.0. Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them. The redundant option parameters have been deprecated in MaxScale 22.08.
+```
+
+### create monitor
+
+```
+Usage: create monitor <name> <module> [params...]
+
+Create monitor options:
+      --servers  Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
+
+Global Options:
+  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user       Username to use  [string] [default: "admin"]
+  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv        Print tab separated output  [boolean] [default: false]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+      --version  Show version number  [boolean]
+      --help     Show help  [boolean]
+
+The list of servers given with the --servers option should not contain any servers that are already monitored by another monitor. The last argument to this command is a list of key=value parameters given as the monitor parameters. The redundant option parameters have been deprecated in MaxScale 22.08.
 ```
 
 ### create service
@@ -1717,20 +1680,6 @@ The last argument to this command is a list of key=value parameters given as the
 ```
 Usage: create listener <service> <name> <port> [params...]
 
-Create listener options:
-      --interface                    Interface to listen on  [string] [default: "::"]
-      --protocol                     Protocol module name  [string] [default: "mariadbclient"]
-      --authenticator                Authenticator module name  [string]
-      --authenticator-options        Option string for the authenticator  [string]
-      --tls-key                      Path to TLS key  [string]
-      --tls-cert                     Path to TLS certificate  [string]
-      --tls-ca-cert                  Path to TLS CA certificate  [string]
-      --tls-version                  TLS version to use  [string]
-      --tls-crl                      TLS CRL to use  [string]
-      --tls-cert-verify-depth        TLS certificate verification depth  [number]
-      --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
-      --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
-
 Global Options:
   -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user       Username to use  [string] [default: "admin"]
@@ -1743,9 +1692,9 @@ Global Options:
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-      --tls-key                 Path to TLS key  [string]
+      --tls-key                 Path to TLS private key  [string]
       --tls-passphrase          Password for the TLS private key  [string]
-      --tls-cert                Path to TLS certificate  [string]
+      --tls-cert                Path to TLS public certificate  [string]
       --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
@@ -1753,7 +1702,7 @@ Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
 
-The new listener will be taken into use immediately. The last argument to this command is a list of key=value parameters given as the listener parameters. These parameters override any parameters set via command line options: e.g. using `protocol=mariadb` will override the `--protocol=cdc` option.
+The new listener will be taken into use immediately. The last argument to this command is a list of key=value parameters given as the listener parameters. These parameters override any parameters set via command line options: e.g. using `protocol=mariadb` will override the `--protocol=cdc` option. The redundant option parameters have been deprecated in MaxScale 22.08.
 ```
 
 ### create user
@@ -2516,21 +2465,7 @@ Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
 
-To display the service parameters, execute `show service <service>`. Some routers support runtime configuration changes to all parameters. Currently all readconnroute, readwritesplit and schemarouter parameters can be changed at runtime. In addition to module specific parameters, the following list of common service parameters can be altered at runtime:
-
-[
-    "user",
-    "passwd",
-    "enable_root_user",
-    "max_connections",
-    "connection_timeout",
-    "auth_all_servers",
-    "optimize_wildcard",
-    "strip_db_esc",
-    "max_slave_connections",
-    "max_slave_replication_lag",
-    "retain_last_statements"
-]
+To display the service parameters, execute `show service <service
 The parameters should be given in the `key=value` format. This command also supports the legacy method
 of passing parameters as `key value` pairs but the use of this is not recommended.
 ```
@@ -2564,7 +2499,7 @@ Options:
 
 The order of the filters given as the second parameter will also be the order in which queries pass through the filter chain. If no filters are given, all existing filters are removed from the service.
 
-For example, the command `maxctrl alter service filters my-service A B C` will set the filter chain for the service `my-service` so that A gets the query first after which it is passed to B and finally to C. This behavior is the same as if the `filters=A|B|C` parameter was defined for the service.
+For example, the command `maxctrl alter service-filters my-service A B C` will set the filter chain for the service `my-service` so that A gets the query first after which it is passed to B and finally to C. This behavior is the same as if the `filters=A|B|C` parameter was defined for the service.
 
 The parameters should be given in the `key=value` format. This command also supports the legacy method
 of passing parameters as `key value` pairs but the use of this is not recommended.
@@ -2697,22 +2632,7 @@ Options:
       --version  Show version number  [boolean]
       --help     Show help  [boolean]
 
-To display the MaxScale parameters, execute `show maxscale`. The following list of parameters can be altered at runtime:
-
-[
-    "auth_connect_timeout",
-    "auth_read_timeout",
-    "auth_write_timeout",
-    "admin_auth",
-    "admin_log_auth_failures",
-    "passive",
-    "ms_timestamp",
-    "skip_permission_checks",
-    "query_retries",
-    "query_retry_timeout",
-    "retain_last_statements",
-    "dump_last_statements"
-]
+To display the MaxScale parameters, execute `show maxscale`.
 The parameters should be given in the `key=value` format. This command also supports the legacy method
 of passing parameters as `key value` pairs but the use of this is not recommended.
 ```
@@ -2991,70 +2911,6 @@ Options:
       --help     Show help  [boolean]
 
 To inspect the list of module commands, execute `list commands`
-```
-
-## cluster
-
-### cluster diff
-
-```
-Usage: cluster diff <target>
-
-Global Options:
-  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
-  -u, --user       Username to use  [string] [default: "admin"]
-  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
-  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
-  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
-  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-      --tsv        Print tab separated output  [boolean] [default: false]
-      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
-
-HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-      --tls-key                 Path to TLS private key  [string]
-      --tls-passphrase          Password for the TLS private key  [string]
-      --tls-cert                Path to TLS public certificate  [string]
-      --tls-ca-cert             Path to TLS CA certificate  [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
-
-Options:
-      --version  Show version number  [boolean]
-      --help     Show help  [boolean]
-
-The list of host servers is controlled with the --hosts option. The target server should not be in the host list. Value of <target> must be in HOST:PORT format
-```
-
-### cluster sync
-
-```
-Usage: cluster sync <target>
-
-Global Options:
-  -c, --config     MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
-  -u, --user       Username to use  [string] [default: "admin"]
-  -p, --password   Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
-  -h, --hosts      List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
-  -t, --timeout    Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
-  -q, --quiet      Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-      --tsv        Print tab separated output  [boolean] [default: false]
-      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
-
-HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-      --tls-key                 Path to TLS private key  [string]
-      --tls-passphrase          Password for the TLS private key  [string]
-      --tls-cert                Path to TLS public certificate  [string]
-      --tls-ca-cert             Path to TLS CA certificate  [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
-
-Options:
-      --version  Show version number  [boolean]
-      --help     Show help  [boolean]
-
-This command will alter all MaxScale instances given in the --hosts option to represent the <target> MaxScale. Value of <target> must be in HOST:PORT format. Synchronization can be attempted again if a previous attempt failed due to a network failure or some other ephemeral error. Any other errors require manual synchronization of the MaxScale configuration files and a restart of the failed Maxscale.
-
-Note: New objects created by `cluster sync` will have a placeholder value and must be manually updated. Passwords for existing objects will not be updated by `cluster sync` and must also be manually updated.
 ```
 
 ## api
