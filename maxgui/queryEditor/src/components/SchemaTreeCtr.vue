@@ -161,7 +161,7 @@ export default {
         },
         // basic node options for different node types
         baseOptsMap() {
-            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, TRIGGER } = this.NODE_TYPES
             const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = this.NODE_CTX_TYPES
 
             const tblViewOpts = [
@@ -175,6 +175,7 @@ export default {
                 [TBL]: tblViewOpts,
                 [VIEW]: tblViewOpts,
                 [SP]: this.txtOpts,
+                [FN]: this.txtOpts,
                 [COL]: this.txtOpts,
                 [TRIGGER]: this.txtOpts,
             }
@@ -266,7 +267,7 @@ export default {
         },
         iconSheet(node) {
             const { SCHEMA } = this.NODE_TYPES
-            const { TBL_G, VIEW_G, SP_G } = this.NODE_GROUP_TYPES
+            const { TBL_G, VIEW_G, SP_G, FN_G } = this.NODE_GROUP_TYPES
             switch (node.type) {
                 case SCHEMA:
                     return '$vuetify.icons.mxs_database'
@@ -276,6 +277,8 @@ export default {
                     return 'mdi-view-dashboard-outline'
                 case SP_G:
                     return '$vuetify.icons.mxs_storedProcedures'
+                case FN_G:
+                    return 'mdi-function-variant'
                 //TODO: find icons for COL_G, TRIGGER_G
             }
         },
@@ -302,7 +305,7 @@ export default {
          * @returns {Array} context options for non system node
          */
         genUserNodeOpts(node) {
-            const { SCHEMA, TBL, VIEW, SP, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, TRIGGER } = this.NODE_TYPES
             const { DROP, ALTER, TRUNCATE } = this.NODE_CTX_TYPES
             const label = this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())
 
@@ -314,6 +317,7 @@ export default {
                 case SCHEMA:
                 case VIEW:
                 case SP:
+                case FN:
                 case TRIGGER:
                     return [dropOpt]
                 case TBL:

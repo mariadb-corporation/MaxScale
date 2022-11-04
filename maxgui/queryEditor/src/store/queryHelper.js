@@ -47,7 +47,7 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
 function getNodeGroupSQL(nodeGroup) {
-    const { TBL_G, VIEW_G, SP_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
+    const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
     const dbName = getDbName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
@@ -68,6 +68,11 @@ function getNodeGroupSQL(nodeGroup) {
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
             cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE != 'BASE TABLE'`
+            break
+        case FN_G:
+            cols = `${colNameKey}, DATA_TYPE, CREATED`
+            from = 'FROM information_schema.ROUTINES'
+            cond = `WHERE ROUTINE_TYPE = 'FUNCTION' AND ROUTINE_SCHEMA = '${dbName}'`
             break
         case SP_G:
             cols = `${colNameKey}, CREATED`
@@ -97,8 +102,8 @@ function getNodeGroupSQL(nodeGroup) {
  * @returns {Object}  A node in schema sidebar
  */
 function genNode({ nodeGroup, data, type, name }) {
-    const { SCHEMA, TBL, VIEW, SP, TRIGGER, COL } = NODE_TYPES
-    const { TBL_G, VIEW_G, SP_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
+    const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL } = NODE_TYPES
+    const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
     const dbName = nodeGroup ? getDbName(nodeGroup) : name
     let node = {
         id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
@@ -117,6 +122,7 @@ function genNode({ nodeGroup, data, type, name }) {
         case TBL:
         case VIEW:
         case SP:
+        case FN:
             node.qualified_name = `${dbName}.${node.name}`
             break
         case TRIGGER:
@@ -153,7 +159,7 @@ function genNode({ nodeGroup, data, type, name }) {
             }, [])
             break
         case SCHEMA:
-            node.children = [TBL_G, VIEW_G, SP_G].map(t => ({
+            node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
                 id: `${node.id}.${t}`,
                 qualified_name: `${dbName}.${t}`,
                 key: genNodeKey(),
