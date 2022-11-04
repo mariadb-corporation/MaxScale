@@ -70,18 +70,18 @@ function getNodeGroupSQL(nodeGroup) {
             cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE != 'BASE TABLE'`
             break
         case FN_G:
-            cols = `${colNameKey}, DATA_TYPE, CREATED`
+            cols = `${colNameKey}, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'FUNCTION' AND ROUTINE_SCHEMA = '${dbName}'`
             break
         case SP_G:
-            cols = `${colNameKey}, CREATED`
+            cols = `${colNameKey}, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
             break
         case TRIGGER_G:
-            cols = `${colNameKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT`
-            from = 'FROM information_schema.TRIGGER'
+            cols = `${colNameKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
+            from = 'FROM information_schema.TRIGGERS'
             cond = `WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
