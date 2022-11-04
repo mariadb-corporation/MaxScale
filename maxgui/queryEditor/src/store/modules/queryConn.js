@@ -591,18 +591,6 @@ export default {
         },
     },
     getters: {
-        getBgConn: (state, getters, rootState) => {
-            /**
-             * @param {Number} - active connection id that was cloned
-             */
-            return ({ session_id_fk }) =>
-                Object.values(state.sql_conns).find(
-                    conn =>
-                        conn.binding_type ===
-                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
-                                .BACKGROUND && conn.session_id_fk === session_id_fk
-                ) || {}
-        },
         getIsConnBusy: (state, getters, rootState, rootGetters) => {
             const { value = false } =
                 state.is_conn_busy_map[rootGetters['querySession/getActiveSessionId']] || {}

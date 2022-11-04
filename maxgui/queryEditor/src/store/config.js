@@ -13,8 +13,8 @@
 
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     SESSION: 'SESSION',
-    WORKSHEET: 'WORKSHEET', // used by <conn-man-ctr/>
-    BACKGROUND: 'BACKGROUND', // used to stop the running query
+    // Used by <conn-man-ctr/>. It's also used for stopping the running query
+    WORKSHEET: 'WORKSHEET',
 })
 export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'ctrl-d': ['ctrl', 'd'],

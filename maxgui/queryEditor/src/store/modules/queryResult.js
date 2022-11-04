@@ -116,20 +116,6 @@ export default {
                     },
                 })
 
-                /**
-                 * Clone the current connection and make it a BACKGROUND connection which is
-                 * used to stop the query. This action must be dispatched before running the
-                 * user's query to prevent concurrent querying of the same connection.
-                 */
-                await dispatch(
-                    'queryConn/cloneConn',
-                    {
-                        conn_to_be_cloned: active_sql_conn,
-                        binding_type: config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
-                        session_id_fk: active_session_id,
-                    },
-                    { root: true }
-                )
                 let res = await this.vue.$queryHttp.post(
                     `/sql/${active_sql_conn.id}/queries`,
                     {
@@ -169,10 +155,6 @@ export default {
                     const USE_REG = /(use|drop database)\s/i
                     if (query.match(USE_REG))
                         await dispatch('queryConn/updateActiveDb', {}, { root: true })
-                    const bgConn = rootGetters['queryConn/getBgConn']({
-                        session_id_fk: active_session_id,
-                    })
-                    await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
                 }
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_session_id,
@@ -201,7 +183,11 @@ export default {
                 this.vue.$logger(`store-queryResult-fetchQueryResult`).error(e)
             }
         },
-        async stopQuery({ commit, getters, dispatch, rootGetters, rootState }) {
+        /**
+         * This action uses the current active worksheet connection to send
+         * KILL QUERY thread_id
+         */
+        async stopQuery({ commit, getters, rootGetters, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
@@ -209,12 +195,10 @@ export default {
                     id: active_session_id,
                     payload: { value: true },
                 })
-                const bgConn = rootGetters['queryConn/getBgConn']({
-                    session_id_fk: active_session_id,
-                })
+                const wkeConn = rootGetters['queryConn/getCurrWkeConn']
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
-                } = await this.vue.$queryHttp.post(`/sql/${bgConn.id}/queries`, {
+                } = await this.vue.$queryHttp.post(`/sql/${wkeConn.id}/queries`, {
                     sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
                 })
                 if (this.vue.$typy(results, '[0].errno').isDefined)
@@ -232,8 +216,6 @@ export default {
                 else {
                     const abort_controller = getters.getAbortControllerBySessId(active_session_id)
                     abort_controller.abort() // abort the running query
-                    // Disconnect the "BACKGROUND" connection once KILL QUERY statement is sent
-                    await dispatch('queryConn/disconnectClone', { id: bgConn.id }, { root: true })
                 }
             } catch (e) {
                 this.vue.$logger(`store-queryResult-stopQuery`).error(e)
