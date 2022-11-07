@@ -37,6 +37,10 @@ export default {
         DELETE_SESSION(state, id) {
             state.query_sessions = state.query_sessions.filter(s => s.id !== id)
         },
+        /**
+         * UPDATE_SESSION must be called before any mutations that mutates a property of a session.
+         * e.g. SET_BLOB_FILE, SET_QUERY_TXT
+         */
         UPDATE_SESSION(state, session) {
             const idx = state.query_sessions.findIndex(s => s.id === session.id)
             state.query_sessions = this.vue.$helpers.immutableUpdate(state.query_sessions, {

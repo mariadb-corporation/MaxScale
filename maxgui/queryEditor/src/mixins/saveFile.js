@@ -118,13 +118,12 @@ export default {
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
                 await this.writeFile({ fileHandle, contents: session.query_txt })
+                this.UPDATE_SESSION({ ...session, name: fileHandle.name }) // update tab name
                 // update blob_file
                 this.SET_BLOB_FILE({
                     payload: { file_handle: fileHandle, txt: session.query_txt },
                     id: session.id,
                 })
-                // update session tab name
-                this.UPDATE_SESSION({ ...session, name: fileHandle.name })
             } catch (ex) {
                 this.$logger('mixins-saveFile-saveFileAs').error('Unable to write file')
             }
