@@ -65,6 +65,16 @@ struct ConfigSection
 using ConfigSectionMap = std::map<std::string, ConfigSection>;
 
 /**
+ * Calls mxb::ini::parse_config_file_to_map and handles a possible case-insensitively labeled [maxscale]-
+ * section.
+ *
+ * @param config_file Config file to load
+ * @return Tuple of actual parse results and a possible warning message regarding the maxscale-section.
+ */
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+parse_mxs_config_file_to_map(const std::string& config_file);
+
+/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function loads and parses the configuration file, checks for duplicate sections,

@@ -218,6 +218,7 @@ struct SniffResult
 {
     bool                                success {false};
     mxb::ini::map_result::Configuration config;
+    std::string                         warning;
 };
 
 SniffResult sniff_configuration(const string& filepath);
@@ -1919,6 +1920,11 @@ int main(int argc, char** argv)
     mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
     MainWorker main_worker(&watchdog_notifier);
 
+    if (!cfg_file_read_res.warning.empty())
+    {
+        MXB_WARNING("In file '%s': %s", cnf_file_path.c_str(), cfg_file_read_res.warning.c_str());
+    }
+
     if (!apply_main_config(cfg_file_read_res.config))
     {
         rc = MAXSCALE_BADCONFIG;
@@ -2974,7 +2980,7 @@ namespace
 SniffResult sniff_configuration(const string& filepath)
 {
     SniffResult rval;
-    auto load_res = mxb::ini::parse_config_file_to_map(filepath);
+    auto [load_res, warning] = parse_mxs_config_file_to_map(filepath);
     if (load_res.errors.empty())
     {
         rval.success = true;
@@ -3017,12 +3023,14 @@ SniffResult sniff_configuration(const string& filepath)
         if (rval.success)
         {
             rval.config = move(load_res.config);
+            // The warning, if any, cannot be printed yet since log is not initialized.
+            rval.warning = std::move(warning);
         }
     }
     else
     {
         string all_errors = mxb::create_list_string(load_res.errors, " ");
-        print_alert("Failed to read configuration file '%s'. %s", filepath.c_str(), all_errors.c_str());
+        print_alert("Failed to read configuration file '%s': %s", filepath.c_str(), all_errors.c_str());
     }
     return rval;
 }
