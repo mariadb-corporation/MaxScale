@@ -565,6 +565,8 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
 
 void RoutingWorker::clear()
 {
+    finish_datas();
+
     int64_t cleared = qc_clear_thread_cache();
 
     std::unique_lock<std::mutex> guard(m_pool_lock);
@@ -602,8 +604,6 @@ void RoutingWorker::deactivate()
     // Set epoll-timeout to 1000ms, i.e. 1000 times longer than
     // the default 1ms.
     set_min_timeout(1000);
-
-    finish_datas();
 
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
@@ -701,17 +701,6 @@ bool RoutingWorker::create_threads(int n)
 
                 sWorker->call([&sWorker, &services, &listeners, &success]() {
                         success = true;
-
-                        for (auto* pService : services)
-                        {
-                            if (!pService->set_usercache_for(*sWorker.get()))
-                            {
-                                MXB_ERROR("Could not set usercache of service %s for new routing worker %d.",
-                                          pService->name(), sWorker->index());
-                                success = false;
-                                break;
-                            }
-                        }
 
                         if (success)
                         {

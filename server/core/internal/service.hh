@@ -42,6 +42,7 @@ constexpr char CN_PRUNE_SESCMD_HISTORY[] = "prune_sescmd_history";
 
 // The internal service representation
 class Service : public SERVICE
+              , mxs::RoutingWorker::Data
 {
 public:
     using FilterList = std::vector<SFilterDef>;
@@ -282,16 +283,9 @@ public:
      */
     void check_server_dependencies(const std::set<std::string>& parameters);
 
-    /**
-     * Set the usercache for a routing worker that was created at runtime
-     * after the MaxScale startup. Should be called once and must be called
-     * only from the main worker or @c worker.
-     *
-     * @param worker  The routing worker for which the usercache should be set.
-     *
-     * @return True, if the cache could be set, false otherwise.
-     */
-    bool set_usercache_for(mxs::RoutingWorker& worker);
+private:
+    void init_for(mxs::RoutingWorker* pWorker) override final;
+    void finish_for(mxs::RoutingWorker* pWorker) override final;
 
 private:
 

@@ -1885,21 +1885,35 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // the admin thread and workers see the same object.
     mxb::Semaphore sem;
     auto init_cache = [this]() {
-            *m_usercache = user_account_manager()->create_user_account_cache();
+            init_for(RoutingWorker::get_current());
         };
+    // TODO: When the routing worker is started, it'll call RoutingWorker::init_datas()
+    // TODO: in its pre_run(), which will cause all init_for()s to be called. However,
+    // TODO: as the configuration has not been created at that point, Service will not
+    // TODO: have registered itself and thus init_for() below will not be called.
+    // TODO: Consequently, we need to do that manually here. If the startup is changed
+    // TODO: so that the routing workers are first created (but not started), then the
+    // TODO: configuration is created and finally the routing workers are started, this
+    // TODO: code can be removed and the creation/activation of a thread will be handled
+    // TODO: in the same manner.
     auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
     sem.wait_n(n_threads);
 
     m_usermanager->start();
 }
 
-bool Service::set_usercache_for(mxs::RoutingWorker& worker)
+void Service::init_for(RoutingWorker* pWorker)
 {
-    mxb_assert(MainWorker::is_main_worker() || RoutingWorker::get_current() == &worker);
-    return worker.call([this]() {
-            mxb_assert(!*m_usercache);
-            *m_usercache = user_account_manager()->create_user_account_cache();
-        }, mxb::Worker::EXECUTE_AUTO);
+    mxb_assert(RoutingWorker::get_current() == pWorker);
+    mxb_assert(!*m_usercache);
+    *m_usercache = user_account_manager()->create_user_account_cache();
+}
+
+void Service::finish_for(RoutingWorker* pWorker)
+{
+    mxb_assert(RoutingWorker::get_current() == pWorker);
+    mxb_assert(*m_usercache);
+    (*m_usercache).reset();
 }
 
 void Service::request_user_account_update()
