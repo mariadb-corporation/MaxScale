@@ -573,45 +573,97 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
     if (test.ok())
     {
         clients.start();
-        time_t start = time(NULL);
+        const time_t start = time(NULL);
         sleep(1);
         int failovers = 0;
 
         while (test.ok() && (time(NULL) - start < base_sett.test_duration))
         {
-            auto servers = mxs.get_servers();
-            servers.print();
-            auto master = servers.get_master();
+            auto servers_before = mxs.get_servers();
+            servers_before.print();
+            auto master = servers_before.get_master();
             bool have_master = master.server_id > 0;
-            int slaves = servers.get_role_info().slaves;
 
-            if (have_master && slaves >= 1)
+            if (have_master && servers_before.get_role_info().slaves >= 1)
             {
                 // Can do another failover.
                 test.tprintf("Stopping master '%s'", master.name.c_str());
                 int old_master_ind = master.server_id - 1;
                 repl.stop_node(old_master_ind);
-                mxs.sleep_and_wait_for_monitor(2, 3);
+                mxs.sleep_and_wait_for_monitor(1, 2);
 
-                // Failover should have happened, check.
-                auto servers_after = mxs.get_servers();
-                auto new_master = servers_after.get_master();
-                if (new_master.server_id >= 0 && new_master.server_id != master.server_id)
+                bool failover_success = false;
+
+                // Wait a maximum of 10s for a single failover.
+                const time_t failover_start = time(nullptr);
+                while (time(nullptr) - failover_start < 11)
                 {
-                    failovers++;
-                    test.tprintf("Failover %i successfull.", failovers);
+                    auto servers_after = mxs.get_servers();
+                    auto new_master = servers_after.get_master();
+                    if (new_master.server_id > 0)
+                    {
+                        if (new_master.server_id != master.server_id)
+                        {
+                            failover_success = true;
+                            failovers++;
+                            test.tprintf("Failover %i successfull.", failovers);
+                        }
+                        else
+                        {
+                            test.add_failure("Master did not change, '%s' is still master.",
+                                             new_master.name.c_str());
+                        }
+                        break;
+                    }
+                    else
+                    {
+                        sleep(1);
+                    }
                 }
-                else if (new_master.server_id >= 0)
+
+                test.tprintf("Starting old master '%s'", master.name.c_str());
+                repl.start_node(old_master_ind);
+                mxs.sleep_and_wait_for_monitor(1, 1);
+
+                if (failover_success)
                 {
-                    test.add_failure("Master did not change, '%s' is still master.", new_master.name.c_str());
+                    // Also wait for slaves (especially the old master) to start replicating. This can
+                    // apparently take a while.
+                    const time_t slave_wait_start = time(nullptr);
+                    const int slaves_expected = repl.N - 1;
+                    int diverged = 0;
+
+                    while (time(nullptr) - slave_wait_start < 5)
+                    {
+                        auto servers_after = mxs.get_servers();
+                        int slaves = servers_after.get_role_info().slaves;
+                        diverged = slaves_expected - slaves;
+                        if (diverged > 0)
+                        {
+                            sleep(1);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (diverged > 0)
+                    {
+                        if (base_sett.diverging_allowed)
+                        {
+                            test.tprintf("%i slaves have diverged.", diverged);
+                        }
+                        else
+                        {
+                            test.add_failure("%i slaves have diverged.", diverged);
+                        }
+                    }
                 }
                 else
                 {
                     test.add_failure("Failover didn't happen, no master.");
                 }
-                test.tprintf("Starting old master '%s'", master.name.c_str());
-                repl.start_node(old_master_ind);
-                sleep(1);
             }
             else if (have_master)
             {
@@ -620,19 +672,6 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
             else
             {
                 test.tprintf("No master, cannot continue");
-            }
-
-            int diverged = 3 - slaves;
-            if (diverged > 0)
-            {
-                if (base_sett.diverging_allowed)
-                {
-                    test.tprintf("%i slaves have diverged.", diverged);
-                }
-                else
-                {
-                    test.add_failure("%i slaves have diverged.", diverged);
-                }
             }
         }
 

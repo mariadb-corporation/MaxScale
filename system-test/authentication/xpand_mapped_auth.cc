@@ -40,6 +40,8 @@ void cleanup_grp_test(TestConnections& test);
 void copy_secrets(TestConnections& test);
 void test_user(TestConnections& test, int port, const string& user, const string& pw,
                const string& final_user, const string& final_host);
+void test_user(TestConnections& test, int port, const string& user, const string& pw, const string& db,
+               const string& final_user, const string& final_host);
 
 int main(int argc, char** argv)
 {
@@ -232,6 +234,16 @@ void test_main(TestConnections& test)
             mxs_vm.remove_linux_group(grpP);
             mxs_vm.remove_linux_user(userE);
         }
+
+        if (test.ok())
+        {
+            // Test MXS-3043: Login as user defined in the user accounts file with a database grant.
+            const char userDb[] = "db-user";
+            const char pwDb[] = "db-user-pass";
+            auto user_db_user = server_conn->create_user_xpand(userDb, "%", pwDb);
+            user_db_user.grant("select on test.*");
+            test_user(test, mapper_service_port, userDb, pwDb, "test", userDb, "%");
+        }
     }
 
     // Delete accounts file, passwords file and secrets.
@@ -285,8 +297,14 @@ void copy_secrets(TestConnections& test)
 void test_user(TestConnections& test, int port, const string& user, const string& pw,
                const string& final_user, const string& final_host)
 {
+    test_user(test, port, user, pw, "", final_user, final_host);
+}
+
+void test_user(TestConnections& test, int port, const string& user, const string& pw, const string& db,
+               const string& final_user, const string& final_host)
+{
     auto& mxs = *test.maxscale;
-    auto conn = mxs.try_open_connection(port, user, pw);
+    auto conn = mxs.try_open_connection(port, user, pw, db);
     if (conn->is_open())
     {
         auto res = conn->query("select current_user()");
