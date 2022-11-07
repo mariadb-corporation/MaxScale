@@ -127,10 +127,11 @@ that too should be added.
 Syntax: @{N:regex}
 
 In a placeholder regex the character `}` must be escaped to `\}`
-(for literal matching). In a regex, plain parenthesis "()" indicate groups,
-which are internally used by the Native grammar. Thus plain parentheses
-in the placeholder regex will break matching. To match a literal parenthesis
-use an escape, e.g. `\(`.
+(for literal matching). Plain parenthesis "()" indicate capturing
+groups, which are internally used by the Native grammar.
+Thus plain parentheses in a placeholder regex will break matching.
+However, non-capturing groups can be used: e.g. `@{1:(:?Jane|Joe)}`.
+To match a literal parenthesis use an escape, e.g. `\(`.
 
 Suppose an application is misbehaving after an upgrade and a quick fix is needed.
 This query `select zip from address_book where str_id = "AZ-124"` is correct,
@@ -317,7 +318,7 @@ It will be needed if support for editing of rewrite templates
 is added to the GUI.
 
 All double quotes and escape characters have to be escaped in json,
-i.e `\"` and '\\\\'.
+i.e '\"' and '\\\\'.
 
 The same example as above is:
 ```
