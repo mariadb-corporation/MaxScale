@@ -28,6 +28,7 @@ const char* bad_configs[] =
     "no_spaces_in_section_names",
     "no_unknown_auth_options",
     "mxs4211_unknown_nested_parameter",
+    "mxs4301_double_maxscale_sections",
     NULL
 };
 
@@ -41,7 +42,8 @@ int main(int argc, char** argv)
     {
         string config_file_path = string(mxt::SOURCE_DIR) + "/cnf/maxscale.cnf.template." + bad_configs[i];
         printf("Testing %s...\n", config_file_path.c_str());
-        test.expect(!test.test_bad_config(config_file_path), "Bad config not detected");
+        bool test_ok = test.test_bad_config(config_file_path);
+        test.expect(test_ok, "Error testing config or MaxScale accepted bad config.");
     }
 
     return test.global_result;

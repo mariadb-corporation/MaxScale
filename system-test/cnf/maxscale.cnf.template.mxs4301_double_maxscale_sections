@@ -1,0 +1,16 @@
+[maxscale]
+threads=2
+
+[serverX]
+type=server
+address=127.0.0.1
+port=1001
+
+[maXScalE]
+type=server
+address=127.0.0.1
+port=1002
+
+[MaxScale]
+log_info=1
+
