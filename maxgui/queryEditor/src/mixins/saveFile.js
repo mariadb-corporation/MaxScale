@@ -97,7 +97,7 @@ export default {
             let a = document.createElement('a')
             // If there is no file_handle, use the current session tab name
             const fileName = this.getSessFileHandleName(session) || `${sessionName}.sql`
-            a.href = `data:application/text;charset=utf-8;${encodeURIComponent(query_txt)}`
+            a.href = `data:application/text;charset=utf-8,${encodeURIComponent(query_txt)}`
             a.download = fileName
             document.body.appendChild(a)
             a.click()
