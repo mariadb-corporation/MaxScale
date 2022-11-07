@@ -50,6 +50,13 @@ public:
 
     class InfoTask;
 
+    enum class State
+    {
+        ACTIVE,   /* Listening and/or routing. */
+        DRAINING, /* Routing; /deactivated/ and once all sessions have ended => DORMANT. */
+        DORMANT   /* Neither listening, nor routing. If /activated/ => ACTIVE. */
+    };
+
     class MemoryUsage
     {
     public:
@@ -193,6 +200,26 @@ public:
 
     const SessionsById& session_registry() const;
 
+    State state() const
+    {
+        return m_state.load(std::memory_order_relaxed);
+    };
+
+    bool is_active() const
+    {
+        return state() == State::ACTIVE;
+    }
+
+    bool is_draining() const
+    {
+        return state() == State::DRAINING;
+    }
+
+    bool is_dormant() const
+    {
+        return state() == State::DORMANT;
+    }
+
     bool is_listening() const
     {
         return m_listening.load(std::memory_order_relaxed);
@@ -201,21 +228,6 @@ public:
     bool is_routing() const
     {
         return m_routing.load(std::memory_order_relaxed);
-    }
-
-    bool is_draining() const
-    {
-        return !is_listening() && is_routing();
-    }
-
-    bool is_active() const
-    {
-        return is_listening() && is_routing();
-    }
-
-    bool is_inactive() const
-    {
-        return !is_listening() && !is_routing();
     }
 
     /**
@@ -585,6 +597,15 @@ private:
     bool try_shutdown();
 
 private:
+    void set_state(State s)
+    {
+        mxb_assert((m_state == State::ACTIVE && (s == State::DRAINING || s == State::DORMANT))
+                   || (m_state == State::DORMANT && s == State::ACTIVE)
+                   || (m_state == State::DRAINING && (s == State::DORMANT || s == State::ACTIVE)));
+
+        m_state.store(s, std::memory_order_relaxed);
+    }
+
     static void register_data(Data* pData);
     static void deregister_data(Data* pData);
 
@@ -764,6 +785,7 @@ private:
     static std::mutex  s_datas_lock;
 
     int                m_index;     /*< Index of routing worker */
+    std::atomic<State> m_state;     /*< State of routing worker */
     std::atomic<bool>  m_listening; /*< Is the routing worker listening. */
     std::atomic<bool>  m_routing;   /*< Is the routing worker routing. */
     Worker::Callable   m_callable;  /*< Context for own dcalls */
@@ -788,6 +810,9 @@ private:
     DCId               m_activate_eps_dcid {0};
     DCId               m_timeout_eps_dcid {0};
 };
+
+const char* to_string(RoutingWorker::State state);
+
 }
 
 /**

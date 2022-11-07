@@ -279,6 +279,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
     , m_index(index)
+    , m_state(State::ACTIVE)
     , m_listening(false)
     , m_routing(false)
     , m_callable(this)
@@ -593,6 +594,9 @@ void RoutingWorker::clear()
 void RoutingWorker::deactivate()
 {
     mxb_assert(get_current() == this);
+    mxb_assert(state() == State::ACTIVE || state() == State::DRAINING);
+
+    set_state(State::DORMANT);
 
     clear();
     cancel_dcalls();
@@ -609,8 +613,8 @@ void RoutingWorker::deactivate()
     mxb_assert(pMain);
 
     pMain->execute([this]() {
-            // Cross-worker call, so we may no longer be inactive.
-            if (is_inactive())
+            // Cross-worker call, so we may have been made active again.
+            if (is_dormant())
             {
                 int i = this->index();
                 mxb_assert(i > 0);
@@ -630,7 +634,7 @@ void RoutingWorker::deactivate()
                     {
                         auto* pWorker = this_unit.ppWorkers[i];
 
-                        if (pWorker->is_inactive())
+                        if (pWorker->is_dormant())
                         {
                             --n;
                             --i;
@@ -655,6 +659,8 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 
     if (success)
     {
+        set_state(State::ACTIVE);
+
         make_dcalls();
 
         // When the worker was deactivated, the statistics were reset. However,
@@ -784,9 +790,16 @@ bool RoutingWorker::decrease_threads(int n)
         pWorker->call([pWorker, &listeners, &success]() {
                 success = pWorker->stop_listening(listeners);
 
-                if (success && pWorker->can_deactivate())
+                if (success)
                 {
-                    pWorker->deactivate();
+                    if (pWorker->can_deactivate())
+                    {
+                        pWorker->deactivate();
+                    }
+                    else
+                    {
+                        pWorker->set_state(State::DRAINING);
+                    }
                 }
             }, mxb::Worker::EXECUTE_QUEUED);
 
@@ -2616,28 +2629,7 @@ public:
 private:
     static void add_stats(const RoutingWorker& rworker, json_t* pStats)
     {
-        std::string state;
-        bool l = rworker.is_listening();
-        bool r = rworker.is_routing();
-
-        if (l && r)
-        {
-            state = "Active";
-        }
-        else if (!l && r)
-        {
-            state = "Draining";
-        }
-        else if (!l && !r)
-        {
-            state = "Inactive";
-        }
-        else
-        {
-            mxb_assert(!true);
-        }
-
-        json_object_set_new(pStats, "state", json_string(state.c_str()));
+        json_object_set_new(pStats, "state", json_string(to_string(rworker.state())));
 
         const Worker::Statistics& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
@@ -2675,6 +2667,25 @@ private:
     vector<json_t*> m_data;
     const char*     m_zHost;
 };
+
+const char* to_string(RoutingWorker::State state)
+{
+    switch (state)
+    {
+    case RoutingWorker::State::ACTIVE:
+        return "Active";
+
+    case RoutingWorker::State::DRAINING:
+        return "Draining";
+
+    case RoutingWorker::State::DORMANT:
+        return "Dormant";
+    }
+
+    mxb_assert(!true);
+    return "Unknown";
+}
+
 }
 
 namespace
