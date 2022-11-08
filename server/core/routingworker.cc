@@ -2630,6 +2630,7 @@ private:
     static void add_stats(const RoutingWorker& rworker, json_t* pStats)
     {
         json_object_set_new(pStats, "state", json_string(to_string(rworker.state())));
+        json_object_set_new(pStats, "listening", json_boolean(rworker.is_listening()));
 
         const Worker::Statistics& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));

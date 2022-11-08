@@ -430,6 +430,12 @@ const thread_fields = [
     summary: "N/A"
   },
   {
+    name: "Listening",
+    path: "attributes.stats.listening",
+    description: "Whether the thread is listening for new connections",
+    summary: "N/A"
+  },
+  {
     name: "Accepts",
     path: "attributes.stats.accepts",
     description: "Number of TCP accepts done by this thread",
