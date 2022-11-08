@@ -404,7 +404,7 @@ void MaxScale::stop()
 
 bool MaxScale::prepare_for_test()
 {
-    if (m_shared.settings.local_maxscale)
+    if (m_shared.settings.local_test)
     {
         // MaxScale is running locally, overwrite node address.
         m_vmnode->set_local();

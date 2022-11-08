@@ -986,6 +986,12 @@ bool MariaDBCluster::basic_test_prepare()
         auto srv = m_backends[i].get();
         bool rval = false;
         auto& vm = srv->m_vm;
+        if (m_shared.settings.local_test)
+        {
+            // Test running locally, assume backends are also local.
+            vm.set_local();
+        }
+
         if (vm.is_remote())
         {
             if (vm.init_ssh_master())
