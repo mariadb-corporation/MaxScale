@@ -147,18 +147,6 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string_view>* names);
 
     /**
-     * Reports whether the statement has a where clause.
-     *
-     * @param stmt        A COM_QUERY or COM_STMT_PREPARE packet.
-     * @param has_clause  On return, non-zero if the statement has a where clause, if
-     *                    @c QC_RESULT_OK is returned.
-     *
-     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
-     *         exhaustion or equivalent.
-     */
-    int32_t (* qc_query_has_clause)(GWBUF* stmt, int32_t* has_clause);
-
-    /**
      * Reports the database names.
      *
      * @param stmt   A COM_QUERY or COM_STMT_PREPARE packet.

@@ -422,16 +422,6 @@ static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 }
 
 /**
- * Returns whether the statement has a WHERE or a USING clause.
- *
- * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- *
- * @return True, if the statement has a WHERE or USING clause, false
- *         otherwise.
- */
-bool qc_query_has_clause(GWBUF* stmt);
-
-/**
  * Returns a string representation of a type bitmask.
  *
  * @param typemask  A bit mask of query types.

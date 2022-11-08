@@ -2067,56 +2067,6 @@ int32_t qc_mysql_is_drop_table_query(GWBUF* querybuf, int32_t* answer)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
-{
-    *has_clause = false;
-
-    if (buf)
-    {
-        if (ensure_query_is_parsed(buf))
-        {
-            LEX* lex = get_lex(buf);
-
-            if (lex)
-            {
-                int cmd = lex->sql_command;
-
-                if (!lex->describe
-                    && !is_show_command(cmd)
-                    && (cmd != SQLCOM_ALTER_PROCEDURE)
-                    && (cmd != SQLCOM_ALTER_TABLE)
-                    && (cmd != SQLCOM_CALL)
-                    && (cmd != SQLCOM_CREATE_PROCEDURE)
-                    && (cmd != SQLCOM_CREATE_TABLE)
-                    && (cmd != SQLCOM_DROP_FUNCTION)
-                    && (cmd != SQLCOM_DROP_PROCEDURE)
-                    && (cmd != SQLCOM_DROP_TABLE)
-                    && (cmd != SQLCOM_DROP_VIEW)
-                    && (cmd != SQLCOM_FLUSH)
-                    && (cmd != SQLCOM_ROLLBACK)
-                    )
-                {
-                    SELECT_LEX* current = lex->all_selects_list;
-
-                    while (current && !*has_clause)
-                    {
-                        if (current->where || current->having ||
-                            ((cmd == SQLCOM_SELECT || cmd == SQLCOM_DELETE || cmd == SQLCOM_UPDATE)
-                             && current->select_limit))
-                        {
-                            *has_clause = true;
-                        }
-
-                        current = current->next_select_in_list();
-                    }
-                }
-            }
-        }
-    }
-
-    return QC_RESULT_OK;
-}
-
 /**
  * Create parsing information; initialize mysql handle, allocate parsing info
  * struct and set handle and free function pointer to it.
@@ -4167,7 +4117,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_created_table_name,
         qc_mysql_is_drop_table_query,
         qc_mysql_get_table_names,
-        qc_mysql_query_has_clause,
         qc_mysql_get_database_names,
         qc_mysql_get_kill_info,
         qc_mysql_get_prepare_name,

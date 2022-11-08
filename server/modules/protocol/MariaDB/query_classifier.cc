@@ -757,19 +757,6 @@ std::vector<std::string_view> qc_get_table_names(GWBUF* query, bool fullnames)
 }
 
 
-bool qc_query_has_clause(GWBUF* query)
-{
-    QC_TRACE();
-    mxb_assert(this_unit.classifier);
-
-    int32_t has_clause = 0;
-
-    QCInfoCacheScope scope(query);
-    this_unit.classifier->qc_query_has_clause(query, &has_clause);
-
-    return (has_clause != 0) ? true : false;
-}
-
 void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();
@@ -1628,8 +1615,6 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
         json_object_set_new(pAttributes, CN_OPERATION,
                             json_string(qc_op_to_string(qc_get_operation(pBuffer))));
-        bool has_clause = qc_query_has_clause(pBuffer);
-        json_object_set_new(pAttributes, CN_HAS_WHERE_CLAUSE, json_boolean(has_clause));
 
         append_field_info(pAttributes, pBuffer);
         append_function_info(pAttributes, pBuffer);

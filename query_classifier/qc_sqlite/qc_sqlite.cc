@@ -437,19 +437,6 @@ public:
         return rv;
     }
 
-    bool query_has_clause(int32_t* pHas_clause) const
-    {
-        bool rv = false;
-
-        if (is_valid())
-        {
-            *pHas_clause = m_has_clause;
-            rv = true;
-        }
-
-        return rv;
-    }
-
     bool get_database_names(vector<string_view>* pNames) const
     {
         bool rv = false;
@@ -1333,18 +1320,6 @@ public:
                                         const ExprList* pExclude,
                                         compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
-        if (pSelect->pLimit)
-        {
-            // In case there is an ORDER BY statement without a LIMIT, which is
-            // not accepted by sqlite, a pseudo LIMIT with the value of -1 is injected.
-            // We need to detect that so as not to incorrectly claim that there is
-            // a clause. See maxscale_create_pseudo_limit() in parse.y.
-            if (pSelect->pLimit->op != TK_INTEGER || pSelect->pLimit->u.iValue != -1)
-            {
-                m_has_clause = true;
-            }
-        }
-
         if (pSelect->pSrc)
         {
             const SrcList* pSrc = pSelect->pSrc;
@@ -1389,7 +1364,6 @@ public:
 
         if (pSelect->pWhere)
         {
-            m_has_clause = true;
             update_field_infos(&aliases,
                                context,
                                0,
@@ -1408,7 +1382,6 @@ public:
 
         if (pSelect->pHaving)
         {
-            m_has_clause = true;
 #if defined (COLLECT_HAVING_AS_WELL)
             // A HAVING clause can only refer to fields that already have been
             // mentioned. Consequently, they need not be collected.
@@ -1862,7 +1835,6 @@ public:
         {
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_DELETE;
-            m_has_clause = pWhere ? true : false;
 
             QcAliases aliases;
 
@@ -1974,9 +1946,6 @@ public:
             QcAliases aliases;
             uint32_t context = 0;
             update_field_infos_from_select(aliases, context, pSelect, NULL);
-
-            // Non-sensical to claim that a "CREATE ... SELECT ... WHERE ..." statement has a clause.
-            m_has_clause = false;
         }
         else if (pOldTable)
         {
@@ -2142,15 +2111,6 @@ public:
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
             update_names_from_srclist(&aliases, pTabList);
-            // If this is an UPDATE ... SELECT ...  and the select has a where clause
-            // or a limit, then m_has_clause has been set already.
-            if (!m_has_clause)
-            {
-                if (pWhere && pWhere->op != TK_IN)
-                {
-                    m_has_clause = true;
-                }
-            }
 
             if (pChanges)
             {
@@ -3445,7 +3405,6 @@ private:
         , m_nQuery(0)
         , m_type_mask(QUERY_TYPE_UNKNOWN)
         , m_operation(QUERY_OP_UNDEFINED)
-        , m_has_clause(false)
         , m_is_drop_table(false)
         , m_pPreparable_stmt(NULL)
     {
@@ -3682,7 +3641,6 @@ public:
     size_t                        m_nQuery;                  // The length of the query.
     uint32_t                      m_type_mask;               // The type mask of the query.
     qc_query_op_t                 m_operation;               // The operation in question.
-    bool                          m_has_clause;              // Has WHERE or HAVING.
     string_view                   m_created_table_name;      // The name of a created table.
     bool                          m_is_drop_table;           // Is the query a DROP TABLE.
     string_view                   m_prepare_name;            // The name of a prepared statement.
@@ -4965,7 +4923,6 @@ static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
 static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
 static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, vector<string_view>* pNames);
-static int32_t        qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
 static int32_t        qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
 static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
 static void           qc_sqlite_set_server_version(uint64_t version);
@@ -5393,35 +5350,6 @@ static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, vector
     return rv;
 }
 
-static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    mxb_assert(this_unit.initialized);
-    mxb_assert(this_thread.initialized);
-
-    *pHas_clause = 0;
-    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
-
-    if (pInfo)
-    {
-        if (pInfo->query_has_clause(pHas_clause))
-        {
-            rv = QC_RESULT_OK;
-        }
-        else if (mxb_log_should_log(LOG_INFO))
-        {
-            log_invalid_data(pStmt, "cannot report whether the query has a where clause");
-        }
-    }
-    else
-    {
-        MXB_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
 static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, vector<string_view>* pNames)
 {
     QC_TRACE();
@@ -5748,7 +5676,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_created_table_name,
         qc_sqlite_is_drop_table_query,
         qc_sqlite_get_table_names,
-        qc_sqlite_query_has_clause,
         qc_sqlite_get_database_names,
         qc_sqlite_get_kill_info,
         qc_sqlite_get_prepare_name,

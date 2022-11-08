@@ -603,37 +603,6 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_query_has_clause(QUERY_CLASSIFIER* pClassifier1,
-                              GWBUF* pCopy1,
-                              QUERY_CLASSIFIER* pClassifier2,
-                              GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_query_has_clause      : ";
-
-    int32_t rv1;
-    pClassifier1->qc_query_has_clause(pCopy1, &rv1);
-    int32_t rv2;
-    pClassifier2->qc_query_has_clause(pCopy2, &rv2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : " << static_cast<bool>(rv1);
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
 void add_fields(std::set<string>& m, const char* fields)
 {
     const char* begin = fields;
@@ -1266,7 +1235,6 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
     errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, false);
     errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, true);
-    errors += !compare_query_has_clause(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
