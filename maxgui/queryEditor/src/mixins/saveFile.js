@@ -95,7 +95,7 @@ export default {
             let a = document.createElement('a')
             // If there is no file_handle, use the current session tab name
             const fileName = this.getSessFileHandleName(session) || `${sessionName}.sql`
-            a.href = `data:application/text;charset=utf-8;${encodeURIComponent(query_txt)}`
+            a.href = `data:application/text;charset=utf-8,${encodeURIComponent(query_txt)}`
             a.download = fileName
             document.body.appendChild(a)
             a.click()
@@ -116,13 +116,12 @@ export default {
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
                 await this.writeFile({ fileHandle, contents: session.query_txt })
+                this.UPDATE_SESSION({ ...session, name: fileHandle.name }) // update tab name
                 // update blob_file
                 this.SET_BLOB_FILE({
                     payload: { file_handle: fileHandle, txt: session.query_txt },
                     id: session.id,
                 })
-                // update session tab name
-                this.UPDATE_SESSION({ ...session, name: fileHandle.name })
             } catch (ex) {
                 this.$logger.error('Unable to write file')
             }

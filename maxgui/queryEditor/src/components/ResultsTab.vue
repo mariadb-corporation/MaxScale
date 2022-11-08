@@ -2,7 +2,21 @@
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center d-flex flex-row">
             <template v-if="!isLoading">
-                <span v-if="!queryTxt" v-html="$mxs_t('resultTabGuide')" />
+                <i18n
+                    v-if="!queryTxt"
+                    path="mxs.resultTabGuide"
+                    class="d-flex align-center text-pre-wrap"
+                    tag="span"
+                >
+                    <template v-slot:shortcut>
+                        <b>CMD/Ctrl + Shift + Enter</b>
+                    </template>
+                    <template v-slot:icon>
+                        <v-icon color="accent-dark" size="16">
+                            $vuetify.icons.mxs_running
+                        </v-icon>
+                    </template>
+                </i18n>
                 <v-menu
                     v-else
                     offset-y
