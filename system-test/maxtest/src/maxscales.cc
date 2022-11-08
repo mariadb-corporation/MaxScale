@@ -411,17 +411,24 @@ bool MaxScale::prepare_for_test()
     }
 
     bool rval = false;
-    if (m_vmnode->init_ssh_master())
+    if (m_vmnode->is_remote())
     {
-        if (m_use_valgrind)
+        if (m_vmnode->init_ssh_master())
         {
-            auto vm = m_vmnode.get();
-            vm->run_cmd_sudo("yum install -y valgrind gdb 2>&1");
-            vm->run_cmd_sudo("apt install -y --force-yes valgrind gdb 2>&1");
-            vm->run_cmd_sudo("zypper -n install valgrind gdb 2>&1");
-            vm->run_cmd_sudo("rm -rf /var/cache/maxscale/maxscale.lock");
+            if (m_use_valgrind)
+            {
+                auto vm = m_vmnode.get();
+                vm->run_cmd_sudo("yum install -y valgrind gdb 2>&1");
+                vm->run_cmd_sudo("apt install -y --force-yes valgrind gdb 2>&1");
+                vm->run_cmd_sudo("zypper -n install valgrind gdb 2>&1");
+                vm->run_cmd_sudo("rm -rf /var/cache/maxscale/maxscale.lock");
+            }
+            rval = true;
         }
-        rval = true;
+    }
+    else
+    {
+        rval = true;    // No preparations necessary in local mode, user is responsible for it.
     }
     return rval;
 }

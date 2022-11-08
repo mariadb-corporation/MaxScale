@@ -160,7 +160,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     }
 
     // Stop MaxScale to prevent it from interfering with replication setup.
-    if (!m_mxs_manual_debug)
+    if (!m_mxs_manual_debug && !m_shared.settings.local_maxscale)
     {
         stop_all_maxscales();
     }
@@ -1877,9 +1877,9 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'l':
             {
-                printf("MaxScale assumed to be running locally; not started and logs not downloaded.\n");
+                logger().log_msg("Running test in local mode. Assuming that MaxScale and servers are "
+                                 "already set up, configured and running.");
                 maxscale::start = false;
-                m_mxs_manual_debug = true;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
                 m_shared.settings.local_maxscale = true;

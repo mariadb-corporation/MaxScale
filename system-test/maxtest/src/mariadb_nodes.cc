@@ -983,28 +983,32 @@ bool MariaDBCluster::check_create_test_db()
 bool MariaDBCluster::basic_test_prepare()
 {
     auto prepare_one = [this](int i) {
-            auto srv = m_backends[i].get();
-            bool rval = false;
-            auto& vm = srv->m_vm;
+        auto srv = m_backends[i].get();
+        bool rval = false;
+        auto& vm = srv->m_vm;
+        if (vm.is_remote())
+        {
             if (vm.init_ssh_master())
             {
                 rval = true;
-                if (vm.is_remote())
+                const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
+                                            "truncate -s 0 /var/log/syslog;"
+                                            "truncate -s 0 /var/log/messages;"
+                                            "rm -f /etc/my.cnf.d/binlog_enc*;";
+                auto ret = vm.run_cmd_sudo(truncate_cmd);
+                if (ret != 0)
                 {
-                    const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
-                                                "truncate -s 0 /var/log/syslog;"
-                                                "truncate -s 0 /var/log/messages;"
-                                                "rm -f /etc/my.cnf.d/binlog_enc*;";
-                    auto ret = vm.run_cmd_sudo(truncate_cmd);
-                    if (ret != 0)
-                    {
-                        // Should this be a fatal error? Maybe some of the files don't exist.
-                        logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
-                    }
+                    // Should this be a fatal error? Maybe some files don't exist.
+                    logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
                 }
             }
-            return rval;
-        };
+        }
+        else
+        {
+            rval = true;        // No preparations necessary in local mode, user is responsible for it.
+        }
+        return rval;
+    };
     return run_on_every_backend(prepare_one);
 }
 
