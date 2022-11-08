@@ -56,7 +56,7 @@ public:
      */
     TestConnections& test() const
     {
-        return m_test;
+        return m_sImp->test();
     }
 
     /**
@@ -234,7 +234,10 @@ public:
      */
     mxb::Json curl_post(const std::string& path) const;
 
-    void raise(const std::string& message) const;
+    void raise(const std::string& message) const
+    {
+        m_sImp->raise(m_fail_on_error, message);
+    }
 
     /**
      * Enable or disable failing the test whenever an exception is thrown
@@ -253,10 +256,21 @@ private:
 
     mxb::Json curl(Command command, const std::string& path) const;
 
+    class Imp
+    {
+    public:
+        virtual ~Imp() = default;
+
+        virtual TestConnections& test() const = 0;
+        virtual void raise(bool fail_on_error, const std::string& message) const = 0;
+        virtual mxt::CmdResult execute_curl_command(const std::string& curl_command) const = 0;
+    };
+
+    class SystemTestImp;
+
 private:
-    TestConnections& m_test;
-    mxt::MaxScale&   m_maxscale;
-    bool             m_fail_on_error  {true};
+    bool                 m_fail_on_error  {true};
+    std::unique_ptr<Imp> m_sImp;
 };
 
 template<>

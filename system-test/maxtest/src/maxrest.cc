@@ -15,24 +15,70 @@
 
 using namespace std;
 
+//
+// MaxRest::SystemTestImp
+//
+
+class MaxRest::SystemTestImp : public MaxRest::Imp
+{
+public:
+    SystemTestImp(TestConnections* pTest)
+        : m_test(*pTest)
+        , m_maxscale(*pTest->maxscale)
+    {
+    }
+
+    SystemTestImp(TestConnections* pTest, mxt::MaxScale* pMaxscale)
+        : m_test(*pTest)
+        , m_maxscale(*pMaxscale)
+    {
+    }
+
+    TestConnections& test() const override final
+    {
+        return m_test;
+    }
+
+    void raise(bool fail_on_error, const std::string& message) const override final
+    {
+        if (fail_on_error)
+        {
+            ++m_test.global_result;
+        }
+
+        throw runtime_error(message);
+    }
+
+    mxt::CmdResult execute_curl_command(const std::string& curl_command) const override final
+    {
+        return m_maxscale.ssh_output(curl_command, false);
+    }
+
+private:
+    TestConnections& m_test;
+    mxt::MaxScale&   m_maxscale;
+};
+
+//
+// MaxRest
+//
+MaxRest::MaxRest(TestConnections* pTest)
+    : m_sImp(new SystemTestImp(pTest))
+{
+}
+
+MaxRest::MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale)
+    : m_sImp(new SystemTestImp(pTest, pMaxscale))
+{
+}
+
+
 MaxRest::Server::Server(const MaxRest& maxrest, json_t* pObject)
     : name       (maxrest.get<string>(pObject, "id", Presence::MANDATORY))
     , address    (maxrest.get<string>(pObject, "attributes/parameters/address"))
     , port       (maxrest.get<int64_t>(pObject, "attributes/parameters/port"))
     , connections(maxrest.get<int64_t>(pObject, "attributes/statistics/connections"))
     , state      (maxrest.get<string>(pObject, "attributes/state"))
-{
-}
-
-MaxRest::MaxRest(TestConnections* pTest)
-    : m_test(*pTest)
-    , m_maxscale(*pTest->maxscale)
-{
-}
-
-MaxRest::MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale)
-    : m_test(*pTest)
-    , m_maxscale(*pMaxscale)
 {
 }
 
@@ -65,9 +111,9 @@ mxb::Json MaxRest::v1_services() const
 }
 
 void MaxRest::v1_maxscale_modules(const string& module,
-                                  const string& command,
-                                  const string& instance,
-                                  const std::vector<string>& params) const
+                                      const string& command,
+                                      const string& instance,
+                                      const std::vector<string>& params) const
 {
     string path("maxscale/modules");
 
@@ -162,7 +208,7 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
 
     curl_command += url;
 
-    auto result = m_maxscale.ssh_output(curl_command, false);
+    auto result = m_sImp->execute_curl_command(curl_command);
 
     if (result.rc != 0)
     {
@@ -177,16 +223,6 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
     }
 
     return rv;
-}
-
-void MaxRest::raise(const std::string& message) const
-{
-    if (m_fail_on_error)
-    {
-        ++m_test.global_result;
-    }
-
-    throw runtime_error(message);
 }
 
 template<>
