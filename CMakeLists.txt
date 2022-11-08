@@ -1,6 +1,13 @@
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.16)
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.24.0)
+  # We need the timestamps in the files to be the same as they are in the archive, otherwise the build starts
+  # failing as automake thinks the files are out-of-date and need to be reconfigured.
+  # https://cmake.org/cmake/help/latest/policy/CMP0135.html
+  cmake_policy(SET CMP0135 OLD)
+endif()
+
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
 enable_testing()
 
