@@ -583,6 +583,21 @@ public:
      */
     static void start_shutdown();
 
+    /**
+     * Set listen mode of worker.
+     *
+     * @note Only the listening mode of an active worker can be set.
+     *       Attempting to set the listening mode of a draining or dormant
+     *       worker is an error.
+     * @note Assumed to be called from the REST-API.
+     *
+     * @param worker_index  The index of the worker.
+     * @param enabled       If true, listening will be enabled, if false, disabled.
+     *
+     * @return True if the operation succeeded, otherwise false. No change is considered a success.
+     */
+    static bool set_listen_mode(int worker_index, bool enabled);
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;

@@ -788,7 +788,16 @@ bool RoutingWorker::decrease_threads(int n)
 
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
-                success = pWorker->stop_listening(listeners);
+                // If an active worker has explicitly been made not to listen,
+                // the listening need not be stopped.
+                if (pWorker->is_listening())
+                {
+                    success = pWorker->stop_listening(listeners);
+                }
+                else
+                {
+                    success = true;
+                }
 
                 if (success)
                 {
@@ -2319,6 +2328,69 @@ void RoutingWorker::start_shutdown()
                   worker->m_callable.dcall(100ms, &RoutingWorker::try_shutdown, worker);
               }, nullptr, EXECUTE_AUTO);
 }
+
+//static
+bool RoutingWorker::set_listen_mode(int index, bool enabled)
+{
+    bool rv = false;
+
+    mxb_assert(MainWorker::is_main_worker());
+
+    int n = this_unit.nDesired.load(std::memory_order_relaxed);
+
+    if (index >= 0 && index < n)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[index];
+        mxb_assert(pWorker);
+
+        auto listeners = Listener::get_started_listeners();
+
+        bool success = false;
+
+        if (!pWorker->call([pWorker, enabled, &listeners, &rv]() {
+                    mxb_assert(pWorker->is_active());
+
+                    bool is_listening = pWorker->is_listening();
+
+                    if (is_listening && !enabled)
+                    {
+                        if (pWorker->stop_listening(listeners))
+                        {
+                            rv = true;
+                        }
+                        else
+                        {
+                            MXB_ERROR("Could not stop listening.");
+                        }
+                    }
+                    else if (!is_listening && enabled)
+                    {
+                        if (pWorker->start_listening(listeners))
+                        {
+                            rv = true;
+                        }
+                        else
+                        {
+                            MXB_ERROR("Could not start listening.");
+                        }
+                    }
+                    else
+                    {
+                        rv = true;
+                    }
+                }, EXECUTE_QUEUED))
+        {
+            MXB_ERROR("Could not call routing worker %d.", index);
+        }
+    }
+    else
+    {
+        MXB_ERROR("%d does not refer to an active worker.", index);
+    }
+
+    return rv;
+}
+
 
 bool RoutingWorker::try_shutdown()
 {

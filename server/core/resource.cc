@@ -999,6 +999,30 @@ HttpResponse cb_thread(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_to_json(request.host(), id));
 }
 
+HttpResponse thread_set_listen_mode(const HttpRequest& request, bool enabled)
+{
+    int id = atoi(request.uri_part(3).c_str());
+
+    if (mxs::RoutingWorker::set_listen_mode(id, enabled))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+    else
+    {
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+    }
+}
+
+HttpResponse cb_thread_listen(const HttpRequest& request)
+{
+    return thread_set_listen_mode(request, true);
+}
+
+HttpResponse cb_thread_unlisten(const HttpRequest& request)
+{
+    return thread_set_listen_mode(request, false);
+}
+
 HttpResponse cb_all_modules(const HttpRequest& request)
 {
     static bool all_modules_loaded = false;
@@ -1486,6 +1510,8 @@ public:
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
+        m_put.emplace_back(cb_thread_listen, "maxscale", "debug", "threads", ":thread", "listen");
+        m_put.emplace_back(cb_thread_unlisten, "maxscale", "debug", "threads", ":thread", "unlisten");
 
         /** Create new resources */
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");
