@@ -137,6 +137,27 @@ MaxRest::Server::Server(const MaxRest& maxrest, json_t* pObject)
 {
 }
 
+MaxRest::Thread::Thread(const MaxRest& maxrest, json_t* pObject)
+    : id         (maxrest.get<string>(pObject, "id", Presence::MANDATORY))
+    , state      (maxrest.get<string>(pObject, "attributes/stats/state"))
+    , listening  (maxrest.get<bool>(pObject, "attributes/stats/listening"))
+{
+}
+
+mxb::Json MaxRest::v1_maxscale_threads(const string& id) const
+{
+    string path("maxscale/threads");
+    path += "/";
+    path += id;
+
+    return curl_get(path);
+}
+
+mxb::Json MaxRest::v1_maxscale_threads() const
+{
+    return curl_get("maxscale/threads");
+}
+
 mxb::Json MaxRest::v1_servers(const string& id) const
 {
     string path("servers");
@@ -196,6 +217,18 @@ MaxRest::Server MaxRest::show_server(const std::string& id) const
     mxb::Json object = v1_servers(id);
     json_t* pData = get_object(object.get_json(), "data", Presence::MANDATORY);
     return Server(*this, pData);
+}
+
+vector<MaxRest::Thread> MaxRest::show_threads() const
+{
+    return get_array<Thread>(v1_maxscale_threads().get_json(), "data", Presence::MANDATORY);
+}
+
+MaxRest::Thread MaxRest::show_thread(const std::string& id) const
+{
+    mxb::Json object = v1_maxscale_threads(id);
+    json_t* pData = get_object(object.get_json(), "data", Presence::MANDATORY);
+    return Thread(*this, pData);
 }
 
 vector<MaxRest::Server> MaxRest::list_servers() const
@@ -280,17 +313,18 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
     return rv;
 }
 
+
 template<>
-string MaxRest::get<string>(json_t* pObject, const string& key, Presence presence) const
+bool MaxRest::get<bool>(json_t* pObject, const string& key, Presence presence) const
 {
     json_t* pValue = get_leaf_object(pObject, key, presence);
 
-    if (pValue && !json_is_string(pValue))
+    if (pValue && !json_is_boolean(pValue))
     {
-        raise("Key '" + key + "' is present, but value is not a string.");
+        raise("Key '" + key + "' is present, but value is not a boolean.");
     }
 
-    return pValue ? json_string_value(pValue) : "";
+    return pValue ? json_boolean_value(pValue) : false;
 }
 
 template<>
@@ -304,4 +338,17 @@ int64_t MaxRest::get<int64_t>(json_t* pObject, const string& key, Presence prese
     }
 
     return pValue ? json_integer_value(pValue) : 0;
+}
+
+template<>
+string MaxRest::get<string>(json_t* pObject, const string& key, Presence presence) const
+{
+    json_t* pValue = get_leaf_object(pObject, key, presence);
+
+    if (pValue && !json_is_string(pValue))
+    {
+        raise("Key '" + key + "' is present, but value is not a string.");
+    }
+
+    return pValue ? json_string_value(pValue) : "";
 }

@@ -43,6 +43,19 @@ public:
     };
 
     /**
+     * A class corresponding to a row in the output of 'maxctrl show threads'
+     */
+    struct Thread
+    {
+        Thread() = default;
+        Thread(const MaxRest& maxrest, json_t* pObject);
+
+        std::string id;
+        std::string state;
+        bool        listening;
+    };
+
+    /**
      * System Test Constructor, to be used in the System Test environment.
      *
      * @param pTest  The TestConnections instance. Must exist for the lifetime
@@ -63,6 +76,16 @@ public:
     {
         return m_sImp->test();
     }
+
+    /**
+     * @return The JSON object corresponding to /v1/maxscale/threads/:id.
+     */
+    mxb::Json v1_maxscale_threads(const std::string& id) const;
+
+    /**
+     * @return The JSON object corresponding to /v1/maxscale/threads.
+     */
+    mxb::Json v1_maxscale_threads() const;
 
     /**
      * @return The JSON object corresponding to /v1/servers/:id:
@@ -119,6 +142,16 @@ public:
      * @return The JSON resource /v1/servers as a vector of Server objects.
      */
     std::vector<Server> list_servers() const;
+
+    /**
+     * The equivalent of 'maxctrl show threads'
+     */
+    std::vector<Thread> show_threads() const;
+
+    /**
+     * The equivalent of 'maxctrl show thread :id'
+     */
+    Thread show_thread(const std::string& id) const;
 
     /**
      * The equivalent of 'maxctrl show server'
@@ -280,7 +313,10 @@ private:
 };
 
 template<>
-std::string MaxRest::get<std::string>(json_t* pObject, const std::string& path, Presence presence) const;
+bool MaxRest::get<bool>(json_t* pObject, const std::string& path, Presence presence) const;
 
 template<>
 int64_t MaxRest::get<int64_t>(json_t* pObject, const std::string& path, Presence presence) const;
+
+template<>
+std::string MaxRest::get<std::string>(json_t* pObject, const std::string& path, Presence presence) const;
