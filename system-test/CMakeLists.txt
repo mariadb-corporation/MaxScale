@@ -142,7 +142,7 @@ add_test_executable(auth_hostname.cpp auth_hostname replication LABELS MySQLAuth
 
 # Test wildcard in user host name (user@127.%.%.%). Also test MXS-3172 escaped wildcard in database grant and
 # MXS-3323 non-escaped wildcard.
-add_test_executable(auth_wchost.cpp auth_wchost replication LABELS MySQLAuth LIGHT REPL_BACKEND)
+add_test_executable(auth_wchost.cpp auth_wchost auth_wchost LABELS MySQLAuth LIGHT REPL_BACKEND)
 
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
 add_test_executable(rhint_basic.cpp rhint_basic rhint_basic LABELS readwritesplit hintfilter REPL_BACKEND)

@@ -8,7 +8,6 @@ add_library(maxtest SHARED
         execute_cmd.cc
         galera_cluster.cc
         get_com_select_insert.cc
-        get_my_ip.cc
         log.cc
         mariadb_func.cc
         mariadb_connector.cc

@@ -494,7 +494,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 }
                 else if (elem.gtid.domain != master_gtid.domain)
                 {
-                    // If a test uses complicated gtid:s, it needs to handle it on it's own.
+                    // If a test uses complicated gtid:s, it needs to handle it on its own.
                     m_shared.log.log_msgf("Found different gtid domain id:s (%li and %li) when waiting "
                                           "for cluster sync.", elem.gtid.domain, master_gtid.domain);
                 }
@@ -534,8 +534,16 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
         }
         else
         {
-            logger().log_msgf("Only %i out of %i servers in the cluster got in sync within %.1f seconds.",
-                              successful_catchups, expected_catchups, mxb::to_secs(timer.split()));
+            std::vector<string> names;
+            for (const auto* srv : waiting_catchup)
+            {
+                names.emplace_back(srv->cnf_name());
+            }
+            string list = mxb::create_list_string(names);
+            logger().log_msgf("Only %i out of %i servers in the cluster got in sync within %.1f seconds. "
+                              "Failed servers: %s",
+                              successful_catchups, expected_catchups, mxb::to_secs(timer.split()),
+                              list.c_str());
         }
     }
     return rval;
