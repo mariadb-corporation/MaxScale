@@ -43,13 +43,18 @@ public:
     };
 
     /**
-     * Constructor
+     * System Test Constructor, to be used in the System Test environment.
      *
      * @param pTest  The TestConnections instance. Must exist for the lifetime
      *               of the MaxRest instance.
      */
     MaxRest(TestConnections* pTest);
     MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale);
+
+    /**
+     * Local Constructor, to be used with a local MaxScale instance.
+     */
+    MaxRest();
 
     /**
      * @return  The TestConnections instance used by this instance.
@@ -266,6 +271,7 @@ private:
         virtual mxt::CmdResult execute_curl_command(const std::string& curl_command) const = 0;
     };
 
+    class LocalImp;
     class SystemTestImp;
 
 private:

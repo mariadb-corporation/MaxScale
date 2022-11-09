@@ -60,8 +60,63 @@ private:
 };
 
 //
+// MaxRest::LocalImp
+//
+
+class MaxRest::LocalImp : public MaxRest::Imp
+{
+public:
+    LocalImp()
+    {
+    }
+
+    TestConnections& test() const override final
+    {
+        throw std::runtime_error("A local MaxRest does not have a TestConnections instance (yet).");
+    }
+
+    void raise(bool fail_on_error, const std::string& message) const override final
+    {
+        throw runtime_error(message);
+    }
+
+    mxt::CmdResult execute_curl_command(const std::string& curl_command) const override final
+    {
+        mxt::CmdResult rv;
+        FILE* pFile = popen(curl_command.c_str(), "r");
+
+        if (pFile)
+        {
+            rv.rc = 0;
+
+            int c;
+            while ((c = fgetc(pFile)) != EOF)
+            {
+                rv.output += (char)c;
+            }
+
+            pclose(pFile);
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "Could not popen '%s': " << mxb_strerror(errno);
+
+            rv.output = ss.str();
+        }
+
+        return rv;
+    }
+};
+
+//
 // MaxRest
 //
+MaxRest::MaxRest()
+    : m_sImp(new LocalImp())
+{
+}
+
 MaxRest::MaxRest(TestConnections* pTest)
     : m_sImp(new SystemTestImp(pTest))
 {
@@ -212,7 +267,7 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
 
     if (result.rc != 0)
     {
-        raise("Invocation of curl failed: " + to_string(result.rc));
+        raise("Invocation of curl failed: " + result.output);
     }
 
     mxb::Json rv;
