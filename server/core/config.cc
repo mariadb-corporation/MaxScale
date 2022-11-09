@@ -1927,9 +1927,16 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
         {
             auto& file = *it;
             // Load config file.
-            auto load_res = mxb::ini::parse_config_file_to_map(file.total_path);
+            auto [load_res, warning] = parse_mxs_config_file_to_map(file.total_path);
             if (load_res.errors.empty())
             {
+                if (!warning.empty())
+                {
+                    // Having a [maxscale]-section in an additional file is always an error. Printing the
+                    // warning may still be useful.
+                    MXB_WARNING("In file '%s': %s", file.total_path.c_str(), warning.c_str());
+                }
+
                 if (substitute_vars)
                 {
                     auto errors = maxbase::ini::substitute_env_vars(load_res.config);
@@ -1951,10 +1958,9 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
             else
             {
                 success = false;
-                for (const auto& error_msg : load_res.errors)
-                {
-                    MXB_ERROR("%s", error_msg.c_str());
-                }
+                string all_errors = mxb::create_list_string(load_res.errors, " ");
+                MXB_ERROR("Failed to read configuration file '%s': %s",
+                          file.total_path.c_str(), all_errors.c_str());
             }
         }
     }
@@ -3743,4 +3749,57 @@ UnmaskPasswords::~UnmaskPasswords()
 bool config_mask_passwords()
 {
     return this_unit.mask_passwords;
+}
+
+std::tuple<mxb::ini::map_result::ParseResult, std::string>
+parse_mxs_config_file_to_map(const string& config_file)
+{
+    auto res = mxb::ini::parse_config_file_to_map(config_file);
+    string warning;
+    if (res.errors.empty())
+    {
+        int first_mxs_lineno = -1;
+        bool conflict_found = false;
+        auto case_fix_iter = res.config.end();
+
+        // Check that the config has only one section name that case-insensitively matches "maxscale".
+        for (auto it = res.config.begin(); it != res.config.end(); ++it)
+        {
+            const auto& section = *it;
+            const string& header = section.first;
+            if (strcasecmp(header.c_str(), CN_MAXSCALE) == 0)
+            {
+                // Equivalent to "maxscale".
+                if (first_mxs_lineno < 0)
+                {
+                    first_mxs_lineno = section.second.lineno;
+                    if (header != CN_MAXSCALE)
+                    {
+                        case_fix_iter = it;
+                    }
+                }
+                else
+                {
+                    string errmsg = mxb::string_printf(
+                        "Section name '%s' at line %i is a duplicate as it compares case-insensitively to a "
+                        "previous definition at line %i.", header.c_str(), section.second.lineno,
+                        first_mxs_lineno);
+
+                    res.errors.push_back(std::move(errmsg));
+                    conflict_found = true;
+                }
+            }
+        }
+
+        if (first_mxs_lineno >= 0 && !conflict_found && case_fix_iter != res.config.end())
+        {
+            // Replace the section name so that later checks don't need to worry about case-insensitivity.
+            warning = mxb::string_printf("Section header '%s' at line %i is interpreted as "
+                                         "'maxscale'.", case_fix_iter->first.c_str(), first_mxs_lineno);
+            auto section_data_temp = std::move(case_fix_iter->second);
+            res.config.erase(case_fix_iter);
+            res.config.emplace(CN_MAXSCALE, std::move(section_data_temp));
+        }
+    }
+    return {std::move(res), std::move(warning)};
 }

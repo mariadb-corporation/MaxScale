@@ -1575,12 +1575,36 @@ void TestConnections::check_current_connections(int value)
 
 bool TestConnections::test_bad_config(const string& config)
 {
-    process_template(*maxscale, config, "/tmp/");
+    auto& mxs = *maxscale;
+    if (process_template(mxs, config, "/tmp/"))
+    {
+        auto cp_res = mxs.ssh_output("cp /tmp/maxscale.cnf /etc/maxscale.cnf");
+        if (cp_res.rc == 0)
+        {
+            mxs.stop_and_check_stopped();
+            if (ok())
+            {
+                // Try to start MaxScale, wait a bit and see if it's running.
+                mxs.start_maxscale();
+                sleep(1);
+                mxs.expect_running_status(false);
+                if (!ok())
+                {
+                    logger().add_failure("MaxScale started successfully with bad config file '%s' when "
+                                         "immediate shutdown was expected.", config.c_str());
+                }
+                mxs.stop_and_check_stopped();
+            }
+            auto rm_res = mxs.ssh_output("rm /etc/maxscale.cnf");
+            logger().expect(rm_res.rc == 0, "Failed to delete config file: %s", rm_res.output.c_str());
+        }
+        else
+        {
+            logger().add_failure("Failed to copy config file: %s", cp_res.output.c_str());
+        }
 
-    int ssh_rc = maxscale->ssh_node_f(true,
-                                      "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
-                                      "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
-    return (ssh_rc == 0) || (ssh_rc == 256);
+    }
+    return ok();
 }
 
 /**

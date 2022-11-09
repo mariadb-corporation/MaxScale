@@ -16,7 +16,7 @@ add_test_executable_ex(NAME mysqlmon_multimaster SOURCE mysqlmon_multimaster.cpp
 add_test_executable_ex(NAME mysqlmon_multimaster_serverid ORIG_NAME mysqlmon_multimaster
         CONFIG mysqlmon_multimaster_serverid.cnf VMS repl_backend LABELS mysqlmon)
 
-# MySQL Monitor Failover Test
+# Check that standalone master is allowed. Also, MXS-4301: Allow [mAxScalE]-section
 add_test_executable_ex(NAME mysqlmon_detect_standalone_master SOURCE mysqlmon_detect_standalone_master.cpp
         CONFIG mysqlmon_detect_standalone_master.cnf VMS repl_backend LABELS mysqlmon)
 
