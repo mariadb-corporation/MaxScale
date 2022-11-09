@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -18,8 +17,6 @@ namespace maxtest
 {
 struct SharedData;
 class TestLogger;
-
-using NetworkConfig = std::map<std::string, std::string>;
 
 class VMNode
 {
@@ -126,7 +123,6 @@ public:
     const std::string m_name;       /**< E.g. "node_001" */
 
 private:
-    std::string get_nc_item(const mxt::NetworkConfig& nwconfig, const std::string& search_key);
     bool        verbose() const;
 
     std::string m_ip4;          /**< IPv4-address */

@@ -266,7 +266,7 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
     string field_network = name + "_network";
 
     bool success = false;
-    string ip4 = get_nc_item(network_config, field_network);
+    string ip4 = m_shared.get_nc_item(network_config, field_network);
     if (!ip4.empty())
     {
         m_ip4 = ip4;
@@ -278,23 +278,23 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
         string field_whoami = name + "_whoami";
         string field_access_sudo = name + "_access_sudo";
 
-        string ip6 = get_nc_item(network_config, field_network6);
+        string ip6 = m_shared.get_nc_item(network_config, field_network6);
         m_ip6 = !ip6.empty() ? ip6 : m_ip4;
 
-        string priv_ip = get_nc_item(network_config, field_private_ip);
+        string priv_ip = m_shared.get_nc_item(network_config, field_private_ip);
         m_private_ip = !priv_ip.empty() ? priv_ip : m_ip4;
 
-        string hostname = get_nc_item(network_config, field_hostname);
+        string hostname = m_shared.get_nc_item(network_config, field_hostname);
         m_hostname = !hostname.empty() ? hostname : m_private_ip;
 
-        string access_user = get_nc_item(network_config, field_whoami);
+        string access_user = m_shared.get_nc_item(network_config, field_whoami);
         m_username = !access_user.empty() ? access_user : "vagrant";
 
         m_homedir = (m_username == "root") ? "/root/" :
             mxb::string_printf("/home/%s/", m_username.c_str());
 
         m_sudo = envvar_get_set(field_access_sudo.c_str(), " sudo ");
-        m_sshkey = get_nc_item(network_config, field_keyfile);
+        m_sshkey = m_shared.get_nc_item(network_config, field_keyfile);
 
         success = true;
     }
@@ -309,35 +309,6 @@ std::string Nodes::mdbci_node_name(int node)
 
 namespace maxtest
 {
-/**
- * Read key value from MDBCI network config contents.
- *
- * @param nwconfig File contents as a map
- * @param search_key Name of field to read
- * @return value of variable or empty value if not found
- */
-std::string VMNode::get_nc_item(const mxt::NetworkConfig& nwconfig, const string& search_key)
-{
-    string rval;
-    auto it = nwconfig.find(search_key);
-    if (it != nwconfig.end())
-    {
-        rval = it->second;
-    }
-
-    if (verbose())
-    {
-        if (rval.empty())
-        {
-            printf("'%s' not found in network config.\n", search_key.c_str());
-        }
-        else
-        {
-            printf("'%s' is '%s'\n", search_key.c_str(), rval.c_str());
-        }
-    }
-    return rval;
-}
 
 mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 {
@@ -428,9 +399,6 @@ const char* VMNode::sshkey() const
 
 void VMNode::set_local()
 {
-    m_ip4 = "127.0.0.1";
-    m_ip6 = m_ip4;
-    m_private_ip = m_ip4;
     m_type = NodeType::LOCAL;
 }
 

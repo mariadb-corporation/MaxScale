@@ -221,6 +221,36 @@ mxt::CmdResult SharedData::run_shell_cmd_output(const string& cmd)
     return rval;
 }
 
+/**
+* Read key value from MDBCI network config contents.
+*
+* @param nwconfig File contents as a map
+* @param search_key Name of field to read
+* @return value of variable or empty value if not found
+*/
+std::string SharedData::get_nc_item(const NetworkConfig& nwconfig, const string& search_key)
+{
+    string rval;
+    auto it = nwconfig.find(search_key);
+    if (it != nwconfig.end())
+    {
+        rval = it->second;
+    }
+
+    if (settings.verbose)
+    {
+        if (rval.empty())
+        {
+            printf("'%s' not found in network config.\n", search_key.c_str());
+        }
+        else
+        {
+            printf("'%s' is '%s'\n", search_key.c_str(), rval.c_str());
+        }
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);
