@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include <variant>
 #include <maxtest/testconnections.hh>
 #include <maxbase/json.hh>
 
@@ -135,6 +136,28 @@ public:
     {
         return v1_maxscale_modules(module, command, instance, params);
     }
+
+    using Value = std::variant<std::string, int64_t, bool>;
+    struct Parameter
+    {
+        template<class T>
+        Parameter(std::string n, T v)
+            : name(n)
+            , value(v)
+        {
+        }
+
+        std::string name;
+        Value       value;
+    };
+
+    void alter(const std::string& resource, const std::vector<Parameter>& parameters) const;
+
+    void alter_maxscale(const std::vector<Parameter>& parameters) const;
+
+    void alter_maxscale(const Parameter& parameter) const;
+
+    void alter_maxscale(const std::string& parameter_name, const Value& parameter_value) const;
 
     /**
      * The equivalent of 'maxctrl list servers'
@@ -261,6 +284,19 @@ public:
     mxb::Json curl_get(const std::string& path) const;
 
     /**
+     * Issue a curl PATCH to the REST-API endpoint of the MaxScale running on
+     * the maxscale 0 VM instance.
+     *
+     * The path will be appended to "http://127.0.0.1:8989/v1/".
+     *
+     * @param path  The path of the resource.
+     * @param body  The patch body.
+     *
+     * @return  The corresponding json_t object.
+     */
+    mxb::Json curl_patch(const std::string& path, const std::string& body) const;
+
+    /**
      * Issue a curl POST to the REST-API endpoint of the MaxScale running on
      * the maxscale 0 VM instance.
      *
@@ -289,10 +325,11 @@ private:
     enum Command
     {
         GET,
+        PATCH,
         POST
     };
 
-    mxb::Json curl(Command command, const std::string& path) const;
+    mxb::Json curl(Command command, const std::string& path, const std::string& body = std::string()) const;
 
     class Imp
     {

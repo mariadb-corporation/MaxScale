@@ -15,6 +15,33 @@
 
 using namespace std;
 
+namespace
+{
+
+string to_string(const MaxRest::Value& value)
+{
+    if (std::holds_alternative<string>(value))
+    {
+        return std::get<string>(value);
+    }
+    else if (std::holds_alternative<int64_t>(value))
+    {
+        return std::to_string(std::get<int64_t>(value));
+    }
+    else if (std::holds_alternative<bool>(value))
+    {
+        return std::get<bool>(value) ? "true" : "false";
+    }
+    else
+    {
+        mxb_assert(!true);
+    }
+
+    return "";
+}
+
+}
+
 //
 // MaxRest::SystemTestImp
 //
@@ -187,9 +214,9 @@ mxb::Json MaxRest::v1_services() const
 }
 
 void MaxRest::v1_maxscale_modules(const string& module,
-                                      const string& command,
-                                      const string& instance,
-                                      const std::vector<string>& params) const
+                                  const string& command,
+                                  const string& instance,
+                                  const std::vector<string>& params) const
 {
     string path("maxscale/modules");
 
@@ -210,6 +237,53 @@ void MaxRest::v1_maxscale_modules(const string& module,
     }
 
     curl_post(path);
+}
+
+void MaxRest::alter(const std::string& resource, const std::vector<Parameter>& parameters) const
+{
+    ostringstream body;
+    body << "{\"data\": {\"attributes\": {\"parameters\": {";
+
+    auto end = parameters.end();
+    auto i = parameters.begin();
+
+    while (i != end)
+    {
+        const Parameter& parameter = *i;
+
+        body << "\"" << parameter.name << "\": " << to_string(parameter.value);
+
+        if (++i != end)
+        {
+            body << ", ";
+        }
+    }
+
+    body << "}}}}";
+
+    mxb::Json json = curl_patch(resource, body.str());
+    mxb::Json errors = json.get_object("errors");
+
+    if (errors)
+    {
+        throw runtime_error(errors.to_string());
+    }
+}
+
+void MaxRest::alter_maxscale(const vector<Parameter>& parameters) const
+{
+    alter("maxscale", parameters);
+}
+
+void MaxRest::alter_maxscale(const Parameter& parameter) const
+{
+    vector<Parameter> parameters = { parameter };
+    alter_maxscale(parameters);
+}
+
+void MaxRest::alter_maxscale(const string& parameter_name, const Value& parameter_value) const
+{
+    alter_maxscale(Parameter { parameter_name, parameter_value });
 }
 
 MaxRest::Server MaxRest::show_server(const std::string& id) const
@@ -273,12 +347,17 @@ mxb::Json MaxRest::curl_get(const string& path) const
     return curl(GET, path);
 }
 
+mxb::Json MaxRest::curl_patch(const std::string& path, const std::string& body) const
+{
+    return curl(PATCH, path, body);
+}
+
 mxb::Json MaxRest::curl_post(const string& path) const
 {
     return curl(POST, path);
 }
 
-mxb::Json MaxRest::curl(Command command, const string& path) const
+mxb::Json MaxRest::curl(Command command, const string& path, const string& body) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
     string curl_command = "curl -s -u admin:mariadb ";
@@ -289,12 +368,23 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
         curl_command += "-X GET ";
         break;
 
+    case PATCH:
+        curl_command += "-X PATCH ";
+        break;
+
     case POST:
         curl_command += "-X POST ";
         break;
     }
 
     curl_command += url;
+
+    if (!body.empty())
+    {
+        curl_command += " -d '";
+        curl_command += body;
+        curl_command += "'";
+    }
 
     auto result = m_sImp->execute_curl_command(curl_command);
 
