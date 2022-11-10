@@ -2617,6 +2617,11 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
         }
     }
 
+    if (find_helper(CN_LOAD_PERSISTED_CONFIGS))
+    {
+        cnf.load_persisted_configs = config_truth_value(*value);
+    }
+
     if (find_helper(CN_LOG_AUGMENTATION))
     {
         set_log_augmentation(value->c_str());

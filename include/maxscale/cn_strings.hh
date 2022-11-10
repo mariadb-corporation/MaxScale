@@ -47,6 +47,7 @@ constexpr char CN_INET[] = "inet";
 constexpr char CN_LINKS[] = "links";
 constexpr char CN_LISTENERS[] = "listeners";
 constexpr char CN_LISTENER[] = "listener";
+constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 constexpr char CN_MAX_ROUTING_CONNECTIONS[] = "max_routing_connections";
 constexpr char CN_MAXSCALE[] = "maxscale";
 constexpr char CN_MEMORY[] = "memory";

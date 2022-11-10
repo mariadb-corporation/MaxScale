@@ -91,7 +91,6 @@ constexpr char CN_AUTO[] = "auto";
 constexpr char CN_AUTO_TUNE[] = "auto_tune";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
-constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 constexpr char CN_LOCAL_ADDRESS[] = "local_address";
 constexpr char CN_LOG_DEBUG[] = "log_debug";
 constexpr char CN_LOG_INFO[] = "log_info";
