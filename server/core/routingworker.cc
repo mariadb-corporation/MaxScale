@@ -654,24 +654,28 @@ void RoutingWorker::deactivate()
 bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 {
     mxb_assert(get_current() == this);
+    mxb_assert(is_draining() || is_dormant());
 
     bool success = start_listening(listeners);
 
     if (success)
     {
-        set_state(State::ACTIVE);
+        if (is_dormant())
+        {
+            make_dcalls();
 
-        make_dcalls();
+            // Set epoll-timeout to the default 1ms.
+            set_min_timeout(1);
+
+            init_datas();
+        }
 
         // When the worker was deactivated, the statistics were reset. However,
         // as there will be some activity even if it is inactive, the statistics
         // are reset also at activation.
         reset_statistics();
 
-        // Set epoll-timeout to the default 1ms.
-        set_min_timeout(1);
-
-        init_datas();
+        set_state(State::ACTIVE);
     }
 
     return success;
