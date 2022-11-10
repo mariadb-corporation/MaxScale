@@ -42,8 +42,8 @@
 * The `Maintenance|Drain` state of a server is now synchronized between multiple
   MaxScale instances if configuration synchronization  is enabled.
 * Causal reads now supported in a multi-MaxScale setup.
-* The [csmon](Monitors/ColumnStore-Monitor.md) and [auroramon](Monitors/Aurora-Monitor.md)
-  monitors are deprecated in 22.08.2 and will be removed in 23.02.0.
+* The `csmon` and `auroramon` monitors are deprecated in 22.08.2 and will be
+  removed in 23.02.0.
 
 For more details, please refer to:
 * [MariaDB MaxScale 22.08.2 Release Notes](Release-Notes/MaxScale-22.08.2-Release-Notes.md)
