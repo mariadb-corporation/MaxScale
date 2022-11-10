@@ -1125,6 +1125,12 @@ HttpResponse cb_sql_query(const HttpRequest& request)
     return HttpSql::query(request);
 }
 
+HttpResponse cb_sql_import(const HttpRequest& request)
+{
+    mxb_assert(request.get_json());
+    return HttpSql::start_import(request);
+}
+
 HttpResponse cb_alter_user(const HttpRequest& request)
 {
     auto user = request.last_uri_part();
@@ -1498,6 +1504,7 @@ public:
         m_post.emplace_back(cb_sql_reconnect, "sql", ":connection_id", "reconnect");
         m_post.emplace_back(cb_sql_clone, "sql", ":connection_id", "clone");
         m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
+        m_post.emplace_back(REQ_BODY, cb_sql_import, "sql", ":connection_id", "import");
 
         /** For all module commands that modify state/data */
         m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");

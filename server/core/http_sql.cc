@@ -287,6 +287,22 @@ bool is_zero_address(const std::string& ip)
         return inet_pton(AF_INET6, ip.c_str(), &addr) == 1 && memcmp(addr.s6_addr, zero, sizeof(zero)) == 0;
     }
 }
+
+void prepare_connection(HttpSql::ConnectionManager::Connection* conn, int64_t max_rows)
+{
+    // Ignore any results that have not yet been read
+    while (conn->conn.current_result_type() != mxq::MariaDB::ResultType::NONE)
+    {
+        conn->conn.next_result();
+    }
+
+    if (conn->last_max_rows != max_rows)
+    {
+        std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
+        conn->conn.cmd("SET sql_select_limit=" + limit);
+        conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
+    }
+}
 }
 
 namespace
@@ -594,18 +610,7 @@ HttpResponse query(const HttpRequest& request)
     auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self), async]() {
         if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
-            // Ignore any results that have not yet been read
-            while (managed_conn->conn.current_result_type() != mxq::MariaDB::ResultType::NONE)
-            {
-                managed_conn->conn.next_result();
-            }
-
-            if (managed_conn->last_max_rows != max_rows)
-            {
-                std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
-                managed_conn->conn.cmd("SET sql_select_limit=" + limit);
-                managed_conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
-            }
+            prepare_connection(managed_conn, max_rows);
 
             int64_t query_id = ++managed_conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
@@ -733,6 +738,56 @@ HttpResponse disconnect(const HttpRequest& request)
             return create_error(error_msg, MHD_HTTP_NOT_FOUND);
         }
     });
+}
+
+HttpResponse start_import(const HttpRequest& request)
+{
+    auto [id, err] = get_connection_id(request, request.uri_part(1));
+
+    if (id.empty())
+    {
+        return create_error(err);
+    }
+
+    string host = request.host();
+    string self = request.uri_segment(0, 2);
+
+    auto exec_query_cb = [id, host = move(host), self = move(self)]() {
+        if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
+        {
+            prepare_connection(conn, 0);
+
+            int64_t query_id = ++conn->current_query_id;
+            string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
+            conn->sql = "TODO: Add something here";
+            conn->last_query_started = mxb::Clock::now();
+
+            mxs::thread_pool().execute(
+                [conn]() {
+                conn->conn.streamed_query("SELECT SLEEP(1)");
+                conn->last_query_time = mxb::Clock::now();
+                conn->release();
+            }, "import-" + id_str);
+
+            string self_id = self + "/queries/" + id_str;
+            mxb::Duration exec_time {0};
+            HttpResponse response = construct_result_response(nullptr, host, self_id,
+                                                              conn->sql, id_str, exec_time);
+
+            response.set_code(MHD_HTTP_ACCEPTED);
+            response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
+
+            return response;
+        }
+        else
+        {
+            const char* why = reason == Reason::BUSY ? "is busy" : "was not found";
+            string errmsg = mxb::string_printf("ID %s %s.", id.c_str(), why);
+            return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+    };
+
+    return HttpResponse(std::move(exec_query_cb));
 }
 
 //
