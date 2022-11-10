@@ -272,41 +272,19 @@ public:
     mxb::Json parse(const std::string& json) const;
 
     /**
-     * Issue a curl GET to the REST-API endpoint of the MaxScale running on
-     * the maxscale 0 VM instance.
+     * Issue a curl GET/PATCH/POST/PUT to the REST-API endpoint of MaxScale.
      *
      * The path will be appended to "http://127.0.0.1:8989/v1/".
      *
      * @param path  The path of the resource.
+     * @param body  The body to be provided.
      *
-     * @return  The corresponding json_t object.
+     * @return  The returned json_t object.
      */
     mxb::Json curl_get(const std::string& path) const;
-
-    /**
-     * Issue a curl PATCH to the REST-API endpoint of the MaxScale running on
-     * the maxscale 0 VM instance.
-     *
-     * The path will be appended to "http://127.0.0.1:8989/v1/".
-     *
-     * @param path  The path of the resource.
-     * @param body  The patch body.
-     *
-     * @return  The corresponding json_t object.
-     */
     mxb::Json curl_patch(const std::string& path, const std::string& body) const;
-
-    /**
-     * Issue a curl POST to the REST-API endpoint of the MaxScale running on
-     * the maxscale 0 VM instance.
-     *
-     * The path will be appended to "http://127.0.0.1:8989/v1/".
-     *
-     * @param path  The path of the resource.
-     *
-     * @return  The corresponding json_t object.
-     */
     mxb::Json curl_post(const std::string& path) const;
+    mxb::Json curl_put(const std::string& path) const;
 
     void raise(const std::string& message) const
     {
@@ -326,7 +304,8 @@ private:
     {
         GET,
         PATCH,
-        POST
+        POST,
+        PUT
     };
 
     mxb::Json curl(Command command, const std::string& path, const std::string& body = std::string()) const;

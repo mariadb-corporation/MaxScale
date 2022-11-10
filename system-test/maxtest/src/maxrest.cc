@@ -357,6 +357,11 @@ mxb::Json MaxRest::curl_post(const string& path) const
     return curl(POST, path);
 }
 
+mxb::Json MaxRest::curl_put(const string& path) const
+{
+    return curl(PUT, path);
+}
+
 mxb::Json MaxRest::curl(Command command, const string& path, const string& body) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
@@ -374,6 +379,10 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
 
     case POST:
         curl_command += "-X POST ";
+        break;
+
+    case PUT:
+        curl_command += "-X PUT ";
         break;
     }
 
