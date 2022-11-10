@@ -628,7 +628,7 @@ HttpResponse query(const HttpRequest& request)
             {
                 managed_conn->conn.streamed_query(sql);
                 managed_conn->last_query_time = mxb::Clock::now();
-                exec_time = managed_conn->last_query_started - managed_conn->last_query_time;
+                exec_time = managed_conn->last_query_time - managed_conn->last_query_started;
                 result_data = generate_json_representation(managed_conn->conn, managed_conn->last_max_rows);
                 managed_conn->release();
                 // 'managed_conn' is now effectively back in storage and should not be used.
