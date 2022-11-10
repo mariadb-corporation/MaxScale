@@ -22,7 +22,7 @@
 #include <vector>
 #include <optional>
 
-#include <maxbase/jansson.hh>
+#include <maxbase/json.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxsql/mariadb_connector.hh>
 
@@ -66,6 +66,7 @@ public:
         int64_t          last_max_rows {0};
         ConnectionConfig config;
         std::string      sql;
+        mxb::Json        result;
     };
 
     enum class Reason

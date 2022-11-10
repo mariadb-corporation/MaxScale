@@ -291,10 +291,7 @@ bool is_zero_address(const std::string& ip)
 void prepare_connection(HttpSql::ConnectionManager::Connection* conn, int64_t max_rows)
 {
     // Ignore any results that have not yet been read
-    while (conn->conn.current_result_type() != mxq::MariaDB::ResultType::NONE)
-    {
-        conn->conn.next_result();
-    }
+    conn->result.reset();
 
     if (conn->last_max_rows != max_rows)
     {
@@ -626,6 +623,8 @@ HttpResponse query(const HttpRequest& request)
                     [managed_conn, sql, max_rows]() {
                     managed_conn->conn.streamed_query(sql);
                     managed_conn->last_query_time = mxb::Clock::now();
+                    managed_conn->result.reset(generate_json_representation(managed_conn->conn,
+                                                                            managed_conn->last_max_rows));
                     managed_conn->release();
                 }, "sql" + id_str);
             }
@@ -682,15 +681,14 @@ HttpResponse query_result(const HttpRequest& request)
 
         if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
         {
-            if (conn->conn.current_result_type() == mxq::MariaDB::ResultType::NONE)
+            if (json_t* result_data = conn->result.release())
             {
-                response = create_error("No async query results found.", MHD_HTTP_BAD_REQUEST);
+                auto exec_time = conn->last_query_time - conn->last_query_started;
+                response = construct_result_response(result_data, host, self, sql, query_id, exec_time);
             }
             else
             {
-                json_t* result_data = generate_json_representation(conn->conn, conn->last_max_rows);
-                auto exec_time = conn->last_query_time - conn->last_query_started;
-                response = construct_result_response(result_data, host, self, sql, query_id, exec_time);
+                response = create_error("No async query results found.", MHD_HTTP_BAD_REQUEST);
             }
 
             conn->release();
@@ -764,7 +762,8 @@ HttpResponse start_import(const HttpRequest& request)
 
             mxs::thread_pool().execute(
                 [conn]() {
-                conn->conn.streamed_query("SELECT SLEEP(1)");
+                bool ok = true;
+                conn->result.reset(json_pack("[{s: b}]", "success", ok));
                 conn->last_query_time = mxb::Clock::now();
                 conn->release();
             }, "import-" + id_str);
