@@ -381,7 +381,7 @@ bool RoutingWorker::adjust_threads(int nCount)
 
     bool rv = false;
 
-    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    int nDesired = this_unit.nDesired.load(std::memory_order_relaxed);
 
     if (nCount < 1)
     {
@@ -391,13 +391,13 @@ bool RoutingWorker::adjust_threads(int nCount)
     {
         MXB_ERROR("The number of threads can be at most %d.", this_unit.nMax);
     }
-    else if (nCount < nRunning)
+    else if (nCount < nDesired)
     {
-        rv = decrease_threads(nRunning - nCount);
+        rv = decrease_threads(nDesired - nCount);
     }
-    else if (nCount > nRunning)
+    else if (nCount > nDesired)
     {
-        rv = increase_threads(nCount - nRunning);
+        rv = increase_threads(nCount - nDesired);
     }
     else
     {
@@ -436,9 +436,8 @@ bool RoutingWorker::increase_threads(int nDelta)
     bool rv = true;
 
     int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
     int nDesired = this_unit.nDesired.load(std::memory_order_relaxed);
-    int nAvailable = nCreated - nRunning;
+    int nAvailable = nCreated - nDesired;
 
     if (nAvailable > 0)
     {
@@ -452,6 +451,8 @@ bool RoutingWorker::increase_threads(int nDelta)
         }
         else
         {
+            int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+
             MXB_ERROR("Could activate %d threads of %d required. %d workers "
                       "currently available.", nActivated, nDelta, nRunning);
             rv = false;
@@ -470,9 +471,10 @@ bool RoutingWorker::increase_threads(int nDelta)
 int RoutingWorker::activate_threads(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    mxb_assert(this_unit.nCreated - this_unit.nRunning >= n);
+    mxb_assert(this_unit.nCreated - this_unit.nDesired >= n);
 
-    int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
+    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nDesired.load(std::memory_order_relaxed);
     int i = nBefore;
     n += i;
 
@@ -493,7 +495,10 @@ int RoutingWorker::activate_threads(int n)
         }
     }
 
-    this_unit.nRunning.store(i, std::memory_order_relaxed);
+    if (i > nRunning)
+    {
+        this_unit.nRunning.store(i, std::memory_order_relaxed);
+    }
     this_unit.nDesired.store(i, std::memory_order_relaxed);
 
     return i - nBefore;
