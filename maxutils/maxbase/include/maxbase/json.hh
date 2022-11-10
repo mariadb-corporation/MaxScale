@@ -457,4 +457,9 @@ static inline bool operator!=(const Json& lhs, const Json& rhs)
 {
     return !(lhs == rhs);
 }
+
+/**
+ * Convert mxb::Json::Type to string
+ */
+std::ostream& operator<<(std::ostream& out, mxb::Json::Type type);
 }

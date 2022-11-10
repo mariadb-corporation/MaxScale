@@ -743,4 +743,39 @@ bool json_is_type(json_t* json, const char* json_ptr, json_type type)
     return rval;
 }
 
+std::ostream& operator<<(std::ostream& out, mxb::Json::Type type)
+{
+    switch (type)
+    {
+    case mxb::Json::Type::OBJECT:
+        out << "object";
+
+    case mxb::Json::Type::ARRAY:
+        out << "array";
+
+    case mxb::Json::Type::STRING:
+        out << "string";
+
+    case mxb::Json::Type::INTEGER:
+        out << "integer";
+
+    case mxb::Json::Type::REAL:
+        out << "real";
+
+    case mxb::Json::Type::BOOL:
+        out << "boolean";
+
+    case mxb::Json::Type::JSON_NULL:
+        out << "null";
+
+    case mxb::Json::Type::UNDEFINED:
+        out << "undefined";
+
+    default:
+        mxb_assert(!true);
+        out << "unknown";
+    }
+
+    return out;
+}
 }
