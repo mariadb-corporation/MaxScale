@@ -2,6 +2,7 @@
 
 #include <maxtest/ccdefs.hh>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ struct CmdResult
 };
 
 using BoolFuncArray = std::vector<std::function<bool (void)>>;
+using NetworkConfig = std::map<std::string, std::string>;
 
 /**
  * System test error log container.
@@ -54,7 +56,7 @@ private:
 struct Settings
 {
     bool verbose {false};               /**< True if printing more details */
-    bool local_maxscale {false};        /**< MaxScale running locally */
+    bool local_test {false};            /**< MaxScale and nodes running locally */
     bool allow_concurrent_run {true};   /**< Allow concurrent_run to run concurrently */
 };
 
@@ -85,6 +87,8 @@ struct SharedData
      * @return Return value and output
      */
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd);
+
+    std::string get_nc_item(const NetworkConfig& nwconfig, const std::string& search_key);
 };
 
 /**

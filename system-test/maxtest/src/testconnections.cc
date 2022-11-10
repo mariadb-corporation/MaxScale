@@ -160,12 +160,12 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     }
 
     // Stop MaxScale to prevent it from interfering with replication setup.
-    if (!m_mxs_manual_debug)
+    if (!m_mxs_manual_debug && !is_local_test())
     {
         stop_all_maxscales();
     }
 
-    if (galera && maxscale::restart_galera)
+    if (galera && maxscale::restart_galera && !is_local_test())
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -318,7 +318,7 @@ int TestConnections::cleanup()
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
-    if (!settings().local_maxscale)
+    if (!settings().local_test)
     {
         // Stop all MaxScales to detect crashes on exit.
         bool sleep_more = false;
@@ -413,11 +413,18 @@ int TestConnections::setup_vms()
     bool vms_found = false;
     if (m_recreate_vms)
     {
-        // User has requested to recreate all VMs required by current test.
-        if (call_mdbci_and_check("--recreate"))
+        if (is_local_test())
         {
-            vms_found = true;
-            maxscale_installed = true;
+            add_failure("Cannot recreate VMs in local mode.");
+        }
+        else
+        {
+            // User has requested to recreate all VMs required by current test.
+            if (call_mdbci_and_check("--recreate"))
+            {
+                vms_found = true;
+                maxscale_installed = true;
+            }
         }
     }
     else
@@ -425,6 +432,11 @@ int TestConnections::setup_vms()
         if (read_network_config() && required_machines_are_running())
         {
             vms_found = true;
+        }
+        else if (is_local_test())
+        {
+            add_failure("Network config failure or not all machines were running while in "
+                        "local mode. Cannot continue. Check network_config and configured_labels-files.");
         }
         else
         {
@@ -443,14 +455,21 @@ int TestConnections::setup_vms()
         rval = 0;
         if (m_reinstall_maxscale)
         {
-            if (reinstall_maxscales())
+            if (is_local_test())
             {
-                maxscale_installed = true;
+                add_failure("Cannot install MaxScale while in local mode.");
             }
             else
             {
-                add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
-                rval = MDBCI_FAIL;
+                if (reinstall_maxscales())
+                {
+                    maxscale_installed = true;
+                }
+                else
+                {
+                    add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
+                    rval = MDBCI_FAIL;
+                }
             }
         }
 
@@ -1795,7 +1814,7 @@ mxt::Settings& TestConnections::settings()
 
 bool TestConnections::read_cmdline_options(int argc, char* argv[])
 {
-    static struct option long_options[] =
+    option long_options[] =
     {
         {"help",               no_argument,       0, 'h'},
         {"verbose",            no_argument,       0, 'v'},
@@ -1806,7 +1825,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-nodes-check",     no_argument,       0, 'r'},
         {"restart-galera",     no_argument,       0, 'g'},
         {"no-timeouts",        no_argument,       0, 'z'},
-        {"local-maxscale",     optional_argument, 0, 'l'},
+        {"local-test",         no_argument,       0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
         {"fix-clusters",       no_argument,       0, 'f'},
@@ -1877,12 +1896,12 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'l':
             {
-                printf("MaxScale assumed to be running locally; not started and logs not downloaded.\n");
+                logger().log_msg("Running test in local mode. Assuming that MaxScale and servers are "
+                                 "already set up, configured and running.");
                 maxscale::start = false;
-                m_mxs_manual_debug = true;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
-                m_shared.settings.local_maxscale = true;
+                m_shared.settings.local_test = true;
             }
             break;
 
@@ -2000,7 +2019,7 @@ bool TestConnections::initialize_nodes()
         add_failure("Not enough MaxScales. Test requires %i, found %i.",
                     n_mxs_expected, n_mxs_inited);
     }
-    else if (n_mxs_inited > 1 && settings().local_maxscale)
+    else if (n_mxs_inited > 1 && settings().local_test)
     {
         error = true;
         add_failure("Multiple MaxScales are defined while using a local MaxScale. Not supported.");
@@ -2027,12 +2046,12 @@ bool TestConnections::check_backend_versions()
 
 bool TestConnections::required_machines_are_running()
 {
-    bool rval = false;
     StringSet missing_mdbci_labels;
     std::set_difference(m_required_mdbci_labels.begin(), m_required_mdbci_labels.end(),
                         m_configured_mdbci_labels.begin(), m_configured_mdbci_labels.end(),
                         std::inserter(missing_mdbci_labels, missing_mdbci_labels.begin()));
 
+    bool rval = false;
     if (missing_mdbci_labels.empty())
     {
         if (verbose())
@@ -2169,6 +2188,11 @@ void TestConnections::set_signal_handlers()
 
 bool TestConnections::check_create_vm_dir()
 {
+    if (is_local_test())
+    {
+        return true;
+    }
+
     bool rval = false;
     string mkdir_cmd = "mkdir -p " + m_mdbci_vm_path;
     if (run_shell_command(mkdir_cmd, "Failed to create MDBCI VMs directory."))
@@ -2269,4 +2293,9 @@ mxt::MaxScale* TestConnections::my_maxscale(int m) const
 mxt::SharedData& TestConnections::shared()
 {
     return m_shared;
+}
+
+bool TestConnections::is_local_test() const
+{
+    return m_shared.settings.local_test;
 }

@@ -21,6 +21,9 @@ namespace
 const char ssh_opts[] = "-o ControlMaster=auto -o ControlPath=./maxscale-test-%r@%h:%p -o ControlPersist=yes "
                         "-o CheckHostIP=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
                         "-o LogLevel=quiet ";
+
+const char err_local_cmd[] = "Attempted to run command '%s' on node %s. Running remote commands is not "
+                             "supported in local mode.";
 }
 
 Nodes::Nodes(mxt::SharedData* shared)
@@ -46,31 +49,29 @@ namespace maxtest
 {
 bool VMNode::init_ssh_master()
 {
+    if (is_local())
+    {
+        log().log_msgf("Tried to initialize ssh connection to local node %s. Not supported.", m_name.c_str());
+        return false;
+    }
+
     close_ssh_master();
     bool init_ok = false;
-    if (m_ip4 == "127.0.0.1")
+    m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
+                                      m_sshkey.c_str(), ssh_opts,
+                                      m_username.c_str(), m_ip4.c_str());
+
+    // For initiating the master connection, just part1 is enough.
+    FILE* instream = popen(m_ssh_cmd_p1.c_str(), "w");
+    if (instream)
     {
-        m_type = NodeType::LOCAL;
-        init_ok = true;     // No master connection needed for local.
+        m_ssh_master_pipe = instream;
+        init_ok = true;
     }
     else
     {
-        m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
-                                          m_sshkey.c_str(), ssh_opts,
-                                          m_username.c_str(), m_ip4.c_str());
-
-        // For initiating the master connection, just part1 is enough.
-        FILE* instream = popen(m_ssh_cmd_p1.c_str(), "w");
-        if (instream)
-        {
-            m_ssh_master_pipe = instream;
-            init_ok = true;
-        }
-        else
-        {
-            log().log_msgf("popen() failed on '%s' when forming master ssh connection.",
-                           m_name.c_str());
-        }
+        log().log_msgf("popen() failed on '%s' when forming master ssh connection.",
+                       m_name.c_str());
     }
 
     // Test the connection. If this doesn't work, continuing is pointless.
@@ -83,7 +84,7 @@ bool VMNode::init_ssh_master()
         }
         else
         {
-            log().log_msgf("SSH/Bash check on '%s' failed.", m_name.c_str());
+            log().log_msgf("SSH-check on '%s' failed.", m_name.c_str());
         }
     }
     return rval;
@@ -101,18 +102,16 @@ void VMNode::close_ssh_master()
 
 int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
-    string opening_cmd;
-    if (m_type == NodeType::LOCAL)
+    if (is_local())
     {
-        opening_cmd = "bash";
+        log().add_failure(err_local_cmd, cmd.c_str(), m_name.c_str());
+        return -1;
     }
-    else
+
+    string opening_cmd = m_ssh_cmd_p1;
+    if (!verbose())
     {
-        opening_cmd = m_ssh_cmd_p1;
-        if (!verbose())
-        {
-            opening_cmd += " > /dev/null";
-        }
+        opening_cmd += " > /dev/null";
     }
 
     // Run in two stages so that "sudo" applies to all commands in the string.
@@ -163,6 +162,26 @@ int VMNode::run_cmd_sudo(const string& cmd)
 {
     return run_cmd(cmd, CmdPriv::SUDO);
 }
+
+bool VMNode::copy_to_node(const string& src, const string& dest)
+{
+    if (is_local())
+    {
+        log().log_msgf("Tried to copy file '%s' to %s. Copying files is not supported in local mode.",
+                       src.c_str(), m_name.c_str());
+        return false;
+    }
+
+    string cmd = mxb::string_printf("scp -q -r -i %s %s %s %s@%s:%s", m_sshkey.c_str(), ssh_opts,
+                                    src.c_str(), m_username.c_str(), m_ip4.c_str(), dest.c_str());
+    int rc = system(cmd.c_str());
+    if (rc != 0)
+    {
+        log().log_msgf("Copy to VM %s failed. Command '%s' returned %i.",
+                       m_name.c_str(), cmd.c_str(), rc);
+    }
+    return rc == 0;
+}
 }
 
 int Nodes::ssh_node(int node, const string& ssh, bool sudo)
@@ -188,29 +207,6 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     return m_vms[i]->copy_to_node(src, dest) ? 0 : 1;
 }
 
-bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
-{
-    string cmd;
-    if (m_type == NodeType::LOCAL)
-    {
-        cmd = mxb::string_printf("cp %s %s", src.c_str(), dest.c_str());
-    }
-    else
-    {
-        cmd = mxb::string_printf("scp -q -r -i %s %s %s %s@%s:%s",
-                                 m_sshkey.c_str(), ssh_opts, src.c_str(),
-                                 m_username.c_str(), m_ip4.c_str(), dest.c_str());
-    }
-
-    int rc = system(cmd.c_str());
-    if (rc != 0)
-    {
-        log().log_msgf("Copy to VM %s failed. Command '%s' returned %i.",
-                       m_name.c_str(), cmd.c_str(), rc);
-    }
-    return rc == 0;
-}
-
 int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
 {
     return copy_to_node(i, src, dest);
@@ -227,18 +223,16 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
 
 bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
 {
-    string cmd;
-    if (m_type == NodeType::LOCAL)
+    if (is_local())
     {
-        cmd = mxb::string_printf("cp %s %s", src.c_str(), dest.c_str());
-    }
-    else
-    {
-        cmd = mxb::string_printf("scp -q -r -i %s %s %s@%s:%s %s",
-                                 m_sshkey.c_str(), ssh_opts, m_username.c_str(), m_ip4.c_str(),
-                                 src.c_str(), dest.c_str());
+        log().log_msgf("Tried to copy file '%s' from %s. Copying files is not supported in local mode.",
+                       src.c_str(), m_name.c_str());
+        return false;
     }
 
+    string cmd = mxb::string_printf("scp -q -r -i %s %s %s@%s:%s %s",
+                                    m_sshkey.c_str(), ssh_opts, m_username.c_str(), m_ip4.c_str(),
+                                    src.c_str(), dest.c_str());
     int rc = system(cmd.c_str());
     if (rc != 0)
     {
@@ -272,7 +266,7 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
     string field_network = name + "_network";
 
     bool success = false;
-    string ip4 = get_nc_item(network_config, field_network);
+    string ip4 = m_shared.get_nc_item(network_config, field_network);
     if (!ip4.empty())
     {
         m_ip4 = ip4;
@@ -284,23 +278,23 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
         string field_whoami = name + "_whoami";
         string field_access_sudo = name + "_access_sudo";
 
-        string ip6 = get_nc_item(network_config, field_network6);
+        string ip6 = m_shared.get_nc_item(network_config, field_network6);
         m_ip6 = !ip6.empty() ? ip6 : m_ip4;
 
-        string priv_ip = get_nc_item(network_config, field_private_ip);
+        string priv_ip = m_shared.get_nc_item(network_config, field_private_ip);
         m_private_ip = !priv_ip.empty() ? priv_ip : m_ip4;
 
-        string hostname = get_nc_item(network_config, field_hostname);
+        string hostname = m_shared.get_nc_item(network_config, field_hostname);
         m_hostname = !hostname.empty() ? hostname : m_private_ip;
 
-        string access_user = get_nc_item(network_config, field_whoami);
+        string access_user = m_shared.get_nc_item(network_config, field_whoami);
         m_username = !access_user.empty() ? access_user : "vagrant";
 
         m_homedir = (m_username == "root") ? "/root/" :
             mxb::string_printf("/home/%s/", m_username.c_str());
 
         m_sudo = envvar_get_set(field_access_sudo.c_str(), " sudo ");
-        m_sshkey = get_nc_item(network_config, field_keyfile);
+        m_sshkey = m_shared.get_nc_item(network_config, field_keyfile);
 
         success = true;
     }
@@ -315,57 +309,25 @@ std::string Nodes::mdbci_node_name(int node)
 
 namespace maxtest
 {
-/**
- * Read key value from MDBCI network config contents.
- *
- * @param nwconfig File contents as a map
- * @param search_key Name of field to read
- * @return value of variable or empty value if not found
- */
-std::string VMNode::get_nc_item(const mxt::NetworkConfig& nwconfig, const string& search_key)
-{
-    string rval;
-    auto it = nwconfig.find(search_key);
-    if (it != nwconfig.end())
-    {
-        rval = it->second;
-    }
-
-    if (verbose())
-    {
-        if (rval.empty())
-        {
-            printf("'%s' not found in network config.\n", search_key.c_str());
-        }
-        else
-        {
-            printf("'%s' is '%s'\n", search_key.c_str(), rval.c_str());
-        }
-    }
-    return rval;
-}
 
 mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 {
+    if (is_local())
+    {
+        string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
+        log().log_msg(errmsg);
+        mxt::CmdResult rval;
+        rval.output = errmsg;
+        return rval;
+    }
+
     bool sudo = (priv == CmdPriv::SUDO);
 
+    string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
+        mxb::string_printf("'%s'", cmd.c_str());
     string total_cmd;
     total_cmd.reserve(512);
-    if (m_type == NodeType::LOCAL)
-    {
-        // The command can be ran as is.
-        if (sudo)
-        {
-            total_cmd.append(m_sudo).append(" ");
-        }
-        total_cmd.append(cmd);
-    }
-    else
-    {
-        string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
-            mxb::string_printf("'%s'", cmd.c_str());
-        total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
-    }
+    total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
 
     return m_shared.run_shell_cmd_output(total_cmd);
 }
@@ -437,9 +399,6 @@ const char* VMNode::sshkey() const
 
 void VMNode::set_local()
 {
-    m_ip4 = "127.0.0.1";
-    m_ip6 = m_ip4;
-    m_private_ip = m_ip4;
     m_type = NodeType::LOCAL;
 }
 
@@ -456,6 +415,11 @@ bool VMNode::verbose() const
 bool VMNode::is_remote() const
 {
     return m_type == NodeType::REMOTE;
+}
+
+bool VMNode::is_local() const
+{
+    return m_type == NodeType::LOCAL;
 }
 
 mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)

@@ -190,26 +190,48 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         string node_name = mxb::string_printf("%s_%03d", prefixc, i);
         if (add_node(nwconfig, node_name))
         {
+            auto* latest_node = node(i);
             string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
-            auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *node(i), *this, i);
-            string key_port = node_name + "_port";
-            port[i] = readenv_int(key_port.c_str(), 3306);
+            auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *latest_node, *this, i);
+            if (latest_node->is_remote())
+            {
+                string key_port = node_name + "_port";
+                port[i] = readenv_int(key_port.c_str(), 3306);
 
-            string key_socket = node_name + "_socket";
-            string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
-            m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
+                string key_socket = node_name + "_socket";
+                string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
+                m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
-            string key_socket_cmd = node_name + "_socket_cmd";
-            setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
+                string key_socket_cmd = node_name + "_socket_cmd";
+                setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
 
-            string key_start_db_cmd = node_name + "_start_db_command";
-            srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
+                string key_start_db_cmd = node_name + "_start_db_command";
+                srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
-            string key_stop_db_cmd = node_name + "_stop_db_command";
-            srv->m_settings.stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
+                string key_stop_db_cmd = node_name + "_stop_db_command";
+                srv->m_settings.stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
-            string key_clear_db_cmd = node_name + "_cleanup_db_command";
-            srv->m_settings.cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+                string key_clear_db_cmd = node_name + "_cleanup_db_command";
+                srv->m_settings.cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+            }
+            else
+            {
+                // In local mode, the port of the server should be in the network config.
+                string field_mariadb_port = latest_node->m_name + "_mariadb_port";
+                string port_str = m_shared.get_nc_item(nwconfig, field_mariadb_port);
+                if (port_str.empty())
+                {
+                    logger().log_msgf("'%s' not defined in network config, assuming 3306.",
+                                      field_mariadb_port.c_str());
+                    port[i] = 3306;
+                }
+                else
+                {
+                    mxb::get_int(port_str.c_str(), &port[i]);
+                    // TODO: add more fields if needed.
+                }
+            }
+
             m_backends.push_back(move(srv));
             i++;
         }
@@ -986,25 +1008,30 @@ bool MariaDBCluster::basic_test_prepare()
             auto srv = m_backends[i].get();
             bool rval = false;
             auto& vm = srv->m_vm;
+
+        if (vm.is_remote())
+        {
             if (vm.init_ssh_master())
             {
                 rval = true;
-                if (vm.is_remote())
+                const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
+                                            "truncate -s 0 /var/log/syslog;"
+                                            "truncate -s 0 /var/log/messages;"
+                                            "rm -f /etc/my.cnf.d/binlog_enc*;";
+                auto ret = vm.run_cmd_sudo(truncate_cmd);
+                if (ret != 0)
                 {
-                    const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
-                                                "truncate -s 0 /var/log/syslog;"
-                                                "truncate -s 0 /var/log/messages;"
-                                                "rm -f /etc/my.cnf.d/binlog_enc*;";
-                    auto ret = vm.run_cmd_sudo(truncate_cmd);
-                    if (ret != 0)
-                    {
-                        // Should this be a fatal error? Maybe some of the files don't exist.
-                        logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
-                    }
+                    // Should this be a fatal error? Maybe some files don't exist.
+                    logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
                 }
             }
-            return rval;
-        };
+        }
+        else
+        {
+            rval = true;        // No preparations necessary in local mode, user is responsible for it.
+        }
+        return rval;
+    };
     return run_on_every_backend(prepare_one);
 }
 
@@ -1179,6 +1206,11 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
     , m_ind(ind)
     , m_shared(*shared)
 {
+    if (m_shared.settings.local_test)
+    {
+        // Test running locally, assume backends are also local.
+        m_vm.set_local();
+    }
 }
 
 bool MariaDBServer::start_database()

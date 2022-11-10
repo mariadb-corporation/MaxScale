@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -18,8 +17,6 @@ namespace maxtest
 {
 struct SharedData;
 class TestLogger;
-
-using NetworkConfig = std::map<std::string, std::string>;
 
 class VMNode
 {
@@ -115,6 +112,7 @@ public:
 
     TestLogger& log();
     bool        is_remote() const;
+    bool        is_local() const;
 
     void add_linux_user(const std::string& name, const std::string& pw);
     void remove_linux_user(const std::string& name);
@@ -125,7 +123,6 @@ public:
     const std::string m_name;       /**< E.g. "node_001" */
 
 private:
-    std::string get_nc_item(const mxt::NetworkConfig& nwconfig, const std::string& search_key);
     bool        verbose() const;
 
     std::string m_ip4;          /**< IPv4-address */
@@ -143,7 +140,7 @@ private:
         LOCAL, REMOTE
     };
 
-    NodeType    m_type{NodeType::REMOTE};       /**< SSH only used on remote nodes */
+    NodeType    m_type {NodeType::REMOTE};      /**< SSH only used on remote nodes */
     std::string m_ssh_cmd_p1;                   /**< Start of remote command string */
     FILE*       m_ssh_master_pipe{nullptr};     /**< Master ssh pipe. Kept open for ssh multiplex */
     SharedData& m_shared;
