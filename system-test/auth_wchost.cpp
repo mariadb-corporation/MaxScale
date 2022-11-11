@@ -4,136 +4,203 @@
  * Test creates user1@xxx.%.%.% and tries to use it to connect
  */
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+
 #include <maxbase/format.hh>
-#include <maxtest/get_my_ip.hh>
 #include <maxtest/testconnections.hh>
 
 using std::string;
 
+namespace
+{
+void   test_main(TestConnections& test);
+string get_my_ip(TestConnections& test, const string& remote_ip);
+}
+
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
-    auto mxs = test.maxscale;
-    test.repl->connect();
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    char my_ip[1024];
-    if (get_my_ip(mxs->ip4(), my_ip) == 0)
+namespace
+{
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+
+    string my_ip = get_my_ip(test, mxs.ip4());
+    if (!my_ip.empty())
     {
-        test.tprintf("Test machine IP (got via network request) %s\n", my_ip);
+        test.tprintf("Test machine IP (got via network request): %s", my_ip.c_str());
+        auto dot_loc = my_ip.find('.');
+        if (dot_loc != string::npos)
+        {
+            string ip_wildcarded = my_ip.substr(0, dot_loc);
+            ip_wildcarded.append(".%.%.%");
+            test.tprintf("Test machine IP after wildcarding: %s", ip_wildcarded.c_str());
 
-        char* first_dot = strstr(my_ip, ".");
-        strcpy(first_dot, ".%.%.%");
-        test.tprintf("Test machine IP with %% %s\n", my_ip);
+            const char un[] = "user1";
+            const char pw[] = "pass1";
 
-        const char un[] = "user1";
-        const char pw[] = "pass1";
-        string userhost = mxb::string_printf("%s@'%s'", un, my_ip);
-        auto userhostc = userhost.c_str();
+            string userhost = mxb::string_printf("'%s'@'%s'", un, ip_wildcarded.c_str());
+            auto userhostc = userhost.c_str();
 
-        test.tprintf("Connecting to Maxscale\n");
-        test.add_result(mxs->connect_maxscale(), "Error connecting to Maxscale\n");
-        test.tprintf("Creating user %s", userhostc);
-
-        auto admin_conn = mxs->conn_rwsplit;
-        test.add_result(execute_query(admin_conn, "CREATE USER %s identified by '%s';", userhostc, pw),
-                        "Failed to create user");
-
-        auto query = mxb::string_printf("GRANT ALL PRIVILEGES ON *.* TO %s;", userhostc);
-        test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed");
-
-        auto test_login = [&](const string& db, bool expect_success) {
-                auto conn = open_conn_db(mxs->rwsplit_port, mxs->ip4(), db, un, pw, test.maxscale_ssl);
-
-                bool success = (mysql_errno(conn) == 0);
-                const char* success_str = success ? "succeeded" : "failed";
-                if (success == expect_success)
+            auto test_login = [&](const string& db, bool expect_success) {
+                bool mxs_login = false;
+                bool query_ok = false;
+                auto conn = mxs.try_open_rwsplit_connection(un, pw, db);
+                if (conn->is_open())
                 {
-                    test.tprintf("Authentification for %s to database %s %s, as expected",
-                                 userhostc, db.c_str(), success_str);
+                    mxs_login = true;
+                    auto res = conn->try_query("select 123;");
+                    if (res && res->next_row())
+                    {
+                        query_ok = true;
+                    }
+                }
+
+                if (expect_success)
+                {
+                    if (query_ok)
+                    {
+                        test.tprintf("%s logged in to db %s, as expected.", un, db.c_str());
+                    }
+                    else if (mxs_login)
+                    {
+                        test.add_failure("%s logged in to db %s on MaxScale yet query failed.",
+                                         un, db.c_str());
+                    }
+                    else
+                    {
+                        test.add_failure("%s failed to log in to db %s", un, db.c_str());
+                    }
                 }
                 else
                 {
-                    auto errmsg = success ? "none" :  mysql_error(conn);
-                    test.add_failure(
-                        "Authentification for %s to database %s %s, against expectation. Error: %s",
-                        userhostc, db.c_str(), success_str, errmsg);
+                    // If expecting failure, then even managing to log in to MaxScale is too much.
+                    if (!mxs_login)
+                    {
+                        test.tprintf("%s failed to log in to db %s, as expected.", un, db.c_str());
+                    }
+                    else
+                    {
+                        test.add_failure("%s logged in to db %s, when failure was expected.",
+                                         un, db.c_str());
+                    }
                 }
-                mysql_close(conn);
             };
 
-        if (test.ok())
-        {
-            test.tprintf("Trying to open connection using %s", un);
-            test_login("test", true);
-        }
+            test.tprintf("Creating user %s", userhostc);
+            auto admin_conn = mxs.open_rwsplit_connection2_nodb();
+            auto user1 = admin_conn->create_user(un, ip_wildcarded, pw);
+            const char dbname[] = "test";
+            user1.grant_f("select on %s.*", dbname);
 
-        query = mxb::string_printf("REVOKE ALL PRIVILEGES ON *.* FROM %s; FLUSH PRIVILEGES;", userhostc);
-        test.add_result(execute_query(admin_conn, "%s", query.c_str()), "REVOKE failed");
-
-        // MXS-3172 Test logging on to database when grant includes a wildcard.
-        if (test.ok())
-        {
-            const char grant_db[] = "Area5_Files";
-            const char fail_db1[] = "Area51Files";
-            const char fail_db2[] = "Area52Files";
-
-            const char create_db_fmt[] = "create database %s;";
-            const char create_db_failed[] = "CREATE DATABASE failed";
-            test.add_result(execute_query(admin_conn, create_db_fmt, grant_db), create_db_failed);
-            test.add_result(execute_query(admin_conn, create_db_fmt, fail_db1), create_db_failed);
-            test.add_result(execute_query(admin_conn, create_db_fmt, fail_db2), create_db_failed);
-
-            const char grant_fmt[] = "GRANT SELECT ON `%s`.* TO %s;";
-            const char revoke_fmt[] = "REVOKE SELECT ON `%s`.* FROM %s;";
-            const char escaped_wc_db[] = "Area5\\_Files";
-            query = mxb::string_printf(grant_fmt, escaped_wc_db, userhostc);
-            test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed.");
+            auto reload_users = [&mxs]() {
+                // Try to log in with a non-existent user.
+                sleep(1);
+                mxs.try_open_rwsplit_connection("nevergonna", "giveyouup");
+            };
 
             if (test.ok())
             {
-                test.tprintf("Testing database grant with escaped wildcard...");
-                test_login(grant_db, true);
-                test_login(fail_db1, false);
-                test_login(fail_db2, false);
+                test.tprintf("Trying to log in as %s to db '%s'.", un, dbname);
+                test_login(dbname, true);
+
+                admin_conn->cmd_f("REVOKE select on %s.* FROM %s;", dbname, userhostc);
+                // Refresh privs on MaxScale, then try to log in as user1 again. It should fail.
+                reload_users();
+                test_login(dbname, false);
             }
 
-            // Replace escaped wc grant with non-escaped version.
-            query = mxb::string_printf(revoke_fmt, escaped_wc_db, userhostc);
-            test.add_result(execute_query(admin_conn, "%s", query.c_str()), "REVOKE failed.");
-
-            const char wc_db[] = "Area5_Files";
-            query = mxb::string_printf(grant_fmt, wc_db, userhostc);
-            test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed.");
-
+            // MXS-3172 Test logging on to database when grant includes a wildcard.
             if (test.ok())
             {
-                // Restart MaxScale to reload users, as the load limit may have been reached.
-                test.maxscale->restart();
-                mxs->wait_for_monitor();
+                const char grant_db[] = "Area5_Files";
+                const char fail_db1[] = "Area51Files";
+                const char fail_db2[] = "Area52Files";
 
-                test.tprintf("Testing database grant with wildcard...");
-                test_login(grant_db, true);
-                test_login(fail_db1, true);
-                test_login(fail_db2, true);
+                const char create_db_fmt[] = "create database %s;";
+                admin_conn->cmd_f(create_db_fmt, grant_db);
+                admin_conn->cmd_f(create_db_fmt, fail_db1);
+                admin_conn->cmd_f(create_db_fmt, fail_db2);
+
+                const char grant_fmt[] = "GRANT SELECT ON `%s`.* TO %s;";
+                const char revoke_fmt[] = "REVOKE SELECT ON `%s`.* FROM %s;";
+                const char escaped_wc_db[] = "Area5\\_Files";
+                admin_conn->cmd_f(grant_fmt, escaped_wc_db, userhostc);
+                reload_users();
+
+                if (test.ok())
+                {
+                    test.tprintf("Testing database grant with escaped wildcard...");
+                    test_login(grant_db, true);
+                    test_login(fail_db1, false);
+                    test_login(fail_db2, false);
+                }
+
+                // Replace escaped wc grant with non-escaped version.
+                admin_conn->cmd_f(revoke_fmt, escaped_wc_db, userhostc);
+                admin_conn->cmd_f(grant_fmt, "Area5_Files", userhostc);
+                reload_users();
+
+                if (test.ok())
+                {
+                    test.tprintf("Testing database grant with wildcard...");
+                    test_login(grant_db, true);
+                    test_login(fail_db1, true);
+                    test_login(fail_db2, true);
+                }
+
+                const char drop_db_fmt[] = "drop database %s;";
+                admin_conn->cmd_f(drop_db_fmt, grant_db);
+                admin_conn->cmd_f(drop_db_fmt, fail_db1);
+                admin_conn->cmd_f(drop_db_fmt, fail_db2);
             }
-
-            test.maxscale->connect();
-            admin_conn = mxs->conn_rwsplit;
-            const char drop_db_fmt[] = "drop database %s;";
-            const char drop_db_failed[] = "DROP DATABASE failed";
-            test.add_result(execute_query(admin_conn, drop_db_fmt, grant_db), drop_db_failed);
-            test.add_result(execute_query(admin_conn, drop_db_fmt, fail_db1), drop_db_failed);
-            test.add_result(execute_query(admin_conn, drop_db_fmt, fail_db2), drop_db_failed);
         }
-
-        test.add_result(execute_query(admin_conn, "DROP USER %s;", userhostc), "Drop user failed");
+        else
+        {
+            test.add_failure("%s is not a valid ip.", my_ip.c_str());
+        }
     }
     else
     {
-        test.add_failure("get_my_ip() failed");
+        test.add_failure("get_my_ip() failed.");
     }
+}
 
-    test.check_maxscale_alive();
-    test.repl->disconnect();
-    return test.global_result;
+string get_my_ip(TestConnections& test, const string& remote_ip)
+{
+    string rval;
+    int sock = socket (AF_INET, SOCK_DGRAM, 0);
+    if (sock >= 0)
+    {
+        int dns_port = 53;
+        sockaddr_in serv {};
+        serv.sin_family = AF_INET;
+        serv.sin_addr.s_addr = inet_addr(remote_ip.c_str());
+        serv.sin_port = htons(dns_port);
+        connect(sock, (const sockaddr*) &serv, sizeof(serv));
+
+        sockaddr_in name;
+        socklen_t namelen = sizeof(name);
+        getsockname(sock, (sockaddr*)&name, &namelen);
+        close(sock);
+
+        char buffer[100];
+        const char* p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
+        if (p)
+        {
+            rval = buffer;
+        }
+        else
+        {
+            test.tprintf("inet_ntop failed. Error %d: %s", errno, strerror(errno));
+        }
+    }
+    return rval;
+}
 }
