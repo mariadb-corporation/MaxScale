@@ -218,11 +218,17 @@ public:
     // Helper class for containing slave connection settings. These are modifiable by
     // a CHANGE MASTER TO-command and should not change on their own. The owning server
     // is included to simplify log message creation.
-    class Settings
+    struct Settings
     {
-    public:
-        Settings(std::string name, EndPoint target, std::string owner);
-        Settings(const std::string& name, const SERVER* target);
+        enum class GtidMode
+        {
+            NONE,       /* No gtid. Not supported when generating a CHANGE MASTER TO-command */
+            CURRENT,    /* Current_Pos */
+            SLAVE       /* Slave_Pos */
+        };
+
+        Settings(std::string name, EndPoint target, GtidMode gtid_mode, std::string owner);
+        Settings(const std::string& name, const SERVER* target, GtidMode gtid_mode);
         explicit Settings(std::string owner);
 
         /**
@@ -232,11 +238,10 @@ public:
          */
         std::string to_string() const;
 
-        std::string name;               /* Slave connection name. Must be unique for the server. */
-        EndPoint    master_endpoint;    /* Master server address & port */
-
-    private:
-        std::string m_owner;            /* Name of the owning server. Used for logging. */
+        std::string name;                       /* Slave connection name. Must be unique for the server. */
+        EndPoint    master_endpoint;            /* Master server address & port */
+        GtidMode    gtid_mode {GtidMode::NONE}; /* Gtid-mode */
+        std::string m_owner;                    /* Name of the owning server. Used for logging. */
     };
 
     Settings settings;      /* User-defined settings for the slave connection. */

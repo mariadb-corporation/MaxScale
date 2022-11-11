@@ -2040,8 +2040,6 @@ bool RebuildServer::start_replication()
         // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
         // source server.
         MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
-        EndPoint ep(repl_master->server->address(), repl_master->server->port());
-        SlaveStatus::Settings slave_sett("", ep, m_target->name());
 
         m_target->update_server(false, false);
         if (m_target->is_running())
@@ -2050,7 +2048,12 @@ bool RebuildServer::start_replication()
             string set_gtid = mxb::string_printf("set global gtid_slave_pos='%s';", gtid.c_str());
             if (m_target->execute_cmd(set_gtid, &errmsg))
             {
+                // Typically, Current_Pos is used when configuring replication on a new slave. Rebuild is
+                // an exception as we just configured slave_pos.
                 GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
+                SlaveStatus::Settings slave_sett("", repl_master->server,
+                                                 SlaveStatus::Settings::GtidMode::SLAVE);
+
                 if (m_target->create_start_slave(op, slave_sett))
                 {
                     replication_attempted = true;

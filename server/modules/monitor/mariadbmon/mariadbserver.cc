@@ -2004,6 +2004,8 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
             auto& conn_settings = slave_conn.settings;
             if (check_modify_conn_name(&conn_settings))
             {
+                // TODO: Use Slave_Pos for next major release.
+                conn_settings.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
                 if (create_start_slave(op, conn_settings))
                 {
                     connection_names.insert(conn_settings.name);
@@ -2060,7 +2062,11 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
                 }
             }
 
-            if (ok_to_copy && !create_start_slave(op, slave_conn.settings))
+            // Copying new slave connections to server which may have been a master, so use Current_Pos.
+            // TODO: use Slave_Pos when reasonable
+            auto new_sett = slave_conn.settings;
+            new_sett.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
+            if (ok_to_copy && !create_start_slave(op, new_sett))
             {
                 start_slave_error = true;
             }
@@ -2081,7 +2087,8 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
     string error_msg;
     bool success = false;
 
-    SlaveStatus::Settings new_settings(conn_settings.name, conn_settings.master_endpoint, name());
+    SlaveStatus::Settings new_settings = conn_settings;
+    new_settings.m_owner = name();      // So any error messages refer to this server.
     auto change_master = generate_change_master_cmd(new_settings);
     bool conn_created = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
                                                time_remaining, &error_msg);
@@ -2124,7 +2131,24 @@ MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_sett
                                      conn_settings.name.c_str(),
                                      conn_settings.master_endpoint.host().c_str(),
                                      conn_settings.master_endpoint.port());
-    cmd_begin += "MASTER_USE_GTID = current_pos, ";
+
+    using GtidMode = SlaveStatus::Settings::GtidMode;
+    auto mode = conn_settings.gtid_mode;
+    if (mode == GtidMode::CURRENT)
+    {
+        cmd_begin += "MASTER_USE_GTID = current_pos, ";
+    }
+    else if (mode == GtidMode::SLAVE)
+    {
+        cmd_begin += "MASTER_USE_GTID = slave_pos, ";
+    }
+    else
+    {
+        // File/pos replication not supported.
+        mxb_assert(!true);
+        return {"", ""};
+    }
+
     if (m_settings.replication_ssl)
     {
         cmd_begin += "MASTER_SSL = 1, ";    // Leave out if not set to preserve existing setting.

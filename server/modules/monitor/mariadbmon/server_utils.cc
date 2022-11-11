@@ -177,15 +177,16 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     return accepted;
 }
 
-SlaveStatus::Settings::Settings(string name, EndPoint target, string owner)
+SlaveStatus::Settings::Settings(string name, EndPoint target, GtidMode gtid_mode, string owner)
     : name(move(name))
     , master_endpoint(move(target))
+    , gtid_mode(gtid_mode)
     , m_owner(move(owner))
 {
 }
 
-SlaveStatus::Settings::Settings(const std::string& name, const SERVER* target)
-    : Settings(name, EndPoint(target), "")
+SlaveStatus::Settings::Settings(const std::string& name, const SERVER* target, GtidMode gtid_mode)
+    : Settings(name, EndPoint(target), gtid_mode, "")
 {
 }
 
