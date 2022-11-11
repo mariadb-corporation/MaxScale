@@ -394,10 +394,12 @@ bool RoutingWorker::adjust_threads(int nCount)
     else if (nCount < nDesired)
     {
         rv = decrease_threads(nDesired - nCount);
+        mxb_assert(nCount == this_unit.nDesired);
     }
     else if (nCount > nDesired)
     {
         rv = increase_threads(nCount - nDesired);
+        mxb_assert(nCount == this_unit.nDesired);
     }
     else
     {
@@ -652,6 +654,7 @@ void RoutingWorker::deactivate()
                 }
 
                 this_unit.nRunning.store(n, std::memory_order_relaxed);
+                mxb_assert(this_unit.nRunning >= this_unit.nDesired);
             }
         }, mxb::Worker::EXECUTE_QUEUED);
 }
@@ -784,7 +787,7 @@ bool RoutingWorker::decrease_threads(int n)
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
 
-    int nBefore = this_unit.nRunning.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nDesired.load(std::memory_order_relaxed);
     int nAfter = nBefore - n;
     mxb_assert(nAfter > 0);
 
