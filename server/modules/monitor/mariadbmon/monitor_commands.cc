@@ -2006,24 +2006,71 @@ bool RebuildServer::start_target()
 
 bool RebuildServer::start_replication()
 {
-    // The model script reads gtid position from xtrabackup_binlog_info and writes it to gtid_slave_pos.
-    // However, this does not seem necessary as gtid_slave_pos is already correct.
-
-    // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
-    // source server.
-    MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
-    EndPoint ep(repl_master->server->address(), repl_master->server->port());
-    SlaveStatus::Settings slave_sett("", ep, m_target->name());
-
-    bool replicating = false;
-    m_target->update_server(false, false);
-    if (m_target->is_running())
+    string gtid;
+    // The gtid of the rebuilt server may not be correct, read it from xtrabackup_binlog_info.
+    string read_gtid_cmd = mxb::string_printf("sudo cat %s/xtrabackup_binlog_info | tr -s ' ' | "
+                                              "cut --fields=3 | tail -n 1", rebuild_datadir.c_str());
+    auto res = ssh_util::run_cmd(*m_target_ses, read_gtid_cmd, m_ssh_timeout);
+    if (res.type == RType::OK && res.rc == 0)
     {
-        GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
-        if (m_target->create_start_slave(op, slave_sett))
+        // Check that the result at least looks a bit like a gtid.
+        int n_dash = std::count(res.output.begin(), res.output.end(), '-');
+        if (n_dash >= 2)
         {
-            // Wait a bit and then check that replication works. This only affects the log message. Simplified
-            // from MariaDBMonitor::wait_cluster_stabilization().
+            gtid = res.output;
+            mxb::trim(gtid);
+        }
+        else
+        {
+            PRINT_JSON_ERROR(m_result.output,
+                             "Command '%s' returned invalid result '%s' on %s. Expected a gtid string.",
+                             read_gtid_cmd.c_str(), res.output.c_str(), m_target->name());
+        }
+    }
+    else
+    {
+        string errmsg = ssh_util::form_cmd_error_msg(res, read_gtid_cmd.c_str());
+        PRINT_JSON_ERROR(m_result.output, "Could not read gtid on %s. %s", m_target->name(), errmsg.c_str());
+    }
+
+    bool replication_attempted = false;
+    bool replication_confirmed = false;
+    if (!gtid.empty())
+    {
+        // If monitor had a master when starting rebuild, replicate from it. Otherwise, replicate from the
+        // source server.
+        MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
+        EndPoint ep(repl_master->server->address(), repl_master->server->port());
+        SlaveStatus::Settings slave_sett("", ep, m_target->name());
+
+        m_target->update_server(false, false);
+        if (m_target->is_running())
+        {
+            string errmsg;
+            string set_gtid = mxb::string_printf("set global gtid_slave_pos='%s';", gtid.c_str());
+            if (m_target->execute_cmd(set_gtid, &errmsg))
+            {
+                GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
+                if (m_target->create_start_slave(op, slave_sett))
+                {
+                    replication_attempted = true;
+                }
+            }
+            else
+            {
+                PRINT_JSON_ERROR(m_result.output, "Could not set gtid_slave_pos on %s after rebuild. %s",
+                                 m_target->name(), errmsg.c_str());
+            }
+        }
+        else
+        {
+            PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", m_target->name());
+        }
+
+        if (replication_attempted)
+        {
+            // Wait a bit and then check that replication works. This only affects the log message.
+            // Simplified from MariaDBMonitor::wait_cluster_stabilization().
             std::this_thread::sleep_for(500ms);
             string errmsg;
             if (m_target->do_show_slave_status(&errmsg))
@@ -2034,7 +2081,7 @@ bool RebuildServer::start_replication()
                     if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_YES
                         && slave_conn->slave_sql_running == true)
                     {
-                        replicating = true;
+                        replication_confirmed = true;
                         MXB_NOTICE("%s replicating from %s.", m_target->name(), repl_master->name());
                     }
                     else
@@ -2060,10 +2107,10 @@ bool RebuildServer::start_replication()
     }
     else
     {
-        PRINT_JSON_ERROR(m_result.output, "Could not connect to %s after rebuild.", m_target->name());
+        PRINT_JSON_ERROR(m_result.output, "Could not start replication on %s.", m_target->name());
     }
 
-    m_state = replicating ? State::DONE : State::CLEANUP;
+    m_state = replication_confirmed ? State::DONE : State::CLEANUP;
     return true;
 }
 
