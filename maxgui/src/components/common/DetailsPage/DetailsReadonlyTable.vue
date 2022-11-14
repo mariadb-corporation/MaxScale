@@ -14,9 +14,10 @@
                 :loading="isLoading"
                 :noDataText="noDataText === '' ? $t('$vuetify.noDataText') : noDataText"
                 :tdBorderLeft="tdBorderLeft"
-                showAll
+                :showAll="showAll"
                 :expandAll="expandAll"
                 :isTree="isTree"
+                :itemsPerPage="itemsPerPage"
             >
                 <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
                     <slot :name="header.value" :cellProps="cellProps"> </slot>
@@ -61,6 +62,8 @@ export default {
         expandAll: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
         customTableHeaders: { type: Array },
+        showAll: { type: Boolean, default: false },
+        itemsPerPage: { type: Number, default: 50 },
     },
 
     data() {

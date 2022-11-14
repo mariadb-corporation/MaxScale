@@ -73,6 +73,7 @@
                                     :title="`${$t('routerDiagnostics')}`"
                                     :tableData="routerDiagnostics"
                                     expandAll
+                                    showAll
                                     isTree
                                 />
                             </v-col>

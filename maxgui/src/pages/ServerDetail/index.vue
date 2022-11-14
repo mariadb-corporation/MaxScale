@@ -22,6 +22,7 @@
                                             ref="statistics-table"
                                             :title="`${$tc('statistics', 2)}`"
                                             :tableData="current_server_stats"
+                                            showAll
                                             isTree
                                         />
                                     </v-col>
@@ -68,6 +69,7 @@
                                     :title="`${$t('monitorDiagnostics')}`"
                                     :tableData="monitorDiagnostics"
                                     expandAll
+                                    showAll
                                     isTree
                                 />
                             </v-col>
