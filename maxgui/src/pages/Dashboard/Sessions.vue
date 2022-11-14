@@ -5,7 +5,6 @@
         :headers="tableHeaders"
         :sortDesc="true"
         sortBy="connected"
-        :itemsPerPage="-1"
         @confirm-kill="killSession({ id: $event.id, callback: fetchAllSessions })"
     >
         <template v-slot:header-append-serviceIds>
