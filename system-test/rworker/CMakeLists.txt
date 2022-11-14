@@ -1,0 +1,1 @@
+add_test_executable(rworker_basics.cc rworker_basics rworker_basics REPL_BACKEND)

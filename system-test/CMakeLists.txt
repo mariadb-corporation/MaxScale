@@ -49,6 +49,7 @@ add_subdirectory(pinloki)
 add_subdirectory(config_sync)
 add_subdirectory(schemarouter)
 add_subdirectory(filters)
+add_subdirectory(rworker)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
