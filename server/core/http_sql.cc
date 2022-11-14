@@ -738,7 +738,7 @@ HttpResponse disconnect(const HttpRequest& request)
     });
 }
 
-HttpResponse start_import(const HttpRequest& request)
+HttpResponse etl(const HttpRequest& request)
 {
     auto [id, err] = get_connection_id(request, request.uri_part(1));
 
@@ -766,7 +766,7 @@ HttpResponse start_import(const HttpRequest& request)
                 conn->result.reset(json_pack("[{s: b}]", "success", ok));
                 conn->last_query_time = mxb::Clock::now();
                 conn->release();
-            }, "import-" + id_str);
+            }, "etl-" + id_str);
 
             string self_id = self + "/queries/" + id_str;
             mxb::Duration exec_time {0};

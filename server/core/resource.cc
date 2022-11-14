@@ -1151,10 +1151,10 @@ HttpResponse cb_sql_query(const HttpRequest& request)
     return HttpSql::query(request);
 }
 
-HttpResponse cb_sql_import(const HttpRequest& request)
+HttpResponse cb_sql_etl(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
-    return HttpSql::start_import(request);
+    return HttpSql::etl(request);
 }
 
 HttpResponse cb_alter_user(const HttpRequest& request)
@@ -1533,7 +1533,7 @@ public:
         m_post.emplace_back(cb_sql_reconnect, "sql", ":connection_id", "reconnect");
         m_post.emplace_back(cb_sql_clone, "sql", ":connection_id", "clone");
         m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
-        m_post.emplace_back(REQ_BODY, cb_sql_import, "sql", ":connection_id", "import");
+        m_post.emplace_back(REQ_BODY, cb_sql_etl, "sql", ":connection_id", "etl");
 
         /** For all module commands that modify state/data */
         m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");

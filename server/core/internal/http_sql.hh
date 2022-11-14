@@ -34,7 +34,7 @@ HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);
 HttpResponse query_result(const HttpRequest& request);
 HttpResponse disconnect(const HttpRequest& request);
-HttpResponse start_import(const HttpRequest& request);
+HttpResponse etl(const HttpRequest& request);
 
 bool is_query(const std::string& id);
 bool is_connection(const std::string& id);
