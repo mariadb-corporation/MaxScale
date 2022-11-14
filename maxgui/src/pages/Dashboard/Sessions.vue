@@ -1,11 +1,10 @@
 <template>
-    <data-table
+    <sessions-table
         :search="search_keyword"
+        :rows="tableRows"
         :headers="tableHeaders"
-        :data="tableRows"
         :sortDesc="true"
         sortBy="connected"
-        :itemsPerPage="50"
     >
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
@@ -13,21 +12,20 @@
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
             <template v-else>
-                <template v-for="serviceId in serviceIds">
-                    <router-link
-                        :key="serviceId"
-                        :to="`/dashboard/services/${serviceId}`"
-                        class="rsrc-link"
-                    >
-                        <span>{{ serviceId }} </span>
-                    </router-link>
-                </template>
+                <router-link
+                    v-for="serviceId in serviceIds"
+                    :key="serviceId"
+                    :to="`/dashboard/services/${serviceId}`"
+                    class="rsrc-link"
+                >
+                    <span>{{ serviceId }} </span>
+                </router-link>
             </template>
         </template>
         <template v-slot:connected="{ data: { item: { connected } } }">
             <span> {{ $help.dateFormat({ value: connected }) }} </span>
         </template>
-    </data-table>
+    </sessions-table>
 </template>
 
 <script>

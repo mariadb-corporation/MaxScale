@@ -78,14 +78,14 @@
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
-                                <details-readonly-table
-                                    ref="sessions-table"
-                                    :tdBorderLeft="false"
-                                    :title="`${$tc('currentSessions', 2)}`"
-                                    :titleInfo="sessionsTableRows.length"
-                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                                    :tableData="sessionsTableRows"
-                                    :customTableHeaders="sessionsTableHeader"
+                                <sessions-table
+                                    :search="search_keyword"
+                                    collapsible
+                                    delayLoading
+                                    :rows="sessionsTableRows"
+                                    :headers="sessionsTableHeader"
+                                    :sortDesc="true"
+                                    sortBy="connected"
                                 />
                             </v-col>
                         </v-row>
@@ -142,6 +142,7 @@ export default {
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
+            search_keyword: 'search_keyword',
             current_service: state => state.service.current_service,
             current_service_diagnostics: state => state.service.current_service_diagnostics,
             service_connections_datasets: state => state.service.service_connections_datasets,

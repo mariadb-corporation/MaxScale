@@ -40,7 +40,7 @@ export default [
             layout: 'app-layout',
         },
         name: 'sessions',
-        text: 'current sessions',
+        text: 'currentSessions',
         isTabRoute: true,
     },
     {

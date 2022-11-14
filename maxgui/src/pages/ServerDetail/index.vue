@@ -39,14 +39,15 @@
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
-                                <details-readonly-table
+                                <sessions-table
                                     ref="sessions-table"
-                                    :tdBorderLeft="false"
-                                    :title="`${$tc('currentSessions', 2)}`"
-                                    :titleInfo="sessionsTableRow.length"
-                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                                    :tableData="sessionsTableRow"
-                                    :customTableHeaders="sessionsTableHeader"
+                                    :search="search_keyword"
+                                    collapsible
+                                    delayLoading
+                                    :rows="sessionsTableRow"
+                                    :headers="sessionsTableHeader"
+                                    :sortDesc="true"
+                                    sortBy="connected"
                                 />
                             </v-col>
                         </v-row>
