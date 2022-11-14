@@ -134,13 +134,13 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_REGISTER_SLAVE:
         // Connected client is registering as Slave Server
         m_serverid = gw_mysql_get_byte4(data + MYSQL_HEADER_LEN + 1);
-        MXB_INFO("Client is registering as Slave server with ID %u", m_serverid);
+        MXB_INFO("Client is registering as Replica server with ID %u", m_serverid);
         break;
 
     case MXS_COM_BINLOG_DUMP:
         // Connected Slave server is waiting for binlog events
         m_state = BINLOG_MODE;
-        MXB_INFO("Slave server %u is waiting for binlog events.", m_serverid);
+        MXB_INFO("Replica server %u is waiting for binlog events.", m_serverid);
 
         if (!m_is_gtid && m_config.rewrite_src)
         {
@@ -296,7 +296,7 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
         // Error in binlog stream: no filter
         m_state = ERRORED;
         m_skip = false;
-        MXB_INFO("Slave server %u received error in replication stream", m_serverid);
+        MXB_INFO("Replica server %u received error in replication stream", m_serverid);
     }
     else
     {

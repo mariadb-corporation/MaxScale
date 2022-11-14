@@ -135,7 +135,7 @@ void Writer::run()
                 {
                     if (log_host_warning)
                     {
-                        MXB_SWARNING("No (replication) master found. Retrying silently until one is found.");
+                        MXB_SWARNING("No (replication) primary found. Retrying silently until one is found.");
                         log_host_warning = false;
                     }
 
@@ -170,7 +170,7 @@ void Writer::run()
 
                 if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
                 {
-                    MXB_INFO("Pinloki switching to new master at '%s'", host.c_str());
+                    MXB_INFO("Pinloki switching to new primary at '%s'", host.c_str());
                     break;
                 }
 

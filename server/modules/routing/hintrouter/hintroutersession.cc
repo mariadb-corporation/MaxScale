@@ -168,7 +168,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
 
             if (master_ok)
             {
-                HR_DEBUG("Writing packet to master: '%s'.", m_master->target()->name());
+                HR_DEBUG("Writing packet to primary: '%s'.", m_master->target()->name());
                 success = m_master->routeQuery(pPacket);
                 if (success)
                 {
@@ -176,12 +176,12 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
                 }
                 else
                 {
-                    HR_DEBUG("Write to master failed.");
+                    HR_DEBUG("Write to primary failed.");
                 }
             }
             else if (print_errors)
             {
-                MXB_ERROR("Hint suggests routing to master when no master connected.");
+                MXB_ERROR("Hint suggests routing to primary when no primary connected.");
             }
         }
         break;
@@ -268,7 +268,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             auto candidate = m_slaves.at(curr % size);
             if (candidate->target()->is_slave())
             {
-                HR_DEBUG("Writing packet to slave: '%s'.", candidate->target()->name());
+                HR_DEBUG("Writing packet to replica: '%s'.", candidate->target()->name());
                 success = candidate->routeQuery(pPacket);
                 if (success)
                 {
@@ -276,7 +276,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
                 }
                 else
                 {
-                    HR_DEBUG("Write to slave failed.");
+                    HR_DEBUG("Write to replica failed.");
                 }
             }
         }
@@ -304,7 +304,7 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
                 }
                 else
                 {
-                    HR_DEBUG("Write to slave failed.");
+                    HR_DEBUG("Write to replica failed.");
                 }
             }
         }
@@ -319,11 +319,11 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
     {
         if (!size)
         {
-            MXB_ERROR("Hint suggests routing to slave when no slaves found.");
+            MXB_ERROR("Hint suggests routing to replica when no replicas found.");
         }
         else
         {
-            MXB_ERROR("Could not write to any of '%lu' slaves.", size);
+            MXB_ERROR("Could not write to any of '%lu' replicas.", size);
         }
     }
     return success;
@@ -349,7 +349,7 @@ void HintRouterSession::update_connections()
             }
             else
             {
-                MXB_WARNING("Found multiple master servers when updating connections.");
+                MXB_WARNING("Found multiple primary servers when updating connections.");
             }
         }
         else if (server->is_slave())

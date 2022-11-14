@@ -197,7 +197,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         MXB_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
         send_readonly_error();
-        discard_connection(m_current_master, "The original master is not available");
+        discard_connection(m_current_master, "The original primary is not available");
     }
     else if (res.route_target == TARGET_MASTER
              && (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count()))
@@ -339,14 +339,14 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
     {
         if (should_replace_master(target))
         {
-            MXB_INFO("Replacing old master '%s' with new master '%s'",
+            MXB_INFO("Replacing old primary '%s' with new primary '%s'",
                      m_current_master ? m_current_master->name() : "<no previous master>",
                      target->name());
             replace_master(target);
         }
         else if (target)
         {
-            MXB_INFO("Cannot replace old master with '%s'", target->name());
+            MXB_INFO("Cannot replace old primary with '%s'", target->name());
             target = nullptr;
         }
     }
@@ -485,7 +485,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
-        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "master" : "slave", backend->name());
+        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "primary" : "replica", backend->name());
     }
     else
     {
@@ -818,7 +818,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
                 if (!target)
                 {
                     MXB_INFO("Was supposed to route to server with replication lag "
-                             "at most %d but couldn't find such a slave.", hint_max_rlag);
+                             "at most %d but couldn't find such a replica.", hint_max_rlag);
                 }
             }
             else
@@ -890,7 +890,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
     if (!target)
     {
-        MXB_INFO("Was supposed to route to slave but finding suitable one failed.");
+        MXB_INFO("Was supposed to route to replica but finding suitable one failed.");
     }
 
     return target;
@@ -907,7 +907,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout.count())
     {
-        sprintf(errmsg, "'delayed_retry_timeout' exceeded before a master could be found");
+        sprintf(errmsg, "'delayed_retry_timeout' exceeded before a primary could be found");
     }
     else if (!found)
     {
@@ -928,7 +928,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
         mxb_assert(!curr_master);
         /** We have an original master connection but we couldn't find it */
         sprintf(errmsg,
-                "The connection to master server '%s' is not available",
+                "The connection to primary server '%s' is not available",
                 old_master->name());
     }
     else
@@ -938,13 +938,13 @@ void RWSplitSession::log_master_routing_failure(bool found,
         {
             sprintf(errmsg,
                     "Session is in read-only mode because it was created "
-                    "when no master was available");
+                    "when no primary was available");
         }
         else
         {
             mxb_assert(old_master && !old_master->in_use());
             sprintf(errmsg,
-                    "Was supposed to route to master but the master connection is %s",
+                    "Was supposed to route to primary but the primary connection is %s",
                     old_master->is_closed() ? "closed" : "not in a suitable state");
             mxb_assert(old_master->is_closed());
         }
@@ -1006,7 +1006,7 @@ void RWSplitSession::discard_connection(mxs::RWBackend* target, const std::strin
 
 void RWSplitSession::replace_master(RWBackend* target)
 {
-    discard_connection(m_current_master, "The original master is not available");
+    discard_connection(m_current_master, "The original primary is not available");
     m_current_master = target;
 }
 
@@ -1087,7 +1087,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
-    MXB_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
+    MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
 

@@ -569,15 +569,15 @@ void MariaDBServer::warn_replication_settings() const
     if (m_rpl_settings.gtid_strict_mode == false)
     {
         const char NO_STRICT[] =
-            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+            "Replica '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
             "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
         MXB_WARNING(NO_STRICT, servername);
     }
     if (m_rpl_settings.log_slave_updates == false)
     {
         const char NO_SLAVE_UPDATES[] =
-            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-            "will break for lagging slaves if '%s' is promoted.";
+            "Replica '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+            "will break for lagging replicas if '%s' is promoted.";
         MXB_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
 }
@@ -632,7 +632,7 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
 
     if (!error && !gtid_reached)
     {
-        PRINT_JSON_ERROR(error_out, "Slave catchup timed out on slave '%s'.", name());
+        PRINT_JSON_ERROR(error_out, "Replica catchup timed out on replica '%s'.", name());
     }
     return gtid_reached;
 }
@@ -764,7 +764,7 @@ json_t* MariaDBServer::to_json() const
 
     bool ext_master = is_running() && !m_node.external_masters.empty();
     json_object_set_new(result, "state_details",
-                        ext_master ? json_string("Slave of External Server") : json_null());
+                        ext_master ? json_string("Replica of External Server") : json_null());
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)
@@ -1150,7 +1150,7 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     auto sstatus = slave_connection_status(demotion_target);
     if (is_master())
     {
-        reason = "it is already the master.";
+        reason = "it is already the primary.";
     }
     else if (!is_usable())
     {
@@ -1171,11 +1171,11 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     }
     else if (sstatus->gtid_io_pos.empty())
     {
-        reason = string_printf("its slave connection to '%s' is not using gtid.", demotion_target->name());
+        reason = string_printf("its replica connection to '%s' is not using gtid.", demotion_target->name());
     }
     else if (op == OperationType::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
     {
-        reason = string_printf("its slave connection to '%s' is broken.", demotion_target->name());
+        reason = string_printf("its replica connection to '%s' is broken.", demotion_target->name());
     }
     else if (!update_replication_settings(&query_error))
     {
@@ -1466,9 +1466,9 @@ bool MariaDBServer::reset_all_slave_conns(mxb::Json& error_out)
         {
             error = true;
             string log_message = conn_name.empty() ?
-                string_printf("Error when reseting the default slave connection of '%s': %s",
+                string_printf("Error when reseting the default replica connection of '%s': %s",
                               name(), error_msg.c_str()) :
-                string_printf("Error when reseting the slave connection '%s' of '%s': %s",
+                string_printf("Error when reseting the replica connection '%s' of '%s': %s",
                               conn_name.c_str(), name(), error_msg.c_str());
             PRINT_JSON_ERROR(error_out, "%s", log_message.c_str());
             break;
@@ -1477,7 +1477,7 @@ bool MariaDBServer::reset_all_slave_conns(mxb::Json& error_out)
 
     if (!error && !m_slave_status.empty())
     {
-        MXB_NOTICE("Removed %lu slave connection(s) from '%s'.", m_slave_status.size(), name());
+        MXB_NOTICE("Removed %lu replica connection(s) from '%s'.", m_slave_status.size(), name());
     }
     return !error;
 }
@@ -1498,7 +1498,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         mxb_assert(master_conn);
         if (master_conn == nullptr)
         {
-            PRINT_JSON_ERROR(error_out, "'%s' is not a slave of '%s' and cannot be promoted to its place.",
+            PRINT_JSON_ERROR(error_out, "'%s' is not a replica of '%s' and cannot be promoted to its place.",
                              name(), demotion_target->name());
             return false;
         }
@@ -1574,7 +1574,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_JSON_ERROR(error_out, "Could not copy slave connections from '%s' to '%s'.",
+                    PRINT_JSON_ERROR(error_out, "Could not copy replica connections from '%s' to '%s'.",
                                      demotion_target->name(), name());
                 }
             }
@@ -1586,7 +1586,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_JSON_ERROR(error_out, "Could not merge slave connections from '%s' to '%s'.",
+                    PRINT_JSON_ERROR(error_out, "Could not merge replica connections from '%s' to '%s'.",
                                      demotion_target->name(), name());
                 }
             }
@@ -1598,7 +1598,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_JSON_ERROR(error_out, "Could not restore slave connections of '%s' when "
+                    PRINT_JSON_ERROR(error_out, "Could not restore replica connections of '%s' when "
                                                 "reversing demotion.", name());
                 }
             }
@@ -1771,7 +1771,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
             }
             else
             {
-                PRINT_JSON_ERROR(error_out, "Failed to reset slave connection on '%s': %s", name(),
+                PRINT_JSON_ERROR(error_out, "Failed to reset replica connection on '%s': %s", name(),
                                  error_msg.c_str());
             }
         }
@@ -1782,7 +1782,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
     }
     else
     {
-        PRINT_JSON_ERROR(error_out, "Failed to stop slave connection on '%s': %s", name(), error_msg.c_str());
+        PRINT_JSON_ERROR(error_out, "Failed to stop replica connection on '%s': %s", name(), error_msg.c_str());
     }
     return rval;
 }
@@ -1818,7 +1818,7 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool success = false;
     if (stop_slave_error)
     {
-        PRINT_JSON_ERROR(error_out, "Failed to remove slave connection(s) from '%s'.", name());
+        PRINT_JSON_ERROR(error_out, "Failed to remove replica connection(s) from '%s'.", name());
     }
     else
     {
@@ -1851,13 +1851,13 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
             else
             {
                 // This means server is really bugging.
-                PRINT_JSON_ERROR(error_out, "'%s' still has %i removed slave connections, RESET SLAVE "
+                PRINT_JSON_ERROR(error_out, "'%s' still has %i removed replica connections, RESET SLAVE "
                                             "must have failed.", name(), found);
             }
         }
         else
         {
-            PRINT_JSON_ERROR(error_out, "Failed to update slave connections of '%s': %s",
+            PRINT_JSON_ERROR(error_out, "Failed to update replica connections of '%s': %s",
                              name(), error_msg.c_str());
         }
     }
@@ -1934,7 +1934,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                     {
                         accepted = false;
                         const char format[] = "its Master_Server_Id (%" PRIi64
-                            ") matches an existing slave connection on '%s'.";
+                            ") matches an existing replica connection on '%s'.";
                         ignore_reason = string_printf(format, master_id, name());
                     }
                     else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
@@ -1943,7 +1943,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                         const auto& endpoint = slave_conn.settings.master_endpoint;
                         ignore_reason = string_printf(
                             "its Master_Host (%s) and Master_Port (%i) match an existing "
-                            "slave connection on %s.",
+                            "replica connection on %s.",
                             endpoint.host().c_str(), endpoint.port(), name());
                     }
                 }
@@ -1980,7 +1980,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                 }
                 else
                 {
-                    MXB_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
+                    MXB_WARNING("A replica connection with name '%s' already exists on '%s', using generated "
                                 "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
                     conn_settings->name = second_try;
                     name_is_unique = true;

@@ -181,7 +181,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
                         }
                         else
                         {
-                            PRINT_JSON_ERROR(output, "'%s' cannot replicate from master server '%s': %s",
+                            PRINT_JSON_ERROR(output, "'%s' cannot replicate from primary server '%s': %s",
                                              rejoin_cand->name(), m_master->name(),
                                              no_rejoin_reason.c_str());
                         }
@@ -203,7 +203,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
                 }
                 else
                 {
-                    PRINT_JSON_ERROR(output, "The GTIDs of master server '%s' could not be updated: %s",
+                    PRINT_JSON_ERROR(output, "The GTIDs of primary server '%s' could not be updated: %s",
                                      m_master->name(), gtid_update_error.c_str());
                 }
             }   // server_is_rejoin_suspect has added any error messages to the output, no need to print here
@@ -217,7 +217,7 @@ mon_op::Result MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv)
     else
     {
         const char BAD_CLUSTER[] = "The server cluster of monitor %s is not in a valid state for joining. "
-                                   "Either it has no master or its gtid domain is unknown.";
+                                   "Either it has no primary or its gtid domain is unknown.";
         PRINT_JSON_ERROR(output, BAD_CLUSTER, name());
     }
     rval.success = rejoin_done;
@@ -252,7 +252,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
         }
         else if (!new_master_cand->is_usable())
         {
-            PRINT_JSON_ERROR(error_out, "Server '%s' is down or in maintenance and cannot be used as master.",
+            PRINT_JSON_ERROR(error_out, "Server '%s' is down or in maintenance and cannot be used as primary.",
                              new_master_cand->name());
         }
         else
@@ -265,11 +265,11 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
         const char BAD_MASTER[] = "Could not autoselect new master for replication reset because %s";
         if (m_master == nullptr)
         {
-            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the cluster has no master.");
+            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the cluster has no primary.");
         }
         else if (!m_master->is_usable())
         {
-            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the master is down or in maintenance.");
+            PRINT_JSON_ERROR(error_out, BAD_MASTER, "the primary is down or in maintenance.");
         }
         else
         {
@@ -296,7 +296,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
             }
         }
         // The 'targets'-array cannot be empty, at least 'new_master' is there.
-        MXB_NOTICE("Reseting replication on the following servers: %s. '%s' will be the new master.",
+        MXB_NOTICE("Reseting replication on the following servers: %s. '%s' will be the new primary.",
                    monitored_servers_to_string(targets).c_str(), new_master->name());
 
         // Helper function for running a command on all servers in the list.
@@ -393,7 +393,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                     }
                     else
                     {
-                        MXB_WARNING("No scheduled events were enabled on '%s' because previous master is "
+                        MXB_WARNING("No scheduled events were enabled on '%s' because previous primary is "
                                     "unknown. Check events manually.", new_master->name());
                     }
                 }
@@ -435,7 +435,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                     if (slave_conns_started == slaves.size())
                     {
                         // TODO: Properly check slave IO/SQL threads.
-                        MXB_NOTICE("All slaves redirected successfully.");
+                        MXB_NOTICE("All replicas redirected successfully.");
                     }
                     else
                     {
@@ -551,7 +551,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
             {
                 // Already has a connection to redirect target.
                 conflicts++;
-                MXB_WARNING("'%s' already has a slave connection to '%s', connection to '%s' was "
+                MXB_WARNING("'%s' already has a replica connection to '%s', connection to '%s' was "
                             "not redirected.",
                             redirectable->name(), to->name(), from->name());
             }
@@ -744,7 +744,7 @@ bool MariaDBMonitor::get_joinable_servers(GeneralOpData& op, ServerArray* output
         }
         else
         {
-            MXB_ERROR("The GTIDs of master server '%s' could not be updated while attempting an automatic "
+            MXB_ERROR("The GTIDs of primary server '%s' could not be updated while attempting an automatic "
                       "rejoin: %s", m_master->name(), gtid_update_error.c_str());
             comm_ok = false;
         }
@@ -817,14 +817,14 @@ bool MariaDBMonitor::server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* 
             else
             {
                 const char CONNECTED[] = "Server '%s' is already connected or trying to connect to the "
-                                         "correct master server.";
+                                         "correct primary server.";
                 PRINT_JSON_ERROR(output, CONNECTED, rejoin_cand->name());
             }
         }
     }
     else if (op.start == OpStart::MANUAL)
     {
-        PRINT_JSON_ERROR(output, "Server '%s' is master or not running.", rejoin_cand->name());
+        PRINT_JSON_ERROR(output, "Server '%s' is primary or not running.", rejoin_cand->name());
     }
     return is_suspect;
 }
@@ -1240,7 +1240,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
             const char* excluded_name = excluded->name();
             if (current_best == nullptr)
             {
-                const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
+                const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new primary, "
                                                   "but cannot be selected as it's excluded.";
                 MXB_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
                 break;
@@ -1387,7 +1387,7 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
     string demotion_msg;
     if (m_master == nullptr)
     {
-        const char msg[] = "Can not select a demotion target for failover: cluster does not have a master.";
+        const char msg[] = "Can not select a demotion target for failover: cluster does not have a primary.";
         PRINT_ERROR_IF(log_mode, error_out, msg);
     }
     else if (!m_master->can_be_demoted_failover(failover_mode, &demotion_msg))
@@ -1502,7 +1502,7 @@ void MariaDBMonitor::handle_auto_failover()
         {
             // Failover is not happening yet but likely soon will.
             int ticks_until = failcount - master_down_count;
-            MXB_WARNING("Master has failed. If master does not return in %i monitor tick(s), failover "
+            MXB_WARNING("Primary has failed. If primary does not return in %i monitor tick(s), failover "
                         "begins.", ticks_until);
         }
         m_warn_master_down = false;
@@ -1536,7 +1536,7 @@ void MariaDBMonitor::handle_auto_failover()
             if (op)
             {
                 m_warn_failover_precond = true;
-                MXB_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                MXB_NOTICE("Performing automatic failover to replace failed primary '%s'.",
                            m_master->name());
                 if (failover_perform(*op))
                 {
@@ -1695,7 +1695,7 @@ MariaDBMonitor::switchover_prepare(SERVER* promotion_server, SERVER* demotion_se
         if (m_master == nullptr || !m_master->is_master())
         {
             const char msg[] = "Can not autoselect a demotion target for switchover: cluster does "
-                               "not have a master.";
+                               "not have a primary.";
             PRINT_ERROR_IF(log_mode, error_out, msg);
         }
         else if (!m_master->can_be_demoted_switchover(&demotion_msg))
@@ -1832,7 +1832,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
     {
         if (m_warn_switchover_precond)
         {
-            MXB_WARNING("Master server '%s' is low on disk space. Attempting to switch it with a slave.",
+            MXB_WARNING("Primary server '%s' is low on disk space. Attempting to switch it with a slave.",
                         m_master->name());
         }
 
@@ -1911,7 +1911,7 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
     {
         PRINT_ERROR_IF(log_mode, error_out,
                        "Cluster gtid domain is unknown. This is usually caused by the cluster never "
-                       "having a master server while MaxScale was running.");
+                       "having a primary server while MaxScale was running.");
     }
     else
     {

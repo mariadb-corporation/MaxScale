@@ -491,17 +491,17 @@ void register_monitor_commands()
     static modulecmd_arg_type_t switchover_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC           },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "New master (optional)"    },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current master (optional)"}
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "New primary (optional)"    },
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current primary (optional)"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, switchover_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Perform master switchover");
+                               "Perform primary switchover");
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Schedule master switchover. Does not wait for completion");
+                               "Schedule primary switchover. Does not wait for completion");
 
     static modulecmd_arg_type_t failover_argv[] =
     {
@@ -510,11 +510,11 @@ void register_monitor_commands()
 
     modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
-                               "Perform master failover");
+                               "Perform primary failover");
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-failover", MODULECMD_TYPE_ACTIVE,
                                handle_async_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
-                               "Schedule master failover. Does not wait for completion.");
+                               "Schedule primary failover. Does not wait for completion.");
 
     static modulecmd_arg_type_t rejoin_argv[] =
     {
@@ -533,19 +533,19 @@ void register_monitor_commands()
     static modulecmd_arg_type_t reset_gtid_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC          },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Master server (optional)"}
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Primary server (optional)"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
-                               "Delete slave connections, delete binary logs and "
+                               "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous)");
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-reset-replication", MODULECMD_TYPE_ACTIVE,
                                handle_async_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
-                               "Delete slave connections, delete binary logs and "
+                               "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous). Does not wait for completion.");
 
     static modulecmd_arg_type_t release_locks_argv[] =
@@ -1250,7 +1250,7 @@ bool RebuildServer::check_preconditions()
         if (!source)
         {
             PRINT_JSON_ERROR(error_out, "Could not autoselect rebuild source server. A valid source must "
-                                        "be either a master or slave.");
+                                        "be either a primary or replica.");
         }
     }
 
@@ -1789,7 +1789,7 @@ bool BackupOperation::check_server_is_valid_target(const MariaDBServer* target)
     // The following do not actually prevent rebuilding, they are just safeguards against user errors.
     if (target->is_master())
     {
-        PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
+        PRINT_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "primary");
         target_ok = false;
     }
     else if (target->is_relay_master())
@@ -1810,7 +1810,7 @@ bool BackupOperation::check_server_is_valid_source(const MariaDBServer* source)
     bool source_ok = true;
     if (!source->is_slave() && !source->is_master())
     {
-        PRINT_JSON_ERROR(m_result.output, "Server '%s' is neither a master or slave, cannot use it "
+        PRINT_JSON_ERROR(m_result.output, "Server '%s' is neither a primary or replica, cannot use it "
                                           "as source.", source->name());
         source_ok = false;
     }
@@ -2225,7 +2225,7 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
                 }
                 else
                 {
-                    MXB_WARNING("Could not check replication from %s to %s: slave connection not found.",
+                    MXB_WARNING("Could not check replication from %s to %s: replica connection not found.",
                                 repl_master->name(), target->name());
                 }
             }
@@ -2303,7 +2303,7 @@ void BackupOperation::cleanup(MariaDBServer* source, const SlaveStatusArray& sou
                     if (was_running && !is_running)
                     {
                         auto& slave_name = old_slave.settings.name;
-                        MXB_NOTICE("Slave connection '%s' is not running on %s, starting it.",
+                        MXB_NOTICE("Replica connection '%s' is not running on %s, starting it.",
                                    slave_name.c_str(), source_name);
                         string start_slave = mxb::string_printf("START SLAVE '%s';", slave_name.c_str());
                         source->execute_cmd(start_slave);
@@ -3060,7 +3060,7 @@ bool RestoreFromBackup::state_start_replication()
     }
     else
     {
-        MXB_WARNING("No master for monitor %s, not starting replication on %s.",
+        MXB_WARNING("No primary for monitor %s, not starting replication on %s.",
                     m_mon.name(), m_target_name.c_str());
         m_state = State::DONE;
     }

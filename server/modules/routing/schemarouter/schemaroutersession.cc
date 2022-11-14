@@ -712,7 +712,7 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
 
     if (backend->write(buffer.release(), type))
     {
-        MXB_INFO("Route query to %s: %s", backend->is_master() ? "master" : "slave", backend->name());
+        MXB_INFO("Route query to %s: %s", backend->is_master() ? "primary" : "replica", backend->name());
     }
     else
     {

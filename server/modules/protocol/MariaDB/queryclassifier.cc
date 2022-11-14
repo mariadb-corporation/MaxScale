@@ -422,7 +422,7 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
             case Type::ROUTE_TO_MASTER:
                 // This means override, so we bail out immediately.
                 *target = TARGET_MASTER;
-                MXB_DEBUG("Hint: route to master");
+                MXB_DEBUG("Hint: route to primary");
                 check_more = false;
                 break;
 
@@ -461,7 +461,7 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
 
             case Type::ROUTE_TO_SLAVE:
                 *target = TARGET_SLAVE;
-                MXB_DEBUG("Hint: route to slave.");
+                MXB_DEBUG("Hint: route to replica.");
                 break;
 
             case Type::NONE:

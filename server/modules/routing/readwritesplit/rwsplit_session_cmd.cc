@@ -53,7 +53,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
                         replace_master(backend);
                     }
 
-                    MXB_INFO("Chose '%s' as master due to session write", backend->name());
+                    MXB_INFO("Chose '%s' as primary due to session write", backend->name());
                     return true;
                 }
             }
@@ -67,7 +67,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
         {
             if (prepare_target(backend, TARGET_SLAVE))
             {
-                MXB_INFO("Chose '%s' as slave due to session write", backend->name());
+                MXB_INFO("Chose '%s' as replica due to session write", backend->name());
                 return true;
             }
         }

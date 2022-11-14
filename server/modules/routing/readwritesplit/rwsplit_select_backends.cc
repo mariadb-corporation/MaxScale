@@ -459,11 +459,11 @@ bool RWSplitSession::open_connections()
     {
         if (!master)
         {
-            MXB_ERROR("Couldn't find suitable Master from %lu candidates.", m_raw_backends.size());
+            MXB_ERROR("Couldn't find suitable Primary from %lu candidates.", m_raw_backends.size());
         }
         else
         {
-            MXB_ERROR("Master exists (%s), but it is being drained and cannot be used.", master->name());
+            MXB_ERROR("Primary exists (%s), but it is being drained and cannot be used.", master->name());
         }
         return false;
     }
@@ -478,7 +478,7 @@ bool RWSplitSession::open_connections()
         // A master connection can be safely attempted
         if (master && !master->in_use() && master->can_connect() && prepare_connection(master))
         {
-            MXB_INFO("Selected Master: %s", master->name());
+            MXB_INFO("Selected Primary: %s", master->name());
             m_current_master = master;
         }
     }
@@ -507,7 +507,7 @@ bool RWSplitSession::open_connections()
     {
         if (prepare_connection(candidate))
         {
-            MXB_INFO("Selected Slave: %s", candidate->name());
+            MXB_INFO("Selected Replica: %s", candidate->name());
             ++n_slaves;
         }
 

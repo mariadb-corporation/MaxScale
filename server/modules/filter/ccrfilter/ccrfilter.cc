@@ -76,13 +76,13 @@ CCRSpecification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 config::ParamCount count(
     &specification,
     "count",
-    "The number of SQL statements to route to master after detecting a data modifying SQL statement.",
+    "The number of SQL statements to route to primary after detecting a data modifying SQL statement.",
     0, mxs::config::Param::AT_RUNTIME);
 
 config::ParamSeconds time(
     &specification,
     "time",
-    "The time window during which queries are routed to the master.",
+    "The time window during which queries are routed to the primary.",
     std::chrono::seconds {60}, mxs::config::Param::AT_RUNTIME);
 
 config::ParamBool global(
@@ -313,14 +313,14 @@ bool CCRSession::routeQuery(GWBUF* queue)
                     if (m_count)
                     {
                         m_hints_left = m_count;
-                        MXB_INFO("Write operation detected, next %ld queries routed to master",
+                        MXB_INFO("Write operation detected, next %ld queries routed to primary",
                                  m_count);
                     }
 
                     if (m_time.count())
                     {
                         m_last_modification = now;
-                        MXB_INFO("Write operation detected, queries routed to master for %ld seconds",
+                        MXB_INFO("Write operation detected, queries routed to primary for %ld seconds",
                                  m_time.count());
 
                         if (m_global)
@@ -409,7 +409,7 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
 // Global module object
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static const char DESCRIPTION[] = "A routing hint filter that sends queries to the master "
+    static const char DESCRIPTION[] = "A routing hint filter that sends queries to the primary "
                                       "after data modification";
     static MXS_MODULE info =
     {

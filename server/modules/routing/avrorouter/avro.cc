@@ -55,7 +55,7 @@ bool Avro::post_configure()
 
     if (!service->get_children().empty())
     {
-        MXB_NOTICE("Replicating directly from a master server");
+        MXB_NOTICE("Replicating directly from a primary server");
         cdc::Config cnf;
         cnf.service = service;
         cnf.statedir = m_config.avrodir;

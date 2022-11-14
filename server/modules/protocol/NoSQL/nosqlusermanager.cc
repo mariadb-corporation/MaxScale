@@ -719,7 +719,7 @@ void UserManager::ensure_initial_user()
     }
     else
     {
-        MXB_INFO("Master not yet available, checking shortly again.");
+        MXB_INFO("Primary not yet available, checking shortly again.");
 
         dcall(1s, [this]() {
                 const SERVER* pMaster = get_master();
@@ -730,7 +730,7 @@ void UserManager::ensure_initial_user()
                 }
                 else
                 {
-                    MXB_INFO("Master still not available, checking shortly again.");
+                    MXB_INFO("Primary still not available, checking shortly again.");
                 }
 
                 return !pMaster;
@@ -1709,7 +1709,7 @@ bool UserManagerMariaDB::check_connection() const
         }
         else
         {
-            MXB_SWARNING("No master server currently available for " << m_name << ", users cannot be "
+            MXB_SWARNING("No primary server currently available for " << m_name << ", users cannot be "
                          "authenticated.");
         }
     }

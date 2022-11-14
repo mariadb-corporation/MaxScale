@@ -59,12 +59,12 @@ std::string SlaveStatus::Settings::to_string() const
 {
     if (name.empty())
     {
-        return string_printf("Slave connection from %s to %s",
+        return string_printf("Replica connection from %s to %s",
                              m_owner.c_str(), master_endpoint.to_string().c_str());
     }
     else
     {
-        return string_printf("Slave connection '%s' from %s to %s",
+        return string_printf("Replica connection '%s' from %s to %s",
                              name.c_str(), m_owner.c_str(), master_endpoint.to_string().c_str());
     }
 }
@@ -157,7 +157,7 @@ bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
     if (!slave_sql_running)
     {
         accepted = false;
-        ignore_reason = "its slave sql thread is not running.";
+        ignore_reason = "its replica sql thread is not running.";
     }
     else if (!seen_connected)
     {

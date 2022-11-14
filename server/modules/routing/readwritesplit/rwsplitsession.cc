@@ -580,7 +580,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string::npos
                 || reply.get_variable("tx_isolation").find(LEVEL) != std::string::npos)
             {
-                MXB_INFO("Transaction isolation level set to %s, locking session to master", LEVEL);
+                MXB_INFO("Transaction isolation level set to %s, locking session to primary", LEVEL);
                 m_locked_to_master = true;
             }
 
@@ -833,7 +833,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     {
         // This should never happen
         mxb_assert_message(!true, "m_current_query is empty");
-        MXB_ERROR("Current query unexpectedly empty when trying to retry query on master");
+        MXB_ERROR("Current query unexpectedly empty when trying to retry query on primary");
     }
 
     return can_continue;
@@ -863,7 +863,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
     if (m_current_master && m_current_master->in_use() && m_current_master == backend)
     {
-        MXB_INFO("Master '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
+        MXB_INFO("Primary '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
         if (reply.command() == MXS_COM_BINLOG_DUMP || reply.command() == MXS_COM_REGISTER_SLAVE)
@@ -894,7 +894,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
              * can't be sure whether it was executed or not. In this
              * case the safest thing to do is to close the client
              * connection. */
-            errmsg += " Lost connection to master server while connection was idle.";
+            errmsg += " Lost connection to primary server while connection was idle.";
             if (m_config.master_failure_mode != RW_FAIL_INSTANTLY)
             {
                 can_continue = true;
@@ -905,7 +905,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             // We were expecting a response but we aren't going to get one
             mxb_assert(m_expected_responses >= 1);
 
-            errmsg += " Lost connection to master server while waiting for a result.";
+            errmsg += " Lost connection to primary server while waiting for a result.";
 
             if (m_expected_responses > 1)
             {
@@ -949,7 +949,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
             int idle = duration_cast<seconds>(
                 maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write()).count();
-            MXB_ERROR("Lost connection to the master server, closing session.%s "
+            MXB_ERROR("Lost connection to the primary server, closing session.%s "
                       "Connection has been idle for %d seconds. Error caused by: %s. "
                       "Last close reason: %s. Last error: %s", errmsg.c_str(), idle,
                       mxs::extract_error(errmsgbuf).c_str(),
@@ -966,11 +966,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
 
         backend->close(failure_type);
-        backend->set_close_reason("Master connection failed: " + mxs::extract_error(errmsgbuf));
+        backend->set_close_reason("Primary connection failed: " + mxs::extract_error(errmsgbuf));
     }
     else
     {
-        MXB_INFO("Slave '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
+        MXB_INFO("Replica '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
         if (backend->is_waiting_result())
         {
@@ -1081,7 +1081,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
     backend->close(failure_type);
-    backend->set_close_reason("Slave connection failed: " + mxs::extract_error(errmsg));
+    backend->set_close_reason("Replica connection failed: " + mxs::extract_error(errmsg));
 
     if (route_stored)
     {
@@ -1106,7 +1106,7 @@ bool RWSplitSession::lock_to_master()
     if (m_config.strict_multi_stmt || m_config.strict_sp_calls)
     {
         MXB_INFO("Multi-statement query or stored procedure call, routing "
-                 "all future queries to master.");
+                 "all future queries to primary.");
         m_locked_to_master = true;
     }
 

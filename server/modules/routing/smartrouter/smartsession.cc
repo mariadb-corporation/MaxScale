@@ -77,7 +77,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     }
     else
     {
-        MXB_ERROR("No master found for %s, smartrouter session cannot be created.",
+        MXB_ERROR("No primary found for %s, smartrouter session cannot be created.",
                   pRouter->config().name().c_str());
     }
 
@@ -134,7 +134,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
         }
         else if (m_qc.target_is_master(route_info.target()) || m_pSession->protocol_data()->is_trx_active())
         {
-            MXB_SDEBUG("Write to master");
+            MXB_SDEBUG("Write to primary");
             ret = write_to_master(pBuf);
         }
         else

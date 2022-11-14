@@ -562,13 +562,13 @@ json_t* MariaDBMonitor::to_json(State op)
         return json_string("Executing scripts");
 
     case State::DEMOTE:
-        return json_string("Demoting old master");
+        return json_string("Demoting old primary");
 
     case State::WAIT_FOR_TARGET_CATCHUP:
-        return json_string("Waiting for candidate master to catch up");
+        return json_string("Waiting for candidate primary to catch up");
 
     case State::PROMOTE_TARGET:
-        return json_string("Promoting candidate master");
+        return json_string("Promoting candidate primary");
 
     case State::REJOIN:
         return json_string("Rejoining slave servers");
@@ -617,7 +617,7 @@ bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, DisableT
     if (!can_be)
     {
         *errmsg_out =
-            "The server is master, so it cannot be set in maintenance or draining mode. "
+            "The server is primary, so it cannot be set in maintenance or draining mode. "
             "First perform a switchover and then retry the operation.";
     }
 
@@ -954,7 +954,7 @@ void MariaDBMonitor::update_gtid_domain()
     {
         if (old_domain != GTID_DOMAIN_UNKNOWN)
         {
-            MXB_NOTICE("Gtid domain id of master has changed: %li -> %li.",
+            MXB_NOTICE("Gtid domain id of primary has changed: %li -> %li.",
                        old_domain, new_domain);
         }
         request_journal_update();
@@ -1169,7 +1169,7 @@ void MariaDBMonitor::check_acquire_masterlock()
                 // Someone else is holding the masterlock, even when this monitor has lock majority.
                 // Not a problem for this monitor, but secondary MaxScales may select a wrong master.
                 MXB_ERROR("Cannot acquire lock '%s' on '%s' as it's claimed by another connection (id %li). "
-                          "Secondary MaxScales may select the wrong master.",
+                          "Secondary MaxScales may select the wrong primary.",
                           MASTER_LOCK_NAME, name(), masterlock.owner());
             }
         }
@@ -1302,7 +1302,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,
-        "A MariaDB Master/Slave replication monitor",
+        "A MariaDB Primary/Replica replication monitor",
         "V1.5.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<MariaDBMonitor>::s_api,

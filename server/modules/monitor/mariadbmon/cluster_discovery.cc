@@ -382,7 +382,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                         // a message explaining why.
                         string server_names = monitored_servers_to_string(cycle_members);
                         string msg_start = string_printf(
-                            "No valid master server could be found in the cycle with servers %s:",
+                            "No valid primary server could be found in the cycle with servers %s:",
                             server_names.c_str());
 
                         DelimitedPrinter cycle_invalid_msg("\n");
@@ -813,7 +813,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
                 {
                     is_valid = false;
                     string server_names_current = monitored_servers_to_string(current_members);
-                    reason = "a server in the master's multimaster group (" + server_names_current
+                    reason = "a server in the primary's multiprimary group (" + server_names_current
                         + ") is replicating from a server not in the group";
                 }
             }
@@ -907,8 +907,8 @@ void MariaDBMonitor::update_master()
             if (master_cand && (master_cand != m_master))
             {
                 // This is unlikely to be printed continuously because of the topology-change requirement.
-                MXB_WARNING("'%s' is a better master candidate than the current master '%s'. "
-                            "Master will change when '%s' is no longer a valid master.",
+                MXB_WARNING("'%s' is a better primary candidate than the current primary '%s'. "
+                            "Primary will change when '%s' is no longer a valid primary.",
                             master_cand->name(), m_master->name(), m_master->name());
             }
         }
@@ -927,8 +927,8 @@ void MariaDBMonitor::update_master()
                 // We have another master to swap to. The messages give the impression that new master
                 // selection has not yet happened, but this is just for clarity for the user.
                 mxb_assert(!reason_not_valid.empty());
-                MXB_WARNING("The current master server '%s' is no longer valid because %s. "
-                            "Selecting new master server.",
+                MXB_WARNING("The current primary server '%s' is no longer valid because %s. "
+                            "Selecting new primary server.",
                             m_master->name(), reason_not_valid.c_str());
 
                 // At this point, print messages explaining why any/other possible master servers
@@ -938,7 +938,7 @@ void MariaDBMonitor::update_master()
                     MXB_WARNING("%s", topology_messages.c_str());
                 }
 
-                MXB_NOTICE("Setting '%s' as master.", master_cand->name());
+                MXB_NOTICE("Setting '%s' as primary.", master_cand->name());
                 // Change the master, even though this may break replication.
                 assign_new_master(master_cand);
             }
@@ -947,8 +947,8 @@ void MariaDBMonitor::update_master()
                 // Tried to find another master but the current one is still the best. This is typically
                 // caused by a topology change. The check on 'm_cluster_topology_changed' should stop this
                 // message from printing repeatedly.
-                MXB_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
-                            "but '%s' is still the best master server.",
+                MXB_WARNING("Attempted to find a replacement for the current primary server '%s' because %s, "
+                            "but '%s' is still the best primary server.",
                             m_master->name(), reason_not_valid.c_str(), m_master->name());
 
                 if (!topology_messages.empty())
@@ -964,7 +964,7 @@ void MariaDBMonitor::update_master()
             // No alternative master. Keep current status and print warnings.
             // This situation may stick so only print the messages once.
             mxb_assert(!reason_not_valid.empty());
-            MXB_WARNING("The current master server '%s' is no longer valid because %s, "
+            MXB_WARNING("The current primary server '%s' is no longer valid because %s, "
                         "but there is no valid alternative to swap to.",
                         m_master->name(), reason_not_valid.c_str());
             if (!topology_messages.empty())
@@ -983,11 +983,11 @@ void MariaDBMonitor::update_master()
                                                                  &topology_messages);
         if (master_cand)
         {
-            MXB_NOTICE("Selecting new master server.");
+            MXB_NOTICE("Selecting new primary server.");
             if (master_cand->is_down())
             {
-                const char msg[] = "No running master candidates detected and no master currently set. "
-                                   "Accepting a non-running server as master.";
+                const char msg[] = "No running primary candidates detected and no primary currently set. "
+                                   "Accepting a non-running server as primary.";
                 MXB_WARNING("%s", msg);
             }
 
@@ -996,13 +996,13 @@ void MariaDBMonitor::update_master()
                 MXB_WARNING("%s", topology_messages.c_str());
             }
 
-            MXB_NOTICE("Setting '%s' as master.", master_cand->name());
+            MXB_NOTICE("Setting '%s' as primary.", master_cand->name());
             assign_new_master(master_cand);
         }
         else if (m_warn_cannot_find_master)
         {
             // No current master and could not select another. This situation may stick so only print once.
-            MXB_WARNING("Tried to find a master but no valid master server found.");
+            MXB_WARNING("Tried to find a primary but no valid primary found.");
             if (!topology_messages.empty())
             {
                 MXB_WARNING("%s", topology_messages.c_str());

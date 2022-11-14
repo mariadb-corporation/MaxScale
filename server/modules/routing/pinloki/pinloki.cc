@@ -541,7 +541,7 @@ std::string Pinloki::start_slave()
 
     if (m_writer)
     {
-        MXB_WARNING("START SLAVE: Slave is already running");
+        MXB_WARNING("START SLAVE: Replica is already running");
         // TODO, a server would generate a warning, code 1254.
     }
     else
@@ -552,7 +552,7 @@ std::string Pinloki::start_slave()
 
         if (err_str.empty())
         {
-            MXB_INFO("Starting slave");
+            MXB_INFO("Starting replica");
             m_writer = std::make_unique<Writer>(generate_details(), inventory());
             m_master_config.slave_running = true;
             m_master_config.save(m_config);
@@ -565,7 +565,7 @@ std::string Pinloki::start_slave()
 void Pinloki::stop_slave()
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    MXB_INFO("Stopping slave");
+    MXB_INFO("Stopping replica");
 
     mxb_assert(m_writer);
 
@@ -577,7 +577,7 @@ void Pinloki::stop_slave()
 void Pinloki::reset_slave()
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    MXB_INFO("Resetting slave");
+    MXB_INFO("Resetting replica");
     m_master_config = MasterConfig();
 }
 
@@ -607,12 +607,12 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 
     std::string sql_state =
         state == State::Stopped ? "" :
-        "Slave has read all relay log; waiting for the slave I/O thread to update it";
+        "Replica has read all relay log; waiting for the replica I/O thread to update it";
 
     std::string sql_io_state =
         state == State::Stopped ? "" :
         state == State::Connected ? "Waiting for master to send event" :
-        "Reconnecting after a failed master event read";
+        "Reconnecting after a failed primary event read";
 
     if (all)
     {
@@ -795,7 +795,7 @@ bool Pinloki::MasterConfig::load(const Config& config)
         }
         else
         {
-            MXB_INFO("Failed to load master info JSON file: %s", err.text);
+            MXB_INFO("Failed to load primary info JSON file: %s", err.text);
         }
     }
 

@@ -136,7 +136,7 @@ bool Producer::connect()
         }
         else
         {
-            MXB_ERROR("Could not find a valid Master server to stream data into.");
+            MXB_ERROR("Could not find a valid Primary server to stream data into.");
         }
     }
 

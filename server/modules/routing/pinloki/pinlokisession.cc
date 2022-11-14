@@ -69,7 +69,7 @@ GWBUF* create_slave_running_error()
 {
     return mariadb::create_error_packet_ptr(
         1, 1198, "HY000",
-        "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
+        "This operation cannot be performed as you have a running replica; run STOP SLAVE first");
 }
 
 GWBUF* create_select_master_error()
@@ -387,7 +387,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         {
             buf = mariadb::create_error_packet_ptr(
                 1, 1198, "HY000",
-                "This operation cannot be performed as you have a running slave;"
+                "This operation cannot be performed as you have a running replica;"
                 " run STOP SLAVE first");
         }
         else
