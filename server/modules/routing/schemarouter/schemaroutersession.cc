@@ -607,15 +607,17 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
 
         if (m_state & INIT_MAPPING)
         {
+            // An error during the shard mapping is not a fatal response. Broken servers are allowed to exist
+            // as the user might not exist on all backends.
             GWBUF* tmp = gwbuf_clone(pMessage);
             handle_mapping_reply(bref, &tmp);
             gwbuf_free(tmp);
         }
-        else
+        else if (!bref->should_ignore_response())
         {
-            /** If the client is waiting for a reply, send an error. */
-            mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
+            // A result that was to be returned to the client was expected from this backend. Since the
+            // schemarouter does not have any retrying capabilities, the only option is to kill the session.
+            m_pSession->kill();
         }
     }
 
