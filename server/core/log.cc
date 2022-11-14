@@ -616,19 +616,24 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
         prio = "&priority=" + mxb::join(priorities);
     }
 
+    const std::string LB = "%5B";   // Percent-encoded [
+    const std::string RB = "%5D";   // Percent-encoded ]
+
     if (!cursors.prev.empty())
     {
-        auto prev = base + "?page[cursor]=" + cursors.prev + "&page[size]=" + std::to_string(rows) + prio;
+        auto prev = base + "?page" + LB + "cursor" + RB + "=" + cursors.prev
+            + "&page" + LB + "size" + RB + "=" + std::to_string(rows) + prio;
         json_object_set_new(links, "prev", json_string(prev.c_str()));
     }
 
     if (!cursors.current.empty())
     {
-        auto self = base + "?page[cursor]=" + cursors.current + "&page[size]=" + std::to_string(rows) + prio;
+        auto self = base + "?page" + LB + "cursor" + RB + "=" + cursors.current
+            + "&page" + LB + "size" + RB + "=" + std::to_string(rows) + prio;
         json_object_set_new(links, "self", json_string(self.c_str()));
     }
 
-    auto last = base + "?page[size]=" + std::to_string(rows) + prio;
+    auto last = base + "?page" + LB + "size" + RB + "=" + std::to_string(rows) + prio;
     json_object_set_new(links, "last", json_string(last.c_str()));
 
     return rval;
