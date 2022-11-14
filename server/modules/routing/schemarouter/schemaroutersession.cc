@@ -605,7 +605,13 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             handle_default_db_response();
         }
 
-        if ((m_state & INIT_MAPPING) == 0)
+        if (m_state & INIT_MAPPING)
+        {
+            GWBUF* tmp = gwbuf_clone(pMessage);
+            handle_mapping_reply(bref, &tmp);
+            gwbuf_free(tmp);
+        }
+        else
         {
             /** If the client is waiting for a reply, send an error. */
             mxs::ReplyRoute route;
@@ -1224,9 +1230,10 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     if (PTR_IS_ERR(ptr))
     {
-        MXS_ERROR("Mapping query returned an error; closing session: %s", mxs::extract_error(buf).c_str());
+        MXB_INFO("Mapping query returned an error; ignoring server '%s': %s",
+                 bref->name(), mxs::extract_error(buf).c_str());
         gwbuf_free(buf);
-        return SHOWDB_FATAL_ERROR;
+        return SHOWDB_FULL_RESPONSE;
     }
 
     if (n_eof == 0)
