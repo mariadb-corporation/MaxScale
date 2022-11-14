@@ -70,7 +70,7 @@
         </div>
         <v-expand-transition>
             <div v-show="isContentVisible" class="collapse-content">
-                <slot name="content"></slot>
+                <slot />
             </div>
         </v-expand-transition>
     </div>

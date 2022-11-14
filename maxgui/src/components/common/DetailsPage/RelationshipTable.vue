@@ -7,63 +7,61 @@
         :onAddClick="addable ? () => onAdd() : null"
         :addBtnText="addable ? addBtnText : ''"
     >
-        <template v-slot:content>
-            <data-table
-                :search="search_keyword"
-                :headers="tableHeader"
-                :data="tableRowsData"
-                :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
-                sortBy=""
-                :loading="isLoading"
-                :showActionsOnHover="removable"
-                :draggable="relationshipType === 'filters'"
-                :hasOrderNumber="relationshipType === 'filters'"
-                showAll
-                @on-drag-end="filterDragReorder"
-            >
-                <template v-slot:id="{ data: { item: { id } } }">
-                    <router-link
-                        :key="id"
-                        :to="`/dashboard/${relationshipType}/${id}`"
-                        class="rsrc-link"
-                    >
-                        {{ id }}
-                    </router-link>
-                </template>
-                <template v-slot:state="{ data: { item: { state } } }">
-                    <icon-sprite-sheet size="13" class="status-icon" :frame="getStatusIcon(state)">
-                        status
-                    </icon-sprite-sheet>
-                </template>
-                <template v-if="removable" v-slot:actions="{ data: { item } }">
-                    <v-btn icon @click="onDelete(item)">
-                        <v-icon size="20" color="error">
-                            $vuetify.icons.unlink
-                        </v-icon>
-                    </v-btn>
-                </template>
-            </data-table>
-            <confirm-dialog
-                v-if="removable"
-                v-model="isConfDlgOpened"
-                :title="dialogTitle"
-                :type="deleteDialogType"
-                :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
-                :onSave="confirmDelete"
-            />
-            <select-dialog
-                v-if="addable"
-                v-model="isSelectDlgOpened"
-                :title="dialogTitle"
-                mode="add"
-                multiple
-                :entityName="relationshipType"
-                :itemsList="itemsList"
-                :onSave="confirmAdd"
-                @selected-items="targetItems = $event"
-                @on-open="getAllEntities"
-            />
-        </template>
+        <data-table
+            :search="search_keyword"
+            :headers="tableHeader"
+            :data="tableRowsData"
+            :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
+            sortBy=""
+            :loading="isLoading"
+            :showActionsOnHover="removable"
+            :draggable="relationshipType === 'filters'"
+            :hasOrderNumber="relationshipType === 'filters'"
+            showAll
+            @on-drag-end="filterDragReorder"
+        >
+            <template v-slot:id="{ data: { item: { id } } }">
+                <router-link
+                    :key="id"
+                    :to="`/dashboard/${relationshipType}/${id}`"
+                    class="rsrc-link"
+                >
+                    {{ id }}
+                </router-link>
+            </template>
+            <template v-slot:state="{ data: { item: { state } } }">
+                <icon-sprite-sheet size="13" class="status-icon" :frame="getStatusIcon(state)">
+                    status
+                </icon-sprite-sheet>
+            </template>
+            <template v-if="removable" v-slot:actions="{ data: { item } }">
+                <v-btn icon @click="onDelete(item)">
+                    <v-icon size="20" color="error">
+                        $vuetify.icons.unlink
+                    </v-icon>
+                </v-btn>
+            </template>
+        </data-table>
+        <confirm-dialog
+            v-if="removable"
+            v-model="isConfDlgOpened"
+            :title="dialogTitle"
+            :type="deleteDialogType"
+            :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
+            :onSave="confirmDelete"
+        />
+        <select-dialog
+            v-if="addable"
+            v-model="isSelectDlgOpened"
+            :title="dialogTitle"
+            mode="add"
+            multiple
+            :entityName="relationshipType"
+            :itemsList="itemsList"
+            :onSave="confirmAdd"
+            @selected-items="targetItems = $event"
+            @on-open="getAllEntities"
+        />
     </collapse>
 </template>
 

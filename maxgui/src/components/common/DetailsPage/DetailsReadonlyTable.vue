@@ -5,25 +5,23 @@
         :title="title"
         :titleInfo="titleInfo"
     >
-        <template v-slot:content>
-            <data-table
-                :tableClass="tableClass"
-                :search="search_keyword"
-                :headers="tableHeaders"
-                :data="tableRows"
-                :loading="isLoading"
-                :noDataText="noDataText === '' ? $t('$vuetify.noDataText') : noDataText"
-                :tdBorderLeft="tdBorderLeft"
-                :showAll="showAll"
-                :expandAll="expandAll"
-                :isTree="isTree"
-                :itemsPerPage="itemsPerPage"
-            >
-                <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
-                    <slot :name="header.value" :cellProps="cellProps"> </slot>
-                </template>
-            </data-table>
-        </template>
+        <data-table
+            :tableClass="tableClass"
+            :search="search_keyword"
+            :headers="tableHeaders"
+            :data="tableRows"
+            :loading="isLoading"
+            :noDataText="noDataText === '' ? $t('$vuetify.noDataText') : noDataText"
+            :tdBorderLeft="tdBorderLeft"
+            :showAll="showAll"
+            :expandAll="expandAll"
+            :isTree="isTree"
+            :itemsPerPage="itemsPerPage"
+        >
+            <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
+                <slot :name="header.value" :cellProps="cellProps"> </slot>
+            </template>
+        </data-table>
     </collapse>
 </template>
 

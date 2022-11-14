@@ -6,45 +6,43 @@
         :isContentVisible="showParameters"
         :title="`${$tc('parameters', 2)}`"
     >
-        <template v-slot:content>
-            <data-table
-                :headers="variableValueTableHeaders"
-                :data="parametersTableRow"
-                :showAll="showAll"
-                :editableCell="editableCell"
-                :keepPrimitiveValue="keepPrimitiveValue"
-                @cell-hover="onCellHover"
-            >
-                <template v-slot:header-append-id>
-                    <span class="ml-1 color text-field-text total-row">
-                        ({{ parametersTableRow.length }})
-                    </span>
-                </template>
+        <data-table
+            :headers="variableValueTableHeaders"
+            :data="parametersTableRow"
+            :showAll="showAll"
+            :editableCell="editableCell"
+            :keepPrimitiveValue="keepPrimitiveValue"
+            @cell-hover="onCellHover"
+        >
+            <template v-slot:header-append-id>
+                <span class="ml-1 color text-field-text total-row">
+                    ({{ parametersTableRow.length }})
+                </span>
+            </template>
 
-                <template v-slot:id="{ data: { item } }">
-                    <parameter-tooltip-activator :item="item" :componentId="componentId" />
-                </template>
+            <template v-slot:id="{ data: { item } }">
+                <parameter-tooltip-activator :item="item" :componentId="componentId" />
+            </template>
 
-                <template v-slot:value="{ data: { item } }">
-                    <parameter-input-container
-                        :item="item"
-                        :parentForm="parentForm"
-                        :usePortOrSocket="usePortOrSocket"
-                        :changedParametersArr="changedParametersArr"
-                        :portValue="portValue"
-                        :socketValue="socketValue"
-                        :isListener="isListener"
-                        @get-changed-params="changedParametersArr = $event"
-                        @handle-change="assignPortSocketDependencyValues"
-                    />
-                </template>
-            </data-table>
-            <parameter-tooltip
-                v-if="parameterTooltip"
-                :parameterTooltip="parameterTooltip"
-                :activator="`#param-${parameterTooltip.id}_${componentId}`"
-            />
-        </template>
+            <template v-slot:value="{ data: { item } }">
+                <parameter-input-container
+                    :item="item"
+                    :parentForm="parentForm"
+                    :usePortOrSocket="usePortOrSocket"
+                    :changedParametersArr="changedParametersArr"
+                    :portValue="portValue"
+                    :socketValue="socketValue"
+                    :isListener="isListener"
+                    @get-changed-params="changedParametersArr = $event"
+                    @handle-change="assignPortSocketDependencyValues"
+                />
+            </template>
+        </data-table>
+        <parameter-tooltip
+            v-if="parameterTooltip"
+            :parameterTooltip="parameterTooltip"
+            :activator="`#param-${parameterTooltip.id}_${componentId}`"
+        />
     </collapse>
 </template>
 

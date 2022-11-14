@@ -8,12 +8,10 @@
             :isContentVisible="showRoutingTargetInputs"
             :title="$t('routingTargets')"
         >
-            <template v-slot:content>
-                <routing-target-select
-                    v-model="routingTargetItems"
-                    :defaultItems="defRoutingTargetItems"
-                />
-            </template>
+            <routing-target-select
+                v-model="routingTargetItems"
+                :defaultItems="defRoutingTargetItems"
+            />
         </collapse>
         <resource-relationships
             ref="filtersRelationship"

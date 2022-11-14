@@ -7,53 +7,51 @@
         :onAddClick="onEdit"
         :addBtnText="$t('edit')"
     >
-        <template v-slot:content>
-            <data-table
-                :search="search_keyword"
-                :headers="tableHeader"
-                :data="tableRows"
-                :noDataText="$t('noEntity', { entityName: $t('routingTargets') })"
-                sortBy=""
-                :loading="isLoading"
-                showActionsOnHover
-                showAll
-            >
-                <template v-slot:id="{ data: { item: { id, state, type } } }">
-                    <icon-sprite-sheet
-                        size="13"
-                        class="mr-1 status-icon"
-                        :frame="getStatusIcon({ state, type })"
-                    >
-                        status
-                    </icon-sprite-sheet>
-                    <router-link :key="id" :to="`/dashboard/${type}/${id}`" class="rsrc-link">
-                        {{ id }}
-                    </router-link>
-                </template>
-                <template v-slot:actions="{ data: { item } }">
-                    <v-btn icon @click="onDelete(item)">
-                        <v-icon size="20" color="error">
-                            $vuetify.icons.unlink
-                        </v-icon>
-                    </v-btn>
-                </template>
-            </data-table>
-            <confirm-dialog
-                v-model="isConfDlgOpened"
-                :title="dialogTitle"
-                type="unlink"
-                :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
-                :onSave="confirmDelete"
-            />
-            <routing-target-dlg
-                v-model="isRoutingTargetDlgOpened"
-                :title="dialogTitle"
-                :routerId="routerId"
-                :onSave="confirmEdit"
-                :initialRoutingTargetHash="initialRoutingTargetHash"
-                @selected-items="targetItems = $event"
-            />
-        </template>
+        <data-table
+            :search="search_keyword"
+            :headers="tableHeader"
+            :data="tableRows"
+            :noDataText="$t('noEntity', { entityName: $t('routingTargets') })"
+            sortBy=""
+            :loading="isLoading"
+            showActionsOnHover
+            showAll
+        >
+            <template v-slot:id="{ data: { item: { id, state, type } } }">
+                <icon-sprite-sheet
+                    size="13"
+                    class="mr-1 status-icon"
+                    :frame="getStatusIcon({ state, type })"
+                >
+                    status
+                </icon-sprite-sheet>
+                <router-link :key="id" :to="`/dashboard/${type}/${id}`" class="rsrc-link">
+                    {{ id }}
+                </router-link>
+            </template>
+            <template v-slot:actions="{ data: { item } }">
+                <v-btn icon @click="onDelete(item)">
+                    <v-icon size="20" color="error">
+                        $vuetify.icons.unlink
+                    </v-icon>
+                </v-btn>
+            </template>
+        </data-table>
+        <confirm-dialog
+            v-model="isConfDlgOpened"
+            :title="dialogTitle"
+            type="unlink"
+            :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
+            :onSave="confirmDelete"
+        />
+        <routing-target-dlg
+            v-model="isRoutingTargetDlgOpened"
+            :title="dialogTitle"
+            :routerId="routerId"
+            :onSave="confirmEdit"
+            :initialRoutingTargetHash="initialRoutingTargetHash"
+            @selected-items="targetItems = $event"
+        />
     </collapse>
 </template>
 
