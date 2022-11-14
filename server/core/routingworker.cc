@@ -56,24 +56,24 @@ namespace
  *
  * The variables related to the management of the threads are:
  *
- * nMax:      The hard maximum number of threads. Cannot be changed at runtime and
- *            currently specified using a compile time constant.
- * nCreated:  The number of existing threads. Note that as threads can only be created but
- *            not destroyed (but only deactivated) at runtime, this number will during the
- *            lifetime of MaxScale only monotonically increase, but never decrase.
- *            The following will always hold: 1 <= nCreated <= nMax.
- * nRunning:  The number of running threads, when viewed from the outside. Running threads
- *            are all active and draining threads, and also inactive threads that are waiting
- *            for other draining threads to become inactive before they can be removed.
- *            The follwing will always hold: 1 <= nRunning <= nCreated.
- * nDesired:  The desired number of threads. When a user issues 'maxctrl alter maxscale threads=N'
- *            nDesired will be immediately set to N (subject to some possible failures), but
- *            when the number of threads is reduced nRunning will become N, only when the
- *            threads have properly been deactivated.
- *            The following will always hold: 1 <= nDesired <= nRunning.
+ * nMax:        The hard maximum number of threads. Cannot be changed at runtime and
+ *              currently specified using a compile time constant.
+ * nCreated:    The number of existing threads. Note that as threads can only be created but
+ *              not destroyed (but only deactivated) at runtime, this number will during the
+ *              lifetime of MaxScale only monotonically increase, but never decrase.
+ *              The following will always hold: 1 <= nCreated <= nMax.
+ * nRunning:    The number of running threads, when viewed from the outside. Running threads
+ *              are all active and draining threads, and also inactive threads that are waiting
+ *              for other draining threads to become inactive before they can be removed.
+ *              The follwing will always hold: 1 <= nRunning <= nCreated.
+ * nConfigured: The configured number of threads. When a user issues 'maxctrl alter maxscale threads=N'
+ *              nConfigured will be immediately set to N (subject to some possible failures), but
+ *              when the number of threads is reduced nRunning will become N, only when the
+ *              threads have properly been deactivated.
+ *              The following will always hold: 1 <= nConfigured <= nRunning.
  *
  * Right after startup and when any thread operations have reached their conclusion, the
- * following will hold: nDesired == nRunning. Further, if the number of threads has not
+ * following will hold: nConfigured == nRunning. Further, if the number of threads has not
  * been decreased, the following will hold: nRunning == nCreated.
  */
 class ThisUnit
@@ -136,7 +136,7 @@ public:
 
         this->nCreated.store(0, std::memory_order_relaxed);
         this->nRunning.store(0, std::memory_order_relaxed);
-        this->nDesired.store(0, std::memory_order_relaxed);
+        this->nConfigured.store(0, std::memory_order_relaxed);
 
         delete[] this->ppWorkers;
         this->ppWorkers = nullptr;
@@ -157,7 +157,7 @@ public:
     const int        nMax {MAX_COUNT};         // Hard maximum of workers
     std::atomic<int> nCreated {0};             // Created amount of workers.
     std::atomic<int> nRunning {0};             // "Running" amount of workers.
-    std::atomic<int> nDesired {0};             // The desired amount of workers.
+    std::atomic<int> nConfigured {0};          // The configured amount of workers.
     RoutingWorker**  ppWorkers {nullptr};      // Array of routing worker instances.
     mxb::AverageN**  ppWorker_loads {nullptr}; // Array of load averages for workers.
     int              epoll_listener_fd {-1};   // Shared epoll descriptor for listening descriptors.
@@ -192,8 +192,8 @@ int broadcast_recipients(int nWorkers)
         nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
         break;
 
-    case RoutingWorker::DESIRED:
-        nWorkers = this_unit.nDesired.load(std::memory_order_relaxed);
+    case RoutingWorker::CONFIGURED:
+        nWorkers = this_unit.nConfigured.load(std::memory_order_relaxed);
         break;
 
     default:
@@ -333,7 +333,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
         if (i == nCreated)
         {
             this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
-            // nRunning and nDesired are set in start_workers().
+            // nRunning and nConfigured are set in start_workers().
         }
         else
         {
@@ -381,7 +381,7 @@ bool RoutingWorker::adjust_threads(int nCount)
 
     bool rv = false;
 
-    int nDesired = this_unit.nDesired.load(std::memory_order_relaxed);
+    int nConfigured = this_unit.nConfigured.load(std::memory_order_relaxed);
 
     if (nCount < 1)
     {
@@ -391,15 +391,15 @@ bool RoutingWorker::adjust_threads(int nCount)
     {
         MXB_ERROR("The number of threads can be at most %d.", this_unit.nMax);
     }
-    else if (nCount < nDesired)
+    else if (nCount < nConfigured)
     {
-        rv = decrease_threads(nDesired - nCount);
-        mxb_assert(nCount == this_unit.nDesired);
+        rv = decrease_threads(nConfigured - nCount);
+        mxb_assert(nCount == this_unit.nConfigured);
     }
-    else if (nCount > nDesired)
+    else if (nCount > nConfigured)
     {
-        rv = increase_threads(nCount - nDesired);
-        mxb_assert(nCount == this_unit.nDesired);
+        rv = increase_threads(nCount - nConfigured);
+        mxb_assert(nCount == this_unit.nConfigured);
     }
     else
     {
@@ -438,8 +438,8 @@ bool RoutingWorker::increase_threads(int nDelta)
     bool rv = true;
 
     int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    int nDesired = this_unit.nDesired.load(std::memory_order_relaxed);
-    int nAvailable = nCreated - nDesired;
+    int nConfigured = this_unit.nConfigured.load(std::memory_order_relaxed);
+    int nAvailable = nCreated - nConfigured;
 
     if (nAvailable > 0)
     {
@@ -473,10 +473,10 @@ bool RoutingWorker::increase_threads(int nDelta)
 int RoutingWorker::activate_threads(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    mxb_assert(this_unit.nCreated - this_unit.nDesired >= n);
+    mxb_assert(this_unit.nCreated - this_unit.nConfigured >= n);
 
     int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
-    int nBefore = this_unit.nDesired.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nConfigured.load(std::memory_order_relaxed);
     int i = nBefore;
     n += i;
 
@@ -501,7 +501,7 @@ int RoutingWorker::activate_threads(int n)
     {
         this_unit.nRunning.store(i, std::memory_order_relaxed);
     }
-    this_unit.nDesired.store(i, std::memory_order_relaxed);
+    this_unit.nConfigured.store(i, std::memory_order_relaxed);
 
     return i - nBefore;
 }
@@ -654,7 +654,7 @@ void RoutingWorker::deactivate()
                 }
 
                 this_unit.nRunning.store(n, std::memory_order_relaxed);
-                mxb_assert(this_unit.nRunning >= this_unit.nDesired);
+                mxb_assert(this_unit.nRunning >= this_unit.nConfigured);
             }
         }, mxb::Worker::EXECUTE_QUEUED);
 }
@@ -776,7 +776,7 @@ bool RoutingWorker::create_threads(int n)
 
     this_unit.nCreated.store(nAfter, std::memory_order_relaxed);
     this_unit.nRunning.store(nAfter, std::memory_order_relaxed);
-    this_unit.nDesired.store(nAfter, std::memory_order_relaxed);
+    this_unit.nConfigured.store(nAfter, std::memory_order_relaxed);
 
     return i != nBefore;
 }
@@ -787,7 +787,7 @@ bool RoutingWorker::decrease_threads(int n)
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
 
-    int nBefore = this_unit.nDesired.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nConfigured.load(std::memory_order_relaxed);
     int nAfter = nBefore - n;
     mxb_assert(nAfter > 0);
 
@@ -838,7 +838,7 @@ bool RoutingWorker::decrease_threads(int n)
         nAfter = i;
     }
 
-    this_unit.nDesired.store(nAfter, std::memory_order_relaxed);
+    this_unit.nConfigured.store(nAfter, std::memory_order_relaxed);
 
     return i != nBefore;
 }
@@ -983,7 +983,7 @@ bool RoutingWorker::start_workers()
     if (rv)
     {
         this_unit.nRunning.store(nCreated, std::memory_order_relaxed);
-        this_unit.nDesired.store(nCreated, std::memory_order_relaxed);
+        this_unit.nConfigured.store(nCreated, std::memory_order_relaxed);
         this_unit.running = true;
     }
 
@@ -2045,10 +2045,10 @@ RoutingWorker* RoutingWorker::pick_worker()
 {
     static uint32_t index_generator = 0;
 
-    // nDesired, so that we will not use a worker that is draining.
+    // nConfigured, so that we will not use a worker that is draining.
 
-    uint32_t nDesired = this_unit.nDesired.load(std::memory_order_relaxed);
-    uint32_t index = mxb::atomic::add(&index_generator, 1, mxb::atomic::RELAXED) % nDesired;
+    uint32_t nConfigured = this_unit.nConfigured.load(std::memory_order_relaxed);
+    uint32_t index = mxb::atomic::add(&index_generator, 1, mxb::atomic::RELAXED) % nConfigured;
 
     return this_unit.ppWorkers[index];
 }
@@ -2348,7 +2348,7 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
 
     mxb_assert(MainWorker::is_main_worker());
 
-    int n = this_unit.nDesired.load(std::memory_order_relaxed);
+    int n = this_unit.nConfigured.load(std::memory_order_relaxed);
 
     if (index >= 0 && index < n)
     {
