@@ -20,6 +20,7 @@
             showAll
             showActionsOnHover
             :customFilter="customFilter"
+            :itemsPerPage="50"
             v-bind="{ ...$attrs }"
         >
             <!-- Pass on all scopedSlots of data-table -->
