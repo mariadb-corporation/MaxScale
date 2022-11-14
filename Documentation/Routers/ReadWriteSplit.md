@@ -226,28 +226,33 @@ a service parameter in MaxScale 2.5.0.
 - **Default**: false
 
 Allow the master server to change mid-session. This feature was introduced in
-MaxScale 2.3.0 and is disabled by default.
+MaxScale 2.3.0 and is disabled by default. This feature requires that
+`disable_sescmd_history` is not used.
 
 When a readwritesplit session starts, it will pick a master server as the
-current master server of that session. By default, when this master server
-changes mid-session, the connection will be closed.
+current master server of that session. By default, when this master server is
+lost or changes to another server, the connection will be closed.
 
-If the `master_reconnection` parameter is enabled, the master server is allowed
-to change as long as the session meets the following criteria:
+When `master_reconnection` is enabled, readwritesplit can sometimes recover a
+lost connection to the master server. This largely depends on the value of
+`master_failure_mode`.
 
-* The session is already connected to the slave that was chosen to be the new master
-* No transaction is open
-* Autocommit is enabled
-* No `LOAD DATA LOCAL INFILE` is in progress
-* There are no queries being actively routed to the old master
+With `master_failure_mode=fail_instantly`, the master server is only allowed to
+change to another server. This change must happen without a loss of the master
+server.
 
-When `master_reconnection` is enabled in conjunction with either
-`master_failure_mode=fail_on_write` or `master_failure_mode=error_on_write`, the
-session can recover from the loss of a master server. This means that when a
-session starts without a master server and later a slave server that it is
-connected to is promoted as the master, the session will come out of the
-read-only mode (described in detail in the
-[`master_failure_mode`](#master_failure_mode) documentation).
+With `master_failure_mode=fail_on_write`, the loss of the master server is no
+longer a fatal error: if a replacement master server appears before any write
+queries are received, readwritesplit will transparently reconnect to the new
+master server.
+
+In both cases the change in the master server can only take place if
+`prune_sescmd_history` is enabled or `max_sescmd_history` has not yet
+been exceeded and the session does not have an open transaction.
+
+The recommended configuration is to use `master_reconnection=true` and
+`master_failure_mode=fail_on_write`. This provides improved fault tolerance
+without any risk to the consistency of the database.
 
 ### `slave_selection_criteria`
 
