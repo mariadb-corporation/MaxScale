@@ -606,6 +606,10 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 
     ss << ")";
 
+    // Erase history info callback before we do the handleError call. This prevents it from being called while
+    // the DCB is in the zombie queue.
+    mysql_session()->history_info.erase(this);
+
     mxb_assert(!dcb->hanged_up());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
 

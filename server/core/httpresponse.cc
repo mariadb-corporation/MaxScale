@@ -267,3 +267,84 @@ void HttpResponse::remove_rows(const std::string& json_ptr, json_t* json)
         }
     }
 }
+
+void HttpResponse::paginate(int64_t limit, int64_t offset)
+{
+    mxb_assert(limit > 0);
+
+    if (auto data = json_object_get(m_body, CN_DATA))
+    {
+        if (json_is_array(data))
+        {
+            int64_t total_size = json_array_size(data);
+
+            // Don't actually paginate the data if only one page would be generated
+            if (total_size > limit)
+            {
+                json_t* new_data = json_array();
+
+                for (int64_t i = offset * limit; i < (offset + 1) * limit; i++)
+                {
+                    if (json_t* v = json_array_get(data, i))
+                    {
+                        json_array_append(new_data, v);
+                    }
+                }
+
+                json_object_set_new(m_body, CN_DATA, new_data);
+            }
+
+            // Create pagination links only if the resource itself didn't create them. The /maxscale/logs/data
+            // endpoint has its own pagination links and they must not be overwritten.
+            json_t* links = json_object_get(m_body, CN_LINKS);
+
+            if (links && !json_object_get(links, "next") && !json_object_get(links, "prev")
+                && !json_object_get(links, "last") && !json_object_get(links, "first"))
+            {
+                mxb_assert(json_object_get(links, "self"));
+                const std::string LB = "%5B";   // Percent-encoded [
+                const std::string RB = "%5D";   // Percent-encoded ]
+
+                std::string base = json_string_value(json_object_get(links, "self"));
+                base += "?page" + LB + "size" + RB + "=" + std::to_string(limit)
+                    + "&page" + LB + "number" + RB + "=";
+
+                // Generate the paginated self link
+                auto self = base + std::to_string(offset);
+                json_object_set_new(links, "self", json_string(self.c_str()));
+
+                if ((offset + 1) * limit < total_size)
+                {
+                    // More pages available
+                    auto next = base + std::to_string(offset + 1);
+                    json_object_set_new(links, "next", json_string(next.c_str()));
+                }
+
+                auto first = base + std::to_string(0);
+                json_object_set_new(links, "first", json_string(first.c_str()));
+
+                // The same calculation that is used to count how many bytes are needed for N bits can be used
+                // to determine how many pages we have: (bits + 7) / 8 = bytes
+                // Pages are indexed from 0 so we decrement the value by one.
+                auto last = base + std::to_string(((total_size + (limit - 1)) / limit) - 1);
+                json_object_set_new(links, "last", json_string(last.c_str()));
+
+                if (offset > 0 && offset * limit < total_size)
+                {
+                    auto prev = base + std::to_string(offset - 1);
+                    json_object_set_new(links, "prev", json_string(prev.c_str()));
+                }
+            }
+
+            json_t* meta = json_object_get(m_body, "meta");
+
+            if (!meta)
+            {
+                json_object_set_new(m_body, "meta", json_object());
+                meta = json_object_get(m_body, "meta");
+            }
+
+            json_object_set_new(meta, "total", json_integer(total_size));
+        }
+    }
+}
