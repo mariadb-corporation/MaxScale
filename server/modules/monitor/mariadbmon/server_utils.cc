@@ -75,8 +75,7 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "connection_name", json_string(settings.name.c_str()));
     json_object_set_new(result, "master_host", json_string(settings.master_endpoint.host().c_str()));
     json_object_set_new(result, "master_port", json_integer(settings.master_endpoint.port()));
-    json_object_set_new(result,
-                        "slave_io_running",
+    json_object_set_new(result, "slave_io_running",
                         json_string(slave_io_to_string(slave_io_running).c_str()));
     json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
     json_object_set_new(result, "seconds_behind_master",
@@ -86,6 +85,9 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "last_io_error", json_string(last_io_error.c_str()));
     json_object_set_new(result, "last_sql_error", json_string(last_sql_error.c_str()));
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
+    const char* gtid_mode_str = (settings.gtid_mode == Settings::GtidMode::SLAVE) ? "Slave_Pos" :
+                                (settings.gtid_mode == Settings::GtidMode::CURRENT) ? "Current_Pos" : "No";
+    json_object_set_new(result, "using_gtid", json_string(gtid_mode_str));
     if (master_server)
     {
         json_object_set_new(result, "master_server_name", json_string(master_server->name()));

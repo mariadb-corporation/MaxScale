@@ -27,6 +27,7 @@ using std::unique_ptr;
 using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
+using GtidMode = SlaveStatus::Settings::GtidMode;
 using namespace std::chrono_literals;
 
 namespace
@@ -40,12 +41,25 @@ void print_no_locks_error(mxb::Json& error_out)
     auto err_msg = string_printf(locks_taken, SERVER_LOCK_NAME);
     PRINT_JSON_ERROR(error_out, "%s", err_msg.c_str());
 }
+
+void fix_gtid_mode(GtidMode& gtid_mode)
+{
+    if (gtid_mode == GtidMode::NONE)
+    {
+        // Usually getting here is unlikely if not impossible as slaves without gtid are not valid for
+        // monitor operations. Cannot be 100% sure though, as dba could disable gtid-mode just before
+        // a monitor operation. In any case, forcing Current_Pos matches previous version behavior.
+        gtid_mode = GtidMode::CURRENT;
+    }
 }
+
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
 const char FAILOVER_OK[] = "Failover '%s' -> '%s' performed.";
 const char FAILOVER_FAIL[] = "Failover '%s' -> '%s' failed.";
 const char SWITCHOVER_OK[] = "Switchover '%s' -> '%s' performed.";
 const char SWITCHOVER_FAIL[] = "Switchover %s -> %s failed.";
+}
+
 
 /**
  * Run a manual switchover, promoting a new master server and demoting the existing master.
@@ -420,8 +434,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 if (!slaves.empty())
                 {
                     SERVER* new_master_srv = new_master->server;
-                    SlaveStatus::Settings new_conn("", new_master_srv,
-                                                   SlaveStatus::Settings::GtidMode::CURRENT);
+                    // Using Slave_Pos here since gtid_slave_pos was set earlier.
+                    SlaveStatus::Settings new_conn("", new_master_srv, GtidMode::SLAVE);
                     // Expect this to complete quickly.
                     GeneralOpData general(OpStart::MANUAL, rval.output, 0s);
                     size_t slave_conns_started = 0;
@@ -561,8 +575,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 // No conflict, redirect as normal.
                 auto old_conn = redirectable->slave_connection_status(from);
                 auto old_settings = old_conn->settings;
-                // TODO: allow slave_pos in future releases
-                old_settings.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
+                fix_gtid_mode(old_settings.gtid_mode);
                 if (redirectable->redirect_existing_slave_conn(general, old_settings, to))
                 {
                     successes++;
@@ -637,8 +650,7 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                     MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
-                    SlaveStatus::Settings new_conn("", master_server,
-                                                   SlaveStatus::Settings::GtidMode::CURRENT);
+                    SlaveStatus::Settings new_conn("", master_server, GtidMode::CURRENT);
                     op_success = joinable->create_start_slave(op, new_conn);
                 }
                 else
@@ -667,9 +679,7 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                 }
 
                 auto slave_settings = joinable->m_slave_status[0].settings;
-                // TODO: For next major release, change the following to use slave_pos if existing
-                //  connection used it.
-                slave_settings.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
+                fix_gtid_mode(slave_settings.gtid_mode);
                 op_success = joinable->redirect_existing_slave_conn(op, slave_settings, m_master);
             }
 
@@ -881,11 +891,12 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                     m_next_master = promotion_target;
                 }
 
-                // Step 4: Start replication on old master and redirect slaves.
+                // Step 4: Start replication on old master and redirect slaves. Using Current_Pos since
+                // Slave_Pos is likely obsolete or empty.
                 m_state = State::REJOIN;
                 ServerArray redirected_to_promo_target;
                 if (demotion_target->copy_slave_conns(op.general, op.demotion.conns_to_copy,
-                                                      promotion_target))
+                                                      promotion_target, GtidMode::CURRENT))
                 {
                     redirected_to_promo_target.push_back(demotion_target);
                 }

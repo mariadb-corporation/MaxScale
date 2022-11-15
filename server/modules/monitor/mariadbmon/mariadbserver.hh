@@ -429,11 +429,11 @@ public:
      *
      * @param op Operation descriptor
      * @params conns_to_copy The connections to add to the server
-     * @params replacement Which server should rep
+     * @params replacement Which server should replace this server as replication target
      * @return True on success
      */
     bool copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
-                          const MariaDBServer* replacement);
+                          const MariaDBServer* replacement, SlaveStatus::Settings::GtidMode gtid_mode);
 
     /**
      * Remove slave connections from this server.
@@ -647,7 +647,9 @@ private:
                                 std::string* errmsg_out);
 
     bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, mxb::Json& error_out);
-    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
+
+    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge,
+                           SlaveStatus::Settings::GtidMode gtid_mode);
 
     struct ChangeMasterCmd
     {

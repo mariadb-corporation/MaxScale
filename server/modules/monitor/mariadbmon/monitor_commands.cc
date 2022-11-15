@@ -2179,8 +2179,7 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
             string set_gtid = mxb::string_printf("set global gtid_slave_pos='%s';", gtid.c_str());
             if (target->execute_cmd(set_gtid, &errmsg))
             {
-                // Typically, Current_Pos is used when configuring replication on a new slave. Rebuild is
-                // an exception as we just configured slave_pos.
+                // Just configured gtid_slave_pos, so use it to start replication.
                 GeneralOpData op(OpStart::MANUAL, m_result.output, m_ssh_timeout);
                 SlaveStatus::Settings slave_sett("", repl_master->server,
                                                  SlaveStatus::Settings::GtidMode::SLAVE);
