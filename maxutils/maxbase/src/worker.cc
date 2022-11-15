@@ -536,6 +536,22 @@ Worker::~Worker()
     }
 }
 
+std::string Worker::thread_name() const
+{
+    string s;
+
+    if (get_current() == this)
+    {
+        s = mxb::get_thread_name();
+    }
+    else
+    {
+        s = mxb::get_thread_name(m_thread);
+    }
+
+    return s;
+}
+
 // static
 bool Worker::init()
 {
@@ -820,7 +836,7 @@ void Worker::run(mxb::Semaphore* pSem)
         m_event_loop_state = EventLoop::FINISHED;
 
         post_run();
-        MXB_INFO("Worker %p has shut down.", this);
+        MXB_INFO("Worker (%s, %p) has shut down.", thread_name().c_str(), this);
     }
     else if (pSem)
     {
@@ -861,9 +877,10 @@ void Worker::join()
 
     if (m_started)
     {
-        MXB_INFO("Waiting for worker %p.", this);
+        string s = thread_name();
+        MXB_INFO("Waiting for worker (%s, %p).", s.c_str(), this);
         m_thread.join();
-        MXB_INFO("Waited for worker %p.", this);
+        MXB_INFO("Waited for worker (%s, %p).", s.c_str(), this);
         m_started = false;
     }
 }
@@ -876,7 +893,7 @@ void Worker::shutdown()
     if (!m_shutdown_initiated)
     {
         auto init_shutdown = [this]() {
-            MXB_INFO("Worker %p received shutdown message.", this);
+            MXB_INFO("Worker (%s, %p) received shutdown message.", thread_name().c_str(), this);
             m_should_shutdown = true;
         };
         execute(init_shutdown, EXECUTE_QUEUED);

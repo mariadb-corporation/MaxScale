@@ -519,6 +519,14 @@ public:
         return m_id;
     }
 
+    /**
+     * Returns the thread name of the worker. Note that if the worker has not
+     * been started or already has finished, then "unknown" will be returned.
+     *
+     * @return The name of the worker.
+     */
+    std::string thread_name() const;
+
     int load(Load::counter_t counter) const
     {
         return m_load.percentage(counter);
