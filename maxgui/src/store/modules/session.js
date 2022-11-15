@@ -63,12 +63,7 @@ export default {
                     commit('SET_TOTAL_SESSIONS', total ? total : res.data.data.length)
                 }
             } catch (e) {
-<<<<<<< HEAD
                 this.vue.$logger.error(e)
-=======
-                const logger = this.vue.$logger('store-sessions-fetchSessions')
-                logger.error(e)
->>>>>>> 22.08
             }
         },
 
