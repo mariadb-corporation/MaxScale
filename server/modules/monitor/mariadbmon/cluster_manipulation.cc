@@ -420,7 +420,8 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                 if (!slaves.empty())
                 {
                     SERVER* new_master_srv = new_master->server;
-                    SlaveStatus::Settings new_conn("", new_master_srv);
+                    SlaveStatus::Settings new_conn("", new_master_srv,
+                                                   SlaveStatus::Settings::GtidMode::CURRENT);
                     // Expect this to complete quickly.
                     GeneralOpData general(OpStart::MANUAL, rval.output, 0s);
                     size_t slave_conns_started = 0;
@@ -559,7 +560,10 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
             {
                 // No conflict, redirect as normal.
                 auto old_conn = redirectable->slave_connection_status(from);
-                if (redirectable->redirect_existing_slave_conn(general, old_conn->settings, to))
+                auto old_settings = old_conn->settings;
+                // TODO: allow slave_pos in future releases
+                old_settings.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
+                if (redirectable->redirect_existing_slave_conn(general, old_settings, to))
                 {
                     successes++;
                     redirected->push_back(redirectable);
@@ -633,7 +637,8 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                     MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
-                    SlaveStatus::Settings new_conn("", master_server);
+                    SlaveStatus::Settings new_conn("", master_server,
+                                                   SlaveStatus::Settings::GtidMode::CURRENT);
                     op_success = joinable->create_start_slave(op, new_conn);
                 }
                 else
@@ -661,8 +666,11 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                     joinable->remove_slave_conns(op, extra_conns);
                 }
 
-                op_success = joinable->redirect_existing_slave_conn(op, joinable->m_slave_status[0].settings,
-                                                                    m_master);
+                auto slave_settings = joinable->m_slave_status[0].settings;
+                // TODO: For next major release, change the following to use slave_pos if existing
+                //  connection used it.
+                slave_settings.gtid_mode = SlaveStatus::Settings::GtidMode::CURRENT;
+                op_success = joinable->redirect_existing_slave_conn(op, slave_settings, m_master);
             }
 
             if (op_success)
