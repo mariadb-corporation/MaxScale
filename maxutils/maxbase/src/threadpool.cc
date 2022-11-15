@@ -12,23 +12,52 @@
  */
 
 #include <maxbase/threadpool.hh>
+#include <string.h>
 #include <maxbase/assert.hh>
 
 namespace maxbase
 {
 
+const size_t MAX_THREAD_NAME_LEN = 15;
+
 void set_thread_name(std::thread& thread, const std::string& name)
 {
-    const size_t MAX_LEN = 15;
-    if (name.size() > MAX_LEN)
+    if (name.size() > MAX_THREAD_NAME_LEN)
     {
-        pthread_setname_np(thread.native_handle(), name.substr(0, MAX_LEN).c_str());
+        pthread_setname_np(thread.native_handle(), name.substr(0, MAX_THREAD_NAME_LEN).c_str());
     }
     else
     {
         pthread_setname_np(thread.native_handle(), name.c_str());
     }
 }
+
+namespace
+{
+
+std::string get_pthread_name(pthread_t thread)
+{
+    char buffer[MAX_THREAD_NAME_LEN + 1];
+    if (pthread_getname_np(thread, buffer, MAX_THREAD_NAME_LEN + 1) != 0)
+    {
+        strcpy(buffer, "unknown");
+    }
+
+    return buffer;
+}
+
+}
+
+std::string get_thread_name(const std::thread& thread)
+{
+    return get_pthread_name(const_cast<std::thread&>(thread).native_handle());
+}
+
+std::string get_thread_name()
+{
+    return get_pthread_name(pthread_self());
+}
+
 
 ThreadPool::Thread::Thread(const std::string& name)
 {

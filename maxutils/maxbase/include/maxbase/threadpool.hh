@@ -25,11 +25,26 @@ namespace maxbase
 
 /**
  * @brief set_thread_name - Set the name of a thread.
- *                          Usefull e.g. with "top -H -p $(pidof maxscale)"
+ *                          Useful e.g. with "top -H -p $(pidof maxscale)"
  * @param thread
  * @param name            - Note: only the first 15 chars can be used
  */
 void set_thread_name(std::thread& thread, const std::string& name);
+
+/**
+ * @brief get_thread_name - Get the name of a thread.
+ *
+ * @param name            - The name of the thread.
+ */
+std::string get_thread_name(const std::thread& thread);
+
+/**
+ * @brief get_thread_name - Get the name of the calling thread.
+ *
+ * @param name            - The name of the thread.
+ */
+std::string get_thread_name();
+
 
 class ThreadPool
 {
