@@ -45,7 +45,7 @@ export default {
             this.fetchThreadStats(),
             this.fetchAllServers(),
             this.fetchAllMonitors(),
-            this.fetchAllSessions(),
+            this.fetchSessions(),
             this.fetchAllServices(),
         ])
 
@@ -77,7 +77,7 @@ export default {
 
             fetchAllMonitors: 'monitor/fetchAllMonitors',
 
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessions: 'session/fetchSessions',
             genSessionDataSets: 'session/genDataSets',
 
             fetchAllServices: 'service/fetchAllServices',

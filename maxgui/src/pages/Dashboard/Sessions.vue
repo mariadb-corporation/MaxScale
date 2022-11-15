@@ -1,15 +1,15 @@
 <template>
     <sessions-table
-        :search="search_keyword"
-        :rows="tableRows"
         :headers="tableHeaders"
-        :sortDesc="true"
-        sortBy="connected"
+        :items="tableRows"
+        :server-items-length="getTotalSessions"
+        @get-data-from-api="fetchSessions"
     >
-        <template v-slot:header-append-serviceIds>
+        <template v-slot:[`header.serviceIds`]="{ header }">
+            {{ header.text }}
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
         </template>
-        <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
+        <template v-slot:[`item.serviceIds`]="{ value: serviceIds }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
             <template v-else>
                 <router-link
@@ -21,9 +21,6 @@
                     <span>{{ serviceId }} </span>
                 </router-link>
             </template>
-        </template>
-        <template v-slot:connected="{ data: { item: { connected } } }">
-            <span> {{ $help.dateFormat({ value: connected }) }} </span>
         </template>
     </sessions-table>
 </template>
@@ -41,11 +38,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'sessions',
-
     data() {
         return {
             tableHeaders: [
@@ -60,14 +56,15 @@ export default {
     },
     computed: {
         ...mapState({
-            search_keyword: 'search_keyword',
-            all_sessions: state => state.session.all_sessions,
+            current_sessions: state => state.session.current_sessions,
         }),
-
+        ...mapGetters({
+            getTotalSessions: 'session/getTotalSessions',
+        }),
         tableRows: function() {
             let rows = []
             let allServiceNames = []
-            this.all_sessions.forEach(session => {
+            this.current_sessions.forEach(session => {
                 const {
                     id,
                     attributes: { idle, connected, user, remote },
@@ -84,7 +81,7 @@ export default {
                 rows.push({
                     id: id,
                     user: `${user}@${remote}`,
-                    connected: connected,
+                    connected: this.$help.dateFormat({ value: connected }),
                     idle: idle,
                     serviceIds: serviceIds,
                 })
@@ -96,6 +93,7 @@ export default {
         },
     },
     methods: {
+        ...mapActions({ fetchSessions: 'session/fetchSessions' }),
         setServicesLength(total) {
             this.servicesLength = total
         },

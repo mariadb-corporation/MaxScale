@@ -86,7 +86,9 @@ describe('Graphs index', () => {
 
         await axiosStub.getCall(0).should.have.been.calledWith('/servers')
         await axiosStub.getCall(1).should.have.been.calledWith('/monitors')
-        await axiosStub.getCall(2).should.have.been.calledWith('/sessions')
+        await axiosStub
+            .getCall(2)
+            .should.have.been.calledWith('/sessions?page[size]=50&page[number]=0')
         await axiosStub.getCall(3).should.have.been.calledWith('/services')
         await axiosStub.lastCall.should.have.been.calledWith(
             '/maxscale/threads?fields[threads]=stats'

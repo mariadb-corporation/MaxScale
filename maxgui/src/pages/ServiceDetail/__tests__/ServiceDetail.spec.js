@@ -85,7 +85,7 @@ const defaultComputed = {
     current_service: () => dummy_all_services[0], // id: row_server_0
     service_connections_datasets: () => dummy_service_connection_datasets,
     service_connection_info: () => dummy_service_connection_info,
-    sessions_by_service: () => dummy_sessions_by_service,
+    filtered_sessions: () => dummy_sessions_by_service,
     current_service_diagnostics: () => routerDiagnosticsResStub,
 }
 const shallowMountOptions = {

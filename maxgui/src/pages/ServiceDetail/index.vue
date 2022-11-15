@@ -79,13 +79,12 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <sessions-table
-                                    :search="search_keyword"
                                     collapsible
                                     delayLoading
-                                    :rows="sessionsTableRows"
                                     :headers="sessionsTableHeader"
-                                    :sortDesc="true"
-                                    sortBy="connected"
+                                    :items="sessionsTableRows"
+                                    :server-items-length="getTotalFilteredSessions"
+                                    @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
                                 />
                             </v-col>
                         </v-row>
@@ -110,7 +109,7 @@
  * Public License.
  */
 import { FORM_LISTENER } from 'store/formTypes'
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 
@@ -142,16 +141,18 @@ export default {
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            search_keyword: 'search_keyword',
             current_service: state => state.service.current_service,
             current_service_diagnostics: state => state.service.current_service_diagnostics,
             service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
-            sessions_by_service: state => state.session.sessions_by_service,
+            filtered_sessions: state => state.session.filtered_sessions,
             ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
                 state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
         }),
-
+        ...mapGetters({
+            getTotalFilteredSessions: 'session/getTotalFilteredSessions',
+            getFilterParamByServiceId: 'session/getFilterParamByServiceId',
+        }),
         routerDiagnostics: function() {
             const {
                 attributes: { router_diagnostics = {} } = {},
@@ -162,7 +163,7 @@ export default {
             return this.current_service.attributes.router
         },
         sessionsTableRows: function() {
-            return this.sessions_by_service.map(
+            return this.filtered_sessions.map(
                 ({ id, attributes: { idle, connected, user, remote } }) => ({
                     id,
                     user: `${user}@${remote}`,
@@ -170,6 +171,9 @@ export default {
                     idle,
                 })
             )
+        },
+        filterSessionParam() {
+            return this.getFilterParamByServiceId(this.$route.params.id)
         },
     },
     watch: {
@@ -202,7 +206,7 @@ export default {
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             updateServiceParameters: 'service/updateServiceParameters',
-            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
+            fetchSessionsWithFilter: 'session/fetchSessionsWithFilter',
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
         ...mapMutations({
@@ -230,10 +234,10 @@ export default {
          */
         async fetchConnSessDiag() {
             const serviceId = this.$route.params.id
-            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
+            // fetching connections chart info should be at the same time with fetchSessionsWithFilter
             await Promise.all([
                 this.fetchServiceConnections(serviceId),
-                this.fetchSessionsFilterByService(serviceId),
+                this.fetchSessionsWithFilter(this.filterSessionParam),
                 this.fetchServiceDiagnostics(serviceId),
             ])
         },

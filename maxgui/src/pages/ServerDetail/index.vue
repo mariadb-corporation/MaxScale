@@ -41,13 +41,12 @@
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
                                     ref="sessions-table"
-                                    :search="search_keyword"
                                     collapsible
                                     delayLoading
-                                    :rows="sessionsTableRow"
                                     :headers="sessionsTableHeader"
-                                    :sortDesc="true"
-                                    sortBy="connected"
+                                    :items="sessionsTableRow"
+                                    :server-items-length="getTotalFilteredSessions"
+                                    @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
                                 />
                             </v-col>
                         </v-row>
@@ -95,7 +94,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -126,13 +125,15 @@ export default {
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            search_keyword: 'search_keyword',
             current_server: state => state.server.current_server,
             current_server_stats: state => state.server.current_server_stats,
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
-            all_sessions: state => state.session.all_sessions,
+            filtered_sessions: state => state.session.filtered_sessions,
         }),
-
+        ...mapGetters({
+            getTotalFilteredSessions: 'session/getTotalFilteredSessions',
+            getFilterParamByServerId: 'session/getFilterParamByServerId',
+        }),
         monitorDiagnostics: function() {
             const {
                 attributes: { monitor_diagnostics: { server_info = [] } = {} } = {},
@@ -141,26 +142,22 @@ export default {
         },
         sessionsTableRow: function() {
             let tableRows = []
-            this.all_sessions.forEach(session => {
+            this.filtered_sessions.forEach(session => {
                 const {
                     id,
-                    attributes: { idle, connected, user, remote, connections },
+                    attributes: { idle, connected, user, remote },
                 } = session
-
-                let connectionOfThisServer = connections.find(
-                    connection => connection.server === this.current_server.id
-                )
-
-                if (connectionOfThisServer) {
-                    tableRows.push({
-                        id: id,
-                        user: `${user}@${remote}`,
-                        connected: this.$help.dateFormat({ value: connected }),
-                        idle: idle,
-                    })
-                }
+                tableRows.push({
+                    id: id,
+                    user: `${user}@${remote}`,
+                    connected: this.$help.dateFormat({ value: connected }),
+                    idle: idle,
+                })
             })
             return tableRows
+        },
+        filterSessionParam() {
+            return this.getFilterParamByServerId(this.$route.params.id)
         },
     },
     watch: {
@@ -212,7 +209,7 @@ export default {
             updateServerRelationship: 'server/updateServerRelationship',
             updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessionsWithFilter: 'session/fetchSessionsWithFilter',
         }),
         async loopFetch() {
             while (this.isLoopFetch) {
@@ -221,7 +218,7 @@ export default {
                     fetched together as their data point changes over time
                 */
                 await Promise.all([
-                    this.fetchAllSessions(),
+                    this.fetchSessionsWithFilter(this.filterSessionParam),
                     this.fetchServerStatsById(this.$route.params.id),
                     this.fetchMonitorDiagnostics(),
                     this.$help.delay(10000),

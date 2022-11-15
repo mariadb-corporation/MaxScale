@@ -14,11 +14,7 @@
 import mount from '@tests/unit/setup'
 import Sessions from '@/pages/Dashboard/Sessions'
 
-import {
-    dummy_all_sessions,
-    findAnchorLinkInTable,
-    getUniqueResourceNamesStub,
-} from '@tests/unit/utils'
+import { dummy_all_sessions, getUniqueResourceNamesStub } from '@tests/unit/utils'
 
 const expectedTableHeaders = [
     { text: 'ID', value: 'id' },
@@ -32,7 +28,7 @@ const expectedTableRows = [
     {
         id: '1000002',
         user: 'maxskysql@::ffff:127.0.0.1',
-        connected: 'Thu Aug 13 14:06:17 2020',
+        connected: '14:06:17 08.13.2020',
         idle: 55.5,
         serviceIds: ['RCR-Router'],
     },
@@ -46,7 +42,7 @@ describe('Dashboard Sessions tab', () => {
             shallow: false,
             component: Sessions,
             computed: {
-                all_sessions: () => dummy_all_sessions,
+                current_sessions: () => dummy_all_sessions,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
@@ -64,22 +60,10 @@ describe('Dashboard Sessions tab', () => {
         expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
     })
 
-    it(`Should pass expected table headers to data-table`, () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
+    it(`Should pass expected table headers to sessions-table`, () => {
+        const dataTable = wrapper.findComponent({ name: 'sessions-table' })
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectedTableHeaders)
-        expect(dataTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
-    })
-
-    it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const sessionId = dummy_all_sessions[0].id
-        const serviceId = dummy_all_sessions[0].relationships.services.data[0].id
-        const aTag = findAnchorLinkInTable({
-            wrapper: wrapper,
-            rowId: sessionId,
-            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
-        })
-        await aTag.trigger('click')
-        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+        expect(dataTable.vm.$attrs.headers).to.be.deep.equals(expectedTableHeaders)
     })
 
     it(`Should get total number of unique service names accurately`, () => {

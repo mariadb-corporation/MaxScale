@@ -140,7 +140,7 @@ const mountOptions = {
         current_server: () => dummy_all_servers[0], // id: row_server_0
         current_server_stats: () => dummy_server_stats,
         monitor_diagnostics: () => dummy_monitor_diagnostics,
-        all_sessions: () => dummy_all_sessions,
+        current_sessions: () => dummy_all_sessions,
     },
 }
 

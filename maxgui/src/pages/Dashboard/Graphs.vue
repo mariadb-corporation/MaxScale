@@ -145,7 +145,7 @@ export default {
             fetchThreadStats: 'maxscale/fetchThreadStats',
             fetchAllServers: 'server/fetchAllServers',
             fetchAllMonitors: 'monitor/fetchAllMonitors',
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessions: 'session/fetchSessions',
             fetchAllServices: 'service/fetchAllServices',
         }),
 
@@ -254,7 +254,7 @@ export default {
                 await Promise.all([
                     this.fetchAllServers(),
                     this.fetchAllMonitors(),
-                    this.fetchAllSessions(),
+                    this.fetchSessions(),
                     this.fetchAllServices(),
                     this.fetchThreadStats(),
                 ])
