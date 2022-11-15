@@ -1,22 +1,21 @@
 <template>
     <sessions-table
-        :search="search_keyword"
-        :rows="tableRows"
         :headers="tableHeaders"
-        :sortDesc="true"
-        sortBy="connected"
-        @confirm-kill="killSession({ id: $event.id, callback: fetchAllSessions })"
+        :items="tableRows"
+        :server-items-length="getTotalSessions"
+        @get-data-from-api="fetchSessions"
+        @confirm-kill="killSession({ id: $event.id, callback: fetchSessions })"
     >
-        <template v-slot:header-append-serviceIds>
+        <template v-slot:[`header.serviceIds`]="{ header }">
+            {{ header.text }}
             <span class="ml-1 mxs-color-helper text-grayed-out"> ({{ servicesLength }}) </span>
         </template>
-        <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
+        <template v-slot:[`item.serviceIds`]="{ value: serviceIds }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
             <template v-else>
                 <router-link
                     v-for="serviceId in serviceIds"
                     :key="serviceId"
-                    v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
                     :to="`/dashboard/services/${serviceId}`"
                     class="rsrc-link"
                 >
@@ -44,7 +43,6 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
     name: 'sessions',
-
     data() {
         return {
             tableHeaders: [
@@ -60,14 +58,16 @@ export default {
     },
     computed: {
         ...mapState({
-            search_keyword: 'search_keyword',
-            all_sessions: state => state.session.all_sessions,
+            current_sessions: state => state.session.current_sessions,
         }),
-        ...mapGetters({ isAdmin: 'user/isAdmin' }),
+        ...mapGetters({
+            getTotalSessions: 'session/getTotalSessions',
+            isAdmin: 'user/isAdmin',
+        }),
         tableRows() {
             let rows = []
             let allServiceNames = []
-            this.all_sessions.forEach(session => {
+            this.current_sessions.forEach(session => {
                 const {
                     id,
                     attributes: { idle, connected, user, remote, memory },
@@ -99,7 +99,7 @@ export default {
     methods: {
         ...mapActions({
             killSession: 'session/killSession',
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessions: 'session/fetchSessions',
         }),
         setServicesLength(total) {
             this.servicesLength = total

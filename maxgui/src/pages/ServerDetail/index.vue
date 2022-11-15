@@ -44,14 +44,17 @@
                             <v-col cols="8">
                                 <sessions-table
                                     :search="search_keyword"
-                                    :collapsible="true"
-                                    :delayLoading="true"
-                                    :rows="sessionsTableRow"
+                                    collapsible
+                                    delayLoading
                                     :headers="sessionsTableHeader"
-                                    :sortDesc="true"
-                                    sortBy="connected"
+                                    :items="sessionsTableRow"
+                                    :server-items-length="getTotalFilteredSessions"
+                                    @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
                                     @confirm-kill="
-                                        killSession({ id: $event.id, callback: fetchAllSessions })
+                                        killSession({
+                                            id: $event.id,
+                                            callback: fetchSessionsWithFilter(filterSessionParam),
+                                        })
                                     "
                                 />
                             </v-col>
@@ -99,7 +102,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 
@@ -129,10 +132,13 @@ export default {
     computed: {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
-            search_keyword: 'search_keyword',
             current_server: state => state.server.current_server,
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
-            all_sessions: state => state.session.all_sessions,
+            filtered_sessions: state => state.session.filtered_sessions,
+        }),
+        ...mapGetters({
+            getTotalFilteredSessions: 'session/getTotalFilteredSessions',
+            getFilterParamByServerId: 'session/getFilterParamByServerId',
         }),
         serverStats() {
             return this.$typy(this.current_server, 'attributes.statistics').safeObjectOrEmpty
@@ -145,30 +151,27 @@ export default {
         },
         sessionsTableRow() {
             let tableRows = []
-            this.all_sessions.forEach(session => {
+            this.filtered_sessions.forEach(session => {
                 const {
                     id,
-                    attributes: { idle, connected, user, remote, connections, memory },
+                    attributes: { idle, connected, user, remote, memory },
                 } = session
 
-                let connectionOfThisServer = connections.find(
-                    connection => connection.server === this.current_server.id
-                )
-
-                if (connectionOfThisServer) {
-                    tableRows.push({
-                        id: id,
-                        user: `${user}@${remote}`,
-                        connected: this.$helpers.dateFormat({
-                            moment: this.$moment,
-                            value: connected,
-                        }),
-                        idle: idle,
-                        memory,
-                    })
-                }
+                tableRows.push({
+                    id: id,
+                    user: `${user}@${remote}`,
+                    connected: this.$helpers.dateFormat({
+                        moment: this.$moment,
+                        value: connected,
+                    }),
+                    idle: idle,
+                    memory,
+                })
             })
             return tableRows
+        },
+        filterSessionParam() {
+            return this.getFilterParamByServerId(this.$route.params.id)
         },
     },
     watch: {
@@ -207,14 +210,14 @@ export default {
             updateServerRelationship: 'server/updateServerRelationship',
             updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessionsWithFilter: 'session/fetchSessionsWithFilter',
             killSession: 'session/killSession',
         }),
         async fetchAll() {
             await this.dispatchFetchServer()
             await Promise.all([
                 this.serviceTableRowProcessing(),
-                this.fetchAllSessions(),
+                this.fetchSessionsWithFilter(this.filterSessionParam),
                 this.fetchMonitorDiagnostics(),
             ])
         },

@@ -134,6 +134,7 @@ export default {
     },
     getters: {
         // -------------- below getters are available only when fetchAllListeners has been dispatched
+        getTotalListeners: state => state.all_listeners.length,
         getAllListenersMap: state => {
             let map = new Map()
             state.all_listeners.forEach(ele => {

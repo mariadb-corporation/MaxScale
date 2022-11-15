@@ -136,6 +136,7 @@ export default {
     },
     getters: {
         // -------------- below getters are available only when fetchAllFilters has been dispatched
+        getTotalFilters: state => state.all_filters.length,
         getAllFiltersMap: state => {
             let map = new Map()
             state.all_filters.forEach(ele => {

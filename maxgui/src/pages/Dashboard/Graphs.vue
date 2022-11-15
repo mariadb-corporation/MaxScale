@@ -87,7 +87,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
+
 export default {
     name: 'graphs',
     props: {
@@ -108,7 +109,6 @@ export default {
             all_servers: state => state.all_servers,
         }),
         ...mapState('session', {
-            all_sessions: state => state.all_sessions,
             sessions_datasets: state => state.sessions_datasets,
         }),
         streamOpts() {
@@ -121,6 +121,9 @@ export default {
                 },
             }
         },
+        ...mapGetters({
+            getTotalSessions: 'session/getTotalSessions',
+        }),
     },
 
     methods: {
@@ -128,7 +131,7 @@ export default {
             fetchThreadStats: 'maxscale/fetchThreadStats',
             fetchAllServers: 'server/fetchAllServers',
             fetchAllMonitors: 'monitor/fetchAllMonitors',
-            fetchAllSessions: 'session/fetchAllSessions',
+            fetchSessions: 'session/fetchSessions',
             fetchAllServices: 'service/fetchAllServices',
         }),
 
@@ -200,7 +203,7 @@ export default {
             sessionsChart.chartData.datasets.forEach(function(dataset) {
                 dataset.data.push({
                     x: timestamp,
-                    y: self.all_sessions.length,
+                    y: self.getTotalSessions,
                 })
             })
         },

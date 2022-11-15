@@ -14,11 +14,7 @@
 import mount from '@tests/unit/setup'
 import Sessions from '@rootSrc/pages/Dashboard/Sessions'
 
-import {
-    dummy_all_sessions,
-    findAnchorLinkInTable,
-    getUniqueResourceNamesStub,
-} from '@tests/unit/utils'
+import { dummy_all_sessions, getUniqueResourceNamesStub } from '@tests/unit/utils'
 
 const expectedTableHeaders = [
     { text: 'ID', value: 'id' },
@@ -37,7 +33,7 @@ describe('Dashboard Sessions tab', () => {
             shallow: false,
             component: Sessions,
             computed: {
-                all_sessions: () => dummy_all_sessions,
+                current_sessions: () => dummy_all_sessions,
             },
         })
         axiosStub = sinon.stub(wrapper.vm.$http, 'get').resolves(Promise.resolve({ data: {} }))
@@ -62,21 +58,7 @@ describe('Dashboard Sessions tab', () => {
 
     it(`Should pass expected table headers to sessions-table`, () => {
         const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
-        expect(sessionsTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
-    })
-
-    it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const sessionId = dummy_all_sessions[0].id
-        const serviceId = dummy_all_sessions[0].relationships.services.data[0].id
-        const dataTable = wrapper.findComponent({ name: 'sessions-table' })
-        const aTag = findAnchorLinkInTable({
-            wrapper: dataTable,
-            rowId: sessionId,
-            cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
-        })
-        await aTag.trigger('click')
-        await wrapper.vm.$nextTick()
-        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+        expect(sessionsTable.vm.$attrs.headers).to.be.deep.equals(expectedTableHeaders)
     })
 
     it(`Should get total number of unique service names accurately`, () => {
