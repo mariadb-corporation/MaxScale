@@ -302,20 +302,20 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
         // Helper function for running a command on all servers in the list.
         auto exec_cmd_on_array = [&error](const ServerArray& targets, const string& query,
                                           mxb::Json& error_out) {
-                if (!error)
+            if (!error)
+            {
+                for (MariaDBServer* server : targets)
                 {
-                    for (MariaDBServer* server : targets)
+                    string error_msg;
+                    if (!server->execute_cmd(query, &error_msg))
                     {
-                        string error_msg;
-                        if (!server->execute_cmd(query, &error_msg))
-                        {
-                            error = true;
-                            PRINT_JSON_ERROR(error_out, "%s", error_msg.c_str());
-                            break;
-                        }
+                        error = true;
+                        PRINT_JSON_ERROR(error_out, "%s", error_msg.c_str());
+                        break;
                     }
                 }
-            };
+            }
+        };
 
         // Step 2: Stop and reset all slave connections, even external ones.
         for (MariaDBServer* server : targets)

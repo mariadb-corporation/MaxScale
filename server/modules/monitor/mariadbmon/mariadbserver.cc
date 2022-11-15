@@ -1041,9 +1041,9 @@ const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& s
 {
     // Helper function. Checks if the connection in the new row is to the same server than in the old row.
     auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool {
-            return lhs.settings.name == rhs.settings.name
-                   && lhs.settings.master_endpoint == rhs.settings.master_endpoint;
-        };
+        return lhs.settings.name == rhs.settings.name
+               && lhs.settings.master_endpoint == rhs.settings.master_endpoint;
+    };
 
     // Usually the same slave connection can be found from the same index than in the previous slave
     // status array, but this is not 100% (e.g. dba has just added a new connection).
@@ -1238,27 +1238,27 @@ bool
 MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, mxb::Json& error_out)
 {
     EventStatusMapper mapper = [&event_names](const EventInfo& event) {
-            string rval;
-            if (event_names.count(event.name) > 0
-                && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
-            {
-                rval = "ENABLE";
-            }
-            return rval;
-        };
+        string rval;
+        if (event_names.count(event.name) > 0
+            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
+        {
+            rval = "ENABLE";
+        }
+        return rval;
+    };
     return alter_events(binlog_mode, mapper, error_out);
 }
 
 bool MariaDBServer::disable_events(BinlogMode binlog_mode, mxb::Json& error_out)
 {
     EventStatusMapper mapper = [](const EventInfo& event) {
-            string rval;
-            if (event.status == "ENABLED")
-            {
-                rval = "DISABLE ON SLAVE";
-            }
-            return rval;
-        };
+        string rval;
+        if (event.status == "ENABLED")
+        {
+            rval = "DISABLE ON SLAVE";
+        }
+        return rval;
+    };
     return alter_events(binlog_mode, mapper, error_out);
 }
 
@@ -1293,16 +1293,16 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     // Helper function which alters an event depending on the mapper-function.
     EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
                                                                                 mxb::Json& error_out) {
-            string target_state = mapper(event);
-            if (!target_state.empty())
+        string target_state = mapper(event);
+        if (!target_state.empty())
+        {
+            target_events++;
+            if (alter_event(event, target_state, error_out))
             {
-                target_events++;
-                if (alter_event(event, target_state, error_out))
-                {
-                    events_altered++;
-                }
+                events_altered++;
             }
-        };
+        }
+    };
 
     bool rval = false;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
@@ -1904,57 +1904,57 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
 
     // Helper function for checking if a slave connection should be ignored.
     auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
-            bool accepted = true;
-            auto master_id = slave_conn.master_server_id;
-            EndPoint my_host_port(server);
-            // The connection is only merged if it satisfies the copy-conditions. Merging has also
-            // additional requirements.
-            string ignore_reason;
-            if (!slave_conn.should_be_copied(&ignore_reason))
+        bool accepted = true;
+        auto master_id = slave_conn.master_server_id;
+        EndPoint my_host_port(server);
+        // The connection is only merged if it satisfies the copy-conditions. Merging has also
+        // additional requirements.
+        string ignore_reason;
+        if (!slave_conn.should_be_copied(&ignore_reason))
+        {
+            accepted = false;
+        }
+        else if (master_id == m_server_id)
+        {
+            // This is not an error but indicates a complicated topology. In any case, ignore this.
+            accepted = false;
+            ignore_reason = string_printf("it points to '%s' (according to server id:s).", name());
+        }
+        else if (slave_conn.settings.master_endpoint == my_host_port)
+        {
+            accepted = false;
+            ignore_reason = string_printf("it points to '%s' (according to master host:port).", name());
+        }
+        else
+        {
+            // Compare to connections already existing on this server.
+            for (const SlaveStatus& my_slave_conn : m_slave_status)
             {
-                accepted = false;
-            }
-            else if (master_id == m_server_id)
-            {
-                // This is not an error but indicates a complicated topology. In any case, ignore this.
-                accepted = false;
-                ignore_reason = string_printf("it points to '%s' (according to server id:s).", name());
-            }
-            else if (slave_conn.settings.master_endpoint == my_host_port)
-            {
-                accepted = false;
-                ignore_reason = string_printf("it points to '%s' (according to master host:port).", name());
-            }
-            else
-            {
-                // Compare to connections already existing on this server.
-                for (const SlaveStatus& my_slave_conn : m_slave_status)
+                if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
                 {
-                    if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
-                    {
-                        accepted = false;
-                        const char format[] = "its Master_Server_Id (%" PRIi64
-                            ") matches an existing slave connection on '%s'.";
-                        ignore_reason = string_printf(format, master_id, name());
-                    }
-                    else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
-                    {
-                        accepted = false;
-                        const auto& endpoint = slave_conn.settings.master_endpoint;
-                        ignore_reason = string_printf(
-                            "its Master_Host (%s) and Master_Port (%i) match an existing "
-                            "slave connection on %s.",
-                            endpoint.host().c_str(), endpoint.port(), name());
-                    }
+                    accepted = false;
+                    const char format[] = "its Master_Server_Id (%" PRIi64
+                        ") matches an existing slave connection on '%s'.";
+                    ignore_reason = string_printf(format, master_id, name());
+                }
+                else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
+                {
+                    accepted = false;
+                    const auto& endpoint = slave_conn.settings.master_endpoint;
+                    ignore_reason = string_printf(
+                        "its Master_Host (%s) and Master_Port (%i) match an existing "
+                        "slave connection on %s.",
+                        endpoint.host().c_str(), endpoint.port(), name());
                 }
             }
+        }
 
-            if (!accepted)
-            {
-                *ignore_reason_out = ignore_reason;
-            }
-            return accepted;
-        };
+        if (!accepted)
+        {
+            *ignore_reason_out = ignore_reason;
+        }
+        return accepted;
+    };
 
     // Need to keep track of connection names (both existing and new) to avoid using an existing name.
     std::set<string> connection_names;
@@ -1965,33 +1965,33 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
 
     // Helper function which checks that a connection name is unique and modifies it if not.
     auto check_modify_conn_name = [this, &connection_names](SlaveStatus::Settings* conn_settings) -> bool {
-            bool name_is_unique = false;
-            string conn_name = conn_settings->name;
-            if (connection_names.count(conn_name) > 0)
+        bool name_is_unique = false;
+        string conn_name = conn_settings->name;
+        if (connection_names.count(conn_name) > 0)
+        {
+            // If the name is used, generate a name using the host:port of the master,
+            // it should be unique.
+            string second_try = "To " + conn_settings->master_endpoint.to_string();
+            if (connection_names.count(second_try) > 0)
             {
-                // If the name is used, generate a name using the host:port of the master,
-                // it should be unique.
-                string second_try = "To " + conn_settings->master_endpoint.to_string();
-                if (connection_names.count(second_try) > 0)
-                {
-                    // Even this one exists, something is really wrong. Give up.
-                    MXB_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
-                              "already taken.", name(), conn_name.c_str(), second_try.c_str());
-                }
-                else
-                {
-                    MXB_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
-                                "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
-                    conn_settings->name = second_try;
-                    name_is_unique = true;
-                }
+                // Even this one exists, something is really wrong. Give up.
+                MXB_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
+                          "already taken.", name(), conn_name.c_str(), second_try.c_str());
             }
             else
             {
+                MXB_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
+                            "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
+                conn_settings->name = second_try;
                 name_is_unique = true;
             }
-            return name_is_unique;
-        };
+        }
+        else
+        {
+            name_is_unique = true;
+        }
+        return name_is_unique;
+    };
 
     bool error = false;
     for (size_t i = 0; !error && (i < conns_to_merge.size()); i++)
@@ -2328,8 +2328,8 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             set_status(SERVER_AUTH_ERROR);
         }
 
-        /* Avoid spamming and only log if this is the first tick or if server was
-         * running last tick or if server has started to reject the monitor. If we failed to log in due to authentication failure,
+        /* Avoid spamming and only log if this is the first tick or if server was running last tick or
+         * if server has started to reject the monitor. If we failed to log in due to authentication failure,
          * log that as well. */
         if (first_tick || had_status(SERVER_RUNNING)
             || (has_status(SERVER_AUTH_ERROR) && !had_status(SERVER_AUTH_ERROR)))
@@ -2410,51 +2410,51 @@ void MariaDBServer::update_locks_status()
 {
     /* Read a lock status from a result row. */
     auto read_lock_status = [this](const QueryResult& is_used_row, int ind) {
-            ServerLock rval;
-            if (is_used_row.field_is_null(ind))
-            {
-                // null means the lock is free.
-                rval.set_status(ServerLock::Status::FREE);
-            }
-            else
-            {
-                auto lock_owner_id = is_used_row.get_int(ind);
-                // Either owned by this MaxScale or another.
-                auto new_status = (lock_owner_id == conn_id()) ? ServerLock::Status::OWNED_SELF :
-                    ServerLock::Status::OWNED_OTHER;
-                rval.set_status(new_status, lock_owner_id);
-            }
-            return rval;
-        };
+        ServerLock rval;
+        if (is_used_row.field_is_null(ind))
+        {
+            // null means the lock is free.
+            rval.set_status(ServerLock::Status::FREE);
+        }
+        else
+        {
+            auto lock_owner_id = is_used_row.get_int(ind);
+            // Either owned by this MaxScale or another.
+            auto new_status = (lock_owner_id == conn_id()) ? ServerLock::Status::OWNED_SELF :
+                ServerLock::Status::OWNED_OTHER;
+            rval.set_status(new_status, lock_owner_id);
+        }
+        return rval;
+    };
 
     auto report_unexpected_lock = [this](ServerLock old_status, ServerLock new_status,
                                          const string& lock_name) {
-            bool owned_lock = (old_status.status() == ServerLock::Status::OWNED_SELF);
-            if (new_status.status() == ServerLock::Status::OWNED_SELF)
+        bool owned_lock = (old_status.status() == ServerLock::Status::OWNED_SELF);
+        if (new_status.status() == ServerLock::Status::OWNED_SELF)
+        {
+            // This MaxScale has the lock. Print warning if it got the lock without knowing it.
+            if (!owned_lock)
             {
-                // This MaxScale has the lock. Print warning if it got the lock without knowing it.
-                if (!owned_lock)
-                {
-                    MXB_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
-                                lock_name.c_str(), name());
-                }
+                MXB_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
+                            lock_name.c_str(), name());
             }
-            else
+        }
+        else
+        {
+            // Don't have the lock. Print a warning if lock was lost without releasing it.
+            // This may happen if connection broke and was recreated.
+            if (owned_lock)
             {
-                // Don't have the lock. Print a warning if lock was lost without releasing it.
-                // This may happen if connection broke and was recreated.
-                if (owned_lock)
+                string msg = string_printf("Lost the lock '%s' on server '%s' without releasing it.",
+                                           lock_name.c_str(), name());
+                if (new_status.status() == ServerLock::Status::OWNED_OTHER)
                 {
-                    string msg = string_printf("Lost the lock '%s' on server '%s' without releasing it.",
-                                               lock_name.c_str(), name());
-                    if (new_status.status() == ServerLock::Status::OWNED_OTHER)
-                    {
-                        msg += string_printf(" The lock is now owned by connection %li.", new_status.owner());
-                    }
-                    MXB_WARNING("%s", msg.c_str());
+                    msg += string_printf(" The lock is now owned by connection %li.", new_status.owner());
                 }
+                MXB_WARNING("%s", msg.c_str());
             }
-        };
+        }
+    };
 
     // First, check who currently has the locks. If the query fails, assume that this MaxScale does not
     // have the locks. This is correct if connection failed.
