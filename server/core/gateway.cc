@@ -464,8 +464,8 @@ static void sigfatal_handler(int i)
     char str[512]; // Enough
     sprintf(str,
             "MaxScale %s received fatal signal %d. "
-            "Commit ID: %s System name: %s Release string: %s",
-            MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
+            "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
+            MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
 
     cerr << str << "\n" << endl;
 
