@@ -278,6 +278,22 @@ parameters. Parameters are given in the HTTP query string:
     be used. Note the double quotes around the `"RW-Split-Router"`, they are
     required to correctly convert strings into JSON values.
 
+- `page[size]`
+
+  - The number of elements that are returned for resource collections. By
+    default all elements in the resource collection are returned. The value must
+    be a valid positive integer, otherwise the parameter is ignored. If
+    pagination is used, the `links` object will have pagination links to the
+    next page if more elements are available.
+
+- `page[number]`
+
+  - How many pages of results to skip. The first page of results starts from 0
+    and each page has no more than `page[size]` elements. If defined,
+    `page[size]` must also be defined, otherwise this parameter is ignored. This
+    should be considered pseudo-pagination as the results are not guaranteed to
+    be consistent between requests.
+
 - `sync`
 
   - Control configuration synchronization.

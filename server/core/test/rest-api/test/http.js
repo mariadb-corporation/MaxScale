@@ -215,6 +215,40 @@ describe("HTTP", function () {
         res.data.relationships.should.have.keys("servers");
       });
     });
+
+    it("Paginates results", async function () {
+      var res = await request.get(base_url + "/servers?page[size]=3&page[number]=0");
+      validate_func(res).should.be.true;
+      expect(res.data.length).to.equal(3);
+    });
+
+    it("Contains valid pagination links", async function () {
+      var res = await request.get(base_url + "/servers?page[size]=1");
+      validate_func(res).should.be.true;
+      const first = res.links.first;
+      const last = res.links.last;
+
+      // Second server
+      res = await request.get(res.links.next);
+      validate_func(res).should.be.true;
+      // Third server
+      res = await request.get(res.links.next);
+      validate_func(res).should.be.true;
+      // Fourth server
+      res = await request.get(res.links.next);
+      validate_func(res).should.be.true;
+
+      expect(res.links.last).to.equal(last);
+      expect(res.links.next).to.be.undefined;
+      expect(first).to.equal(res.links.first);
+    });
+
+    it("Returns one page with large page size", async function () {
+      var res = await request.get(base_url + "/servers?page[size]=9999");
+      validate_func(res).should.be.true;
+      expect(res.data.length).to.equal(4);
+      expect(res.links.last).to.equal(res.links.first);
+    });
   });
 
   after(stopMaxScale);

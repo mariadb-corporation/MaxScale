@@ -1785,6 +1785,23 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
     }
 }
 
+static void paginate_result(const HttpRequest& request, HttpResponse& response)
+{
+    auto limit = request.get_option("page[size]");
+    auto offset = request.get_option("page[number]");
+
+    if (!limit.empty())
+    {
+        int64_t lim = strtol(limit.c_str(), nullptr, 10);
+        int64_t off = offset.empty() ? 0 :  strtol(offset.c_str(), nullptr, 10);
+
+        if (lim > 0 && off >= 0)
+        {
+            response.paginate(lim, off);
+        }
+    }
+}
+
 static HttpResponse handle_request(const HttpRequest& request)
 {
     // Redirect log output into the runtime error message buffer
@@ -1887,6 +1904,7 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
+        paginate_result(request, rval);
         remove_unwanted_fields(request, rval);
         remove_unwanted_rows(request, rval);
     }

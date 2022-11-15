@@ -179,6 +179,16 @@ public:
      */
     void remove_rows(const std::string& json_ptr, json_t* value);
 
+    /**
+     * Paginates the result
+     *
+     * Only works if the `data` member of the response JSON is an array.
+     *
+     * @param limit  The page size
+     * @param offset The page offset, starts from 0
+     */
+    void paginate(int64_t limit, int64_t offset);
+
     Handler websocket_handler()
     {
         return m_handler;

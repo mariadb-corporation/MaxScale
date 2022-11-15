@@ -601,11 +601,22 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             handle_default_db_response();
         }
 
-        if ((m_state & INIT_MAPPING) == 0)
+        if (m_state & INIT_MAPPING)
         {
-            /** If the client is waiting for a reply, send an error. */
-            mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_clone_shallow(pMessage), route, mxs::Reply());
+            // An error during the shard mapping is not a fatal response. Broken servers are allowed to exist
+            // as the user might not exist on all backends.
+            mxs::Reply tmp;
+            uint16_t errcode = mxs_mysql_get_mysql_errno(pMessage);
+            std::string errmsg = mxs::extract_error(pMessage);
+            std::string sqlstate = "HY000";
+            tmp.set_error(errcode, errmsg.begin(), errmsg.end(), sqlstate.begin(), sqlstate.end());
+            handle_mapping_reply(bref, tmp);
+        }
+        else if (!bref->should_ignore_response())
+        {
+            // A result that was to be returned to the client was expected from this backend. Since the
+            // schemarouter does not have any retrying capabilities, the only option is to kill the session.
+            m_pSession->kill();
         }
     }
 
@@ -1187,7 +1198,9 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     if (reply.error())
     {
-        MXB_SERROR("Mapping query returned an error, closing session: " << reply.error().message());
+        MXB_INFO("Mapping query returned an error; ignoring server '%s': %s",
+                 bref->name(), reply.error().message().c_str());
+        rval = SHOWDB_FULL_RESPONSE;
     }
     else
     {
