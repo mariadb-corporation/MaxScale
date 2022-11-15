@@ -49,7 +49,7 @@ const defaultComputed = {
     current_service: () => dummy_all_services[0], // id: row_server_0
     service_connections_datasets: () => dummy_service_connection_datasets,
     serviceConnectionInfo: () => dummy_service_connection_info,
-    sessions_by_service: () =>
+    filtered_sessions: () =>
         dummy_all_sessions.map(s => ({
             ...s,
             relationships: {

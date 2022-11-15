@@ -7,77 +7,49 @@
                       toggleOnClick: () => (showTable = !showTable),
                       isContentVisible: showTable,
                       title: `${$mxs_tc('currentSessions', 2)}`,
-                      titleInfo: rows.length,
+                      titleInfo: total,
                   }
                 : null
         "
     >
-        <data-table
-            :headers="headers"
-            :data="rows"
+        <v-data-table
+            class="session-table--std"
             :loading="isLoading"
-            :noDataText="$mxs_t('noEntity', { entityName: $mxs_tc('sessions', 2) })"
-            showAll
-            showActionsOnHover
-            :customFilter="customFilter"
-            :itemsPerPage="50"
+            :no-data-text="$mxs_t('noEntity', { entityName: $mxs_tc('sessions', 2) })"
+            :options.sync="pagination"
+            disable-sort
+            :footer-props="footerOpts"
             v-bind="{ ...$attrs }"
         >
             <!-- Pass on all scopedSlots of data-table -->
             <template v-for="slot in Object.keys($scopedSlots)" v-slot:[slot]="slotData">
                 <slot :name="slot" v-bind="slotData" />
             </template>
-            <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
-                <mxs-tooltip-btn icon @click="onKillSession(item)">
-                    <template v-slot:btn-content>
-                        <v-icon size="18" color="error">$vuetify.icons.mxs_unlink</v-icon>
-                    </template>
-                    {{ $mxs_t('killSession') }}
-                </mxs-tooltip-btn>
-            </template>
             <template
-                v-if="headers.find(h => h.value === 'memory')"
-                v-slot:memory="{ data: { item: { memory } } }"
+                v-if="$attrs.headers.find(h => h.value === 'memory')"
+                v-slot:[`item.memory`]="{ value: memory }"
             >
-                <v-menu
-                    top
-                    offset-y
-                    transition="slide-y-transition"
-                    :close-on-content-click="false"
-                    open-on-hover
-                    allow-overflow
-                    content-class="shadow-drop"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            v-mxs-highlighter="{
-                                keyword: $typy($attrs, 'search').safeString,
-                                txt: memory.total,
-                            }"
-                            class="pointer override-td--padding"
-                            v-on="on"
-                        >
-                            {{ memory.total }}
-                        </div>
-                    </template>
-                    <v-sheet class="py-4 px-3 text-body-2">
-                        <table class="info-table px-1">
-                            <tr v-for="(value, key) in memory" :key="key">
-                                <td class="pr-5">{{ key }}</td>
-                                <td
-                                    v-mxs-highlighter="{
-                                        keyword: $typy($attrs, 'search').safeString,
-                                        txt: value,
-                                    }"
-                                >
-                                    {{ value }}
-                                </td>
-                            </tr>
-                        </table>
-                    </v-sheet>
-                </v-menu>
+                <memory-cell :data="memory" />
             </template>
-        </data-table>
+            <!-- Add action button in the last cell -->
+            <template v-if="isAdmin" v-slot:[`item.${lastHeader.value}`]="slotData">
+                <div class="d-flex justify-space-between align-center">
+                    <slot
+                        v-if="lastHeader.value !== 'memory'"
+                        :name="`item.${lastHeader.value}`"
+                        v-bind="slotData"
+                    />
+                    <memory-cell v-else :data="slotData.value" />
+                    <mxs-tooltip-btn icon @click="onKillSession(slotData.item)">
+                        <template v-slot:btn-content>
+                            <!-- TODO: only show when table row is hovered -->
+                            <v-icon size="18" color="error"> $vuetify.icons.mxs_unlink</v-icon>
+                        </template>
+                        {{ $mxs_t('killSession') }}
+                    </mxs-tooltip-btn>
+                </div>
+            </template>
+        </v-data-table>
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="$mxs_t('killSession')"
@@ -113,20 +85,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
-@confirm-kill: item:object.
-*/
+/**
+ * Emit:
+ * @get-data-from-api: void
+ * @confirm-kill: item:object.
+ */
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapMutations, mapGetters } from 'vuex'
 import asyncEmit from '@share/mixins/asyncEmit'
+import MemoryCell from './MemoryCell.vue'
 
 export default {
     name: 'sessions-table',
+    components: { MemoryCell },
     mixins: [asyncEmit],
     inheritAttrs: false, // bind $attrs to data-table
+
     props: {
-        rows: { type: [Object, Array], required: true },
-        headers: { type: Array },
         collapsible: { type: Boolean, default: false },
         delayLoading: { type: Boolean, default: false },
     },
@@ -140,28 +115,64 @@ export default {
         }
     },
     computed: {
-        ...mapState({ overlay_type: state => state.mxsApp.overlay_type }),
+        ...mapState({
+            overlay_type: state => state.mxsApp.overlay_type,
+            pagination_config: state => state.session.pagination_config,
+        }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
         isLoading() {
             if (!this.delayLoading) return false
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
+        total() {
+            return this.$attrs['server-items-length']
+        },
+        footerOpts() {
+            return {
+                'items-per-page-options': [5, 10, 50, 100, 500],
+            }
+        },
+        lastHeader() {
+            return this.$attrs.headers.at(-1)
+        },
+        // API page starts at 0, vuetify page starts at 1
+        pagination: {
+            get() {
+                const page =
+                    this.$typy(this.pagination_config, 'page').safeNumber === 0
+                        ? 1
+                        : this.pagination_config.page
+                return { ...this.pagination_config, page }
+            },
+            set(v) {
+                return this.SET_PAGINATION_CONFIG({ ...v, page: v.page - 1 })
+            },
+        },
+    },
+    watch: {
+        pagination: {
+            handler() {
+                this.asyncEmit('get-data-from-api')
+            },
+            deep: true,
+        },
+    },
+    created() {
+        this.SET_DEF_PAGINATION_CONFIG()
     },
     async mounted() {
         await this.$helpers.delay(this.delayLoading ? 400 : 0).then(() => (this.isMounting = false))
     },
     methods: {
+        ...mapMutations({
+            SET_DEF_PAGINATION_CONFIG: 'session/SET_DEF_PAGINATION_CONFIG',
+            SET_PAGINATION_CONFIG: 'session/SET_PAGINATION_CONFIG',
+        }),
         onKillSession(item) {
             this.confDlg = { isOpened: true, item }
         },
         async confirmKill() {
             await this.asyncEmit('confirm-kill', this.confDlg.item)
-        },
-        customFilter(v, search) {
-            let value = `${v}`
-            // filter for memory object
-            if (this.$typy(v).isObject) value = JSON.stringify(v)
-            return this.$helpers.ciStrIncludes(value, search)
         },
     },
 }
@@ -172,6 +183,50 @@ export default {
         white-space: nowrap;
         height: 24px;
         line-height: 1.5;
+    }
+}
+::v-deep .session-table--std {
+    thead {
+        tr {
+            box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1);
+            th {
+                background-color: $table-border !important;
+                border-bottom: none !important;
+                padding: 0 24px !important;
+                color: $small-text !important;
+                text-transform: uppercase;
+                font-size: 11px;
+                white-space: nowrap;
+                &:first-child {
+                    border-radius: 5px 0 0 0;
+                }
+                &:last-child {
+                    border-radius: 0 5px 0 0;
+                }
+            }
+        }
+    }
+    tbody {
+        tr:hover {
+            background: #fafcfc !important;
+        }
+        tr:active {
+            background: #f2fcff !important;
+        }
+        td {
+            padding: 0 24px !important;
+            color: $navigation !important;
+            border-bottom: thin solid $table-border !important;
+            &:last-child:not(.hide) {
+                border-right: thin solid $table-border;
+            }
+            &:first-child:not(.hide) {
+                border-left: thin solid $table-border;
+            }
+        }
+    }
+    .v-data-footer {
+        border-top: thin solid $table-border !important;
     }
 }
 </style>

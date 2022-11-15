@@ -92,23 +92,7 @@ const mountOptions = {
     computed: {
         current_server: () => dummy_all_servers[0], // id: row_server_0
         monitor_diagnostics: () => dummy_monitor_diagnostics,
-        all_sessions: () =>
-            dummy_all_sessions.map(s => ({
-                ...s,
-                attributes: {
-                    ...s.attributes,
-                    connections: [
-                        {
-                            connection_id: 14,
-                            server: 'row_server_0',
-                        },
-                        {
-                            connection_id: 13,
-                            server: 'row_server_1',
-                        },
-                    ],
-                },
-            })),
+        filtered_sessions: () => dummy_all_sessions,
     },
     stubs: {
         'refresh-rate': "<div class='refresh-rate'></div>",

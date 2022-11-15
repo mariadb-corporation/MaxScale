@@ -65,7 +65,7 @@ export const dashboardTabRoutes = [
             group: DASHBOARD,
         },
         name: 'sessions',
-        text: 'current sessions',
+        text: 'currentSessions',
         isTabRoute: true,
     },
     {

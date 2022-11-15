@@ -80,17 +80,16 @@
                             </v-col>
                             <v-col cols="7">
                                 <sessions-table
-                                    :search="search_keyword"
-                                    :collapsible="true"
-                                    :delayLoading="true"
-                                    :rows="sessionsTableRows"
+                                    collapsible
+                                    delayLoading
                                     :headers="sessionsTableHeader"
-                                    :sortDesc="true"
-                                    sortBy="connected"
+                                    :items="sessionsTableRows"
+                                    :server-items-length="getTotalFilteredSessions"
+                                    @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
                                     @confirm-kill="
                                         killSession({
                                             id: $event.id,
-                                            callback: fetchSessionsFilterByService(serviceId),
+                                            callback: fetchSessionsWithFilter(filterSessionParam),
                                         })
                                     "
                                 />
@@ -116,7 +115,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import refreshRate from '@share/mixins/refreshRate'
@@ -155,7 +154,7 @@ export default {
             should_refresh_resource: 'should_refresh_resource',
             current_service: state => state.service.current_service,
             service_connections_datasets: state => state.service.service_connections_datasets,
-            sessions_by_service: state => state.session.sessions_by_service,
+            filtered_sessions: state => state.session.filtered_sessions,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
             ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
                 state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
@@ -163,6 +162,11 @@ export default {
         serviceId() {
             return this.$route.params.id
         },
+        ...mapGetters({
+            getTotalFilteredSessions: 'session/getTotalFilteredSessions',
+            getFilterParamByServiceId: 'session/getFilterParamByServiceId',
+        }),
+
         serviceConnectionInfo() {
             const { total_connections, connections } = this.$typy(
                 this.current_service,
@@ -178,7 +182,7 @@ export default {
             return this.current_service.attributes.router
         },
         sessionsTableRows() {
-            return this.sessions_by_service.map(
+            return this.filtered_sessions.map(
                 ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
                     id,
                     user: `${user}@${remote}`,
@@ -187,6 +191,9 @@ export default {
                     memory,
                 })
             )
+        },
+        filterSessionParam() {
+            return this.getFilterParamByServiceId(this.$route.params.id)
         },
     },
     watch: {
@@ -219,7 +226,7 @@ export default {
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             updateServiceParameters: 'service/updateServiceParameters',
-            fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
+            fetchSessionsWithFilter: 'session/fetchSessionsWithFilter',
             fetchAllFilters: 'filter/fetchAllFilters',
             killSession: 'session/killSession',
         }),
@@ -231,7 +238,7 @@ export default {
         async fetchAll() {
             await this.fetchService()
             await Promise.all([
-                this.fetchSessionsFilterByService(this.serviceId),
+                this.fetchSessionsWithFilter(this.filterSessionParam),
                 this.processRoutingTargetsTable(),
                 this.processRelationshipTable('filters'),
                 this.processRelationshipTable('listeners'),
@@ -246,7 +253,6 @@ export default {
             const timestamp = Date.now()
             await this.$refs.overviewHeader.updateChart(timestamp)
         },
-
         async genRelationshipRows(type) {
             const { relationships: { [`${type}`]: { data = [] } = {} } = {} } = this.current_service
             let arr = []
