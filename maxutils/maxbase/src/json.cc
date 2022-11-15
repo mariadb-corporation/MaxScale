@@ -439,14 +439,50 @@ void Json::set_string(const char* key, const std::string& value)
     set_string(key, value.c_str());
 }
 
+void Json::set_string(std::string_view value)
+{
+    if (json_is_string(m_obj))
+    {
+        json_string_setn(m_obj, value.data(), value.length());
+    }
+    else
+    {
+        m_errormsg = "Value is not a string";
+    }
+}
+
 void Json::set_int(const char* key, int64_t value)
 {
     json_object_set_new(m_obj, key, json_integer(value));
 }
 
+void Json::set_int(int64_t value)
+{
+    if (json_is_integer(m_obj))
+    {
+        json_integer_set(m_obj, value);
+    }
+    else
+    {
+        m_errormsg = "Value is not an integer";
+    }
+}
+
 void Json::set_float(const char* key, double value)
 {
     json_object_set_new(m_obj, key, json_real(value));
+}
+
+void Json::set_float(double value)
+{
+    if (json_is_real(m_obj))
+    {
+        json_real_set(m_obj, value);
+    }
+    else
+    {
+        m_errormsg = "Value is not a float";
+    }
 }
 
 void Json::set_bool(const char* key, bool value)
@@ -531,11 +567,19 @@ Json::Json(Type type)
         break;
 
     case Type::STRING:
+        m_obj = json_string("");
+        break;
+
     case Type::INTEGER:
+        m_obj = json_integer(0);
+        break;
+
     case Type::REAL:
+        m_obj = json_real(0);
+        break;
+
     case Type::BOOL:
-        // These are currently not useful (or required), as the contained value cannot be modified.
-        mxb_assert(!true);
+        m_obj = json_boolean(false);
         break;
 
     case Type::JSON_NULL:

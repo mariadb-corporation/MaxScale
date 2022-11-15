@@ -16,6 +16,7 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <maxbase/jansson.hh>
@@ -56,7 +57,11 @@ public:
     };
 
     /**
-     * Construct a new Json wrapper object. The contained object is initialized with the given type.
+     * Construct a new Json wrapper object.
+     *
+     * The contained object is "default-initialized" with the given type: arrays and objects are empty,
+     * numbers are 0, booleans are false and strings are empty. Nulls are always null and undefined leaves the
+     * held object empty.
      *
      * @param obj The type of the object to create
      */
@@ -291,6 +296,15 @@ public:
     void set_string(const char* key, const std::string& value);
 
     /**
+     * Store a JSON string
+     *
+     * The held object will be updated with the new values if it is a JSON string.
+     *
+     * @param value The value to set
+     */
+    void set_string(std::string_view value);
+
+    /**
      * Store a JSON integer in a field
      *
      * Note that JavaScript does not have a concept of integers and only has floating point numbers. Jansson
@@ -304,12 +318,30 @@ public:
     void set_int(const char* key, int64_t value);
 
     /**
+     * Store a JSON integer
+     *
+     * The held object will be updated with the new value if it is a JSON integer.
+     *
+     * @param value The value to set
+     */
+    void set_int(int64_t value);
+
+    /**
      * Store a JSON number in a field
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
      */
     void set_float(const char* key, double value);
+
+    /**
+     * Store a JSON number
+     *
+     * The held object will be updated with the new value if it is a JSON number.
+     *
+     * @param value The value to set
+     */
+    void set_float(double value);
 
     /**
      * Store a JSON boolean in a field
