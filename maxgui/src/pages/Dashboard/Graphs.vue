@@ -87,7 +87,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'graphs',
@@ -133,8 +133,10 @@ export default {
             all_servers: state => state.all_servers,
         }),
         ...mapState('session', {
-            all_sessions: state => state.all_sessions,
             sessions_datasets: state => state.sessions_datasets,
+        }),
+        ...mapGetters({
+            getTotalSessions: 'session/getTotalSessions',
         }),
     },
 
@@ -215,7 +217,7 @@ export default {
             sessionsChart.chartData.datasets.forEach(function(dataset) {
                 dataset.data.push({
                     x: timestamp,
-                    y: self.all_sessions.length,
+                    y: self.getTotalSessions,
                 })
             })
         },

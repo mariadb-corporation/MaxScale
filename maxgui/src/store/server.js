@@ -289,6 +289,7 @@ export default {
     },
     getters: {
         // -------------- below getters are available only when fetchAllServers has been dispatched
+        getTotalServers: state => state.all_servers.length,
         getAllServersMap: state => {
             let map = new Map()
             state.all_servers.forEach(ele => {

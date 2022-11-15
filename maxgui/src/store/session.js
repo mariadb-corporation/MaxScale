@@ -15,12 +15,16 @@ export default {
     namespaced: true,
     state: {
         all_sessions: [],
+        total_sessions: 0,
         sessions_datasets: [],
         sessions_by_service: [],
     },
     mutations: {
         SET_ALL_SESSIONS(state, payload) {
             state.all_sessions = payload
+        },
+        SET_TOTAL_SESSIONS(state, payload) {
+            state.total_sessions = payload
         },
         SET_SESSIONS_DATASETS(state, payload) {
             state.sessions_datasets = payload
@@ -33,7 +37,10 @@ export default {
         async fetchAllSessions({ commit }) {
             try {
                 let res = await this.$http.get(`/sessions`)
-                if (res.data.data) commit('SET_ALL_SESSIONS', res.data.data)
+                if (res.data.data) {
+                    commit('SET_ALL_SESSIONS', res.data.data)
+                    commit('SET_TOTAL_SESSIONS', res.data.data.length)
+                }
             } catch (e) {
                 const logger = this.vue.$logger('store-sessions-fetchAllSessions')
                 logger.error(e)
@@ -62,5 +69,8 @@ export default {
                 logger.error(e)
             }
         },
+    },
+    getters: {
+        getTotalSessions: state => state.total_sessions,
     },
 }

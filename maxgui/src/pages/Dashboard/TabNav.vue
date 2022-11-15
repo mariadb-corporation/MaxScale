@@ -28,7 +28,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import tabRoutes from 'router/tabRoutes'
 
 export default {
@@ -41,18 +41,17 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            all_filters: state => state.filter.all_filters,
-            all_listeners: state => state.listener.all_listeners,
-            all_servers: state => state.server.all_servers,
-            all_services: state => state.service.all_services,
-            all_sessions: state => state.session.all_sessions,
+        ...mapGetters({
+            getTotalFilters: 'filter/getTotalFilters',
+            getTotalListeners: 'listener/getTotalListeners',
+            getTotalServers: 'server/getTotalServers',
+            getTotalServices: 'service/getTotalServices',
+            getTotalSessions: 'session/getTotalSessions',
         }),
     },
-
     methods: {
         getTotal(name) {
-            return this[`all_${name}`].length
+            return this[`getTotal${this.$help.capitalizeFirstLetter(name)}`]
         },
     },
 }

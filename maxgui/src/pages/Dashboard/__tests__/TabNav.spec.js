@@ -24,24 +24,21 @@ import {
     routeChangesMock,
 } from '@tests/unit/utils'
 
+const mockResources = {
+    dummy_all_sessions,
+    dummy_all_filters,
+    dummy_all_listeners,
+    dummy_all_servers,
+    dummy_all_services,
+}
 const mockupComputed = {
-    all_sessions: () => dummy_all_sessions,
-    all_filters: () => dummy_all_filters,
-    all_listeners: () => dummy_all_listeners,
-    all_servers: () => dummy_all_servers,
-    all_services: () => dummy_all_services,
+    getTotalFilters: () => dummy_all_filters.length,
+    getTotalListeners: () => dummy_all_listeners.length,
+    getTotalServers: () => dummy_all_servers.length,
+    getTotalServices: () => dummy_all_services.length,
+    getTotalSessions: () => dummy_all_sessions.length,
 }
-/**
- *
- *
- * @param {Object} payload
- * @param {Object} payload.wrapper mounted component wrapper
- * @param {String} payload.resourceType resource type: servers, services, filters, listeners, sessions
- * @param {Array} payload.allResources all resources
- */
-function testGetTotalMethod({ wrapper, resourceType, allResources }) {
-    expect(wrapper.vm.getTotal(resourceType)).to.be.equals(allResources.length)
-}
+
 describe('Dashboard TabNav', () => {
     let wrapper, axiosStub
 
@@ -66,12 +63,10 @@ describe('Dashboard TabNav', () => {
         const resourceTypes = ['servers', 'sessions', 'services', 'listeners', 'filters']
 
         resourceTypes.forEach(type => {
-            const allResources = mockupComputed[`all_${type}`]() // IIFE
-            testGetTotalMethod({
-                wrapper,
-                resourceType: type,
-                allResources: allResources,
-            })
+            const total = mockupComputed[
+                `getTotal${wrapper.vm.$help.capitalizeFirstLetter(type)}`
+            ]() // IIFE
+            expect(total).to.be.equals(mockResources[`dummy_all_${type}`].length)
         })
     })
 
@@ -81,7 +76,9 @@ describe('Dashboard TabNav', () => {
         aTags.forEach((aTag, i) => {
             const { text: tabText, name: routeName } = tabRoutes[i]
             const content = aTag.text().replace(/\s{2,}/g, ' ')
-            expect(content).to.be.equals(`${tabText} (${wrapper.vm.getTotal(routeName)})`)
+            expect(content).to.be.equals(
+                `${wrapper.vm.$tc(tabText, 2)} (${wrapper.vm.getTotal(routeName)})`
+            )
         })
     })
 

@@ -251,6 +251,7 @@ export default {
     },
     getters: {
         // -------------- below getters are available only when fetchAllMonitors has been dispatched
+        getTotalMonitors: state => state.all_monitors.length,
         getAllMonitorsMap: state => {
             let map = new Map()
             state.all_monitors.forEach(ele => {
