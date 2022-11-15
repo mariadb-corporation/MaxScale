@@ -282,18 +282,22 @@ public:
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
+     *
+     * @return True if the value was set
      */
-    void set_object(const char* key, const Json& value);
-    void set_object(const char* key, Json&& value);
+    bool set_object(const char* key, const Json& value);
+    bool set_object(const char* key, Json&& value);
 
     /**
      * Store a JSON string in a field
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
+     *
+     * @return True if the value was set
      */
-    void set_string(const char* key, const char* value);
-    void set_string(const char* key, const std::string& value);
+    bool set_string(const char* key, const char* value);
+    bool set_string(const char* key, const std::string& value);
 
     /**
      * Store a JSON string
@@ -301,8 +305,10 @@ public:
      * The held object will be updated with the new values if it is a JSON string.
      *
      * @param value The value to set
+     *
+     * @return True if the value was set
      */
-    void set_string(std::string_view value);
+    bool set_string(std::string_view value);
 
     /**
      * Store a JSON integer in a field
@@ -314,8 +320,10 @@ public:
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
+     *
+     * @return True if the value was set
      */
-    void set_int(const char* key, int64_t value);
+    bool set_int(const char* key, int64_t value);
 
     /**
      * Store a JSON integer
@@ -323,16 +331,20 @@ public:
      * The held object will be updated with the new value if it is a JSON integer.
      *
      * @param value The value to set
+     *
+     * @return True if the value was set
      */
-    void set_int(int64_t value);
+    bool set_int(int64_t value);
 
     /**
      * Store a JSON number in a field
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
+     *
+     * @return True if the value was set
      */
-    void set_float(const char* key, double value);
+    bool set_float(const char* key, double value);
 
     /**
      * Store a JSON number
@@ -340,23 +352,29 @@ public:
      * The held object will be updated with the new value if it is a JSON number.
      *
      * @param value The value to set
+     *
+     * @return True if the value was set
      */
-    void set_float(double value);
+    bool set_float(double value);
 
     /**
      * Store a JSON boolean in a field
      *
      * @param key   The name of the field to store the value in
      * @param value The value to store
+     *
+     * @return True if the value was set
      */
-    void set_bool(const char* key, bool value);
+    bool set_bool(const char* key, bool value);
 
     /**
      * Store a JSON null in a field
      *
      * @param key   The name of the field to store the value in
+     *
+     * @return True if the value was set
      */
-    void set_null(const char* key);
+    bool set_null(const char* key);
 
     /**
      * Append an element to an array

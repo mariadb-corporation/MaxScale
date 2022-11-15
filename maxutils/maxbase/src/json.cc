@@ -429,70 +429,85 @@ bool Json::try_get_string(const string& key, std::string* out) const
     return try_get_string(key.c_str(), out);
 }
 
-void Json::set_string(const char* key, const char* value)
+bool Json::set_string(const char* key, const char* value)
 {
-    json_object_set_new(m_obj, key, json_string(value));
+    return json_object_set_new(m_obj, key, json_string(value)) == 0;
 }
 
-void Json::set_string(const char* key, const std::string& value)
+bool Json::set_string(const char* key, const std::string& value)
 {
-    set_string(key, value.c_str());
+    return set_string(key, value.c_str());
 }
 
-void Json::set_string(std::string_view value)
+bool Json::set_string(std::string_view value)
 {
-    if (json_is_string(m_obj))
+    bool ok = json_is_string(m_obj);
+
+    if (ok)
     {
         json_string_setn(m_obj, value.data(), value.length());
     }
     else
     {
         m_errormsg = "Value is not a string";
+        mxb_assert(!true);
     }
+
+    return ok;
 }
 
-void Json::set_int(const char* key, int64_t value)
+bool Json::set_int(const char* key, int64_t value)
 {
-    json_object_set_new(m_obj, key, json_integer(value));
+    return json_object_set_new(m_obj, key, json_integer(value)) == 0;
 }
 
-void Json::set_int(int64_t value)
+bool Json::set_int(int64_t value)
 {
-    if (json_is_integer(m_obj))
+    bool ok = json_is_integer(m_obj);
+
+    if (ok)
     {
         json_integer_set(m_obj, value);
     }
     else
     {
         m_errormsg = "Value is not an integer";
+        mxb_assert(!true);
     }
+
+    return ok;
 }
 
-void Json::set_float(const char* key, double value)
+bool Json::set_float(const char* key, double value)
 {
-    json_object_set_new(m_obj, key, json_real(value));
+    return json_object_set_new(m_obj, key, json_real(value)) == 0;
 }
 
-void Json::set_float(double value)
+bool Json::set_float(double value)
 {
-    if (json_is_real(m_obj))
+    bool ok = json_is_real(m_obj);
+
+    if (ok)
     {
         json_real_set(m_obj, value);
     }
     else
     {
         m_errormsg = "Value is not a float";
+        mxb_assert(!true);
     }
+
+    return ok;
 }
 
-void Json::set_bool(const char* key, bool value)
+bool Json::set_bool(const char* key, bool value)
 {
-    json_object_set_new(m_obj, key, json_boolean(value));
+    return json_object_set_new(m_obj, key, json_boolean(value)) == 0;
 }
 
-void Json::set_null(const char* key)
+bool Json::set_null(const char* key)
 {
-    json_object_set_new(m_obj, key, json_null());
+    return json_object_set_new(m_obj, key, json_null()) == 0;
 }
 
 void Json::add_array_elem(const Json& elem)
@@ -525,15 +540,16 @@ void Json::add_array_elem(const char* key, Json&& elem)
     elem.m_obj = nullptr;
 }
 
-void Json::set_object(const char* key, const Json& value)
+bool Json::set_object(const char* key, const Json& value)
 {
-    json_object_set(m_obj, key, value.m_obj);
+    return json_object_set(m_obj, key, value.m_obj) == 0;
 }
 
-void Json::set_object(const char* key, Json&& value)
+bool Json::set_object(const char* key, Json&& value)
 {
-    json_object_set_new(m_obj, key, value.m_obj);
+    bool ok = json_object_set_new(m_obj, key, value.m_obj) == 0;
     value.m_obj = nullptr;
+    return ok;
 }
 
 bool Json::save(const std::string& filepath, Format format)
