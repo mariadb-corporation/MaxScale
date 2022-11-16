@@ -1906,14 +1906,20 @@ void Service::init_for(RoutingWorker* pWorker)
 {
     mxb_assert(RoutingWorker::get_current() == pWorker);
     mxb_assert(!*m_usercache);
-    *m_usercache = user_account_manager()->create_user_account_cache();
+    if (m_usermanager)
+    {
+        *m_usercache = m_usermanager->create_user_account_cache();
+    }
 }
 
 void Service::finish_for(RoutingWorker* pWorker)
 {
     mxb_assert(RoutingWorker::get_current() == pWorker);
-    mxb_assert(*m_usercache);
-    (*m_usercache).reset();
+    if (m_usermanager)
+    {
+        mxb_assert(*m_usercache);
+        (*m_usercache).reset();
+    }
 }
 
 void Service::request_user_account_update()
