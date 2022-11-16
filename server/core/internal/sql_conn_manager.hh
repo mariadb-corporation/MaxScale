@@ -50,16 +50,31 @@ public:
     ConnectionManager() = default;
     ~ConnectionManager();
 
-    struct Connection
+    class Connection
     {
-        Connection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf);
-        ~Connection();
+    public:
+        Connection(const Connection&) = delete;
+        Connection& operator=(const Connection&) = delete;
+
+        Connection(const ConnectionConfig& cnf);
+        virtual ~Connection();
         void release();
 
         json_t* to_json() const;
 
+        virtual std::string error() = 0;
+
+        virtual bool cmd(const std::string& cmd) = 0;
+
+        virtual mxb::Json query(const std::string& sql, int64_t max_rows) = 0;
+
+        virtual uint32_t thread_id() const = 0;
+
+        virtual bool reconnect() = 0;
+
+        virtual bool ping() = 0;
+
         std::atomic_bool busy {false};
-        mxq::MariaDB     conn;
         int64_t          current_query_id {0};
         mxb::TimePoint   last_query_started;
         mxb::TimePoint   last_query_time;
@@ -67,6 +82,26 @@ public:
         ConnectionConfig config;
         std::string      sql;
         mxb::Json        result;
+    };
+
+    class MariaDBConnection : public Connection
+    {
+    public:
+        MariaDBConnection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf);
+        std::string error() override final;
+        bool        cmd(const std::string& cmd) override final;
+        mxb::Json   query(const std::string& sql, int64_t max_rows) override final;
+        uint32_t    thread_id() const override final;
+        bool        reconnect() override final;
+        bool        ping() override final;
+
+    private:
+        mxb::Json generate_json_representation(int64_t max_rows);
+        json_t*   generate_column_info(const mxq::MariaDBQueryResult::Fields& fields_info);
+        json_t*   generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
+                                          const mxq::MariaDBQueryResult::Fields& field_info);
+
+        mxq::MariaDB m_conn;
     };
 
     enum class Reason
@@ -100,10 +135,9 @@ public:
     /**
      * Add a connection to the map.
      *
-     * @param conn Existing Connector-C connection
-     * @return Id of added connection
+     * @param conn Existing connection
      */
-    std::string add(mxq::MariaDB&& conn, const ConnectionConfig& cnf);
+    std::string add(std::unique_ptr<Connection> conn);
 
     /**
      * Erase a connection from the map.

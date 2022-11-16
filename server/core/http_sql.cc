@@ -111,142 +111,6 @@ std::pair<std::string, std::string> get_connection_id(const HttpRequest& request
     return {id, err};
 }
 
-json_t* generate_column_info(const mxq::MariaDBQueryResult::Fields& fields_info)
-{
-    json_t* rval = json_array();
-    for (auto& elem : fields_info)
-    {
-        json_array_append_new(rval, json_string(elem.name.c_str()));
-    }
-    return rval;
-}
-
-json_t* generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
-                                const mxq::MariaDBQueryResult::Fields& field_info)
-{
-    using Type = mxq::MariaDBQueryResult::Field::Type;
-    json_t* rval = json_array();
-    auto n = field_info.size();
-    auto rowdata = resultset->rowdata();
-
-    for (size_t i = 0; i < n; i++)
-    {
-        json_t* value = nullptr;
-
-        if (rowdata[i])
-        {
-            switch (field_info[i].type)
-            {
-            case Type::INTEGER:
-                value = json_integer(strtol(rowdata[i], nullptr, 10));
-                break;
-
-            case Type::FLOAT:
-                value = json_real(strtod(rowdata[i], nullptr));
-                break;
-
-            case Type::NUL:
-                value = json_null();
-                break;
-
-            default:
-                value = json_string(rowdata[i]);
-                break;
-            }
-
-            if (!value)
-            {
-                value = json_null();
-            }
-        }
-        else
-        {
-            value = json_null();
-        }
-
-        json_array_append_new(rval, value);
-    }
-    return rval;
-}
-
-json_t* generate_json_representation(mxq::MariaDB& conn, int64_t max_rows)
-{
-    using ResultType = mxq::MariaDB::ResultType;
-    json_t* resultset_arr = json_array();
-
-    auto current_type = conn.current_result_type();
-    while (current_type != ResultType::NONE)
-    {
-        switch (current_type)
-        {
-        case ResultType::OK:
-            {
-                auto res = conn.get_ok_result();
-                json_t* ok = json_object();
-                json_object_set_new(ok, "last_insert_id", json_integer(res->insert_id));
-                json_object_set_new(ok, "warnings", json_integer(res->warnings));
-                json_object_set_new(ok, "affected_rows", json_integer(res->affected_rows));
-                json_array_append_new(resultset_arr, ok);
-            }
-            break;
-
-        case ResultType::ERROR:
-            {
-                auto res = conn.get_error_result();
-                json_t* err = json_object();
-                json_object_set_new(err, "errno", json_integer(res->error_num));
-                json_object_set_new(err, "message", json_string(res->error_msg.c_str()));
-                json_object_set_new(err, "sqlstate", json_string(res->sqlstate.c_str()));
-                json_array_append_new(resultset_arr, err);
-            }
-            break;
-
-        case ResultType::RESULTSET:
-            {
-                auto res = conn.get_resultset();
-                auto fields = res->fields();
-                json_t* resultset = json_object();
-                json_t* rows = json_array();
-                int64_t rows_read = 0;
-
-                // We have to read the whole resultset in order to find whether it ended with an error
-                while (res->next_row())
-                {
-                    if (rows_read++ < max_rows)
-                    {
-                        json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
-                    }
-                }
-
-                auto error = conn.get_error_result();
-
-                if (error->error_num)
-                {
-                    json_object_set_new(resultset, "errno", json_integer(error->error_num));
-                    json_object_set_new(resultset, "message", json_string(error->error_msg.c_str()));
-                    json_object_set_new(resultset, "sqlstate", json_string(error->sqlstate.c_str()));
-                    json_decref(rows);
-                }
-                else
-                {
-                    json_object_set_new(resultset, "data", rows);
-                    json_object_set_new(resultset, "fields", generate_column_info(fields));
-                    json_object_set_new(resultset, "complete", json_boolean(rows_read < max_rows));
-                }
-
-                json_array_append_new(resultset_arr, resultset);
-            }
-            break;
-
-        case ResultType::NONE:
-            break;
-        }
-        current_type = conn.next_result();
-    }
-
-    return resultset_arr;
-}
-
 HttpResponse
 construct_result_response(json_t* resultdata, const string& host, const std::string& self,
                           const string& sql, const string& query_id, const mxb::Duration& query_exec_time)
@@ -285,19 +149,6 @@ bool is_zero_address(const std::string& ip)
         in6_addr addr;
         decltype(addr.s6_addr) zero = {};
         return inet_pton(AF_INET6, ip.c_str(), &addr) == 1 && memcmp(addr.s6_addr, zero, sizeof(zero)) == 0;
-    }
-}
-
-void prepare_connection(HttpSql::ConnectionManager::Connection* conn, int64_t max_rows)
-{
-    // Ignore any results that have not yet been read
-    conn->result.reset();
-
-    if (conn->last_max_rows != max_rows)
-    {
-        std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
-        conn->conn.cmd("SET sql_select_limit=" + limit);
-        conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
     }
 }
 }
@@ -495,13 +346,13 @@ HttpResponse reconnect(const HttpRequest& request)
 
         if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
-            if (managed_conn->conn.reconnect())
+            if (managed_conn->reconnect())
             {
                 response = HttpResponse(MHD_HTTP_NO_CONTENT);
             }
             else
             {
-                response = create_error(managed_conn->conn.error(), MHD_HTTP_SERVICE_UNAVAILABLE);
+                response = create_error(managed_conn->error(), MHD_HTTP_SERVICE_UNAVAILABLE);
             }
 
             managed_conn->release();
@@ -607,11 +458,12 @@ HttpResponse query(const HttpRequest& request)
     auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self), async]() {
         if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
-            prepare_connection(managed_conn, max_rows);
+            // Ignore any results that have not yet been read
+            managed_conn->result.reset();
 
             int64_t query_id = ++managed_conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-            json_t* result_data = nullptr;
+            mxb::Json result_data(mxb::Json::Type::UNDEFINED);
             mxb::Duration exec_time {0};
 
             managed_conn->sql = sql;
@@ -621,19 +473,16 @@ HttpResponse query(const HttpRequest& request)
             {
                 mxs::thread_pool().execute(
                     [managed_conn, sql, max_rows]() {
-                    managed_conn->conn.streamed_query(sql);
+                    managed_conn->result = managed_conn->query(sql, max_rows);
                     managed_conn->last_query_time = mxb::Clock::now();
-                    managed_conn->result.reset(generate_json_representation(managed_conn->conn,
-                                                                            managed_conn->last_max_rows));
                     managed_conn->release();
                 }, "sql" + id_str);
             }
             else
             {
-                managed_conn->conn.streamed_query(sql);
+                result_data = managed_conn->query(sql, max_rows);
                 managed_conn->last_query_time = mxb::Clock::now();
                 exec_time = managed_conn->last_query_time - managed_conn->last_query_started;
-                result_data = generate_json_representation(managed_conn->conn, managed_conn->last_max_rows);
                 managed_conn->release();
                 // 'managed_conn' is now effectively back in storage and should not be used.
             }
@@ -641,7 +490,7 @@ HttpResponse query(const HttpRequest& request)
             string self_id = self;
             self_id.append("/").append(id_str);
 
-            HttpResponse response = construct_result_response(result_data, host, self_id,
+            HttpResponse response = construct_result_response(result_data.release(), host, self_id,
                                                               sql, id_str, exec_time);
 
             if (async)
@@ -753,7 +602,7 @@ HttpResponse etl(const HttpRequest& request)
     auto exec_query_cb = [id, host = move(host), self = move(self)]() {
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
-            prepare_connection(conn, 0);
+            conn->result.reset();
 
             int64_t query_id = ++conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
@@ -825,6 +674,8 @@ std::vector<std::string> get_connections()
 std::string create_connection(const ConnectionConfig& config, std::string* err)
 {
     std::string id;
+    std::unique_ptr<HttpSql::ConnectionManager::Connection> elem;
+
     mxq::MariaDB conn;
     auto& sett = conn.connection_settings();
     sett.user = config.user;
@@ -835,11 +686,16 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
 
     if (conn.open(config.host, config.port, config.db))
     {
-        id = this_unit.manager.add(move(conn), config);
+        elem = std::make_unique<HttpSql::ConnectionManager::MariaDBConnection>(move(conn), config);
     }
     else
     {
         *err = conn.error();
+    }
+
+    if (elem)
+    {
+        id = this_unit.manager.add(move(elem));
     }
 
     return id;

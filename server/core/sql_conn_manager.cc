@@ -13,6 +13,7 @@
 
 #include "internal/sql_conn_manager.hh"
 #include <maxbase/assert.hh>
+#include <maxbase/json.hh>
 #include <uuid/uuid.h>
 
 using std::move;
@@ -57,10 +58,8 @@ std::optional<ConnectionConfig> ConnectionManager::get_configuration(const std::
     return rval;
 }
 
-std::string ConnectionManager::add(mxq::MariaDB&& conn, const ConnectionConfig& cnf)
+std::string ConnectionManager::add(std::unique_ptr<Connection> elem)
 {
-    auto elem = std::make_unique<Connection>(move(conn), cnf);
-
     LockGuard guard(m_connection_lock);
 
     uuid_t uuid;
@@ -173,7 +172,7 @@ void ConnectionManager::cleanup_thread_func()
                 // TODO: If auto-reconnection is ever enabled on the connector, may need to detect
                 // it happening. To do that, check if mysql thread id changes during 'ping'.
                 if ((idle_time > idle_hard_limit)
-                    || (idle_time > idle_suspect_limit && !managed_conn->conn.ping()))
+                    || (idle_time > idle_suspect_limit && !managed_conn->ping()))
                 {
                     should_close = true;
                 }
@@ -229,9 +228,8 @@ ConnectionManager::Connection::~Connection()
     mxb_assert(!busy);
 }
 
-ConnectionManager::Connection::Connection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf)
-    : conn(move(new_conn))
-    , last_query_time(mxb::Clock::now())
+ConnectionManager::Connection::Connection(const ConnectionConfig& cnf)
+    : last_query_time(mxb::Clock::now())
     , config(cnf)
 {
 }
@@ -258,11 +256,192 @@ json_t* ConnectionManager::Connection::to_json() const
     }
 
     json_t* obj = json_object();
-    json_object_set_new(obj, "thread_id", json_integer(conn.thread_id()));
+    json_object_set_new(obj, "thread_id", json_integer(thread_id()));
     json_object_set_new(obj, "seconds_idle", json_real(idle));
     json_object_set_new(obj, "sql", json_string(sql.c_str()));
     json_object_set_new(obj, "execution_time", json_real(exec_time));
     json_object_set_new(obj, "target", json_string(config.target.c_str()));
     return obj;
+}
+
+ConnectionManager::MariaDBConnection::MariaDBConnection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf)
+    : Connection(cnf)
+    , m_conn(std::move(new_conn))
+{
+}
+
+std::string ConnectionManager::MariaDBConnection::error()
+{
+    return m_conn.error();
+}
+
+bool ConnectionManager::MariaDBConnection::cmd(const std::string& cmd)
+{
+    return m_conn.cmd(cmd);
+}
+
+mxb::Json ConnectionManager::MariaDBConnection::query(const std::string& sql, int64_t max_rows)
+{
+    if (this->last_max_rows != max_rows)
+    {
+        std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
+        this->cmd("SET sql_select_limit=" + limit);
+        this->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
+    }
+
+    m_conn.streamed_query(sql);
+    return generate_json_representation(last_max_rows);
+}
+
+uint32_t ConnectionManager::MariaDBConnection::thread_id() const
+{
+    return m_conn.thread_id();
+}
+
+bool ConnectionManager::MariaDBConnection::reconnect()
+{
+    return m_conn.reconnect();
+}
+
+bool ConnectionManager::MariaDBConnection::ping()
+{
+    return m_conn.ping();
+}
+
+json_t* ConnectionManager::MariaDBConnection::generate_column_info(
+    const mxq::MariaDBQueryResult::Fields& fields_info)
+{
+    json_t* rval = json_array();
+    for (auto& elem : fields_info)
+    {
+        json_array_append_new(rval, json_string(elem.name.c_str()));
+    }
+    return rval;
+}
+
+json_t* ConnectionManager::MariaDBConnection::generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
+                                                                      const mxq::MariaDBQueryResult::Fields& field_info)
+{
+    using Type = mxq::MariaDBQueryResult::Field::Type;
+    json_t* rval = json_array();
+    auto n = field_info.size();
+    auto rowdata = resultset->rowdata();
+
+    for (size_t i = 0; i < n; i++)
+    {
+        json_t* value = nullptr;
+
+        if (rowdata[i])
+        {
+            switch (field_info[i].type)
+            {
+            case Type::INTEGER:
+                value = json_integer(strtol(rowdata[i], nullptr, 10));
+                break;
+
+            case Type::FLOAT:
+                value = json_real(strtod(rowdata[i], nullptr));
+                break;
+
+            case Type::NUL:
+                value = json_null();
+                break;
+
+            default:
+                value = json_string(rowdata[i]);
+                break;
+            }
+
+            if (!value)
+            {
+                value = json_null();
+            }
+        }
+        else
+        {
+            value = json_null();
+        }
+
+        json_array_append_new(rval, value);
+    }
+    return rval;
+}
+
+mxb::Json ConnectionManager::MariaDBConnection::generate_json_representation(int64_t max_rows)
+{
+    using ResultType = mxq::MariaDB::ResultType;
+    json_t* resultset_arr = json_array();
+
+    auto current_type = m_conn.current_result_type();
+    while (current_type != ResultType::NONE)
+    {
+        switch (current_type)
+        {
+        case ResultType::OK:
+            {
+                auto res = m_conn.get_ok_result();
+                json_t* ok = json_object();
+                json_object_set_new(ok, "last_insert_id", json_integer(res->insert_id));
+                json_object_set_new(ok, "warnings", json_integer(res->warnings));
+                json_object_set_new(ok, "affected_rows", json_integer(res->affected_rows));
+                json_array_append_new(resultset_arr, ok);
+            }
+            break;
+
+        case ResultType::ERROR:
+            {
+                auto res = m_conn.get_error_result();
+                json_t* err = json_object();
+                json_object_set_new(err, "errno", json_integer(res->error_num));
+                json_object_set_new(err, "message", json_string(res->error_msg.c_str()));
+                json_object_set_new(err, "sqlstate", json_string(res->sqlstate.c_str()));
+                json_array_append_new(resultset_arr, err);
+            }
+            break;
+
+        case ResultType::RESULTSET:
+            {
+                auto res = m_conn.get_resultset();
+                auto fields = res->fields();
+                json_t* resultset = json_object();
+                json_t* rows = json_array();
+                int64_t rows_read = 0;
+
+                // We have to read the whole resultset in order to find whether it ended with an error
+                while (res->next_row())
+                {
+                    if (rows_read++ < max_rows)
+                    {
+                        json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
+                    }
+                }
+
+                auto error = m_conn.get_error_result();
+
+                if (error->error_num)
+                {
+                    json_object_set_new(resultset, "errno", json_integer(error->error_num));
+                    json_object_set_new(resultset, "message", json_string(error->error_msg.c_str()));
+                    json_object_set_new(resultset, "sqlstate", json_string(error->sqlstate.c_str()));
+                    json_decref(rows);
+                }
+                else
+                {
+                    json_object_set_new(resultset, "data", rows);
+                    json_object_set_new(resultset, "fields", generate_column_info(fields));
+                    json_object_set_new(resultset, "complete", json_boolean(rows_read < max_rows));
+                }
+
+                json_array_append_new(resultset_arr, resultset);
+            }
+            break;
+
+        case ResultType::NONE:
+            break;
+        }
+        current_type = m_conn.next_result();
+    }
+
+    return mxb::Json(resultset_arr, mxb::Json::RefType::STEAL);
 }
 }
