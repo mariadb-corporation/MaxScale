@@ -1135,6 +1135,11 @@ HttpResponse cb_sql_query_result(const HttpRequest& request)
     return HttpSql::query_result(request);
 }
 
+HttpResponse cb_sql_get_odbc_drivers(const HttpRequest& request)
+{
+    return HttpSql::odbc_drivers(request);
+}
+
 HttpResponse cb_sql_get_all(const HttpRequest& request)
 {
     return HttpSql::show_all_connections(request);
@@ -1509,6 +1514,7 @@ public:
         m_get.emplace_back(cb_sql_get_all, "sql");
         m_get.emplace_back(cb_sql_get_one, "sql", ":connection_id");
         m_get.emplace_back(cb_sql_query_result, "sql", ":connection_id", "queries", ":query_id");
+        m_get.emplace_back(cb_sql_get_odbc_drivers, "sql", "odbc", "drivers");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");

@@ -246,16 +246,31 @@ HttpResponse connect(const HttpRequest& request)
     json.try_get_string("db", &config.db);
     std::string target;
 
-    if (!json.try_get_string("user", &config.user)
-        || !json.try_get_string("password", &config.password)
-        || !json.try_get_string("target", &target))
+    if (!json.try_get_string("target", &target))
     {
-        return create_error("The `target`, `user` and `password` fields are mandatory");
+        return create_error("The `target` field is mandatory");
+    }
+
+    if (target == "odbc")
+    {
+        if (!json.try_get_string("connection_string", &config.odbc_string) || config.odbc_string.empty())
+        {
+            return create_error("Missing connection string for ODBC connection.");
+        }
+    }
+    else if (!json.try_get_string("user", &config.user) || !json.try_get_string("password", &config.password))
+    {
+        return create_error("The `user` and `password` fields are mandatory for this `target`");
     }
 
     config.target = target;
 
-    if (Server* server = ServerManager::find_by_unique_name(target))
+    if (!config.odbc_string.empty())
+    {
+        mxb_assert(target == "odbc");
+        // ODBC connection. Everything we need to connect is defined in the connection string.
+    }
+    else if (Server* server = ServerManager::find_by_unique_name(target))
     {
         config.host = server->address();
         config.port = server->port();
@@ -638,6 +653,31 @@ HttpResponse etl(const HttpRequest& request)
     return HttpResponse(std::move(exec_query_cb));
 }
 
+HttpResponse odbc_drivers(const HttpRequest& request)
+{
+    json_t* arr = json_array();
+
+    for (const auto& [driver, params] : mxq::ODBC::drivers())
+    {
+        json_t* obj = json_object();
+        json_object_set_new(obj, CN_ID, json_string(driver.c_str()));
+        json_object_set_new(obj, CN_TYPE, json_string("drivers"));
+
+
+        json_t* attr = json_object();
+
+        for (const auto& [k, v] : params)
+        {
+            json_object_set_new(attr, mxb::lower_case_copy(k).c_str(), json_string(v.c_str()));
+        }
+
+        json_object_set_new(obj, CN_ATTRIBUTES, attr);
+        json_array_append_new(arr, obj);
+    }
+
+    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), "sql/odbc/drivers", arr));
+}
+
 //
 // SQL connection implementation
 //
@@ -676,21 +716,47 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     std::string id;
     std::unique_ptr<HttpSql::ConnectionManager::Connection> elem;
 
-    mxq::MariaDB conn;
-    auto& sett = conn.connection_settings();
-    sett.user = config.user;
-    sett.password = config.password;
-    sett.timeout = config.timeout;
-    sett.ssl = config.ssl;
-    sett.proxy_protocol = config.proxy_protocol;
-
-    if (conn.open(config.host, config.port, config.db))
+    if (config.odbc_string.empty())
     {
-        elem = std::make_unique<HttpSql::ConnectionManager::MariaDBConnection>(move(conn), config);
+        mxq::MariaDB conn;
+        auto& sett = conn.connection_settings();
+        sett.user = config.user;
+        sett.password = config.password;
+        sett.timeout = config.timeout;
+        sett.ssl = config.ssl;
+        sett.proxy_protocol = config.proxy_protocol;
+
+        if (conn.open(config.host, config.port, config.db))
+        {
+            elem = std::make_unique<HttpSql::ConnectionManager::MariaDBConnection>(move(conn), config);
+        }
+        else
+        {
+            *err = conn.error();
+        }
     }
     else
     {
-        *err = conn.error();
+        std::string str = config.odbc_string;
+
+        if (strstr(str.c_str(), "libmaodbc.so") || strcasestr(str.c_str(), "mariadb"))
+        {
+            // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will just
+            // return syntax errors for otherwise valid SQL.
+            str += ";OPTION=67108864";
+        }
+
+        mxq::ODBC odbc(str);
+
+        if (odbc.connect())
+        {
+            elem = std::make_unique<HttpSql::ConnectionManager::ODBCConnection>(move(odbc), config);
+        }
+        else
+        {
+            MXB_NOTICE("Failed to connect with '%s'", config.odbc_string.c_str());
+            *err = odbc.error();
+        }
     }
 
     if (elem)

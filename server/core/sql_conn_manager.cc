@@ -444,4 +444,60 @@ mxb::Json ConnectionManager::MariaDBConnection::generate_json_representation(int
 
     return mxb::Json(resultset_arr, mxb::Json::RefType::STEAL);
 }
+
+ConnectionManager::ODBCConnection::ODBCConnection(mxq::ODBC&& odbc, const ConnectionConfig& cnf)
+    : Connection(cnf)
+    , m_conn(move(odbc))
+{
+}
+
+std::string ConnectionManager::ODBCConnection::error()
+{
+    return m_conn.error();
+}
+
+bool ConnectionManager::ODBCConnection::cmd(const std::string& cmd)
+{
+    mxq::NoResult empty;
+    return m_conn.query(cmd, &empty);
+}
+
+mxb::Json ConnectionManager::ODBCConnection::query(const std::string& sql, int64_t max_rows)
+{
+    mxq::JsonResult res;
+    m_conn.set_row_limit(max_rows);
+    this->last_max_rows = max_rows;
+    bool ok = m_conn.query(sql, &res);
+    auto result = res.result();
+    mxb_assert(result.type() == mxb::Json::Type::ARRAY);
+
+    if (!ok)
+    {
+        mxb::Json obj(mxb::Json::Type::OBJECT);
+        obj.set_int("errno", m_conn.errnum());
+        obj.set_string("message", m_conn.error());
+        obj.set_string("sqlstate", m_conn.sqlstate());
+        result.add_array_elem(move(obj));
+    }
+
+    return result;
+}
+
+uint32_t ConnectionManager::ODBCConnection::thread_id() const
+{
+    // Not applicable to ODBC connections
+    return 0;
+}
+
+bool ConnectionManager::ODBCConnection::reconnect()
+{
+    m_conn.disconnect();
+    return m_conn.connect();
+}
+
+bool ConnectionManager::ODBCConnection::ping()
+{
+    mxq::NoResult empty;
+    return m_conn.query("SELECT 1", &empty);
+}
 }

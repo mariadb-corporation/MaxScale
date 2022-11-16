@@ -25,6 +25,7 @@
 #include <maxbase/json.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxsql/mariadb_connector.hh>
+#include <maxsql/odbc.hh>
 
 namespace HttpSql
 {
@@ -40,6 +41,7 @@ struct ConnectionConfig
     int64_t        timeout = 10;
     bool           proxy_protocol = false;
     mxb::SSLConfig ssl;
+    std::string    odbc_string;
 };
 
 class ConnectionManager
@@ -102,6 +104,22 @@ public:
                                           const mxq::MariaDBQueryResult::Fields& field_info);
 
         mxq::MariaDB m_conn;
+    };
+
+    class ODBCConnection : public Connection
+    {
+    public:
+        ODBCConnection(mxq::ODBC&& odbc, const ConnectionConfig& cnf);
+
+        std::string error() override final;
+        bool        cmd(const std::string& cmd) override final;
+        mxb::Json   query(const std::string& sql, int64_t max_rows) override final;
+        uint32_t    thread_id() const override final;
+        bool        reconnect() override final;
+        bool        ping() override final;
+
+    private:
+        mxq::ODBC m_conn;
     };
 
     enum class Reason
