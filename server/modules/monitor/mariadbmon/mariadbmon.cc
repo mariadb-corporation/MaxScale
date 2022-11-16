@@ -235,13 +235,14 @@ cfg::ParamInteger s_script_max_rlag(
 cfg::ParamCount s_cs_admin_port(
     &s_spec, "cs_admin_port", "Port of the ColumnStore administrative daemon.", 8640);
 
-cfg::ParamString s_cs_admin_base_path(&s_spec, "cs_admin_base_path",
+const char CS_ADMIN_BASE_PATH_DESC[] =
     "The base path to be used when accessing the ColumnStore administrative daemon. "
     "If, for instance, a daemon URL is https://localhost:8640/cmapi/0.4.0/node/start "
-    "then the admin_base_path is \"/cmapi/0.4.0\".", "/cmapi/0.4.0");
+    "then the admin_base_path is \"/cmapi/0.4.0\".";
+cfg::ParamString s_cs_admin_base_path(&s_spec, "cs_admin_base_path", CS_ADMIN_BASE_PATH_DESC, "/cmapi/0.4.0");
 
-cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key",
-    "The API key used in communication with the ColumnStore admin daemon.", "");
+cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key", "The API key used in communication with the "
+                                                                 "ColumnStore admin daemon.", "");
 
 cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER,
                             "SSH username. Used for running remote commands on servers.", "");
@@ -472,13 +473,13 @@ bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
         // This is a "mega-setting" which turns on several other features regardless of their individual
         // settings.
         auto warn_and_enable = [](bool* setting, const char* setting_name) {
-                const char setting_activated[] = "%s enables %s, overriding any existing setting or default.";
-                if (*setting == false)
-                {
-                    *setting = true;
-                    MXB_WARNING(setting_activated, CN_ENFORCE_SIMPLE_TOPOLOGY, setting_name);
-                }
-            };
+            const char setting_activated[] = "%s enables %s, overriding any existing setting or default.";
+            if (*setting == false)
+            {
+                *setting = true;
+                MXB_WARNING(setting_activated, CN_ENFORCE_SIMPLE_TOPOLOGY, setting_name);
+            }
+        };
 
         warn_and_enable(&assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
         warn_and_enable(&auto_failover, CN_AUTO_FAILOVER);
@@ -1110,11 +1111,11 @@ bool MariaDBMonitor::try_acquire_locks_this_tick()
     mxb_assert(server_locks_in_use());
 
     auto calc_interval = [this](int base_intervals, int deviation_max_intervals) {
-            // Scale the interval calculation by the monitor interval.
-            int mon_interval_ms = settings().interval.count();
-            int deviation = m_random_gen.b_to_e_co(0, deviation_max_intervals);
-            return (base_intervals + deviation) * mon_interval_ms;
-        };
+        // Scale the interval calculation by the monitor interval.
+        int mon_interval_ms = settings().interval.count();
+        int deviation = m_random_gen.b_to_e_co(0, deviation_max_intervals);
+        return (base_intervals + deviation) * mon_interval_ms;
+    };
 
     bool try_acquire_locks = false;
     if (m_locks_info.time_to_update())
@@ -1192,9 +1193,9 @@ void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const S
     for (auto server : servers)
     {
         auto server_task = [&task, &task_complete, server]() {
-                task(server);
-                task_complete.post();
-            };
+            task(server);
+            task_complete.post();
+        };
         m_threadpool.execute(server_task, "monitor-task");
     }
     task_complete.wait_n(servers.size());

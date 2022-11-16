@@ -45,19 +45,19 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
     // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
     std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
         [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
-            mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
-            node->m_node.index = next_index++;
-            if (visitor(node))
+        mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
+        node->m_node.index = next_index++;
+        if (visitor(node))
+        {
+            for (MariaDBServer* slave : node->m_node.children)
             {
-                for (MariaDBServer* slave : node->m_node.children)
+                if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
                 {
-                    if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-                    {
-                        topology_DFS_visit(slave, visitor);
-                    }
+                    topology_DFS_visit(slave, visitor);
                 }
             }
-        };
+        }
+    };
 
     topology_DFS_visit(root, visitor);
 }
@@ -143,8 +143,8 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node, ServerArray* sta
                         // Sort the cycle members according to monitor config order.
                         std::sort(members.begin(), members.end(),
                                   [](const MariaDBServer* lhs, const MariaDBServer* rhs) -> bool {
-                                      return lhs->m_config_index < rhs->m_config_index;
-                                  });
+                            return lhs->m_config_index < rhs->m_config_index;
+                        });
                         // All cycle elements popped. Next cycle...
                         *next_cycle = cycle_ind + 1;
                     }
@@ -332,73 +332,73 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     // Helper function for finding normal master candidates.
     auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                             DelimitedPrinter& topo_messages) {
-            for (MariaDBServer* server : servers())
+        for (MariaDBServer* server : servers())
+        {
+            if (server->m_node.parents.empty())
             {
-                if (server->m_node.parents.empty())
+                string why_not;
+                if (is_candidate_valid(server, req_running, &why_not))
                 {
-                    string why_not;
-                    if (is_candidate_valid(server, req_running, &why_not))
-                    {
-                        master_candidates.push_back(server);
-                    }
-                    else
-                    {
-                        topo_messages.cat(why_not);
-                    }
+                    master_candidates.push_back(server);
+                }
+                else
+                {
+                    topo_messages.cat(why_not);
                 }
             }
-        };
+        }
+    };
 
     // Helper function for finding master candidates inside cycles.
     auto search_inside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                            DelimitedPrinter& topo_messages) {
-            // For each cycle, it's enough to take one sample server, as all members of a cycle have the
-            // same reach. The sample server needs to be valid, though.
-            for (auto& iter : m_cycles)
+        // For each cycle, it's enough to take one sample server, as all members of a cycle have the
+        // same reach. The sample server needs to be valid, though.
+        for (auto& iter : m_cycles)
+        {
+            ServerArray& cycle_members = iter.second;
+            // Check that no server in the cycle is replicating from outside the cycle. This requirement
+            // is analogous with the same requirement for non-cycle servers.
+            if (!cycle_has_master_server(cycle_members))
             {
-                ServerArray& cycle_members = iter.second;
-                // Check that no server in the cycle is replicating from outside the cycle. This requirement
-                // is analogous with the same requirement for non-cycle servers.
-                if (!cycle_has_master_server(cycle_members))
+                // Find a valid candidate from the cycle.
+                MariaDBServer* cycle_cand = nullptr;
+                for (MariaDBServer* elem : cycle_members)
                 {
-                    // Find a valid candidate from the cycle.
-                    MariaDBServer* cycle_cand = nullptr;
-                    for (MariaDBServer* elem : cycle_members)
+                    mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
+                    if (is_candidate_valid(elem, req_running))
                     {
-                        mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
-                        if (is_candidate_valid(elem, req_running))
-                        {
-                            cycle_cand = elem;
-                            break;
-                        }
-                    }
-                    if (cycle_cand)
-                    {
-                        master_candidates.push_back(cycle_cand);
-                    }
-                    else
-                    {
-                        // No single server in the cycle was viable. Go through the cycle again and construct
-                        // a message explaining why.
-                        string server_names = monitored_servers_to_string(cycle_members);
-                        string msg_start = string_printf(
-                            "No valid primary server could be found in the cycle with servers %s:",
-                            server_names.c_str());
-
-                        DelimitedPrinter cycle_invalid_msg("\n");
-                        cycle_invalid_msg.cat(msg_start);
-                        for (MariaDBServer* elem : cycle_members)
-                        {
-                            string server_msg;
-                            is_candidate_valid(elem, req_running, &server_msg);
-                            cycle_invalid_msg.cat(server_msg);
-                        }
-                        cycle_invalid_msg.cat("");      // Adds a linebreak
-                        topo_messages.cat(cycle_invalid_msg.message());
+                        cycle_cand = elem;
+                        break;
                     }
                 }
+                if (cycle_cand)
+                {
+                    master_candidates.push_back(cycle_cand);
+                }
+                else
+                {
+                    // No single server in the cycle was viable. Go through the cycle again and construct
+                    // a message explaining why.
+                    string server_names = monitored_servers_to_string(cycle_members);
+                    string msg_start = string_printf(
+                        "No valid primary server could be found in the cycle with servers %s:",
+                        server_names.c_str());
+
+                    DelimitedPrinter cycle_invalid_msg("\n");
+                    cycle_invalid_msg.cat(msg_start);
+                    for (MariaDBServer* elem : cycle_members)
+                    {
+                        string server_msg;
+                        is_candidate_valid(elem, req_running, &server_msg);
+                        cycle_invalid_msg.cat(server_msg);
+                    }
+                    cycle_invalid_msg.cat("");          // Adds a linebreak
+                    topo_messages.cat(cycle_invalid_msg.message());
+                }
             }
-        };
+        }
+    };
 
     // Normally, do not accept downed servers as master.
     DelimitedPrinter topo_messages_reject_down("\n");
@@ -459,14 +459,14 @@ void MariaDBMonitor::calculate_node_reach(MariaDBServer* search_root)
 
     int reach = 0;
     VisitorFunc visitor = [&reach](MariaDBServer* node) -> bool {
-            bool node_running = node->is_running();
-            if (node_running)
-            {
-                reach++;
-            }
-            // The node is expanded if it's running.
-            return node_running;
-        };
+        bool node_running = node->is_running();
+        if (node_running)
+        {
+            reach++;
+        }
+        // The node is expanded if it's running.
+        return node_running;
+    };
 
     topology_DFS(search_root, visitor);
     search_root->m_node.reach = reach;
@@ -486,13 +486,13 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
 
     int n_running_slaves = 0;
     VisitorFunc visitor = [&n_running_slaves](MariaDBServer* node) -> bool {
-            if (node->is_running())
-            {
-                n_running_slaves++;
-            }
-            // The node is always expanded.
-            return true;
-        };
+        if (node->is_running())
+        {
+            n_running_slaves++;
+        }
+        // The node is always expanded.
+        return true;
+    };
 
     topology_DFS(search_root, visitor);
     return n_running_slaves;
@@ -595,8 +595,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
     };
 
     auto compare = [](const QueueElement& left, const QueueElement& right) {
-            return !left.active_link && right.active_link;
-        };
+        return !left.active_link && right.active_link;
+    };
     /* 'open_set' contains the nodes which the search should expand to. It's a priority queue so that nodes
      * with a functioning chain of slave connections to the master are processed first. Only after all such
      * nodes have been processed does the search expand to downed or disconnected nodes. */
@@ -1193,8 +1193,8 @@ int MariaDBMonitor::get_free_locks()
 
     std::atomic_int locks_acquired {0};
     auto get_lock_task = [&locks_acquired](MariaDBServer* server) {
-            locks_acquired += server->get_lock(LockType::SERVER);
-        };
+        locks_acquired += server->get_lock(LockType::SERVER);
+    };
     execute_task_on_servers(get_lock_task, targets);
     return locks_acquired;
 }
