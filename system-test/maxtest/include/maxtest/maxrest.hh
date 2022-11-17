@@ -171,6 +171,9 @@ public:
         Value       value;
     };
 
+    /**
+     * alter
+     */
     void alter(const std::string& resource, const std::vector<Parameter>& parameters) const;
 
     void alter_maxscale(const std::vector<Parameter>& parameters) const;
@@ -178,6 +181,13 @@ public:
     void alter_maxscale(const Parameter& parameter) const;
 
     void alter_maxscale(const std::string& parameter_name, const Value& parameter_value) const;
+
+    /**
+     * create
+     */
+    void create_service(const std::string& name, const std::string& router, const std::vector<Parameter>& parameters);
+
+    void create_listener(const std::string& service, const std::string& name, int port);
 
     /**
      * The equivalent of 'maxctrl list servers'

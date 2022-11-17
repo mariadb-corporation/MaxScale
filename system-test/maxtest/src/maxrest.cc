@@ -285,6 +285,57 @@ void MaxRest::alter_maxscale(const string& parameter_name, const Value& paramete
     alter_maxscale(Parameter { parameter_name, parameter_value });
 }
 
+void MaxRest::create_service(const std::string& name, const std::string& router, const std::vector<Parameter>& parameters)
+{
+    ostringstream body;
+    body << "{\"data\": {"
+         <<    "\"id\": " << to_json_value(name) << ","
+         <<    "\"attributes\": {"
+         <<      "\"router\": " << to_json_value(router) << ","
+         <<      "\"parameters\": {";
+
+    auto end = parameters.end();
+    auto i = parameters.begin();
+
+    while (i != end)
+    {
+        const Parameter& parameter = *i;
+
+        body << "\"" << parameter.name << "\": " << to_json_value(parameter.value);
+
+        if (++i != end)
+        {
+            body << ", ";
+        }
+    }
+
+    body << "}}}}";
+
+    curl_post("services", body.str());
+}
+
+void MaxRest::create_listener(const std::string& service, const std::string& name, int port)
+{
+    ostringstream body;
+    body << "{\"data\": {"
+         <<    "\"id\": " << to_json_value(name) << ","
+         <<    "\"type\": \"listeners\","
+         <<    "\"attributes\": {"
+         <<      "\"parameters\": {"
+         <<        "\"port\": " << port
+         <<      "}"
+         <<    "},"
+         <<    "\"relationships\": {"
+         <<      "\"services\": {"
+         <<        "\"data\": [{ \"id\": " << to_json_value(service) << ", \"type\": \"services\" }]"
+         <<      "}"
+         <<   "}"
+         <<  "}"
+         << "}";
+
+    curl_post("listeners", body.str());
+}
+
 MaxRest::Server MaxRest::show_server(const std::string& id) const
 {
     mxb::Json object = v1_servers(id);
