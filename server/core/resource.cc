@@ -1951,9 +1951,9 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
+        remove_unwanted_rows(request, rval);
         paginate_result(request, rval);
         remove_unwanted_fields(request, rval);
-        remove_unwanted_rows(request, rval);
     }
 
     return rval;
