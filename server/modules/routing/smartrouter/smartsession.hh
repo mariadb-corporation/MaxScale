@@ -96,6 +96,7 @@ private:
 
     Clusters             m_clusters;
     mxs::QueryClassifier m_qc;
+    mxs::Buffer          m_queued;
     struct Measurement
     {
         maxbase::TimePoint start;

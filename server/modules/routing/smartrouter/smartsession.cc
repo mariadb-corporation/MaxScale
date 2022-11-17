@@ -98,13 +98,19 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
         // TODO: This doesn't work if the client sends multiple queries before waiting for their results.
         // If/when support for this is added for the smartrouter, the query should be placed into a queue and
         // the queue should be processed when the KILL commands have finished.
-        mxs::Downstream down;
-        down.instance = (mxs_filter*)&m_router;
-        down.routeQuery = (mxs::DOWNSTREAMFUNC)SmartRouter::routeQuery;
-        down.session = (mxs_filter_session*)static_cast<MXS_ROUTER_SESSION*>(this);
-
-        session_delay_routing(m_pSession, down, pBuf, 0);
-        return 1;
+        if (!m_queued.empty())
+        {
+            MXB_ERROR("routeQuery() in wrong state, multiple in-progress queries are not supported.");
+            mxb_assert(false);
+            gwbuf_free(pBuf);
+            return 0;
+        }
+        else
+        {
+            MXB_INFO("Queuing query while KILL command is in progress: %s", mxs::extract_sql(pBuf).c_str());
+            m_queued.reset(pBuf);
+            return 1;
+        }
     }
     else if (m_mode == Mode::KillDone)
     {
@@ -405,6 +411,17 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     protocol->mxs_mysql_execute_kill(m_pSession->id(), KT_QUERY, [this](){
         mxb_assert(m_mode == Mode::Kill);
         m_mode = Mode::KillDone;
+
+        if (GWBUF* pBuf = m_queued.release())
+        {
+            MXB_INFO("Routing queued query: %s", mxs::extract_sql(pBuf).c_str());
+            mxs::Downstream down;
+            down.instance = (mxs_filter*)&m_router;
+            down.routeQuery = (mxs::DOWNSTREAMFUNC)SmartRouter::routeQuery;
+            down.session = (mxs_filter_session*)static_cast<MXS_ROUTER_SESSION*>(this);
+
+            session_delay_routing(m_pSession, down, pBuf, 0);
+        }
     });
 }
 
