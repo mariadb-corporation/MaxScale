@@ -334,6 +334,7 @@ For more details, please refer to:
 * [MariaDB MaxScale 2.2.0 Release Notes](Release-Notes/MaxScale-2.2.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.1
+
 * MariaDB MaxScale is licensed under MariaDB BSL 1.1.
 * Hierarchical configuration files are now supported.
 * Logging is now performed in a way compatible with logrotate(8).
