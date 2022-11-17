@@ -7,6 +7,7 @@
  (i.e. `idle_session_pool_time`).
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.4.3 Release Notes](Release-Notes/MaxScale-6.4.3-Release-Notes.md)
 * [MariaDB MaxScale 6.4.2 Release Notes](Release-Notes/MaxScale-6.4.2-Release-Notes.md)
 * [MariaDB MaxScale 6.4.1 Release Notes](Release-Notes/MaxScale-6.4.1-Release-Notes.md)
@@ -24,6 +25,7 @@ For more details, please refer to:
   that are defined in static configuration files.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.3.1 Release Notes](Release-Notes/MaxScale-6.3.1-Release-Notes.md)
 * [MariaDB MaxScale 6.3.0 Release Notes](Release-Notes/MaxScale-6.3.0-Release-Notes.md)
 
@@ -43,6 +45,7 @@ For more details, please refer to:
   for more information.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.2.4 Release Notes](Release-Notes/MaxScale-6.2.4-Release-Notes.md)
 * [MariaDB MaxScale 6.2.3 Release Notes](Release-Notes/MaxScale-6.2.3-Release-Notes.md)
 * [MariaDB MaxScale 6.2.2 Release Notes](Release-Notes/MaxScale-6.2.2-Release-Notes.md)
@@ -75,6 +78,7 @@ lag limit (`script_max_replication_lag`).
 the results has been introduced.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.1.4 Release Notes](Release-Notes/MaxScale-6.1.4-Release-Notes.md)
 * [MariaDB MaxScale 6.1.3 Release Notes](Release-Notes/MaxScale-6.1.3-Release-Notes.md)
 * [MariaDB MaxScale 6.1.2 Release Notes](Release-Notes/MaxScale-6.1.2-Release-Notes.md)
@@ -116,6 +120,7 @@ For more details, please refer to:
 * Multiple modes of operation for `causal_reads`.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.5.23 Release Notes](Release-Notes/MaxScale-2.5.23-Release-Notes.md)
 * [MariaDB MaxScale 2.5.22 Release Notes](Release-Notes/MaxScale-2.5.22-Release-Notes.md)
 * [MariaDB MaxScale 2.5.21 Release Notes](Release-Notes/MaxScale-2.5.21-Release-Notes.md)
@@ -268,6 +273,7 @@ For more details, please refer to:
   the master. There is also limited capability for rejoining nodes.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.2.21 Release Notes](Release-Notes/MaxScale-2.2.21-Release-Notes.md)
 * [MariaDB MaxScale 2.2.20 Release Notes](Release-Notes/MaxScale-2.2.20-Release-Notes.md)
 * [MariaDB MaxScale 2.2.19 Release Notes](Release-Notes/MaxScale-2.2.19-Release-Notes.md)
@@ -292,6 +298,7 @@ For more details, please refer to:
 * [MariaDB MaxScale 2.2.0 Release Notes](Release-Notes/MaxScale-2.2.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.1
+
 * MariaDB MaxScale is licensed under MariaDB BSL 1.1.
 * Hierarchical configuration files are now supported.
 * Logging is now performed in a way compatible with logrotate(8).
@@ -312,6 +319,7 @@ For more details, please refer to:
 * MaxScale now supports IPv6
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.1.17 Release Notes](Release-Notes/MaxScale-2.1.17-Release-Notes.md)
 * [MariaDB MaxScale 2.1.16 Release Notes](Release-Notes/MaxScale-2.1.16-Release-Notes.md)
 * [MariaDB MaxScale 2.1.15 Release Notes](Release-Notes/MaxScale-2.1.15-Release-Notes.md)
@@ -342,6 +350,7 @@ For more details, please refer to:
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.0.6 Release Notes](Release-Notes/MaxScale-2.0.6-Release-Notes.md)
 * [MariaDB MaxScale 2.0.5 Release Notes](Release-Notes/MaxScale-2.0.5-Release-Notes.md)
 * [MariaDB MaxScale 2.0.4 Release Notes](Release-Notes/MaxScale-2.0.4-Release-Notes.md)
