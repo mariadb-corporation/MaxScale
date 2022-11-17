@@ -95,7 +95,8 @@ function getNodeGroupSQL(nodeGroup) {
             cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
             break
         case IDX_G:
-            cols = `${colNameKey}, COLUMN_NAME, NON_UNIQUE, CARDINALITY, NULLABLE, INDEX_TYPE`
+            // eslint-disable-next-line vue/max-len
+            cols = `${colNameKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
             from = 'FROM information_schema.STATISTICS'
             cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
             break
@@ -125,6 +126,11 @@ function genNode({ nodeGroup, data, type, name }) {
         data,
         isSys: SYS_SCHEMAS.includes(dbName.toLowerCase()),
     }
+    /**
+     * index name can be duplicated. e.g.composite indexes.
+     * So this adds -node.key as a suffix to make sure id is unique.
+     */
+    if (type === IDX) node.id = `${nodeGroup.id}.${name}-${node.key}`
 
     node.level = lodash.countBy(node.id)['.'] || 0
 
