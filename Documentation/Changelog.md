@@ -31,6 +31,7 @@
   monitors are deprecated in 22.08.2 and will be removed in 23.02.0.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 22.08.2 Release Notes](Release-Notes/MaxScale-22.08.2-Release-Notes.md)
 * [MariaDB MaxScale 22.08.1 Release Notes](Release-Notes/MaxScale-22.08.1-Release-Notes.md)
 * [MariaDB MaxScale 22.08.0 Release Notes](Release-Notes/MaxScale-22.08.0-Release-Notes.md)
@@ -42,6 +43,7 @@ For more details, please refer to:
  (i.e. `idle_session_pool_time`).
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.4.3 Release Notes](Release-Notes/MaxScale-6.4.3-Release-Notes.md)
 * [MariaDB MaxScale 6.4.2 Release Notes](Release-Notes/MaxScale-6.4.2-Release-Notes.md)
 * [MariaDB MaxScale 6.4.1 Release Notes](Release-Notes/MaxScale-6.4.1-Release-Notes.md)
@@ -59,6 +61,7 @@ For more details, please refer to:
   that are defined in static configuration files.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.3.1 Release Notes](Release-Notes/MaxScale-6.3.1-Release-Notes.md)
 * [MariaDB MaxScale 6.3.0 Release Notes](Release-Notes/MaxScale-6.3.0-Release-Notes.md)
 
@@ -78,6 +81,7 @@ For more details, please refer to:
   for more information.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.2.4 Release Notes](Release-Notes/MaxScale-6.2.4-Release-Notes.md)
 * [MariaDB MaxScale 6.2.3 Release Notes](Release-Notes/MaxScale-6.2.3-Release-Notes.md)
 * [MariaDB MaxScale 6.2.2 Release Notes](Release-Notes/MaxScale-6.2.2-Release-Notes.md)
@@ -110,6 +114,7 @@ lag limit (`script_max_replication_lag`).
 the results has been introduced.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 6.1.4 Release Notes](Release-Notes/MaxScale-6.1.4-Release-Notes.md)
 * [MariaDB MaxScale 6.1.3 Release Notes](Release-Notes/MaxScale-6.1.3-Release-Notes.md)
 * [MariaDB MaxScale 6.1.2 Release Notes](Release-Notes/MaxScale-6.1.2-Release-Notes.md)
@@ -151,6 +156,7 @@ For more details, please refer to:
 * Multiple modes of operation for `causal_reads`.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.5.23 Release Notes](Release-Notes/MaxScale-2.5.23-Release-Notes.md)
 * [MariaDB MaxScale 2.5.22 Release Notes](Release-Notes/MaxScale-2.5.22-Release-Notes.md)
 * [MariaDB MaxScale 2.5.21 Release Notes](Release-Notes/MaxScale-2.5.21-Release-Notes.md)
@@ -303,6 +309,7 @@ For more details, please refer to:
   the master. There is also limited capability for rejoining nodes.
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.2.21 Release Notes](Release-Notes/MaxScale-2.2.21-Release-Notes.md)
 * [MariaDB MaxScale 2.2.20 Release Notes](Release-Notes/MaxScale-2.2.20-Release-Notes.md)
 * [MariaDB MaxScale 2.2.19 Release Notes](Release-Notes/MaxScale-2.2.19-Release-Notes.md)
@@ -347,6 +354,7 @@ For more details, please refer to:
 * MaxScale now supports IPv6
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.1.17 Release Notes](Release-Notes/MaxScale-2.1.17-Release-Notes.md)
 * [MariaDB MaxScale 2.1.16 Release Notes](Release-Notes/MaxScale-2.1.16-Release-Notes.md)
 * [MariaDB MaxScale 2.1.15 Release Notes](Release-Notes/MaxScale-2.1.15-Release-Notes.md)
@@ -377,6 +385,7 @@ For more details, please refer to:
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
+
 * [MariaDB MaxScale 2.0.6 Release Notes](Release-Notes/MaxScale-2.0.6-Release-Notes.md)
 * [MariaDB MaxScale 2.0.5 Release Notes](Release-Notes/MaxScale-2.0.5-Release-Notes.md)
 * [MariaDB MaxScale 2.0.4 Release Notes](Release-Notes/MaxScale-2.0.4-Release-Notes.md)
@@ -386,6 +395,7 @@ For more details, please refer to:
 * [MariaDB MaxScale 2.0.0 Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
 
 ## MariaDB MaxScale 1.4
+
 * Authentication now allows table level resolution of grants. MaxScale service
   users will now need SELECT privileges on `mysql.tables_priv` to be able to
   authenticate users at the database and table level.
@@ -393,6 +403,7 @@ For more details, please refer to:
 * Client side SSL works.
 
 For more details, please refer to
+
 * [MariaDB MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
 * [MariaDB MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
 * [MariaDB MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
