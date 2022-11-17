@@ -30,7 +30,7 @@ const getDbName = node => node.qualified_name.split('.')[0]
 
 /**
  * @private
- * @param {Object} node - TRIGGER_G || COL_G node
+ * @param {Object} node - TRIGGER_G || COL_G || IDX_G node
  * @returns {String} table name
  */
 const getTblName = node => node.qualified_name.split('.')[1]
@@ -47,7 +47,7 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
 function getNodeGroupSQL(nodeGroup) {
-    const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G } = NODE_GROUP_TYPES
+    const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
     const dbName = getDbName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
@@ -56,8 +56,13 @@ function getNodeGroupSQL(nodeGroup) {
         cols = '',
         from = '',
         cond = ''
-    if (nodeGroup.type === TRIGGER_G || nodeGroup.type === COL_G) tblName = getTblName(nodeGroup)
-
+    switch (nodeGroup.type) {
+        case TRIGGER_G:
+        case COL_G:
+        case IDX_G:
+            tblName = getTblName(nodeGroup)
+            break
+    }
     switch (nodeGroup.type) {
         case TBL_G:
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
@@ -89,6 +94,11 @@ function getNodeGroupSQL(nodeGroup) {
             from = 'FROM information_schema.COLUMNS'
             cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
             break
+        case IDX_G:
+            cols = `${colNameKey}, COLUMN_NAME, NON_UNIQUE, CARDINALITY, NULLABLE, INDEX_TYPE`
+            from = 'FROM information_schema.STATISTICS'
+            cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
+            break
     }
     return `SELECT ${cols} ${from} ${cond} ORDER BY ${colNameKey};`
 }
@@ -102,8 +112,8 @@ function getNodeGroupSQL(nodeGroup) {
  * @returns {Object}  A node in schema sidebar
  */
 function genNode({ nodeGroup, data, type, name }) {
-    const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL } = NODE_TYPES
-    const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, TRIGGER_G } = NODE_GROUP_TYPES
+    const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
+    const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
     const dbName = nodeGroup ? getDbName(nodeGroup) : name
     let node = {
         id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
@@ -127,6 +137,7 @@ function genNode({ nodeGroup, data, type, name }) {
             break
         case TRIGGER:
         case COL:
+        case IDX:
             node.qualified_name = `${getTblName(nodeGroup)}.${node.name}`
             break
         case SCHEMA:
@@ -139,11 +150,11 @@ function genNode({ nodeGroup, data, type, name }) {
         case TBL:
             /**
              * VIEW and TBL nodes canBeHighlighted and has children props
-             * but only TBL node has TRIGGER_G
+             * but only TBL node has TRIGGER_G and IDX_G
              */
             node.canBeHighlighted = true
-            node.children = [COL_G, TRIGGER_G].reduce((arr, t) => {
-                if (type === VIEW && t === TRIGGER_G) return arr
+            node.children = [COL_G, IDX_G, TRIGGER_G].reduce((arr, t) => {
+                if (type === VIEW && (t === TRIGGER_G || t === IDX_G)) return arr
                 else
                     arr.push({
                         id: `${node.id}.${t}`,

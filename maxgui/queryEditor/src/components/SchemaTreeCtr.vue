@@ -161,7 +161,7 @@ export default {
         },
         // basic node options for different node types
         baseOptsMap() {
-            const { SCHEMA, TBL, VIEW, SP, FN, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
             const { USE, PRVW_DATA, PRVW_DATA_DETAILS } = this.NODE_CTX_TYPES
 
             const tblViewOpts = [
@@ -177,6 +177,7 @@ export default {
                 [SP]: this.txtOpts,
                 [FN]: this.txtOpts,
                 [COL]: this.txtOpts,
+                [IDX]: this.txtOpts,
                 [TRIGGER]: this.txtOpts,
             }
         },
@@ -305,7 +306,7 @@ export default {
          * @returns {Array} context options for non system node
          */
         genUserNodeOpts(node) {
-            const { SCHEMA, TBL, VIEW, SP, FN, COL, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
             const { DROP, ALTER, TRUNCATE } = this.NODE_CTX_TYPES
             const label = this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())
 
@@ -322,6 +323,8 @@ export default {
                     return [dropOpt]
                 case TBL:
                     return [alterOpt, dropOpt, truncateOpt]
+                case IDX:
+                    return [dropOpt]
                 case COL:
                 default:
                     return []
@@ -429,7 +432,7 @@ export default {
             } = this.NODE_CTX_TYPES
 
             const { escapeIdentifiers: escape } = this.$helpers
-            const { TBL } = this.NODE_TYPES
+            const { TBL, IDX } = this.NODE_TYPES
 
             switch (opt.type) {
                 case USE:
@@ -451,9 +454,17 @@ export default {
                 case CLIPBOARD:
                     this.handleTxtOpt({ node, opt })
                     break
-                case DROP:
-                    this.$emit('drop-action', `DROP ${node.type} ${escape(node.qualified_name)};`)
+                case DROP: {
+                    let sql = `DROP ${node.type} ${escape(node.qualified_name)};`
+                    if (node.type === IDX) {
+                        const tbl = node.qualified_name.split('.')[0]
+                        const db = node.id.split('.')[0]
+                        const target = `${escape(db)}.${escape(tbl)}`
+                        sql = `DROP ${node.type} ${escape(node.name)} ON ${target};`
+                    }
+                    this.$emit('drop-action', sql)
                     break
+                }
                 case ALTER:
                     if (node.type === TBL) this.$emit('alter-tbl', this.minimizeNode(node))
                     break
