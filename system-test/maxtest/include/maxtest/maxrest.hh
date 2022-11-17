@@ -303,7 +303,7 @@ public:
      */
     mxb::Json curl_get(const std::string& path) const;
     mxb::Json curl_patch(const std::string& path, const std::string& body) const;
-    mxb::Json curl_post(const std::string& path) const;
+    mxb::Json curl_post(const std::string& path, const std::string& body = std::string {}) const;
     mxb::Json curl_put(const std::string& path) const;
 
     void raise(const std::string& message) const

@@ -18,11 +18,16 @@ using namespace std;
 namespace
 {
 
-string to_string(const MaxRest::Value& value)
+string to_json_value(const string& value)
+{
+    return "\"" + value + "\"";
+}
+
+string to_json_value(const MaxRest::Value& value)
 {
     if (std::holds_alternative<string>(value))
     {
-        return std::get<string>(value);
+        return to_json_value(std::get<string>(value));
     }
     else if (std::holds_alternative<int64_t>(value))
     {
@@ -37,7 +42,7 @@ string to_string(const MaxRest::Value& value)
         mxb_assert(!true);
     }
 
-    return "";
+    throw std::runtime_error("Variant contains value of wrong type.");
 }
 
 }
@@ -122,7 +127,7 @@ public:
                 rv.output += (char)c;
             }
 
-            pclose(pFile);
+            rv.rc = pclose(pFile);
         }
         else
         {
@@ -251,7 +256,7 @@ void MaxRest::alter(const std::string& resource, const std::vector<Parameter>& p
     {
         const Parameter& parameter = *i;
 
-        body << "\"" << parameter.name << "\": " << to_string(parameter.value);
+        body << "\"" << parameter.name << "\": " << to_json_value(parameter.value);
 
         if (++i != end)
         {
@@ -261,13 +266,7 @@ void MaxRest::alter(const std::string& resource, const std::vector<Parameter>& p
 
     body << "}}}}";
 
-    mxb::Json json = curl_patch(resource, body.str());
-    mxb::Json errors = json.get_object("errors");
-
-    if (errors)
-    {
-        throw runtime_error(errors.to_string());
-    }
+    curl_patch(resource, body.str());
 }
 
 void MaxRest::alter_maxscale(const vector<Parameter>& parameters) const
@@ -352,9 +351,9 @@ mxb::Json MaxRest::curl_patch(const std::string& path, const std::string& body) 
     return curl(PATCH, path, body);
 }
 
-mxb::Json MaxRest::curl_post(const string& path) const
+mxb::Json MaxRest::curl_post(const string& path, const std::string& body) const
 {
-    return curl(POST, path);
+    return curl(POST, path, body);
 }
 
 mxb::Json MaxRest::curl_put(const string& path) const
@@ -365,7 +364,7 @@ mxb::Json MaxRest::curl_put(const string& path) const
 mxb::Json MaxRest::curl(Command command, const string& path, const string& body) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
-    string curl_command = "curl -s -u admin:mariadb ";
+    string curl_command = "curl --fail -s -u admin:mariadb ";
 
     switch (command)
     {
@@ -399,7 +398,19 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
 
     if (result.rc != 0)
     {
-        raise("Invocation of curl failed: " + result.output);
+        string message("Invocation of curl failed");
+
+        if (result.output.empty())
+        {
+            message += ".";
+        }
+        else
+        {
+            message += ": ";
+            message += result.output;
+        }
+
+        raise(message);
     }
 
     mxb::Json rv;
@@ -407,6 +418,13 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
     if (!result.output.empty() && !rv.load_string(result.output))
     {
         raise("JSON parsing failed: " + rv.error_msg());
+    }
+
+    mxb::Json errors = rv.get_object("errors");
+
+    if (errors)
+    {
+        throw runtime_error(errors.to_string());
     }
 
     return rv;
