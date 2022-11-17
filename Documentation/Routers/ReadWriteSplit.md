@@ -1086,7 +1086,7 @@ of the following group:
 * `SHOW` statements except `SHOW MASTER STATUS`
 
 The list of supported built-in fuctions can be found
-[here](../../query_classifier/qc_sqlite/builtin_functions.c).
+[here](https://github.com/mariadb-corporation/MaxScale/blob/6.4/query_classifier/qc_sqlite/builtin_functions.c).
 
 ### Routing to every session backend
 
