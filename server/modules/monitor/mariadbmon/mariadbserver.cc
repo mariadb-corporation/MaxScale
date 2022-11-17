@@ -764,7 +764,7 @@ json_t* MariaDBServer::to_json() const
 
     bool ext_master = is_running() && !m_node.external_masters.empty();
     json_object_set_new(result, "state_details",
-                        ext_master ? json_string("Replica of External Server") : json_null());
+                        ext_master ? json_string("Slave of External Server") : json_null());
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)

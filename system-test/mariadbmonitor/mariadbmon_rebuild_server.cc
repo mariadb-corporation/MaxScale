@@ -60,21 +60,19 @@ void test_main(TestConnections& test)
     const string start_firewall = "systemctl start iptables";
     repl.backend(source_ind)->vm_node().run_cmd_output_sudo(stop_firewall);
 
-    if (test.ok())
-    {
-        // Need to install some packages.
-        auto install_tools = [&repl](int ind) {
-            auto be = repl.backend(ind);
-            const char install_fmt[] = "yum -y install %s";
-            be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
-            be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
-        };
-        install_tools(source_ind);
-        install_tools(target_ind);
-    }
+    // Need to install some packages.
+    auto install_tools = [&repl](int ind) {
+        auto be = repl.backend(ind);
+        const char install_fmt[] = "yum -y install %s";
+        be->vm_node().run_cmd_output_sudof(install_fmt, "pigz");
+        be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
+    };
 
     if (test.ok())
     {
+        install_tools(source_ind);
+        install_tools(target_ind);
+
         const int target_rows = 100;
         const int cluster_rows = 300;
 
@@ -228,10 +226,17 @@ void test_main(TestConnections& test)
         {
             // At this point, clear the backup folder. It may contain old backups from a previous failed
             // test run.
-            auto clear_backups = [&repl, bu_storage_ind]() {
-                repl.backend(bu_storage_ind)->vm_node().run_cmd_output_sudo("rm -rf /tmp/backups/*");
+            const char bu_dir[] = "/tmp/backups";
+            auto& bu_vm = repl.backend(bu_storage_ind)->vm_node();
+            auto clear_backups = [&bu_vm, &bu_dir]() {
+                bu_vm.run_cmd_output_sudof("rm -rf %s", bu_dir);
             };
             clear_backups();
+            // Recreate backup directory and give ownership.
+            bu_vm.run_cmd_output_sudof("mkdir %s", bu_dir);
+            auto* ssh_user = mxs.vm_node().access_user();
+            bu_vm.run_cmd_output_sudof("sudo chown %s:%s %s", ssh_user, ssh_user, bu_dir);
+            install_tools(0); // Backup tools may be missing from server1.
 
             test.tprintf("Test database created and row added.");
             const char create_backup_fmt[] = "call command mariadbmon async-create-backup MariaDB-Monitor "
