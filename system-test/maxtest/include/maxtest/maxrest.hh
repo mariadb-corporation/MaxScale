@@ -137,7 +137,27 @@ public:
         return v1_maxscale_modules(module, command, instance, params);
     }
 
-    using Value = std::variant<std::string, int64_t, bool>;
+    class Value : public std::variant<std::string, int64_t, bool>
+    {
+    public:
+        using std::variant<std::string, int64_t, bool>::variant;
+
+        Value(const char* z)
+            : std::variant<std::string, int64_t, bool>(std::string(z))
+        {
+        }
+
+        Value(int i)
+            : std::variant<std::string, int64_t, bool>((int64_t) i)
+        {
+        }
+
+        Value(unsigned u)
+            : std::variant<std::string, int64_t, bool>((int64_t) u)
+        {
+        }
+    };
+
     struct Parameter
     {
         template<class T>
