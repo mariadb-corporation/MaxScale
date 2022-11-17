@@ -1154,8 +1154,8 @@ of the following group:
 * All statements within an explicit read-only transaction (`START TRANSACTION READ ONLY`)
 * `SHOW` statements except `SHOW MASTER STATUS`
 
-The list of supported built-in functions can be found
-[here](../../query_classifier/qc_sqlite/builtin_functions.c).
+The list of supported built-in fuctions can be found
+[here](https://github.com/mariadb-corporation/MaxScale/blob/22.08/query_classifier/qc_sqlite/builtin_functions.cc).
 
 ### Routing to every session backend
 
