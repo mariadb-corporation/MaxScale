@@ -2580,7 +2580,7 @@ void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, Loc
 
 void MariaDBClientConnection::maybe_send_kill_response(const std::function<void()>& cb)
 {
-    if (!have_local_clients())
+    if (!have_local_clients() && m_session->state() == MXS_SESSION::State::STARTED)
     {
         MXS_INFO("All KILL commands finished");
         cb();
