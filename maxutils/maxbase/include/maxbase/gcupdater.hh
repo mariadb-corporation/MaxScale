@@ -207,8 +207,8 @@ private:
     std::vector<typename SharedDataType::InternalUpdate>  m_leftover_queue;
 
     std::condition_variable m_updater_wakeup;
-    bool                    m_data_rdy;
-    std::atomic<int64_t>    m_timestamp_generator;
+    bool                    m_data_rdy {false};
+    std::atomic<int64_t>    m_timestamp_generator {0};
 
     virtual typename SharedDataType::DataType* create_new_copy(
         const typename SharedDataType::DataType* pCurrent) = 0;
