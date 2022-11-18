@@ -2717,12 +2717,12 @@ bool RestoreFromBackup::run()
             advance = state_init();
             break;
 
-        case State::TEST_DATALINK:
-            advance = state_test_datalink();
-            break;
-
         case State::CHECK_BACKUP_STORAGE:
             advance = state_check_backup_storage();
+            break;
+
+        case State::TEST_DATALINK:
+            advance = state_test_datalink();
             break;
 
         case State::SERVE_BACKUP:
@@ -2805,7 +2805,7 @@ bool RestoreFromBackup::state_init()
 
         if (init_operation())
         {
-            m_state = State::TEST_DATALINK;
+            m_state = State::CHECK_BACKUP_STORAGE;
         }
     }
     return true;
@@ -2848,7 +2848,7 @@ bool RestoreFromBackup::check_preconditions()
 
 bool RestoreFromBackup::state_test_datalink()
 {
-    m_state = test_datalink() ? State::CHECK_BACKUP_STORAGE : State::CLEANUP;
+    m_state = test_datalink() ? State::SERVE_BACKUP : State::CLEANUP;
     return true;
 }
 
@@ -2924,7 +2924,7 @@ bool RestoreFromBackup::state_check_backup_storage()
         }
     }
 
-    m_state = success ? State::SERVE_BACKUP : State::CLEANUP;
+    m_state = success ? State::TEST_DATALINK : State::CLEANUP;
     return true;
 }
 
