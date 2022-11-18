@@ -1033,34 +1033,60 @@ MaxScale. Only use it when there is another monitor ready to claim the locks.
 maxctrl call command mariadbmon release-locks MyMonitor1
 ```
 
-## Rebuild server
+## Backup operations
 
-The rebuild server-feature replaces the contents of a database server with the
-contents of another server. The source server is effectively cloned and all data
-on the target server is lost. This is useful when a replica server has diverged
-from the primary server, or when adding a new server to the cluster. The
-MariaDB Server configuration files are not affected.
+Backup operations manipulate the contents of a MariaDB Server, saving it or
+overwriting it. MariaDB-Monitor supports three backup operations:
 
-MariaDB-Monitor can perform this operation by running
-[Mariabackup](https://mariadb.com/kb/en/mariabackup/) on both the source and
-target servers. To do this, MaxScale needs to have ssh-access on the machines.
-Also, the following tools need to be installed on the source and target
-machines:
+1. *rebuild-server*: Replace the contents of a database server with the
+contents of another.
+2. *create-backup*: Copy the contents of a database server to a storage
+location.
+3. *restore-from-backup*: Overwrite the contents of a database server with a
+backup.
 
-1. *Mariabackup*. Backups and restores MariaDB Server contents. Installed e.g.
-with `yum install MariaDB-backup`.
+These operations do not modify server config files, only files in the data
+directory */var/lib/mysql* are affected.
+
+All of these operations are monitor commands and best launched with MaxCtrl.
+The operations are asynchronous, which means MaxCtrl won't wait for the
+operation to complete and instead immediately returns "OK". To see the current
+status of an operation, either check MaxScale log or use the
+fetch-cmd-result-command
+(e.g. `maxctrl call command mariadbmon fetch-cmd-result MyMonitor`).
+
+To perform backup operations, MaxScale requires ssh-access on all affected
+machines. The *ssh_user* and *ssh_keyfile*-settings define the SSH credentials
+MaxScale uses to access the servers. MaxScale must be able to run commands with
+*sudo* on both the source and target servers. See [settings](#settings) and
+[sudoers.d configuration](#sudoersd-configuration) below
+for more information.
+
+The following tools need to be installed on the backends:
+
+1. *Mariabackup*. Backs up and restores MariaDB Server contents. Installed e.g.
+with `yum install MariaDB-backup`. See
+[Mariabackup documentation](https://mariadb.com/kb/en/mariabackup/) for more
+information.
 2. *pigz*. Compresses and decompresses the backup stream. Installed e.g. with
 `yum install pigz`.
 3. *socat*. Streams data from one machine to another. Is likely already
 installed. If not, can be installed e.g. with `yum install socat`.
 
-The *ssh_user* and *ssh_keyfile*-settings define the SSH credentials MaxScale
-uses to access the servers. MaxScale must be able to run commands with *sudo* on
-both the source and target servers. Mariabackup, on the other hand, needs to
-authenticate to the MariaDB Server being copied from. For this, MaxScale uses
-the monitor user. The monitor user may thus require additional privileges. See
+Mariabackup needs server credentials to log in and authenticate to the
+MariaDB Server being copied from. For this, MaxScale uses the monitor user.
+The monitor user may thus require additional privileges. See
 [Mariabackup documentation](https://mariadb.com/kb/en/mariabackup-overview/#authentication-and-privileges)
 for more details.
+
+### Rebuild server
+
+The rebuild server-operation replaces the contents of a database server with the
+contents of another server. The source server is effectively cloned and all data
+on the target server is lost. This is useful when a replica server has diverged
+from the primary server, or when adding a new server to the cluster.
+MaxScale performs this operation by running Mariabackup on both the
+source and target servers.
 
 When launched, the rebuild operation proceeds as below. If any step fails, the
 operation is stopped and the target server will be left in an unspecified state.
@@ -1081,23 +1107,25 @@ directory */var/lib/mysql*.
 decompress it and write to the data directory. This is performed with a command
 like `socat -u TCP:<host>:<port> STDOUT | pigz -dc | mbstream -x`. This step can
 take a long time if there is much data to transfer.
-7. Check that the data directory is not empty.
+7. Check that the data directory on the target machine is not empty,
+i.e. that the transfer at least appears to have succeeded.
 8. Prepare the backup on the target server with a command like
 `mariabackup --use-memory=1G --prepare`. This step can also take some time if
 the source server performed writes during data transfer.
 9. On the target server, change ownership of datadir contents to the
 *mysql*-user and start MariaDB-server.
 10. Read gtid from the data directory. Have the target server start replicating
-from the primary.
+from the primary if it is not one already.
 
-The rebuild-operation is a monitor module command and is best launched with
-MaxCtrl. The command takes three arguments: the monitor name, target server name
-and source server name. The source server can be left out, in which case it is
-autoselected. When autoselecting, the monitor prefers to pick an up-to-date
-replica server. Due to the `--safe-slave-backup`-option, the replica will stop
+The rebuild-operation is a monitor module command and takes three arguments:
+the monitor name, target server name and source server name.
+The source server can be left out, in which case it is autoselected.
+When autoselecting, the monitor prefers to pick an up-to-date replica server to
+avoid increasing load on a primary server.
+Due to the `--safe-slave-backup`-option, the replica will stop
 replicating until the backup data has been transferred.
 ```
-maxctrl call command mariadbmon async-rebuild-server MariaDB-Monitor MyServer3 MyServer2
+maxctrl call command mariadbmon async-rebuild-server MyMonitor MyTargetServer MySourceServer
 ```
 The operation does not launch if the target server is already replicating or if
 the source server is not a primary or replica.
@@ -1107,6 +1135,48 @@ writes are ongoing. During these steps, the monitor will continue monitoring the
 cluster normally. After each monitor tick the monitor checks if the
 rebuild-operation can proceed. No other monitor operations, either manual or
 automatic, can run until the rebuild completes.
+
+### Create backup
+
+The create backup-operation copies the contents of a database server to the
+backup storage. The source server is not modified but may slow down during
+backup creation. MaxScale performs this operation by running
+Mariabackup on both the source and storage servers. The storage location is
+defined by the *backup_storage_address* and *backup_storage_path* settings.
+Normal ssh-settings are used to access the storage server. The backup storage
+machine does not need to have a MariaDB Server installed.
+
+Backup creation runs somewhat similar to rebuild-server. The main difference
+is that the backup data is simply saved to a directory and not prepared or
+used to start a MariaDB Server. If any step fails, the operation is stopped
+and the backup storage directory will be left in an unspecified state.
+
+1. Init. See rebuild-server.
+2. Check listen port on backup storage machine. See rebuild-server.
+3. Check that the backup storage main directory exists. Check that it does not
+contain a backup with the same name as the one being created. Create the final
+backup directory.
+4. Test the connection by streaming a short message from the source host to the
+backup storage.
+5. Serve backup on source. Similar to rebuild-server step 4.
+6. Transfer backup directly to the final storage directory. Similar to
+rebuild-server step 5.
+7. Check that the copied backup data looks ok.
+
+Backup creation is a monitor module command and takes three
+arguments: the monitor name, source server name and backup name. Backup name
+defines the subdirectory where the backup is saved and should be a valid
+directory name. The command
+```
+maxctrl call command mariadbmon async-create-backup MyMonitor MySourceServer wednesday_161122
+```
+would save the backup of MySourceServer to
+`<backup_storage_path>/wednesday_161122` on the host defined in
+*backup_storage_address*. *ssh_user* needs to have read and write access
+to the main storage directory. The source server must be a primary or replica.
+
+Similar to rebuild-server, the monitor will continue monitoring the servers
+while the backup is transferred.
 
 ### Settings
 
@@ -1142,6 +1212,23 @@ Numeric, default: 4444. The port which the source server listens on for a
 connection. The port must not be blocked by a firewall or listened on by any
 other program. If another process is listening on the port when rebuild is
 starting, MaxScale will attempt to kill the process.
+
+#### `backup_storage_address`
+
+String. Address of the backup storage. Does not need to have MariaDB Server
+running or be monitored by the monitor. Connected to with ssh. Must have enough
+disk space to store all backups.
+```
+backup_storage_address=192.168.1.11
+```
+
+#### `backup_storage_path`
+
+String. Path to main backup storage directory on backup storage host. *ssh_user*
+needs to have full access to this directory to save and read backups.
+```
+/home/maxscale_ssh_user/backup_storage
+```
 
 ### sudoers.d configuration
 
