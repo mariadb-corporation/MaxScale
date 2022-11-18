@@ -151,6 +151,45 @@ bool is_zero_address(const std::string& ip)
         return inet_pton(AF_INET6, ip.c_str(), &addr) == 1 && memcmp(addr.s6_addr, zero, sizeof(zero)) == 0;
     }
 }
+
+// Processes the given ODBC connection string into something more suitable for our use. More of a best-effort
+// attempt at providing a more usable environment for the query editor in the GUI.
+std::string process_connection_string(std::string str)
+{
+    bool is_maria = false;
+    bool no_option = true;
+
+    for (auto tok : mxb::strtok(str, ";"))
+    {
+        auto [key, value] = mxb::split(tok, "=");
+
+        if (mxb::sv_case_eq(key, "driver"))
+        {
+            if (value.find("libmaodbc.so") != std::string_view::npos
+                || mxb::lower_case_copy(value).find("mariadb") != std::string::npos)
+            {
+                is_maria = true;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else if (mxb::sv_case_eq(key, "option"))
+        {
+            no_option = false;
+        }
+    }
+
+    if (is_maria && no_option)
+    {
+        // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will
+        // just return syntax errors for otherwise valid SQL.
+        str += ";OPTION=67108864";
+    }
+
+    return str;
+}
 }
 
 namespace
@@ -737,16 +776,7 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     }
     else
     {
-        std::string str = config.odbc_string;
-
-        if (strstr(str.c_str(), "libmaodbc.so") || strcasestr(str.c_str(), "mariadb"))
-        {
-            // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will just
-            // return syntax errors for otherwise valid SQL.
-            str += ";OPTION=67108864";
-        }
-
-        mxq::ODBC odbc(str);
+        mxq::ODBC odbc(process_connection_string(config.odbc_string));
 
         if (odbc.connect())
         {
