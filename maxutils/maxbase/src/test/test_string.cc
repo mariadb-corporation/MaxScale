@@ -15,6 +15,7 @@
 #include <maxbase/assert.hh>
 #include <string.h>
 #include <iostream>
+#include <tuple>
 
 using std::cout;
 using std::endl;
@@ -116,6 +117,43 @@ int test_rtrim()
     cout << "rtrim()" << endl;
     return test(rtrim_testcases, n_rtrim_testcases, mxb::rtrim);
 }
+
+int test_split()
+{
+    cout << "split()" << endl;
+
+    std::vector<std::tuple<std::string_view,
+                           std::string_view,
+                           std::string_view,
+                           std::string_view>> test_cases
+    {
+        {"hello=world", "=", "hello", "world", },
+        {"=world", "=", "", "world", },
+        {"=world", "", "=world", ""},
+        {"helloworld!", "!", "helloworld", ""},
+        {"helloworld!", "=", "helloworld!", ""},
+        {"helloworld!", "\0", "helloworld!", ""},
+        {"hello world!", "  ", "hello world!", ""},
+        {"hello world!", " ", "hello", "world!"},
+        {"hello world!", "world", "hello ", "!"},
+    };
+
+    int rc = 0;
+
+    for (const auto& [input, delim, head, tail] : test_cases)
+    {
+        if (auto [split_head, split_tail] =
+                mxb::split(input, delim); head != split_head || tail != split_tail)
+        {
+            cout << "`" << input << "` with delimiter `" << delim << "` returned "
+                 << "`" << split_head << "` and `" << split_tail << "` "
+                 << "instead of `" << head << "` and `" << tail << "`" << endl;
+            rc = 1;
+        }
+    }
+
+    return rc;
+}
 }
 
 int main(int argc, char* argv[])
@@ -125,6 +163,7 @@ int main(int argc, char* argv[])
     rv += test_trim();
     rv += test_ltrim();
     rv += test_rtrim();
+    rv += test_split();
 
     return rv;
 }

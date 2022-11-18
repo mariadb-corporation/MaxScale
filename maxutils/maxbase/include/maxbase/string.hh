@@ -212,11 +212,13 @@ inline void upper_case(std::string& str)
 }
 
 /**
- * @brief lower_case_copy
- * @param str
- * @return
+ * Return a lowercase copy of the string
+ *
+ * @param str String to convert
+ *
+ * @return Lowercase copy of the string
  */
-inline std::string lower_case_copy(const std::string& str)
+inline std::string lower_case_copy(std::string_view str)
 {
     std::string ret(str.size(), 0);
     std::transform(str.begin(), str.end(), ret.begin(), ::tolower);
@@ -224,11 +226,13 @@ inline std::string lower_case_copy(const std::string& str)
 }
 
 /**
- * @brief upper_case_copy
- * @param str
- * @return
+ * Return an uppercase copy of the string
+ *
+ * @param str String to convert
+ *
+ * @return Uppercase copy of the string
  */
-inline std::string upper_case_copy(const std::string& str)
+inline std::string upper_case_copy(std::string_view str)
 {
     std::string ret(str.size(), 0);
     std::transform(str.begin(), str.end(), ret.begin(), ::toupper);
@@ -256,6 +260,21 @@ inline std::vector<std::string> strtok(std::string str, const char* delim)
     }
 
     return rval;
+}
+
+/**
+ * Split a string
+ *
+ * @param str   String to split
+ * @param delim Delimiter to find
+ *
+ * @return The string split into two parts without the delimiter or the original string and an empty string if
+ *         the delimiter was not found.
+ */
+inline std::pair<std::string_view, std::string_view> split(std::string_view str, std::string_view delim)
+{
+    auto pos = delim.empty() ? std::string_view::npos : str.find(delim);
+    return {str.substr(0, pos), pos != std::string_view::npos ? str.substr(pos + delim.size()) : ""};
 }
 
 /**
