@@ -1087,7 +1087,8 @@ take a long time if there is much data to transfer.
 the source server performed writes during data transfer.
 9. On the target server, change ownership of datadir contents to the
 *mysql*-user and start MariaDB-server.
-10. Have the target server start replicating from the primary.
+10. Read gtid from the data directory. Have the target server start replicating
+from the primary.
 
 The rebuild-operation is a monitor module command and is best launched with
 MaxCtrl. The command takes three arguments: the monitor name, target server name
@@ -1160,6 +1161,7 @@ johnny ALL= NOPASSWD: /bin/mbstream
 johnny ALL= NOPASSWD: /bin/du
 johnny ALL= NOPASSWD: /bin/rm -rf /var/lib/mysql/*
 johnny ALL= NOPASSWD: /bin/chown -R mysql\:mysql /var/lib/mysql/*
+johnny ALL= NOPASSWD: /bin/cat
 ```
 
 ## ColumnStore commands
