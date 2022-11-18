@@ -1178,6 +1178,54 @@ to the main storage directory. The source server must be a primary or replica.
 Similar to rebuild-server, the monitor will continue monitoring the servers
 while the backup is transferred.
 
+### Restore from backup
+
+The restore-operation is the reverse of create-backup. It overwrites the
+contents of an existing MariaDB Server with a backup from the backup storage.
+The backup is not removed and can be used again. MaxScale performs this
+operation by transferring the backup contents as a tar archive and overwriting
+the target server data directory. The backup storage is defined in monitor
+settings similar to create-backup.
+
+The restore-operation runs somewhat similar to rebuild-server. The main
+difference is that the backup data is copied with *tar* instead of Mariabackup.
+If any step fails, the operation is stopped and the target server will be
+left in an unspecified state.
+
+1. Init. See rebuild-server.
+2. Check listen port on target machine. See rebuild-server.
+3. Check that the backup storage main directory exists and that it contains
+a backup with the name requested.
+4. Test the connection by streaming a short message from the backup storage to
+the target machine.
+5. On the backup storage machine, compress the backup with tar and serve it
+with socat, listening for an incoming connection. This is performed with
+a command like `tar -zc -C <backup_dir> . | socat - TCP-LISTEN:<port>`.
+6. Stop MariaDB-server on the target machine and delete all contents of the data
+directory */var/lib/mysql*.
+7. On the target machine, connect to the source machine, read the backup stream,
+decompress it and write to the data directory. This is performed with a command
+like  `socat -u TCP:<host>:<port> STDOUT | sudo tar -xz -C /var/lib/mysql/`.
+This step can take a long time if there is much data to transfer.
+8. From here on, the operation proceeds as from rebuild-server step 7.
+
+Server restoration is a monitor module command and takes three
+arguments: the monitor name, target server name and backup name. Backup name
+defines the subdirectory where the backup is read from and should be an
+existing directory on the backup storage host. The command
+```
+maxctrl call command mariadbmon async-restore-from-backup MyMonitor MyTargetServer wednesday_161122
+```
+would erase the contents of MyTargetServer and replace them with the backup
+contained in
+`<backup_storage_path>/wednesday_161122` on the host defined in
+*backup_storage_address*. *ssh_user* needs to have read access
+to the main storage directory and the backup. The target server must not be
+a primary or replica.
+
+Similar to rebuild-server, the monitor will continue monitoring the servers
+while the backup is transferred and prepared.
+
 ### Settings
 
 #### `ssh_user`
@@ -1233,7 +1281,7 @@ needs to have full access to this directory to save and read backups.
 ### sudoers.d configuration
 
 If giving MaxScale general sudo-access is out of the question, MaxScale must be
-allowed to run the specific commands required by the rebuild-operation. This can
+allowed to run the specific commands required by the backup operations. This can
 be achieved by creating a file with the commands in the
 `/etc/sudoers.d`-directory. In the example below, the user *johnny* is given the
 power to run commands as root. The contents of the file may need to be tweaked
@@ -1245,10 +1293,10 @@ johnny ALL= NOPASSWD: /usr/sbin/lsof
 johnny ALL= NOPASSWD: /bin/kill
 johnny ALL= NOPASSWD: /usr/bin/mariabackup
 johnny ALL= NOPASSWD: /bin/mbstream
-johnny ALL= NOPASSWD: /bin/du
 johnny ALL= NOPASSWD: /bin/rm -rf /var/lib/mysql/*
-johnny ALL= NOPASSWD: /bin/chown -R mysql\:mysql /var/lib/mysql/*
-johnny ALL= NOPASSWD: /bin/cat
+johnny ALL= NOPASSWD: /bin/chown -R mysql\:mysql /var/lib/mysql
+johnny ALL= NOPASSWD: /bin/cat /var/lib/mysql/xtrabackup_binlog_info
+johnny ALL= NOPASSWD: /bin/tar -xz -C /var/lib/mysql/
 ```
 
 ## ColumnStore commands
