@@ -1849,15 +1849,16 @@ bool RebuildServer::state_prepare_target()
     return true;
 }
 
-bool BackupOperation::start_transfer(const string& destination)
+bool BackupOperation::start_transfer(const string& destination, TargetOwner target_owner)
 {
     bool transfer_started = false;
 
     // Connect to source and start stream the backup.
     const char receive_fmt[] = "socat -u TCP:%s:%i,connect-timeout=%i STDOUT | pigz -dc "
-                               "| sudo mbstream -x --directory=%s";
+                               "| %smbstream -x --directory=%s";
+    const char* maybe_sudo = (target_owner == TargetOwner::ROOT) ? "sudo " : "";
     string receive_cmd = mxb::string_printf(receive_fmt, m_source_host.c_str(), m_source_port,
-                                            socat_timeout_s, destination.c_str());
+                                            socat_timeout_s, maybe_sudo, destination.c_str());
 
     bool rval = false;
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, receive_cmd);
@@ -1877,7 +1878,7 @@ bool BackupOperation::start_transfer(const string& destination)
 
 bool RebuildServer::state_start_transfer()
 {
-    m_state = start_transfer(rebuild_datadir) ? State::WAIT_TRANSFER : State::CLEANUP;
+    m_state = start_transfer(rebuild_datadir, TargetOwner::ROOT) ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -2666,7 +2667,7 @@ void CreateBackup::cancel()
 
 bool CreateBackup::state_start_transfer()
 {
-    m_state = start_transfer(m_bu_path) ? State::WAIT_TRANSFER : State::CLEANUP;
+    m_state = start_transfer(m_bu_path, TargetOwner::NORMAL) ? State::WAIT_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -2933,7 +2934,7 @@ bool RestoreFromBackup::state_serve_backup()
     auto source_name = m_source_name.c_str();
     // Start serving the backup stream. The source will wait for a new connection. Since MariaDB Server is
     // not running on this machine, serve the data directory as a tar archive.
-    const char stream_fmt[] = "sudo tar -zc -C %s . | socat - TCP-LISTEN:%i,reuseaddr";
+    const char stream_fmt[] = "tar -zc -C %s . | socat - TCP-LISTEN:%i,reuseaddr";
     string stream_cmd = mxb::string_printf(stream_fmt, m_bu_path.c_str(), source_port());
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 

@@ -121,11 +121,12 @@ public:
 
 protected:
     enum class StateResult {OK, AGAIN, ERROR};
+    enum class TargetOwner {ROOT, NORMAL};
 
     bool        init_operation();
     bool        test_datalink();
     bool        serve_backup(const std::string& mariadb_user, const std::string& mariadb_pw);
-    bool        start_transfer(const std::string& destination);
+    bool        start_transfer(const std::string& destination, TargetOwner target_owner);
     StateResult wait_transfer();
     bool        start_backup_prepare();
     StateResult wait_backup_prepare();
