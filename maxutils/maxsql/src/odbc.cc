@@ -129,38 +129,84 @@ ResultBuffer::ResultBuffer(const std::vector<ColumnInfo>& infos, size_t row_limi
 
     for (const auto& i : infos)
     {
-        columns.emplace_back(row_count, buffer_size(i), sql_to_c_type(i.data_type));
+        columns.emplace_back(row_count, buffer_size(i), sql_to_c_type(i), i.data_type);
     }
 }
 
 size_t ResultBuffer::buffer_size(const ColumnInfo& c) const
 {
-    // return std::min(1024UL * 1024, std::max(c.buffer_size, c.size) + 1);
-
-    switch (c.data_type)
+    switch (sql_to_c_type(c))
     {
-    case SQL_BIT:
-    case SQL_TINYINT:
+    case SQL_C_BIT:
+    case SQL_C_UTINYINT:
         return sizeof(SQLCHAR);
 
-    case SQL_SMALLINT:
+    case SQL_C_STINYINT:
+        return sizeof(SQLSCHAR);
+
+    case SQL_C_USHORT:
+        return sizeof(SQLUSMALLINT);
+
+    case SQL_C_SSHORT:
         return sizeof(SQLSMALLINT);
 
-    case SQL_INTEGER:
-    case SQL_BIGINT:
+    case SQL_C_ULONG:
+        return sizeof(SQLUINTEGER);
+
+    case SQL_C_SLONG:
         return sizeof(SQLINTEGER);
 
-    case SQL_REAL:
-        return sizeof(SQLREAL);
+    case SQL_C_UBIGINT:
+        return sizeof(SQLUBIGINT);
 
-    case SQL_FLOAT:
-    case SQL_DOUBLE:
+    case SQL_C_SBIGINT:
+        return sizeof(SQLBIGINT);
+
+    case SQL_C_DOUBLE:
         return sizeof(SQLDOUBLE);
 
         // Treat everything else as a string, keeps things simple. Also keep the buffer smaller than 1Mib,
         // some varchars seems to be blobs in reality.
     default:
         return std::min(1024UL * 1024, std::max(c.buffer_size, c.size) + 1);
+    }
+}
+
+int ResultBuffer::sql_to_c_type(const ColumnInfo& c) const
+{
+    switch (c.data_type)
+    {
+    case SQL_TINYINT:
+        return c.is_unsigned ? SQL_C_UTINYINT : SQL_C_STINYINT;
+
+    case SQL_SMALLINT:
+        return c.is_unsigned ? SQL_C_USHORT : SQL_C_SSHORT;
+
+    case SQL_INTEGER:
+        return c.is_unsigned ? SQL_C_ULONG : SQL_C_SLONG;
+
+    case SQL_BIGINT:
+        return c.is_unsigned ? SQL_C_UBIGINT : SQL_C_SBIGINT;
+
+        // Connector/ODBC doesn't handle SQL_REAL correctly: https://jira.mariadb.org/browse/ODBC-374
+        // We have to use a SQLDOUBLE to store all floating point types to make sure we don't crash when
+        // inserting data into MariaDB.
+    case SQL_REAL:
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+        return SQL_C_DOUBLE;
+
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+        return SQL_C_BINARY;
+
+    case SQL_BIT:
+        return SQL_C_BIT;
+
+        // String, date, time et cetera. Keeps things simple as DATETIME structs are a little messy.
+    default:
+        return SQL_C_CHAR;
     }
 }
 
@@ -175,6 +221,11 @@ std::string ResultBuffer::Column::to_string(int row) const
     const uint8_t* ptr = buffers.data() + buffer_size * row;
     const SQLLEN len = *(indicators.data() + row);
 
+    if (len == SQL_NULL_DATA)
+    {
+        return "<NULL>";
+    }
+
     switch (buffer_type)
     {
     case SQL_C_BIT:
@@ -182,12 +233,32 @@ std::string ResultBuffer::Column::to_string(int row) const
         rval = std::to_string(*reinterpret_cast<const SQLCHAR*>(ptr));
         break;
 
+    case SQL_C_STINYINT:
+        rval = std::to_string(*reinterpret_cast<const SQLSCHAR*>(ptr));
+        break;
+
     case SQL_C_USHORT:
         rval = std::to_string(*reinterpret_cast<const SQLUSMALLINT*>(ptr));
         break;
 
+    case SQL_C_SSHORT:
+        rval = std::to_string(*reinterpret_cast<const SQLSMALLINT*>(ptr));
+        break;
+
     case SQL_C_ULONG:
         rval = std::to_string(*reinterpret_cast<const SQLUINTEGER*>(ptr));
+        break;
+
+    case SQL_C_SLONG:
+        rval = std::to_string(*reinterpret_cast<const SQLINTEGER*>(ptr));
+        break;
+
+    case SQL_C_UBIGINT:
+        rval = std::to_string(*reinterpret_cast<const SQLUBIGINT*>(ptr));
+        break;
+
+    case SQL_C_SBIGINT:
+        rval = std::to_string(*reinterpret_cast<const SQLBIGINT*>(ptr));
         break;
 
     case SQL_C_FLOAT:
@@ -199,16 +270,8 @@ std::string ResultBuffer::Column::to_string(int row) const
         rval = std::to_string(*reinterpret_cast<const SQLDOUBLE*>(ptr));
         break;
 
-        // String, date, time et cetera. Keeps things simple as DATETIME structs are a little messy.
     default:
-        if (len != SQL_NULL_DATA)
-        {
-            rval.assign((const char*)ptr, len);
-        }
-        else
-        {
-            rval = "<NULL>";
-        }
+        rval.assign((const char*)ptr, len);
         break;
     }
 
@@ -221,6 +284,11 @@ json_t* ResultBuffer::Column::to_json(int row) const
     const uint8_t* ptr = buffers.data() + buffer_size * row;
     const SQLLEN len = *(indicators.data() + row);
 
+    if (len == SQL_NULL_DATA)
+    {
+        return json_null();
+    }
+
     switch (buffer_type)
     {
     case SQL_C_BIT:
@@ -228,12 +296,32 @@ json_t* ResultBuffer::Column::to_json(int row) const
         rval = json_integer(*reinterpret_cast<const SQLCHAR*>(ptr));
         break;
 
+    case SQL_C_STINYINT:
+        rval = json_integer(*reinterpret_cast<const SQLSCHAR*>(ptr));
+        break;
+
     case SQL_C_USHORT:
         rval = json_integer(*reinterpret_cast<const SQLUSMALLINT*>(ptr));
         break;
 
+    case SQL_C_SSHORT:
+        rval = json_integer(*reinterpret_cast<const SQLSMALLINT*>(ptr));
+        break;
+
     case SQL_C_ULONG:
         rval = json_integer(*reinterpret_cast<const SQLUINTEGER*>(ptr));
+        break;
+
+    case SQL_C_SLONG:
+        rval = json_integer(*reinterpret_cast<const SQLINTEGER*>(ptr));
+        break;
+
+    case SQL_C_UBIGINT:
+        rval = json_integer(*reinterpret_cast<const SQLUBIGINT*>(ptr));
+        break;
+
+    case SQL_C_SBIGINT:
+        rval = json_integer(*reinterpret_cast<const SQLBIGINT*>(ptr));
         break;
 
     case SQL_C_FLOAT:
@@ -245,16 +333,27 @@ json_t* ResultBuffer::Column::to_json(int row) const
         rval = json_real(*reinterpret_cast<const SQLDOUBLE*>(ptr));
         break;
 
-        // String, date, time et cetera. Keeps things simple as DATETIME structs are a little messy.
     default:
-        if (len != SQL_NULL_DATA)
+        if (data_type == SQL_NUMERIC || data_type == SQL_DECIMAL)
         {
-            rval = json_stringn((const char*)ptr, len);
+            std::string str(ptr, ptr + len);
+            char* end = nullptr;
+            double val = strtod(str.c_str(), &end);
+
+            if (end == str.c_str() + str.length())
+            {
+                rval = json_real(val);
+            }
+            else
+            {
+                rval = json_stringn((const char*)ptr, len);
+            }
         }
         else
         {
-            rval = json_null();
+            rval = json_stringn((const char*)ptr, len);
         }
+
         break;
     }
 
@@ -543,6 +642,17 @@ std::vector<ColumnInfo> ODBCImp::get_headers(int columns)
                 SQLCloseCursor(m_stmt);
                 return {};
             }
+
+            SQLLEN is_unsigned = SQL_FALSE;
+
+            if (!get_int_attr(i + 1, SQL_DESC_UNSIGNED, &is_unsigned))
+            {
+                get_error(SQL_HANDLE_STMT, m_stmt);
+                SQLCloseCursor(m_stmt);
+                return {};
+            }
+
+            info.is_unsigned = is_unsigned;
 
             cols.push_back(std::move(info));
         }

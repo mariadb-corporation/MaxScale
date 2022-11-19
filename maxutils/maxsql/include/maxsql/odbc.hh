@@ -27,21 +27,23 @@ namespace maxsql
 
 struct ColumnInfo
 {
-    std::string name;           // Column name
-    int         data_type {0};  // ODBC data type
-    size_t      size {0};       // The size of the SQL type (e.g. Unicode characters)
-    size_t      buffer_size {0};// The "octet" size, i.e. size in bytes
-    int         digits {0};     // Number of digits, zero if not applicable
-    bool        nullable {0};   // If column is nullable
+    std::string name;               // Column name
+    int         data_type {0};      // ODBC data type
+    size_t      size {0};           // The size of the SQL type (e.g. Unicode characters)
+    size_t      buffer_size {0};    // The "octet" size, i.e. size in bytes
+    int         digits {0};         // Number of digits, zero if not applicable
+    bool        nullable {false};   // If column is nullable
+    bool        is_unsigned {false};// If the column is unsigned
 };
 
 struct ResultBuffer
 {
     struct Column
     {
-        Column(size_t row_count, size_t buffer_sz, int type)
+        Column(size_t row_count, size_t buffer_sz, int c_type, int sql_type)
             : buffer_size(buffer_sz)
-            , buffer_type(type)
+            , buffer_type(c_type)
+            , data_type(sql_type)
             , buffers(row_count * buffer_size)
             , indicators(row_count)
         {
@@ -53,6 +55,7 @@ struct ResultBuffer
 
         size_t               buffer_size;   // Size of one value
         int                  buffer_type;   // ODBC C data type
+        int                  data_type;     // ODBC SQL data type
         std::vector<uint8_t> buffers;       // Buffer that contains the column values
         std::vector<long>    indicators;    // Indicator values for each of the column values
     };
@@ -64,6 +67,7 @@ struct ResultBuffer
     ResultBuffer(const std::vector<ColumnInfo>& infos, size_t row_limit = 0);
 
     size_t buffer_size(const ColumnInfo& c) const;
+    int    sql_to_c_type(const ColumnInfo& c) const;
 
     size_t                      row_count = 0;
     std::vector<Column>         columns;

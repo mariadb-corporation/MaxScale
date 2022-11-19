@@ -21,5 +21,4 @@
 const char* row_status_to_str(int ret);
 const char* ret_to_str(int ret);
 const char* type_to_str(int type);
-int         sql_to_c_type(int data_type);
 const char* c_type_to_str(int type);

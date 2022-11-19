@@ -213,39 +213,6 @@ const char* type_to_str(int type)
     }
 }
 
-int sql_to_c_type(int data_type)
-{
-    switch (data_type)
-    {
-    case SQL_TINYINT:
-        return SQL_C_UTINYINT;
-
-    case SQL_SMALLINT:
-        return SQL_C_USHORT;
-
-    case SQL_INTEGER:
-    case SQL_BIGINT:
-        return SQL_C_ULONG;
-
-    case SQL_REAL:
-    case SQL_FLOAT:
-    case SQL_DOUBLE:
-        return SQL_C_DOUBLE;
-
-    case SQL_BINARY:
-    case SQL_VARBINARY:
-    case SQL_LONGVARBINARY:
-        return SQL_C_BINARY;
-
-    case SQL_BIT:
-        return SQL_C_BIT;
-
-        // String, date, time et cetera. Keeps things simple as DATETIME structs are a little messy.
-    default:
-        return SQL_C_CHAR;
-    }
-}
-
 const char* c_type_to_str(int type)
 {
     static char msg[256];
