@@ -440,9 +440,6 @@ ODBCImp::~ODBCImp()
 
 bool ODBCImp::connect()
 {
-    SQLSetConnectAttr(m_conn, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)SQL_AUTOCOMMIT_OFF, 0);
-    SQLSetConnectAttr(m_conn, SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TXN_REPEATABLE_READ, 0);
-
     SQLCHAR outbuf[1024];
     SQLSMALLINT s2len;
     SQLRETURN ret = SQLDriverConnect(m_conn, nullptr, (SQLCHAR*)m_dsn.c_str(), m_dsn.size(),
