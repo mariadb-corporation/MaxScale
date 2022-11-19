@@ -49,9 +49,12 @@ public:
     std::map<std::string, std::map<std::string, std::string>> drivers();
 
 private:
+    using DiagRec = std::tuple<int, std::string, std::string>;
+
     template<class Hndl>
-    void get_error(int hndl_type, Hndl hndl)
+    std::vector<DiagRec> get_diag_recs(int hndl_type, Hndl hndl)
     {
+        std::vector<DiagRec> records;
         SQLLEN n = 0;
         SQLRETURN ret = SQLGetDiagField(hndl_type, hndl, 0, SQL_DIAG_NUMBER, &n, 0, 0);
 
@@ -65,10 +68,21 @@ private:
             if (SQLGetDiagRec(hndl_type, hndl, i + 1, sqlstate, &native_error,
                               msg, sizeof(msg), &msglen) != SQL_NO_DATA)
             {
-                m_sqlstate = (const char*)sqlstate;
-                m_error.assign((const char*)msg, msglen);
-                m_errnum = native_error;
+                records.emplace_back(native_error,
+                                     std::string_view((const char*)msg, msglen),
+                                     (const char*)sqlstate);
             }
+        }
+
+        return records;
+    }
+
+    template<class Hndl>
+    void get_error(int hndl_type, Hndl hndl)
+    {
+        if (auto errs = get_diag_recs(hndl_type, hndl); !errs.empty())
+        {
+            std::tie(m_errnum, m_error, m_sqlstate) = std::move(errs.back());
         }
     }
 
@@ -361,11 +375,11 @@ json_t* ResultBuffer::Column::to_json(int row) const
     return rval;
 }
 
-bool JsonResult::ok_result(int64_t rows_affected)
+bool JsonResult::ok_result(int64_t rows_affected, int64_t warnings)
 {
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_int("last_insert_id", 0);
-    obj.set_int("warnings", 0);
+    obj.set_int("warnings", warnings);
     obj.set_int("affected_rows", rows_affected);
     m_result.add_array_elem(std::move(obj));
     return true;
@@ -416,6 +430,16 @@ bool JsonResult::resultset_end()
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_object("fields", std::move(m_fields));
     obj.set_object("data", std::move(m_data));
+    m_result.add_array_elem(std::move(obj));
+    return true;
+}
+
+bool JsonResult::error_result(int errnum, const std::string& errmsg, const std::string& sqlstate)
+{
+    mxb::Json obj(mxb::Json::Type::OBJECT);
+    obj.set_int("errno", errnum);
+    obj.set_string("message", errmsg);
+    obj.set_string("sqlstate", sqlstate);
     m_result.add_array_elem(std::move(obj));
     return true;
 }
@@ -559,7 +583,10 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
             {
                 SQLLEN rowcount = 0;
                 SQLRowCount(m_stmt, &rowcount);
-                handler->ok_result(rowcount);
+                // C/ODBC doesn't seem to return warnings at all, other drivers do return them.
+                int64_t warnings = ret == SQL_SUCCESS_WITH_INFO ?
+                    get_diag_recs(SQL_HANDLE_STMT, m_stmt).size() : 0;
+                handler->ok_result(rowcount, warnings);
             }
             else if (columns > 0)
             {
@@ -569,13 +596,15 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
                 handler->resultset_end();
             }
         }
-        while (SQL_SUCCEEDED(SQLMoreResults(m_stmt)));
+        while (SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
 
         SQLCloseCursor(m_stmt);
     }
-    else
+
+    if (ret == SQL_ERROR)
     {
         get_error(SQL_HANDLE_STMT, m_stmt);
+        handler->error_result(m_errnum, m_error, m_sqlstate);
     }
 
     return ok;

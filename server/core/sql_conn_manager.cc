@@ -467,18 +467,9 @@ mxb::Json ConnectionManager::ODBCConnection::query(const std::string& sql, int64
     mxq::JsonResult res;
     m_conn.set_row_limit(max_rows);
     this->last_max_rows = max_rows;
-    bool ok = m_conn.query(sql, &res);
+    m_conn.query(sql, &res);
     auto result = res.result();
     mxb_assert(result.type() == mxb::Json::Type::ARRAY);
-
-    if (!ok)
-    {
-        mxb::Json obj(mxb::Json::Type::OBJECT);
-        obj.set_int("errno", m_conn.errnum());
-        obj.set_string("message", m_conn.error());
-        obj.set_string("sqlstate", m_conn.sqlstate());
-        result.add_array_elem(move(obj));
-    }
 
     return result;
 }

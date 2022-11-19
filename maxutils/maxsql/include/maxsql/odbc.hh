@@ -80,7 +80,7 @@ public:
     virtual ~Output() = default;
 
     // Called whenever an empty result (i.e. an OK packet) is received.
-    virtual bool ok_result(int64_t rows_affected) = 0;
+    virtual bool ok_result(int64_t rows_affected, int64_t warnings) = 0;
 
     // Called before the first row of the resultset is read.
     virtual bool resultset_start(const std::vector<ColumnInfo>& metadata) = 0;
@@ -92,16 +92,20 @@ public:
 
     // Called when the resultset ends.
     virtual bool resultset_end() = 0;
+
+    // An error occurred
+    virtual bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) = 0;
 };
 
 // Creates a mxb::Json result
 struct JsonResult : public Output
 {
-    bool ok_result(int64_t rows_affected) override;
+    bool ok_result(int64_t rows_affected, int64_t warnings) override;
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
     bool resultset_end() override;
+    bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
     mxb::Json result()
     {
@@ -117,7 +121,7 @@ private:
 // Discards the result
 struct NoResult : public Output
 {
-    virtual bool ok_result(int64_t rows_affected) override
+    virtual bool ok_result(int64_t rows_affected, int64_t warnings) override
     {
         return true;
     }
@@ -134,6 +138,11 @@ struct NoResult : public Output
     }
 
     bool resultset_end() override
+    {
+        return true;
+    }
+
+    bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override
     {
         return true;
     }
