@@ -86,6 +86,16 @@ public:
 
     mxb::Json to_json() const;
 
+    const char* table() const
+    {
+        return m_table.c_str();
+    }
+
+    const char* schema() const
+    {
+        return m_schema.c_str();
+    }
+
 private:
 
     const ETL&  m_etl;

@@ -444,6 +444,72 @@ bool JsonResult::error_result(int errnum, const std::string& errmsg, const std::
     return true;
 }
 
+bool TextResult::ok_result(int64_t rows_affected, int64_t warnings)
+{
+    return true;
+}
+
+bool TextResult::resultset_start(const std::vector<ColumnInfo>& metadata)
+{
+    m_data = Result{};
+    return true;
+}
+
+bool TextResult::resultset_rows(const std::vector<ColumnInfo>& metadata,
+                                ResultBuffer& res,
+                                uint64_t rows_fetched)
+{
+    int columns = metadata.size();
+
+    for (uint64_t i = 0; i < rows_fetched; i++)
+    {
+        Row row(columns);
+
+        if (res.row_status[i] == SQL_ROW_SUCCESS || res.row_status[i] == SQL_ROW_SUCCESS_WITH_INFO)
+        {
+            for (int c = 0; c < columns; c++)
+            {
+                if (!res.columns[c].is_null(i))
+                {
+                    row[c] = res.columns[c].to_string(i);
+                }
+                else
+                {
+                    row[c] = "NULL";
+                }
+            }
+
+            m_data.push_back(std::move(row));
+        }
+    }
+
+    return true;
+}
+
+bool TextResult::resultset_end()
+{
+    m_result.push_back(std::move(m_data));
+    return true;
+}
+
+bool TextResult::error_result(int errnum, const std::string& errmsg, const std::string& sqlstate)
+{
+    // Ignore errors, they're available in the ODBC class so there's no need to duplicate them here.
+    return true;
+}
+
+std::optional<std::string> TextResult::get_field(size_t field, size_t row, size_t result) const
+{
+    try
+    {
+        return m_result.at(result).at(row).at(field).value();
+    }
+    catch (const std::exception& e)
+    {
+        return {};      // Value not present
+    }
+}
+
 ODBCImp::ODBCImp(std::string dsn)
     : m_dsn(std::move(dsn))
 {
@@ -556,6 +622,7 @@ std::map<std::string, std::map<std::string, std::string>> ODBCImp::drivers()
 
 bool ODBCImp::query(const std::string& query, Output* output)
 {
+    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
     SQLRETURN ret = SQLExecDirect(m_stmt, (SQLCHAR*)query.c_str(), query.size());
     return process_response(ret, output);
 }

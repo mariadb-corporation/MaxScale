@@ -118,6 +118,34 @@ private:
     mxb::Json m_fields;
 };
 
+// Creates a text result
+struct TextResult : public Output
+{
+    // Nulls are represented as empty std::optional values
+    using Value = std::optional<std::string>;
+    using Row = std::vector<Value>;
+    using Result = std::vector<Row>;
+
+    bool ok_result(int64_t rows_affected, int64_t warnings) override;
+    bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
+    bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
+                        uint64_t rows_fetched) override;
+    bool resultset_end() override;
+    bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
+
+    const std::vector<Result>& result() const
+    {
+        return m_result;
+    }
+
+    // Helper that extracts the given field in the resultset, if present.
+    std::optional<std::string> get_field(size_t field, size_t row = 0, size_t result = 0) const;
+
+private:
+    std::vector<Result> m_result;
+    Result              m_data;
+};
+
 // Discards the result
 struct NoResult : public Output
 {
@@ -211,7 +239,24 @@ public:
      */
     const std::string& sqlstate() const;
 
-    bool query(const std::string& sql, Output* output);
+    // By default the output is ignored
+    static Output* ignore_result()
+    {
+        static NoResult no_result;
+        return &no_result;
+    }
+
+    /**
+     * Execute a query
+     *
+     * @param sql SQL to execute
+     * @param output The output formatter class. By default the output is discarded.
+     *
+     * @return True if the query was successfully executed and at least one non-error result was returned.
+     *         Partially successful results (e.g. multi-statement SQL) can be detected by inspecting whether
+     *         errnum() is set.
+     */
+    bool query(const std::string& sql, Output* output = ignore_result());
 
     /**
      * Set maximum number of rows to fetch
