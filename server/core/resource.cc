@@ -1156,10 +1156,16 @@ HttpResponse cb_sql_query(const HttpRequest& request)
     return HttpSql::query(request);
 }
 
-HttpResponse cb_sql_etl(const HttpRequest& request)
+HttpResponse cb_sql_etl_prepare(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
-    return HttpSql::etl(request);
+    return HttpSql::etl_prepare(request);
+}
+
+HttpResponse cb_sql_etl_start(const HttpRequest& request)
+{
+    mxb_assert(request.get_json());
+    return HttpSql::etl_start(request);
 }
 
 HttpResponse cb_alter_user(const HttpRequest& request)
@@ -1539,7 +1545,8 @@ public:
         m_post.emplace_back(cb_sql_reconnect, "sql", ":connection_id", "reconnect");
         m_post.emplace_back(cb_sql_clone, "sql", ":connection_id", "clone");
         m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
-        m_post.emplace_back(REQ_BODY, cb_sql_etl, "sql", ":connection_id", "etl");
+        m_post.emplace_back(REQ_BODY, cb_sql_etl_prepare, "sql", ":connection_id", "etl", "prepare");
+        m_post.emplace_back(REQ_BODY, cb_sql_etl_start, "sql", ":connection_id", "etl", "start");
 
         /** For all module commands that modify state/data */
         m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");

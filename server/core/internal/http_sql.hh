@@ -34,7 +34,8 @@ HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);
 HttpResponse query_result(const HttpRequest& request);
 HttpResponse disconnect(const HttpRequest& request);
-HttpResponse etl(const HttpRequest& request);
+HttpResponse etl_prepare(const HttpRequest& request);
+HttpResponse etl_start(const HttpRequest& request);
 HttpResponse odbc_drivers(const HttpRequest& request);
 
 bool is_query(const std::string& id);

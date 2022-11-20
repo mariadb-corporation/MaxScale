@@ -26,6 +26,7 @@
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/sql_conn_manager.hh"
+#include "internal/sql_etl.hh"
 
 
 using std::string;
@@ -641,7 +642,8 @@ HttpResponse disconnect(const HttpRequest& request)
     });
 }
 
-HttpResponse etl(const HttpRequest& request)
+template<auto func>
+HttpResponse run_etl_task(const HttpRequest& request)
 {
     auto [id, err] = get_connection_id(request, request.uri_part(1));
 
@@ -652,34 +654,45 @@ HttpResponse etl(const HttpRequest& request)
 
     string host = request.host();
     string self = request.uri_segment(0, 2);
+    auto js = mxb::Json(request.get_json());
 
-    auto exec_query_cb = [id, host = move(host), self = move(self)]() {
+    auto exec_query_cb = [id, host = move(host), self = move(self), js]() {
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
+            // Ignore any results that have not yet been read
             conn->result.reset();
 
-            int64_t query_id = ++conn->current_query_id;
-            string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-            conn->sql = "TODO: Add something here";
-            conn->last_query_started = mxb::Clock::now();
+            try
+            {
+                auto cnf = sql_etl::configure(js, conn->config);
+                std::shared_ptr<sql_etl::ETL> etl = sql_etl::create(cnf, js);
 
-            mxs::thread_pool().execute(
-                [conn]() {
-                bool ok = true;
-                conn->result.reset(json_pack("[{s: b}]", "success", ok));
-                conn->last_query_time = mxb::Clock::now();
+                int64_t query_id = ++conn->current_query_id;
+                string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
+                conn->sql = "TODO: Add something here";
+                conn->last_query_started = mxb::Clock::now();
+
+                mxs::thread_pool().execute([conn, etl = move(etl)]() {
+                    conn->result = std::invoke(func, *etl);
+                    conn->last_query_time = mxb::Clock::now();
+                    conn->release();
+                }, "etl-" + id_str);
+
+                string self_id = self + "/queries/" + id_str;
+                mxb::Duration exec_time {0};
+                HttpResponse response = construct_result_response(nullptr, host, self_id,
+                                                                  conn->sql, id_str, exec_time);
+
+                response.set_code(MHD_HTTP_ACCEPTED);
+                response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
+
+                return response;
+            }
+            catch (const sql_etl::Error& e)
+            {
                 conn->release();
-            }, "etl-" + id_str);
-
-            string self_id = self + "/queries/" + id_str;
-            mxb::Duration exec_time {0};
-            HttpResponse response = construct_result_response(nullptr, host, self_id,
-                                                              conn->sql, id_str, exec_time);
-
-            response.set_code(MHD_HTTP_ACCEPTED);
-            response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
-
-            return response;
+                return create_error(e.what());
+            }
         }
         else
         {
@@ -715,6 +728,16 @@ HttpResponse odbc_drivers(const HttpRequest& request)
     }
 
     return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), "sql/odbc/drivers", arr));
+}
+
+HttpResponse etl_prepare(const HttpRequest& request)
+{
+    return run_etl_task<&sql_etl::ETL::prepare>(request);
+}
+
+HttpResponse etl_start(const HttpRequest& request)
+{
+    return run_etl_task<&sql_etl::ETL::start>(request);
 }
 
 //

@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <maxbase/json.hh>
+#include <maxbase/ssl.hh>
 
 #include "sql_conn_manager.hh"
 
@@ -31,8 +32,7 @@ namespace sql_etl
 
 enum class Source
 {
-    MARIADB,
-    UNKNOWN
+    MARIADB
 };
 
 struct Error : public std::runtime_error
@@ -42,7 +42,21 @@ struct Error : public std::runtime_error
 
 struct Config
 {
-    // TODO: Implement
+    Config(Source source_type, std::string odbc_src, std::string odbc_dest)
+        : type(source_type)
+        , src (odbc_src)
+        , dest(odbc_dest)
+    {
+    }
+
+    // The type of the source server
+    Source type;
+
+    // The ODBC connection string to the server where the data is read from
+    std::string src;
+
+    // The ODBC connection string to the MariaDB server where the data is sent
+    std::string dest;
 };
 
 class ETL;
@@ -56,9 +70,7 @@ public:
           std::string_view create,
           std::string_view select);
 
-    void read_create() noexcept;
-
-    void read_select() noexcept;
+    void prepare() noexcept;
 
     void start() noexcept;
 
@@ -71,6 +83,8 @@ public:
     {
         return m_error;
     }
+
+    mxb::Json to_json() const;
 
 private:
 
@@ -99,11 +113,8 @@ struct ETL
         return m_tables;
     }
 
-    mxb::Json list_tables();
 
-    mxb::Json get_create();
-
-    mxb::Json get_select();
+    mxb::Json prepare();
 
     mxb::Json start();
 
@@ -119,13 +130,13 @@ private:
  * Read configuration from JSON
  *
  * @param json The JSON needed to configure the source server connection
- * @param cc   The connection configuration to the MariaDB server
+ * @param cc   The connection configuration to the source server
  *
  * @return The configuration if the JSON was valid
  *
  * @throws ETLError
  */
-std::unique_ptr<Config> configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc);
+Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc);
 
 /**
  * Create ETL from configuration

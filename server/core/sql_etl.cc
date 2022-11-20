@@ -12,24 +12,125 @@
  */
 
 #include "internal/sql_etl.hh"
+#include "internal/servermanager.hh"
+
+namespace
+{
+using Type = mxb::Json::Type;
+
+template<class ... Args>
+sql_etl::Error problem(Args&& ... args)
+{
+    std::ostringstream ss;
+    (ss << ... << args);
+    return sql_etl::Error(ss.str());
+}
+
+mxb::Json maybe_get(const mxb::Json& json, const std::string& path, mxb::Json::Type type)
+{
+    auto elem = json.at(path);
+    return elem.type() == type ? elem : mxb::Json(type);
+}
+
+mxb::Json get(const mxb::Json& json, const std::string& path, mxb::Json::Type type)
+{
+    auto elem = json.at(path);
+
+    if (elem.type() != type)
+    {
+        throw problem("Value at '", path, "' is '", elem.type(), "', expected '", type, "'");
+    }
+
+    return elem;
+}
+}
 
 namespace sql_etl
 {
 
-std::unique_ptr<Config> configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc)
+Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc)
 {
-    auto cnf = std::make_unique<Config>();
 
-    // TODO:: Implement
+    auto maybe_add = [](const std::string& keyword, const std::string& str){
+        return str.empty() ? "" : keyword + "=" + str + ";";
+    };
 
-    return cnf;
+    if (cc.target != "odbc")
+    {
+        throw problem("Only ODBC targets are supported");
+    }
+
+    auto target = get(json, "target", Type::STRING).get_string();
+    Server* server = ServerManager::find_by_unique_name(target);
+
+    if (!server)
+    {
+        throw problem("'", target, "' is not the name of a server in MaxScale.");
+    }
+
+    std::ostringstream ss;
+
+    // We know what the library name is and it'll work regardless of the odbc.ini configuration.
+    ss << "DRIVER=libmaodbc.so;";
+
+    // If the user provided some extra options, put them first so that they take precedence over the ones
+    // that are generated from the server configuration.
+    if (auto extra = maybe_get(json, "connection_string", Type::STRING).get_string(); !extra.empty())
+    {
+        if (extra.back() != ';')
+        {
+            extra += ';';
+        }
+
+        ss << extra;
+    }
+
+    ss << "SERVER=" << server->address() << ";"
+       << "PORT=" << server->port() << ";"
+       << "UID=" << get(json, "user", Type::STRING).get_string() << ";"
+       << "PWD={" << get(json, "password", Type::STRING).get_string() << "};";
+
+    ss << maybe_add("DATABASE", maybe_get(json, "db", Type::STRING).get_string());
+
+    if (auto ssl = server->ssl_config(); ssl.enabled)
+    {
+        ss << maybe_add("SSLCERT", ssl.cert)
+           << maybe_add("SSLKEY", ssl.key)
+           << maybe_add("SSLCA", ssl.ca)
+           << maybe_add("SSLCRL", ssl.crl)
+           << maybe_add("SSLCIPHER", ssl.cipher);
+    }
+
+    auto type_str = get(json, "type", Type::STRING).get_string();
+    Source source;
+
+    if (type_str == "mariadb")
+    {
+        source = Source::MARIADB;
+    }
+    else
+    {
+        throw problem("Unknown value for 'type': ", type_str);
+    }
+
+    std::string dest = ss.str();
+    std::string src = cc.odbc_string;
+
+    return Config(source, src, dest);
 }
 
 std::unique_ptr<ETL> create(const Config& config, const mxb::Json& json)
 {
     std::unique_ptr<ETL> etl = std::make_unique<ETL>(config);
 
-    // TODO:: Implement
+    for (const auto& val : get(json, "tables", Type::ARRAY).get_array_elems())
+    {
+        etl->tables().emplace_back(*etl,
+                                   get(val, "schema", Type::STRING).get_string(),
+                                   get(val, "table", Type::STRING).get_string(),
+                                   maybe_get(val, "create", Type::STRING).get_string(),
+                                   maybe_get(val, "select", Type::STRING).get_string());
+    }
 
     return etl;
 }
@@ -47,19 +148,31 @@ Table::Table(const ETL& etl,
 {
 }
 
-void Table::read_create() noexcept
+mxb::Json Table::to_json() const
 {
-    try
+    mxb::Json obj(mxb::Json::Type::OBJECT);
+    obj.set_string("table", m_table);
+    obj.set_string("schema", m_schema);
+
+    if (!m_create.empty())
     {
-        // TODO: implement this
+        obj.set_string("create", m_create);
     }
-    catch (const Error& e)
+
+    if (!m_select.empty())
     {
-        m_error = e.what();
+        obj.set_string("select", m_select);
     }
+
+    if (!m_error.empty())
+    {
+        obj.set_string("error", m_error);
+    }
+
+    return obj;
 }
 
-void Table::read_select() noexcept
+void Table::prepare() noexcept
 {
     try
     {
@@ -99,25 +212,28 @@ mxb::Json ETL::run_job()
     }
 
     mxb::Json rval(mxb::Json::Type::OBJECT);
-    rval.set_bool("ok", true);
+    mxb::Json arr(mxb::Json::Type::ARRAY);
+    bool ok = true;
+
+    for (const auto& t : m_tables)
+    {
+        arr.add_array_elem(t.to_json());
+
+        if (!t.ok())
+        {
+            ok = false;
+        }
+    }
+
+    rval.set_bool("ok", ok);
+    rval.set_object("tables", std::move(arr));
+
     return rval;
 }
 
-mxb::Json ETL::list_tables()
+mxb::Json ETL::prepare()
 {
-    mxb::Json rval(mxb::Json::Type::OBJECT);
-    rval.set_bool("ok", true);
-    return rval;
-}
-
-mxb::Json ETL::get_create()
-{
-    return run_job<&Table::read_create>();
-}
-
-mxb::Json ETL::get_select()
-{
-    return run_job<&Table::read_select>();
+    return run_job<&Table::prepare>();
 }
 
 mxb::Json ETL::start()
