@@ -23,6 +23,7 @@
 
 #include <mariadb_rpl.h>
 #include <errmsg.h>
+#include <fcntl.h>
 
 #include <maxbase/threadpool.hh>
 #include <maxscale/query_classifier.hh>
@@ -112,6 +113,7 @@ private:
     gtid_pos_t           m_current_gtid;            // GTID of the transaction being processed
     bool                 m_implicit_commit {false}; // Commit after next query event
     Rpl                  m_rpl;                     // Class that handles the replicated events
+    int                  m_state_fd {-1};           // File handle to GTID state file
 
     // NOTE: must be declared last
     std::thread m_thr;      // Thread that receives the replication events
@@ -318,6 +320,12 @@ void Replicator::Imp::process_events()
         }
     }
 
+    if (m_state_fd != -1)
+    {
+        close(m_state_fd);
+        m_state_fd = -1;
+    }
+
     qc_thread_end(QC_INIT_BOTH);
 }
 
@@ -332,26 +340,24 @@ bool Replicator::Imp::load_gtid_state()
 {
     bool rval = false;
     std::string filename = m_cnf.statedir + "/" + STATEFILE_NAME;
-    std::ifstream statefile(filename);
-    std::string gtid;
-    statefile >> gtid;
+    int fd = open(filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
-    if (statefile)
+    if (fd != -1)
     {
-        rval = true;
+        m_state_fd = fd;
+        char gtid[4096];
+        int n = pread(m_state_fd, gtid, sizeof(gtid) - 1, 0);
 
-        if (!gtid.empty())
+        if (n != -1)
         {
-            m_gtid_position = parse_gtid_list(gtid);
-            MXB_NOTICE("Continuing from GTID '%s'", gtid_list_to_string(m_gtid_position).c_str());
-        }
-    }
-    else
-    {
-        if (errno == ENOENT || errno == 0)
-        {
-            //  No GTID file or empty file, use the GTID provided in the configuration
+            gtid[n] = '\0';
             rval = true;
+
+            if (*gtid)
+            {
+                m_gtid_position = parse_gtid_list(gtid);
+                MXB_NOTICE("Continuing from GTID '%s'", gtid);
+            }
         }
         else
         {
@@ -359,16 +365,22 @@ bool Replicator::Imp::load_gtid_state()
                       filename.c_str(), errno, mxb_strerror(errno));
         }
     }
+    else
+    {
+        MXB_ERROR("Failed to open GTID state file '%s': %d, %s",
+                  filename.c_str(), errno, mxb_strerror(errno));
+    }
 
     return rval;
 }
 
 void Replicator::Imp::save_gtid_state() const
 {
-    std::ofstream statefile(m_cnf.statedir + "/" + STATEFILE_NAME);
-    statefile << gtid_list_to_string(m_gtid_position) << std::endl;
+    std::string s = gtid_list_to_string(m_gtid_position);
 
-    if (!statefile)
+    // Include the null terminating character in the data. This way we can construct a std::string directly
+    // from the buffer that contains the data.
+    if (pwrite(m_state_fd, s.c_str(), s.size() + 1, 0) == -1)
     {
         MXB_ERROR("Failed to store current GTID state inside '%s': %d, %s",
                   m_cnf.statedir.c_str(), errno, mxb_strerror(errno));
@@ -476,6 +488,7 @@ Replicator::Imp::~Imp()
 {
     m_should_stop = true;
     m_thr.join();
+    mxb_assert(m_state_fd == -1);
 }
 
 Replicator::Imp::GtidList Replicator::Imp::parse_gtid_list(const std::string& gtid_list_str)
