@@ -655,7 +655,8 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 //static
 bool RoutingWorker::create_workers(int n)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    // Not all unit tests have a MainWorker.
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
     mxb_assert(this_unit.nCreated == this_unit.nRunning);
 
@@ -879,7 +880,8 @@ RoutingWorker* RoutingWorker::get_by_index(int index)
 // static
 bool RoutingWorker::start_workers(int nWorkers)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    // Not all unit tests have a MainWorker.
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
     mxb_assert(this_unit.nCreated == 0);
 
     bool rv = create_workers(nWorkers);

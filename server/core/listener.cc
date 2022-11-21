@@ -375,7 +375,8 @@ bool Listener::Manager::reload_tls()
 
 vector<SListener> Listener::Manager::get_started_listeners()
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    // Not all unit tests have a MainWorker.
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
 
     vector<SListener> started_listeners;
 
