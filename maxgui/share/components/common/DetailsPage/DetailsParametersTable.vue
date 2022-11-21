@@ -62,7 +62,7 @@
             v-model="showConfirmDialog"
             :onSave="acceptEdit"
             :title="`${$mxs_t('implementChanges')}`"
-            saveText="thatsRight"
+            saveText="confirm"
             :hasChanged="hasChanged"
             @on-cancel="cancelEdit"
         >
