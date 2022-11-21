@@ -913,12 +913,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     // Reset for every classification
     m_route_info.set_ps_continuation(false);
 
-    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE
-        && session_is_load_active(m_pSession))
-    {
-        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
-    }
-    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
+    if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
     {
         m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_INACTIVE);
     }
@@ -1063,6 +1058,15 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     m_route_info.set_stmt_id(stmt_id);
 
     return m_route_info;
+}
+
+void QueryClassifier::update_from_reply(const mxs::Reply& reply)
+{
+    if (reply.state() == mxs::ReplyState::LOAD_DATA
+        && m_route_info.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE)
+    {
+        m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_ACTIVE);
+    }
 }
 
 // static

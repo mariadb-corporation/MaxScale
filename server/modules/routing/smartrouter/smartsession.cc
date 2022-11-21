@@ -185,6 +185,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
     auto tracker_state_before = cluster.tracker.state();
 
+    m_qc.update_from_reply(reply);
     cluster.tracker.update_response(pPacket);
 
     // these flags can all be true at the same time
