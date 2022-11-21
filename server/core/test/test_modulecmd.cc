@@ -437,6 +437,8 @@ int test_domain_matching(const char* actual_module,
 
     TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
 
+    MonitorManager::destroy_all_monitors();
+
     return 0;
 }
 
