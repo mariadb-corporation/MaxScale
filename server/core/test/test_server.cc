@@ -137,6 +137,8 @@ bool test_serialize()
     sprintf(cmd, "diff ./%s ./%s", config_name, old_config_name);
     TEST(system(cmd) == 0, "The files are not identical");
 
+    ServerManager::destroy_all();
+
     return true;
 }
 
