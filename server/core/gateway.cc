@@ -2081,6 +2081,18 @@ int main(int argc, char** argv)
                 }
             }
 
+            if (RoutingWorker::start_workers(config_threadcount()))
+            {
+                MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
+            }
+            else
+            {
+                MXB_ALERT("Failed to start routing workers.");
+                rc = MAXSCALE_INTERNALERROR;
+                maxscale_shutdown();
+                return;
+            }
+
             manager.start_sync();
 
             if (this_unit.daemon_mode)
@@ -2100,51 +2112,40 @@ int main(int argc, char** argv)
     {
         if (RoutingWorker::init(&watchdog_notifier))
         {
-            // Start the routing workers, each in a thread of its own.
-            if (RoutingWorker::start_workers())
+            if (configure_normal_signals())
             {
-                MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
-
-                if (configure_normal_signals())
+                if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
                 {
-                    if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
-                    {
-                        // This call will block until MaxScale is shut down.
-                        main_worker.run();
-                        MXB_NOTICE("MaxScale is shutting down.");
+                    // This call will block until MaxScale is shut down.
+                    main_worker.run();
+                    MXB_NOTICE("MaxScale is shutting down.");
 
-                        disable_normal_signals();
-                        mxs_admin_finish();
+                    disable_normal_signals();
+                    mxs_admin_finish();
 
-                        // Shutting down started, wait for all routing workers.
-                        RoutingWorker::join_workers();
-                        MXB_NOTICE("All workers have shut down.");
+                    // Shutting down started, wait for all routing workers.
+                    RoutingWorker::join_workers();
+                    MXB_NOTICE("All workers have shut down.");
 
-                        MonitorManager::destroy_all_monitors();
+                    MonitorManager::destroy_all_monitors();
 
-                        maxscale_start_teardown();
-                        service_destroy_instances();
-                        filter_destroy_instances();
-                        Listener::clear();
-                        ServerManager::destroy_all();
+                    maxscale_start_teardown();
+                    service_destroy_instances();
+                    filter_destroy_instances();
+                    Listener::clear();
+                    ServerManager::destroy_all();
 
-                        MXB_NOTICE("MaxScale shutdown completed.");
-                    }
-                    else
-                    {
-                        MXB_ALERT("Failed to queue startup task.");
-                        rc = MAXSCALE_INTERNALERROR;
-                    }
+                    MXB_NOTICE("MaxScale shutdown completed.");
                 }
                 else
                 {
-                    MXB_ALERT("Failed to install signal handlers.");
+                    MXB_ALERT("Failed to queue startup task.");
                     rc = MAXSCALE_INTERNALERROR;
                 }
             }
             else
             {
-                MXB_ALERT("Failed to start routing workers.");
+                MXB_ALERT("Failed to install signal handlers.");
                 rc = MAXSCALE_INTERNALERROR;
             }
 

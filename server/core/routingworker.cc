@@ -276,10 +276,10 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier)
-    : mxb::WatchedWorker(pNotifier)
+RoutingWorker::RoutingWorker(int index)
+    : mxb::WatchedWorker(this_unit.pNotifier)
     , m_index(index)
-    , m_state(State::ACTIVE)
+    , m_state(State::DORMANT)
     , m_listening(false)
     , m_routing(false)
     , m_callable(this)
@@ -299,53 +299,16 @@ RoutingWorker::~RoutingWorker()
 // static
 bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 {
-    if (this_unit.init(pNotifier))
-    {
-        int nCreated = config_threadcount();
+    mxb_assert(!this_unit.initialized);
 
-        size_t rebalance_window = mxs::Config::get().rebalance_window.get();
-        int fd = this_unit.epoll_listener_fd;
-
-        int i;
-        for (i = 0; i < nCreated; ++i)
-        {
-            std::unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, pNotifier, fd));
-            std::unique_ptr<AverageN> sAverage(new (std::nothrow) AverageN(rebalance_window));
-
-            if (sWorker && sAverage)
-            {
-                this_unit.ppWorkers[i] = sWorker.release();
-                this_unit.ppWorker_loads[i] = sAverage.release();
-            }
-            else
-            {
-                for (int j = i - 1; j >= 0; --j)
-                {
-                    delete this_unit.ppWorker_loads[j];
-                    delete this_unit.ppWorkers[j];
-                    this_unit.ppWorker_loads[j] = nullptr;
-                    this_unit.ppWorkers[j] = nullptr;
-                }
-                break;
-            }
-        }
-
-        if (i == nCreated)
-        {
-            this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
-            // nRunning and nConfigured are set in start_workers().
-        }
-        else
-        {
-            this_unit.finish();
-        }
-    }
-
-    return this_unit.initialized;
+    return this_unit.init(pNotifier);
 }
 
+// static
 void RoutingWorker::finish()
 {
+    mxb_assert(this_unit.initialized);
+
     this_unit.finish();
 }
 
@@ -393,12 +356,12 @@ bool RoutingWorker::adjust_threads(int nCount)
     }
     else if (nCount < nConfigured)
     {
-        rv = decrease_threads(nConfigured - nCount);
+        rv = decrease_workers(nConfigured - nCount);
         mxb_assert(nCount == this_unit.nConfigured);
     }
     else if (nCount > nConfigured)
     {
-        rv = increase_threads(nCount - nConfigured);
+        rv = increase_workers(nCount - nConfigured);
         mxb_assert(nCount == this_unit.nConfigured);
     }
     else
@@ -430,7 +393,7 @@ void RoutingWorker::finish_datas()
 }
 
 //static
-bool RoutingWorker::increase_threads(int nDelta)
+bool RoutingWorker::increase_workers(int nDelta)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(nDelta > 0);
@@ -445,7 +408,7 @@ bool RoutingWorker::increase_threads(int nDelta)
     {
         int n = std::min(nDelta, nAvailable);
 
-        int nActivated = activate_threads(n);
+        int nActivated = activate_workers(n);
 
         if (n == nActivated)
         {
@@ -463,14 +426,14 @@ bool RoutingWorker::increase_threads(int nDelta)
 
     if (rv && (nDelta != 0))
     {
-        rv = create_threads(nDelta);
+        rv = create_workers(nDelta);
     }
 
     return rv;
 }
 
 //static
-int RoutingWorker::activate_threads(int n)
+int RoutingWorker::activate_workers(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(this_unit.nCreated - this_unit.nConfigured >= n);
@@ -690,7 +653,7 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 }
 
 //static
-bool RoutingWorker::create_threads(int n)
+bool RoutingWorker::create_workers(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
@@ -701,64 +664,18 @@ bool RoutingWorker::create_threads(int n)
     int nBefore = this_unit.nCreated.load(std::memory_order_relaxed);
     int nAfter = nBefore + n;
 
-    auto services = Service::get_all();
     auto listeners = Listener::get_started_listeners();
 
     int i = nBefore;
     for (; i < nAfter; ++i)
     {
-        unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, this_unit.pNotifier,
-                                                                this_unit.epoll_listener_fd));
+        unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, listeners));
         unique_ptr<AverageN> sAverage(new (std::nothrow) AverageN(rebalance_window));
 
         if (sWorker && sAverage)
         {
-            if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
-            {
-                bool success = false;
-
-                sWorker->call([&sWorker, &services, &listeners, &success]() {
-                        success = true;
-
-                        if (success)
-                        {
-                            for (auto sListener : listeners)
-                            {
-                                // Other listener types are handled implicitly by the routing
-                                // worker reacting to events on the shared routing worker fd.
-                                if (sListener->type() == Listener::Type::UNIQUE_TCP)
-                                {
-                                    if (!sListener->listen(*sWorker.get()))
-                                    {
-                                        MXB_ERROR("Could not add listener to routing worker %d.",
-                                                  sWorker->index());
-                                        success = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }, mxb::Worker::EXECUTE_QUEUED);
-
-                if (success)
-                {
-                    this_unit.ppWorkers[i] = sWorker.release();
-                    this_unit.ppWorker_loads[i] = sAverage.release();
-                }
-                else
-                {
-                    MXB_ERROR("Terminating routing worker creation");
-
-                    sWorker->shutdown();
-                    sWorker->join();
-                    break;
-                }
-            }
-            else
-            {
-                MXB_ERROR("Could not start routing worker %d.", i);
-                break;
-            }
+            this_unit.ppWorkers[i] = sWorker.release();
+            this_unit.ppWorker_loads[i] = sAverage.release();
         }
         else
         {
@@ -782,7 +699,7 @@ bool RoutingWorker::create_threads(int n)
 }
 
 //static
-bool RoutingWorker::decrease_threads(int n)
+bool RoutingWorker::decrease_workers(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
@@ -960,30 +877,15 @@ RoutingWorker* RoutingWorker::get_by_index(int index)
 }
 
 // static
-bool RoutingWorker::start_workers()
+bool RoutingWorker::start_workers(int nWorkers)
 {
-    bool rv = true;
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(this_unit.nCreated == 0);
 
-    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-
-    for (int i = 0; i < nCreated; ++i)
-    {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        mxb_assert(pWorker);
-
-        if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
-        {
-            MXB_ALERT("Could not start routing worker %d of %d.", i, nCreated);
-            rv = false;
-            // At startup, so we don't even try to clean up.
-            break;
-        }
-    }
+    bool rv = create_workers(nWorkers);
 
     if (rv)
     {
-        this_unit.nRunning.store(nCreated, std::memory_order_relaxed);
-        this_unit.nConfigured.store(nCreated, std::memory_order_relaxed);
         this_unit.running = true;
     }
 
@@ -1574,12 +1476,7 @@ bool RoutingWorker::pre_run()
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
-    if (rv)
-    {
-        make_dcalls();
-        init_datas();
-    }
-    else
+    if (!rv)
     {
         MXB_ERROR("Could not perform thread initialization for all modules. Thread exits.");
         this_thread.pCurrent_worker = nullptr;
@@ -1608,40 +1505,49 @@ void RoutingWorker::post_run()
 
 /**
  * Creates a worker instance.
- * - Allocates the structure.
- * - Creates a pipe.
- * - Adds the read descriptor to the polling mechanism.
  *
- * @param pNotifier          The watchdog notifier.
  * @param index              Routing worker index.
- * @param epoll_listener_fd  The file descriptor of the epoll set to which listening
- *                           sockets will be placed.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 // static
-RoutingWorker* RoutingWorker::create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
+unique_ptr<RoutingWorker> RoutingWorker::create(int index,
+                                                const std::vector<std::shared_ptr<Listener>>& listeners)
 {
-    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(index, pNotifier);
+    unique_ptr<RoutingWorker> sWorker(new (std::nothrow) RoutingWorker(index));
 
-    if (pThis)
+    if (sWorker)
     {
-        if (pThis->start_polling_on_shared_fd())
+        if (sWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << index)))
         {
-            pThis->set_listening(true);
+            bool success = false;
+            sWorker->call([&sWorker, &listeners, &success]() {
+                    success = sWorker->activate(listeners);
+                }, mxb::Worker::EXECUTE_QUEUED);
+
+            mxb_assert(success);
+
+            if (!success)
+            {
+                MXB_ERROR("Could not activate worker %d.", index);
+
+                sWorker->shutdown();
+                sWorker->join();
+
+                sWorker.reset();
+            }
         }
         else
         {
-            delete pThis;
-            pThis = NULL;
+            MXB_ERROR("Could not start worker %d.", index);
         }
     }
     else
     {
-        MXB_OOM();
+        MXB_ERROR("Could not create worker %d.", index);
     }
 
-    return pThis;
+    return sWorker;
 }
 
 void RoutingWorker::epoll_tick()

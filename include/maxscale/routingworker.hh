@@ -135,9 +135,6 @@ public:
     /**
      * Initialize the routing worker mechanism.
      *
-     * To be called once at process startup. This will cause as many workers
-     * to be created as the number of threads defined.
-     *
      * @param pNotifier  The watchdog notifier. Must remain alive for the
      *                   lifetime of the routing worker.
      *
@@ -279,11 +276,13 @@ public:
     }
 
     /**
-     * Starts all routing workers.
+     * Starts routing workers.
+     *
+     * @param nWorkers  How many to start.
      *
      * @return True, if all workers could be started.
      */
-    static bool start_workers();
+    static bool start_workers(int nWorkers);
 
     /**
      * Returns whether worker threads are running
@@ -645,9 +644,10 @@ private:
         }
     };
 
-    RoutingWorker(int index, mxb::WatchdogNotifier* pNotifier);
+    RoutingWorker(int index);
 
-    static RoutingWorker* create(int index, mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
+    static std::unique_ptr<RoutingWorker> create(int index,
+                                                 const std::vector<std::shared_ptr<Listener>>& listeners);
 
     void set_listening(bool b)
     {
@@ -669,14 +669,14 @@ private:
     void init_datas();
     void finish_datas();
 
-    static bool increase_threads(int nDelta);
-    static bool decrease_threads(int nDelta);
+    static bool increase_workers(int nDelta);
+    static bool decrease_workers(int nDelta);
 
     bool start_polling_on_shared_fd();
     bool stop_polling_on_shared_fd();
 
-    static int activate_threads(int n);
-    static bool create_threads(int n);
+    static int activate_workers(int n);
+    static bool create_workers(int n);
 
     bool start_listening(const std::vector<std::shared_ptr<Listener>>& listeners);
     bool stop_listening(const std::vector<std::shared_ptr<Listener>>& listeners);

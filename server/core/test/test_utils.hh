@@ -145,6 +145,6 @@ void run_unit_test(std::function<void ()> func)
 {
     mxs::test::start_test();
     init_test_env();
-    mxs::RoutingWorker::start_workers();
+    mxs::RoutingWorker::start_workers(config_threadcount());
     mxs::RoutingWorker::get_first()->call(func, mxs::RoutingWorker::EXECUTE_AUTO);
 }

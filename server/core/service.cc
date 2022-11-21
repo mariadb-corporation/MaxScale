@@ -1887,16 +1887,12 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     auto init_cache = [this]() {
             init_for(RoutingWorker::get_current());
         };
-    // TODO: When the routing worker is started, it'll call RoutingWorker::init_datas()
-    // TODO: in its pre_run(), which will cause all init_for()s to be called. However,
-    // TODO: as the configuration has not been created at that point, Service will not
-    // TODO: have registered itself and thus init_for() below will not be called.
-    // TODO: Consequently, we need to do that manually here. If the startup is changed
-    // TODO: so that the routing workers are first created (but not started), then the
-    // TODO: configuration is created and finally the routing workers are started, this
-    // TODO: code can be removed and the creation/activation of a thread will be handled
-    // TODO: in the same manner.
-    auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
+
+    // The task is broadcasted to all running workers. Dormant ones, should they be
+    // started, will end up doing this when they are activated.
+    auto n_threads = mxs::RoutingWorker::broadcast(init_cache,
+                                                   mxs::RoutingWorker::RUNNING,
+                                                   &sem, mxb::Worker::EXECUTE_AUTO);
     sem.wait_n(n_threads);
 
     m_usermanager->start();
