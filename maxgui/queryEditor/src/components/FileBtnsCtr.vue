@@ -16,7 +16,7 @@
             </template>
             {{ $mxs_t('openScript') }}
             <br />
-            Cmd/Ctrl + O
+            {{ OS_KEY }} + O
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             v-if="hasFileSystemRWAccess"
@@ -30,7 +30,7 @@
             </template>
             {{ $mxs_t('saveScript') }}
             <br />
-            Cmd/Ctrl + S
+            {{ OS_KEY }} + S
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn save-sql-btn"
@@ -43,7 +43,7 @@
             </template>
             {{ $mxs_t('saveScriptAs') }}
             <br />
-            Cmd/Ctrl + Shift + S
+            {{ OS_KEY }} + SHIFT + S
         </mxs-tooltip-btn>
     </div>
 </template>
@@ -69,7 +69,10 @@ export default {
     mixins: [saveFile],
     props: { session: { type: Object, required: true } },
     computed: {
-        ...mapState({ file_dlg_data: state => state.editor.file_dlg_data }),
+        ...mapState({
+            file_dlg_data: state => state.editor.file_dlg_data,
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+        }),
         ...mapGetters({
             getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
             hasFileSystemReadOnlyAccess: 'editor/hasFileSystemReadOnlyAccess',

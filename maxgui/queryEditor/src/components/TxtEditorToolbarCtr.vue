@@ -22,7 +22,7 @@
             <template v-if="isExecuting">
                 {{ $mxs_t('stopStatements') }}
                 <br />
-                Cmd/Ctrl + Shift + C
+                {{ OS_KEY }} + SHIFT + C
             </template>
             <template v-else>
                 {{
@@ -31,7 +31,7 @@
                     })
                 }}
                 <br />
-                {{ selected_query_txt ? 'Cmd/Ctrl + Enter' : 'Cmd/Ctrl + Shift + Enter' }}
+                {{ OS_KEY }} {{ selected_query_txt ? '' : '+ SHIFT' }} + ENTER
             </template>
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
@@ -63,7 +63,7 @@
             </template>
             {{ $mxs_t('createQuerySnippet') }}
             <br />
-            Cmd/Ctrl + D
+            {{ OS_KEY }} + D
         </mxs-tooltip-btn>
         <file-btns-ctr :session="session" />
         <v-spacer />
@@ -189,6 +189,7 @@ export default {
     },
     computed: {
         ...mapState({
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
