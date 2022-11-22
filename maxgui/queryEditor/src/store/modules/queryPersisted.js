@@ -22,6 +22,7 @@ export default {
         query_snippets: [],
         query_history_expired_time: addDaysToNow(30),
         query_show_sys_schemas_flag: 1,
+        tab_moves_focus: false,
     },
     mutations: {
         SET_QUERY_ROW_LIMIT(state, payload) {
@@ -49,6 +50,9 @@ export default {
         },
         SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(state, payload) {
             state.query_show_sys_schemas_flag = payload
+        },
+        SET_TAB_MOVES_FOCUS(state, payload) {
+            state.tab_moves_focus = payload
         },
     },
     actions: {

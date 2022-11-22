@@ -1,7 +1,12 @@
 <template>
     <div class="d-flex flex-column fill-height">
         <!-- ref is needed here so that its parent can call method in it  -->
-        <txt-editor-toolbar-ctr class="d-flex" :height="txtEditorToolbarHeight" :session="session">
+        <txt-editor-toolbar-ctr
+            class="d-flex"
+            :height="txtEditorToolbarHeight"
+            :session="session"
+            @disable-tab-move-focus="toggleTabMoveFocus"
+        >
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
         </txt-editor-toolbar-ctr>
         <!-- Main panel contains editor pane and chart-config -->
@@ -35,6 +40,7 @@
                                     class="editor pt-2 pl-2"
                                     :cmplList="cmplList"
                                     isKeptAlive
+                                    :isTabMoveFocus.sync="isTabMoveFocus"
                                     @on-selection="SET_SELECTED_QUERY_TXT($event)"
                                     @shortkey="eventBus.$emit('shortkey', $event)"
                                 />
@@ -146,6 +152,7 @@ export default {
             SQL_CHART_TYPES: state => state.queryEditorConfig.config.SQL_CHART_TYPES,
             SQL_CHART_AXIS_TYPES: state => state.queryEditorConfig.config.SQL_CHART_AXIS_TYPES,
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
+            tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
@@ -154,6 +161,14 @@ export default {
         }),
         eventBus() {
             return EventBus
+        },
+        isTabMoveFocus: {
+            get() {
+                return this.tab_moves_focus
+            },
+            set(v) {
+                this.SET_TAB_MOVES_FOCUS(v)
+            },
         },
         resultSets() {
             return this.getChartResultSets({ scope: this })
@@ -235,7 +250,12 @@ export default {
         ...mapMutations({
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
             SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
+            SET_TAB_MOVES_FOCUS: 'queryPersisted/SET_TAB_MOVES_FOCUS',
         }),
+        toggleTabMoveFocus() {
+            if (!this.$typy(this.$refs, 'sqlEditor.editor').isEmptyObject)
+                this.$refs.sqlEditor.editor.trigger('', 'editor.action.toggleTabFocusMode')
+        },
         setDefChartOptState() {
             this.chartOpt = this.$helpers.lodash.cloneDeep(this.defChartOpt)
         },

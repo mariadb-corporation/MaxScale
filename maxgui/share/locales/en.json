@@ -153,6 +153,7 @@
         "destroy": "Destroy",
         "details": "Details",
         "diagnostics": "diagnostic | diagnostics",
+        "disableAccessibilityMode": "Disable accessibility mode",
         "disconnect": "Disconnect",
         "disconnectAll": "Disconnect all",
         "disconnectConn": "Disconnect connection",
@@ -237,7 +238,9 @@
             "refreshRate": "Click to change refresh rate",
             "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
             "showTrendline": "The trend line can only be computed for numerical data on both axes",
-            "switchover": "Swap the running master with a designated slave"
+            "switchover": "Swap the running master with a designated slave",
+            "tabInsetChar": "Pressing Tab in the current editor will insert the tab character. Check the box to change this behavior or while focusing on the editor, press {shortcut}",
+            "tabMovesFocus": "Pressing Tab in the current editor will move focus to the next focusable element. Uncheck the box to change this behavior or while focusing on the editor, press {shortcut}"
         },
         "initializing": "initializing",
         "items": "item | items",
@@ -399,6 +402,7 @@
         "swap": "Swap",
         "switchToHorizTable": "Switch to horizontal table",
         "switchToVertTable": "Switch to vertical table",
+        "tabMovesFocus": "Tab moves Focus",
         "timeout": "Timeout",
         "totalDuration": "Total Duration",
         "truncateTbl": "Truncate Table",
