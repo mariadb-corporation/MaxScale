@@ -67,6 +67,21 @@
         </mxs-tooltip-btn>
         <file-btns-ctr :session="session" />
         <v-spacer />
+        <mxs-tooltip-btn
+            v-if="tab_moves_focus"
+            btnClass="disable-tab-move-focus-mode-btn mr-1 text-capitalize"
+            text
+            color="accent-dark"
+            x-small
+            @click="$emit('disable-tab-move-focus')"
+        >
+            <template v-slot:btn-content>
+                {{ $mxs_t('tabMovesFocus') }}
+            </template>
+            {{ $mxs_t('disableAccessibilityMode') }}
+            <br />
+            {{ OS_KEY }} {{ $helpers.isMAC() ? '+ SHIFT' : '' }} + M
+        </mxs-tooltip-btn>
         <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
             <row-limit-ctr
@@ -151,7 +166,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+/**
+ * Emits
+ * @disable-tab-move-focus : void
+ */
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
@@ -198,6 +216,7 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             selected_query_txt: state => state.editor.selected_query_txt,
+            tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({
             getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
