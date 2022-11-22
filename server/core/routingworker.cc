@@ -1956,20 +1956,28 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
     m_epoll_tick_funcs.push_back(func);
 }
 
+void RoutingWorker::update_average_load(size_t count)
+{
+    mxb_assert(MainWorker::is_main_worker());
+
+    if (m_average_load.size() != count)
+    {
+        m_average_load.resize(count);
+    }
+
+    m_average_load.add_value(this->load(mxb::WorkerLoad::ONE_SECOND));
+}
+
 // static
 void RoutingWorker::collect_worker_load(size_t count)
 {
+    mxb_assert(MainWorker::is_main_worker());
+
     for (int i = 0; i < this_unit.nCreated; ++i)
     {
         auto* pWorker = this_unit.ppWorkers[i];
-        auto& worker_load = pWorker->m_average_load;
 
-        if (worker_load.size() != count)
-        {
-            worker_load.resize(count);
-        }
-
-        worker_load.add_value(pWorker->load(mxb::WorkerLoad::ONE_SECOND));
+        pWorker->update_average_load(count);
     }
 }
 
@@ -2011,7 +2019,7 @@ bool RoutingWorker::balance_workers(int threshold)
 
         if (use_average)
         {
-            load = pWorker->m_average_load.value();
+            load = pWorker->average_load();
         }
         else
         {

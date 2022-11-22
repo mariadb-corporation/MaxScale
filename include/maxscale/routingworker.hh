@@ -687,6 +687,13 @@ private:
         return !is_listening() && m_sessions.empty();
     }
 
+    uint8_t average_load() const
+    {
+        return m_average_load.value();
+    }
+
+    void update_average_load(size_t count);
+
     void clear();
     void deactivate();
     bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);
