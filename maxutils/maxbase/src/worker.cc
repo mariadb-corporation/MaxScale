@@ -804,14 +804,17 @@ bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
     // NOTE: No logging here, this function must be signal safe.
     bool rval = false;
 
-    // TODO: Enable and fix this in develop and/or 2.4: The deletion of rworker_local is done after the
-    // workers have stopped and it triggers this assertion.
-    // mxb_assert(event_loop_state() != EventLoop::FINISHED);
-
-    if (event_loop_state() != EventLoop::FINISHED)
+    if (messages_enabled())
     {
-        MessageQueue::Message message(msg_id, arg1, arg2);
-        rval = m_pQueue->post(message);
+        // TODO: Enable and fix this in develop and/or 2.4: The deletion of rworker_local is done after the
+        // workers have stopped and it triggers this assertion.
+        // mxb_assert(event_loop_state() != EventLoop::FINISHED);
+
+        if (event_loop_state() != EventLoop::FINISHED)
+        {
+            MessageQueue::Message message(msg_id, arg1, arg2);
+            rval = m_pQueue->post(message);
+        }
     }
 
     return rval;

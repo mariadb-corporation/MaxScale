@@ -766,8 +766,26 @@ public:
     void lcall(std::function<void ()>&& f);
 
 protected:
-    const     int m_epoll_fd;                              /*< The epoll file descriptor. */
-    EventLoop m_event_loop_state {EventLoop::NOT_STARTED}; /*< The event loop state of the worker */
+    const int m_epoll_fd;                                  /*< The epoll file descriptor. */
+    EventLoop m_event_loop_state {EventLoop::NOT_STARTED}; /*< The event loop state of the worker. */
+
+    /**
+     * Enable/disable message sending to this worker.
+     *
+     * @bool enabled  Whether to enable or disable.
+     */
+    void set_messages_enabled(bool enabled)
+    {
+        m_messages_enabled.store(enabled, std::memory_order_relaxed);
+    }
+
+    /**
+     * @return Whether messages to this worker are enabled or not.
+     */
+    bool messages_enabled() const
+    {
+        return m_messages_enabled.load(std::memory_order_relaxed);
+    }
 
     static void inc_ref(WorkerDisposableTask* pTask)
     {
@@ -1223,23 +1241,24 @@ private:
     std::thread      m_thread;           /*< The thread object of the worker. */
     std::atomic_bool m_started {false};  /*< Whether the thread has been started or not. */
 
-    uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
-    Statistics    m_statistics;                /*< Worker statistics. */
-    bool          m_should_shutdown {false};   /*< Whether shutdown should be performed. */
-    bool          m_shutdown_initiated {false};/*< Whether shutdown has been initated. */
-    int64_t       m_nCurrent_descriptors {0};  /*< Current number of descriptors. */
-    int64_t       m_nTotal_descriptors {0};    /*< Total number of descriptors. */
-    Load          m_load;                      /*< The worker load. */
-    PrivateTimer* m_pTimer;                    /*< The worker's own timer. */
-    DCallsByTime  m_sorted_calls;              /*< Current delayed calls sorted by time. */
-    DCallsById    m_calls;                     /*< Current delayed calls indexed by id. */
-    DCall*        m_pCurrent_call { nullptr }; /*< The current call, or nullptr if there is not one. */
-    RandomEngine  m_random_engine;             /*< Random engine for this worker (this thread). */
-    TimePoint     m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
-    DCId          m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
-    LCalls        m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
-    PendingPolls  m_scheduled_polls;           /*< Calls to be made during current epoll_wait(). */
-    PendingPolls  m_incomplete_polls;          /*< Calls to be made at next epoll_wait(). */
-    int           m_min_timeout {1};           /*< Minimum timeout when calling epoll_wait(). */
+    uint32_t         m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
+    Statistics       m_statistics;                /*< Worker statistics. */
+    bool             m_should_shutdown {false};   /*< Whether shutdown should be performed. */
+    bool             m_shutdown_initiated {false};/*< Whether shutdown has been initated. */
+    int64_t          m_nCurrent_descriptors {0};  /*< Current number of descriptors. */
+    int64_t          m_nTotal_descriptors {0};    /*< Total number of descriptors. */
+    Load             m_load;                      /*< The worker load. */
+    PrivateTimer*    m_pTimer;                    /*< The worker's own timer. */
+    DCallsByTime     m_sorted_calls;              /*< Current delayed calls sorted by time. */
+    DCallsById       m_calls;                     /*< Current delayed calls indexed by id. */
+    DCall*           m_pCurrent_call { nullptr }; /*< The current call, or nullptr if there is not one. */
+    RandomEngine     m_random_engine;             /*< Random engine for this worker (this thread). */
+    TimePoint        m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
+    DCId             m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
+    LCalls           m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
+    PendingPolls     m_scheduled_polls;           /*< Calls to be made during current epoll_wait(). */
+    PendingPolls     m_incomplete_polls;          /*< Calls to be made at next epoll_wait(). */
+    int              m_min_timeout {1};           /*< Minimum timeout when calling epoll_wait(). */
+    std::atomic_bool m_messages_enabled {true};   /*< Are messages to this worker enabled. */
 };
 }
