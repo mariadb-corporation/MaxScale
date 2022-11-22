@@ -26,6 +26,7 @@
 #include <vector>
 #include <grp.h>
 #include <pwd.h>
+#include <utility>
 
 #include <maxsql/mariadb.hh>
 #include <maxscale/listener.hh>
@@ -1384,14 +1385,20 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     else if (m_routing_state == RoutingState::COMPARE_RESPONSES)
     {
         // A session command that was recorded was just processed. Call the installed callbacks for any
-        // backends that responded before the accepted response was received.
+        // backends that responded before the accepted response was received. Collect the callbacks first into
+        // a separate vector: the callback might end up modifying the history info map.
+        std::vector<std::function<void ()>> callbacks;
         for (auto& kv : m_session_data->history_info)
         {
-            if (auto cb = kv.second.response_cb)
+            if (kv.second.response_cb)
             {
-                kv.second.response_cb = nullptr;
-                cb();
+                callbacks.push_back(std::exchange(kv.second.response_cb, nullptr));
             }
+        }
+
+        for (auto& cb : callbacks)
+        {
+            cb();
         }
 
         m_routing_state = RoutingState::PACKET_START;
