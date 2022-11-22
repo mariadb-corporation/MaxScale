@@ -7,7 +7,7 @@
             <div class="d-flex align-center justify-center">
                 <span
                     v-if="!isCollapsed"
-                    class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-uppercase"
+                    class="mxs-color-helper text-small-text sidebar-toolbar__title d-inline-block text-truncate text-capitalize"
                 >
                     {{ $mxs_t('schemas') }}
                 </span>
