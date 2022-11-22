@@ -891,15 +891,28 @@ void Worker::join()
 void Worker::shutdown()
 {
     // NOTE: No logging here, this function must be signal safe.
-    // This function could set m_should_shutdown directly, but posting it in a message also ensures
-    // the thread wakes up from epoll_wait.
     if (!m_shutdown_initiated)
     {
+        m_shutdown_initiated = true; // A potential race here, but it does not matter.
+
+        // If called from the thread itself, we just turn on the flag because in that case
+        // we must be running in an event-handler and will shortly return to the loop where
+        // the flag is checked. Otherwise we post the change, so that the thread returns from
+        // epoll_wait().
+
         auto init_shutdown = [this]() {
             MXB_INFO("Worker (%s, %p) received shutdown message.", thread_name().c_str(), this);
             m_should_shutdown = true;
         };
-        execute(init_shutdown, EXECUTE_QUEUED);
+
+        if (get_current() == this)
+        {
+            init_shutdown();
+        }
+        else
+        {
+            execute(init_shutdown, EXECUTE_QUEUED);
+        }
     }
 }
 
