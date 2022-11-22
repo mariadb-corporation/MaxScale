@@ -140,14 +140,26 @@
                     </template>
                 </table-list>
             </template>
-            <span
+            <i18n
                 v-else
-                v-html="
+                :path="
                     activeView === SQL_QUERY_MODES.HISTORY
-                        ? $mxs_t('historyTabGuide')
-                        : $mxs_t('snippetTabGuide')
+                        ? 'mxs.historyTabGuide'
+                        : 'mxs.snippetTabGuide'
                 "
-            />
+                class="d-flex align-center text-pre-wrap"
+                tag="span"
+            >
+                <!-- Slots for SQL_QUERY_MODES.SNIPPETS only -->
+                <template v-slot:shortcut>
+                    <b>{{ OS_KEY }} + S</b>
+                </template>
+                <template v-slot:icon>
+                    <v-icon color="accent-dark" size="16">
+                        mdi-star-plus-outline
+                    </v-icon>
+                </template>
+            </i18n>
         </keep-alive>
         <mxs-conf-dlg
             v-model="isConfDlgOpened"
@@ -218,6 +230,7 @@ export default {
     },
     computed: {
         ...mapState({
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
             SQL_QUERY_MODES: state => state.queryEditorConfig.config.SQL_QUERY_MODES,
             QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
             SQL_RES_TBL_CTX_OPT_TYPES: state =>

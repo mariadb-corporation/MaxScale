@@ -9,7 +9,7 @@
                     tag="span"
                 >
                     <template v-slot:shortcut>
-                        <b>CMD/Ctrl + Shift + Enter</b>
+                        <b>{{ OS_KEY }} + SHIFT + ENTER</b>
                     </template>
                     <template v-slot:icon>
                         <v-icon color="accent-dark" size="16">
@@ -133,6 +133,7 @@
  */
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
+import { mapState } from 'vuex'
 export default {
     name: 'results-tab',
     components: {
@@ -161,6 +162,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+        }),
         queryTxt() {
             return this.$typy(this.data, 'data.attributes.sql').safeObject
         },

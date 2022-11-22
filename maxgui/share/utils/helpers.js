@@ -261,3 +261,7 @@ export function preventNonNumericalVal(e) {
 export function stringifyClone(data) {
     return JSON.parse(JSON.stringify(data))
 }
+
+export function isMAC() {
+    return Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
+}

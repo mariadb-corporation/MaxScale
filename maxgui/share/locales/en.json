@@ -387,7 +387,7 @@
         "slaveRepStatus": "Slave replication status",
         "slaves": "Slave | Slaves",
         "snippets": "snippets",
-        "snippetTabGuide": "Query snippets are empty. Press <b>CMD/Ctrl + S</b> or click <i class='v-icon mdi mdi-star-plus-outline accent-dark--text material-icons' style='font-size: 20px;'></i> icon to create a query snippet",
+        "snippetTabGuide": "Query snippets are empty. Press {shortcut} or click {icon} to create a query snippet.",
         "socket": "Socket",
         "specify": "Specify a | Specify",
         "specifyRoutingTarget": "Specify a {0} | Specify {0}",
