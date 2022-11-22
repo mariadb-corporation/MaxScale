@@ -93,13 +93,11 @@ public:
         if (fd != -1)
         {
             std::unique_ptr<RoutingWorker* []> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
-            std::unique_ptr<AverageN* []> spWorker_loads(new(std::nothrow) AverageN* [this->nMax]());
 
-            if (spWorkers && spWorker_loads)
+            if (spWorkers)
             {
                 this->epoll_listener_fd = fd;
                 this->ppWorkers = spWorkers.release();
-                this->ppWorker_loads = spWorker_loads.release();
                 this->pNotifier = pNotifier;
                 this->initialized = true;
             }
@@ -127,11 +125,6 @@ public:
             mxb_assert(pWorker);
             delete pWorker;
             this->ppWorkers[i] = nullptr;
-
-            mxb::Average* pWorker_load = this->ppWorker_loads[i];
-            mxb_assert(pWorker_load);
-            delete pWorker_load;
-            this->ppWorker_loads[i] = nullptr;
         }
 
         this->nCreated.store(0, std::memory_order_relaxed);
@@ -140,9 +133,6 @@ public:
 
         delete[] this->ppWorkers;
         this->ppWorkers = nullptr;
-
-        delete[] this->ppWorker_loads;
-        this->ppWorker_loads = nullptr;
 
         close(this->epoll_listener_fd);
         this->epoll_listener_fd = -1;
@@ -159,7 +149,6 @@ public:
     std::atomic<int> nRunning {0};             // "Running" amount of workers.
     std::atomic<int> nConfigured {0};          // The configured amount of workers.
     RoutingWorker**  ppWorkers {nullptr};      // Array of routing worker instances.
-    mxb::AverageN**  ppWorker_loads {nullptr}; // Array of load averages for workers.
     int              epoll_listener_fd {-1};   // Shared epoll descriptor for listening descriptors.
     WN*              pNotifier {nullptr};      // Watchdog notifier.
 } this_unit;
@@ -276,7 +265,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker(int index)
+RoutingWorker::RoutingWorker(int index, size_t rebalance_window)
     : mxb::WatchedWorker(this_unit.pNotifier)
     , m_index(index)
     , m_state(State::DORMANT)
@@ -284,6 +273,7 @@ RoutingWorker::RoutingWorker(int index)
     , m_routing(false)
     , m_callable(this)
     , m_pool_handler(this)
+    , m_average_load(rebalance_window)
 {
 }
 
@@ -670,13 +660,11 @@ bool RoutingWorker::create_workers(int n)
     int i = nBefore;
     for (; i < nAfter; ++i)
     {
-        unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, listeners));
-        unique_ptr<AverageN> sAverage(new (std::nothrow) AverageN(rebalance_window));
+        unique_ptr<RoutingWorker> sWorker(RoutingWorker::create(i, rebalance_window, listeners));
 
-        if (sWorker && sAverage)
+        if (sWorker)
         {
             this_unit.ppWorkers[i] = sWorker.release();
-            this_unit.ppWorker_loads[i] = sAverage.release();
         }
         else
         {
@@ -1515,9 +1503,10 @@ void RoutingWorker::post_run()
  */
 // static
 unique_ptr<RoutingWorker> RoutingWorker::create(int index,
+                                                size_t rebalance_window,
                                                 const std::vector<std::shared_ptr<Listener>>& listeners)
 {
-    unique_ptr<RoutingWorker> sWorker(new (std::nothrow) RoutingWorker(index));
+    unique_ptr<RoutingWorker> sWorker(new (std::nothrow) RoutingWorker(index, rebalance_window));
 
     if (sWorker)
     {
@@ -1973,14 +1962,14 @@ void RoutingWorker::collect_worker_load(size_t count)
     for (int i = 0; i < this_unit.nCreated; ++i)
     {
         auto* pWorker = this_unit.ppWorkers[i];
-        auto* pWorker_load = this_unit.ppWorker_loads[i];
+        auto& worker_load = pWorker->m_average_load;
 
-        if (pWorker_load->size() != count)
+        if (worker_load.size() != count)
         {
-            pWorker_load->resize(count);
+            worker_load.resize(count);
         }
 
-        pWorker_load->add_value(pWorker->load(mxb::WorkerLoad::ONE_SECOND));
+        worker_load.add_value(pWorker->load(mxb::WorkerLoad::ONE_SECOND));
     }
 }
 
@@ -2022,8 +2011,7 @@ bool RoutingWorker::balance_workers(int threshold)
 
         if (use_average)
         {
-            mxb::Average* pLoad = this_unit.ppWorker_loads[i];
-            load = pLoad->value();
+            load = pWorker->m_average_load.value();
         }
         else
         {

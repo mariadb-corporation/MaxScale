@@ -644,9 +644,10 @@ private:
         }
     };
 
-    RoutingWorker(int index);
+    RoutingWorker(int index, size_t rebalance_window);
 
     static std::unique_ptr<RoutingWorker> create(int index,
+                                                 size_t rebalance_window,
                                                  const std::vector<std::shared_ptr<Listener>>& listeners);
 
     void set_listening(bool b)
@@ -824,6 +825,7 @@ private:
     DCId               m_check_pool_dcid {0};
     DCId               m_activate_eps_dcid {0};
     DCId               m_timeout_eps_dcid {0};
+    mxb::AverageN      m_average_load;
 };
 
 const char* to_string(RoutingWorker::State state);
