@@ -155,15 +155,13 @@ template<typename SD>
 class GCUpdater
 {
 public:
-    using SharedDataType = SD;
-
     /**
      * @brief Constructor
      *
      * @param pInitialData The initial DataType instance.
      * @param num_clients Number of SharedData
      * @param queue_max The max queue length in a SharedData
-     * @param cap_copies Maximum number of simultaneous copies of SharedDataType::DataType
+     * @param cap_copies Maximum number of simultaneous copies of SD::DataType
      *                   if <= 0, the number of copies is unlimited
      * @param order_updates when true, process updates in order of creation
      * @param updates_only means that the GCUpdater will only handle updates and not
@@ -189,16 +187,16 @@ public:
     void start();
     void stop();
 
-    // The SharedDataType instances are owned by GCUpdater, get pointers to all of them...
-    std::vector<SharedDataType*> get_shared_data_pointers();
+    // The SD instances are owned by GCUpdater, get pointers to all of them...
+    std::vector<SD*> get_shared_data_pointers();
 
-    // ... alternatively, if the threads using SharedDataType are ordered [0, num_clients[,
+    // ... alternatively, if the threads using SD are ordered [0, num_clients[,
     // this may be more convenient.
-    SharedDataType* get_shared_data_by_index(int thread_id);
+    SD* get_shared_data_by_index(int thread_id);
 
     // Only for testing. The pointed to data may be collected (deleted) at any time, the caller
     // must know what it is doing.
-    typename SharedDataType::DataType* get_pLatest();
+    typename SD::DataType* get_pLatest();
 
 private:
     void run();
@@ -207,9 +205,9 @@ private:
 
     std::vector<const typename SD::DataType*> get_in_use_ptrs();
 
-    std::atomic<bool>                  m_running;
-    std::future<void>                  m_future;
-    typename SharedDataType::DataType* m_pLatest_data;
+    std::atomic<bool>      m_running;
+    std::future<void>      m_future;
+    typename SD::DataType* m_pLatest_data;
 
     int    m_num_clients;
     size_t m_queue_max;     // of a SharedData instance
@@ -217,17 +215,16 @@ private:
     bool   m_order_updates;
     bool   m_updates_only;
 
-    std::vector<SharedDataType>                           m_shared_data;
-    std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
-    std::vector<typename SharedDataType::InternalUpdate>  m_local_queue;
-    std::vector<typename SharedDataType::InternalUpdate>  m_leftover_queue;
+    std::vector<SD>                           m_shared_data;
+    std::vector<const typename SD::DataType*> m_all_ptrs;
+    std::vector<typename SD::InternalUpdate>  m_local_queue;
+    std::vector<typename SD::InternalUpdate>  m_leftover_queue;
 
     std::condition_variable m_updater_wakeup;
     bool                    m_data_rdy {false};
     std::atomic<int64_t>    m_timestamp_generator {0};
 
-    virtual typename SharedDataType::DataType* create_new_copy(
-        const typename SharedDataType::DataType* pCurrent)
+    virtual typename SD::DataType* create_new_copy(const typename SD::DataType* pCurrent)
     {
         /// Misconfigured updater. Either turn off the updates_only feature or
         /// implement create_new_copy.
@@ -236,8 +233,8 @@ private:
     }
 
     // The queue is never empty
-    virtual void make_updates(typename SharedDataType::DataType* pData,
-                              std::vector<typename SharedDataType::InternalUpdate>& queue) = 0;
+    virtual void make_updates(typename SD::DataType* pData,
+                              std::vector<typename SD::InternalUpdate>& queue) = 0;
 };
 
 /// IMPLEMENTATION
@@ -274,7 +271,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
     while (!clients.empty())
     {
         int index = clients.back();
-        std::vector<typename SharedDataType::InternalUpdate> swap_queue;
+        std::vector<typename SD::InternalUpdate> swap_queue;
         swap_queue.reserve(m_queue_max);
 
         // magic value clients.size() <= N: when true, get_updates() blocks if a worker has the mutex.
@@ -293,7 +290,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
 template<typename SD>
 std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
 {
-    std::vector<const typename SharedDataType::DataType*> in_use_ptrs;
+    std::vector<const typename SD::DataType*> in_use_ptrs;
     in_use_ptrs.reserve(2 * m_shared_data.size());
     for (auto& c : m_shared_data)
     {
@@ -366,10 +363,10 @@ void GCUpdater<SD>::run()
         if (m_order_updates && m_local_queue.size() > 1)
         {
             std::sort(begin(m_local_queue), end(m_local_queue),
-                      [](const typename SharedDataType::InternalUpdate& lhs,
-                         const typename SharedDataType::InternalUpdate& rhs) {
-                          return lhs.tstamp < rhs.tstamp;
-                      });
+                      [](const typename SD::InternalUpdate& lhs,
+                         const typename SD::InternalUpdate& rhs) {
+                return lhs.tstamp < rhs.tstamp;
+            });
 
             // Find a discontinuity point in input (missing timestamp)
             size_t ind = 1;
@@ -498,7 +495,7 @@ int GCUpdater<SD>::gc()
 template<typename SD>
 std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
 {
-    std::vector<SharedDataType*> ptrs;
+    std::vector<SD*> ptrs;
     for (auto& c : m_shared_data)
     {
         ptrs.push_back(&c);
