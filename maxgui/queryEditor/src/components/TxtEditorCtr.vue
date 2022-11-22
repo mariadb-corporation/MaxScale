@@ -72,6 +72,7 @@
             </template>
             <template slot="pane-right">
                 <chart-config
+                    v-if="show_vis_sidebar"
                     v-model="chartOpt"
                     :chartTypes="SQL_CHART_TYPES"
                     :axisTypes="SQL_CHART_AXIS_TYPES"
@@ -134,7 +135,7 @@ export default {
             // chart-config and chart-pane state
             defChartOpt: {
                 type: '',
-                data: {},
+                data: { datasets: [] },
                 scaleLabels: { x: '', y: '' },
                 axesType: { x: '', y: '' },
                 isMaximized: false,
