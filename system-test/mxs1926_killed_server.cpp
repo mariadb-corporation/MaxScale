@@ -85,12 +85,17 @@ int main(int argc, char** argv)
     // Disable replication of the LOAD DATA LOCAL INFILE
     test.try_query(test.maxscale->conn_rwsplit, "SET sql_log_bin=0");
 
+    // This works around a limitation in 2.5 where non-participating connections must not process any queries
+    // while the LOAD DATA LOCAL INFILE is in progress.
+    // TODO: Remove this when merging into 6.4
+    sleep(2);
+
     test.tprintf("Loading %d rows of data while stopping a slave", ROWCOUNT.load());
     std::thread thr([&]() {
-                        std::this_thread::sleep_for(milliseconds(10));
-                        test.repl->stop_node(3);
-                        test.repl->start_node(3);
-                    });
+        std::this_thread::sleep_for(milliseconds(10));
+        test.repl->stop_node(3);
+        test.repl->start_node(3);
+    });
     test.try_query(test.maxscale->conn_rwsplit,
                    "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
                    filename.c_str());

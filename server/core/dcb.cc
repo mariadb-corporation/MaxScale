@@ -349,11 +349,8 @@ int DCB::read(GWBUF** head, int maxbytes)
             {
                 m_last_read = mxs_clock();
                 nreadtotal += nsingleread;
-                MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
-                          nsingleread,
-                          this,
-                          mxs::to_string(m_state),
-                          m_fd);
+                MXB_DEBUG("Read %d bytes from dcb %p (%s) in state %s fd %d.",
+                          nsingleread, this, whoami(), mxs::to_string(m_state), m_fd);
 
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
@@ -807,6 +804,9 @@ int DCB::writeq_drain()
 
     mxb_assert(m_writeqlen >= (uint32_t)total_written);
     m_writeqlen -= total_written;
+
+    MXB_DEBUG("Wrote %d bytes to dcb %p (%s) in state %s fd %d.",
+              total_written, this, whoami(), mxs::to_string(m_state), m_fd);
 
     if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
     {
@@ -1669,6 +1669,11 @@ void ClientDCB::shutdown()
     m_protocol->finish_connection();
 }
 
+const char* ClientDCB::whoami() const
+{
+    return m_session->user_and_host().c_str();
+}
+
 ClientDCB::ClientDCB(int fd,
                      const std::string& remote,
                      const sockaddr_storage& ip,
@@ -2077,6 +2082,11 @@ void BackendDCB::close(BackendDCB* dcb)
 BackendDCB::Manager* BackendDCB::manager() const
 {
     return static_cast<Manager*>(m_manager);
+}
+
+const char* BackendDCB::whoami() const
+{
+    return m_server->name();
 }
 
 /**

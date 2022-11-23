@@ -150,6 +150,8 @@ public:
         return m_remote;
     }
 
+    virtual const char* whoami() const = 0;
+
     /**
      * @return The host of the client that created this DCB.
      */
@@ -757,6 +759,8 @@ public:
 
     static void close(ClientDCB* dcb);
 
+    const char* whoami() const override;
+
 protected:
     // Only for InternalDCB.
     ClientDCB(int fd,
@@ -853,6 +857,8 @@ public:
      * @param dcb Dcb to close
      */
     static void close(BackendDCB* dcb);
+
+    const char* whoami() const override;
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
