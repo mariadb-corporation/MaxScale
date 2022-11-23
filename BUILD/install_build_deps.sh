@@ -88,6 +88,7 @@ then
   then
      # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
      ${apt_cmd} install python3
+     ${apt_cmd} install python2
   fi
 
    ## separate libgnutls installation process for Ubuntu Trusty
@@ -144,6 +145,9 @@ then
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
        sudo yum -d1 -y install python3
+       # And for some reason RHEL 8 ARM requires python2 instead of python3. Install it
+       # separately so that in case it fails, the build will still proceed.
+       sudo yum -d1 -y install python2
     fi
 
     # Enable the devtoolkit to get a newer compiler
@@ -200,6 +204,8 @@ then
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
        sudo zypper -n install python3
+       # See: YUM version explains why we need this
+       sudo zypper -n install python2
     fi
 
     # Install a newer compiler
