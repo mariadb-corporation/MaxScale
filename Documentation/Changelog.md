@@ -15,6 +15,10 @@
 * The `maxctrl cluster` commands have been removed. Use the built-in
   [configuration synchronization](Getting-Started/Configuration-Guide.md#configuration-synchronization)
   to synchronize the configurations of multiple MaxScale instances.
+* MariaDBMonitor now preserves the MASTER_USE_GTID-setting of a replica when
+  redirecting one during switchover and failover. When starting a new
+  replication connection on a previous replica, Slave_Pos is used. When starting
+  a new replication connection on a previous primary, Current_Pos is used.
 
 ## MariaDB MaxScale 22.08
 
