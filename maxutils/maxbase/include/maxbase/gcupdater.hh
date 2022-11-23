@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxbase/shareddata.hh>
+#include <maxbase/threadpool.hh>
 #include <vector>
 #include <numeric>
 #include <algorithm>
@@ -159,7 +160,10 @@ public:
      * @brief Constructor
      *
      * @param pInitialData The initial DataType instance.
-     * @param num_clients Number of SharedData
+     * @param num_clients Number of SharedData.
+     *        NOTE: if the client implements dynamic threads, thus calling
+     *              increase/decrease_client_count(), it must pass
+     *              num_clients==0.
      * @param queue_max The max queue length in a SharedData
      * @param cap_copies Maximum number of simultaneous copies of SD::DataType
      *                   if <= 0, the number of copies is unlimited
@@ -187,6 +191,14 @@ public:
     void start();
     void stop();
 
+    // Add a SharedData to the end of the vector.
+    // The index is passed in for asserting that it matches expectations.
+    void increase_client_count(size_t index);
+
+    // Drop the last SharedData (highest index).
+    // The index is passed in for asserting that it matches expectation.
+    void decrease_client_count(size_t index);
+
     // The SD instances are owned by GCUpdater, get pointers to all of them...
     std::vector<SD*> get_shared_data_pointers();
 
@@ -206,8 +218,13 @@ private:
     std::vector<const typename SD::DataType*> get_in_use_ptrs();
 
     std::atomic<bool>      m_running;
-    std::future<void>      m_future;
+    std::thread            m_thread;
     typename SD::DataType* m_pLatest_data;
+
+    // Synchronize the updater thread and an increase/decrease_client_count() call
+    std::mutex              m_client_count_mutex;
+    std::condition_variable m_client_cond;
+    std::atomic<bool>       m_pending_client_change{false};
 
     size_t           m_queue_max;   // of a SharedData instance
     int              m_cap_copies;
@@ -278,8 +295,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
         std::vector<typename SD::InternalUpdate> swap_queue;
         swap_queue.reserve(m_queue_max);
 
-        // magic value clients.size() <= N: when true, get_updates() blocks if a worker has the mutex.
-        if (m_shared_data[index]->get_updates(swap_queue, clients.size() <= 4))
+        if (m_shared_data[index]->get_updates(swap_queue))
         {
             m_local_queue.insert(end(m_local_queue), begin(swap_queue), end(swap_queue));
             clients.pop_back();
@@ -319,11 +335,28 @@ void GCUpdater<SD>::update_client_indices()
 template<typename SD>
 void GCUpdater<SD>::run()
 {
+    std::atomic<int> instance_ctr{0};
+    auto name {MAKE_STR("GCUpdater-" << std::setw(2) << std::setfill('0') << ++instance_ctr)};
+    maxbase::set_thread_name(m_thread, name);
+
     const maxbase::Duration garbage_wait_tmo {std::chrono::microseconds(100)};
     int gc_ptr_count = 0;
+    std::unique_lock client_lock(m_client_count_mutex);
+
+    // Initially the threads may not yet have been created
+    while (m_running.load(std::memory_order_acquire) && m_client_indices.size() == 0)
+    {
+        client_lock.unlock();
+        std::this_thread::sleep_for(garbage_wait_tmo);
+        client_lock.lock();
+    }
 
     while (m_running.load(std::memory_order_acquire))
     {
+        m_client_cond.wait(client_lock, [this]() {
+            return !m_pending_client_change.load(std::memory_order_acquire);
+        });
+
         m_local_queue.clear();
         if (m_order_updates)
         {
@@ -332,7 +365,8 @@ void GCUpdater<SD>::run()
 
         read_clients(m_client_indices);
 
-        mxb_assert(m_local_queue.size() < 2 * m_shared_data.size() * m_queue_max);
+        mxb_assert(!m_shared_data.size()
+                   || m_local_queue.size() < 2 * m_shared_data.size() * m_queue_max);
 
         if (m_local_queue.empty())
         {
@@ -346,7 +380,8 @@ void GCUpdater<SD>::run()
             if (gc_ptr_count)
             {
                 // wait for updates, or a timeout to check for new garbage (opportunistic gc)
-                while (gc_ptr_count
+                int count = 5;
+                while (gc_ptr_count && --count
                        && !(have_data = m_shared_data[0]->wait_for_updates(garbage_wait_tmo)))
                 {
                     gc_ptr_count = gc();
@@ -355,14 +390,15 @@ void GCUpdater<SD>::run()
 
             if (!have_data && m_running.load(std::memory_order_acquire))
             {
-                m_shared_data[0]->wait_for_updates(maxbase::Duration {0});
+                // Wait for a long time, thus keeping CPU load low.
+                // Only a client count change may have to wait a little longer.
+                m_shared_data[0]->wait_for_updates(100ms);
             }
 
             read_clients(m_client_indices);
 
             if (m_local_queue.empty())
             {
-                mxb_assert(m_running.load(std::memory_order_acquire) == false);
                 continue;
             }
         }
@@ -456,7 +492,7 @@ template<typename SD>
 void GCUpdater<SD>::start()
 {
     m_running.store(true, std::memory_order_release);
-    m_future = std::async(std::launch::async, &GCUpdater<SD>::run, this);
+    m_thread = std::thread(&GCUpdater<SD>::run, this);
 }
 
 template<typename SD>
@@ -468,7 +504,61 @@ void GCUpdater<SD>::stop()
         s->reset_ptrs();
     }
     m_shared_data[0]->shutdown();
-    m_future.get();
+    m_thread.join();
+}
+
+template<typename SD>
+void GCUpdater<SD>::increase_client_count(size_t index)
+{
+    mxb_assert(index == m_shared_data.size());
+
+    m_pending_client_change.store(true, std::memory_order_release);
+    std::lock_guard client_lock(m_client_count_mutex);
+
+    m_shared_data.push_back(std::make_unique<SD>(m_pLatest_data,
+                                                 m_queue_max,
+                                                 &m_updater_wakeup,
+                                                 &m_data_rdy,
+                                                 &m_timestamp_generator));
+    update_client_indices();
+    m_pending_client_change.store(false, std::memory_order_release);
+    m_client_cond.notify_one();
+}
+
+template<typename SD>
+void GCUpdater<SD>::decrease_client_count(size_t index)
+{
+    mxb_assert(index + 1 == m_shared_data.size());
+
+    m_pending_client_change.store(true, std::memory_order_release);
+    std::unique_lock client_lock(m_client_count_mutex);
+
+    while (m_shared_data.back()->has_data())
+    {
+        m_pending_client_change.store(false, std::memory_order_release);
+        client_lock.unlock();
+        m_client_cond.notify_one();
+
+        std::this_thread::sleep_for(1ms);
+        m_pending_client_change.store(true, std::memory_order_release);
+        client_lock.lock();
+    }
+
+    m_pending_client_change.store(false, std::memory_order_release);
+
+    m_shared_data.resize(m_shared_data.size() - 1);
+
+    if (index == 0)
+    {
+        m_running = false;
+        m_client_indices.clear();
+    }
+    else
+    {
+        update_client_indices();
+    }
+
+    m_client_cond.notify_one();
 }
 
 template<typename SD>

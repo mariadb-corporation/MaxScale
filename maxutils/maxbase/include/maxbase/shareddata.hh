@@ -114,7 +114,7 @@ public:
      *                    This number should by high enough that send_update() never blocks, or, does not
      *                    block under sensible load conditions.
      */
-    SharedData(Data * pData,
+    SharedData(Data* pData,
                int max_updates,
                std::condition_variable* updater_wakeup,
                bool* pData_rdy,
@@ -149,8 +149,12 @@ public:
         int64_t    tstamp = 0;
     };
 
+    // For GCUpdater to check if there is buffered data
+    // when this SharedData is about to be removed.
+    bool has_data() const;
+
     // For GCUpdater, so it can move SharedData into a vector (in initialization)
-    SharedData(SharedData && rhs);
+    SharedData(SharedData&& rhs);
 private:
     // GCUpdater is a friend. All private functions are for GCUpdater, and nothing else, to call.
     template<typename Me>
@@ -158,7 +162,7 @@ private:
 
     void set_new_data(const Data* pData);
     bool wait_for_updates(maxbase::Duration timeout);
-    bool get_updates(std::vector<InternalUpdate>& swap_me, bool block);
+    bool get_updates(std::vector<InternalUpdate>& swap_me);
     void reset_ptrs();
     void shutdown();
 
@@ -302,8 +306,8 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
     {
         *m_pData_rdy = false;
         auto pred = [this]() {
-                return *m_pData_rdy;
-            };
+            return *m_pData_rdy;
+        };
 
         if (timeout.count() != 0)
         {
@@ -319,22 +323,12 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
     return ret_got_data;
 }
 
-// TODO don't know if there is any performance advantage with "block", which when false means that the
-// function will only try_lock(), and immediately return if try_lock() failed. Intuitively it seems there
-// would be an advantage: imagine 96 cores and the first ten calls happen to block, meaning we make a trip
-// to the kernel (or hopefully only spin for a while), rather than just stay in userland and be able to
-// speed through and pick up updates where they are not locked. GCUpdater calls with block==true, when the
-// remaining count of SharedData to read becomes "low" (it reads all SharedData instances each cycle).
 template<typename Data, typename Update>
-bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me, bool block)
+bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me)
 {
     std::unique_lock<std::mutex> guard(m_update_mutex, std::defer_lock);
 
-    if (block)
-    {
-        guard.lock();
-    }
-    else if (!guard.try_lock())
+    if (!guard.try_lock())
     {
         num_shareddata_updater_blocks.fetch_add(1, std::memory_order_release);
         return false;
@@ -378,10 +372,16 @@ void SharedData<Data, Update>::send_update(const Update& update)
             num_shareddata_worker_blocks.fetch_add(1, std::memory_order_relaxed);
             m_data_swapped_out = false;
             m_worker_wakeup.wait(guard, [this]() {
-                                     return m_data_swapped_out;
-                                 });
+                return m_data_swapped_out;
+            });
         }
     }
+}
+
+template<typename Data, typename Update>
+bool SharedData<Data, Update>::has_data() const
+{
+    return !m_queue.empty();
 }
 
 template<typename Data, typename Update>
