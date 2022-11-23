@@ -93,20 +93,6 @@ SmartRouter::SmartRouter(SERVICE* service)
     using namespace maxscale;
     using namespace maxbase;
 
-    auto shared_ptrs = m_updater.get_shared_data_pointers();
-
-    for (size_t i = 0; i != shared_ptrs.size(); ++i)
-    {
-        RoutingWorker* pRworker = RoutingWorker::get_by_index(i);
-        auto pShared = shared_ptrs[i];
-        pRworker->execute([pRworker, pShared]() {
-                              pRworker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::
-                                                                           reader_ready,
-                                                                           pShared));
-                          },
-                          Worker::EXECUTE_AUTO);
-    }
-
     m_updater.start();
 }
 

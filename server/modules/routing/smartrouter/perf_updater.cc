@@ -16,11 +16,23 @@
 
 PerformanceInfoUpdater::PerformanceInfoUpdater()
     : GCUpdater(new PerformanceInfoContainer(),
-                config_threadcount(),
+                0,
                 5000,                           // config, maybe. 5000 should be a pretty safe queue size.
                 3,                              // 3 copies. Not expecting the container to be very large.
                 true)                           // order updates.
 {
+}
+
+void PerformanceInfoUpdater::init_for(maxscale::RoutingWorker* pWorker)
+{
+    increase_client_count(pWorker->index());
+    auto pShared = get_shared_data_by_index(pWorker->index());
+    pWorker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::reader_ready, pShared));
+}
+
+void PerformanceInfoUpdater::finish_for(maxscale::RoutingWorker* pWorker)
+{
+    decrease_client_count(pWorker->index());
 }
 
 PerformanceInfoContainer* PerformanceInfoUpdater::create_new_copy(const PerformanceInfoContainer* pCurrent)
