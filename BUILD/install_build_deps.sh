@@ -88,7 +88,6 @@ then
   then
      # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
      ${apt_cmd} install python3
-     ${apt_cmd} install python2
   fi
 
    ## separate libgnutls installation process for Ubuntu Trusty
