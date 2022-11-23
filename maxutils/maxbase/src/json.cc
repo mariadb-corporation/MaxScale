@@ -749,31 +749,40 @@ std::ostream& operator<<(std::ostream& out, mxb::Json::Type type)
     {
     case mxb::Json::Type::OBJECT:
         out << "object";
+        break;
 
     case mxb::Json::Type::ARRAY:
         out << "array";
+        break;
 
     case mxb::Json::Type::STRING:
         out << "string";
+        break;
 
     case mxb::Json::Type::INTEGER:
         out << "integer";
+        break;
 
     case mxb::Json::Type::REAL:
         out << "real";
+        break;
 
     case mxb::Json::Type::BOOL:
         out << "boolean";
+        break;
 
     case mxb::Json::Type::JSON_NULL:
         out << "null";
+        break;
 
     case mxb::Json::Type::UNDEFINED:
         out << "undefined";
+        break;
 
     default:
         mxb_assert(!true);
         out << "unknown";
+        break;
     }
 
     return out;
