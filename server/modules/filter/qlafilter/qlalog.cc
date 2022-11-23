@@ -26,12 +26,22 @@ void log_error(int errnum, const typename SharedLogLine::InternalUpdate& iu)
 
 QlaLog::QlaLog()
     : GCUpdater(new LogContext(),
-                config_threadcount(),
-                10000,                      // Queue length.
-                0,                          // Cap, not used in updates_only mode
-                true,                       // order updates.
-                true)                       // Updates only
+                0,      // Support dynamic thread count
+                10000,  // Queue length.
+                0,      // Cap, not used in updates_only mode
+                true,   // order updates.
+                true)   // Updates only
 {
+}
+
+void QlaLog::init_for(maxscale::RoutingWorker* pWorker)
+{
+    increase_client_count(pWorker->index());
+}
+
+void QlaLog::finish_for(maxscale::RoutingWorker* pWorker)
+{
+    decrease_client_count(pWorker->index());
 }
 
 /// NOTE: There is a very small caveat with flusing only the last element in the queue.

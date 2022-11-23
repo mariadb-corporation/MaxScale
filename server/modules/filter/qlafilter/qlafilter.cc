@@ -51,7 +51,7 @@ using std::string;
 namespace
 {
 
-uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_NO_THREAD_CHANGE;
+uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT;
 
 const char HEADER_ERROR[] = "Failed to print header to file %s. Error %i: '%s'.";
 
