@@ -167,6 +167,7 @@ QlaInstance::QlaInstance(const string& name)
     : m_settings(name, this)
     , m_name(name)
 {
+    m_qlalog.start();
 }
 
 QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
@@ -204,11 +205,11 @@ bool QlaInstance::Settings::post_configure(const std::map<std::string, mxs::Conf
 
 QlaInstance::~QlaInstance()
 {
+    m_qlalog.stop();
 }
 
 QlaInstance::LogManager::~LogManager()
 {
-    m_qlalog.stop();
 }
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
@@ -230,7 +231,7 @@ bool QlaInstance::post_configure()
 {
     bool ok = false;
 
-    if (auto log = LogManager::create(m_settings.values()))
+    if (auto log = LogManager::create(m_settings.values(), m_qlalog))
     {
         m_log.assign(std::move(log));
         ok = true;
@@ -241,9 +242,9 @@ bool QlaInstance::post_configure()
 
 // static
 std::unique_ptr<QlaInstance::LogManager>
-QlaInstance::LogManager::create(const QlaInstance::Settings::Values& settings)
+QlaInstance::LogManager::create(const QlaInstance::Settings::Values& settings, QlaLog& qlalog)
 {
-    std::unique_ptr<QlaInstance::LogManager> manager(new QlaInstance::LogManager(settings));
+    std::unique_ptr<QlaInstance::LogManager> manager(new QlaInstance::LogManager(settings, qlalog));
 
     if (!manager->prepare())
     {
@@ -253,12 +254,12 @@ QlaInstance::LogManager::create(const QlaInstance::Settings::Values& settings)
     return manager;
 }
 
-QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& settings)
+QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& settings, QlaLog& qlalog)
     : m_settings(settings)
     , m_rotation_count(mxs_get_log_rotation_count())
+    , m_qlalog(qlalog)
 {
     m_sUnified_file = std::make_shared<LogFile>();      // The shared_ptr is always valid
-    m_qlalog.start();
 }
 
 bool QlaInstance::LogManager::prepare()

@@ -159,7 +159,7 @@ public:
     class LogManager
     {
     public:
-        static std::unique_ptr<LogManager> create(const Settings::Values& settings);
+        static std::unique_ptr<LogManager> create(const Settings::Values& settings, QlaLog& qlalog);
         ~LogManager();
 
         bool        open_unified_logfile();
@@ -178,7 +178,7 @@ public:
         }
 
     private:
-        LogManager(const Settings::Values& settings);
+        LogManager(const Settings::Values& settings, QlaLog& qlalog);
         bool  prepare();
         SFile open_log_file(uint64_t data_flags, const std::string& filename) const;
         void  check_reopen_file(const std::string& filename, uint64_t data_flags, SFile* psFile) const;
@@ -188,8 +188,7 @@ public:
         std::string      m_unified_filename;            /* Filename of the unified log file */
         SFile            m_sUnified_file;               /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
-
-        QlaLog m_qlalog;
+        QlaLog&          m_qlalog;
     };
 
     std::shared_ptr<LogManager> log() const
@@ -200,6 +199,7 @@ public:
 private:
     Settings          m_settings;
     const std::string m_name;   /* Filter definition name */
+    QlaLog            m_qlalog;
 
     mxs::WorkerGlobal<std::shared_ptr<LogManager>> m_log;
 };
