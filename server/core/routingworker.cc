@@ -142,15 +142,16 @@ public:
         this->initialized = false;
     }
 
-    bool             initialized {false};      // Whether the initialization has been performed.
-    bool             running {false};          // True if worker threads are running
-    const int        nMax {MAX_COUNT};         // Hard maximum of workers
-    std::atomic<int> nCreated {0};             // Created amount of workers.
-    std::atomic<int> nRunning {0};             // "Running" amount of workers.
-    std::atomic<int> nConfigured {0};          // The configured amount of workers.
-    RoutingWorker**  ppWorkers {nullptr};      // Array of routing worker instances.
-    int              epoll_listener_fd {-1};   // Shared epoll descriptor for listening descriptors.
-    WN*              pNotifier {nullptr};      // Watchdog notifier.
+    bool             initialized {false};            // Whether the initialization has been performed.
+    bool             running {false};                // True if worker threads are running
+    const int        nMax {MAX_COUNT};               // Hard maximum of workers
+    std::atomic<int> nCreated {0};                   // Created amount of workers.
+    std::atomic<int> nRunning {0};                   // "Running" amount of workers.
+    std::atomic<int> nConfigured {0};                // The configured amount of workers.
+    RoutingWorker**  ppWorkers {nullptr};            // Array of routing worker instances.
+    int              epoll_listener_fd {-1};         // Shared epoll descriptor for listening descriptors.
+    WN*              pNotifier {nullptr};            // Watchdog notifier.
+    bool             termination_in_process {false}; // Is a routing worker being terminated.
 } this_unit;
 
 thread_local struct this_thread
@@ -906,17 +907,21 @@ void RoutingWorker::join_workers()
 // static
 bool RoutingWorker::shutdown_complete()
 {
-    bool rval = true;
+    // If a routing worker is being terminated, we must wait for that to finish.
+    bool rval = !this_unit.termination_in_process;
 
-    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    for (int i = 0; i < nCreated; ++i)
+    if (rval)
     {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        mxb_assert(pWorker);
-
-        if (pWorker->event_loop_state() == Worker::EventLoop::RUNNING)
+        int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+        for (int i = 0; i < nCreated; ++i)
         {
-            rval = false;
+            RoutingWorker* pWorker = this_unit.ppWorkers[i];
+            mxb_assert(pWorker);
+
+            if (pWorker->event_loop_state() == Worker::EventLoop::RUNNING)
+            {
+                rval = false;
+            }
         }
     }
 
