@@ -68,7 +68,8 @@ public:
           std::string_view schema,
           std::string_view table,
           std::string_view create,
-          std::string_view select);
+          std::string_view select,
+          std::string_view insert);
 
     void prepare() noexcept;
 
@@ -103,6 +104,7 @@ private:
     std::string m_table;
     std::string m_create;
     std::string m_select;
+    std::string m_insert;
     std::string m_error;
 };
 

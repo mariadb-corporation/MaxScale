@@ -120,7 +120,8 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
                                    get(val, "schema", Type::STRING).get_string(),
                                    get(val, "table", Type::STRING).get_string(),
                                    maybe_get(val, "create", Type::STRING).get_string(),
-                                   maybe_get(val, "select", Type::STRING).get_string());
+                                   maybe_get(val, "select", Type::STRING).get_string(),
+                                   maybe_get(val, "insert", Type::STRING).get_string());
     }
 
     return etl;
@@ -130,12 +131,14 @@ Table::Table(const ETL& etl,
              std::string_view schema,
              std::string_view table,
              std::string_view create,
-             std::string_view select)
+             std::string_view select,
+             std::string_view insert)
     : m_etl(etl)
     , m_schema(schema)
     , m_table(table)
     , m_create(create)
     , m_select(select)
+    , m_insert(insert)
 {
 }
 
@@ -153,6 +156,11 @@ mxb::Json Table::to_json() const
     if (!m_select.empty())
     {
         obj.set_string("select", m_select);
+    }
+
+    if (!m_insert.empty())
+    {
+        obj.set_string("insert", m_insert);
     }
 
     if (!m_error.empty())
