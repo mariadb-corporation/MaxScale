@@ -209,11 +209,11 @@ private:
     std::future<void>      m_future;
     typename SD::DataType* m_pLatest_data;
 
-    int    m_num_clients;
-    size_t m_queue_max;     // of a SharedData instance
-    int    m_cap_copies;
-    bool   m_order_updates;
-    bool   m_updates_only;
+    size_t           m_queue_max;   // of a SharedData instance
+    int              m_cap_copies;
+    bool             m_order_updates;
+    bool             m_updates_only;
+    std::vector<int> m_client_indices;
 
     std::vector<std::unique_ptr<SD>>          m_shared_data;
     std::vector<const typename SD::DataType*> m_all_ptrs;
@@ -223,6 +223,8 @@ private:
     std::condition_variable m_updater_wakeup;
     bool                    m_data_rdy {false};
     std::atomic<int64_t>    m_timestamp_generator {0};
+
+    void update_client_indices();
 
     virtual typename SD::DataType* create_new_copy(const typename SD::DataType* pCurrent)
     {
@@ -249,7 +251,6 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
                          bool updates_only)
     : m_running(false)
     , m_pLatest_data(initial_copy)
-    , m_num_clients(num_clients)
     , m_queue_max(queue_max)
     , m_cap_copies(cap_copies)
     , m_order_updates(order_updates)
@@ -258,12 +259,14 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
     mxb_assert(cap_copies != 1);
     m_all_ptrs.push_back(m_pLatest_data);
 
-    for (int i = 0; i < m_num_clients; ++i)
+    for (int i = 0; i < num_clients; ++i)
     {
         m_shared_data.push_back(std::make_unique<SD>(m_pLatest_data, m_queue_max,
                                                      &m_updater_wakeup, &m_data_rdy,
                                                      &m_timestamp_generator));
     }
+
+    update_client_indices();
 }
 
 template<typename SD>
@@ -306,15 +309,18 @@ std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
     return in_use_ptrs;
 }
 
+template<typename SD>
+void GCUpdater<SD>::update_client_indices()
+{
+    m_client_indices.resize(m_shared_data.size());
+    std::iota(begin(m_client_indices), end(m_client_indices), 0);       // 0, 1, 2, ...
+}
 
 template<typename SD>
 void GCUpdater<SD>::run()
 {
     const maxbase::Duration garbage_wait_tmo {std::chrono::microseconds(100)};
     int gc_ptr_count = 0;
-
-    std::vector<int> client_indices(m_num_clients);
-    std::iota(begin(client_indices), end(client_indices), 0);       // 0, 1, 2, ...
 
     while (m_running.load(std::memory_order_acquire))
     {
@@ -324,9 +330,9 @@ void GCUpdater<SD>::run()
             m_local_queue.swap(m_leftover_queue);
         }
 
-        read_clients(client_indices);
+        read_clients(m_client_indices);
 
-        mxb_assert(m_local_queue.size() < 2 * m_num_clients * m_queue_max);
+        mxb_assert(m_local_queue.size() < 2 * m_shared_data.size() * m_queue_max);
 
         if (m_local_queue.empty())
         {
@@ -352,7 +358,7 @@ void GCUpdater<SD>::run()
                 m_shared_data[0]->wait_for_updates(maxbase::Duration {0});
             }
 
-            read_clients(client_indices);
+            read_clients(m_client_indices);
 
             if (m_local_queue.empty())
             {
