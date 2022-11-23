@@ -694,6 +694,9 @@ private:
 
     void update_average_load(size_t count);
 
+    void terminate();
+    static void terminate_last_if_dormant(bool first_attempt);
+
     void clear();
     void deactivate();
     bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);

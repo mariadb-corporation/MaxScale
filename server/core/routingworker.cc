@@ -29,6 +29,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
+#include <maxscale/maxscale.hh>
 #include <maxscale/statistics.hh>
 #include <maxscale/utils.hh>
 
@@ -50,6 +51,8 @@ using std::vector;
 
 namespace
 {
+
+const std::chrono::seconds TERMINATION_DELAY = 5s;
 
 /**
  * Unit variables.
@@ -573,44 +576,87 @@ void RoutingWorker::deactivate()
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
 
-    pMain->execute([this]() {
-            // Cross-worker call, so we may have been made active again.
-            if (is_dormant())
+    auto proceed_in_main = [this]() {
+        mxb_assert(MainWorker::is_main_worker());
+
+        if (!this_unit.termination_in_process)
+        {
+            auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+            if (index() == nRunning - 1)
             {
-                int i = this->index();
-                mxb_assert(i > 0);
-
-                MXB_NOTICE("Routing worker %d has been deactivated.", i);
-
-                auto n = this_unit.nRunning.load(std::memory_order_relaxed);
-
-                if (i == n - 1)
-                {
-                    // This was the last running worker. Now we can reduce nRunning.
-                    --n;
-                    --i;
-
-                    // And "remove" any intermediate inactive workers as well.
-                    while (i > 0)
-                    {
-                        auto* pWorker = this_unit.ppWorkers[i];
-
-                        if (pWorker->is_dormant())
-                        {
-                            --n;
-                            --i;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                this_unit.nRunning.store(n, std::memory_order_relaxed);
-                mxb_assert(this_unit.nRunning >= this_unit.nConfigured);
+                // We are in the last last worker.
+                terminate_last_if_dormant(true);
             }
-        }, mxb::Worker::EXECUTE_QUEUED);
+        }
+    };
+
+    if (!pMain->execute(proceed_in_main, mxb::Worker::EXECUTE_QUEUED))
+    {
+        MXB_ERROR("Could not post cleanup function from worker (%s, %p) to Main.",
+                  thread_name().c_str(), this);
+    }
+}
+
+//static
+void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
+{
+    mxb_assert((first_attempt && !this_unit.termination_in_process)
+               || (!first_attempt && this_unit.termination_in_process));
+
+    if (maxscale_is_shutting_down())
+    {
+        // Already going down, in which case there is no need for further action.
+        this_unit.termination_in_process = false;
+        return;
+    }
+
+    auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    mxb_assert(nRunning > 0);
+    auto i = nRunning - 1;
+
+    RoutingWorker* pWorker = this_unit.ppWorkers[i];
+
+    if (!pWorker->is_dormant())
+    {
+        mxb_assert(!first_attempt);
+        // Not dormant, must not proceed with the termination.
+        this_unit.termination_in_process = false;
+        return;
+    }
+
+    mxb_assert(i > 0); // Should not be possible to terminate the first worker.
+
+    if (first_attempt)
+    {
+        this_unit.termination_in_process = true;
+    }
+
+    MXB_NOTICE("Routing worker %d is dormant and last, and will be terminated.", i);
+
+    --nRunning;
+    this_unit.nRunning.store(nRunning, std::memory_order_relaxed);
+    mxb_assert(this_unit.nRunning >= this_unit.nConfigured);
+
+    auto nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+    mxb_assert(nCreated > nRunning);
+    --nCreated;
+    mxb_assert(nCreated == nRunning);
+
+    this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
+    this_unit.ppWorkers[nCreated] = nullptr;
+
+    if (!pWorker->execute([pWorker]() {
+                pWorker->terminate();
+            }, mxb::Worker::EXECUTE_QUEUED))
+    {
+        MXB_ERROR("Could not post to (%s, %p), the worker will not go down.",
+                  pWorker->thread_name().c_str(), pWorker);
+
+        this_unit.ppWorkers[nCreated] = pWorker;
+        this_unit.nRunning.store(nRunning + 1, std::memory_order_relaxed);
+        this_unit.nCreated.store(nCreated + 1, std::memory_order_relaxed);
+        this_unit.termination_in_process = false;
+    }
 }
 
 bool RoutingWorker::activate(const std::vector<SListener>& listeners)
@@ -1971,6 +2017,68 @@ void RoutingWorker::update_average_load(size_t count)
     }
 
     m_average_load.add_value(this->load(mxb::WorkerLoad::ONE_SECOND));
+}
+
+void RoutingWorker::terminate()
+{
+    mxb_assert(get_current() == this);
+
+    // No more messages for this worker.
+    set_messages_enabled(false);
+
+    auto start = std::chrono::steady_clock::now();
+
+    m_callable.dcall(500ms, [this, start]() {
+            bool ready_to_proceed = false;
+            auto now = std::chrono::steady_clock::now();
+
+            std::chrono::duration time_passed = now - start;
+
+            if (maxscale_is_shutting_down())
+            {
+                MXB_NOTICE("Terminating worker %d going down immediately, "
+                           "as MaxScale shutdown has been iniated.",
+                           index());
+                ready_to_proceed = true;
+            }
+            else if (time_passed > TERMINATION_DELAY)
+            {
+                MXB_NOTICE("Terminating worker %d going down as %d seconds has "
+                           "passed since termination was started.",
+                           index(),
+                           (int)std::chrono::duration_cast<std::chrono::seconds>(time_passed).count());
+                ready_to_proceed = true;
+            }
+            else
+            {
+                std::chrono::duration remaining = TERMINATION_DELAY - time_passed;
+                MXB_NOTICE("Terminating worker %d has been idle for %d seconds, "
+                           "still waiting %d seconds before going down.",
+                           index(),
+                           (int)std::chrono::duration_cast<std::chrono::seconds>(time_passed).count(),
+                           (int)std::chrono::duration_cast<std::chrono::seconds>(remaining).count());
+            }
+
+            if (ready_to_proceed)
+            {
+                shutdown();
+
+                MainWorker* pMain = MainWorker::get();
+
+                pMain->execute([this]() {
+                        mxb_assert(MainWorker::is_main_worker());
+                        mxb_assert(this_unit.termination_in_process);
+
+                        this->join();
+                        delete this;
+
+                        // Others may be in line.
+                        terminate_last_if_dormant(false);
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            }
+
+            return !ready_to_proceed;
+        });
 }
 
 // static
