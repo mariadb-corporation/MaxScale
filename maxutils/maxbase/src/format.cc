@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <maxbase/assert.hh>
 #include <maxbase/log.hh>
+#include <maxbase/string.hh>
 
 namespace
 {
@@ -80,7 +81,7 @@ std::string string_vprintf(const char* format, va_list args)
     if (characters < 0)
     {
         // Encoding (programmer) error.
-        mxb_assert(!true);
+        mxb_assert_message(!true, "printf format error: %d, %s", errno, mxb_strerror(errno));
         MXB_ERROR("Could not format '%s'.", format);
     }
     else if (characters > 0)
