@@ -48,25 +48,21 @@ mxb::Json get(const mxb::Json& json, const std::string& path, mxb::Json::Type ty
 namespace sql_etl
 {
 
-Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc)
+std::unique_ptr<ETL> create(const mxb::Json& json,
+                            const HttpSql::ConnectionConfig& src_cc,
+                            const HttpSql::ConnectionConfig& dest_cc)
 {
 
     auto maybe_add = [](const std::string& keyword, const std::string& str){
         return str.empty() ? "" : keyword + "=" + str + ";";
     };
 
-    if (cc.target != "odbc")
+    if (src_cc.target != "odbc")
     {
         throw problem("Only ODBC targets are supported");
     }
 
-    auto target = get(json, "target", Type::STRING).get_string();
-    Server* server = ServerManager::find_by_unique_name(target);
-
-    if (!server)
-    {
-        throw problem("'", target, "' is not the name of a server in MaxScale.");
-    }
+    mxb_assert(ServerManager::find_by_unique_name(dest_cc.target));
 
     std::ostringstream ss;
 
@@ -85,20 +81,20 @@ Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc)
         ss << extra;
     }
 
-    ss << "SERVER=" << server->address() << ";"
-       << "PORT=" << server->port() << ";"
-       << "UID=" << get(json, "user", Type::STRING).get_string() << ";"
-       << "PWD={" << get(json, "password", Type::STRING).get_string() << "};";
+    ss << "SERVER=" << dest_cc.host << ";"
+       << "PORT=" << dest_cc.port << ";"
+       << "UID=" << dest_cc.user << ";"
+       << "PWD={" << dest_cc.password << "};";
 
-    ss << maybe_add("DATABASE", maybe_get(json, "db", Type::STRING).get_string());
+    ss << maybe_add("DATABASE", dest_cc.db);
 
-    if (auto ssl = server->ssl_config(); ssl.enabled)
+    if (dest_cc.ssl.enabled)
     {
-        ss << maybe_add("SSLCERT", ssl.cert)
-           << maybe_add("SSLKEY", ssl.key)
-           << maybe_add("SSLCA", ssl.ca)
-           << maybe_add("SSLCRL", ssl.crl)
-           << maybe_add("SSLCIPHER", ssl.cipher);
+        ss << maybe_add("SSLCERT", dest_cc.ssl.cert)
+           << maybe_add("SSLKEY", dest_cc.ssl.key)
+           << maybe_add("SSLCA", dest_cc.ssl.ca)
+           << maybe_add("SSLCRL", dest_cc.ssl.crl)
+           << maybe_add("SSLCIPHER", dest_cc.ssl.cipher);
     }
 
     auto type_str = get(json, "type", Type::STRING).get_string();
@@ -114,14 +110,9 @@ Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc)
     }
 
     std::string dest = ss.str();
-    std::string src = cc.odbc_string;
+    std::string src = src_cc.odbc_string;
 
-    return Config(source, src, dest);
-}
-
-std::unique_ptr<ETL> create(const Config& config, const mxb::Json& json)
-{
-    std::unique_ptr<ETL> etl = std::make_unique<ETL>(config);
+    std::unique_ptr<ETL> etl = std::make_unique<ETL>(Config {source, src, dest});
 
     for (const auto& val : get(json, "tables", Type::ARRAY).get_array_elems())
     {

@@ -60,19 +60,18 @@ void set_conn_id_cookie(HttpResponse* response, const std::string& id,
     response->add_cookie(CONN_ID_SIG + id, token, max_age);
 }
 
-std::pair<std::string, std::string> get_connection_id(const HttpRequest& request,
-                                                      const std::string& requested_id)
+std::pair<std::string, std::string> validate_connection_id(const HttpRequest& request,
+                                                           const std::string& requested_id,
+                                                           const std::string& token)
 {
     bool ok = false;
     std::string id;
     std::string aud;
     std::string err;
-    std::string token = request.get_option("token");
-    std::string cookie = get_conn_id_cookie(request, requested_id);
 
-    if (!token.empty() || !cookie.empty())
+    if (!token.empty())
     {
-        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token.empty() ? cookie : token))
+        if (auto claims = mxs::jwt::decode(TOKEN_ISSUER, token))
         {
             if (auto sub = claims->get("sub"))
             {
@@ -110,6 +109,14 @@ std::pair<std::string, std::string> get_connection_id(const HttpRequest& request
     }
 
     return {id, err};
+}
+
+std::pair<std::string, std::string> get_connection_id(const HttpRequest& request,
+                                                      const std::string& requested_id)
+{
+    std::string token = request.get_option("token");
+    std::string cookie = get_conn_id_cookie(request, requested_id);
+    return validate_connection_id(request, requested_id, !token.empty() ? token : cookie);
 }
 
 HttpResponse
@@ -652,47 +659,113 @@ HttpResponse run_etl_task(const HttpRequest& request)
         return create_error(err);
     }
 
+    auto json = mxb::Json(request.get_json());
+    std::string target;
+
+    if (!json.try_get_string("target", &target))
+    {
+        return create_error("The `target` field is mandatory");
+    }
+
+    ConnectionConfig src_cc;
+    ConnectionConfig dest_cc;
+
+    if (auto cc = this_unit.manager.get_configuration(id))
+    {
+        src_cc = *cc;
+    }
+    else
+    {
+        mxb_assert_message(!true, "The connection should've been validated before the call.");
+        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    Server* server = ServerManager::find_by_unique_name(target);
+
+    if (server)
+    {
+        dest_cc.target = target;
+        dest_cc.host = server->address();
+        dest_cc.port = server->port();
+        dest_cc.ssl = server->ssl_config();
+
+        json.try_get_string("db", &dest_cc.db);
+
+        if (!json.try_get_string("user", &dest_cc.user)
+            || !json.try_get_string("password", &dest_cc.password))
+        {
+            return create_error("The `user` and `password` fields are mandatory for this `target`");
+        }
+    }
+    else if (auto cnf = this_unit.manager.get_configuration(target))
+    {
+        std::string token = request.get_option("target_token");
+        std::string cookie = get_conn_id_cookie(request, target);
+
+        auto [target_id, target_err] = validate_connection_id(
+            request, target, !token.empty() ? token : cookie);
+
+        if (target_id.empty())
+        {
+            return create_error("Validation of target connection failed: " + target_err);
+        }
+
+        server = ServerManager::find_by_unique_name(cnf->target);
+
+        if (!server)
+        {
+            return create_error("The target '" + cnf->target + "' of connection '"
+                                + target + "' is not a server in MaxScale.");
+        }
+
+        dest_cc = *cnf;
+    }
+    else
+    {
+        return create_error("The target '" + target
+                            + "' is not the name of a server in MaxScale nor is it a connection to one.");
+    }
+
+    std::shared_ptr<sql_etl::ETL> etl;
+
+    try
+    {
+        etl = sql_etl::create(json, src_cc, dest_cc);
+    }
+    catch (const sql_etl::Error& e)
+    {
+        return create_error(e.what());
+    }
+
     string host = request.host();
     string self = request.uri_segment(0, 2);
-    auto js = mxb::Json(request.get_json());
 
-    auto exec_query_cb = [id, host = move(host), self = move(self), js]() {
+    auto exec_query_cb = [id, host = move(host), self = move(self), etl]() {
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
             // Ignore any results that have not yet been read
             conn->result.reset();
 
-            try
-            {
-                auto cnf = sql_etl::configure(js, conn->config);
-                std::shared_ptr<sql_etl::ETL> etl = sql_etl::create(cnf, js);
+            int64_t query_id = ++conn->current_query_id;
+            string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
+            conn->sql = "TODO: Add something here";
+            conn->last_query_started = mxb::Clock::now();
 
-                int64_t query_id = ++conn->current_query_id;
-                string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-                conn->sql = "TODO: Add something here";
-                conn->last_query_started = mxb::Clock::now();
-
-                mxs::thread_pool().execute([conn, etl = move(etl)]() {
-                    conn->result = std::invoke(func, *etl);
-                    conn->last_query_time = mxb::Clock::now();
-                    conn->release();
-                }, "etl-" + id_str);
-
-                string self_id = self + "/queries/" + id_str;
-                mxb::Duration exec_time {0};
-                HttpResponse response = construct_result_response(nullptr, host, self_id,
-                                                                  conn->sql, id_str, exec_time);
-
-                response.set_code(MHD_HTTP_ACCEPTED);
-                response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
-
-                return response;
-            }
-            catch (const sql_etl::Error& e)
-            {
+            mxs::thread_pool().execute([conn, etl = move(etl)]() {
+                conn->result = std::invoke(func, *etl);
+                conn->last_query_time = mxb::Clock::now();
                 conn->release();
-                return create_error(e.what());
-            }
+            }, "etl-" + id_str);
+
+            string self_id = self + "/queries/" + id_str;
+            mxb::Duration exec_time {0};
+            HttpResponse response = construct_result_response(nullptr, host, self_id,
+                                                              conn->sql, id_str, exec_time);
+
+            response.set_code(MHD_HTTP_ACCEPTED);
+            response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);
+
+            return response;
         }
         else
         {

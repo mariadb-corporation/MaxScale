@@ -137,26 +137,17 @@ private:
 };
 
 /**
- * Read configuration from JSON
+ * Create ETL operation
  *
- * @param json The JSON needed to configure the source server connection
- * @param cc   The connection configuration to the source server
- *
- * @return The configuration if the JSON was valid
- *
- * @throws ETLError
- */
-Config configure(const mxb::Json& json, const HttpSql::ConnectionConfig& cc);
-
-/**
- * Create ETL from configuration
- *
- * @param config The base ETL connection configuration
- * @param json   The JSON data for the operation being done
+ * @param json    The JSON needed to configure the operation
+ * @param src_cc  The connection configuration to the source server
+ * @param dest_cc The connection configuration to the destination server
  *
  * @return The ETL instance if the creation was successful
  *
  * @throws ETLError
  */
-std::unique_ptr<ETL> create(const Config& config, const mxb::Json& json);
+std::unique_ptr<ETL> create(const mxb::Json& json,
+                            const HttpSql::ConnectionConfig& src_cc,
+                            const HttpSql::ConnectionConfig& dest_cc);
 }
