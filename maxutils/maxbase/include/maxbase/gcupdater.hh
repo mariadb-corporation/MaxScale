@@ -215,7 +215,7 @@ private:
     bool   m_order_updates;
     bool   m_updates_only;
 
-    std::vector<SD>                           m_shared_data;
+    std::vector<std::unique_ptr<SD>>          m_shared_data;
     std::vector<const typename SD::DataType*> m_all_ptrs;
     std::vector<typename SD::InternalUpdate>  m_local_queue;
     std::vector<typename SD::InternalUpdate>  m_leftover_queue;
@@ -260,8 +260,9 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
 
     for (int i = 0; i < m_num_clients; ++i)
     {
-        m_shared_data.emplace_back(m_pLatest_data, m_queue_max,
-                                   &m_updater_wakeup, &m_data_rdy, &m_timestamp_generator);
+        m_shared_data.push_back(std::make_unique<SD>(m_pLatest_data, m_queue_max,
+                                                     &m_updater_wakeup, &m_data_rdy,
+                                                     &m_timestamp_generator));
     }
 }
 
@@ -275,7 +276,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
         swap_queue.reserve(m_queue_max);
 
         // magic value clients.size() <= N: when true, get_updates() blocks if a worker has the mutex.
-        if (m_shared_data[index].get_updates(swap_queue, clients.size() <= 4))
+        if (m_shared_data[index]->get_updates(swap_queue, clients.size() <= 4))
         {
             m_local_queue.insert(end(m_local_queue), begin(swap_queue), end(swap_queue));
             clients.pop_back();
@@ -294,7 +295,7 @@ std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
     in_use_ptrs.reserve(2 * m_shared_data.size());
     for (auto& c : m_shared_data)
     {
-        auto ptrs = c.get_ptrs();
+        auto ptrs = c->get_ptrs();
         in_use_ptrs.push_back(ptrs.first);
         in_use_ptrs.push_back(ptrs.second);
     }
@@ -340,7 +341,7 @@ void GCUpdater<SD>::run()
             {
                 // wait for updates, or a timeout to check for new garbage (opportunistic gc)
                 while (gc_ptr_count
-                       && !(have_data = m_shared_data[0].wait_for_updates(garbage_wait_tmo)))
+                       && !(have_data = m_shared_data[0]->wait_for_updates(garbage_wait_tmo)))
                 {
                     gc_ptr_count = gc();
                 }
@@ -348,7 +349,7 @@ void GCUpdater<SD>::run()
 
             if (!have_data && m_running.load(std::memory_order_acquire))
             {
-                m_shared_data[0].wait_for_updates(maxbase::Duration {0});
+                m_shared_data[0]->wait_for_updates(maxbase::Duration {0});
             }
 
             read_clients(client_indices);
@@ -424,7 +425,7 @@ void GCUpdater<SD>::run()
         {
             for (auto& s : m_shared_data)
             {
-                s.set_new_data(m_pLatest_data);
+                s->set_new_data(m_pLatest_data);
             }
         }
 
@@ -439,7 +440,7 @@ void GCUpdater<SD>::run()
     // they should all have been stopped and joined by now.
     for (auto& s : m_shared_data)
     {
-        s.reset_ptrs();
+        s->reset_ptrs();
     }
 
     gc();
@@ -458,9 +459,9 @@ void GCUpdater<SD>::stop()
     m_running.store(false, std::memory_order_release);
     for (auto& s : m_shared_data)
     {
-        s.reset_ptrs();
+        s->reset_ptrs();
     }
-    m_shared_data[0].shutdown();
+    m_shared_data[0]->shutdown();
     m_future.get();
 }
 
@@ -498,7 +499,7 @@ std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
     std::vector<SD*> ptrs;
     for (auto& c : m_shared_data)
     {
-        ptrs.push_back(&c);
+        ptrs.push_back(c.get());
     }
 
     return ptrs;
@@ -507,7 +508,7 @@ std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
 template<typename SD>
 SD* GCUpdater<SD>::get_shared_data_by_index(int thread_id)
 {
-    return &m_shared_data[thread_id];
+    return m_shared_data[thread_id].get();
 }
 
 template<typename SD>
