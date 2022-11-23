@@ -318,6 +318,10 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     {
         rval_ok = true;
         auto readq_len = m_readq.length();
+
+        MXB_DEBUG("Read %lu bytes from dcb %p (%s) in state %s fd %d.",
+                  readq_len, this, whoami(), mxs::to_string(m_state), m_fd);
+
         if (maxbytes > 0 && readq_len >= maxbytes)
         {
             // Maxbytes-limit is in effect.
@@ -947,6 +951,9 @@ void DCB::socket_write_SSL()
 
     if (total_written > 0)
     {
+        MXB_DEBUG("Wrote %lu bytes to dcb %p (%s) in state %s fd %d.",
+                  total_written, this, whoami(), mxs::to_string(m_state), m_fd);
+
         m_last_write = mxs_clock();
     }
 }
@@ -1010,6 +1017,9 @@ void DCB::socket_write()
 
     if (total_written > 0)
     {
+        MXB_DEBUG("Wrote %lu bytes to dcb %p (%s) in state %s fd %d.",
+                  total_written, this, whoami(), mxs::to_string(m_state), m_fd);
+
         m_last_write = mxs_clock();
     }
 }
@@ -1730,6 +1740,11 @@ void ClientDCB::shutdown()
     m_protocol->finish_connection();
 }
 
+const char* ClientDCB::whoami() const
+{
+    return m_session->user_and_host().c_str();
+}
+
 ClientDCB::ClientDCB(int fd,
                      const std::string& remote,
                      const sockaddr_storage& ip,
@@ -2160,6 +2175,11 @@ void BackendDCB::close(BackendDCB* dcb)
 BackendDCB::Manager* BackendDCB::manager() const
 {
     return static_cast<Manager*>(m_manager);
+}
+
+const char* BackendDCB::whoami() const
+{
+    return m_server->name();
 }
 
 /**
