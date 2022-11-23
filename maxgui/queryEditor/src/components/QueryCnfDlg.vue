@@ -69,6 +69,7 @@
                                     top
                                     transition="slide-y-transition"
                                     content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                                    max-width="400"
                                 >
                                     <template v-slot:activator="{ on }">
                                         <v-icon
@@ -86,11 +87,15 @@
                                                 ? 'mxs.info.tabMovesFocus'
                                                 : 'mxs.info.tabInsetChar'
                                         "
-                                        class="d-flex align-center text-pre-wrap"
                                         tag="span"
                                     >
                                         <template v-slot:shortcut>
-                                            {{ OS_KEY }}{{ $helpers.isMAC() ? '+ SHIFT' : '' }} + M
+                                            <b>
+                                                {{
+                                                    `${OS_KEY} ${$helpers.isMAC() ? '+ SHIFT' : ''}`
+                                                }}
+                                                + M
+                                            </b>
                                         </template>
                                     </i18n>
                                 </v-tooltip>
