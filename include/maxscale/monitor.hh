@@ -228,10 +228,11 @@ public:
 
     static bool status_changed(uint64_t before, uint64_t after);
 
-    bool status_changed();
-    bool auth_status_changed();
-    bool should_print_fail_status();
-    void log_connect_error(ConnectResult rval);
+    bool        status_changed();
+    bool        auth_status_changed();
+    bool        should_print_fail_status();
+    std::string get_connect_error(ConnectResult rval);
+    void        log_connect_error(ConnectResult rval);
 
     /**
      * Report query error to log.
