@@ -767,6 +767,11 @@ bool ODBCImp::get_normal_result(int columns, Output* handler)
 
     bool ok = true;
 
+    SQLULEN rows_fetched = 0;
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_ROW_ARRAY_SIZE, (void*)res.row_count, 0);
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_ROW_STATUS_PTR, res.row_status.data(), 0);
+
     while (SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
     {
         for (SQLSMALLINT i = 0; i < columns; i++)
@@ -798,8 +803,6 @@ bool ODBCImp::get_normal_result(int columns, Output* handler)
             break;
         }
     }
-
-    SQLCloseCursor(m_stmt);
 
     if (ret == SQL_ERROR)
     {
@@ -865,6 +868,8 @@ bool ODBCImp::get_batch_result(int columns, Output* handler)
 
         ok = false;
     }
+
+    SQLFreeStmt(m_stmt, SQL_UNBIND);
 
     return ok;
 }
