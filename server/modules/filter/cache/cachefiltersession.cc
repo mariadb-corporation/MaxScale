@@ -359,7 +359,7 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
         reset_response_state();
         m_state = CACHE_IGNORING_RESPONSE;
 
-        if (!session_is_load_active(m_pSession))
+        if (!m_load_active)
         {
             m_processing = true;
 
@@ -513,6 +513,15 @@ void CacheFilterSession::invalidate_handler(cache_result_t result)
 
 bool CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    if (reply.state() == mxs::ReplyState::LOAD_DATA)
+    {
+        m_load_active = true;
+    }
+    else if (m_load_active && reply.is_complete())
+    {
+        m_load_active = false;
+    }
+
     m_res = m_res ? gwbuf_append(m_res, pData) : pData;
 
     if (m_state == CACHE_EXPECTING_RESPONSE)

@@ -2183,7 +2183,6 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
     case ReplyState::LOAD_DATA_END:
         MXB_INFO("Load data ended on '%s'", m_server.name());
-        session_set_load_active(m_session, false);
 
         if (cmd == MYSQL_REPLY_ERR)
         {
@@ -2563,7 +2562,6 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
     case MYSQL_REPLY_LOCAL_INFILE:
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
-        session_set_load_active(m_session, true);
         set_reply_state(ReplyState::LOAD_DATA);
         break;
 
@@ -2667,8 +2665,6 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
     mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY
                || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS
                || m_state == State::SEND_CHANGE_USER || m_state == State::RESET_CONNECTION_FAST);
-
-    mxb_assert(!session_is_load_active(m_session) || m_reply.state() == ReplyState::LOAD_DATA_END);
 
     m_reply.clear();
     m_reply.set_command(query.command);

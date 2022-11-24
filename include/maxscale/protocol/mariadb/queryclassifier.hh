@@ -222,7 +222,11 @@ public:
         {
             if (state == LOAD_DATA_ACTIVE)
             {
-                mxb_assert(m_load_data_state == LOAD_DATA_INACTIVE);
+                // The load data state is almost always inactive when this function is called with
+                // LOAD_DATA_ACTIVE as the state. The only exception is when the same SQL statement executes
+                // two or more LOAD DATA LOCAL INFILE commands in a row. In this case the state will be
+                // LOAD_DATA_END.
+                mxb_assert(m_load_data_state != LOAD_DATA_ACTIVE);
                 reset_load_data_sent();
             }
 
@@ -418,6 +422,15 @@ public:
      * @return A copy of the current route info.
      */
     RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
+
+    /**
+     * Update the RouteInfo state based on the reply from the downstream component
+     *
+     * Currently this only updates the LOAD DATA state.
+     *
+     * @param reply The reply from the downstream component
+     */
+    void update_from_reply(const mxs::Reply& reply);
 
     /**
      * Reverts the effects of the latest update_route_info call

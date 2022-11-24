@@ -1276,7 +1276,7 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     auto capabilities = m_session->capabilities();
 
     if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-        && !service->config()->session_track_trx_state && !m_session->load_active)
+        && !service->config()->session_track_trx_state)
     {
         track_transaction_state(m_session, &buffer);
     }
@@ -1413,13 +1413,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     bool routed = false;
 
-    // Backend-protocol tracks LOAD_DATA-state by looking at replies.
-    // TODO: add client-side tracking for proper error detection.
-    if (session_is_load_active(m_session))
-    {
-        m_routing_state = RoutingState::LOAD_DATA;
-    }
-
     switch (m_routing_state)
     {
     case RoutingState::PACKET_START:
@@ -1469,11 +1462,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
             // but this time on the downstream side.
-            routed = route_statement(move(buffer));
-            if (!session_is_load_active(m_session))
-            {
-                m_routing_state = RoutingState::PACKET_START;
-            }
+            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
         }
         break;
 
@@ -2856,11 +2845,24 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             m_dcb->trigger_read_event();
             break;
 
+        case RoutingState::LOAD_DATA:
+            if (reply.is_complete())
+            {
+                m_routing_state = RoutingState::PACKET_START;
+            }
+            break;
+
         case RoutingState::RECORD_HISTORY:
             finish_recording_history(buffer, reply);
             break;
 
         default:
+            m_qc.update_from_reply(reply);
+
+            if (reply.state() == mxs::ReplyState::LOAD_DATA)
+            {
+                m_routing_state = RoutingState::LOAD_DATA;
+            }
             break;
         }
     }
