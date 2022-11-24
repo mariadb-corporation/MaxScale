@@ -98,6 +98,7 @@ private:
 
     Clusters                 m_clusters;
     mariadb::QueryClassifier m_qc;
+    mxs::Buffer              m_queued;
     struct Measurement
     {
         maxbase::TimePoint start;

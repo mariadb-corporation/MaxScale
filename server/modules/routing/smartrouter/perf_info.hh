@@ -50,7 +50,7 @@ public:
     bool is_updating() const;
 private:
     mxs::Target*      m_target {nullptr};
-    maxbase::Duration m_duration;
+    maxbase::Duration m_duration {0};
 
     int  m_eviction_schedule = 0;
     bool m_updating = false;
