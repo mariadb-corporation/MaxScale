@@ -147,17 +147,17 @@
                         ? 'mxs.historyTabGuide'
                         : 'mxs.snippetTabGuide'
                 "
-                class="d-flex align-center text-pre-wrap"
+                class="d-flex align-center"
                 tag="span"
             >
                 <!-- Slots for SQL_QUERY_MODES.SNIPPETS only -->
                 <template v-slot:shortcut>
-                    <b>{{ OS_KEY }} + S</b>
+                    &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
                 </template>
                 <template v-slot:icon>
-                    <v-icon color="accent-dark" size="16">
-                        mdi-star-plus-outline
-                    </v-icon>
+                    &nbsp;
+                    <v-icon color="accent-dark" size="16">mdi-star-plus-outline</v-icon>
+                    &nbsp;
                 </template>
             </i18n>
         </keep-alive>

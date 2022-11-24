@@ -5,16 +5,16 @@
                 <i18n
                     v-if="!queryTxt"
                     path="mxs.resultTabGuide"
-                    class="d-flex align-center text-pre-wrap"
-                    tag="span"
+                    class="d-flex align-center"
+                    tag="div"
                 >
                     <template v-slot:shortcut>
-                        <b>{{ OS_KEY }} + SHIFT + ENTER</b>
+                        &nbsp;<b>{{ OS_KEY }} + SHIFT + ENTER</b>&nbsp;
                     </template>
                     <template v-slot:icon>
-                        <v-icon color="accent-dark" size="16">
-                            $vuetify.icons.mxs_running
-                        </v-icon>
+                        &nbsp;
+                        <v-icon color="accent-dark" size="16">$vuetify.icons.mxs_running</v-icon>
+                        &nbsp;
                     </template>
                 </i18n>
                 <v-menu
