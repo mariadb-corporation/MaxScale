@@ -2989,11 +2989,19 @@ void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, Loc
     auto fn = [=]() {
         MXS_SESSION::Scope scope(m_session);
 
-        m_local_clients.erase(
-            std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
+        auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [&](const auto& c) {
             return c.get() == client;
-        }), m_local_clients.end());
-        maybe_send_kill_response(cb);
+        });
+
+        // It's possible that both the reponse to the KILL as well as an error occur on the same LocalClient
+        // before we end up processing either of the two events. For this reason, the validity of the client
+        // must be checked before we invoke the callback, otherwise we risk calling it twice.
+        if (it != m_local_clients.end())
+        {
+            mxb_assert(std::distance(it, m_local_clients.end()) == 1);
+            m_local_clients.erase(it, m_local_clients.end());
+            maybe_send_kill_response(cb);
+        }
     };
 
     m_session->worker()->lcall(fn);
@@ -3001,7 +3009,7 @@ void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, Loc
 
 void MariaDBClientConnection::maybe_send_kill_response(const std::function<void()>& cb)
 {
-    if (!have_local_clients())
+    if (!have_local_clients() && m_session->state() == MXS_SESSION::State::STARTED)
     {
         MXB_INFO("All KILL commands finished");
         cb();

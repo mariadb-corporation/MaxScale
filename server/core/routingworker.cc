@@ -488,6 +488,7 @@ void RoutingWorker::delete_zombies()
     {
         DCB* pDcb = m_zombies.back();
         m_zombies.pop_back();
+        MXS_SESSION::Scope scope(pDcb->session());
 
         bool can_close = true;
 
