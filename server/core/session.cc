@@ -94,7 +94,6 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , refcount(1)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
-    , load_active(false)
 {
     mxs::RoutingWorker::get_current()->register_session(this);
 }

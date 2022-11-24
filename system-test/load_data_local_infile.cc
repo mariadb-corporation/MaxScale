@@ -17,6 +17,7 @@ const char filename[] = "local_infile.dat";
 bool create_datafile(TestConnections& test, size_t datasize);
 void test_main(TestConnections& test);
 void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows, int wait_limit_s);
+bool test_repeated_ldli(TestConnections& test);
 
 int main(int argc, char* argv[])
 {
@@ -28,6 +29,13 @@ void test_main(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
+
+    // MXS-4388: Next command hangs after LOAD DATA LOCAL INFILE
+    // Quick to test, run it first.
+    if (!test_repeated_ldli(test))
+    {
+        return;
+    }
 
     // This test involves inserting large blocks of data. To speed up the test, use only one slave,
     // as this is not a replication speed test.
@@ -141,6 +149,26 @@ void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows
         test.tprintf("Test table dropped.");
     }
     unlink(filename);
+}
+
+bool test_repeated_ldli(TestConnections& test)
+{
+    if (create_datafile(test, 1024))
+    {
+        auto conn = test.maxscale->open_rwsplit_connection2();
+        const char table_name[] = "test.dump";
+        conn->cmd_f("CREATE OR REPLACE TABLE %s (a int, b varchar(80), c varchar(80));", table_name);
+        conn->cmd("SET AUTOCOMMIT=0");
+        conn->cmd_f("LOAD DATA LOCAL INFILE '%s' INTO TABLE %s", filename, table_name);
+        conn->cmd("SET AUTOCOMMIT=1");
+        conn->cmd("SET AUTOCOMMIT=0");
+        conn->cmd_f("LOAD DATA LOCAL INFILE '%s' INTO TABLE %s", filename, table_name);
+        conn->cmd("SET AUTOCOMMIT=1");
+        conn->cmd_f("DROP TABLE %s", table_name);
+    }
+
+    unlink(filename);
+    return test.ok();
 }
 
 bool create_datafile(TestConnections& test, size_t datasize)

@@ -532,6 +532,8 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         return 1;
     }
 
+    m_qc.update_from_reply(reply);
+
     // TODO: Do this in the client protocol, it seems to be a pretty logical place for it as it already
     // assigns the prepared statement IDs.
     if (m_config.reuse_ps && reply.command() == MXS_COM_STMT_PREPARE)
