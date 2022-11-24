@@ -146,7 +146,7 @@ public:
     struct InternalUpdate
     {
         UpdateType update;
-        int64_t    tstamp;
+        int64_t    tstamp = 0;
     };
 
     // For GCUpdater, so it can move SharedData into a vector (in initialization)

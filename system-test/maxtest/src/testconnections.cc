@@ -218,7 +218,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     if (rc == 0)
     {
-        if (m_init_maxscale)
+        if (m_init_maxscale && !m_mxs_manual_debug)
         {
             init_maxscales();
         }
@@ -318,7 +318,7 @@ int TestConnections::cleanup()
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
-    if (!settings().local_test)
+    if (!settings().local_test && !m_mxs_manual_debug)
     {
         // Stop all MaxScales to detect crashes on exit.
         bool sleep_more = false;
@@ -976,7 +976,7 @@ void TestConnections::copy_all_logs()
         }
     }
 
-    if (m_maxscale_log_copy)
+    if (m_maxscale_log_copy && !m_mxs_manual_debug)
     {
         copy_maxscale_logs(0);
     }

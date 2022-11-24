@@ -12,15 +12,25 @@ public:
     {
         if (m_test.maxscale->ssh_node_f(false, "test -d kafka") != 0)
         {
+            test.tprintf("Installing Kafka...");
             if (!install_kafka())
             {
                 m_test.add_failure("Failed to install Kafka");
             }
+            else
+            {
+                test.tprintf("Installed Kafka");
+            }
         }
 
+        test.tprintf("Starting Kafka...");
         if (!start_kafka())
         {
             m_test.add_failure("Failed to start Kafka");
+        }
+        else
+        {
+            test.tprintf("Started Kafka");
         }
     }
 
