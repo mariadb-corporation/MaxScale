@@ -22,6 +22,7 @@ export default {
         options: { type: Object, default: () => {} },
         isKeptAlive: { type: Boolean, default: false },
         skipRegCompleters: { type: Boolean, default: false },
+        isTabMoveFocus: { type: Boolean, default: false }, // sync
     },
 
     model: {
@@ -38,12 +39,18 @@ export default {
         value(v) {
             if (this.editor && v !== this.getEditorValue()) this.setEditorValue(v)
         },
+        isTabMoveFocus() {
+            this.updateTabFocusMode()
+        },
     },
     computed: {
         ...mapState({
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
         }),
+        editorTabFocusModeKey() {
+            return this.monaco.editor.EditorOption.tabFocusMode
+        },
         builtInCmplItems() {
             const keywordCmplItems = languageTokens.keywords.map(s => ({
                 label: s,
@@ -164,12 +171,28 @@ export default {
                 readOnly: this.readOnly,
                 ...this.options,
             })
+            /**
+             * the monaco editor hasn't provided a way to persist the changes. So if
+             * this.isTabMoveFocus is true and the value of tabFocusMode(from the editor) is false,
+             * trigger action to toggle the mode
+             */
+            if (this.isTabMoveFocus && !this.editor.getOption(this.editorTabFocusModeKey))
+                this.editor.trigger('', 'editor.action.toggleTabFocusMode')
+
             if (!this.readOnly) {
                 if (!this.isKeptAlive && !this.skipRegCompleters) this.regCompleters(monaco)
                 this.regDocFormattingProvider(monaco)
                 this.addWatchers(this.editor)
                 this.addCustomCmds(monaco)
             }
+        },
+        /**
+         * If isTabMoveFocus is changed elsewhere, not by interacting with this editor,
+         * it should be updated
+         */
+        updateTabFocusMode() {
+            if (this.isTabMoveFocus !== this.editor.getOption(this.editorTabFocusModeKey))
+                this.editor.trigger('', 'editor.action.toggleTabFocusMode')
         },
         regDocFormattingProvider(monaco) {
             const scope = this
@@ -225,6 +248,11 @@ export default {
                     this.$emit('on-selection', tmp)
                     prevSelectedTxt = tmp
                 }
+            })
+            editor.onDidChangeConfiguration(() => {
+                const tabFocusMode = editor.getOption(this.editorTabFocusModeKey)
+                if (tabFocusMode !== this.isTabMoveFocus)
+                    this.$emit('update:isTabMoveFocus', tabFocusMode)
             })
         },
         addCustomCmds(monaco) {

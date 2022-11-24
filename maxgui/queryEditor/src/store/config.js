@@ -10,7 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { isMAC } from '@share/utils/helpers'
 
+export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     SESSION: 'SESSION',
     // Used by <conn-man-ctr/>. It's also used for stopping the running query

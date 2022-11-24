@@ -5,16 +5,16 @@
                 <i18n
                     v-if="!queryTxt"
                     path="mxs.resultTabGuide"
-                    class="d-flex align-center text-pre-wrap"
-                    tag="span"
+                    class="d-flex align-center"
+                    tag="div"
                 >
                     <template v-slot:shortcut>
-                        <b>CMD/Ctrl + Shift + Enter</b>
+                        &nbsp;<b>{{ OS_KEY }} + SHIFT + ENTER</b>&nbsp;
                     </template>
                     <template v-slot:icon>
-                        <v-icon color="accent-dark" size="16">
-                            $vuetify.icons.mxs_running
-                        </v-icon>
+                        &nbsp;
+                        <v-icon color="accent-dark" size="16">$vuetify.icons.mxs_running</v-icon>
+                        &nbsp;
                     </template>
                 </i18n>
                 <v-menu
@@ -133,6 +133,7 @@
  */
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
+import { mapState } from 'vuex'
 export default {
     name: 'results-tab',
     components: {
@@ -161,6 +162,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+        }),
         queryTxt() {
             return this.$typy(this.data, 'data.attributes.sql').safeObject
         },

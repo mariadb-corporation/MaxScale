@@ -48,6 +48,7 @@
                         v-for="(value, key) in $helpers.lodash.pick(config, [
                             'showQueryConfirm',
                             'showSysSchemas',
+                            'tabMovesFocus',
                         ])"
                         :key="key"
                         cols="12"
@@ -58,10 +59,48 @@
                             class="v-checkbox--custom-label pa-0 ma-0"
                             dense
                             :class="[key]"
-                            :label="$mxs_t(key)"
                             color="primary"
                             hide-details="auto"
-                        />
+                        >
+                            <template v-slot:label>
+                                <label class="v-label pointer">{{ $mxs_t(key) }}</label>
+                                <v-tooltip
+                                    v-if="key === 'tabMovesFocus'"
+                                    top
+                                    transition="slide-y-transition"
+                                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                                    max-width="400"
+                                >
+                                    <template v-slot:activator="{ on }">
+                                        <v-icon
+                                            class="ml-1 material-icons-outlined pointer"
+                                            size="16"
+                                            color="#9DB4BB"
+                                            v-on="on"
+                                        >
+                                            mdi-information-outline
+                                        </v-icon>
+                                    </template>
+                                    <i18n
+                                        :path="
+                                            config[key]
+                                                ? 'mxs.info.tabMovesFocus'
+                                                : 'mxs.info.tabInsetChar'
+                                        "
+                                        tag="span"
+                                    >
+                                        <template v-slot:shortcut>
+                                            <b>
+                                                {{
+                                                    `${OS_KEY} ${$helpers.isMAC() ? '+ SHIFT' : ''}`
+                                                }}
+                                                + M
+                                            </b>
+                                        </template>
+                                    </i18n>
+                                </v-tooltip>
+                            </template>
+                        </v-checkbox>
                     </v-col>
                 </v-row>
             </v-container>
@@ -86,6 +125,7 @@
  * Emits
  * $emit('confirm-save', v:object): new cnf data
  */
+import { mapState } from 'vuex'
 import RowLimitCtr from './RowLimitCtr.vue'
 export default {
     name: 'query-cnf-dlg',
@@ -105,7 +145,9 @@ export default {
                     'query_history_expired_time' in obj &&
                     typeof obj.query_history_expired_time === 'number' &&
                     'query_show_sys_schemas_flag' in obj &&
-                    typeof obj.query_show_sys_schemas_flag === 'number'
+                    typeof obj.query_show_sys_schemas_flag === 'number' &&
+                    'tab_moves_focus' in obj &&
+                    typeof obj.tab_moves_focus === 'boolean'
                 )
             },
             required: true,
@@ -126,6 +168,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+        }),
         isOpened: {
             get() {
                 return this.value
@@ -143,6 +188,7 @@ export default {
                     timestamp: this.cnf.query_history_expired_time,
                 }),
                 showSysSchemas: Boolean(this.cnf.query_show_sys_schemas_flag),
+                tabMovesFocus: this.cnf.tab_moves_focus,
             }
         },
         hasChanged() {
@@ -174,6 +220,7 @@ export default {
                     this.config.queryHistoryRetentionPeriod
                 ),
                 query_show_sys_schemas_flag: Number(this.config.showSysSchemas),
+                tab_moves_focus: this.config.tabMovesFocus,
             })
         },
     },

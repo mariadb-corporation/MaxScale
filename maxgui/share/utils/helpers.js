@@ -277,3 +277,7 @@ export function asyncTryCatch(promise) {
             return [err, undefined]
         })
 }
+
+export function isMAC() {
+    return Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
+}

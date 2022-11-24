@@ -21,6 +21,7 @@ const getUserPrefStates = () => ({
     query_history_expired_time: addDaysToNow(30), // Unix time
     query_show_sys_schemas_flag: 1,
     is_sidebar_collapsed: false,
+    tab_moves_focus: false,
 })
 
 function userPrefMutationCreator(states) {

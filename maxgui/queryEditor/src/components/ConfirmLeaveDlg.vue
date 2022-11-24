@@ -1,7 +1,7 @@
 <template>
     <mxs-conf-dlg
         :title="$mxs_t('confirmations.leavePage')"
-        saveText="thatsRight"
+        saveText="confirm"
         minBodyWidth="624px"
         v-bind="{ ...$attrs }"
         v-on="$listeners"
