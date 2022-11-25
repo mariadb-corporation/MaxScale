@@ -207,3 +207,16 @@ DELETE FROM obj_stat_log_seq WHERE sequence < 6000;
 # MXS-4307
 # Does not parse CONVERT() properly.
 select CONVERT(substring(receive_code,8), UNSIGNED INTEGER) FROM t;
+
+# MXS-4413
+# qc_sqlite misses QUERY_TYPE_WRITE and QUERY_TYPE_USERVAR_READ
+UPDATE objects o,
+(
+    SELECT newIndex, o_id FROM (SELECT @n := IF(@n = '2' - 1,@n + 2,@n + 1) AS newIndex, o_id
+    FROM objects,
+    (SELECT @n := -1) variable
+     WHERE o_id != '2142' AND o_parentId = '343' AND o_type IN ('object','variant','folder')
+     ORDER BY o_index, o_id='2142'
+    ) tmp
+) order_table
+SET o.o_index = order_table.newIndex;

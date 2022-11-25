@@ -35,6 +35,8 @@ std::string to_string(Status status);
 enum class SubState
 {
     LATE,
+    LATE_LEAVING,
+    LEAVING,
     NORMAL,
     UNKNOWN
 };
