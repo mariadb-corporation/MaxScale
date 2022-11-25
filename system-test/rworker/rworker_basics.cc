@@ -248,7 +248,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     vector<MaxRest::Thread> threads;
 
     threads = maxrest.show_threads();
-    mxb_assert(threads.size() == 4);
+    test.expect(threads.size() == 4, "0: Expected %d threads, found %d.", 4, (int)threads.size());
 
     // Initially make all workers deaf.
     for (int i = 0; i < 4; ++i)
