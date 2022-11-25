@@ -506,6 +506,7 @@ void test_main(TestConnections& test)
 
 int main(int argc, char* argv[])
 {
+    mxb::Log log;
     TestConnections test;
     return test.run_test(argc, argv, test_main);
 }
