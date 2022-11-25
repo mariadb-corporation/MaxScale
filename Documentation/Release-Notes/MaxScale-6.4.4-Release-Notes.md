@@ -14,6 +14,8 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4415](https://jira.mariadb.org/browse/MXS-4415) Warning for xpandmon for 'leaving' / 'late, leaving' being an unknown sub-state
+* [MXS-4413](https://jira.mariadb.org/browse/MXS-4413) UPDATE with user variable breaks replication
 * [MXS-4404](https://jira.mariadb.org/browse/MXS-4404) Maxscale: KafkaCDC writes to current_gtid.txt causes high disk utilisation.
 * [MXS-4397](https://jira.mariadb.org/browse/MXS-4397) fields parameter breaks REST-API filtering
 * [MXS-4393](https://jira.mariadb.org/browse/MXS-4393) Authentication failures during shard mapping are not handled correctly
