@@ -25,7 +25,7 @@
 
 namespace maxsql
 {
-class ODBCImp
+class ODBCImp : public Output
 {
 public:
     ODBCImp(std::string dsn);
@@ -44,9 +44,20 @@ public:
 
     bool query(const std::string& sql, Output* output);
 
+    bool prepare(const std::string& sql);
+
+    bool execute(Output* output);
+
     void set_row_limit(size_t limit);
 
     std::map<std::string, std::map<std::string, std::string>> drivers();
+
+    bool ok_result(int64_t rows_affected, int64_t warnings) override;
+    bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
+    bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
+                        uint64_t rows_fetched) override;
+    bool resultset_end() override;
+    bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
 private:
     using DiagRec = std::tuple<int, std::string, std::string>;
@@ -627,6 +638,86 @@ bool ODBCImp::query(const std::string& query, Output* output)
     return process_response(ret, output);
 }
 
+bool ODBCImp::prepare(const std::string& query)
+{
+    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+    SQLRETURN ret = SQLPrepare(m_stmt, (SQLCHAR*)query.c_str(), query.size());
+
+    if (ret == SQL_ERROR)
+    {
+        get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    return SQL_SUCCEEDED(ret);
+}
+
+bool ODBCImp::execute(Output* output)
+{
+    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+    SQLRETURN ret = SQLExecute(m_stmt);
+    return process_response(ret, output);
+}
+
+bool ODBCImp::ok_result(int64_t rows_affected, int64_t warnings)
+{
+    mxb_assert_message(!true, "SELECT should not generate an OK result.");
+    return false;
+}
+
+bool ODBCImp::resultset_start(const std::vector<ColumnInfo>& metadata)
+{
+    return m_error.empty();
+}
+
+bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
+                             uint64_t rows_fetched)
+{
+    SQLLEN params_processed = 0;
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_PARAM_BIND_TYPE, (void*)SQL_PARAM_BIND_BY_COLUMN, 0);
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_PARAMSET_SIZE, (void*)rows_fetched, 0);
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_PARAM_STATUS_PTR, res.row_status.data(), 0);
+    SQLSetStmtAttr(m_stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, &params_processed, 0);
+
+    for (size_t i = 0; i < metadata.size(); i++)
+    {
+        SQLBindParameter(m_stmt, i + 1, SQL_PARAM_INPUT, res.columns[i].buffer_type,
+                         metadata[i].data_type, metadata[i].size, metadata[i].digits,
+                         (SQLPOINTER*)res.columns[i].buffers.data(), res.columns[i].buffer_size,
+                         res.columns[i].indicators.data());
+    }
+
+    SQLRETURN ret = SQLExecute(m_stmt);
+
+    if (ret == SQL_ERROR)
+    {
+        get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    return SQL_SUCCEEDED(ret);
+}
+
+bool ODBCImp::resultset_end()
+{
+    SQLFreeStmt(m_stmt, SQL_UNBIND);
+    SQLFreeStmt(m_stmt, SQL_DROP);
+    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, m_conn, SQL_COMMIT);
+
+    if (ret == SQL_ERROR)
+    {
+        get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    return SQL_SUCCEEDED(ret);
+}
+
+
+bool ODBCImp::error_result(int errnum, const std::string& errmsg, const std::string& sqlstate)
+{
+    // Shouldn't happen unless the resultset ended in an error.
+    MXB_INFO("Error result while loading data: #%s %d, %s", sqlstate.c_str(), errnum, errmsg.c_str());
+    return false;
+}
+
 void ODBCImp::set_row_limit(size_t limit)
 {
     m_row_limit = limit;
@@ -953,6 +1044,21 @@ const std::string& ODBC::sqlstate() const
 bool ODBC::query(const std::string& sql, mxq::Output* output)
 {
     return m_imp->query(sql, output);
+}
+
+bool ODBC::prepare(const std::string& sql)
+{
+    return m_imp->prepare(sql);
+}
+
+bool ODBC::execute(mxq::Output* output)
+{
+    return m_imp->execute(output);
+}
+
+Output* ODBC::as_output()
+{
+    return m_imp.get();
 }
 
 void ODBC::set_row_limit(size_t limit)

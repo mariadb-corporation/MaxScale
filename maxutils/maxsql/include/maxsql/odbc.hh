@@ -259,6 +259,36 @@ public:
     bool query(const std::string& sql, Output* output = ignore_result());
 
     /**
+     * Prepare a query
+     *
+     * @param sql SQL to prepare
+     *
+     * @return True if the preparation was successfully
+     */
+    bool prepare(const std::string& sql);
+
+    /**
+     * Execute a prepared query
+     *
+     * @param output The output formatter class. By default the output is discarded.
+     *
+     * @return True if the query execution was successfully executed and at least one non-error result was
+     *         returned. Partially successful results (e.g. multi-statement SQL) can be detected by inspecting
+     *         whether errnum() is set.
+     */
+    bool execute(Output* output = ignore_result());
+
+    /**
+     * Streams the results of another connection into this one
+     *
+     * The SQL that defines the output stream (usually an INSERT statement) must be prepared before this
+     * function is called.
+     *
+     * @return The Output class pointer that is given to query()
+     */
+    Output* as_output();
+
+    /**
      * Set maximum number of rows to fetch
      *
      * @param limit The number of rows to fetch, 0 for no limit.
