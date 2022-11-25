@@ -2916,11 +2916,13 @@ static void disable_module_unloading(const char* arg)
 static void enable_statement_logging(const char* arg)
 {
     maxsql::mysql_set_log_statements(true);
+    maxsql::odbc_set_log_statements(true);
 }
 
 static void disable_statement_logging(const char* arg)
 {
     maxsql::mysql_set_log_statements(false);
+    maxsql::odbc_set_log_statements(false);
 }
 
 static void enable_cors(const char* arg)

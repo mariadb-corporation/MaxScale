@@ -298,4 +298,12 @@ public:
 private:
     std::unique_ptr<ODBCImp> m_imp;
 };
+
+/**
+ * Enable/disable the logging of all SQL statements MaxScale sends to
+ * the servers via ODBC connections.
+ *
+ * @param enable Whether to log the SQL statements as they are executed or prepared
+ */
+void odbc_set_log_statements(bool enable);
 }

@@ -23,6 +23,16 @@
 #include <sqlext.h>
 #include <unistd.h>
 
+namespace
+{
+struct ThisUnit
+{
+    bool log_statements {false};
+};
+
+ThisUnit this_unit;
+}
+
 namespace maxsql
 {
 class ODBCImp : public Output
@@ -110,6 +120,18 @@ private:
         }
 
         return ok;
+    }
+
+    void log_statement(const std::string& sql)
+    {
+        if (this_unit.log_statements)
+        {
+            char drv[256];
+            SQLSMALLINT drvlen = 0;
+            SQLGetInfo(m_conn, SQL_DRIVER_NAME, drv, sizeof(drv), &drvlen);
+            drv[drvlen] = '\0';
+            MXB_NOTICE("SQL(%s): \"%s\"", drv, sql.c_str());
+        }
     }
 
     bool                    process_response(SQLRETURN ret, Output* handler);
@@ -633,6 +655,7 @@ std::map<std::string, std::map<std::string, std::string>> ODBCImp::drivers()
 
 bool ODBCImp::query(const std::string& query, Output* output)
 {
+    log_statement(query);
     std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
     SQLRETURN ret = SQLExecDirect(m_stmt, (SQLCHAR*)query.c_str(), query.size());
     return process_response(ret, output);
@@ -640,6 +663,7 @@ bool ODBCImp::query(const std::string& query, Output* output)
 
 bool ODBCImp::prepare(const std::string& query)
 {
+    log_statement(query);
     std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
     SQLRETURN ret = SQLPrepare(m_stmt, (SQLCHAR*)query.c_str(), query.size());
 
@@ -1073,5 +1097,10 @@ std::map<std::string, std::map<std::string, std::string>> ODBC::drivers()
     // handle to get the drivers.
     auto tmp = std::make_unique<mxq::ODBCImp>("");
     return tmp->drivers();
+}
+
+void odbc_set_log_statements(bool enable)
+{
+    this_unit.log_statements = enable;
 }
 }
