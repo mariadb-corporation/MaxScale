@@ -23,6 +23,8 @@ namespace
 
 const char CN_DYNAMIC[] = "dynamic";
 const char CN_LATE[] = "late";
+const char CN_LATE_LEAVING[] = "late, leaving";
+const char CN_LEAVING[] = "leaving";
 const char CN_NORMAL[] = "normal";
 const char CN_QUORUM[] = "quorum";
 const char CN_STATIC[] = "static";
@@ -78,6 +80,12 @@ std::string xpand::to_string(xpand::SubState substate)
     case SubState::LATE:
         return CN_LATE;
 
+    case SubState::LATE_LEAVING:
+        return CN_LATE_LEAVING;
+
+    case SubState::LEAVING:
+        return CN_LEAVING;
+
     case SubState::NORMAL:
         return CN_NORMAL;
 
@@ -94,6 +102,14 @@ xpand::SubState xpand::substate_from_string(const std::string& substate)
     if (substate == CN_LATE)
     {
         return SubState::LATE;
+    }
+    else if (substate == CN_LATE_LEAVING)
+    {
+        return SubState::LATE_LEAVING;
+    }
+    else if (substate == CN_LEAVING)
+    {
+        return SubState::LEAVING;
     }
     else if (substate == CN_NORMAL)
     {
