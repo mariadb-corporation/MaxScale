@@ -768,17 +768,36 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
                 // C/ODBC doesn't seem to return warnings at all, other drivers do return them.
                 int64_t warnings = ret == SQL_SUCCESS_WITH_INFO ?
                     get_diag_recs(SQL_HANDLE_STMT, m_stmt).size() : 0;
-                handler->ok_result(rowcount, warnings);
+
+                if (!handler->ok_result(rowcount, warnings))
+                {
+                    MXB_DEBUG("Output failed to process OK result");
+                    ok = false;
+                }
             }
             else if (columns > 0)
             {
                 m_columns = get_headers(columns);
-                handler->resultset_start(m_columns);
-                ok = can_batch() ? get_batch_result(columns, handler) : get_normal_result(columns, handler);
-                handler->resultset_end();
+
+                if (handler->resultset_start(m_columns))
+                {
+                    ok = can_batch() ? get_batch_result(columns, handler) :
+                        get_normal_result(columns, handler);
+
+                    if (!handler->resultset_end())
+                    {
+                        MXB_DEBUG("Output failed to process resultset end");
+                        ok = false;
+                    }
+                }
+                else
+                {
+                    MXB_DEBUG("Output failed to process resultset start");
+                    ok = false;
+                }
             }
         }
-        while (SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
+        while (ok && SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
 
         SQLCloseCursor(m_stmt);
     }
@@ -786,7 +805,12 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
     if (ret == SQL_ERROR)
     {
         get_error(SQL_HANDLE_STMT, m_stmt);
-        handler->error_result(m_errnum, m_error, m_sqlstate);
+
+        if (!handler->error_result(m_errnum, m_error, m_sqlstate))
+        {
+            MXB_DEBUG("Output failed to process error result");
+            ok = false;
+        }
     }
 
     return ok;
@@ -968,6 +992,7 @@ bool ODBCImp::get_batch_result(int columns, Output* handler)
 
         if (!handler->resultset_rows(m_columns, res, rows_fetched))
         {
+            MXB_DEBUG("Output failed to process resultset row at offset %lu", total_rows);
             ok = false;
         }
     }
