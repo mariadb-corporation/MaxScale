@@ -83,7 +83,7 @@ public:
         int64_t          last_max_rows {0};
         ConnectionConfig config;
         std::string      sql;
-        mxb::Json        result;
+        mxb::Json        result {mxb::Json::Type::UNDEFINED};
     };
 
     class MariaDBConnection : public Connection

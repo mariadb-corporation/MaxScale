@@ -592,10 +592,11 @@ HttpResponse query_result(const HttpRequest& request)
 
         if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
         {
-            if (json_t* result_data = conn->result.release())
+            if (json_t* result_data = conn->result.get_json())
             {
                 auto exec_time = conn->last_query_time - conn->last_query_started;
-                response = construct_result_response(result_data, host, self, sql, query_id, exec_time);
+                response = construct_result_response(json_incref(result_data),
+                                                     host, self, sql, query_id, exec_time);
             }
             else
             {
@@ -621,6 +622,40 @@ HttpResponse query_result(const HttpRequest& request)
 
     return HttpResponse(std::move(result_cb));
 }
+
+HttpResponse erase_query_result(const HttpRequest& request)
+{
+    auto [id, err] = get_connection_id(request, request.uri_part(1));
+
+    if (id.empty())
+    {
+        return create_error(err);
+    }
+
+    std::string host = request.host();
+    std::string self = request.get_uri();
+
+    auto result_cb = [id, host = std::move(host), self = std::move(self)]() {
+        HttpResponse response;
+
+        if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
+        {
+            conn->result.reset();
+            conn->release();
+        }
+        else
+        {
+            const char* why = reason == Reason::BUSY ? "is busy" : "was not found";
+            string errmsg = mxb::string_printf("ID %s %s.", id.c_str(), why);
+            response = create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return response;
+    };
+
+    return HttpResponse(std::move(result_cb));
+}
+
 // static
 HttpResponse disconnect(const HttpRequest& request)
 {

@@ -150,7 +150,7 @@ describe("Query API ", function () {
       check_resultset(res.data, query);
     });
 
-    it("async result can only be read once", async function () {
+    it("async result can be read more than once", async function () {
       var query = "SELECT 1";
       var post_res = await c.post(conn.data.links.related + "?async=true&token=" + conn.meta.token, {
         sql: query,
@@ -160,6 +160,25 @@ describe("Query API ", function () {
       await new Promise((res) => setTimeout(res, 100));
       var res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
       expect(res.status).to.equal(201);
+
+      await new Promise((res) => setTimeout(res, 100));
+      res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      expect(res.status).to.equal(201);
+    });
+
+    it("discards async result", async function () {
+      var query = "SELECT 1";
+      var post_res = await c.post(conn.data.links.related + "?async=true&token=" + conn.meta.token, {
+        sql: query,
+      });
+      expect(post_res.status).to.equal(202);
+
+      await new Promise((res) => setTimeout(res, 100));
+      var res = await c.get(post_res.data.links.self + "?token=" + conn.meta.token);
+      expect(res.status).to.equal(201);
+
+      res = await c.delete(post_res.data.links.self + "?token=" + conn.meta.token);
+      expect(res.status).to.equal(200);
 
       // Reading a result that has already been read should return a 400 Bad Request
       expect(c.get(post_res.data.links.self + "?token=" + conn.meta.token)).to.be.rejected;

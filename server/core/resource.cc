@@ -1150,6 +1150,11 @@ HttpResponse cb_sql_disconnect(const HttpRequest& request)
     return HttpSql::disconnect(request);
 }
 
+HttpResponse cb_sql_erase_query_result(const HttpRequest& request)
+{
+    return HttpSql::erase_query_result(request);
+}
+
 HttpResponse cb_sql_query(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1616,6 +1621,7 @@ public:
 
         /** SQL connection destruction */
         m_delete.emplace_back(cb_sql_disconnect, "sql", ":connection_id");
+        m_delete.emplace_back(cb_sql_erase_query_result, "sql", ":connection_id", "queries", ":query_id");
     }
 
     ~RootResource()

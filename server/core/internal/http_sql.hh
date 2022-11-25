@@ -33,6 +33,7 @@ HttpResponse show_connection(const HttpRequest& request);
 HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);
 HttpResponse query_result(const HttpRequest& request);
+HttpResponse erase_query_result(const HttpRequest& request);
 HttpResponse disconnect(const HttpRequest& request);
 HttpResponse etl_prepare(const HttpRequest& request);
 HttpResponse etl_start(const HttpRequest& request);
