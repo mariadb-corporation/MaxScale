@@ -98,11 +98,11 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
     }
 
     auto type_str = get(json, "type", Type::STRING).get_string();
-    Source source;
+    std::unique_ptr<Extractor> extractor;
 
     if (type_str == "mariadb")
     {
-        source = Source::MARIADB;
+        // TODO: Create a MariaDBExtractor
     }
     else
     {
@@ -112,7 +112,7 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
     std::string dest = ss.str();
     std::string src = src_cc.odbc_string;
 
-    std::unique_ptr<ETL> etl = std::make_unique<ETL>(Config {source, src, dest});
+    std::unique_ptr<ETL> etl = std::make_unique<ETL>(Config {src, dest}, std::move(extractor));
 
     for (const auto& val : get(json, "tables", Type::ARRAY).get_array_elems())
     {

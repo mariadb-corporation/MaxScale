@@ -30,11 +30,6 @@
 namespace sql_etl
 {
 
-enum class Source
-{
-    MARIADB
-};
-
 struct Error : public std::runtime_error
 {
     using std::runtime_error::runtime_error;
@@ -42,21 +37,102 @@ struct Error : public std::runtime_error
 
 struct Config
 {
-    Config(Source source_type, std::string odbc_src, std::string odbc_dest)
-        : type(source_type)
-        , src (odbc_src)
+    Config(std::string odbc_src, std::string odbc_dest)
+        : src(odbc_src)
         , dest(odbc_dest)
     {
     }
-
-    // The type of the source server
-    Source type;
 
     // The ODBC connection string to the server where the data is read from
     std::string src;
 
     // The ODBC connection string to the MariaDB server where the data is sent
     std::string dest;
+};
+
+class Table;
+
+// Abstract base class for dump thread synchronization and SQL translations into MariaDB syntax.
+// If an error occurs at any point, the base class should throw an sql_etl::Error exception.
+struct Extractor
+{
+    virtual ~Extractor() = default;
+
+    /**
+     *  Prepares a connection for use
+     *
+     * Used to initialize the session state of all connections. Called once for each ODBC connection before
+     * any other functions are called.
+     *
+     * @param source Connection to the source server
+     */
+    virtual void init_connection(mxq::ODBC& source) = 0;
+
+    /**
+     * Called when the data dump is first started and before any threads have been created.
+     *
+     * @param source Connection to the source server
+     * @param tables Table that are to be imported
+     * */
+    virtual void start(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+
+    /**
+     * Called whenever a thread is created for dumping data.
+     *
+     * The DB given to the function will be the same instance for the whole lifetime of the thread and thus
+     * its state does not need to be initialized when the other functions are called.
+     *
+     * @param source Connection to the source server
+     * @param tables The table being imported
+     */
+    virtual void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+
+    /**
+     * Called after data dump is ready to start
+     *
+     * this function is called for for the main coordinating connection after all threads have been
+     * successfully started and data dump is ready to start.
+     *
+     * @param source Connection to the source server
+     * @param tables Table that are to be imported
+     */
+    virtual void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+
+    /**
+     * Get the CREATE TABLE SQL for the given table
+     *
+     * @param source Connection to the source server
+     * @param tables The table being imported
+     *
+     * @return The SQL statement needed to create the table. Must be MariaDB-compatible SQL.
+     */
+    virtual std::string create_table(mxq::ODBC& source, const Table& table) = 0;
+
+    /**
+     * Should return the SQL needed to read the data from the source.
+     *
+     * The statement is almost always a SELECT statement of some sort.
+     *
+     * @param source Connection to the source server
+     * @param tables The table being imported
+     *
+     * @return The SQL needed to read the data. This must be in the native format of the source server.
+     */
+    virtual std::string select(mxq::ODBC& source, const Table& table) = 0;
+
+
+    /**
+     * Should return the SQL needed to insert the data into MariaDB.
+     *
+     * The SQL must be of the form `INSERT INTO table(columns ...) VALUE (values...)` and the INSERT must be
+     * directly compatible with the resultset of the SELECT statement used to read the data.
+     *
+     * @param source Connection to the source server
+     * @param tables The table being imported
+     *
+     * @return The SQL needed to insert the data. Must be MariaDB-compatible SQL.
+     */
+    virtual std::string insert(mxq::ODBC& source, const Table& table) = 0;
 };
 
 class ETL;
@@ -110,8 +186,9 @@ private:
 
 struct ETL
 {
-    ETL(Config config)
+    ETL(Config config, std::unique_ptr<Extractor> extractor)
         : m_config(std::move(config))
+        , m_extractor(std::move(extractor))
     {
     }
 
@@ -125,6 +202,11 @@ struct ETL
         return m_tables;
     }
 
+    Extractor& extractor() const
+    {
+        mxb_assert(m_extractor.get());
+        return *m_extractor;
+    }
 
     mxb::Json prepare();
 
@@ -134,8 +216,9 @@ private:
     template<auto func>
     mxb::Json run_job();
 
-    Config             m_config;
-    std::vector<Table> m_tables;
+    Config                     m_config;
+    std::vector<Table>         m_tables;
+    std::unique_ptr<Extractor> m_extractor;
 };
 
 /**
