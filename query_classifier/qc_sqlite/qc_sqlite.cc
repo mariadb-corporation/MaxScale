@@ -2256,14 +2256,7 @@ public:
         }
         else
         {
-            // Only if the type has explicitly been set to QUERY_TYPE_WRITE
-            // we don't force it to QUERY_TYPE_READ but with other bits we do.
-            // This is something of kludge to ensure continued compatibility
-            // with qc_mysqlembedded.
-            if (m_type_mask != QUERY_TYPE_WRITE)
-            {
-                m_type_mask = QUERY_TYPE_READ;
-            }
+            m_type_mask |= QUERY_TYPE_READ;
         }
 
         QcAliases aliases;
