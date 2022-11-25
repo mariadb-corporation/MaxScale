@@ -13,6 +13,7 @@
 
 #include "internal/sql_etl.hh"
 #include "internal/servermanager.hh"
+#include <maxbase/format.hh>
 
 namespace
 {
@@ -47,6 +48,141 @@ mxb::Json get(const mxb::Json& json, const std::string& path, mxb::Json::Type ty
 
 namespace sql_etl
 {
+class MariaDBExtractor final : public Extractor
+{
+public:
+    void init_connection(mxq::ODBC& source) override
+    {
+        if (!source.query("SET AUTOCOMMIT=0,SQL_MODE='PIPES_AS_CONCAT,NO_ENGINE_SUBSTITUTION'"))
+        {
+            throw problem(source.error());
+        }
+    }
+
+    void start(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        std::ostringstream ss;
+        ss << "LOCK TABLE "
+           << mxb::transform_join(tables, [](const auto& t){
+            return "`"s + t.schema() + "`.`" + t.table() + "` READ";
+        }, ",");
+
+        if (!source.query(ss.str()))
+        {
+            throw problem(source.error());
+        }
+    }
+
+    void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        if (!source.query("START TRANSACTION WITH CONSISTENT SNAPSHOT"))
+        {
+            throw problem(source.error());
+        }
+    }
+
+    void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        if (!source.query("UNLOCK TABLES"))
+        {
+            throw problem(source.error());
+        }
+    }
+
+    std::string create_table(mxq::ODBC& source, const Table& table) override
+    {
+        std::string rval;
+        std::string sql = mxb::string_printf("SHOW CREATE TABLE `%s`.`%s`", table.schema(), table.table());
+
+        mxq::TextResult textresult;
+        if (source.query(sql, &textresult))
+        {
+            if (auto val = textresult.get_field(1))
+            {
+                rval = *val;
+            }
+        }
+        else
+        {
+            throw problem(source.error());
+        }
+
+        return rval;
+    }
+
+    std::string select(mxq::ODBC& source, const Table& table) override
+    {
+        const char* format =
+            R"(
+SELECT
+  'SELECT ' || GROUP_CONCAT('`' || COLUMN_NAME || '`' ORDER BY ORDINAL_POSITION SEPARATOR ',') ||
+  ' FROM `' || TABLE_SCHEMA || '`.`' || TABLE_NAME || '`'
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND IS_GENERATED = 'NEVER'
+GROUP BY TABLE_SCHEMA, TABLE_NAME;
+)";
+
+        std::string rval;
+        std::string sql = mxb::string_printf(format, table.schema(), table.table());
+        mxq::TextResult textresult;
+
+        if (source.query(sql, &textresult))
+        {
+            if (auto val = textresult.get_field(0))
+            {
+                rval = *val;
+            }
+            else
+            {
+                mxb_assert_message(!true, "Query did not return a result: %s", sql.c_str());
+                throw problem("Unexpected empty result");
+            }
+        }
+        else
+        {
+            throw problem(source.error());
+        }
+
+        return rval;
+    }
+
+    std::string insert(mxq::ODBC& source, const Table& table) override
+    {
+        const char* format =
+            R"(
+SELECT
+  'INSERT INTO `' || TABLE_SCHEMA || '`.`' || TABLE_NAME ||
+  '` (' || GROUP_CONCAT('`' || COLUMN_NAME || '`' ORDER BY ORDINAL_POSITION SEPARATOR ',') ||
+  ') VALUES (' || GROUP_CONCAT('?' SEPARATOR ',') || ')'
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND IS_GENERATED = 'NEVER'
+GROUP BY TABLE_SCHEMA, TABLE_NAME;
+)";
+
+        std::string rval;
+        std::string sql = mxb::string_printf(format, table.schema(), table.table());
+        mxq::TextResult textresult;
+
+        if (source.query(sql, &textresult))
+        {
+            if (auto val = textresult.get_field(0))
+            {
+                rval = *val;
+            }
+            else
+            {
+                mxb_assert_message(!true, "Query did not return a result: %s", sql.c_str());
+                throw problem("Unexpected empty result");
+            }
+        }
+        else
+        {
+            throw problem(source.error());
+        }
+
+        return rval;
+    }
+};
 
 std::unique_ptr<ETL> create(const mxb::Json& json,
                             const HttpSql::ConnectionConfig& src_cc,
@@ -102,7 +238,7 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
 
     if (type_str == "mariadb")
     {
-        // TODO: Create a MariaDBExtractor
+        extractor = std::make_unique<MariaDBExtractor>();
     }
     else
     {
