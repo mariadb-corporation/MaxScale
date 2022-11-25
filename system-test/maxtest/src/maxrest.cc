@@ -119,15 +119,38 @@ public:
 
         if (pFile)
         {
-            rv.rc = 0;
-
             int c;
             while ((c = fgetc(pFile)) != EOF)
             {
                 rv.output += (char)c;
             }
 
-            rv.rc = pclose(pFile);
+            int rc = pclose(pFile);
+
+            if (!WIFEXITED(rc))
+            {
+                raise(true, "Execution of curl failed.");
+            }
+
+            int curl_rc = WEXITSTATUS(rc);
+
+            switch (curl_rc)
+            {
+            case 0:
+            case 22:
+                // 22 HTTP page not retrieved. The requested url was not found or returned another
+                //    error with the HTTP error code being 400 or above. This return code only
+                //    appears if -f, --fail is used.
+                rv.rc = curl_rc;
+                break;
+
+            default:
+                {
+                    ostringstream ss;
+                    ss << "Curl failed with exit code %d." << curl_rc << ".";
+                    raise(true, ss.str());
+                }
+            }
         }
         else
         {
@@ -446,23 +469,6 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
     }
 
     auto result = m_sImp->execute_curl_command(curl_command);
-
-    if (result.rc != 0)
-    {
-        string message("Invocation of curl failed");
-
-        if (result.output.empty())
-        {
-            message += ".";
-        }
-        else
-        {
-            message += ": ";
-            message += result.output;
-        }
-
-        raise(message);
-    }
 
     mxb::Json rv;
 
