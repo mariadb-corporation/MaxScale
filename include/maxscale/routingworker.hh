@@ -94,8 +94,7 @@ public:
     enum Which
     {
         ALL        = -1,
-        RUNNING    = -2,
-        CONFIGURED = -3
+        CONFIGURED = -2
     };
 
     /**
@@ -159,11 +158,6 @@ public:
      * @return True, if the number could be adjusted, false, otherwise.
      */
     static bool adjust_threads(int nCount);
-
-    /**
-     * @return The number of created routing workers.
-     */
-    static int nCreated();
 
     /**
      * @return The number of active routing workers; less than or equal to created.

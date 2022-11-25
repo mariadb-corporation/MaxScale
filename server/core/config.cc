@@ -278,12 +278,12 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
         }
     }
 
-    int nCreated = RoutingWorker::nCreated();
+    int nRunning = RoutingWorker::nRunning();
     int nRequested = s_n_threads.get(params);
 
-    if (nRequested != nCreated)
+    if (nRequested != nRunning)
     {
-        if (nCreated != 0) // Will be 0 at startup.
+        if (nRunning != 0) // Will be 0 at startup.
         {
             std::vector<Service*> services = Service::get_all();
 

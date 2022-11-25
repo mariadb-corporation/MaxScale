@@ -61,14 +61,10 @@ const std::chrono::seconds TERMINATION_DELAY = 5s;
  *
  * nMax:        The hard maximum number of threads. Cannot be changed at runtime and
  *              currently specified using a compile time constant.
- * nCreated:    The number of existing threads. Note that as threads can only be created but
- *              not destroyed (but only deactivated) at runtime, this number will during the
- *              lifetime of MaxScale only monotonically increase, but never decrase.
- *              The following will always hold: 1 <= nCreated <= nMax.
  * nRunning:    The number of running threads, when viewed from the outside. Running threads
  *              are all active and draining threads, and also inactive threads that are waiting
  *              for other draining threads to become inactive before they can be removed.
- *              The follwing will always hold: 1 <= nRunning <= nCreated.
+ *              The follwing will always hold: 1 <= nRunning <= nMax.
  * nConfigured: The configured number of threads. When a user issues 'maxctrl alter maxscale threads=N'
  *              nConfigured will be immediately set to N (subject to some possible failures), but
  *              when the number of threads is reduced nRunning will become N, only when the
@@ -76,8 +72,7 @@ const std::chrono::seconds TERMINATION_DELAY = 5s;
  *              The following will always hold: 1 <= nConfigured <= nRunning.
  *
  * Right after startup and when any thread operations have reached their conclusion, the
- * following will hold: nConfigured == nRunning. Further, if the number of threads has not
- * been decreased, the following will hold: nRunning == nCreated.
+ * following will hold: nConfigured == nRunning.
  */
 class ThisUnit
 {
@@ -122,7 +117,7 @@ public:
     {
         mxb_assert(this->initialized);
 
-        for (int i = this->nCreated - 1; i >= 0; --i)
+        for (int i = this->nRunning - 1; i >= 0; --i)
         {
             RoutingWorker* pWorker = this->ppWorkers[i];
             mxb_assert(pWorker);
@@ -130,7 +125,6 @@ public:
             this->ppWorkers[i] = nullptr;
         }
 
-        this->nCreated.store(0, std::memory_order_relaxed);
         this->nRunning.store(0, std::memory_order_relaxed);
         this->nConfigured.store(0, std::memory_order_relaxed);
 
@@ -148,7 +142,6 @@ public:
     bool             initialized {false};            // Whether the initialization has been performed.
     bool             running {false};                // True if worker threads are running
     const int        nMax {MAX_COUNT};               // Hard maximum of workers
-    std::atomic<int> nCreated {0};                   // Created amount of workers.
     std::atomic<int> nRunning {0};                   // "Running" amount of workers.
     std::atomic<int> nConfigured {0};                // The configured amount of workers.
     RoutingWorker**  ppWorkers {nullptr};            // Array of routing worker instances.
@@ -178,10 +171,6 @@ int broadcast_recipients(int nWorkers)
     switch (nWorkers)
     {
     case RoutingWorker::ALL:
-        nWorkers = this_unit.nCreated.load(std::memory_order_relaxed);
-        break;
-
-    case RoutingWorker::RUNNING:
         nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
         break;
 
@@ -394,9 +383,9 @@ bool RoutingWorker::increase_workers(int nDelta)
 
     bool rv = true;
 
-    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
+    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
     int nConfigured = this_unit.nConfigured.load(std::memory_order_relaxed);
-    int nAvailable = nCreated - nConfigured;
+    int nAvailable = nRunning - nConfigured;
 
     if (nAvailable > 0)
     {
@@ -410,6 +399,7 @@ bool RoutingWorker::increase_workers(int nDelta)
         }
         else
         {
+            // activate_workers(...) may change, must be fetched again.
             int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
 
             MXB_ERROR("Could activate %d threads of %d required. %d workers "
@@ -430,7 +420,7 @@ bool RoutingWorker::increase_workers(int nDelta)
 int RoutingWorker::activate_workers(int n)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    mxb_assert(this_unit.nCreated - this_unit.nConfigured >= n);
+    mxb_assert(this_unit.nRunning - this_unit.nConfigured >= n);
 
     int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
     int nBefore = this_unit.nConfigured.load(std::memory_order_relaxed);
@@ -636,14 +626,7 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
     --nRunning;
     this_unit.nRunning.store(nRunning, std::memory_order_relaxed);
     mxb_assert(this_unit.nRunning >= this_unit.nConfigured);
-
-    auto nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    mxb_assert(nCreated > nRunning);
-    --nCreated;
-    mxb_assert(nCreated == nRunning);
-
-    this_unit.nCreated.store(nCreated, std::memory_order_relaxed);
-    this_unit.ppWorkers[nCreated] = nullptr;
+    this_unit.ppWorkers[nRunning] = nullptr;
 
     if (!pWorker->execute([pWorker]() {
                 pWorker->terminate();
@@ -652,9 +635,8 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
         MXB_ERROR("Could not post to (%s, %p), the worker will not go down.",
                   pWorker->thread_name().c_str(), pWorker);
 
-        this_unit.ppWorkers[nCreated] = pWorker;
+        this_unit.ppWorkers[nRunning] = pWorker;
         this_unit.nRunning.store(nRunning + 1, std::memory_order_relaxed);
-        this_unit.nCreated.store(nCreated + 1, std::memory_order_relaxed);
         this_unit.termination_in_process = false;
     }
 }
@@ -695,11 +677,10 @@ bool RoutingWorker::create_workers(int n)
     // Not all unit tests have a MainWorker.
     mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
     mxb_assert(n > 0);
-    mxb_assert(this_unit.nCreated == this_unit.nRunning);
 
     size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
-    int nBefore = this_unit.nCreated.load(std::memory_order_relaxed);
+    int nBefore = this_unit.nRunning.load(std::memory_order_acquire);
     int nAfter = nBefore + n;
 
     auto listeners = Listener::get_started_listeners();
@@ -727,9 +708,8 @@ bool RoutingWorker::create_workers(int n)
         nAfter = i;
     }
 
-    this_unit.nCreated.store(nAfter, std::memory_order_relaxed);
-    this_unit.nRunning.store(nAfter, std::memory_order_relaxed);
-    this_unit.nConfigured.store(nAfter, std::memory_order_relaxed);
+    this_unit.nRunning.store(nAfter, std::memory_order_release);
+    this_unit.nConfigured.store(nAfter, std::memory_order_release);
 
     return i != nBefore;
 }
@@ -836,12 +816,6 @@ bool RoutingWorker::stop_polling_on_shared_fd()
 }
 
 // static
-int RoutingWorker::nCreated()
-{
-    return this_unit.nCreated.load(std::memory_order_relaxed);
-}
-
-// static
 int RoutingWorker::nRunning()
 {
     return this_unit.nRunning.load(std::memory_order_relaxed);
@@ -917,7 +891,7 @@ bool RoutingWorker::start_workers(int nWorkers)
 {
     // Not all unit tests have a MainWorker.
     mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
-    mxb_assert(this_unit.nCreated == 0);
+    mxb_assert(this_unit.nRunning == 0);
 
     bool rv = create_workers(nWorkers);
 
@@ -938,8 +912,8 @@ bool RoutingWorker::is_running()
 // static
 void RoutingWorker::join_workers()
 {
-    int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-    for (int i = 0; i < nCreated; ++i)
+    int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    for (int i = 0; i < nRunning; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -958,8 +932,8 @@ bool RoutingWorker::shutdown_complete()
 
     if (rval)
     {
-        int nCreated = this_unit.nCreated.load(std::memory_order_relaxed);
-        for (int i = 0; i < nCreated; ++i)
+        int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+        for (int i = 0; i < nRunning; ++i)
         {
             RoutingWorker* pWorker = this_unit.ppWorkers[i];
             mxb_assert(pWorker);
@@ -1173,7 +1147,7 @@ RoutingWorker::ConnectionPool::get_connection(MXS_SESSION* session)
 void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
 {
     // Capacity has changed, recalculate local capacity.
-    m_capacity = global_capacity / this_unit.nCreated.load(std::memory_order_relaxed);
+    m_capacity = global_capacity / this_unit.nRunning.load(std::memory_order_relaxed);
 }
 
 mxs::BackendConnection*
@@ -2086,7 +2060,8 @@ void RoutingWorker::collect_worker_load(size_t count)
 {
     mxb_assert(MainWorker::is_main_worker());
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    for (int i = 0; i < nRunning; ++i)
     {
         auto* pWorker = this_unit.ppWorkers[i];
 
@@ -2124,7 +2099,8 @@ bool RoutingWorker::balance_workers(int threshold)
     // and we can use it.
     bool use_average = rebalance_period != std::chrono::milliseconds(0);
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    for (int i = 0; i < this_unit.nRunning; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
 
@@ -2310,7 +2286,7 @@ private:
 //static
 std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
 {
-    MemoryTask task(this_unit.nCreated);
+    MemoryTask task(this_unit.nRunning.load(std::memory_order_relaxed));
     RoutingWorker::execute_concurrently(task);
 
     json_t* pAttr = json_object();
@@ -2478,7 +2454,8 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
     mxb_assert(mxs::MainWorker::is_main_worker());
     RoutingWorker::ConnectionPoolStats rval;
 
-    for (int i = 0; i < this_unit.nCreated; ++i)
+    auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    for (int i = 0; i < this_unit.nRunning; ++i)
     {
         rval.add(this_unit.ppWorkers[i]->pool_stats(pSrv));
     }

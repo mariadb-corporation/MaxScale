@@ -1890,9 +1890,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
 
     // The task is broadcasted to all running workers. Dormant ones, should they be
     // started, will end up doing this when they are activated.
-    auto n_threads = mxs::RoutingWorker::broadcast(init_cache,
-                                                   mxs::RoutingWorker::RUNNING,
-                                                   &sem, mxb::Worker::EXECUTE_AUTO);
+    auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
     sem.wait_n(n_threads);
 
     m_usermanager->start();
