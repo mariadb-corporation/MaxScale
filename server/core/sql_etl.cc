@@ -99,7 +99,7 @@ public:
         {
             if (auto val = textresult.get_field(1))
             {
-                rval = *val;
+                rval = "USE `"s + table.schema() + "`;\n" + *val;
             }
         }
         else
@@ -220,7 +220,8 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
     ss << "SERVER=" << dest_cc.host << ";"
        << "PORT=" << dest_cc.port << ";"
        << "UID=" << dest_cc.user << ";"
-       << "PWD={" << dest_cc.password << "};";
+       << "PWD={" << dest_cc.password << "};"
+       << "OPTION=67108864;";   // Enables multi-statment SQL.
 
     ss << maybe_add("DATABASE", dest_cc.db);
 
