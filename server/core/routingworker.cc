@@ -92,8 +92,8 @@ public:
 
         if (fd != -1)
         {
-            std::unique_ptr<RoutingWorker*> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
-            std::unique_ptr<AverageN*> spWorker_loads(new(std::nothrow) AverageN* [this->nMax]());
+            std::unique_ptr<RoutingWorker* []> spWorkers(new(std::nothrow) RoutingWorker* [this->nMax]());
+            std::unique_ptr<AverageN* []> spWorker_loads(new(std::nothrow) AverageN* [this->nMax]());
 
             if (spWorkers && spWorker_loads)
             {
