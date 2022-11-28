@@ -2366,6 +2366,12 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
 }
 
 
+//static
+bool RoutingWorker::termination_in_process()
+{
+    return this_unit.termination_in_process;
+}
+
 bool RoutingWorker::try_shutdown()
 {
     pool_close_all_conns();

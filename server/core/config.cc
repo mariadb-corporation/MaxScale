@@ -305,6 +305,14 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
                       ParamThreadsCount::MAX_COUNT, nRequested);
             rv = false;
         }
+
+        if (rv && RoutingWorker::termination_in_process())
+        {
+            MXB_ERROR("A thread is being terminated, a change in the number of threads "
+                      "cannot currently be made.");
+            rv = false;
+
+        }
     }
 
     return rv;

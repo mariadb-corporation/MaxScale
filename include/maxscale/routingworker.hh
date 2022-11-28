@@ -599,6 +599,11 @@ public:
      */
     static bool set_listen_mode(int worker_index, bool enabled);
 
+    /**
+     * @return True, if a thread is being terminated.
+     */
+    static bool termination_in_process();
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
