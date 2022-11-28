@@ -30,6 +30,7 @@ public:
     std::string name() const override;
 
     const std::unordered_set<std::string>& supported_plugins() const override;
+    static constexpr size_t scramble_len = 32;
 };
 
 class Ed25519ClientAuthenticator : public mariadb::ClientAuthenticator
@@ -40,7 +41,9 @@ public:
 
 private:
     enum class State {INIT, AUTHSWITCH_SENT, CHECK_SIGNATURE, DONE};
-    State m_state {State::INIT};
+
+    State   m_state {State::INIT};
+    uint8_t m_scramble[Ed25519AuthenticatorModule::scramble_len];
 
     GWBUF create_auth_change_packet();
     bool  read_signature(MYSQL_session* session, const GWBUF& buffer);
@@ -54,8 +57,10 @@ public:
 
 private:
     enum class State {EXPECT_AUTHSWITCH, SIGNATURE_SENT, ERROR};
-    State m_state {State::EXPECT_AUTHSWITCH};
 
+    State                           m_state {State::EXPECT_AUTHSWITCH};
     const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
     uint8_t                         m_sequence {0}; /**< Next packet sequence number */
+
+    GWBUF generate_auth_token_packet(const mariadb::ByteVec& scramble) const;
 };
