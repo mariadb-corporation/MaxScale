@@ -246,12 +246,24 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
         throw problem("Unknown value for 'type': ", type_str);
     }
 
-    std::string dest = ss.str();
-    std::string src = src_cc.odbc_string;
+    auto tables = get(json, "tables", Type::ARRAY).get_array_elems();
 
-    std::unique_ptr<ETL> etl = std::make_unique<ETL>(Config {src, dest}, std::move(extractor));
+    if (tables.empty())
+    {
+        throw problem("No tables defined");
+    }
 
-    for (const auto& val : get(json, "tables", Type::ARRAY).get_array_elems())
+    Config cnf{src_cc.odbc_string, ss.str()};
+    cnf.threads = std::min(16UL, tables.size());
+
+    if (int64_t threads = maybe_get(json, "threads", mxb::Json::Type::INTEGER).get_int(); threads > 0)
+    {
+        cnf.threads = std::min((size_t)threads, tables.size());
+    }
+
+    std::unique_ptr<ETL> etl = std::make_unique<ETL>(cnf, std::move(extractor));
+
+    for (const auto& val : tables)
     {
         etl->tables().emplace_back(*etl,
                                    get(val, "schema", Type::STRING).get_string(),

@@ -49,6 +49,9 @@ struct Config
 
     // The ODBC connection string to the MariaDB server where the data is sent
     std::string dest;
+
+    // How many threads are used to do the data dump.
+    size_t threads = 1;
 };
 
 class Table;
