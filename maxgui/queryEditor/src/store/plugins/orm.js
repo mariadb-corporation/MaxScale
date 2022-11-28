@@ -10,14 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-import orm from './orm'
-import queryEditorPersistPlugin from './persistPlugin'
-
-export default [
-    store => {
-        store.vue = Vue.prototype
-    },
-    orm,
-    queryEditorPersistPlugin,
-]
+import VuexORM from '@vuex-orm/core'
+import database from '../orm/database'
+import { ORM_NAMESPACE } from '@queryEditorSrc/store/config'
+export default VuexORM.install(database, { namespace: ORM_NAMESPACE })

@@ -108,6 +108,7 @@ export default {
     },
     created() {
         this.handleAutoClearQueryHistory()
+        this.createDefWorksheet()
     },
     mounted() {
         this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())
@@ -115,6 +116,7 @@ export default {
 
     methods: {
         ...mapActions({
+            createDefWorksheet: 'queryEditorConfig/createDefWorksheet',
             handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),

@@ -11,6 +11,12 @@
  * Public License.
  */
 import * as config from '@queryEditorSrc/store/config'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     namespaced: true,
@@ -25,6 +31,30 @@ export default {
         },
         SET_AXIOS_OPTS(state, payload) {
             state.axios_opts = payload
+        },
+    },
+    actions: {
+        createDefWorksheet() {
+            if (Worksheet.all().length === 0) {
+                const id = this.vue.$helpers.uuidv1()
+                Worksheet.create({
+                    data: {
+                        id,
+                        name: 'WORKSHEET',
+                        schemaSidebar: new SchemaSidebar(),
+                        queryTabs: [
+                            {
+                                ...new QueryTab(),
+                                worksheet_id: id,
+                                editor: new Editor(),
+                                queryResult: new QueryResult(),
+                                queryConn: new QueryConn(),
+                            },
+                        ],
+                        queryConn: new QueryConn(),
+                    },
+                })
+            }
         },
     },
 }

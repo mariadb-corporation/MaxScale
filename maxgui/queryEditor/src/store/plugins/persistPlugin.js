@@ -18,7 +18,9 @@ export default new VuexPersistence({
     storage: localForage,
     asyncStorage: true,
     reducer: state => ({
+        queryEditorORM: state.queryEditorORM,
         queryPersisted: state.queryPersisted,
+        //TODO: remove below fields once ORM is completely added
         wke: {
             worksheets_arr: state.wke.worksheets_arr,
             active_wke_id: state.wke.active_wke_id,

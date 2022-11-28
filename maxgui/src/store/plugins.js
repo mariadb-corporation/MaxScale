@@ -14,7 +14,7 @@ import Vue from 'vue'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
 import queryEditorPersistPlugin from '@queryEditorSrc/store/plugins/persistPlugin'
-
+import orm from '@queryEditorSrc/store/plugins/orm'
 const appPersistConfig = new VuexPersistence({
     key: 'maxgui-app',
     storage: localForage,
@@ -29,6 +29,7 @@ export default [
     store => {
         store.vue = Vue.prototype
     },
+    orm,
     appPersistConfig.plugin,
     queryEditorPersistPlugin,
 ]
