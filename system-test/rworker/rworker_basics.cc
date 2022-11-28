@@ -12,6 +12,7 @@
  */
 
 #include <iostream>
+#include <maxscale/routingworker.hh>
 #include <maxtest/maxrest.hh>
 #include <maxtest/testconnections.hh>
 
@@ -123,6 +124,21 @@ void dump_states(const vector<MaxRest::Thread>& threads)
     cout << endl;
 }
 
+void sleep_enough(int from_workers, int to_workers)
+{
+    if (to_workers >= from_workers)
+    {
+        sleep(1);
+    }
+    else
+    {
+        int diff = from_workers - to_workers;
+        std::chrono::seconds delay = (diff + 1) * mxs::RoutingWorker::TERMINATION_DELAY;
+
+        sleep(delay.count());
+    }
+}
+
 }
 
 //
@@ -141,13 +157,13 @@ void smoke_test1(TestConnections& test, MaxRest& maxrest)
     test.expect(threads.size() == 4, "1: Expected 4 initial threads, but found %d.", (int)threads.size());
 
     maxrest.alter_maxscale("threads", (int64_t)8);
-    sleep(1);
+    sleep_enough(4, 8);
 
     threads = maxrest.show_threads();
     test.expect(threads.size() == 8, "2: Expected 8 threads, but found %d.", (int)threads.size());
 
     maxrest.alter_maxscale("threads", (int64_t)4);
-    sleep(1);
+    sleep_enough(8, 4);
 
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "3: Expected 4 threads, but found %d.", (int)threads.size());
@@ -201,7 +217,7 @@ void smoke_test3(TestConnections& test, MaxRest& maxrest)
     vector<MaxRest::Thread> threads;
 
     threads = maxrest.show_threads();
-    mxb_assert(!threads.empty());
+    test.expect(threads.size() == 4, "Expected 4 initial threads, but found %d.", (int)threads.size());
 
     // Make them all deaf.
     for (const auto& t : threads)
@@ -242,9 +258,6 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 {
     ENTER_TEST();
 
-    maxrest.alter_maxscale("threads", (int64_t)4);
-    sleep(1);
-
     vector<MaxRest::Thread> threads;
 
     threads = maxrest.show_threads();
@@ -276,8 +289,9 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     threads = maxrest.show_threads();
     check_value(test, threads, &MaxRest::Thread::state, string("Active"));
 
-    // Tuning the number of threads to 1.
+    // Tuning the number of threads to 1; as they all have connections, none should disappear.
     maxrest.alter_maxscale("threads", (int64_t)1);
+    sleep_enough(4, 1);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "2: Expected 4 threads but found %d.", (int)threads.size());
 
@@ -287,6 +301,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Tuning the number of threads to 5.
     maxrest.alter_maxscale("threads", (int64_t)5);
+    sleep_enough(4, 5);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 5, "3: Expected 5 threads but found %d.", (int)threads.size());
 
@@ -295,6 +310,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Tuning the number of threads to 1.
     maxrest.alter_maxscale("threads", (int64_t)1);
+    sleep_enough(5, 1);
     threads = maxrest.show_threads();
     // The fifth thread should go down, as there are no connections.
     test.expect(threads.size() == 4, "4: Expected 4 threads but found %d.", (int)threads.size());
@@ -305,6 +321,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Close all connections, the draining threads should become dormant.
     connections.clear();
+    sleep_enough(4, 1);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 1, "4: Expected 1 threads but found %d.", (int)threads.size());
 }
@@ -500,7 +517,7 @@ void test_main(TestConnections& test)
     }
     catch (const std::exception& x)
     {
-        cerr << x.what();
+        cerr << x.what() << endl;
     }
 }
 
