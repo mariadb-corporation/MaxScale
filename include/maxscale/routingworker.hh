@@ -526,7 +526,7 @@ public:
 
     mxs::BackendConnection* pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream);
 
-    void pool_close_all_conns();
+    size_t pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
 
     void add_conn_wait_entry(ServerEndpoint* ep);
@@ -660,13 +660,13 @@ private:
         {
             // If worker is listening, then it is also routing. However, even
             // if it is not listening, it may still be routing.
-            m_routing.store(true, std::memory_order_relaxed);
+            set_routing(true);
         }
     }
 
-    void clear_routing()
+    void set_routing(bool b)
     {
-        m_routing.store(false, std::memory_order_relaxed);
+        m_routing.store(b, std::memory_order_relaxed);
     }
 
     void init_datas();
@@ -699,7 +699,6 @@ private:
     void terminate();
     static void terminate_last_if_dormant(bool first_attempt);
 
-    void clear();
     void deactivate();
     bool activate(const std::vector<std::shared_ptr<Listener>>& listeners);
 

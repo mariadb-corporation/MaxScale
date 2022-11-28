@@ -270,11 +270,6 @@ RoutingWorker::RoutingWorker(int index, size_t rebalance_window)
 
 RoutingWorker::~RoutingWorker()
 {
-    if (is_listening())
-    {
-        stop_polling_on_shared_fd();
-    }
-    m_callable.cancel_dcalls();
 }
 
 // static
@@ -516,50 +511,13 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
     return rv;
 }
 
-void RoutingWorker::clear()
-{
-    finish_datas();
-
-    int64_t cleared = qc_clear_thread_cache();
-
-    std::unique_lock<std::mutex> guard(m_pool_lock);
-
-    size_t nClosed = 0;
-    for (auto& kv : m_pool_group)
-    {
-        ConnectionPool& pool = kv.second;
-        nClosed += pool.close_all();
-    }
-
-    guard.unlock();
-
-    MXB_NOTICE("%s of memory used by the query classifier cache released and "
-               "%lu pooled connections closed "
-               "when routing worker %d was deactivated.",
-               mxb::pretty_size(cleared).c_str(),
-               nClosed,
-               index());
-
-    m_storage.clear();
-}
-
 void RoutingWorker::deactivate()
 {
     mxb_assert(get_current() == this);
     mxb_assert(state() == State::ACTIVE || state() == State::DRAINING);
 
     set_state(State::DORMANT);
-
-    clear();
-    cancel_dcalls();
-
-    clear_routing();
-
-    reset_statistics();
-
-    // Set epoll-timeout to 1000ms, i.e. 1000 times longer than
-    // the default 1ms.
-    set_min_timeout(1000);
+    set_routing(false);
 
     MainWorker* pMain = MainWorker::get();
     mxb_assert(pMain);
@@ -648,21 +606,6 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 
     if (success)
     {
-        if (is_dormant())
-        {
-            make_dcalls();
-
-            // Set epoll-timeout to the default 1ms.
-            set_min_timeout(1);
-
-            init_datas();
-        }
-
-        // When the worker was deactivated, the statistics were reset. However,
-        // as there will be some activity even if it is inactive, the statistics
-        // are reset also at activation.
-        reset_statistics();
-
         set_state(State::ACTIVE);
     }
 
@@ -1265,13 +1208,17 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
     return moved_to_pool;
 }
 
-void RoutingWorker::pool_close_all_conns()
+size_t RoutingWorker::pool_close_all_conns()
 {
+    size_t nClosed = 0;
     for (auto& kv : m_pool_group)
     {
-        kv.second.close_all();
+        ConnectionPool& pool = kv.second;
+        nClosed += pool.close_all();
     }
     m_pool_group.clear();
+
+    return nClosed;
 }
 
 
@@ -1482,6 +1429,8 @@ void RoutingWorker::cancel_dcalls()
         m_callable.cancel_dcall(m_timeout_eps_dcid);
         m_timeout_eps_dcid = 0;
     }
+
+    m_callable.cancel_dcalls();
 }
 
 bool RoutingWorker::pre_run()
@@ -1490,7 +1439,13 @@ bool RoutingWorker::pre_run()
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
-    if (!rv)
+    if (rv)
+    {
+        init_datas();
+
+        make_dcalls();
+    }
+    else
     {
         MXB_ERROR("Could not perform thread initialization for all modules. Thread exits.");
         this_thread.pCurrent_worker = nullptr;
@@ -1501,12 +1456,27 @@ bool RoutingWorker::pre_run()
 
 void RoutingWorker::post_run()
 {
-    if (is_active())
+    if (is_listening())
     {
-        finish_datas();
+        stop_polling_on_shared_fd();
     }
 
-    pool_close_all_conns();
+    cancel_dcalls();
+
+    int64_t cleared = qc_clear_thread_cache();
+    size_t nClosed = pool_close_all_conns();
+
+    if (!maxscale_is_shutting_down())
+    {
+        MXB_NOTICE("%s of memory used by the query classifier cache released and "
+                   "%lu pooled connections closed "
+                   "when routing worker %d was terminated.",
+                   mxb::pretty_size(cleared).c_str(),
+                   nClosed,
+                   index());
+    }
+
+    finish_datas();
 
     // See MainWorker::post_run for an explanation why this is done here
     m_storage.clear();
