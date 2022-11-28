@@ -20,6 +20,7 @@
 
 #include <maxbase/json.hh>
 #include <maxbase/ssl.hh>
+#include <maxbase/latch.hh>
 
 #include "sql_conn_manager.hh"
 
@@ -151,19 +152,11 @@ public:
           std::string_view select,
           std::string_view insert);
 
-    void prepare() noexcept;
+    void read_sql(mxq::ODBC& source);
 
-    void start() noexcept;
+    void create_objects(mxq::ODBC& source, mxq::ODBC& dest);
 
-    bool ok() const
-    {
-        return m_error.empty();
-    }
-
-    const std::string& error() const
-    {
-        return m_error;
-    }
+    void load_data(mxq::ODBC& source, mxq::ODBC& dest);
 
     mxb::Json to_json() const;
 
@@ -192,6 +185,8 @@ struct ETL
     ETL(Config config, std::unique_ptr<Extractor> extractor)
         : m_config(std::move(config))
         , m_extractor(std::move(extractor))
+        , m_init_latch{(std::ptrdiff_t)m_config.threads}
+        , m_create_latch{(std::ptrdiff_t)m_config.threads}
     {
     }
 
@@ -218,8 +213,16 @@ struct ETL
     void add_error();
 
 private:
-    template<auto func>
+    template<auto connect_func, auto run_func>
     mxb::Json run_job();
+    void      run_prepare_job(mxq::ODBC& source) noexcept;
+    void      run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept;
+
+    mxq::ODBC                       connect_to_source();
+    std::pair<mxq::ODBC, mxq::ODBC> connect_to_both();
+
+    bool   checkpoint(int* current_checkpoint);
+    Table* next_table();
 
     Config                     m_config;
     std::vector<Table>         m_tables;
@@ -227,6 +230,11 @@ private:
 
     std::mutex m_lock;
     bool       m_have_error{false};
+
+    mxb::latch          m_init_latch;
+    mxb::latch          m_create_latch;
+    int                 m_next_checkpoint {0};
+    std::atomic<size_t> m_counter{0};
 };
 
 /**

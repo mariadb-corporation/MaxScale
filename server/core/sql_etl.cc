@@ -320,11 +320,26 @@ mxb::Json Table::to_json() const
     return obj;
 }
 
-void Table::prepare() noexcept
+void Table::read_sql(mxq::ODBC& source)
 {
     try
     {
-        // TODO: implement this
+        auto& extractor = m_etl.extractor();
+
+        if (m_create.empty())
+        {
+            m_create = extractor.create_table(source, *this);
+        }
+
+        if (m_select.empty())
+        {
+            m_select = extractor.select(source, *this);
+        }
+
+        if (m_insert.empty())
+        {
+            m_insert = extractor.insert(source, *this);
+        }
     }
     catch (const Error& e)
     {
@@ -333,17 +348,128 @@ void Table::prepare() noexcept
     }
 }
 
-void Table::start() noexcept
+void Table::create_objects(mxq::ODBC& source, mxq::ODBC& dest)
 {
     try
     {
-        // TODO: implement this
+        mxb_assert(!m_create.empty());
+
+        if (!dest.query("CREATE DATABASE IF NOT EXISTS `" + m_schema + "`"))
+        {
+            throw problem("Failed to create database: ", dest.error());
+        }
+
+        if (!dest.query("USE `" + m_schema + "`"))
+        {
+            throw problem("Failed to use database: ", dest.error());
+        }
+
+        if (!dest.query(m_create))
+        {
+            throw problem("Failed to create table: ", dest.error());
+        }
     }
     catch (const Error& e)
     {
         m_error = e.what();
         m_etl.add_error();
     }
+}
+
+void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
+{
+    try
+    {
+        mxb_assert(!m_select.empty() && !m_insert.empty());
+
+        if (!source.prepare(m_select))
+        {
+            throw problem("Failed to prepare SELECT: ", source.error());
+        }
+
+        if (!dest.prepare(m_insert))
+        {
+            throw problem("Failed to prepare INSERT: ", dest.error());
+        }
+
+        if (!source.execute(dest.as_output()))
+        {
+            throw problem("Failed to load data: ", source.error(), dest.error());
+        }
+    }
+    catch (const Error& e)
+    {
+        m_error = e.what();
+        m_etl.add_error();
+    }
+}
+
+mxq::ODBC ETL::connect_to_source()
+{
+    mxq::ODBC source(config().src);
+
+    if (!source.connect())
+    {
+        throw problem("Failed to connect to the source: ", source.error());
+    }
+
+    extractor().init_connection(source);
+    extractor().start_thread(source, m_tables);
+    return source;
+}
+
+std::pair<mxq::ODBC, mxq::ODBC> ETL::connect_to_both()
+{
+    mxq::ODBC source = connect_to_source();
+    mxq::ODBC dest(config().dest);
+
+    if (!dest.connect())
+    {
+        throw problem("Failed to connect to the destination: ", dest.error());
+    }
+
+    // Disabling UNIQUE_CHECKS, FOREIGN_KEY_CHECKS and AUTOCOMMIT will put InnoDB into a special mode
+    // where inserting data is more efficient than it normally would be if the table is empty.
+    auto SQL_SETUP = "SET MAX_STATEMENT_TIME=0, "
+                     "SQL_MODE='ANSI_QUOTES,PIPES_AS_CONCAT,NO_ENGINE_SUBSTITUTION', "
+                     "UNIQUE_CHECKS=0, FOREIGN_KEY_CHECKS=0, AUTOCOMMIT=0, SQL_NOTES=0";
+
+    if (!dest.query(SQL_SETUP))
+    {
+        throw problem("Failed to setup connection: ", dest.error());
+    }
+
+    return {std::move(source), std::move(dest)};
+}
+
+Table* ETL::next_table()
+{
+    mxb_assert(!m_tables.empty());
+    Table* rval = nullptr;
+
+    if (size_t offset = m_counter.fetch_add(1, std::memory_order_relaxed); offset < m_tables.size())
+    {
+        rval = &m_tables[offset];
+    }
+
+    return rval;
+}
+
+bool ETL::checkpoint(int* current_checkpoint)
+{
+    std::unique_lock guard(m_lock);
+
+    if (*current_checkpoint == m_next_checkpoint)
+    {
+        // This is the first thread to arrive at the latest checkpoint. Reset the table counter to start
+        // iteration from the beginning.
+        ++m_next_checkpoint;
+        m_counter.store(0, std::memory_order_relaxed);
+    }
+
+    ++(*current_checkpoint);
+
+    return !m_have_error;
 }
 
 void ETL::add_error()
@@ -352,33 +478,62 @@ void ETL::add_error()
     m_have_error = true;
 }
 
-template<auto func>
+template<auto connect_func, auto run_func>
 mxb::Json ETL::run_job()
 {
-    std::vector<std::thread> threads;
+    std::string error;
 
-    for (auto& t : m_tables)
+    try
     {
-        threads.emplace_back(func, std::ref(t));
+        mxq::ODBC coordinator(m_config.src);
+
+        if (!coordinator.connect())
+        {
+            throw problem(coordinator.error());
+        }
+
+        extractor().init_connection(coordinator);
+        extractor().start(coordinator, m_tables);
+
+        using Connection = decltype(std::invoke(connect_func, this));
+        std::vector<Connection> connections;
+
+        for (size_t i = 0; i < m_config.threads; i++)
+        {
+            connections.emplace_back(std::invoke(connect_func, this));
+        }
+
+        mxb_assert(connections.size() <= m_tables.size());
+
+        extractor().threads_started(coordinator, m_tables);
+
+        std::vector<std::thread> threads;
+
+        for (auto& c : connections)
+        {
+            threads.emplace_back(run_func, this, std::ref(c));
+        }
+
+        std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
     }
-
-    for (auto& thr : threads)
+    catch (const Error& e)
     {
-        thr.join();
+        error = e.what();
     }
 
     mxb::Json rval(mxb::Json::Type::OBJECT);
     mxb::Json arr(mxb::Json::Type::ARRAY);
-    bool ok = true;
+    bool ok = !m_have_error;
 
     for (const auto& t : m_tables)
     {
         arr.add_array_elem(t.to_json());
+    }
 
-        if (!t.ok())
-        {
-            ok = false;
-        }
+    if (!error.empty())
+    {
+        ok = false;
+        rval.set_string("error", error);
     }
 
     rval.set_bool("ok", ok);
@@ -387,13 +542,52 @@ mxb::Json ETL::run_job()
     return rval;
 }
 
+void ETL::run_prepare_job(mxq::ODBC& source) noexcept
+{
+    while (auto t = next_table())
+    {
+        t->read_sql(source);
+    }
+}
+
+void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
+{
+    auto& [source, dest] = connections;
+    int my_checkpoint = 0;
+
+    while (auto t = next_table())
+    {
+        t->read_sql(source);
+    }
+
+    m_init_latch.arrive_and_wait();
+
+    if (checkpoint(&my_checkpoint))
+    {
+        while (auto t = next_table())
+        {
+            t->create_objects(source, dest);
+        }
+
+        m_create_latch.arrive_and_wait();
+
+        if (checkpoint(&my_checkpoint))
+        {
+            while (auto t = next_table())
+            {
+                t->load_data(source, dest);
+            }
+        }
+    }
+}
+
 mxb::Json ETL::prepare()
 {
-    return run_job<&Table::prepare>();
+    return run_job<&ETL::connect_to_source, &ETL::run_prepare_job>();
 }
 
 mxb::Json ETL::start()
 {
-    return run_job<&Table::start>();
+    return run_job<&ETL::connect_to_both, &ETL::run_start_job>();
 }
 }
