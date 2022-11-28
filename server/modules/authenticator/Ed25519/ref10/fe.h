@@ -1,6 +1,7 @@
 #ifndef FE_H
 #define FE_H
 
+#include "internal/crypto_namespace.h"
 #include "crypto_int32.h"
 
 typedef crypto_int32 fe[10];

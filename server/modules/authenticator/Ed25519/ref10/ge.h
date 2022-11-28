@@ -1,6 +1,8 @@
 #ifndef GE_H
 #define GE_H
 
+#include "internal/crypto_namespace.h"
+
 /*
 ge means group element.
 
