@@ -1016,6 +1016,15 @@ HttpResponse cb_thread_unlisten(const HttpRequest& request)
     return thread_set_listen_mode(request, false);
 }
 
+HttpResponse cb_termination_in_process(const HttpRequest& request)
+{
+    mxb::Json body;
+
+    body.set_bool("termination_in_process", mxs::RoutingWorker::termination_in_process());
+
+    return HttpResponse(MHD_HTTP_OK, body.release());
+}
+
 HttpResponse cb_all_modules(const HttpRequest& request)
 {
     static bool all_modules_loaded = false;
@@ -1505,6 +1514,7 @@ public:
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
         m_put.emplace_back(cb_thread_listen, "maxscale", "debug", "threads", ":thread", "listen");
         m_put.emplace_back(cb_thread_unlisten, "maxscale", "debug", "threads", ":thread", "unlisten");
+        m_get.emplace_back(cb_termination_in_process, "maxscale", "debug", "termination_in_process");
 
         /** Create new resources */
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");
