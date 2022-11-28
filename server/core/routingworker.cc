@@ -52,8 +52,6 @@ using std::vector;
 namespace
 {
 
-const std::chrono::seconds TERMINATION_DELAY = 5s;
-
 /**
  * Unit variables.
  *

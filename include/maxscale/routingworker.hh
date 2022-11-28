@@ -46,6 +46,14 @@ class RoutingWorker : public mxb::WatchedWorker
     RoutingWorker& operator=(const RoutingWorker&) = delete;
 
 public:
+#ifdef SS_DEBUG
+    // In debug mode a routing worker is deleted aggressively quickly
+    // in the hope that it will bring to light any issues.
+    static constexpr std::chrono::seconds TERMINATION_DELAY = 1s;
+#else
+    static constexpr std::chrono::seconds TERMINATION_DELAY = 5s;
+#endif
+
     virtual ~RoutingWorker();
 
     class InfoTask;
