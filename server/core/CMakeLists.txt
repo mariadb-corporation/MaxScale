@@ -64,6 +64,8 @@ target_link_libraries(maxscale-common
   maxbase
   maxsql
   maxsimd
+  mariadbprotocol
+  mariadbauth
   ${MARIADB_CONNECTOR_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}
@@ -80,10 +82,10 @@ target_link_libraries(maxscale-common
   ${MICROHTTPD_LIBRARIES}
   ${GNUTLS_LIBRARIES}
   ${LIBATOMIC_LIBRARIES}
-  mariadbprotocol
-  mariadbauth
   uuid
 )
+
+set_target_properties(maxscale-common PROPERTIES LINK_FLAGS -Wl,--exclude-libs=libmariadbclient.a)
 
 if(WITH_ASAN AND ASAN_FOUND)
   target_link_libraries(maxscale-common ${ASAN_LIBRARIES})
