@@ -283,8 +283,7 @@ GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::Byt
 
     // The signature generation function requires some extra storage as it adds the message to the buffer.
     uint8_t signature_buf[ED::SIGNATURE_LEN + ED::SCRAMBLE_LEN];
-    unsigned long long signed_msg_len = 0;
-    crypto_sign(signature_buf, &signed_msg_len, scramble.data(), scramble.size(), backend_pw.data());
+    crypto_sign(signature_buf, scramble.data(), scramble.size(), backend_pw.data(), backend_pw.size());
 
     size_t buflen = MYSQL_HEADER_LEN + ED::SIGNATURE_LEN;
     GWBUF rval;

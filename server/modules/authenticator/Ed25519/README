@@ -1,0 +1,11 @@
+This plugin uses public domain ed25519 code by Daniel J. Bernstein, Niels Duif,
+Tanja Lange, Peter Schwabe and Bo-Yin Yang.
+
+The code was extracted from https://bench.cr.yp.to/supercop/supercop-20221122.tar.xz
+and can be found in the "crypto_sign/ed25519/ref10"-directory.
+
+==============================
+Changes:
+- crypto_sign() does not take the public key as argument and instead calculates
+  it from the password as in crypto_sign_keypair(). Also, does not return signed
+  message length as it's already known.
