@@ -143,7 +143,8 @@ public:
                 // 22 HTTP page not retrieved. The requested url was not found or returned another
                 //    error with the HTTP error code being 400 or above. This return code only
                 //    appears if -f, --fail is used.
-                raise(true, "Curl error 22: HTTP page not retrieved.");
+                raise(true, "Curl error 22: HTTP page not retrieved for command '"
+                      + curl_command + "'");
                 break;
 
             default:
@@ -310,7 +311,9 @@ void MaxRest::alter_maxscale(const string& parameter_name, const Value& paramete
     alter_maxscale(Parameter { parameter_name, parameter_value });
 }
 
-void MaxRest::create_service(const std::string& name, const std::string& router, const std::vector<Parameter>& parameters)
+void MaxRest::create_service(const std::string& name,
+                             const std::string& router,
+                             const std::vector<Parameter>& parameters)
 {
     ostringstream body;
     body << "{\"data\": {"
