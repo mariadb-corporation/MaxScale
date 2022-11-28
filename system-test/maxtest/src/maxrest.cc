@@ -137,17 +137,19 @@ public:
             switch (curl_rc)
             {
             case 0:
+                break;
+
             case 22:
                 // 22 HTTP page not retrieved. The requested url was not found or returned another
                 //    error with the HTTP error code being 400 or above. This return code only
                 //    appears if -f, --fail is used.
-                rv.rc = curl_rc;
+                raise(true, "Curl error 22: HTTP page not retrieved.");
                 break;
 
             default:
                 {
                     ostringstream ss;
-                    ss << "Curl failed with exit code %d." << curl_rc << ".";
+                    ss << "Curl failed with exit code " << curl_rc << ".";
                     raise(true, ss.str());
                 }
             }
@@ -468,7 +470,7 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
         curl_command += "'";
     }
 
-    auto result = m_sImp->execute_curl_command(curl_command);
+    mxt::CmdResult result = m_sImp->execute_curl_command(curl_command);
 
     mxb::Json rv;
 
