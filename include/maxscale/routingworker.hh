@@ -99,12 +99,6 @@ public:
     typedef std::vector<void*>           LocalData;
     typedef std::vector<void (*)(void*)> DataDeleters;
 
-    enum Which
-    {
-        ALL        = -1,
-        CONFIGURED = -2
-    };
-
     /**
      * Class to be derived from, in case there is data to be
      * initialized separately for each worker.
@@ -306,10 +300,9 @@ public:
     /**
      * Posts a task to workers for execution.
      *
-     * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, RUNNING, CONFIGURED or a specific number of workers.
-     * @param pSem      If non-NULL, will be posted once per worker when the task's
-     *                  `execute` return.
+     * @param pTask  The task to be executed.
+     * @param pSem   If non-NULL, will be posted once per worker when the task's
+     *              `execute` return.
      *
      * @return How many workers the task was posted to.
      *
@@ -324,18 +317,12 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(Task* pTask, int nWorkers, mxb::Semaphore* pSem = nullptr);
-
-    static size_t broadcast(Task* pTask, mxb::Semaphore* pSem = nullptr)
-    {
-        return broadcast(pTask, ALL, pSem);
-    }
+    static size_t broadcast(Task* pTask, mxb::Semaphore* pSem = nullptr);
 
     /**
      * Posts a task to workers for execution.
      *
-     * @param pTask     The task to be executed.
-     * @param nWorkers  ALL, RUNNING, CONFIGURED or a specific number of workers.
+     * @param pTask  The task to be executed.
      *
      * @return How many workers the task was posted to.
      *
@@ -353,33 +340,24 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t broadcast(std::unique_ptr<DisposableTask> sTask, int nWorkers = ALL);
+    static size_t broadcast(std::unique_ptr<DisposableTask> sTask);
 
     /**
      * Posts a functor to workers for execution.
      *
-     * @param func      The functor to be executed.
-     * @param nWorkers  ALL, RUNNING, CONFIGURED or a specific number of workers.
-     * @param pSem      If non-NULL, will be posted once the task's `execute` return.
-     * @param mode      Execution mode
+     * @param func  The functor to be executed.
+     * @param pSem  If non-NULL, will be posted once the task's `execute` return.
+     * @param mode  Execution mode
      *
      * @return How many workers the task was posted to.
      */
     static size_t broadcast(const std::function<void ()>& func,
-                            int nWorkers,
                             mxb::Semaphore* pSem,
                             execute_mode_t mode);
 
     static size_t broadcast(const std::function<void ()>& func, execute_mode_t mode)
     {
-        return broadcast(func, ALL, nullptr, mode);
-    }
-
-    static size_t broadcast(const std::function<void ()>& func,
-                            mxb::Semaphore* pSem,
-                            execute_mode_t mode)
-    {
-        return broadcast(func, ALL, pSem, mode);
+        return broadcast(func, nullptr, mode);
     }
 
     /**
@@ -388,7 +366,6 @@ public:
      * the task has been executed on all workers.
      *
      * @param task/func  The task/func to be executed.
-     * @param nWorkers   ALL, RUNNING, CONFIGURED or a specific number of workers.
      *
      * @return How many workers the task was posted to.
      *
@@ -402,8 +379,8 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t execute_serially(Task& task, int nWorkers = ALL);
-    static size_t execute_serially(const std::function<void()>& func, int nWorkers = ALL);
+    static size_t execute_serially(Task& task);
+    static size_t execute_serially(const std::function<void()>& func);
 
     /**
      * Executes a task on all workers concurrently and waits until all workers
@@ -420,8 +397,8 @@ public:
      *            directly without going through the message loop of the worker,
      *            otherwise the task is delivered via the message loop.
      */
-    static size_t execute_concurrently(Task& task, int nWorkers = ALL);
-    static size_t execute_concurrently(const std::function<void()>& func, int nWorkers = ALL);
+    static size_t execute_concurrently(Task& task);
+    static size_t execute_concurrently(const std::function<void()>& func);
 
     /**
      * Broadcast a message to workers.
@@ -442,7 +419,7 @@ public:
      *
      * @attention This function is signal safe.
      */
-    static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2, int nWorkers = ALL);
+    static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
     /**
      * Returns statistics for all workers.
@@ -455,7 +432,7 @@ public:
      *             been returned. The returned values may also not represent a
      *             100% consistent set.
      */
-    static Statistics get_statistics(int nWorkers = ALL);
+    static Statistics get_statistics();
 
     /**
      * Get next worker
@@ -480,7 +457,7 @@ public:
      * @param nWorkers   ALL, RUNNING, CONFIGURED or a specific number of workers.
      * @param all_stats  Vector that on return will contain the statistics of all workers.
      */
-    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats, int nWorkers = ALL);
+    static void get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats);
 
     /**
      * Provides QC statistics of all workers as a Json object for use in the REST-API.
@@ -489,7 +466,7 @@ public:
      *
      * @return JSON object containing statistics.
      */
-    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int nWorkers = ALL);
+    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost);
 
     /**
      * Provides QC statistics of one worker as a Json object for use in the REST-API.
@@ -861,14 +838,13 @@ json_t* mxs_rworker_to_json(const char* host, int index);
 /**
  * Convert routing workers into JSON format
  *
- * @param host   Hostname of this server
- * @param which  Which worker should be returned, all or running.
+ * @param host  Hostname of this server
  *
  * @return A JSON resource collection of workers
  *
  * @see mxs_json_resource()
  */
-json_t* mxs_rworker_list_to_json(const char* host, mxs::RoutingWorker::Which which);
+json_t* mxs_rworker_list_to_json(const char* host);
 
 /**
  * @brief MaxScale worker watchdog

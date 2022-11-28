@@ -106,7 +106,7 @@ json_t* CachePT::get_info(uint32_t what) const
                         infos[i] = pThread_info;
                         keys[i] = key;
                     }
-                }, nRunning);
+                });
 
             auto it = infos.begin();
             auto jt = keys.begin();

@@ -1007,17 +1007,11 @@ exports.builder = function (yargs) {
         return yargs
           .epilog("Show detailed information about all worker threads." + fieldDescriptions(thread_fields))
           .wrap(null)
-          .usage("Usage: show threads")
-          .option("kind", {
-            describe: "The kind of threads to display, only the running or all.",
-            type: "string",
-            default: "running",
-            choices: ["running", "all"],
-          });
+          .usage("Usage: show threads");
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getTransposedCollection(host, "maxscale/threads" + "?kind=" + argv.kind, thread_fields);
+          return getTransposedCollection(host, "maxscale/threads", thread_fields);
         });
       }
     )
