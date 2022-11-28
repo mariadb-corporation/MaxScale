@@ -264,7 +264,7 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
     return etl;
 }
 
-Table::Table(const ETL& etl,
+Table::Table(ETL& etl,
              std::string_view schema,
              std::string_view table,
              std::string_view create,
@@ -317,6 +317,7 @@ void Table::prepare() noexcept
     catch (const Error& e)
     {
         m_error = e.what();
+        m_etl.add_error();
     }
 }
 
@@ -329,7 +330,14 @@ void Table::start() noexcept
     catch (const Error& e)
     {
         m_error = e.what();
+        m_etl.add_error();
     }
+}
+
+void ETL::add_error()
+{
+    std::unique_lock guard(m_lock);
+    m_have_error = true;
 }
 
 template<auto func>

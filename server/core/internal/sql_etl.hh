@@ -16,6 +16,7 @@
 #include <maxbase/ccdefs.hh>
 
 #include <vector>
+#include <mutex>
 
 #include <maxbase/json.hh>
 #include <maxbase/ssl.hh>
@@ -140,7 +141,7 @@ class ETL;
 class Table
 {
 public:
-    Table(const ETL& etl,
+    Table(ETL& etl,
           std::string_view schema,
           std::string_view table,
           std::string_view create,
@@ -174,8 +175,7 @@ public:
     }
 
 private:
-
-    const ETL&  m_etl;
+    ETL&        m_etl;
     std::string m_schema;
     std::string m_table;
     std::string m_create;
@@ -212,6 +212,8 @@ struct ETL
 
     mxb::Json start();
 
+    void add_error();
+
 private:
     template<auto func>
     mxb::Json run_job();
@@ -219,6 +221,9 @@ private:
     Config                     m_config;
     std::vector<Table>         m_tables;
     std::unique_ptr<Extractor> m_extractor;
+
+    std::mutex m_lock;
+    bool       m_have_error{false};
 };
 
 /**
