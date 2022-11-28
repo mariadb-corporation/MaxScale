@@ -97,10 +97,17 @@ int random_percent()
     return 100 * (d / RAND_MAX);
 }
 
-void dump_states(const vector<MaxRest::Thread>& threads)
+bool dump_states(const vector<MaxRest::Thread>& threads, const string& expected = string())
 {
+    bool rv = true;
+
     for (const auto& t : threads)
     {
+        if (!expected.empty() && (t.state != expected))
+        {
+            rv = false;
+        }
+
         if (t.state == "Active")
         {
             cout << "A";
@@ -122,6 +129,8 @@ void dump_states(const vector<MaxRest::Thread>& threads)
     }
 
     cout << endl;
+
+    return rv;
 }
 
 void sleep_enough(int from_workers, int to_workers)
@@ -137,6 +146,20 @@ void sleep_enough(int from_workers, int to_workers)
 
         sleep(delay.count());
     }
+}
+
+void wait_until_not_terminating(MaxRest& maxrest)
+{
+    string url { "maxscale/debug/termination_in_process" };
+    bool tim;
+
+    do
+    {
+        auto json = maxrest.curl_get("maxscale/debug/termination_in_process");
+        MXB_AT_DEBUG(bool rv =) json.try_get_bool("termination_in_process", &tim);
+        mxb_assert(rv);
+    }
+    while (tim);
 }
 
 }
@@ -422,75 +445,89 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
     sleep(1);
 
     vector<std::thread> client_threads;
-
     bool terminate = false;
-    for (int i = 0; i < nClients; ++i)
+
+    try
     {
-        client_threads.emplace_back(&stress_test1_client, &test, &terminate, i);
-    }
-
-    sleep(1);
-
-    auto threads = maxrest.show_threads();
-    dump_states(threads);
-
-    for (int i = nWorkers - 1; i > 0; --i)
-    {
-        if (terminate)
+        for (int i = 0; i < nClients; ++i)
         {
-            break;
+            client_threads.emplace_back(&stress_test1_client, &test, &terminate, i);
         }
 
-        maxrest.alter_maxscale("threads", (int64_t)i);
-
-        for (int j = 0; j < 2; ++j)
-        {
-            threads = maxrest.show_threads();
-            dump_states(threads);
-            sleep(1);
-        }
-    }
-
-    threads = maxrest.show_threads();
-
-    int nWaits = 5;
-    while (threads.size() != 1 && nWaits != 0)
-    {
         sleep(1);
-        threads = maxrest.show_threads();
-        if (threads.size() != 1)
+
+        auto threads = maxrest.show_threads();
+        dump_states(threads);
+
+        for (int i = nWorkers - 1; i > 0; --i)
         {
-            cout << "The number of workers not yet dropped to 1, sleeping and re-checking" << endl;
-            sleep(1);
-            --nWaits;
-        }
-    }
+            if (terminate)
+            {
+                break;
+            }
 
-    test.expect(threads.size() == 1, "Unexpected number of threads: %d", (int)threads.size());
+            maxrest.alter_maxscale("threads", (int64_t)i);
 
-    for (int i = 2; i <= nWorkers; ++i)
-    {
-        if (terminate)
-        {
-            break;
-        }
-
-        maxrest.alter_maxscale("threads", (int64_t)i);
-
-        for (int j = 0; j < 5; ++j)
-        {
             threads = maxrest.show_threads();
-            dump_states(threads);
-            sleep(1);
-        }
-    }
 
-    threads = maxrest.show_threads();
-    test.expect(threads.size() == nWorkers, "Unexpected number of threads: %d", (int)threads.size());
+            while (!dump_states(threads, "Active"))
+            {
+                sleep(1);
+                threads = maxrest.show_threads();
+            }
+
+            // When the while-loop ends, all threads are active, i.e. the Draining one
+            // has been drained and the termination has commenced. Thus, we need to wait
+            // until the termination has finished, before proceeding.
+
+            wait_until_not_terminating(maxrest);
+        }
+
+        threads = maxrest.show_threads();
+
+        int nWaits = 5;
+        while (threads.size() != 1 && nWaits != 0)
+        {
+            sleep(1);
+            threads = maxrest.show_threads();
+            if (threads.size() != 1)
+            {
+                cout << "The number of workers not yet dropped to 1, sleeping and re-checking" << endl;
+                sleep(1);
+                --nWaits;
+            }
+        }
+
+        test.expect(threads.size() == 1, "Unexpected number of threads: %d", (int)threads.size());
+
+        for (int i = 2; i <= nWorkers; ++i)
+        {
+            if (terminate)
+            {
+                break;
+            }
+
+            maxrest.alter_maxscale("threads", (int64_t)i);
+
+            for (int j = 0; j < 5; ++j)
+            {
+                threads = maxrest.show_threads();
+                dump_states(threads);
+                sleep(1);
+            }
+        }
+
+        threads = maxrest.show_threads();
+        test.expect(threads.size() == nWorkers, "Unexpected number of threads: %d", (int)threads.size());
+    }
+    catch (const exception& x)
+    {
+        cerr << x.what() << endl;
+    }
 
     terminate = true;
 
-    for (int i = 0; i < nClients; ++i)
+    for (size_t i = 0; i < client_threads.size(); ++i)
     {
         client_threads[i].join();
     }
