@@ -32,3 +32,7 @@ add_test_executable_ex(NAME mariadb_change_user SOURCE mariadb_change_user.cc CO
 # MXS-4094: Wrong auth plugin and no pw
 add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_plugin.cc
         CONFIG wrong_client_auth_plugin.cnf VMS repl_backend)
+
+# MXS-4270: Ed25519 authentication test
+add_test_executable_ex(NAME ed25519_authentication SOURCE ed25519_authentication.cc
+        CONFIG ed25519_authentication.cnf VMS repl_backend)

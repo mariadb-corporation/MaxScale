@@ -1,0 +1,16 @@
+[maxscale]
+threads=1
+admin_auth=false
+log_info=1
+users_refresh_time=0s
+
+###mariadb_monitor###
+
+###rwsplit_service###
+
+
+###rwsplit_listener###
+authenticator=mariadbauth,ed25519auth
+user_mapping_file=/tmp/ed25519_auth_user_map.json
+
+###server_definitions###

@@ -1,0 +1,24 @@
+{
+    "user_map": [
+        {
+            "original_user": "supersecureuser",
+            "mapped_user": "lesssecureuser"
+        },
+        {
+            "original_user": "test_user2",
+            "mapped_user": "test_user2"
+        }
+    ],
+    "server_credentials": [
+        {
+            "mapped_user": "lesssecureuser",
+            "password": "normalpw",
+            "plugin": "mysql_native_password"
+        },
+        {
+            "mapped_user": "test_user2",
+            "password": "test_password2",
+            "plugin": "ed25519"
+        }
+    ]
+}
