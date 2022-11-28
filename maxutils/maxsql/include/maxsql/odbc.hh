@@ -91,7 +91,7 @@ public:
                                 ResultBuffer& res, uint64_t rows_fetched) = 0;
 
     // Called when the resultset ends.
-    virtual bool resultset_end() = 0;
+    virtual bool resultset_end(bool complete) = 0;
 
     // An error occurred
     virtual bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) = 0;
@@ -104,7 +104,7 @@ struct JsonResult : public Output
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end() override;
+    bool resultset_end(bool complete) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
     mxb::Json result()
@@ -130,7 +130,7 @@ struct TextResult : public Output
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end() override;
+    bool resultset_end(bool complete) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
     const std::vector<Result>& result() const
@@ -165,7 +165,7 @@ struct NoResult : public Output
         return true;
     }
 
-    bool resultset_end() override
+    bool resultset_end(bool complete) override
     {
         return true;
     }

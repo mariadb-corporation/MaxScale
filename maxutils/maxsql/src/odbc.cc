@@ -66,7 +66,7 @@ public:
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end() override;
+    bool resultset_end(bool) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
 private:
@@ -136,8 +136,8 @@ private:
 
     bool                    process_response(SQLRETURN ret, Output* handler);
     std::vector<ColumnInfo> get_headers(int columns);
-    bool                    get_normal_result(int columns, Output* handler);
-    bool                    get_batch_result(int columns, Output* handler);
+    std::pair<bool, bool>   get_normal_result(int columns, Output* handler);
+    std::pair<bool, bool>   get_batch_result(int columns, Output* handler);
     bool                    data_truncation();
     bool                    can_batch();
 
@@ -458,11 +458,12 @@ bool JsonResult::resultset_rows(const std::vector<ColumnInfo>& metadata,
     return true;
 }
 
-bool JsonResult::resultset_end()
+bool JsonResult::resultset_end(bool complete)
 {
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_object("fields", std::move(m_fields));
     obj.set_object("data", std::move(m_data));
+    obj.set_bool("complete", complete);
     m_result.add_array_elem(std::move(obj));
     return true;
 }
@@ -519,7 +520,7 @@ bool TextResult::resultset_rows(const std::vector<ColumnInfo>& metadata,
     return true;
 }
 
-bool TextResult::resultset_end()
+bool TextResult::resultset_end(bool complete)
 {
     m_result.push_back(std::move(m_data));
     return true;
@@ -720,7 +721,7 @@ bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuff
     return SQL_SUCCEEDED(ret);
 }
 
-bool ODBCImp::resultset_end()
+bool ODBCImp::resultset_end(bool complete)
 {
     SQLFreeStmt(m_stmt, SQL_UNBIND);
     SQLFreeStmt(m_stmt, SQL_DROP);
@@ -781,10 +782,12 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
 
                 if (handler->resultset_start(m_columns))
                 {
-                    ok = can_batch() ? get_batch_result(columns, handler) :
+                    bool complete;
+                    std::tie(ok, complete) = can_batch() ?
+                        get_batch_result(columns, handler) :
                         get_normal_result(columns, handler);
 
-                    if (!handler->resultset_end())
+                    if (!handler->resultset_end(complete))
                     {
                         MXB_DEBUG("Output failed to process resultset end");
                         ok = false;
@@ -899,7 +902,7 @@ std::vector<ColumnInfo> ODBCImp::get_headers(int columns)
     return cols;
 }
 
-bool ODBCImp::get_normal_result(int columns, Output* handler)
+std::pair<bool, bool> ODBCImp::get_normal_result(int columns, Output* handler)
 {
     SQLRETURN ret;
     ResultBuffer res(m_columns, 1);
@@ -911,8 +914,17 @@ bool ODBCImp::get_normal_result(int columns, Output* handler)
     SQLSetStmtAttr(m_stmt, SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
     SQLSetStmtAttr(m_stmt, SQL_ATTR_ROW_STATUS_PTR, res.row_status.data(), 0);
 
-    while (SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
+    size_t total_rows = 0;
+    bool below_limit = true;
+
+    while (ok && SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
     {
+        if (m_row_limit > 0 && ++total_rows > m_row_limit)
+        {
+            below_limit = false;
+            break;
+        }
+
         for (SQLSMALLINT i = 0; i < columns; i++)
         {
             auto& c = res.columns[i];
@@ -930,16 +942,13 @@ bool ODBCImp::get_normal_result(int columns, Output* handler)
 
             if (ret == SQL_ERROR)
             {
-                get_error(SQL_HANDLE_STMT, m_stmt);
                 ok = false;
-                break;
             }
         }
 
-        if (!handler->resultset_rows(m_columns, res, 1))
+        if (ok && !handler->resultset_rows(m_columns, res, 1))
         {
             ok = false;
-            break;
         }
     }
 
@@ -949,10 +958,10 @@ bool ODBCImp::get_normal_result(int columns, Output* handler)
         ok = false;
     }
 
-    return ok;
+    return {ok, below_limit};
 }
 
-bool ODBCImp::get_batch_result(int columns, Output* handler)
+std::pair<bool, bool> ODBCImp::get_batch_result(int columns, Output* handler)
 {
     ResultBuffer res(m_columns, m_row_limit);
 
@@ -986,8 +995,13 @@ bool ODBCImp::get_batch_result(int columns, Output* handler)
 
         if (m_row_limit > 0 && total_rows > m_row_limit)
         {
-            rows_fetched = total_rows - m_row_limit;
+            rows_fetched = m_row_limit - (total_rows - rows_fetched);
             below_limit = false;
+
+            if (rows_fetched == 0)
+            {
+                continue;
+            }
         }
 
         if (!handler->resultset_rows(m_columns, res, rows_fetched))
@@ -1011,7 +1025,7 @@ bool ODBCImp::get_batch_result(int columns, Output* handler)
 
     SQLFreeStmt(m_stmt, SQL_UNBIND);
 
-    return ok;
+    return {ok, below_limit};
 }
 
 bool ODBCImp::can_batch()
