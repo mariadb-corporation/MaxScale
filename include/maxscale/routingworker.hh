@@ -238,9 +238,9 @@ public:
     void deregister_session(uint64_t session_id);
 
     /**
-     * Return the worker associated with the current thread.
+     * Return the routing worker associated with the current thread.
      *
-     * @return The worker instance, or NULL if the current thread does not have a worker.
+     * @return The worker instance, or NULL if the current thread does not have a routing worker.
      */
     static RoutingWorker* get_current();
 

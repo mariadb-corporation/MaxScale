@@ -428,7 +428,7 @@ int RoutingWorker::activate_workers(int n)
 
 bool RoutingWorker::start_listening(const std::vector<SListener>& listeners)
 {
-    mxb_assert(get_current() == this);
+    mxb_assert(Worker::is_current());
 
     bool rv = false;
 
@@ -459,7 +459,7 @@ bool RoutingWorker::start_listening(const std::vector<SListener>& listeners)
 
 bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
 {
-    mxb_assert(get_current() == this);
+    mxb_assert(Worker::is_current());
 
     bool rv = true;
 
@@ -493,7 +493,7 @@ bool RoutingWorker::stop_listening(const std::vector<SListener>& listeners)
 
 void RoutingWorker::deactivate()
 {
-    mxb_assert(get_current() == this);
+    mxb_assert(Worker::is_current());
     mxb_assert(state() == State::ACTIVE || state() == State::DRAINING);
 
     set_state(State::DORMANT);
@@ -579,7 +579,7 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
 
 bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 {
-    mxb_assert(get_current() == this);
+    mxb_assert(Worker::is_current());
     mxb_assert(is_draining() || is_dormant());
 
     bool success = start_listening(listeners);
@@ -791,6 +791,7 @@ bool RoutingWorker::remove_listener(Listener* pListener)
     return rv;
 }
 
+//static
 RoutingWorker* RoutingWorker::get_current()
 {
     return this_thread.pCurrent_worker;
@@ -1942,7 +1943,7 @@ void RoutingWorker::update_average_load(size_t count)
 
 void RoutingWorker::terminate()
 {
-    mxb_assert(get_current() == this);
+    mxb_assert(Worker::is_current());
 
     // No more messages for this worker.
     set_messages_enabled(false);
@@ -2386,13 +2387,14 @@ void RoutingWorker::deregister_session(uint64_t session_id)
     }
 }
 
+//static
 void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
 {
-    auto rworker = RoutingWorker::get_current();
-    std::lock_guard<std::mutex> guard(rworker->m_pool_lock);
+    auto* pWorker = RoutingWorker::get_current();
+    std::lock_guard<std::mutex> guard(pWorker->m_pool_lock);
     // Check if the worker has a pool with the given server name and update if found.
     // The pool may not exist if pooling was previously disabled or empty.
-    for (auto& kv : rworker->m_pool_group)
+    for (auto& kv : pWorker->m_pool_group)
     {
         if (kv.first->name() == srvname)
         {

@@ -748,6 +748,9 @@ public:
      */
     static Worker* get_current();
 
+    /**
+     * @return True, if this worker is the current one.
+     */
     bool is_current() const;
 
     /**
