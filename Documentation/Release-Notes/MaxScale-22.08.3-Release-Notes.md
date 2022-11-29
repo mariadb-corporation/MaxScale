@@ -12,10 +12,6 @@ this MaxScale version.
 For any problems you encounter, please consider submitting a bug
 report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
-## New Features
-
-* [MXS-4354](https://jira.mariadb.org/browse/MXS-4354) Compile maxscale with clang
-
 ## Bug fixes
 
 * [MXS-4415](https://jira.mariadb.org/browse/MXS-4415) Warning for xpandmon for 'leaving' / 'late, leaving' being an unknown sub-state
