@@ -709,7 +709,7 @@ UserManager::AddUser UserManager::get_add_user_data(const string& db,
 
 void UserManager::ensure_initial_user()
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     const SERVER* pMaster = get_master();
 

@@ -443,7 +443,7 @@ Service* Service::create(const char* name, json_t* params)
 
 std::vector<Service*> Service::get_all()
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
     return this_unit.services;
 }
 
@@ -585,7 +585,7 @@ Service::~Service()
 void Service::destroy(Service* service)
 {
     mxb_assert(service->active());
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     service->m_active = false;
     service->decref();
 }
@@ -2020,7 +2020,7 @@ Router* SERVICE::router() const
 
 void SERVICE::track_variables(const std::set<std::string>& variables)
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
 
     m_tracked_variables.insert(variables.begin(), variables.end());
 }
@@ -2077,7 +2077,7 @@ bool configure_one_parameter(Service* service, const std::string& key, json_t* v
 
 void Service::check_server_dependencies(const std::set<std::string>& parameters)
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
 
     // TODO: At this point any variables needed by routers/filters could
     // TODO: be included.

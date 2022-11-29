@@ -211,7 +211,7 @@ void ConfigManager::start_sync()
 
 void ConfigManager::stop_sync()
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     if (m_dcid)
     {

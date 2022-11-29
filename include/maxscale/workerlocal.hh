@@ -129,7 +129,7 @@ protected:
     {
         IndexedStorage* storage = nullptr;
 
-        if (MainWorker::is_main_worker())
+        if (MainWorker::is_current())
         {
             storage = &MainWorker::get()->storage();
         }
@@ -182,7 +182,7 @@ public:
      */
     void assign(const T& t)
     {
-        mxb_assert_message(MainWorker::is_main_worker() || mxs::test::is_test(),
+        mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
 
         // Update the value of the master copy
@@ -208,7 +208,7 @@ public:
      */
     std::vector<T> collect_values() const
     {
-        mxb_assert_message(MainWorker::is_main_worker() || mxs::test::is_test(),
+        mxb_assert_message(MainWorker::is_current() || mxs::test::is_test(),
                            "this method must be called from the main worker thread");
         std::vector<T> rval;
         std::mutex lock;

@@ -376,7 +376,7 @@ bool Listener::Manager::reload_tls()
 vector<SListener> Listener::Manager::get_started_listeners()
 {
     // Not all unit tests have a MainWorker.
-    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_current());
 
     vector<SListener> started_listeners;
 
@@ -1200,7 +1200,7 @@ bool Listener::unlisten_unique(mxs::RoutingWorker& worker)
 
 bool Listener::listen()
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     mxb::LogScope scope(name());
     m_state = FAILED;
@@ -1231,7 +1231,7 @@ bool Listener::listen()
 
 bool Listener::listen(mxs::RoutingWorker& worker)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker() || &worker == mxs::RoutingWorker::get_current());
+    mxb_assert(mxs::MainWorker::is_current() || &worker == mxs::RoutingWorker::get_current());
 
     mxb::LogScope scope(name());
 
@@ -1253,7 +1253,7 @@ bool Listener::listen(mxs::RoutingWorker& worker)
 
 bool Listener::unlisten(mxs::RoutingWorker& worker)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker() || &worker == mxs::RoutingWorker::get_current());
+    mxb_assert(mxs::MainWorker::is_current() || &worker == mxs::RoutingWorker::get_current());
 
     mxb::LogScope scope(name());
 

@@ -1230,7 +1230,7 @@ void mxs_admin_allow_origin(std::string_view origin)
 bool mxs_admin_reload_tls()
 {
     bool rval = true;
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     const auto& config = mxs::Config::get();
     const auto& cert = config.admin_ssl_cert;
     const auto& key = config.admin_ssl_key;

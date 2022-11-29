@@ -294,7 +294,7 @@ void RoutingWorker::deregister_data(Data* pData)
 //static
 bool RoutingWorker::adjust_threads(int nCount)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     mxb_assert(this_unit.initialized);
     mxb_assert(this_unit.running);
 
@@ -351,7 +351,7 @@ void RoutingWorker::finish_datas()
 //static
 bool RoutingWorker::increase_workers(int nDelta)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     mxb_assert(nDelta > 0);
 
     bool rv = true;
@@ -392,7 +392,7 @@ bool RoutingWorker::increase_workers(int nDelta)
 //static
 int RoutingWorker::activate_workers(int n)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     mxb_assert(this_unit.nRunning - this_unit.nConfigured >= n);
 
     int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
@@ -503,7 +503,7 @@ void RoutingWorker::deactivate()
     mxb_assert(pMain);
 
     auto proceed_in_main = [this]() {
-        mxb_assert(MainWorker::is_main_worker());
+        mxb_assert(MainWorker::is_current());
 
         if (!this_unit.termination_in_process)
         {
@@ -596,7 +596,7 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 bool RoutingWorker::create_workers(int n)
 {
     // Not all unit tests have a MainWorker.
-    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_current());
     mxb_assert(n > 0);
 
     size_t rebalance_window = mxs::Config::get().rebalance_window.get();
@@ -638,7 +638,7 @@ bool RoutingWorker::create_workers(int n)
 //static
 bool RoutingWorker::decrease_workers(int n)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     mxb_assert(n > 0);
 
     int nBefore = this_unit.nConfigured.load(std::memory_order_relaxed);
@@ -812,7 +812,7 @@ RoutingWorker* RoutingWorker::get_by_index(int index)
 bool RoutingWorker::start_workers(int nWorkers)
 {
     // Not all unit tests have a MainWorker.
-    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_main_worker());
+    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_current());
     mxb_assert(this_unit.nRunning == 0);
 
     bool rv = create_workers(nWorkers);
@@ -1931,7 +1931,7 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 
 void RoutingWorker::update_average_load(size_t count)
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
 
     if (m_average_load.size() != count)
     {
@@ -1988,7 +1988,7 @@ void RoutingWorker::terminate()
                 MainWorker* pMain = MainWorker::get();
 
                 pMain->execute([this]() {
-                        mxb_assert(MainWorker::is_main_worker());
+                        mxb_assert(MainWorker::is_current());
                         mxb_assert(this_unit.termination_in_process);
 
                         this->join();
@@ -2006,7 +2006,7 @@ void RoutingWorker::terminate()
 // static
 void RoutingWorker::collect_worker_load(size_t count)
 {
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
 
     auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
     for (int i = 0; i < nRunning; ++i)
@@ -2288,7 +2288,7 @@ bool RoutingWorker::set_listen_mode(int index, bool enabled)
 {
     bool rv = false;
 
-    mxb_assert(MainWorker::is_main_worker());
+    mxb_assert(MainWorker::is_current());
 
     int n = this_unit.nConfigured.load(std::memory_order_relaxed);
 
@@ -2406,7 +2406,7 @@ void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
 
 RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* pSrv)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     RoutingWorker::ConnectionPoolStats rval;
 
     auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);

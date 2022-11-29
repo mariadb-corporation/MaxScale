@@ -532,13 +532,13 @@ bool MariaDBMonitor::post_configure()
 
 json_t* MariaDBMonitor::diagnostics() const
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     return to_json();
 }
 
 json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     json_t* result = nullptr;
 
     if (auto server = get_server(srv))

@@ -1431,7 +1431,7 @@ string Monitor::get_server_monitor(const SERVER* server)
 
 bool Monitor::is_main_worker()
 {
-    return mxs::MainWorker::is_main_worker();
+    return mxs::MainWorker::is_current();
 }
 
 std::string MonitorServer::get_connect_error(ConnectResult rval)

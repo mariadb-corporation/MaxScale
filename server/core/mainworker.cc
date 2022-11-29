@@ -91,14 +91,14 @@ int64_t MainWorker::ticks()
 }
 
 // static
-bool MainWorker::is_main_worker()
+bool MainWorker::is_current()
 {
     return this_thread.pMain != nullptr;
 }
 
 void MainWorker::update_rebalancing()
 {
-    mxb_assert(is_main_worker());
+    mxb_assert(is_current());
 
     // MainWorker must be running
     if (get_current() == nullptr)

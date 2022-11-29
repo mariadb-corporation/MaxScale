@@ -386,7 +386,7 @@ void XpandMonitor::server_removed(SERVER* pServer)
 
 std::vector<SERVER*> XpandMonitor::real_servers() const
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     return m_cluster_servers;
 }
 
@@ -1159,7 +1159,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
 
 void XpandMonitor::add_server(SERVER* pServer)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     // Servers are never deleted, but once created they stay around, also
     // in m_cluster_servers. Thus, to prevent double book-keeping it must

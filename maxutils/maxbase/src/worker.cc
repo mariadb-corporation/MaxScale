@@ -678,6 +678,7 @@ bool Worker::remove_pollable(Pollable* pPollable)
     return rv;
 }
 
+//static
 Worker* Worker::get_current()
 {
     return this_thread.pCurrent_worker;

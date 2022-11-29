@@ -2245,7 +2245,7 @@ uint64_t dcb_get_session_id(DCB* dcb)
 
 bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
 {
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
     SerialDcbTask task(func, data);
     RoutingWorker::execute_serially(task);
     return task.more();

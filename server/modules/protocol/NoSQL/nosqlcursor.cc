@@ -271,7 +271,7 @@ void NoSQLCursor::kill_idle(const mxb::TimePoint& now, const std::chrono::second
 void NoSQLCursor::start_purging_idle_cursors(const std::chrono::seconds& cursor_timeout)
 {
     // This should be called at startup, so we must be on MainWorker.
-    mxb_assert(mxs::MainWorker::is_main_worker());
+    mxb_assert(mxs::MainWorker::is_current());
 
     auto* pMain = mxs::MainWorker::get();
 

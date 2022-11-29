@@ -60,7 +60,7 @@ public:
     /**
      * @return True, if the calling thread is the main worker.
      */
-    static bool is_main_worker();
+    static bool is_current();
 
     /**
      * @return The indexed storage of this worker.
