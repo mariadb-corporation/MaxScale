@@ -11,11 +11,11 @@
  * Public License.
  */
 import { Model } from '@vuex-orm/core'
+import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
-import { EDITOR_MODES } from '@queryEditorSrc/store/config'
 
 export default class Editor extends Model {
-    static entity = 'editors'
+    static entity = ORM_PERSISTENT_ENTITIES.EDITORS
 
     static fields() {
         return {

@@ -12,13 +12,18 @@
  */
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
+import { ORM_NAMESPACE, ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
+import { lodash } from '@share/utils/helpers'
 
 export default new VuexPersistence({
     key: 'query-editor',
     storage: localForage,
     asyncStorage: true,
     reducer: state => ({
-        queryEditorORM: state.queryEditorORM,
+        [ORM_NAMESPACE]: lodash.pick(state[ORM_NAMESPACE], [
+            ...Object.values(ORM_PERSISTENT_ENTITIES),
+            '$name', // not an entity, but it's a reserved key for vuex-orm
+        ]),
         queryPersisted: state.queryPersisted,
         //TODO: remove below fields once ORM is completely added
         wke: {

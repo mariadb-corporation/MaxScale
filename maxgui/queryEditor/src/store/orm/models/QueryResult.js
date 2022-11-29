@@ -11,11 +11,11 @@
  * Public License.
  */
 import { Model } from '@vuex-orm/core'
+import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
-import { QUERY_MODES } from '@queryEditorSrc/store/config'
 
 export default class QueryResult extends Model {
-    static entity = 'queryResults'
+    static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS
 
     static fields() {
         return {

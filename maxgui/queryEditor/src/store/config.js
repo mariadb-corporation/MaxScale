@@ -13,6 +13,14 @@
 import { isMAC } from '@share/utils/helpers'
 
 export const ORM_NAMESPACE = 'queryEditorORM'
+export const ORM_PERSISTENT_ENTITIES = {
+    EDITORS: 'editors',
+    QUERY_CONNS: 'queryConns',
+    QUERY_RESULTS: 'queryResults',
+    QUERY_TABS: 'queryTabs',
+    SCHEMA_SIDEBARS: 'schemaSidebars',
+    WORKSHEETS: 'worksheets',
+}
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     QUERY_TAB: 'QUERY_TAB',

@@ -12,9 +12,10 @@
  */
 import { Model } from '@vuex-orm/core'
 import { uuidv1 } from '@share/utils/helpers'
+import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 
 export default class SchemaSidebar extends Model {
-    static entity = 'schemaSidebars'
+    static entity = ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS
 
     static fields() {
         return {

@@ -11,14 +11,15 @@
  * Public License.
  */
 import { Model } from '@vuex-orm/core'
+import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
+import { uuidv1 } from '@share/utils/helpers'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryResult from './QueryResult'
 import QueryConn from './QueryConn'
 import Editor from './Editor'
-import { uuidv1 } from '@share/utils/helpers'
-import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default class QueryTab extends Model {
-    static entity = 'queryTabs'
+    static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
 
     /**
      * If a record in the parent table (queryTab) is deleted, then the corresponding records in the child

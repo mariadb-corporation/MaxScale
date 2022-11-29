@@ -11,13 +11,14 @@
  * Public License.
  */
 import { Model } from '@vuex-orm/core'
+import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryTab from './QueryTab'
 import Worksheet from './Worksheet'
 
 export default class QueryConn extends Model {
-    static entity = 'queryConns'
+    static entity = ORM_PERSISTENT_ENTITIES.QUERY_CONNS
 
     /**
      * If a record in this table (QueryConn) is deleted, then the corresponding records in the relational

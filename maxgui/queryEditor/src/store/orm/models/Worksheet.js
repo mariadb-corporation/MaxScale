@@ -12,13 +12,14 @@
  */
 import { Model } from '@vuex-orm/core'
 import { uuidv1 } from '@share/utils/helpers'
+import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import SchemaSidebar from './SchemaSidebar'
 import QueryTab from './QueryTab'
 import QueryConn from './QueryConn'
 
 export default class Worksheet extends Model {
-    static entity = 'worksheets'
+    static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
 
     /**
      * If a record in the parent table (worksheet) is deleted, then the corresponding records in the child
