@@ -11,12 +11,14 @@
  * Public License.
  */
 import * as config from '@queryEditorSrc/store/config'
-import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
-import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 
 export default {
     namespaced: true,
@@ -51,11 +53,14 @@ export default {
                                 editor: new Editor(),
                                 queryResult: new QueryResult(),
                                 queryConn: new QueryConn(),
+                                queryTabMem: new QueryTabMem(),
                             },
                         ],
                         queryConn: new QueryConn(),
+                        worksheetMem: new WorksheetMem(),
                     },
                 })
+
                 Worksheet.commit(state => (state.active_wke_id = worksheet_id))
                 // update active_query_tab_map state
                 QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = query_tab_id))

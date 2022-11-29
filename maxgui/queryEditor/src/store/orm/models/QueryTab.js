@@ -17,6 +17,7 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryResult from './QueryResult'
 import QueryConn from './QueryConn'
 import Editor from './Editor'
+import QueryTabMem from './QueryTabMem'
 
 export default class QueryTab extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
@@ -36,6 +37,8 @@ export default class QueryTab extends Model {
         const modelIds = queryHelper.filterEntity(QueryTab, payload).map(model => model.id)
         modelIds.forEach(id => {
             QueryTab.delete(t => t.id === id) // delete itself
+            QueryTabMem.delete(m => m.query_tab_id === id)
+
             // delete records in the child tables
             Editor.delete(e => e.query_tab_id === id)
             QueryResult.delete(r => r.query_tab_id === id)
@@ -54,6 +57,7 @@ export default class QueryTab extends Model {
             editor: this.hasOne(Editor, 'query_tab_id'),
             queryResult: this.hasOne(QueryResult, 'query_tab_id'),
             queryConn: this.hasOne(QueryConn, 'query_tab_id'),
+            queryTabMem: this.hasOne(QueryTabMem, 'query_tab_id'),
         }
     }
 }

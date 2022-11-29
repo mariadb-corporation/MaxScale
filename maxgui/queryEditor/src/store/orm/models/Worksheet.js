@@ -17,6 +17,7 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 import SchemaSidebar from './SchemaSidebar'
 import QueryTab from './QueryTab'
 import QueryConn from './QueryConn'
+import WorksheetMem from './WorksheetMem'
 
 export default class Worksheet extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
@@ -36,6 +37,8 @@ export default class Worksheet extends Model {
         const modelIds = queryHelper.filterEntity(Worksheet, payload).map(model => model.id)
         modelIds.forEach(id => {
             Worksheet.delete(w => w.id === id) // delete itself
+            WorksheetMem.delete(m => m.worksheet_id === id)
+
             // delete records in the child tables
             SchemaSidebar.delete(s => s.worksheet_id === id)
             QueryConn.delete(c => c.worksheet_id === id)
@@ -53,6 +56,7 @@ export default class Worksheet extends Model {
             queryTabs: this.hasMany(QueryTab, 'worksheet_id'),
             schemaSidebar: this.hasOne(SchemaSidebar, 'worksheet_id'),
             queryConn: this.hasOne(QueryConn, 'worksheet_id'),
+            worksheetMem: this.hasOne(WorksheetMem, 'worksheet_id'),
         }
     }
 }

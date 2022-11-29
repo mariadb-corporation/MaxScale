@@ -11,20 +11,25 @@
  * Public License.
  */
 import { Database } from '@vuex-orm/core'
-import Worksheet from './models/Worksheet'
-import SchemaSidebar from './models/SchemaSidebar'
-import QueryTab from './models/QueryTab'
-import QueryResult from './models/QueryResult'
-import QueryConn from './models/QueryConn'
-import Editor from './models/Editor'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+// entities to be stored only in memory
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 
 const database = new Database()
 //TODO: Register a model and vuex module to Database.
-database.register(Worksheet)
-database.register(SchemaSidebar)
-database.register(QueryTab)
-database.register(QueryResult)
-database.register(QueryConn)
 database.register(Editor)
+database.register(QueryConn)
+database.register(QueryResult)
+database.register(QueryTab)
+database.register(SchemaSidebar)
+database.register(Worksheet)
+database.register(QueryTabMem)
+database.register(WorksheetMem)
 
 export default database
