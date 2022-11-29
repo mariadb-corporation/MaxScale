@@ -15,7 +15,7 @@ import mount from '@tests/unit/setup'
 import TxtEditorToolbarCtr from '../TxtEditorToolbarCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
-const dummy_session = { id: 'SESSION_123_45' }
+const dummy_query_tab = { id: 'QUERY_TAB_123_45' }
 const mountFactory = opts =>
     mount(
         lodash.merge(
@@ -26,10 +26,10 @@ const mountFactory = opts =>
                     'readonly-sql-editor': "<div class='stub'></div>",
                 },
                 propsData: {
-                    session: dummy_session,
+                    queryTab: dummy_query_tab,
                 },
                 computed: {
-                    getActiveSessionId: () => dummy_session.id,
+                    getActiveQueryTabId: () => dummy_query_tab.id,
                 },
             },
             opts
@@ -114,9 +114,9 @@ describe(`txt-editor-toolbar-ctr`, () => {
             it(des, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultBySessionId: () => () => true,
-                        getIsRunBtnDisabledBySessionId: () => () => true,
-                        getIsVisBtnDisabledBySessionId: () => () => true,
+                        getLoadingQueryResultByQueryTabId: () => () => true,
+                        getIsRunBtnDisabledByQueryTabId: () => () => true,
+                        getIsVisBtnDisabledByQueryTabId: () => () => true,
                     },
                 })
                 if (btn === 'run-btn') {
@@ -129,9 +129,9 @@ describe(`txt-editor-toolbar-ctr`, () => {
             it(`${btn} should be clickable if it matches certain conditions`, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultBySessionId: () => () => false,
-                        getIsRunBtnDisabledBySessionId: () => () => false,
-                        getIsVisBtnDisabledBySessionId: () => () => false,
+                        getLoadingQueryResultByQueryTabId: () => () => false,
+                        getIsRunBtnDisabledByQueryTabId: () => () => false,
+                        getIsVisBtnDisabledByQueryTabId: () => () => false,
                     },
                 })
                 const btnComponent = wrapper.find(`.${btn}`)
@@ -142,9 +142,9 @@ describe(`txt-editor-toolbar-ctr`, () => {
             it(`Should call ${handler}`, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultBySessionId: () => () => false,
-                        getIsRunBtnDisabledBySessionId: () => () => false,
-                        getIsVisBtnDisabledBySessionId: () => () => false,
+                        getLoadingQueryResultByQueryTabId: () => () => false,
+                        getIsRunBtnDisabledByQueryTabId: () => () => false,
+                        getIsVisBtnDisabledByQueryTabId: () => () => false,
                     },
                 })
                 const spy = sinon.spy(wrapper.vm, handler)
@@ -154,7 +154,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
                     case 'visualize-btn':
                         spy.should.have.been.calledOnceWithExactly({
                             payload: !show_vis_sidebar,
-                            id: dummy_session.id,
+                            id: dummy_query_tab.id,
                         })
                         break
                     case 'run-btn':
@@ -172,7 +172,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 computed: {
                     query_txt: () => 'SELECT 1',
                     query_confirm_flag: () => 1,
-                    getIsRunBtnDisabledBySessionId: () => () => false,
+                    getIsRunBtnDisabledByQueryTabId: () => () => false,
                 },
             })
             sinon.stub(wrapper.vm, 'onRun')
@@ -186,7 +186,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
             let setQueryConfirmFlagCallCount = 0
             wrapper = mountFactory({
                 computed: {
-                    getIsRunBtnDisabledBySessionId: () => () => false,
+                    getIsRunBtnDisabledByQueryTabId: () => () => false,
                     query_confirm_flag: () => 1,
                 },
                 methods: {
@@ -208,8 +208,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
         it(`Should render stop-btn if query result is loading`, () => {
             wrapper = mountFactory({
                 computed: {
-                    getLoadingQueryResultBySessionId: () => () => true,
-                    getIsRunBtnDisabledBySessionId: () => () => false,
+                    getLoadingQueryResultByQueryTabId: () => () => true,
+                    getIsRunBtnDisabledByQueryTabId: () => () => false,
                 },
             })
             expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)

@@ -26,9 +26,9 @@ export default new VuexPersistence({
             active_wke_id: state.wke.active_wke_id,
         },
         queryConn: { sql_conns: state.queryConn.sql_conns },
-        querySession: {
-            query_sessions: state.querySession.query_sessions,
-            active_session_by_wke_id_map: state.querySession.active_session_by_wke_id_map,
+        queryTab: {
+            query_tabs: state.queryTab.query_tabs,
+            active_query_tab_map: state.queryTab.active_query_tab_map,
         },
     }),
 }).plugin

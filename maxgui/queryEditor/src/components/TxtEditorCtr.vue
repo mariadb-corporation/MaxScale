@@ -4,7 +4,7 @@
         <txt-editor-toolbar-ctr
             class="d-flex"
             :height="txtEditorToolbarHeight"
-            :session="session"
+            :queryTab="queryTab"
             @disable-tab-move-focus="toggleTabMoveFocus"
         >
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
@@ -126,7 +126,7 @@ export default {
     },
     props: {
         dim: { type: Object, required: true },
-        session: { type: Object, required: true },
+        queryTab: { type: Object, required: true },
     },
     data() {
         return {
@@ -162,7 +162,7 @@ export default {
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getChartResultSets: 'queryResult/getChartResultSets',
         }),
         eventBus() {
@@ -237,7 +237,7 @@ export default {
                 return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT({ payload: value, id: this.getActiveSessionId })
+                this.SET_QUERY_TXT({ payload: value, id: this.getActiveQueryTabId })
             },
         },
         resultPaneDim() {

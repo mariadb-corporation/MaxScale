@@ -93,21 +93,21 @@ describe('sidebar-ctr', () => {
         it(`Should process fetchNodePrvwData method as expected`, () => {
             let clearDataPreviewCallCount = 0
             let queryModeParam, fetchPrvwParams
-            const active_session_id = 'SESSION_123_45'
+            const active_query_tab_id = 'QUERY_TAB_123_45'
             wrapper = mountFactory({
                 methods: {
                     clearDataPreview: () => clearDataPreviewCallCount++,
                     SET_CURR_QUERY_MODE: mode => (queryModeParam = mode),
                     fetchPrvw: params => (fetchPrvwParams = params),
                 },
-                computed: { getActiveSessionId: () => active_session_id },
+                computed: { getActiveQueryTabId: () => active_query_tab_id },
             })
             const mockParam = { query_mode: 'PRVW_DATA', qualified_name: 'test.t1' }
             wrapper.vm.fetchNodePrvwData(mockParam)
             expect(clearDataPreviewCallCount).to.be.equals(1)
             expect(queryModeParam).to.be.eql({
                 payload: mockParam.query_mode,
-                id: active_session_id,
+                id: active_query_tab_id,
             })
             expect(fetchPrvwParams).to.be.deep.equals({
                 qualified_name: mockParam.qualified_name,
@@ -140,7 +140,7 @@ describe('sidebar-ctr', () => {
                     def_db_charset_map: () => ({}),
                 },
                 methods: {
-                    handleAddNewSession: () => null,
+                    handleAddNewQueryTab: () => null,
                     queryAlterTblSuppData: () => null,
                     queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
                 },
@@ -153,7 +153,7 @@ describe('sidebar-ctr', () => {
                 qualified_name: 'test.t1',
             }
             const fnsToBeSpied = [
-                'handleAddNewSession',
+                'handleAddNewQueryTab',
                 'queryAlterTblSuppData',
                 'queryTblCreationInfo',
             ]

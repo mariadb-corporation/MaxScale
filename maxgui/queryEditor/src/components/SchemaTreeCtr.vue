@@ -142,7 +142,7 @@ export default {
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
             getAlteredActiveNode: 'editor/getAlteredActiveNode',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -196,7 +196,7 @@ export default {
                     const activeNodes = this.minimizeNodes(v)
                     if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
                         this.SET_TBL_CREATION_INFO({
-                            id: this.getActiveSessionId,
+                            id: this.getActiveQueryTabId,
                             payload: {
                                 ...this.tbl_creation_info,
                                 altered_active_node: activeNodes[0],
@@ -441,7 +441,7 @@ export default {
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
                     this.SET_CURR_EDITOR_MODE({
-                        id: this.getActiveSessionId,
+                        id: this.getActiveQueryTabId,
                         payload: this.EDITOR_MODES.TXT_EDITOR,
                     })
                     this.activeNodes = [node] // updateActiveNode

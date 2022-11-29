@@ -377,7 +377,7 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
  * is changed in persisted array then causes other properties also
  * have to recompute. A better method would be to create relational
  * keys between modules, but for now, stick with the old approach.
- * Module states to be synced to query_sessions: editor, queryConn, queryResult
+ * Module states to be synced to query_tabs: editor, queryConn, queryResult
  * Module states to be synced to worksheets_arr: schemaSidebar
  * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @returns {Object} - return flat state for the provided namespace module
@@ -412,8 +412,8 @@ function syncStateCreator(namespace) {
                  * name?: string. Connection name. e.g. server_0
                  * type?: string. listeners, servers or services
                  * clone_of_conn_id?: string. The connection id that was used to make this clone connection.
-                 * wke_id_fk?: string. Id of the worksheet that the connection is bound to. For WORKSHEET binding_type
-                 * session_id_fk?: string. Id of the session that the connection is bound to. For SESSION binding_type
+                 * wke_id_fk?: string. Id of the worksheet that the connection is bound to. WORKSHEET binding_type
+                 * query_tab_id_fk?: string. Id of the queryTab that the connection is bound to. QUERY_TAB binding_type
                  * binding_type?: string. QUERY_CONN_BINDING_TYPES
                  * If it doesn't have clone_of_conn_id, it's a default connection
                  */
@@ -477,8 +477,8 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
 /**
  * @public
  * Below states are stored in hash map structure.
- * The state uses worksheet id as key or session id. This helps to preserve
- * multiple worksheet's data or session's data in memory.
+ * The state uses worksheet id as key or queryTab id. This helps to preserve
+ * multiple worksheet's data or queryTab's data in memory.
  * Use `memStatesMutationCreator` to create corresponding mutations
  * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @returns {Object} - returns states that are stored in memory
@@ -527,7 +527,7 @@ function memStateCreator(namespace) {
                  * loading_db_tree?: boolean
                  * db_completion_list?: array,
                  * data? array. Contains schemas array
-                 * //TODO: Make active_prvw_node an object hash with session id as key
+                 * //TODO: Make active_prvw_node an object hash with queryTab id as key
                  * active_prvw_node? object. Contains active node in the schemas array
                  * data_of_conn?: string. Name of the connection using to fetch data
                  */
@@ -547,8 +547,8 @@ function memStateCreator(namespace) {
 /**
  * @public
  * Mutations creator for states storing in hash map structure (storing in memory).
- * The state uses worksheet id as key or session id. This helps to preserve multiple worksheet's
- * data or session's data in memory.
+ * The state uses worksheet id as key or queryTab id. This helps to preserve multiple worksheet's
+ * data or queryTab's data in memory.
  * The name of mutation follows this pattern PATCH_STATE_NAME.
  * e.g. Mutation for is_conn_busy_map state is PATCH_IS_CONN_BUSY_MAP
  * @param {Object} param.memStates - memStates storing in memory
@@ -559,8 +559,8 @@ function memStatesMutationCreator(memStates) {
         return {
             ...mutations,
             /**
-             * if payload is not provided, the id (wke_id or session_id) key will be removed from the map
-             * @param {String} param.id - wke_id or session_id
+             * if payload is not provided, the id (wke_id or query_tab_id) key will be removed from the map
+             * @param {String} param.id - wke_id or query_tab_id
              * @param {Object} param.payload - always an object
              */
             [`PATCH_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
@@ -580,7 +580,7 @@ function memStatesMutationCreator(memStates) {
  * This helps to commit mutations to release data storing in memory
  * @param {Object} param.namespace - module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @param {Function} param.commit - vuex commit function
- * @param {String} param.id - wke_id or session_id
+ * @param {String} param.id - wke_id or query_tab_id
  * @param {Object} param.memStates - memStates storing in memory
  */
 function releaseMemory({ namespace, commit, id, memStates }) {
@@ -601,7 +601,7 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
         txt: file_handle_txt = '',
         file_handle: { name: file_handle_name = '' } = {},
     } = blob_file
-    // no unsaved changes if it's a blank session tab
+    // no unsaved changes if it's a blank queryTab
     if (!query_txt && !file_handle_name) return false
     /** If there is no file opened (e.g when file_handle_txt === ''), but there is value for query_txt
      * return true.

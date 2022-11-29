@@ -23,7 +23,7 @@
             btnClass="toolbar-square-btn save-sql-btn"
             text
             :disabled="isSaveFileDisabled"
-            @click="saveFileToDisk(session)"
+            @click="saveFileToDisk(queryTab)"
         >
             <template v-slot:btn-content>
                 <v-icon size="20" color="accent-dark">mdi-content-save-outline</v-icon>
@@ -36,7 +36,7 @@
             btnClass="toolbar-square-btn save-sql-btn"
             text
             :disabled="isSaveFileAsDisabled"
-            @click="handleSaveFileAs(session)"
+            @click="handleSaveFileAs(queryTab)"
         >
             <template v-slot:btn-content>
                 <v-icon size="20" color="accent-dark">mdi-content-save-edit-outline</v-icon>
@@ -67,23 +67,23 @@ import saveFile from '@queryEditorSrc/mixins/saveFile'
 export default {
     name: 'file-btns-ctr',
     mixins: [saveFile],
-    props: { session: { type: Object, required: true } },
+    props: { queryTab: { type: Object, required: true } },
     computed: {
         ...mapState({
             file_dlg_data: state => state.editor.file_dlg_data,
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
         ...mapGetters({
-            getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
+            getIsFileUnsavedByQueryTabId: 'editor/getIsFileUnsavedByQueryTabId',
             hasFileSystemReadOnlyAccess: 'editor/hasFileSystemReadOnlyAccess',
             hasFileSystemRWAccess: 'editor/hasFileSystemRWAccess',
-            checkSessFileHandleValidity: 'editor/checkSessFileHandleValidity',
+            checkQueryTabFileHandleValidity: 'editor/checkQueryTabFileHandleValidity',
         }),
         isFileUnsaved() {
-            return this.getIsFileUnsavedBySessionId(this.session.id)
+            return this.getIsFileUnsavedByQueryTabId(this.queryTab.id)
         },
         isSaveFileDisabled() {
-            return !this.isFileUnsaved || !this.checkSessFileHandleValidity(this.session)
+            return !this.isFileUnsaved || !this.checkQueryTabFileHandleValidity(this.queryTab)
         },
         isSaveFileAsDisabled() {
             return !this.isFileUnsaved
@@ -102,7 +102,7 @@ export default {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
-            UPDATE_SESSION: 'querySession/UPDATE_SESSION',
+            UPDATE_QUERY_TAB: 'queryTab/UPDATE_QUERY_TAB',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
             SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
@@ -163,34 +163,34 @@ export default {
                     is_opened: true,
                     title: this.$mxs_t('openScript'),
                     confirm_msg: this.$mxs_t('confirmations.openScript', {
-                        targetId: this.session.name,
+                        targetId: this.queryTab.name,
                         fileNameToBeOpened: blob.handle.name,
                     }),
                     on_save: async () => {
-                        await this.handleSaveFile(this.session)
-                        await this.loadFileToActiveSession(blob)
+                        await this.handleSaveFile(this.queryTab)
+                        await this.loadFileToActiveQueryTab(blob)
                     },
                     dont_save: async () => {
-                        await this.loadFileToActiveSession(blob)
+                        await this.loadFileToActiveQueryTab(blob)
                         this.SET_FILE_DLG_DATA({ ...this.file_dlg_data, is_opened: false })
                     },
                 })
-            } else await this.loadFileToActiveSession(blob)
+            } else await this.loadFileToActiveQueryTab(blob)
         },
         /**
          * @param {Blob} blob - blob
          */
-        async loadFileToActiveSession(blob) {
+        async loadFileToActiveQueryTab(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
-            this.UPDATE_SESSION({ ...this.session, name: blob.handle.name })
-            this.SET_QUERY_TXT({ payload: blobTxt, id: this.session.id })
+            this.UPDATE_QUERY_TAB({ ...this.queryTab, name: blob.handle.name })
+            this.SET_QUERY_TXT({ payload: blobTxt, id: this.queryTab.id })
             if (!this.hasFileSystemReadOnlyAccess)
                 /**
                  * clear the uploader file input so that if the user upload the same file,
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
-            // once file is loaded, store file_handle to the session
+            // once file is loaded, store file_handle to the queryTab
             this.SET_BLOB_FILE({
                 payload: {
                     file_handle: blob.handle,
@@ -200,7 +200,7 @@ export default {
                      */
                     txt: blobTxt,
                 },
-                id: this.session.id,
+                id: this.queryTab.id,
             })
         },
 
@@ -213,12 +213,12 @@ export default {
                 case 'ctrl-s':
                 case 'mac-cmd-s': {
                     if (!this.isSaveFileDisabled && this.hasFileSystemRWAccess)
-                        this.saveFileToDisk(this.session)
+                        this.saveFileToDisk(this.queryTab)
                     break
                 }
                 case 'ctrl-shift-s':
                 case 'mac-cmd-shift-s': {
-                    if (!this.isSaveFileAsDisabled) this.handleSaveFileAs(this.session)
+                    if (!this.isSaveFileAsDisabled) this.handleSaveFileAs(this.queryTab)
                     break
                 }
             }

@@ -59,7 +59,7 @@ export default {
             ddlEditorToolbarHeight: 28,
             /**
              * TODO: move formData to syncStateCreator so that the changes can be kept
-             * after page refresh, changing session or worksheet.
+             * after page refresh, changing active queryTab or worksheet.
              */
             formData: {},
             isFormValid: true,
@@ -72,7 +72,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         formDim() {
             return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
@@ -424,7 +424,7 @@ export default {
             })
             if (!this.isExecFailed)
                 this.SET_TBL_CREATION_INFO({
-                    id: this.getActiveSessionId,
+                    id: this.getActiveQueryTabId,
                     payload: {
                         ...this.tbl_creation_info,
                         data: this.$helpers.lodash.cloneDeep(this.formData),

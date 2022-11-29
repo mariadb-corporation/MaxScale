@@ -52,7 +52,7 @@ function mockActiveConnState() {
     return {
         getWkeConns: () => Object.values(dummy_sql_conns),
         getCurrWkeConn: () => dummy_sql_conns['1'],
-        getActiveSessionId: () => 'SESSION_123_45',
+        getActiveQueryTabId: () => 'QUERY_TAB_123_45',
     }
 }
 

@@ -97,27 +97,27 @@ export default {
                 if (rootState.wke.active_wke_id !== targetWke.id)
                     commit('wke/SET_ACTIVE_WKE_ID', targetWke.id, { root: true })
                 commit(
-                    'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                    'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
                     {
                         id: targetWke.id,
-                        payload: rootState.querySession.active_session_by_wke_id_map[targetWke.id],
+                        payload: rootState.queryTab.active_query_tab_map[targetWke.id],
                     },
                     { root: true }
                 )
             }
             // Use a blank wke if there is one, otherwise create a new one
             else {
-                const blankSession = rootState.querySession.query_sessions.find(
+                const blankQueryTab = rootState.queryTab.query_tabs.find(
                     s => this.vue.$typy(s, 'active_sql_conn').isEmptyObject
                 )
                 const blankWke = rootState.wke.worksheets_arr.find(
-                    wke => wke.id === this.vue.$typy(blankSession, 'wke_id_fk').safeString
+                    wke => wke.id === this.vue.$typy(blankQueryTab, 'wke_id_fk').safeString
                 )
                 if (blankWke) {
                     commit('wke/SET_ACTIVE_WKE_ID', blankWke.id, { root: true })
                     commit(
-                        'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
-                        { id: blankWke.id, payload: blankSession.id },
+                        'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
+                        { id: blankWke.id, payload: blankQueryTab.id },
                         { root: true }
                     )
                 } else await dispatch('wke/addNewWs', { root: true })

@@ -25,7 +25,7 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'querySession.query_sessions',
+            persistedArrayPath: 'queryTab.query_tabs',
         }),
         SET_IS_MAX_ROWS_VALID(state, payload) {
             state.is_max_rows_valid = payload
@@ -41,11 +41,11 @@ export default {
             { qualified_name, query_mode }
         ) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const request_sent_time = new Date().valueOf()
             try {
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: {
                         request_sent_time,
                         total_duration: 0,
@@ -72,7 +72,7 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -93,7 +93,7 @@ export default {
                 )
             } catch (e) {
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: { is_loading: false },
                 })
                 this.vue.$logger.error(e)
@@ -105,12 +105,12 @@ export default {
         async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const abort_controller = new AbortController()
             const config = rootState.queryEditorConfig.config
             try {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: {
                         data: {},
                         request_sent_time,
@@ -131,9 +131,9 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 // If the KILL command was sent for the query is being run, the query request is aborted/canceled
-                if (getters.getHasKillFlagMapBySessionId(active_session_id)) {
+                if (getters.getHasKillFlagMapByQueryTabId(active_query_tab_id)) {
                     commit('PATCH_HAS_KILL_FLAG_MAP', {
-                        id: active_session_id,
+                        id: active_query_tab_id,
                         payload: { value: false },
                     })
                     res = {
@@ -152,7 +152,7 @@ export default {
                      */
                     commit(
                         'queryConn/PATCH_IS_CONN_BUSY_MAP',
-                        { id: active_session_id, payload: { value: false } },
+                        { id: active_query_tab_id, payload: { value: false } },
                         { root: true }
                     )
                 } else {
@@ -161,7 +161,7 @@ export default {
                         await dispatch('queryConn/updateActiveDb', {}, { root: true })
                 }
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -181,7 +181,7 @@ export default {
                 )
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: { is_loading: false },
                 })
                 this.vue.$logger.error(e)
@@ -193,10 +193,10 @@ export default {
          */
         async stopQuery({ commit, getters, rootGetters, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 commit('PATCH_HAS_KILL_FLAG_MAP', {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: { value: true },
                 })
                 const wkeConn = rootGetters['queryConn/getCurrWkeConn']
@@ -218,7 +218,9 @@ export default {
                         { root: true }
                     )
                 else {
-                    const abort_controller = getters.getAbortControllerBySessId(active_session_id)
+                    const abort_controller = getters.getAbortControllerByQueryTabId(
+                        active_query_tab_id
+                    )
                     abort_controller.abort() // abort the running query
                 }
             } catch (e) {
@@ -231,34 +233,34 @@ export default {
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview({ commit, rootGetters }) {
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
-            commit(`PATCH_PRVW_DATA_MAP`, { id: active_session_id })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: active_session_id })
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+            commit(`PATCH_PRVW_DATA_MAP`, { id: active_query_tab_id })
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: active_query_tab_id })
         },
     },
     getters: {
         getUserQueryRes: (state, getters, rootState, rootGetters) =>
-            state.query_results_map[rootGetters['querySession/getActiveSessionId']] || {},
-        getLoadingQueryResultBySessionId: state => {
-            return session_id => {
-                const { is_loading = false } = state.query_results_map[session_id] || {}
+            state.query_results_map[rootGetters['queryTab/getActiveQueryTabId']] || {},
+        getLoadingQueryResultByQueryTabId: state => {
+            return query_tab_id => {
+                const { is_loading = false } = state.query_results_map[query_tab_id] || {}
                 return is_loading
             }
         },
-        getAbortControllerBySessId: state => {
-            return session_id => {
-                const { abort_controller = {} } = state.query_results_map[session_id] || {}
+        getAbortControllerByQueryTabId: state => {
+            return query_tab_id => {
+                const { abort_controller = {} } = state.query_results_map[query_tab_id] || {}
                 return abort_controller
             }
         },
         isWkeLoadingQueryResult: (state, getters, rootState, rootGetters) => {
             return wke_id => {
-                const sessionIds = rootGetters['querySession/getSessionsByWkeId'](wke_id).map(
+                const queryTabIds = rootGetters['queryTab/getQueryTabsByWkeId'](wke_id).map(
                     s => s.id
                 )
                 let isLoading = false
                 for (const key of Object.keys(state.query_results_map)) {
-                    if (sessionIds.includes(key)) {
+                    if (queryTabIds.includes(key)) {
                         const { is_loading = false } = state.query_results_map[key] || {}
                         if (is_loading) {
                             isLoading = true
@@ -269,37 +271,37 @@ export default {
                 return isLoading
             }
         },
-        getHasKillFlagMapBySessionId: state => {
-            return session_id => {
-                const { value = false } = state.has_kill_flag_map[session_id] || {}
+        getHasKillFlagMapByQueryTabId: state => {
+            return query_tab_id => {
+                const { value = false } = state.has_kill_flag_map[query_tab_id] || {}
                 return value
             }
         },
         getPrvwData: (state, getters, rootState, rootGetters) => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
-            if (map) return map[rootGetters['querySession/getActiveSessionId']] || {}
+            if (map) return map[rootGetters['queryTab/getActiveQueryTabId']] || {}
             return {}
         },
-        getIsRunBtnDisabledBySessionId: (state, getters, rootState, rootGetters) => {
+        getIsRunBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
-                const session = rootState.querySession.query_sessions.find(s => s.id === id)
-                if (!session) return true
+                const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                if (!queryTab) return true
                 return (
-                    !session.query_txt ||
-                    !session.active_sql_conn.id ||
-                    rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) ||
-                    getters.getLoadingQueryResultBySessionId(session.id)
+                    !queryTab.query_txt ||
+                    !queryTab.active_sql_conn.id ||
+                    rootGetters['queryConn/getIsConnBusyByQueryTabId'](queryTab.id) ||
+                    getters.getLoadingQueryResultByQueryTabId(queryTab.id)
                 )
             }
         },
-        getIsVisBtnDisabledBySessionId: (state, getters, rootState, rootGetters) => {
+        getIsVisBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
-                const session = rootState.querySession.query_sessions.find(s => s.id === id)
-                if (!session) return true
+                const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                if (!queryTab) return true
                 return (
-                    !session.active_sql_conn.id ||
-                    (rootGetters['queryConn/getIsConnBusyBySessionId'](session.id) &&
-                        getters.getLoadingQueryResultBySessionId(session.id))
+                    !queryTab.active_sql_conn.id ||
+                    (rootGetters['queryConn/getIsConnBusyByQueryTabId'](queryTab.id) &&
+                        getters.getLoadingQueryResultByQueryTabId(queryTab.id))
                 )
             }
         },

@@ -115,7 +115,7 @@ export default {
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         componentDynDim() {
@@ -139,7 +139,7 @@ export default {
                 }
             },
             set(value) {
-                this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
+                this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
             },
         },
         isLoading() {

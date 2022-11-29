@@ -1,14 +1,14 @@
 <template>
     <div
-        class="session-nav-toolbar-ctr d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border"
+        class="query-tab-nav-toolbar-ctr d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border"
     >
         <div ref="buttonWrapper" class="d-flex align-center px-2">
             <v-btn
                 :disabled="$typy(active_sql_conn).isEmptyObject"
                 small
-                class="float-left add-sess-btn"
+                class="float-left add-query-tab-btn"
                 icon
-                @click="handleAddNewSession({ wke_id: active_wke_id })"
+                @click="handleAddNewQueryTab({ wke_id: active_wke_id })"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
@@ -32,7 +32,7 @@
 import { mapActions, mapState } from 'vuex'
 
 export default {
-    name: 'session-nav-toolbar-ctr',
+    name: 'query-tab-nav-toolbar-ctr',
     computed: {
         ...mapState({
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -45,7 +45,7 @@ export default {
         )
     },
     methods: {
-        ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
+        ...mapActions({ handleAddNewQueryTab: 'queryTab/handleAddNewQueryTab' }),
     },
 }
 </script>

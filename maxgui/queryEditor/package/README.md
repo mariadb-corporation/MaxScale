@@ -382,7 +382,7 @@ Certain keywords are reserved in order to make the query editor work properly.
 | editor             |                    Vuex module                     |
 | schemaSidebar      |                    Vuex module                     |
 | queryResult        |                    Vuex module                     |
-| querySession       |                    Vuex module                     |
+| queryTab           |                    Vuex module                     |
 | queryPersisted     |                    Vuex module                     |
 | queryEditorConfig  |                    Vuex module                     |
 | store.vue          |                     Vuex store                     |

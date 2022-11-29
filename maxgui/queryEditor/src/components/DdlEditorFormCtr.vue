@@ -88,7 +88,7 @@ export default {
             def_db_charset_map: state => state.editor.def_db_charset_map,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         tableOptsData: {
             get() {
@@ -111,7 +111,7 @@ export default {
                 return this.curr_ddl_alter_spec
             },
             set(value) {
-                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.getActiveSessionId })
+                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.getActiveQueryTabId })
             },
         },
         tabDim() {

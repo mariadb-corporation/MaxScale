@@ -12,11 +12,11 @@ export function defWorksheetState() {
     }
 }
 /**
- * @returns Return a new session state
+ * @returns Return a new queryTab state
  */
-export function defSessionState(wke_id) {
+export function defQueryTabState(wke_id) {
     return {
-        id: lodash.uniqueId(`SESSION_${new Date().getUTCMilliseconds()}_`),
+        id: lodash.uniqueId(`QUERY_TAB_${new Date().getUTCMilliseconds()}_`),
         name: 'Query Tab 1',
         wke_id_fk: wke_id,
         count: 1,
@@ -27,9 +27,9 @@ export function defSessionState(wke_id) {
 }
 
 const get_def_worksheets_arr = [defWorksheetState()]
-const get_def_query_sessions = [defSessionState(get_def_worksheets_arr[0].id)]
+const get_def_query_tabs = [defQueryTabState(get_def_worksheets_arr[0].id)]
 
 export default {
     get_def_worksheets_arr,
-    get_def_query_sessions,
+    get_def_query_tabs,
 }

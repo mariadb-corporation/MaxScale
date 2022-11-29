@@ -46,7 +46,7 @@ export default {
         }),
         ...mapGetters({
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         activeView: {
             get() {
@@ -57,7 +57,7 @@ export default {
                     this.curr_query_mode === this.QUERY_MODES.PRVW_DATA ||
                     this.curr_query_mode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
+                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
             },
         },
     },

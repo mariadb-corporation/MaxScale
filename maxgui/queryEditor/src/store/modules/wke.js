@@ -86,7 +86,7 @@ export default {
                 const new_active_wke_id = state.worksheets_arr[state.worksheets_arr.length - 1].id
                 commit('SET_ACTIVE_WKE_ID', new_active_wke_id)
                 await dispatch(
-                    'querySession/handleAddNewSession',
+                    'queryTab/handleAddNewQueryTab',
                     { wke_id: new_active_wke_id },
                     { root: true }
                 )
@@ -107,17 +107,17 @@ export default {
                 // release module memory states
                 dispatch('releaseQueryModulesMem', id)
 
-                const sessions = rootGetters['querySession/getSessionsByWkeId'](id)
+                const queryTabs = rootGetters['queryTab/getQueryTabsByWkeId'](id)
                 const { id: wkeConnId = '' } = rootGetters['queryConn/getWkeConnByWkeId'](id)
-                // First call queryConn/disconnect to delete the wke connection and its clones (session tabs)
+                // First call queryConn/disconnect to delete the wke connection and its clones (query tabs)
                 if (wkeConnId)
                     await dispatch('queryConn/disconnect', { id: wkeConnId }, { root: true })
-                // delete session objects
-                for (const session of sessions)
-                    await dispatch('querySession/handleDeleteSession', session, { root: true })
+                // delete queryTab objects
+                for (const queryTab of queryTabs)
+                    await dispatch('queryTab/handleDeleteQueryTab', queryTab, { root: true })
                 commit('DELETE_WKE', id)
                 // remove the key
-                commit('querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP', { id }, { root: true })
+                commit('queryTab/SET_ACTIVE_QUERY_TAB_MAP', { id }, { root: true })
             } catch (e) {
                 this.vue.$logger.error(e)
             }

@@ -15,14 +15,14 @@ export default {
     computed: {
         ...mapGetters({
             hasFileSystemRWAccess: 'editor/hasFileSystemRWAccess',
-            getSessFileHandle: 'editor/getSessFileHandle',
-            getSessFileHandleName: 'editor/getSessFileHandleName',
-            checkSessFileHandleValidity: 'editor/checkSessFileHandleValidity',
+            getQueryTabFileHandle: 'editor/getQueryTabFileHandle',
+            getQueryTabFileHandleName: 'editor/getQueryTabFileHandleName',
+            checkQueryTabFileHandleValidity: 'editor/checkQueryTabFileHandleValidity',
         }),
     },
     methods: {
         ...mapMutations({
-            UPDATE_SESSION: 'querySession/UPDATE_SESSION',
+            UPDATE_QUERY_TAB: 'queryTab/UPDATE_QUERY_TAB',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
         }),
         /**
@@ -88,13 +88,13 @@ export default {
         },
         /**
          * Download the file to user's disk
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        saveFileLegacy(session) {
-            const { id: sessionId, query_txt, name: sessionName } = session
+        saveFileLegacy(queryTab) {
+            const { id: queryTabId, query_txt, name: queryTabName } = queryTab
             let a = document.createElement('a')
-            // If there is no file_handle, use the current session tab name
-            const fileName = this.getSessFileHandleName(session) || `${sessionName}.sql`
+            // If there is no file_handle, use the current queryTab name
+            const fileName = this.getQueryTabFileHandleName(queryTab) || `${queryTabName}.sql`
             a.href = `data:application/text;charset=utf-8,${encodeURIComponent(query_txt)}`
             a.download = fileName
             document.body.appendChild(a)
@@ -102,25 +102,25 @@ export default {
             document.body.removeChild(a)
             // update blob_file
             this.SET_BLOB_FILE({
-                payload: { ...session.blob_file, txt: query_txt },
-                id: sessionId,
+                payload: { ...queryTab.blob_file, txt: query_txt },
+                id: queryTabId,
             })
         },
         /**
          * @private
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        async saveFileAs(session) {
-            let fileHandleName = session.name
-            if (!this.checkSessFileHandleValidity(session)) fileHandleName += '.sql'
+        async saveFileAs(queryTab) {
+            let fileHandleName = queryTab.name
+            if (!this.checkQueryTabFileHandleValidity(queryTab)) fileHandleName += '.sql'
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
-                await this.writeFile({ fileHandle, contents: session.query_txt })
-                this.UPDATE_SESSION({ ...session, name: fileHandle.name }) // update tab name
+                await this.writeFile({ fileHandle, contents: queryTab.query_txt })
+                this.UPDATE_QUERY_TAB({ ...queryTab, name: fileHandle.name }) // update tab name
                 // update blob_file
                 this.SET_BLOB_FILE({
-                    payload: { file_handle: fileHandle, txt: session.query_txt },
-                    id: session.id,
+                    payload: { file_handle: fileHandle, txt: queryTab.query_txt },
+                    id: queryTab.id,
                 })
             } catch (ex) {
                 this.$logger.error('Unable to write file')
@@ -130,27 +130,27 @@ export default {
         // public methods
         /**
          * @public
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        async handleSaveFileAs(session) {
-            if (this.hasFileSystemRWAccess) await this.saveFileAs(session)
-            else this.saveFileLegacy(session)
+        async handleSaveFileAs(queryTab) {
+            if (this.hasFileSystemRWAccess) await this.saveFileAs(queryTab)
+            else this.saveFileLegacy(queryTab)
         },
         /**
          * @public
          * Save new content for the opened file to user's local device
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        async saveFileToDisk(session) {
+        async saveFileToDisk(queryTab) {
             try {
-                const fileHandle = this.getSessFileHandle(session)
+                const fileHandle = this.getQueryTabFileHandle(queryTab)
                 const hasPriv = await this.verifyWritePriv(fileHandle)
                 if (hasPriv) {
-                    await this.writeFile({ fileHandle, contents: session.query_txt })
+                    await this.writeFile({ fileHandle, contents: queryTab.query_txt })
                     // update blob_file
                     this.SET_BLOB_FILE({
-                        payload: { file_handle: fileHandle, txt: session.query_txt },
-                        id: session.id,
+                        payload: { file_handle: fileHandle, txt: queryTab.query_txt },
+                        id: queryTab.id,
                     })
                 }
             } catch (e) {
@@ -159,12 +159,12 @@ export default {
         },
         /**
          * @public
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        async handleSaveFile(session) {
-            if (this.hasFileSystemRWAccess && this.checkSessFileHandleValidity(session))
-                await this.saveFileToDisk(session)
-            else await this.handleSaveFileAs(session)
+        async handleSaveFile(queryTab) {
+            if (this.hasFileSystemRWAccess && this.checkQueryTabFileHandleValidity(queryTab))
+                await this.saveFileToDisk(queryTab)
+            else await this.handleSaveFileAs(queryTab)
         },
     },
 }

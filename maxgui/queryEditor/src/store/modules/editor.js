@@ -36,7 +36,7 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'querySession.query_sessions',
+            persistedArrayPath: 'queryTab.query_tabs',
         }),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
@@ -116,7 +116,7 @@ export default {
         },
         async queryTblCreationInfo({ commit, state, rootState, rootGetters }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const {
                 $queryHttp,
                 $helpers: { getObjectRows, getErrorsArr },
@@ -124,7 +124,7 @@ export default {
             } = this.vue
 
             commit('SET_TBL_CREATION_INFO', {
-                id: active_session_id,
+                id: active_query_tab_id,
                 payload: {
                     ...state.tbl_creation_info,
                     loading_tbl_creation_info: true,
@@ -144,7 +144,7 @@ export default {
             )
             if (tblOptError || colsOptsError) {
                 commit('SET_TBL_CREATION_INFO', {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
                 })
                 let errTxt = []
@@ -167,7 +167,7 @@ export default {
                 const db = schemas[0]
 
                 commit(`SET_TBL_CREATION_INFO`, {
-                    id: active_session_id,
+                    id: active_query_tab_id,
                     payload: {
                         ...state.tbl_creation_info,
                         data: {
@@ -199,22 +199,22 @@ export default {
         hasFileSystemReadOnlyAccess: () => Boolean(supported),
         hasFileSystemRWAccess: (state, getters) =>
             getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-        getIsFileUnsavedBySessionId: (state, getters, rootState, rootGetters) => {
+        getIsFileUnsavedByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
-                const session = rootGetters['querySession/getSessionById'](id)
-                const { blob_file = {}, query_txt = '' } = session
+                const queryTab = rootGetters['queryTab/getQueryTabById'](id)
+                const { blob_file = {}, query_txt = '' } = queryTab
                 return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
             }
         },
-        getSessFileHandle: () => session => {
-            const { blob_file: { file_handle = {} } = {} } = session
+        getQueryTabFileHandle: () => queryTab => {
+            const { blob_file: { file_handle = {} } = {} } = queryTab
             return file_handle
         },
-        getSessFileHandleName: (state, getters) => session => {
-            const { name = '' } = getters.getSessFileHandle(session)
+        getQueryTabFileHandleName: (state, getters) => queryTab => {
+            const { name = '' } = getters.getQueryTabFileHandle(queryTab)
             return name
         },
-        checkSessFileHandleValidity: (state, getters) => session =>
-            Boolean(getters.getSessFileHandleName(session)),
+        checkQueryTabFileHandleValidity: (state, getters) => queryTab =>
+            Boolean(getters.getQueryTabFileHandleName(queryTab)),
     },
 }

@@ -20,11 +20,11 @@ import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
 function patchIsConnBusyMap({ store, value, sql_conn_id }) {
-    const { id: active_session_id } =
-        store.getters['querySession/getSessionByConnId'](sql_conn_id) || {}
-    if (active_session_id)
+    const { id: active_query_tab_id } =
+        store.getters['queryTab/getQueryTabByConnId'](sql_conn_id) || {}
+    if (active_query_tab_id)
         store.commit('queryConn/PATCH_IS_CONN_BUSY_MAP', {
-            id: active_session_id,
+            id: active_query_tab_id,
             payload: { value },
         })
 }
@@ -42,10 +42,10 @@ function analyzeRes({ res, store, sql_conn_id }) {
         return store.state.queryEditorConfig.config.MARIADB_NET_ERRNO.includes(errno)
     })
     if (lostCnnErrMsgs.length) {
-        const { id: active_session_id } =
-            store.getters['querySession/getSessionByConnId'](sql_conn_id) || {}
+        const { id: active_query_tab_id } =
+            store.getters['queryTab/getQueryTabByConnId'](sql_conn_id) || {}
         store.commit('queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP', {
-            id: active_session_id,
+            id: active_query_tab_id,
             payload: { value: lostCnnErrMsgs[0] },
         })
     }

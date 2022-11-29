@@ -16,7 +16,7 @@ import WkeCtr from '../WkeCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
 const dummyCtrDim = { width: 1280, height: 800 }
-const dummy_query_sessions = [{ id: 'SESSION_123_45' }]
+const dummy_query_tabs = [{ id: 'QUERY_TAB_123_45' }]
 const mountFactory = opts =>
     mount(
         lodash.merge(
@@ -27,8 +27,8 @@ const mountFactory = opts =>
                     ctrDim: dummyCtrDim,
                 },
                 computed: {
-                    query_sessions: () => dummy_query_sessions,
-                    getActiveSessionId: () => dummy_query_sessions[0].id,
+                    query_tabs: () => dummy_query_tabs,
+                    getActiveQueryTabId: () => dummy_query_tabs[0].id,
                 },
                 stubs: {
                     'sql-editor': "<div class='stub'></div>",

@@ -236,7 +236,7 @@ export default {
             query_snippets: state => state.queryPersisted.query_snippets,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         activeView: {
             get() {
@@ -247,7 +247,7 @@ export default {
                     this.curr_query_mode === this.QUERY_MODES.HISTORY ||
                     this.curr_query_mode === this.QUERY_MODES.SNIPPETS
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
+                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
             },
         },
         queryLogTypes() {

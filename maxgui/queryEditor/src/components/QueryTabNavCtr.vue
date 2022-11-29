@@ -1,18 +1,18 @@
 <template>
     <div class="d-flex flex-row">
         <v-tabs
-            v-model="activeSessionId"
+            v-model="activeQueryTabId"
             show-arrows
             hide-slider
             :height="height"
             class="v-tabs--query-editor-style query-tab-nav v-tabs--custom-small-pagination-btn flex-grow-0"
-            :style="{ maxWidth: `calc(100% - ${sessionNavToolbarWidth + 1}px)` }"
+            :style="{ maxWidth: `calc(100% - ${queryTabNavToolbarWidth + 1}px)` }"
             center-active
         >
             <v-tab
-                v-for="session in getSessionsOfActiveWke"
-                :key="`${session.id}`"
-                :href="`#${session.id}`"
+                v-for="queryTab in getQueryTabsOfActiveWke"
+                :key="`${queryTab.id}`"
+                :href="`#${queryTab.id}`"
                 class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active"
             >
@@ -22,15 +22,15 @@
                 >
                     <div class="d-inline-flex align-center">
                         <mxs-truncate-str
-                            :tooltipItem="{ txt: `${session.name}`, nudgeLeft: 36 }"
+                            :tooltipItem="{ txt: `${queryTab.name}`, nudgeLeft: 36 }"
                             :maxWidth="112"
                         />
                         <span
-                            v-if="getIsFileUnsavedBySessionId(session.id)"
+                            v-if="getIsFileUnsavedByQueryTabId(queryTab.id)"
                             class="unsaved-changes-indicator"
                         />
                         <v-progress-circular
-                            v-if="getLoadingQueryResultBySessionId(session.id)"
+                            v-if="getLoadingQueryResultByQueryTabId(queryTab.id)"
                             class="ml-2"
                             size="16"
                             width="2"
@@ -42,17 +42,17 @@
                         class="ml-1 del-tab-btn"
                         icon
                         x-small
-                        :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
+                        :disabled="$typy(is_conn_busy_map[queryTab.id], 'value').safeBoolean"
                         @click.stop.prevent="
-                            getIsFileUnsavedBySessionId(session.id)
-                                ? openFileDlg(session)
-                                : handleDeleteSessTab(session)
+                            getIsFileUnsavedByQueryTabId(queryTab.id)
+                                ? openFileDlg(queryTab)
+                                : handleDeleteTab(queryTab)
                         "
                     >
                         <v-icon
                             size="8"
                             :color="
-                                $typy(is_conn_busy_map[session.id], 'value').safeBoolean
+                                $typy(is_conn_busy_map[queryTab.id], 'value').safeBoolean
                                     ? ''
                                     : 'error'
                             "
@@ -63,7 +63,7 @@
                 </div>
             </v-tab>
         </v-tabs>
-        <session-nav-toolbar-ctr @get-total-btn-width="sessionNavToolbarWidth = $event" />
+        <query-tab-nav-toolbar-ctr @get-total-btn-width="queryTabNavToolbarWidth = $event" />
     </div>
 </template>
 
@@ -81,16 +81,16 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
-import SessionNavToolbarCtr from './SessionNavToolbarCtr.vue'
+import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
 export default {
-    name: 'session-nav-ctr',
-    components: { SessionNavToolbarCtr },
+    name: 'query-tab-nav-ctr',
+    components: { QueryTabNavToolbarCtr },
     mixins: [saveFile],
     props: { height: { type: Number, required: true } },
     data() {
         return {
-            sessionNavToolbarWidth: 0,
+            queryTabNavToolbarWidth: 0,
         }
     },
     computed: {
@@ -99,19 +99,19 @@ export default {
             active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
-            getActiveSession: 'querySession/getActiveSession',
-            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
-            getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
-            getIsFileUnsavedBySessionId: 'editor/getIsFileUnsavedBySessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
+            getActiveQueryTab: 'queryTab/getActiveQueryTab',
+            getQueryTabsOfActiveWke: 'queryTab/getQueryTabsOfActiveWke',
+            getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
+            getIsFileUnsavedByQueryTabId: 'editor/getIsFileUnsavedByQueryTabId',
         }),
-        activeSessionId: {
+        activeQueryTabId: {
             get() {
-                return this.getActiveSessionId
+                return this.getActiveQueryTabId
             },
             set(v) {
                 if (v)
-                    this.SET_ACTIVE_SESSION_BY_WKE_ID_MAP({
+                    this.SET_ACTIVE_QUERY_TAB_MAP({
                         payload: v,
                         id: this.active_wke_id,
                     })
@@ -119,48 +119,50 @@ export default {
         },
     },
     activated() {
-        this.watch_getActiveSessionId()
+        this.watch_getActiveQueryTabId()
     },
     deactivated() {
-        this.$typy(this.unwatch_getActiveSessionId).safeFunction()
+        this.$typy(this.unwatch_getActiveQueryTabId).safeFunction()
     },
     methods: {
         ...mapMutations({
-            SET_ACTIVE_SESSION_BY_WKE_ID_MAP: 'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+            SET_ACTIVE_QUERY_TAB_MAP: 'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
             SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
         ...mapActions({
-            handleDeleteSession: 'querySession/handleDeleteSession',
-            handleSyncSession: 'querySession/handleSyncSession',
-            handleClearTheLastSession: 'querySession/handleClearTheLastSession',
+            handleDeleteQueryTab: 'queryTab/handleDeleteQueryTab',
+            handleSyncQueryTab: 'queryTab/handleSyncQueryTab',
+            handleClearTheLastQueryTab: 'queryTab/handleClearTheLastQueryTab',
         }),
-        watch_getActiveSessionId() {
-            this.unwatch_getActiveSessionId = this.$watch(
-                'getActiveSessionId',
+        watch_getActiveQueryTabId() {
+            this.unwatch_getActiveQueryTabId = this.$watch(
+                'getActiveQueryTabId',
                 v => {
-                    if (v) this.handleSyncSession(this.getActiveSession)
+                    if (v) this.handleSyncQueryTab(this.getActiveQueryTab)
                 },
                 { immediate: true }
             )
         },
         /**
-         * @param {Object} session - session object
+         * @param {Object} queryTab - queryTab object
          */
-        openFileDlg(session) {
+        openFileDlg(queryTab) {
             this.SET_FILE_DLG_DATA({
                 is_opened: true,
-                title: this.$mxs_t('deleteSession'),
-                confirm_msg: this.$mxs_t('confirmations.deleteSession', { targetId: session.name }),
+                title: this.$mxs_t('deleteQueryTab'),
+                confirm_msg: this.$mxs_t('confirmations.deleteQueryTab', {
+                    targetId: queryTab.name,
+                }),
                 on_save: async () => {
-                    await this.handleSaveFile(session)
-                    await this.handleDeleteSessTab(session)
+                    await this.handleSaveFile(queryTab)
+                    await this.handleDeleteTab(queryTab)
                 },
-                dont_save: async () => await this.handleDeleteSessTab(session),
+                dont_save: async () => await this.handleDeleteTab(queryTab),
             })
         },
-        async handleDeleteSessTab(session) {
-            if (this.getSessionsOfActiveWke.length === 1) this.handleClearTheLastSession(session)
-            else await this.handleDeleteSession(session)
+        async handleDeleteTab(queryTab) {
+            if (this.getQueryTabsOfActiveWke.length === 1) this.handleClearTheLastQueryTab(queryTab)
+            else await this.handleDeleteQueryTab(queryTab)
         },
     },
 }

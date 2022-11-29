@@ -50,14 +50,15 @@
                                 icon
                                 x-small
                                 :disabled="
-                                    $typy(is_conn_busy_map[getActiveSessionId], 'value').safeBoolean
+                                    $typy(is_conn_busy_map[getActiveQueryTabId], 'value')
+                                        .safeBoolean
                                 "
                                 @click.stop.prevent="handleDeleteWke(wke.id)"
                             >
                                 <v-icon
                                     size="8"
                                     :color="
-                                        $typy(is_conn_busy_map[getActiveSessionId], 'value')
+                                        $typy(is_conn_busy_map[getActiveQueryTabId], 'value')
                                             .safeBoolean
                                             ? ''
                                             : 'error'
@@ -113,7 +114,7 @@ export default {
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
         }),
         ...mapGetters({
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getWkeConnByWkeId: 'queryConn/getWkeConnByWkeId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),

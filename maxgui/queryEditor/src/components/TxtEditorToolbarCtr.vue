@@ -40,7 +40,7 @@
             :text="!show_vis_sidebar"
             :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
             :disabled="isVisBtnDisabled"
-            @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: session.id })"
+            @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: queryTab.id })"
         >
             <template v-slot:btn-content>
                 <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
@@ -65,7 +65,7 @@
             <br />
             {{ OS_KEY }} + D
         </mxs-tooltip-btn>
-        <file-btns-ctr :session="session" />
+        <file-btns-ctr :queryTab="queryTab" />
         <v-spacer />
         <mxs-tooltip-btn
             v-if="tab_moves_focus"
@@ -184,7 +184,7 @@ export default {
         FileBtnsCtr,
     },
     props: {
-        session: { type: Object, required: true },
+        queryTab: { type: Object, required: true },
         height: { type: Number, required: true },
     },
     data() {
@@ -219,10 +219,10 @@ export default {
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({
-            getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
-            getHasKillFlagMapBySessionId: 'queryResult/getHasKillFlagMapBySessionId',
-            getIsRunBtnDisabledBySessionId: 'queryResult/getIsRunBtnDisabledBySessionId',
-            getIsVisBtnDisabledBySessionId: 'queryResult/getIsVisBtnDisabledBySessionId',
+            getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
+            getHasKillFlagMapByQueryTabId: 'queryResult/getHasKillFlagMapByQueryTabId',
+            getIsRunBtnDisabledByQueryTabId: 'queryResult/getIsRunBtnDisabledByQueryTabId',
+            getIsVisBtnDisabledByQueryTabId: 'queryResult/getIsVisBtnDisabledByQueryTabId',
         }),
         eventBus() {
             return EventBus
@@ -236,16 +236,16 @@ export default {
             },
         },
         isExecuting() {
-            return this.getLoadingQueryResultBySessionId(this.session.id)
+            return this.getLoadingQueryResultByQueryTabId(this.queryTab.id)
         },
         hasKillFlag() {
-            return this.getHasKillFlagMapBySessionId(this.session.id)
+            return this.getHasKillFlagMapByQueryTabId(this.queryTab.id)
         },
         isRunBtnDisabled() {
-            return this.getIsRunBtnDisabledBySessionId(this.session.id)
+            return this.getIsRunBtnDisabledByQueryTabId(this.queryTab.id)
         },
         isVisBtnDisabled() {
-            return this.getIsVisBtnDisabledBySessionId(this.session.id)
+            return this.getIsVisBtnDisabledByQueryTabId(this.queryTab.id)
         },
     },
     activated() {
@@ -306,7 +306,7 @@ export default {
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
                 payload: this.QUERY_MODES.QUERY_VIEW,
-                id: this.session.id,
+                id: this.queryTab.id,
             })
             switch (mode) {
                 case 'all':

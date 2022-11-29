@@ -37,7 +37,7 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'querySession.query_sessions',
+            persistedArrayPath: 'queryTab.query_tabs',
         }),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
@@ -94,14 +94,10 @@ export default {
                 let wkeIdsToBeReset = []
                 for (const conn of conns) {
                     await this.vue.$queryHttp.delete(`/sql/${conn.id}`)
-                    const { wke_id_fk } = rootGetters['querySession/getSessionByConnId'](conn.id)
+                    const { wke_id_fk } = rootGetters['queryTab/getQueryTabByConnId'](conn.id)
                     if (wke_id_fk && !wkeIdsToBeReset.includes(wke_id_fk))
                         wkeIdsToBeReset.push(wke_id_fk)
-                    dispatch(
-                        'querySession/resetSessionStates',
-                        { conn_id: conn.id },
-                        { root: true }
-                    )
+                    dispatch('queryTab/resetQueryTabStates', { conn_id: conn.id }, { root: true })
                 }
                 wkeIdsToBeReset.forEach(id => {
                     commit(
@@ -116,22 +112,22 @@ export default {
             }
         },
         /**
-         * update active_sql_conn attributes of the active session
+         * update active_sql_conn attributes of the active queryTab
          * @param {*} param0
          * @param {*} aliveConn
          */
         updateAliveActiveConn({ state, commit, rootGetters }, aliveActiveConn) {
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             if (!this.vue.$helpers.lodash.isEqual(aliveActiveConn, state.active_sql_conn)) {
                 commit('SET_ACTIVE_SQL_CONN', {
                     payload: aliveActiveConn,
-                    id: active_session_id,
+                    id: active_query_tab_id,
                 })
             }
         },
         /**
          * This action has side effects, it also cleans up orphaned connections and
-         * reset query tabs (sessions) states for expired connections
+         * reset query_tabs states for expired connections
          * @param {Object} sqlConns - sql connections
          */
         async fetchConnStatus({ commit }, sqlConns) {
@@ -187,9 +183,9 @@ export default {
                         expired_conn_map = {},
                         orphaned_conns = [],
                     } = state.conn_status_data
-                    //reset sessions that are bound to those expired connections
+                    //reset query_tabs that are bound to those expired connections
                     Object.keys(expired_conn_map).forEach(id => {
-                        dispatch('querySession/resetSessionStates', { conn_id: id }, { root: true })
+                        dispatch('queryTab/resetQueryTabStates', { conn_id: id }, { root: true })
                     })
                     await dispatch('cleanUpOrphanedConns', orphaned_conns)
 
@@ -219,37 +215,41 @@ export default {
         async onChangeConn({ commit, getters, dispatch, rootGetters }, chosenWkeConn) {
             try {
                 dispatch('unbindConn')
-                let activeSessConn = {}
-                const active_session_id = rootGetters['querySession/getActiveSessionId']
-                // Change the connection of all session tabs of the worksheet
-                const sessions = rootGetters['querySession/getSessionsOfActiveWke']
-                if (sessions.length) {
+                let activeQueryTabConn = {}
+                const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+                // Change the connection of all queryTabs of the worksheet
+                const queryTabs = rootGetters['queryTab/getQueryTabsOfActiveWke']
+                if (queryTabs.length) {
                     const clonesOfChosenWkeConn = getters.getClonedConnsOfWkeConn(chosenWkeConn.id)
-                    const bondableSessTabs = sessions.slice(0, clonesOfChosenWkeConn.length)
-                    const leftoverSessTabs = sessions.slice(clonesOfChosenWkeConn.length)
+                    const bondableQueryTabs = queryTabs.slice(0, clonesOfChosenWkeConn.length)
+                    const leftoverQueryTabs = queryTabs.slice(clonesOfChosenWkeConn.length)
                     // Bind the existing cloned connections
-                    for (const [i, s] of bondableSessTabs.entries()) {
-                        // Bind the session connection with session_id_fk
+                    for (const [i, s] of bondableQueryTabs.entries()) {
+                        // Bind the queryTab connection with query_tab_id_fk
                         commit('UPDATE_SQL_CONN', {
                             ...clonesOfChosenWkeConn[i],
-                            session_id_fk: s.id,
+                            query_tab_id_fk: s.id,
                         })
-                        dispatch('syncSqlConnToSess', {
-                            sess: s,
+                        dispatch('syncSqlConnToQueryTab', {
+                            queryTab: s,
                             sql_conn: clonesOfChosenWkeConn[i],
                         })
-                        if (active_session_id === s.id) activeSessConn = clonesOfChosenWkeConn[i]
+                        if (active_query_tab_id === s.id)
+                            activeQueryTabConn = clonesOfChosenWkeConn[i]
                     }
-                    // clones the chosenWkeConn and bind them to leftover session tabs
-                    await dispatch('cloneAndSyncConnToSessions', {
-                        sessions: leftoverSessTabs,
+                    // clones the chosenWkeConn and bind them to leftover queryTabs tabs
+                    await dispatch('cloneAndSyncConnToQueryTabs', {
+                        queryTabs: leftoverQueryTabs,
                         conn_to_be_cloned: chosenWkeConn,
-                        active_session_id,
-                        getActiveSessConn: sessConn => (activeSessConn = sessConn),
+                        active_query_tab_id,
+                        getQueryTabConn: queryTabConn => (activeQueryTabConn = queryTabConn),
                     })
                 }
-                // set active conn once sessions are bound to cloned connections to avoid concurrent query
-                commit('SET_ACTIVE_SQL_CONN', { payload: activeSessConn, id: active_session_id })
+                // set active conn once queryTabs are bound to cloned connections to avoid concurrent query
+                commit('SET_ACTIVE_SQL_CONN', {
+                    payload: activeQueryTabConn,
+                    id: active_query_tab_id,
+                })
                 // bind the chosenWkeConn
                 dispatch('bindConn', chosenWkeConn)
             } catch (e) {
@@ -266,9 +266,9 @@ export default {
             { dispatch, commit, rootState, rootGetters },
             { body, resourceType, meta = {} }
         ) {
-            // activeWkeSessions length always >=1 as the default session will be always created on startup
-            const activeWkeSessions = rootGetters['querySession/getSessionsOfActiveWke']
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            // queryTabsOfActiveWke length always >=1 as the default queryTab will be always created on startup
+            const queryTabsOfActiveWke = rootGetters['queryTab/getQueryTabsOfActiveWke']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 // create the connection
                 const res = await this.vue.$queryHttp.post(`/sql?persist=yes&max-age=604800`, body)
@@ -295,21 +295,21 @@ export default {
                     }
                     commit('ADD_SQL_CONN', sql_conn)
 
-                    let activeSessConn = sql_conn
-                    if (activeWkeSessions.length)
-                        await dispatch('cloneAndSyncConnToSessions', {
-                            sessions: activeWkeSessions,
+                    let activeQueryTabConn = sql_conn
+                    if (queryTabsOfActiveWke.length)
+                        await dispatch('cloneAndSyncConnToQueryTabs', {
+                            queryTabs: queryTabsOfActiveWke,
                             conn_to_be_cloned: sql_conn,
-                            active_session_id,
-                            getActiveSessConn: sessConn => (activeSessConn = sessConn),
+                            active_query_tab_id,
+                            getQueryTabConn: queryTabConn => (activeQueryTabConn = queryTabConn),
                         })
 
                     /* To avoid concurrent query, only set the connection as active to the active
-                     * session tab once cloned connections are bound to sessions
+                     * queryTab once cloned connections are bound to queryTabs
                      */
                     commit('SET_ACTIVE_SQL_CONN', {
-                        id: active_session_id,
-                        payload: activeSessConn,
+                        id: active_query_tab_id,
+                        payload: activeQueryTabConn,
                     })
 
                     if (body.db) await dispatch('useDb', body.db)
@@ -321,58 +321,58 @@ export default {
             }
         },
         /**
-         * Sync the conn to the session in the persisted query_sessions array
-         * @param {Object} param.sess - session object
+         * Sync the conn to the queryTab in the persisted query_tabs array
+         * @param {Object} param.queryTab - queryTab object
          * @param {Object} param.sql_conn - connection object
          */
-        syncSqlConnToSess(_, { sess, sql_conn }) {
+        syncSqlConnToQueryTab(_, { queryTab, sql_conn }) {
             queryHelper.syncToPersistedObj({
                 scope: this,
                 data: { active_sql_conn: sql_conn },
-                id: sess.id,
-                persistedArrayPath: 'querySession.query_sessions',
+                id: queryTab.id,
+                persistedArrayPath: 'queryTab.query_tabs',
             })
         },
         /**
-         * This clones the provided connection and sync it to the session tab object
-         * in query_sessions persisted array. If the session id === active_session_id,
-         * it calls getActiveSessConn to get the clone connection to be bound to the
-         * active session
-         * @param {Array} param.sessions - sessions
+         * This clones the provided connection and sync it to the queryTab object
+         * in query_tabs persisted array. If the queryTab id === active_query_tab_id,
+         * it calls getQueryTabConn to get the clone connection to be bound to the
+         * active queryTab
+         * @param {Array} param.queryTabs - queryTabs
          * @param {Object} param.conn_to_be_cloned - connection object to be cloned
-         * @param {String} param.active_session_id - active_session_id
-         * @param {Function} param.getActiveSessConn - callback function
+         * @param {String} param.active_query_tab_id - active_query_tab_id
+         * @param {Function} param.getQueryTabConn - callback function
          */
-        async cloneAndSyncConnToSessions(
+        async cloneAndSyncConnToQueryTabs(
             { dispatch, rootState },
-            { sessions, conn_to_be_cloned, active_session_id, getActiveSessConn }
+            { queryTabs, conn_to_be_cloned, active_query_tab_id, getQueryTabConn }
         ) {
-            // clone the connection and bind it to all other session tabs
-            for (const s of sessions) {
-                let sessConn
+            // clone the connection and bind it to all other queryTabs
+            for (const queryTab of queryTabs) {
+                let queryTabConn
                 await dispatch('cloneConn', {
                     conn_to_be_cloned,
                     binding_type:
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.SESSION,
-                    session_id_fk: s.id,
-                    getCloneObjRes: obj => (sessConn = obj),
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
+                    query_tab_id_fk: queryTab.id,
+                    getCloneObjRes: obj => (queryTabConn = obj),
                 })
-                // return the connection for the active session
-                if (s.id === active_session_id) getActiveSessConn(sessConn)
-                // just sync the conn to the session
-                else dispatch('syncSqlConnToSess', { sess: s, sql_conn: sessConn })
+                // return the connection for the active queryTab
+                if (queryTab.id === active_query_tab_id) getQueryTabConn(queryTabConn)
+                // just sync the conn to the queryTab
+                else dispatch('syncSqlConnToQueryTab', { queryTab, sql_conn: queryTabConn })
             }
         },
         /**
          *  Clone a connection
          * @param {Object} param.conn_to_be_cloned - connection to be cloned
          * @param {String} param.binding_type - binding_type. Check QUERY_CONN_BINDING_TYPES
-         * @param {String} param.session_id_fk - id of the session that binds this connection
+         * @param {String} param.query_tab_id_fk - id of the queryTab that binds this connection
          * @param {Function} param.getCloneObjRes - get the result of the clone object
          */
         async cloneConn(
             { commit },
-            { conn_to_be_cloned, binding_type, session_id_fk, getCloneObjRes }
+            { conn_to_be_cloned, binding_type, query_tab_id_fk, getCloneObjRes }
         ) {
             try {
                 const res = await this.vue.$queryHttp.post(
@@ -387,7 +387,7 @@ export default {
                         type: conn_to_be_cloned.type,
                         clone_of_conn_id: conn_to_be_cloned.id,
                         binding_type,
-                        session_id_fk,
+                        query_tab_id_fk,
                         meta: this.vue.$typy(conn_to_be_cloned, 'meta').safeObjectOrEmpty,
                     }
                     this.vue.$typy(getCloneObjRes).safeFunction(conn)
@@ -418,7 +418,7 @@ export default {
          * `disconnectAll` action to delete all connection when leaving the page.
          * `handleDeleteWke` action
          * @param {Boolean} param.showSnackbar - should show success message or not
-         * @param {Number} param.id - connection id that is bound to the first session tab
+         * @param {Number} param.id - connection id that is bound to the first queryTab
          */
         async disconnect({ state, commit, dispatch }, { showSnackbar, id: wkeConnId }) {
             try {
@@ -433,13 +433,13 @@ export default {
                         cnnIdsToBeDeleted.map(id => {
                             commit('DELETE_SQL_CONN', state.sql_conns[id])
                             /**
-                             * Don't reset session states for worksheet connection.
-                             * Only connections with binding_type === SESSION need
+                             * Don't reset queryTab states for worksheet connection.
+                             * Only connections with binding_type === QUERY_TAB need
                              * to be reset
                              */
                             if (id !== wkeConnId)
                                 dispatch(
-                                    'querySession/resetSessionStates',
+                                    'queryTab/resetQueryTabStates',
                                     { conn_id: id },
                                     { root: true }
                                 )
@@ -511,7 +511,7 @@ export default {
             try {
                 const active_sql_conn = state.active_sql_conn
                 dispatch(
-                    'querySession/resetSessionStates',
+                    'queryTab/resetQueryTabStates',
                     { conn_id: active_sql_conn.id },
                     { root: true }
                 )
@@ -523,7 +523,7 @@ export default {
 
         async updateActiveDb({ state, commit, rootGetters }) {
             const { active_sql_conn, active_db } = state
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT DATABASE()',
@@ -531,9 +531,9 @@ export default {
                 const resActiveDb = this.vue
                     .$typy(res, 'data.data.attributes.results[0].data')
                     .safeArray.flat()[0]
-                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', id: active_session_id })
+                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', id: active_query_tab_id })
                 else if (active_db !== resActiveDb)
-                    commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_session_id })
+                    commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_query_tab_id })
             } catch (e) {
                 this.vue.$logger.error(e)
             }
@@ -544,7 +544,7 @@ export default {
          */
         async useDb({ commit, dispatch, state, rootState, rootGetters }, db) {
             const active_sql_conn = state.active_sql_conn
-            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 const now = new Date().valueOf()
                 const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
@@ -564,7 +564,7 @@ export default {
                         { root: true }
                     )
                     queryName = `Failed to change default database to ${escapedDb}`
-                } else commit('SET_ACTIVE_DB', { payload: db, id: active_session_id })
+                } else commit('SET_ACTIVE_DB', { payload: db, id: active_query_tab_id })
                 dispatch(
                     'queryPersisted/pushQueryLog',
                     {
@@ -586,27 +586,27 @@ export default {
         resetAllStates({ rootState, rootGetters, commit }) {
             for (const targetWke of rootState.wke.worksheets_arr) {
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
-                const sessions = rootGetters['querySession/getSessionsByWkeId'](targetWke.id)
-                for (const s of sessions)
-                    commit('querySession/REFRESH_SESSION_OF_A_WKE', s, { root: true })
+                const queryTabs = rootGetters['queryTab/getQueryTabsByWkeId'](targetWke.id)
+                for (const s of queryTabs)
+                    commit('queryTab/REFRESH_QUERY_TAB_OF_A_WKE', s, { root: true })
             }
         },
     },
     getters: {
         getIsConnBusy: (state, getters, rootState, rootGetters) => {
             const { value = false } =
-                state.is_conn_busy_map[rootGetters['querySession/getActiveSessionId']] || {}
+                state.is_conn_busy_map[rootGetters['queryTab/getActiveQueryTabId']] || {}
             return value
         },
-        getIsConnBusyBySessionId: state => {
-            return session_id => {
-                const { value = false } = state.is_conn_busy_map[session_id] || {}
+        getIsConnBusyByQueryTabId: state => {
+            return query_tab_id => {
+                const { value = false } = state.is_conn_busy_map[query_tab_id] || {}
                 return value
             }
         },
         getLostCnnErrMsgObj: (state, getters, rootState, rootGetters) => {
             const { value = {} } =
-                state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
+                state.lost_cnn_err_msg_obj_map[rootGetters['queryTab/getActiveQueryTabId']] || {}
             return value
         },
         getWkeConns: (state, getters, rootState) =>

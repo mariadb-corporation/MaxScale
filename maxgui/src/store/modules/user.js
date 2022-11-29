@@ -93,7 +93,7 @@ export default {
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const { mxsApp, queryPersisted, wke, querySession, persisted } = rootState
+            const { mxsApp, queryPersisted, wke, queryTab, persisted } = rootState
             // hide snackbar snackbar_message if it is on
             if (mxsApp.snackbar_message.status) {
                 commit(
@@ -119,9 +119,9 @@ export default {
                     worksheets_arr: wke.worksheets_arr,
                     active_wke_id: wke.active_wke_id,
                 },
-                querySession: {
-                    active_session_by_wke_id_map: querySession.active_session_by_wke_id_map,
-                    query_sessions: querySession.query_sessions,
+                queryTab: {
+                    active_query_tab_map: queryTab.active_query_tab_map,
+                    query_tabs: queryTab.query_tabs,
                 },
             })
             const maxguiPersistedState = this.vue.$helpers.lodash.cloneDeep({

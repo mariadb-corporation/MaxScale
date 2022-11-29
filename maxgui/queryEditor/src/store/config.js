@@ -15,7 +15,7 @@ import { isMAC } from '@share/utils/helpers'
 export const ORM_NAMESPACE = 'queryEditorORM'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
-    SESSION: 'SESSION',
+    QUERY_TAB: 'QUERY_TAB',
     // Used by <conn-man-ctr/>. It's also used for stopping the running query
     WORKSHEET: 'WORKSHEET',
 })

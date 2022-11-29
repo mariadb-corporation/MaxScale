@@ -22,13 +22,13 @@
             </template>
             <template slot="pane-right">
                 <div class="d-flex flex-column fill-height">
-                    <session-nav-ctr :height="sessTabCtrHeight" />
-                    <keep-alive v-for="session in query_sessions" :key="session.id" :max="20">
-                        <template v-if="getActiveSessionId === session.id">
+                    <query-tab-nav-ctr :height="queryTabCtrHeight" />
+                    <keep-alive v-for="queryTab in query_tabs" :key="queryTab.id" :max="20">
+                        <template v-if="getActiveQueryTabId === queryTab.id">
                             <txt-editor-ctr
                                 v-if="getIsTxtEditor"
                                 ref="editor"
-                                :session="session"
+                                :queryTab="queryTab"
                                 :dim="editorDim"
                             >
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
@@ -88,7 +88,7 @@ import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
-import SessionNavCtr from './SessionNavCtr.vue'
+import QueryTabNavCtr from './QueryTabNavCtr.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 import FileDlgCtr from './FileDlgCtr.vue'
 
@@ -98,7 +98,7 @@ export default {
         SidebarCtr,
         TxtEditorCtr,
         DdlEditorCtr,
-        SessionNavCtr,
+        QueryTabNavCtr,
         ExecuteSqlDialog,
         FileDlgCtr,
     },
@@ -107,7 +107,7 @@ export default {
     },
     data() {
         return {
-            sessTabCtrHeight: 30,
+            queryTabCtrHeight: 30,
             execSqlDlg: {
                 isOpened: false,
                 editorHeight: 250,
@@ -124,12 +124,12 @@ export default {
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
             curr_editor_mode: state => state.editor.curr_editor_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            query_sessions: state => state.querySession.query_sessions,
+            query_tabs: state => state.queryTab.query_tabs,
         }),
         ...mapGetters({
             getIsTxtEditor: 'editor/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
         minSidebarPct() {
@@ -161,7 +161,7 @@ export default {
         editorDim() {
             return {
                 width: this.ctrDim.width - this.sidebarWidth,
-                height: this.ctrDim.height - this.sessTabCtrHeight,
+                height: this.ctrDim.height - this.queryTabCtrHeight,
             }
         },
         sidebarPct: {

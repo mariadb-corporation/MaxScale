@@ -120,7 +120,7 @@ export default {
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConn/getIsConnBusy',
-            getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         filterTxt: {
             get() {
@@ -159,33 +159,33 @@ export default {
             queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
-            handleAddNewSession: 'querySession/handleAddNewSession',
+            handleAddNewQueryTab: 'queryTab/handleAddNewQueryTab',
         }),
 
         async fetchNodePrvwData({ query_mode, qualified_name }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.getActiveSessionId })
+            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.getActiveQueryTabId })
             await this.fetchPrvw({ qualified_name: qualified_name, query_mode })
         },
         async handleLoadChildren(node) {
             await this.loadChildNodes(node)
         },
         async onAlterTable(node) {
-            await this.handleAddNewSession({
+            await this.handleAddNewQueryTab({
                 wke_id: this.active_wke_id,
                 name: `ALTER ${node.name}`,
             })
             this.SET_TBL_CREATION_INFO({
-                id: this.getActiveSessionId,
+                id: this.getActiveQueryTabId,
                 payload: { ...this.tbl_creation_info, altered_active_node: node },
             })
             this.SET_CURR_EDITOR_MODE({
-                id: this.getActiveSessionId,
+                id: this.getActiveQueryTabId,
                 payload: this.EDITOR_MODES.DDL_EDITOR,
             })
             this.SET_CURR_DDL_ALTER_SPEC({
                 payload: this.DDL_ALTER_SPECS.COLUMNS,
-                id: this.getActiveSessionId,
+                id: this.getActiveQueryTabId,
             })
             await this.queryAlterTblSuppData()
             await this.queryTblCreationInfo(node)
