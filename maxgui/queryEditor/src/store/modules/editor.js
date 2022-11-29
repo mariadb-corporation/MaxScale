@@ -13,7 +13,6 @@
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import { supported } from 'browser-fs-access'
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
-const memStates = queryHelper.memStateCreator('editor')
 
 export default {
     namespaced: true,
@@ -22,7 +21,6 @@ export default {
         charset_collation_map: {},
         def_db_charset_map: {},
         engines: [],
-        ...memStates,
         ...statesToBeSynced,
         file_dlg_data: {
             is_opened: false,
@@ -33,7 +31,6 @@ export default {
         },
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'queryTab.query_tabs',

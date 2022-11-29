@@ -188,7 +188,7 @@ export default {
          */
         releaseQueryModulesMem({ commit }, query_tab_id) {
             Object.keys(allMemStatesModules).forEach(namespace => {
-                // Only 'editor', 'queryConn', 'queryResult' modules have memStates keyed by query_tab_id
+                // Only 'queryConn', 'queryResult' modules have memStates keyed by query_tab_id
                 if (namespace !== 'schemaSidebar')
                     queryHelper.releaseMemory({
                         namespace,

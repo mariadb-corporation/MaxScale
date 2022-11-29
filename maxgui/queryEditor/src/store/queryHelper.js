@@ -480,13 +480,11 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
  * The state uses worksheet id as key or queryTab id. This helps to preserve
  * multiple worksheet's data or queryTab's data in memory.
  * Use `memStatesMutationCreator` to create corresponding mutations
- * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
+ * @param {String} namespace -  module namespace. i.e. queryConn, queryResult, schemaSidebar
  * @returns {Object} - returns states that are stored in memory
  */
 function memStateCreator(namespace) {
     switch (namespace) {
-        case 'editor':
-            return {}
         case 'queryConn':
             return {
                 /**
