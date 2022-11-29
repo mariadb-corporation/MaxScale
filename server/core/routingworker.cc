@@ -84,7 +84,7 @@ public:
         mxb_assert(!this->initialized);
 
         bool rv = false;
-        int fd = epoll_create(mxb::Worker::MAX_EVENTS);
+        int fd = epoll_create(Worker::MAX_EVENTS);
 
         if (fd != -1)
         {
@@ -294,7 +294,7 @@ void RoutingWorker::deregister_data(Data* pData)
 //static
 bool RoutingWorker::adjust_threads(int nCount)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(MainWorker::is_current());
     mxb_assert(this_unit.initialized);
     mxb_assert(this_unit.running);
 
@@ -330,6 +330,8 @@ bool RoutingWorker::adjust_threads(int nCount)
 
 void RoutingWorker::init_datas()
 {
+    mxb_assert(Worker::is_current());
+
     lock_guard guard(s_datas_lock);
 
     for (Data* pData : s_datas)
@@ -340,6 +342,8 @@ void RoutingWorker::init_datas()
 
 void RoutingWorker::finish_datas()
 {
+    mxb_assert(Worker::is_current());
+
     lock_guard guard(s_datas_lock);
 
     for (Data* pData : s_datas)
@@ -351,7 +355,7 @@ void RoutingWorker::finish_datas()
 //static
 bool RoutingWorker::increase_workers(int nDelta)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(MainWorker::is_current());
     mxb_assert(nDelta > 0);
 
     bool rv = true;
@@ -392,7 +396,7 @@ bool RoutingWorker::increase_workers(int nDelta)
 //static
 int RoutingWorker::activate_workers(int n)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(MainWorker::is_current());
     mxb_assert(this_unit.nRunning - this_unit.nConfigured >= n);
 
     int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
@@ -409,7 +413,7 @@ int RoutingWorker::activate_workers(int n)
         bool success = false;
         pWorker->call([pWorker, &listeners, &success]() {
                 success = pWorker->activate(listeners);
-            }, mxb::Worker::EXECUTE_QUEUED);
+            }, Worker::EXECUTE_QUEUED);
 
         if (!success)
         {
@@ -516,7 +520,7 @@ void RoutingWorker::deactivate()
         }
     };
 
-    if (!pMain->execute(proceed_in_main, mxb::Worker::EXECUTE_QUEUED))
+    if (!pMain->execute(proceed_in_main, Worker::EXECUTE_QUEUED))
     {
         MXB_ERROR("Could not post cleanup function from worker (%s, %p) to Main.",
                   thread_name().c_str(), this);
@@ -526,6 +530,7 @@ void RoutingWorker::deactivate()
 //static
 void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
 {
+    mxb_assert(MainWorker::is_current());
     mxb_assert((first_attempt && !this_unit.termination_in_process)
                || (!first_attempt && this_unit.termination_in_process));
 
@@ -566,7 +571,7 @@ void RoutingWorker::terminate_last_if_dormant(bool first_attempt)
 
     if (!pWorker->execute([pWorker]() {
                 pWorker->terminate();
-            }, mxb::Worker::EXECUTE_QUEUED))
+            }, Worker::EXECUTE_QUEUED))
     {
         MXB_ERROR("Could not post to (%s, %p), the worker will not go down.",
                   pWorker->thread_name().c_str(), pWorker);
@@ -596,7 +601,7 @@ bool RoutingWorker::activate(const std::vector<SListener>& listeners)
 bool RoutingWorker::create_workers(int n)
 {
     // Not all unit tests have a MainWorker.
-    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_current());
+    mxb_assert(!Worker::get_current() || MainWorker::is_current());
     mxb_assert(n > 0);
 
     size_t rebalance_window = mxs::Config::get().rebalance_window.get();
@@ -638,7 +643,7 @@ bool RoutingWorker::create_workers(int n)
 //static
 bool RoutingWorker::decrease_workers(int n)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(MainWorker::is_current());
     mxb_assert(n > 0);
 
     int nBefore = this_unit.nConfigured.load(std::memory_order_relaxed);
@@ -676,7 +681,7 @@ bool RoutingWorker::decrease_workers(int n)
                         pWorker->set_state(State::DRAINING);
                     }
                 }
-            }, mxb::Worker::EXECUTE_QUEUED);
+            }, Worker::EXECUTE_QUEUED);
 
         if (!success)
         {
@@ -699,6 +704,7 @@ bool RoutingWorker::decrease_workers(int n)
 
 bool RoutingWorker::start_polling_on_shared_fd()
 {
+    mxb_assert(Worker::is_current());
     mxb_assert(!is_listening());
 
     bool rv = false;
@@ -724,6 +730,7 @@ bool RoutingWorker::start_polling_on_shared_fd()
 
 bool RoutingWorker::stop_polling_on_shared_fd()
 {
+    mxb_assert(Worker::is_current());
     mxb_assert(m_listening);
 
     bool rv = remove_pollable(this);
@@ -745,6 +752,8 @@ int RoutingWorker::nRunning()
 // static
 bool RoutingWorker::add_listener(Listener* pListener)
 {
+    mxb_assert(MainWorker::is_current());
+
     bool rv = true;
 
     int fd = pListener->poll_fd();
@@ -776,6 +785,8 @@ bool RoutingWorker::add_listener(Listener* pListener)
 // static
 bool RoutingWorker::remove_listener(Listener* pListener)
 {
+    mxb_assert(MainWorker::is_current());
+
     bool rv = true;
 
     int fd = pListener->poll_fd();
@@ -812,7 +823,7 @@ RoutingWorker* RoutingWorker::get_by_index(int index)
 bool RoutingWorker::start_workers(int nWorkers)
 {
     // Not all unit tests have a MainWorker.
-    mxb_assert(!mxb::Worker::get_current() || mxs::MainWorker::is_current());
+    mxb_assert(!Worker::get_current() || MainWorker::is_current());
     mxb_assert(this_unit.nRunning == 0);
 
     bool rv = create_workers(nWorkers);
@@ -834,6 +845,8 @@ bool RoutingWorker::is_running()
 // static
 void RoutingWorker::join_workers()
 {
+    mxb_assert(MainWorker::is_current());
+
     int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
     for (int i = 0; i < nRunning; ++i)
     {
@@ -849,6 +862,8 @@ void RoutingWorker::join_workers()
 // static
 bool RoutingWorker::shutdown_complete()
 {
+    mxb_assert(MainWorker::is_current());
+
     // If a routing worker is being terminated, we must wait for that to finish.
     bool rval = !this_unit.termination_in_process;
 
@@ -872,16 +887,21 @@ bool RoutingWorker::shutdown_complete()
 
 RoutingWorker::SessionsById& RoutingWorker::session_registry()
 {
+    mxb_assert(Worker::is_current());
+
     return m_sessions;
 }
 
 const RoutingWorker::SessionsById& RoutingWorker::session_registry() const
 {
+    mxb_assert(Worker::is_current());
+
     return m_sessions;
 }
 
 void RoutingWorker::destroy(DCB* pDcb)
 {
+    mxb_assert(Worker::is_current());
     mxb_assert(pDcb->owner() == this);
 
     m_zombies.push_back(pDcb);
@@ -893,6 +913,8 @@ void RoutingWorker::destroy(DCB* pDcb)
  */
 void RoutingWorker::process_timeouts()
 {
+    mxb_assert(Worker::is_current());
+
     auto now = mxs_clock();
     if (now >= m_next_timeout_check)
     {
@@ -915,6 +937,8 @@ void RoutingWorker::process_timeouts()
 
 void RoutingWorker::delete_zombies()
 {
+    mxb_assert(Worker::is_current());
+
     Zombies slow_zombies;
     // An algorithm cannot be used, as the final closing of a DCB may cause
     // other DCBs to be registered in the zombie queue.
@@ -953,12 +977,16 @@ void RoutingWorker::delete_zombies()
 
 void RoutingWorker::add(DCB* pDcb)
 {
+    mxb_assert(Worker::is_current());
+
     MXB_AT_DEBUG(auto rv = ) m_dcbs.insert(pDcb);
     mxb_assert(rv.second);
 }
 
 void RoutingWorker::remove(DCB* pDcb)
 {
+    mxb_assert(Worker::is_current());
+
     auto it = m_dcbs.find(pDcb);
     mxb_assert(it != m_dcbs.end());
     m_dcbs.erase(it);
@@ -967,16 +995,18 @@ void RoutingWorker::remove(DCB* pDcb)
 RoutingWorker::ConnectionResult
 RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
+    mxb_assert(Worker::is_current());
+
     auto* pServer = static_cast<Server*>(pSrv);
     auto* pSession = static_cast<Session*>(pSes);
 
     if (pServer->persistent_conns_enabled() && pServer->is_running())
     {
-        auto pool_conn = pool_get_connection(pSrv, pSession, pUpstream);
-        if (pool_conn)
+        auto* pPool_conn = pool_get_connection(pSrv, pSession, pUpstream);
+        if (pPool_conn)
         {
             // Connection found from pool, return it.
-            return {false, pool_conn};
+            return {false, pPool_conn};
         }
     }
 
@@ -1001,11 +1031,11 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
             auto intents = stats.add_conn_intent();
             if (intents + stats.n_current_conns() <= max_allowed_conns)
             {
-                auto new_conn = pSession->create_backend_connection(pServer, this, pUpstream);
-                if (new_conn)
+                auto pNew_conn = pSession->create_backend_connection(pServer, this, pUpstream);
+                if (pNew_conn)
                 {
                     stats.add_connection();
-                    rval.conn = new_conn;
+                    rval.conn = pNew_conn;
                 }
             }
             else
@@ -1018,11 +1048,11 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     else
     {
         // No limit, just create new connection.
-        auto new_conn = pSession->create_backend_connection(pServer, this, pUpstream);
-        if (new_conn)
+        auto* pNew_conn = pSession->create_backend_connection(pServer, this, pUpstream);
+        if (pNew_conn)
         {
             stats.add_connection();
-            rval.conn = new_conn;
+            rval.conn = pNew_conn;
         }
     }
 
@@ -1081,37 +1111,37 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
     mxb_assert(pServer);
     auto pSession = static_cast<Session*>(pSes);
     bool proxy_protocol = pServer->proxy_protocol();
-    mxs::BackendConnection* found_conn = nullptr;
+    mxs::BackendConnection* pFound_conn = nullptr;
 
     auto it = m_pool_group.find(pServer);
     if (it != m_pool_group.end())
     {
         ConnectionPool& conn_pool = it->second;
 
-        while (!found_conn)
+        while (!pFound_conn)
         {
-            auto [reuse, candidate] = conn_pool.get_connection(pSession);
+            auto [reuse, pCandidate] = conn_pool.get_connection(pSession);
 
             // If no candidate could be found, stop right away.
-            if (!candidate)
+            if (!pCandidate)
             {
                 break;
             }
 
-            BackendDCB* pDcb = candidate->dcb();
-            mxb_assert(candidate == pDcb->protocol());
+            BackendDCB* pDcb = pCandidate->dcb();
+            mxb_assert(pCandidate == pDcb->protocol());
             // Put back the original handler.
-            pDcb->set_handler(candidate);
-            pSession->link_backend_connection(candidate);
+            pDcb->set_handler(pCandidate);
+            pSession->link_backend_connection(pCandidate);
 
-            if (candidate->reuse(pSes, pUpstream, reuse))
+            if (pCandidate->reuse(pSes, pUpstream, reuse))
             {
-                found_conn = candidate;
+                pFound_conn = pCandidate;
             }
             else
             {
                 // Reusing the current candidate failed. Close connection, then try with another candidate.
-                pSession->unlink_backend_connection(candidate);
+                pSession->unlink_backend_connection(pCandidate);
                 MXB_WARNING("Failed to reuse a persistent connection.");
                 if (pDcb->state() == DCB::State::POLLING)
                 {
@@ -1125,16 +1155,16 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             }
         }
 
-        if (found_conn)
+        if (pFound_conn)
         {
             // Put the dcb back to the regular book-keeping.
-            mxb_assert(m_dcbs.find(found_conn->dcb()) == m_dcbs.end());
-            m_dcbs.insert(found_conn->dcb());
+            mxb_assert(m_dcbs.find(pFound_conn->dcb()) == m_dcbs.end());
+            m_dcbs.insert(pFound_conn->dcb());
         }
     }
     // else: the server does not have an entry in the pool group.
 
-    return found_conn;
+    return pFound_conn;
 }
 
 bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
@@ -1191,6 +1221,8 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 
 size_t RoutingWorker::pool_close_all_conns()
 {
+    mxb_assert(Worker::is_current());
+
     size_t nClosed = 0;
     for (auto& kv : m_pool_group)
     {
@@ -1354,6 +1386,8 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
 
 void RoutingWorker::make_dcalls()
 {
+    mxb_assert(Worker::is_current());
+
     mxb_assert(m_check_pool_dcid == 0);
     mxb_assert(m_activate_eps_dcid == 0);
     mxb_assert(m_timeout_eps_dcid == 0);
@@ -1393,6 +1427,8 @@ void RoutingWorker::make_dcalls()
 
 void RoutingWorker::cancel_dcalls()
 {
+    mxb_assert(Worker::is_current());
+
     if (m_check_pool_dcid)
     {
         m_callable.cancel_dcall(m_check_pool_dcid);
@@ -1416,6 +1452,8 @@ void RoutingWorker::cancel_dcalls()
 
 bool RoutingWorker::pre_run()
 {
+    mxb_assert(Worker::is_current());
+
     this_thread.pCurrent_worker = this;
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
@@ -1437,6 +1475,8 @@ bool RoutingWorker::pre_run()
 
 void RoutingWorker::post_run()
 {
+    mxb_assert(Worker::is_current());
+
     if (is_listening())
     {
         stop_polling_on_shared_fd();
@@ -1489,7 +1529,7 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
             bool success = false;
             sWorker->call([&sWorker, &listeners, &success]() {
                     success = sWorker->activate(listeners);
-                }, mxb::Worker::EXECUTE_QUEUED);
+                }, Worker::EXECUTE_QUEUED);
 
             mxb_assert(success);
 
@@ -1518,6 +1558,8 @@ unique_ptr<RoutingWorker> RoutingWorker::create(int index,
 
 void RoutingWorker::epoll_tick()
 {
+    mxb_assert(Worker::is_current());
+
     process_timeouts();
 
     delete_zombies();
@@ -1545,8 +1587,9 @@ int RoutingWorker::poll_fd() const
  *
  * @return What actions were performed.
  */
-uint32_t RoutingWorker::handle_poll_events(mxb::Worker* pWorker, uint32_t events, Pollable::Context context)
+uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context context)
 {
+    mxb_assert(Worker::is_current());
     mxb_assert(pWorker == this);
 
     struct epoll_event epoll_events[1];
@@ -1626,7 +1669,7 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 // static
 size_t RoutingWorker::broadcast(const std::function<void ()>& func,
                                 mxb::Semaphore* pSem,
-                                mxb::Worker::execute_mode_t mode)
+                                Worker::execute_mode_t mode)
 {
     size_t n = 0;
 
@@ -1734,6 +1777,8 @@ namespace
 
 std::vector<Worker::Statistics> get_stats()
 {
+    mxb_assert(MainWorker::is_current());
+
     std::vector<Worker::Statistics> rval;
 
     auto nWorkers = this_unit.nRunning.load(std::memory_order_relaxed);
@@ -1753,6 +1798,8 @@ std::vector<Worker::Statistics> get_stats()
 // static
 Worker::Statistics RoutingWorker::get_statistics()
 {
+    mxb_assert(MainWorker::is_current());
+
     auto s = get_stats();
 
     Statistics cs;
@@ -1780,6 +1827,8 @@ Worker::Statistics RoutingWorker::get_statistics()
 // static
 bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 {
+    mxb_assert(MainWorker::is_current());
+
     class Task : public Worker::Task
     {
     public:
@@ -1813,6 +1862,8 @@ bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 // static
 void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 {
+    mxb_assert(MainWorker::is_current());
+
     class Task : public Worker::Task
     {
     public:
@@ -1848,6 +1899,8 @@ namespace
 
 json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
 {
+    mxb_assert(MainWorker::is_current());
+
     json_t* pStats = json_object();
     json_object_set_new(pStats, "size", json_integer(stats.size));
     json_object_set_new(pStats, "inserts", json_integer(stats.inserts));
@@ -1873,6 +1926,8 @@ json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
 // static
 std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json_by_index(const char* zHost, int index)
 {
+    mxb_assert(MainWorker::is_current());
+
     std::unique_ptr<json_t> sStats;
 
     QC_CACHE_STATS stats;
@@ -1893,6 +1948,8 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json_by_index(const char*
 // static
 std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 {
+    mxb_assert(MainWorker::is_current());
+
     vector<QC_CACHE_STATS> all_stats;
 
     get_qc_stats(all_stats);
@@ -1926,6 +1983,8 @@ RoutingWorker* RoutingWorker::pick_worker()
 
 void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 {
+    mxb_assert(Worker::is_current());
+
     m_epoll_tick_funcs.push_back(func);
 }
 
@@ -1938,7 +1997,7 @@ void RoutingWorker::update_average_load(size_t count)
         m_average_load.resize(count);
     }
 
-    m_average_load.add_value(this->load(mxb::WorkerLoad::ONE_SECOND));
+    m_average_load.add_value(this->load(WorkerLoad::ONE_SECOND));
 }
 
 void RoutingWorker::terminate()
@@ -1996,7 +2055,7 @@ void RoutingWorker::terminate()
 
                         // Others may be in line.
                         terminate_last_if_dormant(false);
-                    }, mxb::Worker::EXECUTE_QUEUED);
+                    }, Worker::EXECUTE_QUEUED);
             }
 
             return !ready_to_proceed;
@@ -2020,6 +2079,8 @@ void RoutingWorker::collect_worker_load(size_t count)
 // static
 bool RoutingWorker::balance_workers()
 {
+    mxb_assert(MainWorker::is_current());
+
     bool balancing = false;
 
     int threshold = mxs::Config::get().rebalance_threshold.get();
@@ -2035,6 +2096,8 @@ bool RoutingWorker::balance_workers()
 // static
 bool RoutingWorker::balance_workers(int threshold)
 {
+    mxb_assert(MainWorker::is_current());
+
     bool balancing = false;
 
     int min_load = 100;
@@ -2061,7 +2124,7 @@ bool RoutingWorker::balance_workers(int threshold)
         else
         {
             // If we can't use the average, we use one second load.
-            load = pWorker->load(mxb::WorkerLoad::ONE_SECOND);
+            load = pWorker->load(WorkerLoad::ONE_SECOND);
         }
 
         if (load < min_load)
@@ -2106,6 +2169,8 @@ bool RoutingWorker::balance_workers(int threshold)
 
 void RoutingWorker::rebalance(RoutingWorker* pTo, int nSessions)
 {
+    mxb_assert(Worker::is_current());
+
     // We can't balance here, because if a single epoll_wait() call returns
     // both the rebalance-message (sent from balance_workers() above) and
     // an event for a DCB that we move to another worker, we would crash.
@@ -2115,6 +2180,7 @@ void RoutingWorker::rebalance(RoutingWorker* pTo, int nSessions)
 
 void RoutingWorker::rebalance()
 {
+    mxb_assert(Worker::is_current());
     mxb_assert(m_rebalance.pTo);
     mxb_assert(m_rebalance.perform);
 
@@ -2234,6 +2300,8 @@ private:
 //static
 std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
 {
+    mxb_assert(MainWorker::is_current());
+
     MemoryTask task(this_unit.nRunning.load(std::memory_order_relaxed));
     RoutingWorker::execute_concurrently(task);
 
@@ -2250,6 +2318,8 @@ std::unique_ptr<json_t> RoutingWorker::memory_to_json(const char* zHost)
 
 RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
 {
+    mxb_assert(Worker::is_current());
+
     MemoryUsage rv;
 
     QC_CACHE_STATS qc;
@@ -2286,9 +2356,9 @@ void RoutingWorker::start_shutdown()
 //static
 bool RoutingWorker::set_listen_mode(int index, bool enabled)
 {
-    bool rv = false;
-
     mxb_assert(MainWorker::is_current());
+
+    bool rv = false;
 
     int n = this_unit.nConfigured.load(std::memory_order_relaxed);
 
@@ -2354,6 +2424,8 @@ bool RoutingWorker::termination_in_process()
 
 bool RoutingWorker::try_shutdown()
 {
+    mxb_assert(Worker::is_current());
+
     pool_close_all_conns();
 
     if (m_sessions.empty())
@@ -2373,12 +2445,16 @@ bool RoutingWorker::try_shutdown()
 
 void RoutingWorker::register_session(MXS_SESSION* ses)
 {
+    mxb_assert(Worker::is_current());
+
     MXB_AT_DEBUG(bool rv = ) m_sessions.add(ses);
     mxb_assert(rv);
 }
 
 void RoutingWorker::deregister_session(uint64_t session_id)
 {
+    mxb_assert(Worker::is_current());
+
     bool rv = m_sessions.remove(session_id);
 
     if (rv && can_deactivate())
@@ -2406,7 +2482,8 @@ void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
 
 RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* pSrv)
 {
-    mxb_assert(mxs::MainWorker::is_current());
+    mxb_assert(MainWorker::is_current());
+
     RoutingWorker::ConnectionPoolStats rval;
 
     auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
@@ -2420,6 +2497,8 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
 
 RoutingWorker::ConnectionPoolStats RoutingWorker::pool_stats(const SERVER* pSrv)
 {
+    mxb_assert(MainWorker::is_current());
+
     ConnectionPoolStats rval;
     std::lock_guard<std::mutex> guard(m_pool_lock);
 
@@ -2440,6 +2519,8 @@ void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep)
 
 void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep)
 {
+    mxb_assert(Worker::is_current());
+
     auto map_iter = m_eps_waiting_for_conn.find(ep->server());
     mxb_assert(map_iter != m_eps_waiting_for_conn.end());
     // The element is surely found in both the map and the set.
@@ -2456,6 +2537,8 @@ void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep)
 
 void RoutingWorker::notify_connection_available(SERVER* server)
 {
+    mxb_assert(Worker::is_current());
+
     // A connection to a server should be available, either in the pool or a new one can be created.
     // Cannot be certain due to other threads. Do not activate any connections here, only schedule a check.
 
@@ -2483,6 +2566,8 @@ void RoutingWorker::notify_connection_available(SERVER* server)
  */
 void RoutingWorker::activate_waiting_endpoints()
 {
+    mxb_assert(Worker::is_current());
+
     auto map_iter = m_eps_waiting_for_conn.begin();
     while (map_iter != m_eps_waiting_for_conn.end())
     {
@@ -2537,6 +2622,8 @@ void RoutingWorker::activate_waiting_endpoints()
 
 void RoutingWorker::fail_timed_out_endpoints()
 {
+    mxb_assert(Worker::is_current());
+
     // Check the oldest endpoints. Fail the ones which have been waiting for too long.
     auto now = epoll_tick_now();
     auto it_map = m_eps_waiting_for_conn.begin();
@@ -2574,6 +2661,8 @@ void RoutingWorker::fail_timed_out_endpoints()
 
 void RoutingWorker::pool_close_expired()
 {
+    mxb_assert(Worker::is_current());
+
     std::lock_guard<std::mutex> guard(m_pool_lock);
 
     // Close expired connections in the thread local pool. If the server is down, purge all connections.
@@ -2595,6 +2684,8 @@ void RoutingWorker::pool_close_expired()
 
 bool RoutingWorker::conn_to_server_needed(const SERVER* srv) const
 {
+    mxb_assert(Worker::is_current());
+
     return m_eps_waiting_for_conn.find(srv) != m_eps_waiting_for_conn.end();
 }
 
@@ -2746,6 +2837,8 @@ protected:
 
 json_t* mxs_rworker_to_json(const char* zHost, int index)
 {
+    mxb_assert(mxs::MainWorker::is_current());
+
     Worker* target = RoutingWorker::get_by_index(index);
     mxb_assert(target); // REST-API should have checked the validity.
     RoutingWorker::InfoTask task(zHost, index + 1);
@@ -2759,6 +2852,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int index)
 
 json_t* mxs_rworker_list_to_json(const char* host)
 {
+    mxb_assert(mxs::MainWorker::is_current());
     auto n = this_unit.nRunning.load(std::memory_order_relaxed);
 
     RoutingWorker::InfoTask task(host, n);
@@ -2785,6 +2879,8 @@ public:
 
 void mxs_rworker_watchdog()
 {
+    mxb_assert(mxs::MainWorker::is_current());
+
     MXB_INFO("MaxScale watchdog called.");
     WatchdogTask task;
     RoutingWorker::execute_concurrently(task);
