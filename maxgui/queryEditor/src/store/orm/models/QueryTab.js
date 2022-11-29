@@ -21,6 +21,12 @@ import Editor from './Editor'
 export default class QueryTab extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
 
+    static state() {
+        return {
+            active_query_tab_map: {}, // Persistence, key is worksheet_id, value is entity id
+        }
+    }
+
     /**
      * If a record in the parent table (queryTab) is deleted, then the corresponding records in the child
      * tables (queryResult, queryConn, editor) will automatically be deleted

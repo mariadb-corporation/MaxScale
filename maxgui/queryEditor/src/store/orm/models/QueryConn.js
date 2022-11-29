@@ -20,6 +20,12 @@ import Worksheet from './Worksheet'
 export default class QueryConn extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_CONNS
 
+    static state() {
+        return {
+            sql_conns: {}, // Persistence, store response of GET: /sql
+        }
+    }
+
     /**
      * If a record in this table (QueryConn) is deleted, then the corresponding records in the relational
      * tables (Worksheet, QueryTab) will have the relational fields set to NULL.

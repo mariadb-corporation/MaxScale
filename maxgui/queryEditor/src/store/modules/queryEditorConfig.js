@@ -56,6 +56,9 @@ export default {
                         queryConn: new QueryConn(),
                     },
                 })
+                Worksheet.commit(state => (state.active_wke_id = worksheet_id))
+                // update active_query_tab_map state
+                QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = query_tab_id))
             }
         },
     },

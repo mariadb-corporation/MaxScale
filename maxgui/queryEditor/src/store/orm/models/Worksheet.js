@@ -21,6 +21,12 @@ import QueryConn from './QueryConn'
 export default class Worksheet extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
 
+    static state() {
+        return {
+            active_wke_id: null, // Persistence
+        }
+    }
+
     /**
      * If a record in the parent table (worksheet) is deleted, then the corresponding records in the child
      * tables (schemaSidebar, queryConn, queryTab) will automatically be deleted
@@ -34,6 +40,8 @@ export default class Worksheet extends Model {
             SchemaSidebar.delete(s => s.worksheet_id === id)
             QueryConn.delete(c => c.worksheet_id === id)
             QueryTab.cascadeDelete(t => t.worksheet_id === id)
+            // update active_query_tab_map state
+            QueryTab.commit(state => delete state.active_query_tab_map[id]) // delete worksheet key
         })
     }
 
