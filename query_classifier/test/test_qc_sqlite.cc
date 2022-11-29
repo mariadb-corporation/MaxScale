@@ -261,7 +261,7 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
     },
     {
         "SELECT a FROM tbl FOR UPDATE;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
     {
@@ -311,27 +311,27 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
     },
     {
         "SELECT COUNT(IF(!c.ispackage, 1, NULL)) as cnt FROM test FOR UPDATE;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
     {
         "SELECT handler FROM abc FOR UPDATE;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
     {
         "SELECT * FROM test LOCK IN SHARE MODE;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
     {
         "SELECT * FROM test FOR SHARE;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
     {
         "DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;",
-        QUERY_TYPE_WRITE,
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
         QUERY_OP_DELETE
     },
 
