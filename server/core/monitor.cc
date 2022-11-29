@@ -665,6 +665,7 @@ bool Monitor::test_permissions(const string& query)
         return true;
     }
 
+    mxb::LogScope scope(name());
     bool rval = false;
 
     for (MonitorServer* mondb : m_servers)
@@ -673,12 +674,8 @@ bool Monitor::test_permissions(const string& query)
 
         if (!connection_is_ok(result))
         {
-            MXB_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
-                      " checking monitor user credentials and permissions.",
-                      name(),
-                      mondb->server->name(),
-                      mondb->server->address(),
-                      mondb->server->port());
+            MXB_ERROR("Failed to check monitor user credentials and permissions on '%s': %s",
+                      mondb->server->name(), mondb->get_connect_error(result).c_str());
 
             if (result != ConnectResult::ACCESS_DENIED)
             {
@@ -702,9 +699,8 @@ bool Monitor::test_permissions(const string& query)
                 break;
             }
 
-            MXB_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      name(), query.c_str(), conn_settings().username.c_str(),
-                      mysql_error(mondb->con));
+            MXB_ERROR("Failed to execute query '%s' with user '%s'. MySQL error message: %s",
+                      query.c_str(), conn_settings().username.c_str(), mysql_error(mondb->con));
         }
         else
         {
@@ -712,8 +708,7 @@ bool Monitor::test_permissions(const string& query)
             MYSQL_RES* res = mysql_use_result(mondb->con);
             if (res == NULL)
             {
-                MXB_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          name(),
+                MXB_ERROR("Result retrieval failed when checking monitor permissions: %s",
                           mysql_error(mondb->con));
             }
             else
@@ -1439,6 +1434,15 @@ bool Monitor::is_main_worker()
     return mxs::MainWorker::is_main_worker();
 }
 
+std::string MonitorServer::get_connect_error(ConnectResult rval)
+{
+    mxb_assert(!Monitor::connection_is_ok(rval));
+    const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
+    const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
+    return mxb::string_printf(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
+                              server->name(), server->address(), server->port(), m_latest_error.c_str());
+}
+
 /**
  * Log an error about the failure to connect to a backend server and why it happened.
  *
@@ -1446,14 +1450,7 @@ bool Monitor::is_main_worker()
  */
 void MonitorServer::log_connect_error(ConnectResult rval)
 {
-    mxb_assert(!Monitor::connection_is_ok(rval));
-    const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
-    const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
-    MXB_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
-              server->name(),
-              server->address(),
-              server->port(),
-              m_latest_error.c_str());
+    MXB_ERROR("%s", get_connect_error(rval).c_str());
 }
 
 void MonitorServer::log_state_change(const std::string& reason)
