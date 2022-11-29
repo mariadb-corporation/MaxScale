@@ -63,6 +63,7 @@ static void test1()
                                  session, std::move(client_protocol), mxs::RoutingWorker::get_current());
     pProtocol->set_dcb(dcb);
     session->set_client_connection(pProtocol);
+    session->set_client_dcb(dcb);
 
     mxb_assert(dcb);
     mxb_assert(dcb->enable_events());
