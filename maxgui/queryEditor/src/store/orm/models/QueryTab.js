@@ -14,11 +14,27 @@ import { Model } from '@vuex-orm/core'
 import QueryResult from './QueryResult'
 import QueryConn from './QueryConn'
 import Editor from './Editor'
-
 import { uuidv1 } from '@share/utils/helpers'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default class QueryTab extends Model {
     static entity = 'queryTabs'
+
+    /**
+     * If a record in the parent table (queryTab) is deleted, then the corresponding records in the child
+     * tables (queryResult, queryConn, editor) will automatically be deleted
+     * @param {String|Function} payload - either a queryTab id or a callback function that return Boolean (filter)
+     */
+    static cascadeDelete(payload) {
+        const modelIds = queryHelper.filterEntity(QueryTab, payload).map(model => model.id)
+        modelIds.forEach(id => {
+            QueryTab.delete(t => t.id === id) // delete itself
+            // delete records in the child tables
+            Editor.delete(e => e.query_tab_id === id)
+            QueryResult.delete(r => r.query_tab_id === id)
+            QueryConn.delete(c => c.query_tab_id === id)
+        })
+    }
 
     static fields() {
         return {

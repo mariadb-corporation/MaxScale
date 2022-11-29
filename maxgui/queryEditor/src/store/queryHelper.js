@@ -609,6 +609,19 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
      */
     return file_handle_txt !== query_txt
 }
+
+/**
+ * @public
+ * @param {Object} entity - ORM entity object
+ * @param {String|Function} payload - either an entity id or a callback function that return Boolean (filter)
+ * @returns {Array} returns entities
+ */
+function filterEntity(entity, payload) {
+    if (typeof payload === 'function') return entity.all().filter(payload)
+    if (entity.find(payload)) return [entity.find(payload)]
+    return []
+}
+
 export default {
     getNodeGroupSQL,
     genNodeData,
@@ -622,4 +635,5 @@ export default {
     releaseMemory,
     syncToPersistedObj,
     detectUnsavedChanges,
+    filterEntity,
 }

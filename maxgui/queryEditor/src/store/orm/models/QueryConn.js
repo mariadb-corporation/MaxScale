@@ -12,9 +12,33 @@
  */
 import { Model } from '@vuex-orm/core'
 import { uuidv1 } from '@share/utils/helpers'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
+import QueryTab from './QueryTab'
+import Worksheet from './Worksheet'
 
 export default class QueryConn extends Model {
     static entity = 'queryConns'
+
+    /**
+     * If a record in this table (QueryConn) is deleted, then the corresponding records in the relational
+     * tables (Worksheet, QueryTab) will have the relational fields set to NULL.
+     * @param {String|Function} payload - either a queryConn id or a callback function that return Boolean (filter)
+     */
+    static deleteSetNull(payload) {
+        const models = queryHelper.filterEntity(QueryConn, payload)
+        models.forEach(model => {
+            QueryConn.delete(c => c.id === model.id) // delete itself
+            // set relational fields to null for its relational tables
+            Worksheet.update({
+                where: w => w.id === model.worksheet_id,
+                data: { queryConn: null },
+            })
+            QueryTab.update({
+                where: t => t.id === model.query_tab_id,
+                data: { queryConn: null },
+            })
+        })
+    }
 
     static fields() {
         return {

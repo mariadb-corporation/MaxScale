@@ -36,16 +36,18 @@ export default {
     actions: {
         createDefWorksheet() {
             if (Worksheet.all().length === 0) {
-                const id = this.vue.$helpers.uuidv1()
+                const worksheet_id = this.vue.$helpers.uuidv1()
+                const query_tab_id = this.vue.$helpers.uuidv1()
                 Worksheet.create({
                     data: {
-                        id,
+                        id: worksheet_id,
                         name: 'WORKSHEET',
                         schemaSidebar: new SchemaSidebar(),
                         queryTabs: [
                             {
                                 ...new QueryTab(),
-                                worksheet_id: id,
+                                id: query_tab_id,
+                                worksheet_id,
                                 editor: new Editor(),
                                 queryResult: new QueryResult(),
                                 queryConn: new QueryConn(),
