@@ -12,7 +12,7 @@
  */
 import { isMAC } from '@share/utils/helpers'
 
-export const ORM_NAMESPACE = 'queryEditorORM'
+export const ORM_NAMESPACE = 'ORM'
 export const ORM_PERSISTENT_ENTITIES = {
     EDITORS: 'editors',
     QUERY_CONNS: 'queryConns',

@@ -29,17 +29,16 @@ export default class Worksheet extends Extender {
     }
 
     /**
-     * If a record in the parent table (worksheet) is deleted, then the corresponding records in the child
-     * tables (schemaSidebar, queryConn, queryTab) will automatically be deleted
+     * If a record is deleted, then the corresponding records in its relational
+     * tables will be automatically deleted
      * @param {String|Function} payload - either a worksheet id or a callback function that return Boolean (filter)
      */
     static cascadeDelete(payload) {
-        const modelIds = queryHelper.filterEntity(Worksheet, payload).map(model => model.id)
-        modelIds.forEach(id => {
-            Worksheet.delete(w => w.id === id) // delete itself
+        const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
+        entityIds.forEach(id => {
+            Worksheet.delete(id) // delete itself
+            // delete records in its relational tables
             WorksheetMem.delete(m => m.worksheet_id === id)
-
-            // delete records in the child tables
             SchemaSidebar.delete(s => s.worksheet_id === id)
             QueryConn.delete(c => c.worksheet_id === id)
             QueryTab.cascadeDelete(t => t.worksheet_id === id)
@@ -60,15 +59,15 @@ export default class Worksheet extends Extender {
      * @param {String|Function} payload - either a Worksheet id or a callback function that return Boolean (filter)
      */
     static cascadeRefresh(payload) {
-        const models = queryHelper.filterEntity(Worksheet, payload)
-        models.forEach(model => {
-            Worksheet.refresh(model.id) // refresh itself
+        const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
+        entityIds.forEach(id => {
+            Worksheet.refresh(id) // refresh itself
             // refresh its relations
-            WorksheetMem.refresh(m => m.worksheet_id === model.id)
-            SchemaSidebar.refresh(s => s.worksheet_id === model.id)
-            QueryConn.refresh(c => c.worksheet_id === model.id)
+            WorksheetMem.refresh(m => m.worksheet_id === id)
+            SchemaSidebar.refresh(s => s.worksheet_id === id)
+            QueryConn.refresh(c => c.worksheet_id === id)
             // refresh all queryTabs and its relations
-            QueryTab.cascadeRefresh(t => t.worksheet_id === model.id)
+            QueryTab.cascadeRefresh(t => t.worksheet_id === id)
         })
     }
 
@@ -79,7 +78,6 @@ export default class Worksheet extends Extender {
             // relationship fields
             queryTabs: this.hasMany(QueryTab, 'worksheet_id'),
             schemaSidebar: this.hasOne(SchemaSidebar, 'worksheet_id'),
-            queryConn: this.hasOne(QueryConn, 'worksheet_id'),
             worksheetMem: this.hasOne(WorksheetMem, 'worksheet_id'),
         }
     }

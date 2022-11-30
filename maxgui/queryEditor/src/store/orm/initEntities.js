@@ -12,7 +12,6 @@
  */
 import { uuidv1 } from '@share/utils/helpers'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
@@ -26,12 +25,12 @@ import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 function initDefEntities() {
     const worksheet_id = uuidv1()
     const query_tab_id = uuidv1()
+
     Worksheet.create({
         data: {
             id: worksheet_id,
             name: 'WORKSHEET',
             schemaSidebar: new SchemaSidebar(),
-            queryConn: new QueryConn(),
         },
     })
     QueryTab.create({
@@ -40,7 +39,6 @@ function initDefEntities() {
             worksheet_id,
             editor: new Editor(),
             queryResult: new QueryResult(),
-            queryConn: new QueryConn(),
         },
     })
     Worksheet.commit(state => (state.active_wke_id = worksheet_id))

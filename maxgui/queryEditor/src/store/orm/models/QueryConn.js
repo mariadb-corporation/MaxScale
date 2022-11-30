@@ -20,30 +20,23 @@ import Worksheet from './Worksheet'
 export default class QueryConn extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_CONNS
 
-    static state() {
-        return {
-            sql_conns: {}, // Persistence, store response of GET: /sql
-        }
-    }
-
     /**
-     * If a record in this table (QueryConn) is deleted, then the corresponding records in the relational
-     * tables (Worksheet, QueryTab) will have the relational fields set to NULL.
-     * @param {String|Function} payload - either a queryConn id or a callback function that return Boolean (filter)
+     * If a record is deleted, then the corresponding records in its relational
+     * tables (Worksheet, QueryTab) will have their data refreshed
+     * @param {String|Function} payload - either a QueryConn id or a callback function that return Boolean (filter)
      */
-    static deleteSetNull(payload) {
-        const models = queryHelper.filterEntity(QueryConn, payload)
-        models.forEach(model => {
-            QueryConn.delete(c => c.id === model.id) // delete itself
-            // set relational fields to null for its relational tables
-            Worksheet.update({
-                where: w => w.id === model.worksheet_id,
-                data: { queryConn: null },
-            })
-            QueryTab.update({
-                where: t => t.id === model.query_tab_id,
-                data: { queryConn: null },
-            })
+    static cascadeRefreshOnDelete(payload) {
+        const entities = queryHelper.filterEntity(QueryConn, payload)
+        entities.forEach(entity => {
+            /**
+             * refresh its relations, when a connection bound to the worksheet is deleted,
+             * all QueryTabs data should also be refreshed (Worksheet.cascadeRefresh).
+             * If the connection being deleted doesn't have worksheet_id FK but query_tab_id FK,
+             * it is a connection bound to QueryTab, thus call QueryTab.cascadeRefresh.
+             */
+            if (entity.worksheet_id) Worksheet.cascadeRefresh(w => w.id === entity.worksheet_id)
+            else if (entity.query_tab_id) QueryTab.cascadeRefresh(t => t.id === entity.query_tab_id)
+            QueryConn.delete(entity.id) // delete itself
         })
     }
 
@@ -52,8 +45,13 @@ export default class QueryConn extends Extender {
      */
     static getNonKeyFields() {
         return {
-            sql_conn: this.attr(null), // stores data of a sql connection from API
             active_db: this.string(''),
+            attributes: this.attr({}),
+            binding_type: this.string(''),
+            name: this.string(''),
+            type: this.string(''),
+            meta: this.attr({}),
+            clone_of_conn_id: this.attr(null).nullable(),
         }
     }
 
@@ -61,9 +59,11 @@ export default class QueryConn extends Extender {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
-            //FK: a connection can be bound to either a QueryTab or a Worksheet, so one of them is nullable
+            //FK, one to one inverse
             query_tab_id: this.attr(null).nullable(),
             worksheet_id: this.attr(null).nullable(),
+            queryTab: this.belongsTo(QueryTab, 'query_tab_id'),
+            worksheet: this.belongsTo(Worksheet, 'worksheet_id'),
         }
     }
 }
