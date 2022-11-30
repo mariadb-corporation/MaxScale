@@ -51,6 +51,7 @@ import '@queryEditorSrc/styles/queryEditor.scss'
 import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
 import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
 import { EventBus } from '@queryEditorSrc/components/EventBus'
+import initEntities from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     name: 'query-editor',
@@ -108,7 +109,7 @@ export default {
     },
     created() {
         this.handleAutoClearQueryHistory()
-        this.createDefWorksheet()
+        initEntities()
     },
     mounted() {
         this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())
@@ -116,7 +117,6 @@ export default {
 
     methods: {
         ...mapActions({
-            createDefWorksheet: 'queryEditorConfig/createDefWorksheet',
             handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),
