@@ -135,9 +135,8 @@ AuthRes Ed25519ClientAuthenticator::authenticate(MYSQL_session* session, Authent
         auto pubkey_bytes = mxs::from_base64(encoding);
         if (pubkey_bytes.size() == ED::PUBKEY_LEN)
         {
-            uint8_t message[total_mlen];
-            unsigned long long int decr_mlen = 0;
-            if (crypto_sign_open(message, &decr_mlen, sign_and_scramble, total_mlen,
+            uint8_t work_arr[total_mlen];
+            if (crypto_sign_open(work_arr, sign_and_scramble, total_mlen,
                                  pubkey_bytes.data()) == 0)
             {
                 rval.status = AuthRes::Status::SUCCESS;

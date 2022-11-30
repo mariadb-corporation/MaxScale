@@ -8,7 +8,7 @@ int crypto_sign(unsigned char* sm,
 );
 
 int crypto_sign_open(
-  unsigned char* m,unsigned long long* mlen,
+  unsigned char* m,
   const unsigned char* sm,unsigned long long smlen,
   const unsigned char* pk
 );

@@ -6,7 +6,7 @@
 #include "sc.h"
 
 int crypto_sign_open(
-  unsigned char *m,unsigned long long *mlen,
+  unsigned char *m,
   const unsigned char *sm,unsigned long long smlen,
   const unsigned char *pk
 )
@@ -35,14 +35,9 @@ int crypto_sign_open(
   ge_double_scalarmult_vartime(&R,h,&A,scopy);
   ge_tobytes(rcheck,&R);
   if (crypto_verify_32(rcheck,rcopy) == 0) {
-    memmove(m,m + 64,smlen - 64);
-    memset(m + smlen - 64,0,64);
-    *mlen = smlen - 64;
     return 0;
   }
 
 badsig:
-  *mlen = -1;
-  memset(m,0,smlen);
   return -1;
 }

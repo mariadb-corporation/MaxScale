@@ -6,6 +6,10 @@ and can be found in the "crypto_sign/ed25519/ref10"-directory.
 
 ==============================
 Changes:
-- crypto_sign() does not take the public key as argument and instead calculates
-  it from the password as in crypto_sign_keypair(). Also, does not return signed
-  message length as it's already known.
+
+crypto_sign() does not take the public key as argument and instead calculates
+it from the password as in crypto_sign_keypair(). Also, does not return signed
+message length as it's already known.
+
+crypto_sign_open() only returns the result of the verification (passed/failed),
+not the verified message.
