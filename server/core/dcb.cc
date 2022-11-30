@@ -320,7 +320,7 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
         auto readq_len = m_readq.length();
 
         MXB_DEBUG("Read %lu bytes from dcb %p (%s) in state %s fd %d.",
-                  readq_len, this, whoami(), mxs::to_string(m_state), m_fd);
+                  readq_len, this, whoami().c_str(), mxs::to_string(m_state), m_fd);
 
         if (maxbytes > 0 && readq_len >= maxbytes)
         {
@@ -952,7 +952,7 @@ void DCB::socket_write_SSL()
     if (total_written > 0)
     {
         MXB_DEBUG("Wrote %lu bytes to dcb %p (%s) in state %s fd %d.",
-                  total_written, this, whoami(), mxs::to_string(m_state), m_fd);
+                  total_written, this, whoami().c_str(), mxs::to_string(m_state), m_fd);
 
         m_last_write = mxs_clock();
     }
@@ -1018,7 +1018,7 @@ void DCB::socket_write()
     if (total_written > 0)
     {
         MXB_DEBUG("Wrote %lu bytes to dcb %p (%s) in state %s fd %d.",
-                  total_written, this, whoami(), mxs::to_string(m_state), m_fd);
+                  total_written, this, whoami().c_str(), mxs::to_string(m_state), m_fd);
 
         m_last_write = mxs_clock();
     }
@@ -1740,9 +1740,9 @@ void ClientDCB::shutdown()
     m_protocol->finish_connection();
 }
 
-const char* ClientDCB::whoami() const
+std::string ClientDCB::whoami() const
 {
-    return m_session->user_and_host().c_str();
+    return m_session->user_and_host();
 }
 
 ClientDCB::ClientDCB(int fd,
@@ -2177,7 +2177,7 @@ BackendDCB::Manager* BackendDCB::manager() const
     return static_cast<Manager*>(m_manager);
 }
 
-const char* BackendDCB::whoami() const
+std::string BackendDCB::whoami() const
 {
     return m_server->name();
 }

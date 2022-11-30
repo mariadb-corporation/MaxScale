@@ -3211,7 +3211,7 @@ void MariaDBClientConnection::assign_backend_authenticator(mariadb::Authenticati
                           "The plugin is not enabled for listener '%s'. Falling back to normal "
                           "authentication.",
                           m_session_data->user_and_host().c_str(), mapped_user->c_str(),
-                          mapped_user->c_str(), listener_data->m_listener_name.c_str());
+                          found_creds->plugin.c_str(), listener_data->m_listener_name.c_str());
             }
         }
     }
