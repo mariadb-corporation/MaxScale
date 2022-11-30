@@ -17,21 +17,20 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
-    Test->maxscale->ssh_node_f(true, "chmod 400 /etc/maxscale.cnf");
-    Test->reset_timeout();
-    Test->maxscale->restart_maxscale();
-    Test->reset_timeout();
-    int rv = Test->maxscale->ssh_node_f(true,
-                                        "journalctl --since '-5s' -u maxscale | "
-                                        "grep \"Opening file '/etc/maxscale.cnf' for reading failed\"");
-    Test->expect(rv == 0,
-                 "\"Opening file '/etc/maxscale.cnf' for reading failed\" not found in stderr output.");
-    Test->reset_timeout();
-    Test->maxscale->ssh_node_f(true, "chmod 777 /etc/maxscale.cnf");
+    TestConnections test(argc, argv);
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    test.reset_timeout();
+    test.maxscale->ssh_node_f(true, "chmod 400 /etc/maxscale.cnf");
+    test.reset_timeout();
+    test.maxscale->restart_maxscale();
+    test.reset_timeout();
+    int rv = test.maxscale->ssh_node_f(true,
+                                       "journalctl --since '-5s' -u maxscale | "
+                                       "grep \"Opening file '/etc/maxscale.cnf' for reading failed\"");
+    test.expect(rv == 0,
+                "\"Opening file '/etc/maxscale.cnf' for reading failed\" not found in stderr output.");
+    test.reset_timeout();
+    test.maxscale->ssh_node_f(true, "chmod 777 /etc/maxscale.cnf");
+
+    return test.global_result;
 }
