@@ -48,10 +48,17 @@ export default class Worksheet extends Model {
         })
     }
 
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
+        return { name: this.string('WORKSHEET') }
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
-            name: this.string('WORKSHEET'),
+            ...this.getNonKeyFields(),
             // relationship fields
             queryTabs: this.hasMany(QueryTab, 'worksheet_id'),
             schemaSidebar: this.hasOne(SchemaSidebar, 'worksheet_id'),

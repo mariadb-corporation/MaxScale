@@ -17,14 +17,22 @@ import { uuidv1 } from '@share/utils/helpers'
 export default class Editor extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.EDITORS
 
-    static fields() {
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
         return {
-            id: this.uid(() => uuidv1()),
             query_text: this.string(''),
             curr_ddl_alter_spec: this.string(''),
             blob_file: this.attr(null),
             curr_editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
             tbl_creation_info: this.attr(null),
+        }
+    }
+    static fields() {
+        return {
+            id: this.uid(() => uuidv1()),
+            ...this.getNonKeyFields(),
             //FK
             query_tab_id: this.attr(null),
         }

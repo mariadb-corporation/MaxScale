@@ -46,11 +46,17 @@ export default class QueryTab extends Model {
         })
     }
 
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
+        return { name: this.string('Query Tab 1'), count: this.number(1) }
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
-            name: this.string('Query Tab 1'),
-            count: this.number(1),
+            ...this.getNonKeyFields(),
             //FK
             worksheet_id: this.attr(null),
             // relationship fields

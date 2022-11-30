@@ -45,22 +45,20 @@ export default {
                         id: worksheet_id,
                         name: 'WORKSHEET',
                         schemaSidebar: new SchemaSidebar(),
-                        queryTabs: [
-                            {
-                                ...new QueryTab(),
-                                id: query_tab_id,
-                                worksheet_id,
-                                editor: new Editor(),
-                                queryResult: new QueryResult(),
-                                queryConn: new QueryConn(),
-                                queryTabMem: new QueryTabMem(),
-                            },
-                        ],
                         queryConn: new QueryConn(),
                         worksheetMem: new WorksheetMem(),
                     },
                 })
-
+                QueryTab.create({
+                    data: {
+                        id: query_tab_id,
+                        worksheet_id,
+                        editor: new Editor(),
+                        queryResult: new QueryResult(),
+                        queryConn: new QueryConn(),
+                        queryTabMem: new QueryTabMem(),
+                    },
+                })
                 Worksheet.commit(state => (state.active_wke_id = worksheet_id))
                 // update active_query_tab_map state
                 QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = query_tab_id))

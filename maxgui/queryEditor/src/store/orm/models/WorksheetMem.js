@@ -17,11 +17,11 @@ import { ORM_MEM_ENTITIES } from '@queryEditorSrc/store/config'
 export default class WorksheetMem extends Model {
     static entity = ORM_MEM_ENTITIES.WORKSHEETS_MEM
 
-    static fields() {
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
         return {
-            id: this.uid(() => uuidv1()),
-            //FK
-            worksheet_id: this.attr(null),
             // fields for SchemaSidebar
             /**
              * TODO: Make active_prvw_node an object hash with queryTab id as key
@@ -38,6 +38,15 @@ export default class WorksheetMem extends Model {
              * @property {array} result - error msg array.
              */
             exe_stmt_result: this.attr({}),
+        }
+    }
+
+    static fields() {
+        return {
+            id: this.uid(() => uuidv1()),
+            ...this.getNonKeyFields(),
+            //FK
+            worksheet_id: this.attr(null),
         }
     }
 }

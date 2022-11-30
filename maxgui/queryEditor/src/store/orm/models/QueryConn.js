@@ -47,11 +47,20 @@ export default class QueryConn extends Model {
         })
     }
 
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
+        return {
+            sql_conn: this.attr(null), // stores data of a sql connection from API
+            active_db: this.string(''),
+        }
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
-            sql_conn: this.attr(null), // stores data of a sql connection from API
-            active_db: this.string(''),
+            ...this.getNonKeyFields(),
             //FK: a connection can be bound to either a QueryTab or a Worksheet, so one of them is nullable
             query_tab_id: this.attr(null).nullable(),
             worksheet_id: this.attr(null).nullable(),

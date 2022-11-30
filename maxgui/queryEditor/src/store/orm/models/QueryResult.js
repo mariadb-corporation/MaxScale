@@ -17,11 +17,20 @@ import { uuidv1 } from '@share/utils/helpers'
 export default class QueryResult extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS
 
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
+        return {
+            curr_query_mode: this.string(QUERY_MODES.QUERY_VIEW),
+            show_vis_sidebar: this.boolean(false),
+        }
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
-            curr_query_mode: this.string(QUERY_MODES.QUERY_VIEW),
-            show_vis_sidebar: this.boolean(false),
+            ...this.getNonKeyFields(),
             //FK
             query_tab_id: this.attr(null),
         }

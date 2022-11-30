@@ -17,11 +17,20 @@ import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 export default class SchemaSidebar extends Model {
     static entity = ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS
 
+    /**
+     * @returns {Object} - return fields that are not key, relational fields
+     */
+    static getNonKeyFields() {
+        return {
+            search_schema: this.string(''),
+            expanded_nodes: this.attr([]),
+        }
+    }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),
-            search_schema: this.string(''),
-            expanded_nodes: this.attr([]),
+            ...this.getNonKeyFields(),
             //FK
             worksheet_id: this.attr(null),
         }
