@@ -149,7 +149,7 @@ public:
         return m_remote;
     }
 
-    virtual const char* whoami() const = 0;
+    virtual std::string whoami() const = 0;
 
     /**
      * @return The host of the client that created this DCB.
@@ -749,7 +749,7 @@ public:
         return rv;
     }
 
-    const char* whoami() const override;
+    std::string whoami() const override;
 
 protected:
     // Only for InternalDCB.
@@ -863,7 +863,7 @@ public:
         return rv;
     }
 
-    const char* whoami() const override;
+    std::string whoami() const override;
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
