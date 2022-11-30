@@ -120,6 +120,7 @@ public:
 
     private:
         mxq::ODBC m_conn;
+        bool      m_wrap_in_atomic_block {false};
     };
 
     enum class Reason

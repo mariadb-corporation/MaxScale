@@ -60,6 +60,8 @@ public:
 
     void set_row_limit(size_t limit);
 
+    std::string get_string_info(int type) const;
+
     std::map<std::string, std::map<std::string, std::string>> drivers();
 
     bool ok_result(int64_t rows_affected, int64_t warnings) override;
@@ -748,6 +750,15 @@ void ODBCImp::set_row_limit(size_t limit)
     m_row_limit = limit;
 }
 
+std::string ODBCImp::get_string_info(int type) const
+{
+    char buf[512];
+    SQLSMALLINT buflen = 0;
+    SQLGetInfo(m_conn, type, buf, sizeof(buf), &buflen);
+    buf[buflen] = '\0';
+    return buf;
+}
+
 bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
 {
     mxb_assert(handler);
@@ -1127,6 +1138,16 @@ Output* ODBC::as_output()
 void ODBC::set_row_limit(size_t limit)
 {
     m_imp->set_row_limit(limit);
+}
+
+std::string ODBC::driver_name() const
+{
+    return m_imp->get_string_info(SQL_DRIVER_NAME);
+}
+
+std::string ODBC::driver_version() const
+{
+    return m_imp->get_string_info(SQL_DRIVER_VER);
 }
 
 // static

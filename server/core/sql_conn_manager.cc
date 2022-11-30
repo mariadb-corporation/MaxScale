@@ -15,9 +15,45 @@
 #include <maxbase/assert.hh>
 #include <maxbase/json.hh>
 #include <uuid/uuid.h>
+#include <maxbase/string.hh>
 
 using std::move;
 using LockGuard = std::lock_guard<std::mutex>;
+
+namespace
+{
+std::string wrap_in_atomic_block(std::string_view sql)
+{
+    bool have_semicolon = false;
+
+    for (auto it = sql.rbegin(); it != sql.rend(); it++)
+    {
+        if (!isspace(*it))
+        {
+            have_semicolon = *it == ';';
+            break;
+        }
+    }
+
+    std::ostringstream ss;
+    ss << "BEGIN NOT ATOMIC " << sql << (have_semicolon ? "" : ";") << "END";
+    return ss.str();
+}
+
+int parse_version(std::string str)
+{
+    int ver = 0;
+
+    if (auto tok = mxb::strtok(str, "."); tok.size() == 3)
+    {
+        ver = strtol(tok[0].c_str(), nullptr, 10) * 10000;
+        ver += strtol(tok[1].c_str(), nullptr, 10) * 100;
+        ver += strtol(tok[2].c_str(), nullptr, 10);
+    }
+
+    return ver;
+}
+}
 
 namespace HttpSql
 {
@@ -449,6 +485,14 @@ ConnectionManager::ODBCConnection::ODBCConnection(mxq::ODBC&& odbc, const Connec
     : Connection(cnf)
     , m_conn(move(odbc))
 {
+    if (m_conn.driver_name() == "libmaodbc.so")
+    {
+        if (parse_version(m_conn.driver_version()) < 30118)
+        {
+            // This is a workaround for ODBC-375: https://jira.mariadb.org/browse/ODBC-375
+            m_wrap_in_atomic_block = true;
+        }
+    }
 }
 
 std::string ConnectionManager::ODBCConnection::error()
@@ -467,7 +511,8 @@ mxb::Json ConnectionManager::ODBCConnection::query(const std::string& sql, int64
     mxq::JsonResult res;
     m_conn.set_row_limit(max_rows);
     this->last_max_rows = max_rows;
-    m_conn.query(sql, &res);
+    std::string final_sql = m_wrap_in_atomic_block ? wrap_in_atomic_block(sql) : sql;
+    m_conn.query(final_sql, &res);
     auto result = res.result();
     mxb_assert(result.type() == mxb::Json::Type::ARRAY);
 

@@ -295,6 +295,22 @@ public:
      */
     void set_row_limit(size_t limit);
 
+    /**
+     * Get the name of the driver being used
+     *
+     * @return The name of the driver if it could be retrieved or an empty string if the connection is not
+     *         open or an error occurred while fetching the information.
+     */
+    std::string driver_name() const;
+
+    /**
+     * Get the version of the driver being used
+     *
+     * @return The version of the driver if it could be retrieved or an empty string if the connection is not
+     *         open or an error occurred while fetching the information.
+     */
+    std::string driver_version() const;
+
 private:
     std::unique_ptr<ODBCImp> m_imp;
 };
