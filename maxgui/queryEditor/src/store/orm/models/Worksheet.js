@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { uuidv1 } from '@share/utils/helpers'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
@@ -19,7 +19,7 @@ import QueryTab from './QueryTab'
 import QueryConn from './QueryConn'
 import WorksheetMem from './WorksheetMem'
 
-export default class Worksheet extends Model {
+export default class Worksheet extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
 
     static state() {
@@ -53,6 +53,23 @@ export default class Worksheet extends Model {
      */
     static getNonKeyFields() {
         return { name: this.string('WORKSHEET') }
+    }
+
+    /**
+     * Refresh non-key and non-relational fields of an entity and its relations
+     * @param {String|Function} payload - either a Worksheet id or a callback function that return Boolean (filter)
+     */
+    static cascadeRefresh(payload) {
+        const models = queryHelper.filterEntity(Worksheet, payload)
+        models.forEach(model => {
+            Worksheet.refresh(model.id) // refresh itself
+            // refresh its relations
+            WorksheetMem.refresh(m => m.worksheet_id === model.id)
+            SchemaSidebar.refresh(s => s.worksheet_id === model.id)
+            QueryConn.refresh(c => c.worksheet_id === model.id)
+            // refresh all queryTabs and its relations
+            QueryTab.cascadeRefresh(t => t.worksheet_id === model.id)
+        })
     }
 
     static fields() {

@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { uuidv1 } from '@share/utils/helpers'
 import { ORM_MEM_ENTITIES } from '@queryEditorSrc/store/config'
 
-export default class WorksheetMem extends Model {
+export default class WorksheetMem extends Extender {
     static entity = ORM_MEM_ENTITIES.WORKSHEETS_MEM
 
     /**

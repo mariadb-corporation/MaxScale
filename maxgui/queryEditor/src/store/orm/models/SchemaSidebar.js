@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { uuidv1 } from '@share/utils/helpers'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 
-export default class SchemaSidebar extends Model {
+export default class SchemaSidebar extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS
 
     /**

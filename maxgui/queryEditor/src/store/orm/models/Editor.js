@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
-export default class Editor extends Model {
+export default class Editor extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.EDITORS
 
     /**
@@ -29,6 +29,7 @@ export default class Editor extends Model {
             tbl_creation_info: this.attr(null),
         }
     }
+
     static fields() {
         return {
             id: this.uid(() => uuidv1()),

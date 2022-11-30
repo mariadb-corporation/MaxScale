@@ -10,8 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
+import { t } from 'typy'
 import { uuidv1 } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryResult from './QueryResult'
@@ -19,7 +20,7 @@ import QueryConn from './QueryConn'
 import Editor from './Editor'
 import QueryTabMem from './QueryTabMem'
 
-export default class QueryTab extends Model {
+export default class QueryTab extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
 
     static state() {
@@ -51,6 +52,38 @@ export default class QueryTab extends Model {
      */
     static getNonKeyFields() {
         return { name: this.string('Query Tab 1'), count: this.number(1) }
+    }
+
+    /**
+     * Refresh non-key and non-relational fields of an entity and its relations
+     * @param {String|Function} payload - either a QueryTab id or a callback function that return Boolean (filter)
+     */
+    static cascadeRefresh(payload) {
+        const models = queryHelper.filterEntity(QueryTab, payload)
+        models.forEach(model => {
+            const target = QueryTab.query()
+                .with('editor') // get editor relational field
+                .whereId(model.id)
+                .first()
+            if (target) {
+                //----------------------- refresh itself --------------------------
+                QueryTab.update({
+                    where: model.id,
+                    data: {
+                        // refresh the name if the editor doesn't have a blob_file
+                        name: t(target, 'editor.blob_file').isNull
+                            ? `Query Tab ${target.count}`
+                            : target.name,
+                    },
+                })
+                // refresh its relations
+                QueryTabMem.refresh(m => m.query_tab_id === model.id)
+                // keep query_txt and blob_file data even after refresh all fields
+                Editor.refresh(e => e.query_tab_id === model.id, ['blob_file', 'query_txt'])
+                QueryResult.refresh(r => r.query_tab_id === model.id)
+                QueryConn.refresh(c => c.query_tab_id === model.id)
+            }
+        })
     }
 
     static fields() {

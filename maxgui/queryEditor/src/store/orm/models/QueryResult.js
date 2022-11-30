@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { Model } from '@vuex-orm/core'
+import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
-export default class QueryResult extends Model {
+export default class QueryResult extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS
 
     /**
