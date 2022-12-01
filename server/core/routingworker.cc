@@ -1487,7 +1487,30 @@ void RoutingWorker::post_run()
     int64_t cleared = qc_clear_thread_cache();
     size_t nClosed = pool_close_all_conns();
 
-    if (!maxscale_is_shutting_down())
+    finish_datas();
+
+    // See MainWorker::post_run for an explanation why this is done here
+    m_storage.clear();
+
+    qc_thread_end(QC_INIT_SELF);
+    modules_thread_finish();
+    // TODO: Add service_thread_finish().
+
+    if (maxscale_is_shutting_down())
+    {
+        auto i = index();
+
+        if (i != 0)
+        {
+            // Was not the last, so shutdown the previous one.
+            auto* pWorker = this_unit.ppWorkers[i - 1];
+
+            pWorker->execute([pWorker]() {
+                    pWorker->start_try_shutdown();
+                }, EXECUTE_QUEUED);
+        }
+    }
+    else
     {
         MXB_NOTICE("%s of memory used by the query classifier cache released and "
                    "%lu pooled connections closed "
@@ -1497,27 +1520,7 @@ void RoutingWorker::post_run()
                    index());
     }
 
-    finish_datas();
-
-    // See MainWorker::post_run for an explanation why this is done here
-    m_storage.clear();
-
-    qc_thread_end(QC_INIT_SELF);
-    modules_thread_finish();
-    // TODO: Add service_thread_finish().
     this_thread.pCurrent_worker = nullptr;
-
-    auto i = index();
-
-    if (i != 0)
-    {
-        // Was not the last, so shutdown the previous one.
-        auto* pWorker = this_unit.ppWorkers[i - 1];
-
-        pWorker->execute([pWorker]() {
-                pWorker->start_try_shutdown();
-            }, EXECUTE_QUEUED);
-    }
 }
 
 /**
