@@ -103,7 +103,6 @@
 import { mapActions, mapGetters, mapState } from 'vuex'
 import ConnDlgCtr from './ConnDlgCtr.vue'
 import ReconnDlgCtr from './ReconnDlgCtr.vue'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'conn-man-ctr',
@@ -125,13 +124,11 @@ export default {
             active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
+            getAllConns: 'queryConns/getAllConns',
             getWkeConns: 'queryConns/getWkeConns',
             getActiveWkeConn: 'queryConns/getActiveWkeConn',
             getIsConnBusy: 'queryConns/getIsConnBusy',
         }),
-        allConns() {
-            return QueryConn.all()
-        },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
             return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.wke_id_fk) }))
@@ -216,7 +213,7 @@ export default {
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
         },
         async onReconnectCb() {
-            await this.validateConns({ persistentConns: this.allConns, silentValidation: true })
+            await this.validateConns({ persistentConns: this.getAllConns, silentValidation: true })
         },
     },
 }

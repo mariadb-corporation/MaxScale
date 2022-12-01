@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
 import init, { defWorksheetState } from '@queryEditorSrc/store/initQueryEditorState'
@@ -147,23 +146,6 @@ export default {
                         memStates: allMemStatesModules[namespace],
                     })
             })
-        },
-        /**
-         * wke cleanup
-         * release memStates that uses wke id as key,
-         * refresh wke state to its initial state.
-         * Call this function when the disconnect action is called
-         * @param {String} wkeConnId - id of the connection has binding_type === WORKSHEET
-         */
-        resetWkeStates({ commit, rootState, dispatch, getters }, wkeConnId) {
-            const wkeConn = QueryConn.find(wkeConnId) || {}
-            const targetWke = getters.getWkeById(wkeConn.worksheet_id)
-            if (targetWke) {
-                dispatch('releaseQueryModulesMem', targetWke.id)
-                commit('REFRESH_WKE', targetWke)
-                const freshWke = rootState.wke.worksheets_arr.find(wke => wke.id === targetWke.id)
-                dispatch('handleSyncWke', freshWke)
-            }
         },
         changeWkeName({ commit, rootState, getters }, name) {
             let newWke = this.vue.$helpers.lodash.cloneDeep(getters.getActiveWke)

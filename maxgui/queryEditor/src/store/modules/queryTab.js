@@ -12,7 +12,6 @@
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
 import init, { defQueryTabState } from '@queryEditorSrc/store/initQueryEditorState'
@@ -137,8 +136,10 @@ export default {
          * @param {Object} queryTab - A queryTab object
 
          */
-        async handleDeleteQueryTab({ commit, dispatch }, queryTab) {
-            const bound_conns = QueryConn.all().filter(c => c.query_tab_id === queryTab.id)
+        async handleDeleteQueryTab({ commit, dispatch, rootGetters }, queryTab) {
+            const bound_conns = rootGetters['queryConns/getAllConns'].filter(
+                c => c.query_tab_id === queryTab.id
+            )
             for (const { id } of bound_conns) {
                 if (id) await dispatch('queryConns/disconnectClone', { id }, { root: true })
             }

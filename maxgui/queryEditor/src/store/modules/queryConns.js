@@ -402,6 +402,7 @@ export default {
         },
     },
     getters: {
+        getAllConns: () => QueryConn.all(),
         getActiveQueryTabConn: (state, getters, rootState, rootGetters) =>
             QueryConn.query()
                 .where('query_tab_id', rootGetters['queryTab/getActiveQueryTabId'])

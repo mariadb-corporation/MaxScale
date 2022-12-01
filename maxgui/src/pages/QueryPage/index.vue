@@ -24,10 +24,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 import ConfirmLeaveDlg from '@queryEditorSrc/components/ConfirmLeaveDlg.vue'
 import initEntities from '@queryEditorSrc/store/orm/initEntities'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'query-page',
@@ -42,9 +41,7 @@ export default {
         }
     },
     computed: {
-        allConns() {
-            return QueryConn.all()
-        },
+        ...mapGetters({ getAllConns: 'queryConns/getAllConns' }),
     },
     beforeRouteLeave(to, from, next) {
         if (this.to) {
@@ -55,7 +52,7 @@ export default {
              * Allow to leave page immediately if next path is to login page (user logouts)
              * or if there is no active connections
              */
-            if (Object.keys(this.allConns).length === 0) this.leavePage()
+            if (Object.keys(this.getAllConns).length === 0) this.leavePage()
             else
                 switch (to.path) {
                     case '/login':
@@ -63,7 +60,7 @@ export default {
                         break
                     case '/404':
                         this.cancelLeave()
-                        this.validateConns({ persistentConns: this.allConns })
+                        this.validateConns({ persistentConns: this.getAllConns })
                         break
                     default:
                         this.shouldDelAll = true
@@ -73,7 +70,7 @@ export default {
     },
     async created() {
         initEntities()
-        await this.validateConns({ persistentConns: this.allConns })
+        await this.validateConns({ persistentConns: this.getAllConns })
     },
     methods: {
         ...mapActions({

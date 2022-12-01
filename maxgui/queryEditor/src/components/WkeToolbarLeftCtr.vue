@@ -28,13 +28,14 @@
  * Emits
  * $emit('get-total-width', v:number)
  */
-import { mapActions } from 'vuex'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import { mapActions, mapGetters } from 'vuex'
+
 export default {
     name: 'wke-toolbar-left-ctr',
     computed: {
+        ...mapGetters({ getAllConns: 'queryConns/getAllConns' }),
         isAddWkeDisabled() {
-            return !QueryConn.all().length
+            return !this.getAllConns.length
         },
     },
     mounted() {
