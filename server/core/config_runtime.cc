@@ -2588,8 +2588,20 @@ bool runtime_thread_rebalance(mxs::RoutingWorker& from,
 
             if (pTo)
             {
-                from.rebalance(pTo, nSessions);
-                rv = true;
+                // Execute() and not call(), so that we do not have to worry about
+                // possible deadlocks.
+                if (from.execute([pTo, nSessions]() {
+                            auto* pFrom = mxs::RoutingWorker::get_current();
+
+                            pFrom->rebalance(pTo, nSessions);
+                        }, mxb::Worker::EXECUTE_QUEUED))
+                {
+                    rv = true;
+                }
+                else
+                {
+                    MXB_ERROR("Could not initiate rebalancing.");
+                }
             }
             else
             {
