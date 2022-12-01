@@ -27,7 +27,7 @@ const mountFactory = opts =>
                     ctrDim: dummyCtrDim,
                 },
                 computed: {
-                    query_tabs: () => dummy_query_tabs,
+                    getAllQueryTabs: () => dummy_query_tabs,
                     getActiveQueryTabId: () => dummy_query_tabs[0].id,
                 },
                 stubs: {

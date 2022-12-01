@@ -25,9 +25,5 @@ export default new VuexPersistence({
             '$name', // not an entity, but it's a reserved key for vuex-orm
         ]),
         queryPersisted: state.queryPersisted,
-        //TODO: remove below fields once ORM is completely added
-        queryTab: {
-            query_tabs: state.queryTab.query_tabs,
-        },
     }),
 }).plugin

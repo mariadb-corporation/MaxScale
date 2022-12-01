@@ -33,6 +33,8 @@
  * Public License.
  */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+
 export default {
     name: 'data-prvw-nav-ctr',
     props: {
@@ -46,7 +48,6 @@ export default {
         }),
         ...mapGetters({
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         activeView: {
             get() {
@@ -57,7 +58,10 @@ export default {
                     this.curr_query_mode === this.QUERY_MODES.PRVW_DATA ||
                     this.curr_query_mode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
+                    this.SET_CURR_QUERY_MODE({
+                        payload: value,
+                        id: QueryTab.getters('getActiveQueryTabId'),
+                    })
             },
         },
     },

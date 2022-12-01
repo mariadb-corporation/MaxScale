@@ -53,7 +53,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState, mapGetters } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import AlterTableOpts from './AlterTableOpts.vue'
 import AlterColsOpts from './AlterColsOpts.vue'
 
@@ -87,9 +88,6 @@ export default {
             engines: state => state.editor.engines,
             def_db_charset_map: state => state.editor.def_db_charset_map,
         }),
-        ...mapGetters({
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
-        }),
         tableOptsData: {
             get() {
                 return this.$typy(this.formData, 'table_opts_data').safeObjectOrEmpty
@@ -111,7 +109,10 @@ export default {
                 return this.curr_ddl_alter_spec
             },
             set(value) {
-                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.getActiveQueryTabId })
+                this.SET_CURR_DDL_ALTER_SPEC({
+                    payload: value,
+                    id: QueryTab.getters('getActiveQueryTabId'),
+                })
             },
         },
         tabDim() {

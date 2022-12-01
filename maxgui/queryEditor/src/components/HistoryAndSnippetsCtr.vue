@@ -203,8 +203,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations, mapGetters } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import ResultDataTable from './ResultDataTable'
+
 export default {
     name: 'history-and-snippets-ctr',
     components: { 'table-list': ResultDataTable },
@@ -235,9 +237,7 @@ export default {
             query_history: state => state.queryPersisted.query_history,
             query_snippets: state => state.queryPersisted.query_snippets,
         }),
-        ...mapGetters({
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
-        }),
+
         activeView: {
             get() {
                 return this.curr_query_mode
@@ -247,7 +247,10 @@ export default {
                     this.curr_query_mode === this.QUERY_MODES.HISTORY ||
                     this.curr_query_mode === this.QUERY_MODES.SNIPPETS
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
+                    this.SET_CURR_QUERY_MODE({
+                        payload: value,
+                        id: QueryTab.getters('getActiveQueryTabId'),
+                    })
             },
         },
         queryLogTypes() {

@@ -8,7 +8,7 @@
                 small
                 class="float-left add-query-tab-btn"
                 icon
-                @click="handleAddNewQueryTab({ wke_id: activeWkeId })"
+                @click="add({ worksheet_id: activeWkeId })"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
@@ -29,8 +29,9 @@
  * Public License.
  */
 
-import { mapActions, mapGetters } from 'vuex'
+import { mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
@@ -48,7 +49,9 @@ export default {
         )
     },
     methods: {
-        ...mapActions({ handleAddNewQueryTab: 'queryTab/handleAddNewQueryTab' }),
+        add(param) {
+            QueryTab.dispatch('handleAddQueryTab', param)
+        },
     },
 }
 </script>

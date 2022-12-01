@@ -10,7 +10,7 @@
             center-active
         >
             <v-tab
-                v-for="queryTab in getQueryTabsOfActiveWke"
+                v-for="queryTab in queryTabsOfActiveWke"
                 :key="`${queryTab.id}`"
                 :href="`#${queryTab.id}`"
                 class="pa-0 tab-btn text-none"
@@ -76,7 +76,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapGetters } from 'vuex'
+import { mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
@@ -95,15 +95,12 @@ export default {
     computed: {
         ...mapGetters({
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
-            getActiveQueryTab: 'queryTab/getActiveQueryTab',
-            getQueryTabsOfActiveWke: 'queryTab/getQueryTabsOfActiveWke',
             getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
             getIsFileUnsavedByQueryTabId: 'editor/getIsFileUnsavedByQueryTabId',
         }),
         activeQueryTabId: {
             get() {
-                return this.getActiveQueryTabId
+                return QueryTab.getters('getActiveQueryTabId')
             },
             set(v) {
                 if (v)
@@ -113,31 +110,14 @@ export default {
                     )
             },
         },
-    },
-    activated() {
-        this.watch_getActiveQueryTabId()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_getActiveQueryTabId).safeFunction()
+        queryTabsOfActiveWke() {
+            return QueryTab.getters('getQueryTabsOfActiveWke')
+        },
     },
     methods: {
         ...mapMutations({
             SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
-        ...mapActions({
-            handleDeleteQueryTab: 'queryTab/handleDeleteQueryTab',
-            handleSyncQueryTab: 'queryTab/handleSyncQueryTab',
-            handleClearTheLastQueryTab: 'queryTab/handleClearTheLastQueryTab',
-        }),
-        watch_getActiveQueryTabId() {
-            this.unwatch_getActiveQueryTabId = this.$watch(
-                'getActiveQueryTabId',
-                v => {
-                    if (v) this.handleSyncQueryTab(this.getActiveQueryTab)
-                },
-                { immediate: true }
-            )
-        },
         /**
          * @param {Object} queryTab - queryTab object
          */
@@ -156,8 +136,9 @@ export default {
             })
         },
         async handleDeleteTab(queryTab) {
-            if (this.getQueryTabsOfActiveWke.length === 1) this.handleClearTheLastQueryTab(queryTab)
-            else await this.handleDeleteQueryTab(queryTab)
+            if (this.queryTabsOfActiveWke.length === 1)
+                QueryTab.dispatch('refreshLastQueryTab', queryTab.id)
+            else await QueryTab.dispatch('handleDeleteQueryTab', queryTab.id)
         },
     },
 }

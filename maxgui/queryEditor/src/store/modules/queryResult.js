@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -24,10 +25,6 @@ export default {
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(memStates),
-        ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced,
-            persistedArrayPath: 'queryTab.query_tabs',
-        }),
         SET_IS_MAX_ROWS_VALID(state, payload) {
             state.is_max_rows_valid = payload
         },
@@ -42,7 +39,7 @@ export default {
             { qualified_name, query_mode }
         ) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
-            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             const request_sent_time = new Date().valueOf()
             try {
                 commit(`PATCH_${query_mode}_MAP`, {
@@ -106,7 +103,7 @@ export default {
         async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const request_sent_time = new Date().valueOf()
-            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             const abort_controller = new AbortController()
             const config = rootState.queryEditorConfig.config
             try {
@@ -193,7 +190,7 @@ export default {
          */
         async stopQuery({ commit, getters, rootGetters }) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
-            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             try {
                 commit('PATCH_HAS_KILL_FLAG_MAP', {
                     id: activeQueryTabId,
@@ -232,15 +229,15 @@ export default {
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        clearDataPreview({ commit, rootGetters }) {
-            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+        clearDataPreview({ commit }) {
+            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             commit(`PATCH_PRVW_DATA_MAP`, { id: activeQueryTabId })
             commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: activeQueryTabId })
         },
     },
     getters: {
-        getUserQueryRes: (state, getters, rootState, rootGetters) =>
-            state.query_results_map[rootGetters['queryTab/getActiveQueryTabId']] || {},
+        getUserQueryRes: state =>
+            state.query_results_map[QueryTab.getters('getActiveQueryTabId')] || {},
         getLoadingQueryResultByQueryTabId: state => {
             return query_tab_id => {
                 const { is_loading = false } = state.query_results_map[query_tab_id] || {}
@@ -253,11 +250,9 @@ export default {
                 return abort_controller
             }
         },
-        isWkeLoadingQueryResult: (state, getters, rootState, rootGetters) => {
+        isWkeLoadingQueryResult: state => {
             return wke_id => {
-                const queryTabIds = rootGetters['queryTab/getQueryTabsByWkeId'](wke_id).map(
-                    s => s.id
-                )
+                const queryTabIds = QueryTab.getters('getQueryTabsByWkeId')(wke_id).map(s => s.id)
                 let isLoading = false
                 for (const key of Object.keys(state.query_results_map)) {
                     if (queryTabIds.includes(key)) {
@@ -277,14 +272,14 @@ export default {
                 return value
             }
         },
-        getPrvwData: (state, getters, rootState, rootGetters) => mode => {
+        getPrvwData: state => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
-            if (map) return map[rootGetters['queryTab/getActiveQueryTabId']] || {}
+            if (map) return map[QueryTab.getters('getActiveQueryTabId')] || {}
             return {}
         },
         getIsRunBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
-                const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                const queryTab = QueryTab.find(id) || {}
                 const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
                     queryTab.id
                 )
@@ -300,7 +295,7 @@ export default {
         },
         getIsVisBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
-                const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                const queryTab = QueryTab.find(id) || {}
                 const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
                     queryTab.id
                 )

@@ -61,6 +61,7 @@
  * Public License.
  */
 import { mapState, mapGetters, mapMutations } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import { fileOpen } from 'browser-fs-access'
 import { EventBus } from './EventBus'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
@@ -102,7 +103,6 @@ export default {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
             SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
-            UPDATE_QUERY_TAB: 'queryTab/UPDATE_QUERY_TAB',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
             SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
@@ -182,7 +182,7 @@ export default {
          */
         async loadFileToActiveQueryTab(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
-            this.UPDATE_QUERY_TAB({ ...this.queryTab, name: blob.handle.name })
+            QueryTab.update({ where: this.queryTab.id, data: { name: blob.handle.name } })
             this.SET_QUERY_TXT({ payload: blobTxt, id: this.queryTab.id })
             if (!this.hasFileSystemReadOnlyAccess)
                 /**

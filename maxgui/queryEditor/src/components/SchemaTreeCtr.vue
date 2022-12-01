@@ -113,8 +113,10 @@ This component emits the following events
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
+
 export default {
     name: 'schema-tree-ctr',
     mixins: [customDragEvt, asyncEmit],
@@ -142,11 +144,13 @@ export default {
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
             getAlteredActiveNode: 'editor/getAlteredActiveNode',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
+        },
+        activeQueryTabId() {
+            return QueryTab.getters('getActiveQueryTabId')
         },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -200,7 +204,7 @@ export default {
                     const activeNodes = this.minimizeNodes(v)
                     if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
                         this.SET_TBL_CREATION_INFO({
-                            id: this.getActiveQueryTabId,
+                            id: this.activeQueryTabId,
                             payload: {
                                 ...this.tbl_creation_info,
                                 altered_active_node: activeNodes[0],
@@ -445,7 +449,7 @@ export default {
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
                     this.SET_CURR_EDITOR_MODE({
-                        id: this.getActiveQueryTabId,
+                        id: this.activeQueryTabId,
                         payload: this.EDITOR_MODES.TXT_EDITOR,
                     })
                     this.activeNodes = [node] // updateActiveNode

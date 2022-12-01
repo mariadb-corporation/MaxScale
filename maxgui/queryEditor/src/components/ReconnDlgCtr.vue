@@ -37,6 +37,7 @@
  */
 
 import { mapActions, mapGetters } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 
 export default {
@@ -48,7 +49,6 @@ export default {
         ...mapGetters({
             getLostCnnErrMsgObj: 'queryConns/getLostCnnErrMsgObj',
             getActiveWkeConn: 'queryConns/getActiveWkeConn',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         queryErrMsg() {
             return this.$typy(this.getLostCnnErrMsgObj, 'message').safeString
@@ -59,7 +59,7 @@ export default {
             },
             set() {
                 QueryTabMem.update({
-                    where: this.getActiveQueryTabId,
+                    where: QueryTab.getters('getActiveQueryTabId'),
                     data: { lost_cnn_err_msg_obj: {} },
                 })
             },

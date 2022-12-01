@@ -329,46 +329,6 @@ function getAlterColsOptsSQL(node) {
 }
 
 /**
- * @private
- * This helps to mutate flat state
- * @param {Object} moduleState  module state to be mutated
- * @param {Object} data  key/value state, can be more than one key
- */
-function mutate_flat_states({ moduleState, data }) {
-    Object.keys(data).forEach(key => (moduleState[key] = data[key]))
-}
-/**
- * @public
- * This function helps to synchronize persistedObj in the persisted array. e.g. worksheets_arr with provided data
- * @param {Object} param.scope - Mutation scope.
- * @param {Object} param.data - partial modification of a persistedObj in the persisted array
- * @param {Object} param.id - id of a persistedObj in the persisted array
- * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
- */
-export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
-    const {
-        state,
-        vue: {
-            $helpers: {
-                lodash: { set },
-                immutableUpdate,
-            },
-            $typy,
-        },
-    } = scope
-    const persistedArray = $typy(state, persistedArrayPath).safeArray
-    const idx = persistedArray.findIndex(obj => obj.id === id)
-    set(
-        state, //obj
-        persistedArrayPath, //path
-        //new value
-        immutableUpdate(persistedArray, {
-            [idx]: { $set: { ...persistedArray[idx], ...data } },
-        })
-    )
-}
-
-/**
  * @public
  * The value of each state is replicated from the persisted object in the
  * persisted array. e.g. worksheets_arr
@@ -415,48 +375,6 @@ function syncStateCreator(namespace) {
             return null
     }
 }
-/**
- * @public
- * This function helps to generate vuex mutations for states to by mutated to
- * flat states and synced to persistedObj.
- * The name of mutation follows this pattern SET_STATE_NAME.
- * @param {Object} param.statesToBeSynced. states to be mutated and synced
- * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
- * @returns {Object} - returns vuex mutations
- */
-function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
-    return {
-        // Generate mutation for each key
-        ...Object.keys(statesToBeSynced).reduce(
-            (mutations, key) => ({
-                ...mutations,
-                [`SET_${key.toUpperCase()}`]: function(state, { payload, id }) {
-                    const data = {
-                        [key]: payload,
-                    }
-                    // First mutating flat states then sync it to persistedObj
-                    mutate_flat_states({ moduleState: state, data })
-                    syncToPersistedObj({ scope: this, data, id, persistedArrayPath })
-                },
-            }),
-            {}
-        ),
-        /**
-         * Sync persistedObj to flat states
-         * @param {Object} state - vuex state
-         * @param {Object} persistedObj - persisted object.
-         */
-        SYNC_WITH_PERSISTED_OBJ: function(state, persistedObj) {
-            mutate_flat_states({
-                moduleState: state,
-                data: this.vue.$helpers.lodash.pickBy(persistedObj, (v, key) =>
-                    Object.keys(statesToBeSynced).includes(key)
-                ),
-            })
-        },
-    }
-}
-
 /**
  * @public
  * Below states are stored in hash map structure.
@@ -543,19 +461,6 @@ function memStatesMutationCreator(memStates) {
         }
     }, {})
 }
-/**
- * @public
- * This helps to commit mutations to release data storing in memory
- * @param {Object} param.namespace - module namespace. i.e. editor, queryResult, schemaSidebar
- * @param {Function} param.commit - vuex commit function
- * @param {String} param.id - wke_id or query_tab_id
- * @param {Object} param.memStates - memStates storing in memory
- */
-function releaseMemory({ namespace, commit, id, memStates }) {
-    Object.keys(memStates).forEach(key => {
-        commit(`${namespace}/PATCH_${key.toUpperCase()}`, { id }, { root: true })
-    })
-}
 
 /**
  * @public
@@ -629,11 +534,8 @@ export default {
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
     syncStateCreator,
-    syncedStateMutationsCreator,
     memStateCreator,
     memStatesMutationCreator,
-    releaseMemory,
-    syncToPersistedObj,
     detectUnsavedChanges,
     filterEntity,
     categorizeSqlConns,

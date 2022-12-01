@@ -49,15 +49,13 @@
                                 class="ml-1 del-tab-btn"
                                 icon
                                 x-small
-                                :disabled="getIsConnBusyByQueryTabId(getActiveQueryTabId)"
+                                :disabled="getIsConnBusyByQueryTabId(activeQueryTabId)"
                                 @click.stop.prevent="deleteWke(wke.id)"
                             >
                                 <v-icon
                                     size="8"
                                     :color="
-                                        getIsConnBusyByQueryTabId(getActiveQueryTabId)
-                                            ? ''
-                                            : 'error'
+                                        getIsConnBusyByQueryTabId(activeQueryTabId) ? '' : 'error'
                                     "
                                 >
                                     $vuetify.icons.mxs_close
@@ -90,8 +88,9 @@
  */
 
 import { mapGetters } from 'vuex'
-import WkeToolbar from './WkeToolbar.vue'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import WkeToolbar from './WkeToolbar.vue'
 
 export default {
     name: 'wke-nav-ctr',
@@ -106,13 +105,15 @@ export default {
     },
     computed: {
         ...mapGetters({
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getWkeConnByWkeId: 'queryConns/getWkeConnByWkeId',
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),
         allWorksheets() {
             return Worksheet.all()
+        },
+        activeQueryTabId() {
+            return QueryTab.getters('getActiveQueryTabId')
         },
         activeWkeID: {
             get() {

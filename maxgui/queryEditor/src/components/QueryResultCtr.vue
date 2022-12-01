@@ -82,9 +82,11 @@
  * Public License.
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import DataPrvw from './DataPrvw.vue'
 import ResultsTab from './ResultsTab.vue'
 import HistoryAndSnippetsCtr from './HistoryAndSnippetsCtr.vue'
+
 export default {
     name: 'query-result-ctr',
     components: {
@@ -115,7 +117,6 @@ export default {
             getIsConnBusy: 'queryConns/getIsConnBusy',
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         componentDynDim() {
@@ -139,7 +140,10 @@ export default {
                 }
             },
             set(value) {
-                this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveQueryTabId })
+                this.SET_CURR_QUERY_MODE({
+                    payload: value,
+                    id: QueryTab.getters('getActiveQueryTabId'),
+                })
             },
         },
         isLoading() {

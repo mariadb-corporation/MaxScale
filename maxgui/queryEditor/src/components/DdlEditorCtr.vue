@@ -41,6 +41,7 @@
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
 import DdlEditorToolbar from './DdlEditorToolbar.vue'
 
@@ -72,7 +73,6 @@ export default {
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         formDim() {
             return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
@@ -424,7 +424,7 @@ export default {
             })
             if (!this.isExecFailed)
                 this.SET_TBL_CREATION_INFO({
-                    id: this.getActiveQueryTabId,
+                    id: QueryTab.getters('getActiveQueryTabId'),
                     payload: {
                         ...this.tbl_creation_info,
                         data: this.$helpers.lodash.cloneDeep(this.formData),

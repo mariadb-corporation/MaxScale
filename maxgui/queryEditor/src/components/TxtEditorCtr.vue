@@ -108,6 +108,7 @@
  * Public License.
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
 import QueryResultCtr from './QueryResultCtr.vue'
@@ -162,7 +163,6 @@ export default {
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getChartResultSets: 'queryResult/getChartResultSets',
         }),
         eventBus() {
@@ -237,7 +237,7 @@ export default {
                 return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT({ payload: value, id: this.getActiveQueryTabId })
+                this.SET_QUERY_TXT({ payload: value, id: QueryTab.getters('getActiveQueryTabId') })
             },
         },
         resultPaneDim() {

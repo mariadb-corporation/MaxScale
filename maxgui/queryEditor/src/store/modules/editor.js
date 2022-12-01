@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import { supported } from 'browser-fs-access'
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
@@ -31,10 +32,6 @@ export default {
         },
     },
     mutations: {
-        ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced,
-            persistedArrayPath: 'queryTab.query_tabs',
-        }),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },
@@ -116,7 +113,7 @@ export default {
         },
         async queryTblCreationInfo({ commit, state, rootGetters }, node) {
             const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
-            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             const {
                 $queryHttp,
                 $helpers: { getObjectRows, getErrorsArr },
@@ -199,12 +196,10 @@ export default {
         hasFileSystemReadOnlyAccess: () => Boolean(supported),
         hasFileSystemRWAccess: (state, getters) =>
             getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-        getIsFileUnsavedByQueryTabId: (state, getters, rootState, rootGetters) => {
-            return id => {
-                const queryTab = rootGetters['queryTab/getQueryTabById'](id)
-                const { blob_file = {}, query_txt = '' } = queryTab
-                return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
-            }
+        getIsFileUnsavedByQueryTabId: () => id => {
+            const queryTab = QueryTab.getters('getQueryTabById')(id)
+            const { blob_file = {}, query_txt = '' } = queryTab
+            return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
         },
         getQueryTabFileHandle: () => queryTab => {
             const { blob_file: { file_handle = {} } = {} } = queryTab

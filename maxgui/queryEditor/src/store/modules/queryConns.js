@@ -100,23 +100,23 @@ export default {
          * to queryTabs of the current worksheet before opening/selecting a new one,
          * so it can be used by other worksheet
          */
-        unbindConn({ rootGetters }) {
+        unbindConn() {
             QueryConn.update({
                 where: c => c.worksheet_id === Worksheet.getters('getActiveWkeId'),
                 data: { worksheet_id: null },
             })
-            rootGetters['queryTab/getQueryTabsOfActiveWke'].forEach(t =>
+            QueryTab.getters('getQueryTabsOfActiveWke').forEach(t =>
                 QueryConn.update({
                     where: c => c.query_tab_id === t.id,
                     data: { query_tab_id: null },
                 })
             )
         },
-        async onChangeConn({ getters, dispatch, rootGetters }, chosenWkeConn) {
+        async onChangeConn({ getters, dispatch }, chosenWkeConn) {
             try {
                 dispatch('unbindConn')
                 // Replace the connection of all queryTabs of the worksheet
-                const queryTabs = rootGetters['queryTab/getQueryTabsOfActiveWke']
+                const queryTabs = QueryTab.getters('getQueryTabsOfActiveWke')
                 if (queryTabs.length) {
                     const clonesOfChosenWkeConn = getters.getClonedConnsOfWkeConn(chosenWkeConn.id)
 
@@ -242,17 +242,6 @@ export default {
                 }
                 QueryConn.insert({ data: conn })
             }
-        },
-        /**
-         * Delete a clone connection.
-         * @param {Number} param.id - connection id to be deleted
-         */
-        async disconnectClone(_, { id }) {
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.delete(`/sql/${id}`)
-            )
-            if (e) this.vue.$logger.error(e)
-            else if (res.status === 204) QueryConn.cascadeRefreshOnDelete(id)
         },
         /**
          * This handles delete the worksheet connection. i.e. the
@@ -401,9 +390,9 @@ export default {
     },
     getters: {
         getAllConns: () => QueryConn.all(),
-        getActiveQueryTabConn: (state, getters, rootState, rootGetters) =>
+        getActiveQueryTabConn: () =>
             QueryConn.query()
-                .where('query_tab_id', rootGetters['queryTab/getActiveQueryTabId'])
+                .where('query_tab_id', QueryTab.getters('getActiveQueryTabId'))
                 .first() || {},
         getActiveWkeConn: () =>
             QueryConn.query()
@@ -429,19 +418,14 @@ export default {
                 .where('clone_of_conn_id', wkeConnId)
                 .get() || [],
 
-        getIsConnBusy: (state, getters, rootState, rootGetters) => {
-            const { is_conn_busy = false } = rootGetters['queryTab/getActiveQueryTabMem']
-            return is_conn_busy
-        },
+        getIsConnBusy: () => QueryTab.getters('getActiveQueryTabMem').is_conn_busy || false,
         getIsConnBusyByQueryTabId: () => {
             return query_tab_id => {
                 const { is_conn_busy = false } = QueryTabMem.find(query_tab_id) || {}
                 return is_conn_busy
             }
         },
-        getLostCnnErrMsgObj: (state, getters, rootState, rootGetters) => {
-            const { lost_cnn_err_msg_obj = {} } = rootGetters['queryTab/getActiveQueryTabMem']
-            return lost_cnn_err_msg_obj
-        },
+        getLostCnnErrMsgObj: () =>
+            QueryTab.getters('getActiveQueryTabMem').lost_cnn_err_msg_obj || {},
     },
 }

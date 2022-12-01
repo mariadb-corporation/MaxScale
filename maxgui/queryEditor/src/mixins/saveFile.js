@@ -11,6 +11,7 @@
  * Public License.
  */
 import { mapGetters, mapMutations } from 'vuex'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 export default {
     computed: {
         ...mapGetters({
@@ -22,7 +23,6 @@ export default {
     },
     methods: {
         ...mapMutations({
-            UPDATE_QUERY_TAB: 'queryTab/UPDATE_QUERY_TAB',
             SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
         }),
         /**
@@ -116,7 +116,7 @@ export default {
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
                 await this.writeFile({ fileHandle, contents: queryTab.query_txt })
-                this.UPDATE_QUERY_TAB({ ...queryTab, name: fileHandle.name }) // update tab name
+                QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
                 // update blob_file
                 this.SET_BLOB_FILE({
                     payload: { file_handle: fileHandle, txt: queryTab.query_txt },

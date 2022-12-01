@@ -140,7 +140,7 @@ describe('sidebar-ctr', () => {
                     def_db_charset_map: () => ({}),
                 },
                 methods: {
-                    handleAddNewQueryTab: () => null,
+                    handleAddQueryTab: () => null,
                     queryAlterTblSuppData: () => null,
                     queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
                 },
@@ -153,7 +153,7 @@ describe('sidebar-ctr', () => {
                 qualified_name: 'test.t1',
             }
             const fnsToBeSpied = [
-                'handleAddNewQueryTab',
+                'handleAddQueryTab',
                 'queryAlterTblSuppData',
                 'queryTblCreationInfo',
             ]

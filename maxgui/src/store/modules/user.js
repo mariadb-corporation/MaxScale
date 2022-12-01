@@ -93,7 +93,9 @@ export default {
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const { mxsApp, queryPersisted, queryTab, persisted } = rootState
+            const { ORM_PERSISTENT_ENTITIES, ORM_NAMESPACE } = rootState.queryEditorConfig.config
+
+            const { mxsApp, queryPersisted, persisted, [ORM_NAMESPACE]: orm } = rootState
             // hide snackbar snackbar_message if it is on
             if (mxsApp.snackbar_message.status) {
                 commit(
@@ -115,9 +117,10 @@ export default {
 
             const queryEditorPersistedState = this.vue.$helpers.lodash.cloneDeep({
                 queryPersisted,
-                queryTab: {
-                    query_tabs: queryTab.query_tabs,
-                },
+                [ORM_NAMESPACE]: this.vue.$helpers.lodash.pick(orm, [
+                    ...Object.values(ORM_PERSISTENT_ENTITIES),
+                    '$name', // not an entity, but it's a reserved key for vuex-orm
+                ]),
             })
             const maxguiPersistedState = this.vue.$helpers.lodash.cloneDeep({
                 persisted: persisted,

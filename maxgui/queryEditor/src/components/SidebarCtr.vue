@@ -94,7 +94,9 @@
  */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import SchemaTreeCtr from './SchemaTreeCtr.vue'
+
 export default {
     name: 'sidebar-ctr',
     components: { SchemaTreeCtr },
@@ -120,10 +122,12 @@ export default {
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConns/getIsConnBusy',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
+        },
+        activeQueryTabId() {
+            return QueryTab.getters('getActiveQueryTabId')
         },
         filterTxt: {
             get() {
@@ -162,33 +166,32 @@ export default {
             queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
-            handleAddNewQueryTab: 'queryTab/handleAddNewQueryTab',
         }),
 
         async fetchNodePrvwData({ query_mode, qualified_name }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.getActiveQueryTabId })
+            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.activeQueryTabId })
             await this.fetchPrvw({ qualified_name: qualified_name, query_mode })
         },
         async handleLoadChildren(node) {
             await this.loadChildNodes(node)
         },
         async onAlterTable(node) {
-            await this.handleAddNewQueryTab({
-                wke_id: this.activeWkeId,
+            await QueryTab.dispatch('handleAddQueryTab', {
+                worksheet_id: this.activeWkeId,
                 name: `ALTER ${node.name}`,
             })
             this.SET_TBL_CREATION_INFO({
-                id: this.getActiveQueryTabId,
+                id: this.activeQueryTabId,
                 payload: { ...this.tbl_creation_info, altered_active_node: node },
             })
             this.SET_CURR_EDITOR_MODE({
-                id: this.getActiveQueryTabId,
+                id: this.activeQueryTabId,
                 payload: this.EDITOR_MODES.DDL_EDITOR,
             })
             this.SET_CURR_DDL_ALTER_SPEC({
                 payload: this.DDL_ALTER_SPECS.COLUMNS,
-                id: this.getActiveQueryTabId,
+                id: this.activeQueryTabId,
             })
             await this.queryAlterTblSuppData()
             await this.queryTblCreationInfo(node)

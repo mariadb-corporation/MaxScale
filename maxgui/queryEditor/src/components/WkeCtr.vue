@@ -23,8 +23,8 @@
             <template slot="pane-right">
                 <div class="d-flex flex-column fill-height">
                     <query-tab-nav-ctr :height="queryTabCtrHeight" />
-                    <keep-alive v-for="queryTab in query_tabs" :key="queryTab.id" :max="20">
-                        <template v-if="getActiveQueryTabId === queryTab.id">
+                    <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
+                        <template v-if="activeQueryTabId === queryTab.id">
                             <txt-editor-ctr
                                 v-if="getIsTxtEditor"
                                 ref="editor"
@@ -86,6 +86,7 @@
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
@@ -124,15 +125,19 @@ export default {
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
             curr_editor_mode: state => state.editor.curr_editor_mode,
-            query_tabs: state => state.queryTab.query_tabs,
         }),
         ...mapGetters({
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
             getIsTxtEditor: 'editor/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
-            getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
+        allQueryTabs() {
+            return QueryTab.all()
+        },
+        activeQueryTabId() {
+            return QueryTab.getters('getActiveQueryTabId')
+        },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
         },
