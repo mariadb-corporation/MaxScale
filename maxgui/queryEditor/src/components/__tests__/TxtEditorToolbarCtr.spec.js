@@ -75,29 +75,29 @@ describe(`txt-editor-toolbar-ctr`, () => {
     })
     describe('Save to snippets tests', () => {
         wrapper
-        it(`Should disable save to snippets button if query_txt is empty `, () => {
+        it(`Should disable save to snippets button if getActiveQueryTxt is empty `, () => {
             wrapper = mountFactory()
             const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
             expect(saveToSnippetsBtn.element.disabled).to.be.true
         })
-        it(`Should allow query to be saved to snippets if query_txt is not empty`, () => {
-            wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
+        it(`Should allow query to be saved to snippets if getActiveQueryTxt is not empty`, () => {
+            wrapper = mountFactory({ computed: { getActiveQueryTxt: () => 'SELECT 1' } })
             const saveToSnippetsBtn = wrapper.find('.create-snippet-btn')
             expect(saveToSnippetsBtn.element.disabled).to.be.false
         })
         it(`Should popup dialog to save query text to snippets`, () => {
             expect(wrapper.vm.confDlg.isOpened).to.be.false
-            wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ computed: { getActiveQueryTxt: () => 'SELECT 1' } })
             wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.confDlg.isOpened).to.be.true
         })
         it(`Should generate snippet object before popup the dialog`, () => {
-            wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ computed: { getActiveQueryTxt: () => 'SELECT 1' } })
             wrapper.find('.create-snippet-btn').trigger('click')
             expect(wrapper.vm.snippet.name).to.be.equals('')
         })
         it(`Should assign addSnippet as the save handler for confDlg`, () => {
-            wrapper = mountFactory({ computed: { query_txt: () => 'SELECT 1' } })
+            wrapper = mountFactory({ computed: { getActiveQueryTxt: () => 'SELECT 1' } })
             wrapper.vm.openSnippetDlg()
             expect(wrapper.vm.$data.confDlg.onSave).to.be.equals(wrapper.vm.addSnippet)
         })
@@ -170,7 +170,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
       when query_confirm_flag = 1`, async () => {
             wrapper = mountFactory({
                 computed: {
-                    query_txt: () => 'SELECT 1',
+                    getActiveQueryTxt: () => 'SELECT 1',
                     query_confirm_flag: () => 1,
                     getIsRunBtnDisabledByQueryTabId: () => () => false,
                 },

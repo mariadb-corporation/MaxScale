@@ -96,7 +96,7 @@ export default {
         ...mapGetters({
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
-            getIsFileUnsavedByQueryTabId: 'editor/getIsFileUnsavedByQueryTabId',
+            getIsFileUnsavedByQueryTabId: 'editors/getIsFileUnsavedByQueryTabId',
         }),
         activeQueryTabId: {
             get() {
@@ -116,7 +116,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
+            SET_FILE_DLG_DATA: 'editors/SET_FILE_DLG_DATA',
         }),
         /**
          * @param {Object} queryTab - queryTab object

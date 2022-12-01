@@ -10,21 +10,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapMutations } from 'vuex'
+import { mapGetters } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
+
 export default {
     computed: {
         ...mapGetters({
-            hasFileSystemRWAccess: 'editor/hasFileSystemRWAccess',
-            getQueryTabFileHandle: 'editor/getQueryTabFileHandle',
-            getQueryTabFileHandleName: 'editor/getQueryTabFileHandleName',
-            checkQueryTabFileHandleValidity: 'editor/checkQueryTabFileHandleValidity',
+            hasFileSystemRWAccess: 'editors/hasFileSystemRWAccess',
+            getQueryTabFileHandle: 'editors/getQueryTabFileHandle',
+            getQueryTabFileHandleName: 'editors/getQueryTabFileHandleName',
+            checkQueryTabFileHandleValidity: 'editors/checkQueryTabFileHandleValidity',
         }),
     },
     methods: {
-        ...mapMutations({
-            SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
-        }),
         /**
          * @private
          * Verify the user has granted permission to read and write to the file, if
@@ -91,7 +90,8 @@ export default {
          * @param {Object} queryTab - queryTab object
          */
         saveFileLegacy(queryTab) {
-            const { id: queryTabId, query_txt, name: queryTabName } = queryTab
+            const { id: queryTabId, name: queryTabName } = queryTab
+            const { query_txt } = Editor.find(queryTabId) || {}
             let a = document.createElement('a')
             // If there is no file_handle, use the current queryTab name
             const fileName = this.getQueryTabFileHandleName(queryTab) || `${queryTabName}.sql`
@@ -101,9 +101,9 @@ export default {
             a.click()
             document.body.removeChild(a)
             // update blob_file
-            this.SET_BLOB_FILE({
-                payload: { ...queryTab.blob_file, txt: query_txt },
-                id: queryTabId,
+            Editor.update({
+                where: queryTabId,
+                data: { blob_file: { ...queryTab.blob_file, txt: query_txt } },
             })
         },
         /**
@@ -115,12 +115,13 @@ export default {
             if (!this.checkQueryTabFileHandleValidity(queryTab)) fileHandleName += '.sql'
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
-                await this.writeFile({ fileHandle, contents: queryTab.query_txt })
+                const { query_txt } = Editor.find(queryTab.id) || {}
+                await this.writeFile({ fileHandle, contents: query_txt })
                 QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
                 // update blob_file
-                this.SET_BLOB_FILE({
-                    payload: { file_handle: fileHandle, txt: queryTab.query_txt },
-                    id: queryTab.id,
+                Editor.update({
+                    where: queryTab.id,
+                    data: { blob_file: { file_handle: fileHandle, txt: query_txt } },
                 })
             } catch (ex) {
                 this.$logger.error('Unable to write file')
@@ -146,11 +147,12 @@ export default {
                 const fileHandle = this.getQueryTabFileHandle(queryTab)
                 const hasPriv = await this.verifyWritePriv(fileHandle)
                 if (hasPriv) {
-                    await this.writeFile({ fileHandle, contents: queryTab.query_txt })
+                    const { query_txt } = Editor.find(queryTab.id) || {}
+                    await this.writeFile({ fileHandle, contents: query_txt })
                     // update blob_file
-                    this.SET_BLOB_FILE({
-                        payload: { file_handle: fileHandle, txt: queryTab.query_txt },
-                        id: queryTab.id,
+                    Editor.update({
+                        where: queryTab.id,
+                        data: { blob_file: { file_handle: fileHandle, txt: query_txt } },
                     })
                 }
             } catch (e) {

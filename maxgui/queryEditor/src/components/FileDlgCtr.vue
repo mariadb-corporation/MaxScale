@@ -32,7 +32,7 @@ import { mapState, mapMutations } from 'vuex'
 export default {
     name: 'file-dlg-ctr',
     computed: {
-        ...mapState({ file_dlg_data: state => state.editor.file_dlg_data }),
+        ...mapState({ file_dlg_data: state => state.editors.file_dlg_data }),
         isOpened: {
             get() {
                 return this.file_dlg_data.is_opened
@@ -42,6 +42,6 @@ export default {
             },
         },
     },
-    methods: { ...mapMutations({ SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA' }) },
+    methods: { ...mapMutations({ SET_FILE_DLG_DATA: 'editors/SET_FILE_DLG_DATA' }) },
 }
 </script>

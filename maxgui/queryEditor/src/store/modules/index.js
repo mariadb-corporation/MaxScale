@@ -1,5 +1,5 @@
 import queryConns from './queryConns'
-import editor from './editor'
+import editors from './editors'
 import schemaSidebar from './schemaSidebar'
 import queryResult from './queryResult'
 import queryPersisted from './queryPersisted'
@@ -9,7 +9,7 @@ import mxsApp from '@share/store/mxsApp'
 export default {
     mxsApp,
     queryConns,
-    editor,
+    editors,
     schemaSidebar,
     queryResult,
     queryPersisted,

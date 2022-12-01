@@ -21,11 +21,11 @@ export default class Editor extends Extender {
      */
     static getNonKeyFields() {
         return {
-            query_text: this.string(''),
-            blob_file: this.attr(null),
-            curr_editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
+            query_txt: this.string(''),
             curr_ddl_alter_spec: this.string(''),
-            tbl_creation_info: this.attr(null),
+            blob_file: this.attr({}),
+            curr_editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
+            tbl_creation_info: this.attr({}),
         }
     }
 

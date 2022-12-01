@@ -114,6 +114,7 @@ This component emits the following events
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
 
@@ -138,13 +139,13 @@ export default {
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             search_schema: state => state.schemaSidebar.search_schema,
-            tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
-            getAlteredActiveNode: 'editor/getAlteredActiveNode',
+            getAlteredActiveNode: 'editors/getAlteredActiveNode',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
+            getTblCreationInfo: 'editors/getTblCreationInfo',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -202,15 +203,17 @@ export default {
             set(v) {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
-                    if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
-                        this.SET_TBL_CREATION_INFO({
-                            id: this.activeQueryTabId,
-                            payload: {
-                                ...this.tbl_creation_info,
-                                altered_active_node: activeNodes[0],
+                    if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
+                        Editor.update({
+                            where: this.activeQueryTabId,
+                            data: {
+                                tbl_creation_info: {
+                                    ...this.getTblCreationInfo,
+                                    altered_active_node: activeNodes[0],
+                                },
                             },
                         })
-                    } else
+                    else
                         this.PATCH_DB_TREE_MAP({
                             id: this.activeWkeId,
                             payload: {
@@ -237,8 +240,6 @@ export default {
         ...mapMutations({
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
-            SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
-            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
         watch_expandedNodes() {
             this.unwatch_expandedNodes = this.$watch(
@@ -448,9 +449,11 @@ export default {
                     break
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
-                    this.SET_CURR_EDITOR_MODE({
-                        id: this.activeQueryTabId,
-                        payload: this.EDITOR_MODES.TXT_EDITOR,
+                    Editor.update({
+                        where: this.activeQueryTabId,
+                        data: {
+                            curr_editor_mode: this.EDITOR_MODES.TXT_EDITOR,
+                        },
                     })
                     this.activeNodes = [node] // updateActiveNode
                     this.$emit('get-node-data', {

@@ -95,6 +95,7 @@
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import SchemaTreeCtr from './SchemaTreeCtr.vue'
 
 export default {
@@ -116,12 +117,12 @@ export default {
             EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
-            tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConns/getIsConnBusy',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
+            getTblCreationInfo: 'editors/getTblCreationInfo',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -153,9 +154,6 @@ export default {
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
-            SET_CURR_EDITOR_MODE: 'editor/SET_CURR_EDITOR_MODE',
-            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
         }),
         ...mapActions({
             fetchSchemas: 'schemaSidebar/fetchSchemas',
@@ -163,8 +161,8 @@ export default {
             fetchPrvw: 'queryResult/fetchPrvw',
             loadChildNodes: 'schemaSidebar/loadChildNodes',
             useDb: 'queryConns/useDb',
-            queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
-            queryTblCreationInfo: 'editor/queryTblCreationInfo',
+            queryAlterTblSuppData: 'editors/queryAlterTblSuppData',
+            queryTblCreationInfo: 'editors/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
 
@@ -181,17 +179,13 @@ export default {
                 worksheet_id: this.activeWkeId,
                 name: `ALTER ${node.name}`,
             })
-            this.SET_TBL_CREATION_INFO({
-                id: this.activeQueryTabId,
-                payload: { ...this.tbl_creation_info, altered_active_node: node },
-            })
-            this.SET_CURR_EDITOR_MODE({
-                id: this.activeQueryTabId,
-                payload: this.EDITOR_MODES.DDL_EDITOR,
-            })
-            this.SET_CURR_DDL_ALTER_SPEC({
-                payload: this.DDL_ALTER_SPECS.COLUMNS,
-                id: this.activeQueryTabId,
+            Editor.update({
+                where: this.activeQueryTabId,
+                data: {
+                    curr_editor_mode: this.EDITOR_MODES.DDL_EDITOR,
+                    curr_ddl_alter_spec: this.DDL_ALTER_SPECS.COLUMNS,
+                    tbl_creation_info: { ...this.getTblCreationInfo, altered_active_node: node },
+                },
             })
             await this.queryAlterTblSuppData()
             await this.queryTblCreationInfo(node)

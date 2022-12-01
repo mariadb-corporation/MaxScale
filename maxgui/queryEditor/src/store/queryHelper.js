@@ -15,7 +15,6 @@ import {
     NODE_GROUP_TYPES,
     NODE_GROUP_CHILD_TYPES,
     NODE_NAME_KEYS,
-    EDITOR_MODES,
     SYS_SCHEMAS,
 } from '@queryEditorSrc/store/config'
 import { lodash } from '@share/utils/helpers'
@@ -345,25 +344,6 @@ function getAlterColsOptsSQL(node) {
  */
 function syncStateCreator(namespace) {
     switch (namespace) {
-        case 'editor':
-            return {
-                query_txt: '',
-                curr_ddl_alter_spec: '',
-                /**
-                 * has these properties:
-                 * txt?: string: txt content of the blob file
-                 * file_handle?: FileSystemFileHandle. File handle.
-                 */
-                blob_file: {},
-                curr_editor_mode: EDITOR_MODES.TXT_EDITOR,
-                /**
-                 * properties:
-                 * altered_active_node?: object
-                 * loading_tbl_creation_info?: boolean
-                 * data:{ table_opts_data?: object, cols_opts_data?: object }
-                 */
-                tbl_creation_info: {},
-            }
         case 'queryResult':
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
         case 'schemaSidebar':
@@ -474,6 +454,7 @@ function detectUnsavedChanges({ query_txt, blob_file }) {
         txt: file_handle_txt = '',
         file_handle: { name: file_handle_name = '' } = {},
     } = blob_file
+
     // no unsaved changes if it's a blank queryTab
     if (!query_txt && !file_handle_name) return false
     /** If there is no file opened (e.g when file_handle_txt === ''), but there is value for query_txt

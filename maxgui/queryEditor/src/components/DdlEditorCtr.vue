@@ -39,9 +39,10 @@
  * 2-way data binding to execSqlDlg prop
  * update:execSqlDlg?: (object)
  */
-import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
+import { mapActions, mapGetters, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
 import DdlEditorToolbar from './DdlEditorToolbar.vue'
 
@@ -68,11 +69,9 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            tbl_creation_info: state => state.editor.tbl_creation_info,
-        }),
         ...mapGetters({
-            getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
+            getLoadingTblCreationInfo: 'editors/getLoadingTblCreationInfo',
+            getTblCreationInfo: 'editors/getTblCreationInfo',
         }),
         formDim() {
             return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
@@ -83,7 +82,7 @@ export default {
             )
         },
         initialData() {
-            return this.$typy(this.tbl_creation_info, 'data').safeObjectOrEmpty
+            return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
         },
         hasChanged() {
             return !this.$helpers.lodash.isEqual(
@@ -128,7 +127,6 @@ export default {
     methods: {
         ...mapMutations({
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
-            SET_TBL_CREATION_INFO: 'editor/SET_TBL_CREATION_INFO',
         }),
         ...mapActions({ exeStmtAction: 'schemaSidebar/exeStmtAction' }),
         //Watcher to work with multiple worksheets which are kept alive
@@ -423,11 +421,13 @@ export default {
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
             if (!this.isExecFailed)
-                this.SET_TBL_CREATION_INFO({
-                    id: QueryTab.getters('getActiveQueryTabId'),
-                    payload: {
-                        ...this.tbl_creation_info,
-                        data: this.$helpers.lodash.cloneDeep(this.formData),
+                Editor.update({
+                    where: QueryTab.getters('getActiveQueryTabId'),
+                    data: {
+                        tbl_creation_info: {
+                            ...this.getTblCreationInfo,
+                            data: this.$helpers.lodash.cloneDeep(this.formData),
+                        },
                     },
                 })
         },

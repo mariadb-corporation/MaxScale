@@ -12,6 +12,7 @@
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryResult')
@@ -283,10 +284,11 @@ export default {
                 const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
                     queryTab.id
                 )
+                const { query_txt } = Editor.find(queryTab.id) || {}
 
                 if (!queryTab) return true
                 return (
-                    !queryTab.query_txt ||
+                    !query_txt ||
                     !queryTabConn.id ||
                     rootGetters['queryConns/getIsConnBusyByQueryTabId'](queryTab.id) ||
                     getters.getLoadingQueryResultByQueryTabId(queryTab.id)

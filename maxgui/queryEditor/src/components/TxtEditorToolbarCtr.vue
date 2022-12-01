@@ -55,7 +55,7 @@
             btnClass="create-snippet-btn toolbar-square-btn"
             text
             color="accent-dark"
-            :disabled="!query_txt"
+            :disabled="!getActiveQueryTxt"
             @click="openSnippetDlg"
         >
             <template v-slot:btn-content>
@@ -212,9 +212,8 @@ export default {
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
-            query_txt: state => state.editor.query_txt,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            selected_query_txt: state => state.editor.selected_query_txt,
+            selected_query_txt: state => state.editors.selected_query_txt,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({
@@ -222,6 +221,7 @@ export default {
             getHasKillFlagMapByQueryTabId: 'queryResult/getHasKillFlagMapByQueryTabId',
             getIsRunBtnDisabledByQueryTabId: 'queryResult/getIsRunBtnDisabledByQueryTabId',
             getIsVisBtnDisabledByQueryTabId: 'queryResult/getIsVisBtnDisabledByQueryTabId',
+            getActiveQueryTxt: 'editors/getActiveQueryTxt',
         }),
         eventBus() {
             return EventBus
@@ -272,7 +272,7 @@ export default {
         shouldOpenDialog(mode) {
             return (
                 (mode === 'selected' && this.selected_query_txt) ||
-                (mode === 'all' && this.query_txt)
+                (mode === 'all' && this.getActiveQueryTxt)
             )
         },
         async handleRun(mode) {
@@ -290,7 +290,7 @@ export default {
                         sqlTxt:
                             this.activeRunMode === 'selected'
                                 ? this.selected_query_txt
-                                : this.query_txt,
+                                : this.getActiveQueryTxt,
                         onSave: this.confirmRunning,
                     }
                 }
@@ -309,7 +309,7 @@ export default {
             })
             switch (mode) {
                 case 'all':
-                    if (this.query_txt) await this.fetchQueryResult(this.query_txt)
+                    if (this.getActiveQueryTxt) await this.fetchQueryResult(this.getActiveQueryTxt)
                     break
                 case 'selected':
                     if (this.selected_query_txt)
@@ -318,7 +318,7 @@ export default {
             }
         },
         openSnippetDlg() {
-            if (this.query_txt) {
+            if (this.getActiveQueryTxt) {
                 this.snippet.date = new Date().valueOf()
                 this.snippet.name = ''
                 this.confDlg = {
@@ -327,14 +327,16 @@ export default {
                     title: this.$mxs_t('confirmations.createSnippet'),
                     type: 'create',
                     isCreatingSnippet: true,
-                    sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
+                    sqlTxt: this.selected_query_txt
+                        ? this.selected_query_txt
+                        : this.getActiveQueryTxt,
                     onSave: this.addSnippet,
                 }
             }
         },
         addSnippet() {
             let payload = {
-                sql: this.query_txt,
+                sql: this.getActiveQueryTxt,
                 ...this.snippet,
             }
             if (this.selected_query_txt) payload.sql = this.selected_query_txt

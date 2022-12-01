@@ -79,7 +79,7 @@ export default class QueryTab extends Extender {
                 // refresh its relations
                 QueryTabMem.refresh(id)
                 // keep query_txt and blob_file data even after refresh all fields
-                Editor.refresh(id, ['blob_file', 'query_txt'])
+                Editor.refresh(id, ['query_txt'])
                 QueryResult.refresh(id)
             }
         })

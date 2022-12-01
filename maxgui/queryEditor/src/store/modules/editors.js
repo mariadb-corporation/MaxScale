@@ -12,8 +12,8 @@
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { supported } from 'browser-fs-access'
-const statesToBeSynced = queryHelper.syncStateCreator('editor')
 
 export default {
     namespaced: true,
@@ -22,7 +22,6 @@ export default {
         charset_collation_map: {},
         def_db_charset_map: {},
         engines: [],
-        ...statesToBeSynced,
         file_dlg_data: {
             is_opened: false,
             title: '',
@@ -111,7 +110,7 @@ export default {
             if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
                 await dispatch('queryDefDbCharsetMap')
         },
-        async queryTblCreationInfo({ commit, state, rootGetters }, node) {
+        async queryTblCreationInfo({ commit, getters, rootGetters }, node) {
             const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
             const {
@@ -120,29 +119,37 @@ export default {
                 $typy,
             } = this.vue
 
-            commit('SET_TBL_CREATION_INFO', {
-                id: activeQueryTabId,
-                payload: {
-                    ...state.tbl_creation_info,
-                    loading_tbl_creation_info: true,
-                    altered_active_node: node,
+            Editor.update({
+                where: activeQueryTabId,
+                data: {
+                    tbl_creation_info: {
+                        ...getters.getTblCreationInfo,
+                        loading_tbl_creation_info: true,
+                        altered_active_node: node,
+                    },
                 },
             })
+
             let tblOptsData, colsOptsData
             const [tblOptError, tblOptsRes] = await this.vue.$helpers.asyncTryCatch(
-                $queryHttp.post(`/sql/${connId.id}/queries`, {
+                $queryHttp.post(`/sql/${connId}/queries`, {
                     sql: queryHelper.getAlterTblOptsSQL(node),
                 })
             )
             const [colsOptsError, colsOptsRes] = await this.vue.$helpers.asyncTryCatch(
-                $queryHttp.post(`/sql/${connId.id}/queries`, {
+                $queryHttp.post(`/sql/${connId}/queries`, {
                     sql: queryHelper.getAlterColsOptsSQL(node),
                 })
             )
             if (tblOptError || colsOptsError) {
-                commit('SET_TBL_CREATION_INFO', {
-                    id: activeQueryTabId,
-                    payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
+                Editor.update({
+                    where: activeQueryTabId,
+                    data: {
+                        tbl_creation_info: {
+                            ...getters.getTblCreationInfo,
+                            loading_tbl_creation_info: false,
+                        },
+                    },
                 })
                 let errTxt = []
                 if (tblOptError) errTxt.push(getErrorsArr(tblOptError))
@@ -163,52 +170,54 @@ export default {
                 const schemas = node.qualified_name.split('.')
                 const db = schemas[0]
 
-                commit(`SET_TBL_CREATION_INFO`, {
-                    id: activeQueryTabId,
-                    payload: {
-                        ...state.tbl_creation_info,
-                        data: {
-                            table_opts_data: { dbName: db, ...tblOptsData },
-                            cols_opts_data: colsOptsData,
+                Editor.update({
+                    where: activeQueryTabId,
+                    data: {
+                        tbl_creation_info: {
+                            ...getters.getTblCreationInfo,
+                            data: {
+                                table_opts_data: { dbName: db, ...tblOptsData },
+                                cols_opts_data: colsOptsData,
+                            },
+                            loading_tbl_creation_info: false,
                         },
-                        loading_tbl_creation_info: false,
                     },
                 })
             }
         },
     },
     getters: {
+        getActiveEditor: () => Editor.find(QueryTab.getters('getActiveQueryTabId')) || {},
+        getActiveQueryTxt: (state, getters) => getters.getActiveEditor.query_txt || '',
+        getCurrDdlAlterSpec: (state, getters) => getters.getActiveEditor.curr_ddl_alter_spec || '',
+        getCurrEditorMode: (state, getters) => getters.getActiveEditor.curr_editor_mode || '',
         //editor mode getter
         getIsTxtEditor: (state, getters, rootState) =>
-            state.curr_editor_mode === rootState.queryEditorConfig.config.EDITOR_MODES.TXT_EDITOR,
+            getters.getActiveEditor.curr_editor_mode ===
+            rootState.queryEditorConfig.config.EDITOR_MODES.TXT_EDITOR,
         getIsDDLEditor: (state, getters, rootState) =>
-            state.curr_editor_mode === rootState.queryEditorConfig.config.EDITOR_MODES.DDL_EDITOR,
+            getters.getActiveEditor.curr_editor_mode ===
+            rootState.queryEditorConfig.config.EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
-        getLoadingTblCreationInfo: state => {
-            const { loading_tbl_creation_info = true } = state.tbl_creation_info
-            return loading_tbl_creation_info
-        },
-        getAlteredActiveNode: state => {
-            const { altered_active_node = {} } = state.tbl_creation_info
-            return altered_active_node
-        },
+        getTblCreationInfo: (state, getters) => getters.getActiveEditor.tbl_creation_info || {},
+        getLoadingTblCreationInfo: (state, getters) =>
+            getters.getTblCreationInfo.loading_tbl_creation_info || true,
+        getAlteredActiveNode: (state, getters) =>
+            getters.getTblCreationInfo.altered_active_node || {},
         //browser fs getters
         hasFileSystemReadOnlyAccess: () => Boolean(supported),
         hasFileSystemRWAccess: (state, getters) =>
             getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
         getIsFileUnsavedByQueryTabId: () => id => {
-            const queryTab = QueryTab.getters('getQueryTabById')(id)
-            const { blob_file = {}, query_txt = '' } = queryTab
+            const { query_txt = '', blob_file = {} } = Editor.find(id) || {}
             return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
         },
         getQueryTabFileHandle: () => queryTab => {
-            const { blob_file: { file_handle = {} } = {} } = queryTab
+            const { blob_file: { file_handle = {} } = {} } = Editor.find(queryTab.id) || {}
             return file_handle
         },
-        getQueryTabFileHandleName: (state, getters) => queryTab => {
-            const { name = '' } = getters.getQueryTabFileHandle(queryTab)
-            return name
-        },
+        getQueryTabFileHandleName: (state, getters) => queryTab =>
+            getters.getQueryTabFileHandle(queryTab).name || '',
         checkQueryTabFileHandleValidity: (state, getters) => queryTab =>
             Boolean(getters.getQueryTabFileHandleName(queryTab)),
     },

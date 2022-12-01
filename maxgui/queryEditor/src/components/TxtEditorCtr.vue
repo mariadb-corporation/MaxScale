@@ -109,6 +109,7 @@
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
 import QueryResultCtr from './QueryResultCtr.vue'
@@ -152,7 +153,6 @@ export default {
     computed: {
         ...mapState({
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            query_txt: state => state.editor.query_txt,
             query_snippets: state => state.queryPersisted.query_snippets,
             query_pane_pct_height: state => state.queryPersisted.query_pane_pct_height,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
@@ -164,6 +164,7 @@ export default {
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getChartResultSets: 'queryResult/getChartResultSets',
+            getActiveQueryTxt: 'editors/getActiveQueryTxt',
         }),
         eventBus() {
             return EventBus
@@ -234,10 +235,15 @@ export default {
         },
         allQueryTxt: {
             get() {
-                return this.query_txt
+                return this.getActiveQueryTxt
             },
             set(value) {
-                this.SET_QUERY_TXT({ payload: value, id: QueryTab.getters('getActiveQueryTabId') })
+                Editor.update({
+                    where: QueryTab.getters('getActiveQueryTabId'),
+                    data: {
+                        query_txt: value,
+                    },
+                })
             },
         },
         resultPaneDim() {
@@ -263,8 +269,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
-            SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
+            SET_SELECTED_QUERY_TXT: 'editors/SET_SELECTED_QUERY_TXT',
             SET_QUERY_PANE_PCT_HEIGHT: 'queryPersisted/SET_QUERY_PANE_PCT_HEIGHT',
             SET_TAB_MOVES_FOCUS: 'queryPersisted/SET_TAB_MOVES_FOCUS',
         }),

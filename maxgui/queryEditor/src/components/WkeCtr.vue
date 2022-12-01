@@ -124,11 +124,10 @@ export default {
         ...mapState({
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
-            curr_editor_mode: state => state.editor.curr_editor_mode,
         }),
         ...mapGetters({
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-            getIsTxtEditor: 'editor/getIsTxtEditor',
+            getIsTxtEditor: 'editors/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),

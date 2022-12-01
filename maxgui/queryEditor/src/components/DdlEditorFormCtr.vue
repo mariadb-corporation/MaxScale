@@ -53,8 +53,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import AlterTableOpts from './AlterTableOpts.vue'
 import AlterColsOpts from './AlterColsOpts.vue'
 
@@ -83,10 +84,12 @@ export default {
     computed: {
         ...mapState({
             DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
-            curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
-            charset_collation_map: state => state.editor.charset_collation_map,
-            engines: state => state.editor.engines,
-            def_db_charset_map: state => state.editor.def_db_charset_map,
+            charset_collation_map: state => state.editors.charset_collation_map,
+            engines: state => state.editors.engines,
+            def_db_charset_map: state => state.editors.def_db_charset_map,
+        }),
+        ...mapGetters({
+            getCurrDdlAlterSpec: 'editors/getCurrDdlAlterSpec',
         }),
         tableOptsData: {
             get() {
@@ -106,12 +109,12 @@ export default {
         },
         activeColSpec: {
             get() {
-                return this.curr_ddl_alter_spec
+                return this.getCurrDdlAlterSpec
             },
             set(value) {
-                this.SET_CURR_DDL_ALTER_SPEC({
-                    payload: value,
-                    id: QueryTab.getters('getActiveQueryTabId'),
+                Editor.update({
+                    where: QueryTab.getters('getActiveQueryTabId'),
+                    data: { curr_ddl_alter_spec: value },
                 })
             },
         },
@@ -141,9 +144,6 @@ export default {
         this.activated = false
     },
     methods: {
-        ...mapMutations({
-            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
-        }),
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight

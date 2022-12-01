@@ -62,23 +62,25 @@
  */
 import { mapState, mapGetters, mapMutations } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { fileOpen } from 'browser-fs-access'
 import { EventBus } from './EventBus'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
+
 export default {
     name: 'file-btns-ctr',
     mixins: [saveFile],
     props: { queryTab: { type: Object, required: true } },
     computed: {
         ...mapState({
-            file_dlg_data: state => state.editor.file_dlg_data,
+            file_dlg_data: state => state.editors.file_dlg_data,
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
         ...mapGetters({
-            getIsFileUnsavedByQueryTabId: 'editor/getIsFileUnsavedByQueryTabId',
-            hasFileSystemReadOnlyAccess: 'editor/hasFileSystemReadOnlyAccess',
-            hasFileSystemRWAccess: 'editor/hasFileSystemRWAccess',
-            checkQueryTabFileHandleValidity: 'editor/checkQueryTabFileHandleValidity',
+            getIsFileUnsavedByQueryTabId: 'editors/getIsFileUnsavedByQueryTabId',
+            hasFileSystemReadOnlyAccess: 'editors/hasFileSystemReadOnlyAccess',
+            hasFileSystemRWAccess: 'editors/hasFileSystemRWAccess',
+            checkQueryTabFileHandleValidity: 'editors/checkQueryTabFileHandleValidity',
         }),
         isFileUnsaved() {
             return this.getIsFileUnsavedByQueryTabId(this.queryTab.id)
@@ -102,9 +104,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
-            SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
-            SET_BLOB_FILE: 'editor/SET_BLOB_FILE',
-            SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
+            SET_FILE_DLG_DATA: 'editors/SET_FILE_DLG_DATA',
         }),
         /**
          * Legacy support for reading uploaded file
@@ -183,7 +183,7 @@ export default {
         async loadFileToActiveQueryTab(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
             QueryTab.update({ where: this.queryTab.id, data: { name: blob.handle.name } })
-            this.SET_QUERY_TXT({ payload: blobTxt, id: this.queryTab.id })
+
             if (!this.hasFileSystemReadOnlyAccess)
                 /**
                  * clear the uploader file input so that if the user upload the same file,
@@ -191,16 +191,19 @@ export default {
                  */
                 this.$refs.uploader.value = ''
             // once file is loaded, store file_handle to the queryTab
-            this.SET_BLOB_FILE({
-                payload: {
-                    file_handle: blob.handle,
-                    /* store its txt so that it can be retrieved
-                     * because the permission to read the file is withdrawn
-                     * when the browser is refreshed or closed
-                     */
-                    txt: blobTxt,
+            Editor.update({
+                where: this.queryTab.id,
+                data: {
+                    blob_file: {
+                        file_handle: blob.handle,
+                        /* store its txt so it can be retrieved
+                         * because the permission to read the file is withdrawn
+                         * when the browser is refreshed or closed
+                         */
+                        txt: blobTxt,
+                    },
+                    query_txt: blobTxt,
                 },
-                id: this.queryTab.id,
             })
         },
 
