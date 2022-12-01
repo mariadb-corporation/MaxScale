@@ -28,8 +28,8 @@ const mountFactory = opts =>
                 component: QueryEditor,
                 computed: {
                     is_validating_conn: () => false,
-                    worksheets_arr: () => [{ id: 'WORKSHEET_123' }],
-                    active_wke_id: () => 'WORKSHEET_123',
+                    allWorksheets: () => [{ id: 'WORKSHEET_123' }],
+                    getActiveWkeId: () => 'WORKSHEET_123',
                     ctrDim: () => ({ width: 1280, height: 800 }),
                     getIsTxtEditor: () => true,
                 },

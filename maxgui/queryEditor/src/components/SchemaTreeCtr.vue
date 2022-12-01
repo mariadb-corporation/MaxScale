@@ -112,6 +112,7 @@ This component emits the following events
 @on-dragend: Event.
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
 export default {
@@ -134,7 +135,6 @@ export default {
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
-            active_wke_id: state => state.wke.active_wke_id,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
@@ -145,6 +145,9 @@ export default {
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
+        activeWkeId() {
+            return Worksheet.getters('getActiveWkeId')
+        },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
         },
@@ -205,7 +208,7 @@ export default {
                         })
                     } else
                         this.PATCH_DB_TREE_MAP({
-                            id: this.active_wke_id,
+                            id: this.activeWkeId,
                             payload: {
                                 active_prvw_node: activeNodes[0],
                             },
@@ -249,12 +252,12 @@ export default {
                         if (validLevels[0] === 0)
                             this.SET_EXPANDED_NODES({
                                 payload: nodes,
-                                id: this.active_wke_id,
+                                id: this.activeWkeId,
                             })
                         else
                             this.SET_EXPANDED_NODES({
                                 payload: [],
-                                id: this.active_wke_id,
+                                id: this.activeWkeId,
                             })
                     }
                 },

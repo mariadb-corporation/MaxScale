@@ -23,23 +23,23 @@ describe('wke-nav-ctr', () => {
         wrapper = mountFactory()
     })
 
-    it('Should not show delete worksheet button when worksheets_arr length <= 1', () => {
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(1)
+    it('Should not show delete worksheet button when getAllWorksheets length <= 1', () => {
+        expect(wrapper.vm.getAllWorksheets.length).to.be.equals(1)
         expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(false)
     })
 
-    it('Should show delete worksheet button when worksheets_arr length > 1', () => {
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(1)
-        // stubs worksheets_arr
+    it('Should show delete worksheet button when getAllWorksheets length > 1', () => {
+        expect(wrapper.vm.getAllWorksheets.length).to.be.equals(1)
+        // stubs getAllWorksheets
         wrapper = mountFactory({
             computed: {
-                worksheets_arr: () => [
-                    ...wrapper.vm.worksheets_arr,
-                    { ...wrapper.vm.worksheets_arr[0], id: 'dummy_1234' },
+                getAllWorksheets: () => [
+                    ...wrapper.vm.getAllWorksheets,
+                    { ...wrapper.vm.getAllWorksheets[0], id: 'dummy_1234' },
                 ],
             },
         })
-        expect(wrapper.vm.worksheets_arr.length).to.be.equals(2)
+        expect(wrapper.vm.getAllWorksheets.length).to.be.equals(2)
         expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(true)
     })
 

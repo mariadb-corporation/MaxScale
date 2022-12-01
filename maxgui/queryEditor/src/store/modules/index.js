@@ -1,4 +1,3 @@
-import wke from './wke'
 import queryConns from './queryConns'
 import editor from './editor'
 import schemaSidebar from './schemaSidebar'
@@ -10,7 +9,6 @@ import mxsApp from '@share/store/mxsApp'
 
 export default {
     mxsApp,
-    wke,
     queryConns,
     editor,
     schemaSidebar,

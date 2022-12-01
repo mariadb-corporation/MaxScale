@@ -101,6 +101,7 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import ConnDlgCtr from './ConnDlgCtr.vue'
 import ReconnDlgCtr from './ReconnDlgCtr.vue'
 
@@ -121,7 +122,6 @@ export default {
     computed: {
         ...mapState({
             pre_select_conn_rsrc: state => state.queryConns.pre_select_conn_rsrc,
-            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getAllConns: 'queryConns/getAllConns',
@@ -129,9 +129,12 @@ export default {
             getActiveWkeConn: 'queryConns/getActiveWkeConn',
             getIsConnBusy: 'queryConns/getIsConnBusy',
         }),
+        activeWkeId() {
+            return Worksheet.getters('getActiveWkeId')
+        },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
-            return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.wke_id_fk) }))
+            return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.worksheet_id) }))
         },
         availableConnOpts() {
             return this.connOptions.filter(cnn => !cnn.disabled)
@@ -144,12 +147,12 @@ export default {
         /**
          * Watcher to handle multi-worksheets
          */
-        active_wke_id: {
+        activeWkeId: {
             deep: true,
             immediate: true,
             async handler() {
                 /**
-                 * chosenWkeConn is component'state, so when active_wke_id is changed
+                 * chosenWkeConn is component'state, so when activeWkeId is changed
                  * by changing worksheet, chosenWkeConn needs to be updated by calling assignActiveWkeConn
                  */
                 this.assignActiveWkeConn()

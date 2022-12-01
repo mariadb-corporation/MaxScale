@@ -14,6 +14,7 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 
 export default {
     namespaced: true,
@@ -101,7 +102,7 @@ export default {
          */
         unbindConn({ rootGetters }) {
             QueryConn.update({
-                where: c => c.worksheet_id === rootGetters['wke/getActiveWkeId'],
+                where: c => c.worksheet_id === Worksheet.getters('getActiveWkeId'),
                 data: { worksheet_id: null },
             })
             rootGetters['queryTab/getQueryTabsOfActiveWke'].forEach(t =>
@@ -142,7 +143,7 @@ export default {
                 // bind chosenWkeConn to the active worksheet
                 QueryConn.update({
                     where: chosenWkeConn.id,
-                    data: { worksheet_id: rootGetters['wke/getActiveWkeId'] },
+                    data: { worksheet_id: Worksheet.getters('getActiveWkeId') },
                 })
             } catch (e) {
                 this.vue.$logger.error(e)
@@ -154,12 +155,9 @@ export default {
          * @param {String} param.resourceType - services, servers or listeners.
          * @param {Object} param.meta - meta - connection meta
          */
-        async openConnect(
-            { dispatch, commit, rootGetters, rootState },
-            { body, resourceType, meta = {} }
-        ) {
+        async openConnect({ dispatch, commit, rootState }, { body, resourceType, meta = {} }) {
             const { $helpers, $queryHttp, $mxs_t } = this.vue
-            const activeWorksheetId = rootGetters['wke/getActiveWkeId']
+            const activeWorksheetId = Worksheet.getters('getActiveWkeId')
 
             const queryTabIdsOfActiveWke = QueryTab.query()
                 .where('worksheet_id', activeWorksheetId)
@@ -407,9 +405,9 @@ export default {
             QueryConn.query()
                 .where('query_tab_id', rootGetters['queryTab/getActiveQueryTabId'])
                 .first() || {},
-        getActiveWkeConn: (state, getters, rootState, rootGetters) =>
+        getActiveWkeConn: () =>
             QueryConn.query()
-                .where('worksheet_id', rootGetters['wke/getActiveWkeId'])
+                .where('worksheet_id', Worksheet.getters('getActiveWkeId'))
                 .first() || {},
         getWkeConnByWkeId: () => wke_id =>
             QueryConn.query()

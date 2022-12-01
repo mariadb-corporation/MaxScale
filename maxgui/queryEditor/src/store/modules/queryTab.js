@@ -12,6 +12,7 @@
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
 import init, { defQueryTabState } from '@queryEditorSrc/store/initQueryEditorState'
@@ -188,20 +189,20 @@ export default {
         },
     },
     getters: {
-        getActiveQueryTabId: (state, getters, rootState, rootGetters) => {
+        getActiveQueryTabId: (state, getters, rootState) => {
             const {
                 ORM_NAMESPACE,
                 ORM_PERSISTENT_ENTITIES: { QUERY_TABS },
             } = rootState.queryEditorConfig.config
             const { active_query_tab_map } = rootState[ORM_NAMESPACE][QUERY_TABS] || {}
-            return active_query_tab_map[rootGetters['wke/getActiveWkeId']]
+            return active_query_tab_map[Worksheet.getters('getActiveWkeId')]
         },
         getActiveQueryTab: (state, getters) => {
             return state.query_tabs.find(s => s.id === getters.getActiveQueryTabId) || {}
         },
-        getQueryTabsOfActiveWke: (state, getters, rootState, rootGetters) => {
+        getQueryTabsOfActiveWke: () => {
             return QueryTab.query()
-                .where(t => t.worksheet_id === rootGetters['wke/getActiveWkeId'])
+                .where(t => t.worksheet_id === Worksheet.getters('getActiveWkeId'))
                 .get()
         },
         getQueryTabsByWkeId: state => {

@@ -10,6 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import { insertWke } from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -85,47 +87,30 @@ export default {
          * set it as active and dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
          * @param {String} param.conn_name - connection name
          */
-        async chooseActiveQueryEditorWke(
-            { commit, dispatch, rootState, rootGetters },
-            { type, conn_name }
-        ) {
-            const conn = rootGetters['queryConns/getWkeConns'].find(c => c.name === conn_name)
-            const targetWke = rootState.wke.worksheets_arr.find(
-                w => w.id === this.vue.$typy(conn, 'wke_id_fk').safeString
-            )
-            if (targetWke) {
-                if (rootState.wke.active_wke_id !== targetWke.id)
-                    commit('wke/SET_ACTIVE_WKE_ID', targetWke.id, { root: true })
-                commit(
-                    'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
-                    {
-                        id: targetWke.id,
-                        payload: rootState.queryTab.active_query_tab_map[targetWke.id],
-                    },
-                    { root: true }
-                )
-            }
-            // Use a blank wke if there is one, otherwise create a new one
+        async chooseActiveQueryEditorWke({ commit, dispatch, rootGetters }, { type, conn_name }) {
+            const wkeConns = rootGetters['queryConns/getWkeConns']
+            // Find connection
+            const wkeConn = wkeConns.find(c => c.name === conn_name)
+            // If it is already bound to a worksheet, set that worksheet as active
+            if (this.vue.$typy(wkeConn, 'worksheet_id').safeBoolean)
+                Worksheet.commit(state => (state.active_wke_id = wkeConn.worksheet_id))
             else {
-                const blankQueryTab = rootState.queryTab.query_tabs.find(
-                    s => this.vue.$typy(s, 'active_sql_conn').isEmptyObject
-                )
-                const blankWke = rootState.wke.worksheets_arr.find(
-                    wke => wke.id === this.vue.$typy(blankQueryTab, 'wke_id_fk').safeString
-                )
-                if (blankWke) {
-                    commit('wke/SET_ACTIVE_WKE_ID', blankWke.id, { root: true })
+                const unavailableWkeIds = wkeConns.map(c => c.worksheet_id)
+                const blankWke = Worksheet.query()
+                    .where(w => !unavailableWkeIds.includes(w.id))
+                    .first()
+                // Use a blank wke if there is one, otherwise create a new one
+                if (blankWke) Worksheet.commit(state => (state.active_wke_id = blankWke.id))
+                else insertWke()
+
+                // call onChangeConn to handle connection binding, otherwise popup connection dialog
+                if (wkeConn) await dispatch('queryConns/onChangeConn', wkeConn, { root: true })
+                else
                     commit(
-                        'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
-                        { id: blankWke.id, payload: blankQueryTab.id },
+                        'queryConns/SET_PRE_SELECT_CONN_RSRC',
+                        { type, id: conn_name },
                         { root: true }
                     )
-                } else await dispatch('wke/addNewWs', { root: true })
-                commit(
-                    'queryConns/SET_PRE_SELECT_CONN_RSRC',
-                    { type, id: conn_name },
-                    { root: true }
-                )
             }
         },
     },

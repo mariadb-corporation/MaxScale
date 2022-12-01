@@ -188,7 +188,7 @@ describe('sidebar-ctr', () => {
           clearExeStatementsResult is called`, () => {
             const mockActive_wke_id = 'wke_abcd'
             wrapper = mountFactory({
-                computed: { active_wke_id: () => mockActive_wke_id },
+                computed: { getActiveWkeId: () => mockActive_wke_id },
                 methods: { PATCH_EXE_STMT_RESULT_MAP: () => null },
             })
             sinon.spy(wrapper.vm, 'PATCH_EXE_STMT_RESULT_MAP')

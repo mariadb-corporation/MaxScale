@@ -93,6 +93,7 @@
  * update:execSqlDlg?: (object)
  */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaTreeCtr from './SchemaTreeCtr.vue'
 export default {
     name: 'sidebar-ctr',
@@ -114,7 +115,6 @@ export default {
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
-            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
@@ -122,12 +122,15 @@ export default {
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
+        activeWkeId() {
+            return Worksheet.getters('getActiveWkeId')
+        },
         filterTxt: {
             get() {
                 return this.search_schema
             },
             set(v) {
-                this.SET_SEARCH_SCHEMA({ payload: v, id: this.active_wke_id })
+                this.SET_SEARCH_SCHEMA({ payload: v, id: this.activeWkeId })
             },
         },
         reloadDisabled() {
@@ -172,7 +175,7 @@ export default {
         },
         async onAlterTable(node) {
             await this.handleAddNewQueryTab({
-                wke_id: this.active_wke_id,
+                wke_id: this.activeWkeId,
                 name: `ALTER ${node.name}`,
             })
             this.SET_TBL_CREATION_INFO({
@@ -207,7 +210,7 @@ export default {
             await this.exeStmtAction({ sql: this.execSqlDlg.sql, action: this.actionName })
         },
         clearExeStatementsResult() {
-            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
+            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.activeWkeId })
         },
     },
 }

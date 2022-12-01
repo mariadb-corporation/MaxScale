@@ -19,9 +19,9 @@
                     v-if="!hidden_comp.includes('wke-nav-ctr')"
                     :height="wkeNavCtrHeight"
                 />
-                <keep-alive v-for="wke in worksheets_arr" :key="wke.id" max="15">
+                <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
                     <wke-ctr
-                        v-if="active_wke_id === wke.id && ctrDim.height"
+                        v-if="activeWkeId === wke.id && ctrDim.height"
                         ref="wke"
                         :ctrDim="ctrDim"
                     >
@@ -46,7 +46,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import '@queryEditorSrc/styles/queryEditor.scss'
 import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
 import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
@@ -66,16 +67,17 @@ export default {
     },
     computed: {
         ...mapState({
-            active_wke_id: state => state.wke.active_wke_id,
             is_fullscreen: state => state.queryPersisted.is_fullscreen,
             is_validating_conn: state => state.queryConns.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
-            worksheets_arr: state => state.wke.worksheets_arr,
             hidden_comp: state => state.queryEditorConfig.hidden_comp,
         }),
-        ...mapGetters({
-            getActiveWke: 'wke/getActiveWke',
-        }),
+        allWorksheets() {
+            return Worksheet.all()
+        },
+        activeWkeId() {
+            return Worksheet.getters('getActiveWkeId')
+        },
         wkeNavCtrHeight() {
             return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
         },
@@ -90,12 +92,6 @@ export default {
         },
     },
     watch: {
-        active_wke_id: {
-            immediate: true,
-            handler(v) {
-                if (v) this.handleSyncWke(this.getActiveWke)
-            },
-        },
         is_fullscreen(v) {
             if (v)
                 this.dim = {
@@ -114,7 +110,6 @@ export default {
 
     methods: {
         ...mapActions({
-            handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'queryPersisted/handleAutoClearQueryHistory',
         }),
         setDim() {

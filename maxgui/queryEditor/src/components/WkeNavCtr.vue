@@ -10,7 +10,7 @@
             center-active
         >
             <v-tab
-                v-for="wke in worksheets_arr"
+                v-for="wke in allWorksheets"
                 :key="wke.id"
                 :href="`#${wke.id}`"
                 class="pa-0 tab-btn text-none"
@@ -45,12 +45,12 @@
                                 />
                             </div>
                             <v-btn
-                                v-if="worksheets_arr.length > 1"
+                                v-if="allWorksheets.length > 1"
                                 class="ml-1 del-tab-btn"
                                 icon
                                 x-small
                                 :disabled="getIsConnBusyByQueryTabId(getActiveQueryTabId)"
-                                @click.stop.prevent="handleDeleteWke(wke.id)"
+                                @click.stop.prevent="deleteWke(wke.id)"
                             >
                                 <v-icon
                                     size="8"
@@ -89,8 +89,9 @@
  * Public License.
  */
 
-import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import WkeToolbar from './WkeToolbar.vue'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 
 export default {
     name: 'wke-nav-ctr',
@@ -104,28 +105,28 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            worksheets_arr: state => state.wke.worksheets_arr,
-            active_wke_id: state => state.wke.active_wke_id,
-        }),
         ...mapGetters({
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getWkeConnByWkeId: 'queryConns/getWkeConnByWkeId',
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),
+        allWorksheets() {
+            return Worksheet.all()
+        },
         activeWkeID: {
             get() {
-                return this.active_wke_id
+                return Worksheet.getters('getActiveWkeId')
             },
             set(v) {
-                if (v) this.SET_ACTIVE_WKE_ID(v)
+                if (v) Worksheet.commit(state => (state.active_wke_id = v))
             },
         },
     },
     methods: {
-        ...mapMutations({ SET_ACTIVE_WKE_ID: 'wke/SET_ACTIVE_WKE_ID' }),
-        ...mapActions({ handleDeleteWke: 'wke/handleDeleteWke' }),
+        deleteWke(id) {
+            Worksheet.dispatch('handleDeleteWke', id)
+        },
     },
 }
 </script>

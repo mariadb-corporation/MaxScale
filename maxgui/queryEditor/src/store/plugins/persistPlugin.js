@@ -26,10 +26,6 @@ export default new VuexPersistence({
         ]),
         queryPersisted: state.queryPersisted,
         //TODO: remove below fields once ORM is completely added
-        wke: {
-            worksheets_arr: state.wke.worksheets_arr,
-            active_wke_id: state.wke.active_wke_id,
-        },
         queryTab: {
             query_tabs: state.queryTab.query_tabs,
             active_query_tab_map: state.queryTab.active_query_tab_map,

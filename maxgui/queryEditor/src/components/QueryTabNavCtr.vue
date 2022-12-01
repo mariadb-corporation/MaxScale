@@ -76,7 +76,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
+import { mapActions, mapMutations, mapGetters } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
 export default {
@@ -90,9 +91,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            active_wke_id: state => state.wke.active_wke_id,
-        }),
         ...mapGetters({
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
@@ -109,7 +107,7 @@ export default {
                 if (v)
                     this.SET_ACTIVE_QUERY_TAB_MAP({
                         payload: v,
-                        id: this.active_wke_id,
+                        id: Worksheet.getters('getActiveWkeId'),
                     })
             },
         },

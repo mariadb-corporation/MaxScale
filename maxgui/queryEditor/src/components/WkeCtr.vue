@@ -84,7 +84,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
@@ -188,13 +189,12 @@ export default {
         this.$nextTick(() => this.handleSetDefSidebarPct())
     },
     activated() {
-        this.watch_active_sql_conn()
+        this.watch_getActiveQueryTabConn()
     },
     deactivated() {
         this.$typy(this.unwatch_getActiveQueryTabConn).safeFunction()
     },
     methods: {
-        ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
         ...mapMutations({
             SET_SIDEBAR_PCT_WIDTH: 'queryPersisted/SET_SIDEBAR_PCT_WIDTH',
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
@@ -205,10 +205,10 @@ export default {
          * activated/deactivated hook to prevent it from being triggered while changing
          * the value of getActiveQueryTabConn in another worksheet.
          */
-        watch_active_sql_conn() {
+        watch_getActiveQueryTabConn() {
             this.unwatch_getActiveQueryTabConn = this.$watch(
                 'getActiveQueryTabConn',
-                async () => await this.handleInitialFetch(),
+                async () => await Worksheet.dispatch('handleInitialFetch'),
                 { deep: true, immediate: true }
             )
         },

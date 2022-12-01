@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -25,10 +26,6 @@ export default {
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(memStates),
-        ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced,
-            persistedArrayPath: 'wke.worksheets_arr',
-        }),
     },
     actions: {
         async initialFetch({ dispatch }) {
@@ -66,8 +63,8 @@ export default {
         /**
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
-        async loadChildNodes({ commit, dispatch, rootState, getters }, nodeGroup) {
-            const active_wke_id = rootState.wke.active_wke_id
+        async loadChildNodes({ commit, dispatch, getters }, nodeGroup) {
+            const activeWkeId = Worksheet.getters('getActiveWkeId')
             try {
                 const { new_db_tree, new_cmp_list } = await dispatch('getNewDbTree', {
                     nodeGroup,
@@ -75,7 +72,7 @@ export default {
                     cmpList: getters.getDbCmplList,
                 })
                 commit('PATCH_DB_TREE_MAP', {
-                    id: active_wke_id,
+                    id: activeWkeId,
                     payload: {
                         data: new_db_tree,
                         db_completion_list: new_cmp_list,
@@ -86,12 +83,12 @@ export default {
             }
         },
         async fetchSchemas({ commit, dispatch, state, getters, rootState, rootGetters }) {
-            const active_wke_id = rootState.wke.active_wke_id
+            const activeWkeId = Worksheet.getters('getActiveWkeId')
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
 
             commit('PATCH_DB_TREE_MAP', {
-                id: active_wke_id,
+                id: activeWkeId,
                 payload: { loading_db_tree: true },
             })
 
@@ -102,7 +99,7 @@ export default {
             )
             if (e)
                 commit('PATCH_DB_TREE_MAP', {
-                    id: active_wke_id,
+                    id: activeWkeId,
                     payload: {
                         loading_db_tree: false,
                     },
@@ -131,7 +128,7 @@ export default {
                         }
                     }
                     commit('PATCH_DB_TREE_MAP', {
-                        id: active_wke_id,
+                        id: activeWkeId,
                         payload: {
                             loading_db_tree: false,
                             data: tree,
@@ -158,7 +155,7 @@ export default {
             { sql, action, showSnackbar = true }
         ) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
-            const active_wke_id = rootState.wke.active_wke_id
+            const activeWkeId = Worksheet.getters('getActiveWkeId')
             const request_sent_time = new Date().valueOf()
             try {
                 let stmt_err_msg_obj = {}
@@ -171,7 +168,7 @@ export default {
                 // if multi statement mode, it'll still return only an err msg obj
                 if (errMsgs.length) stmt_err_msg_obj = errMsgs[0]
                 commit('PATCH_EXE_STMT_RESULT_MAP', {
-                    id: active_wke_id,
+                    id: activeWkeId,
                     payload: {
                         data: res.data.data.attributes,
                         stmt_err_msg_obj,
@@ -216,8 +213,7 @@ export default {
             sql += ' ORDER BY SCHEMA_NAME;'
             return sql
         },
-        getCurrDbTree: (state, getters, rootState) =>
-            state.db_tree_map[rootState.wke.active_wke_id] || {},
+        getCurrDbTree: state => state.db_tree_map[Worksheet.getters('getActiveWkeId')] || {},
         getActivePrvwNode: (state, getters) => {
             return getters.getCurrDbTree.active_prvw_node || {}
         },
@@ -231,7 +227,7 @@ export default {
             return []
         },
         // exe_stmt_result_map getters
-        getExeStmtResultMap: (state, getters, rootState) =>
-            state.exe_stmt_result_map[rootState.wke.active_wke_id] || {},
+        getExeStmtResultMap: state =>
+            state.exe_stmt_result_map[Worksheet.getters('getActiveWkeId')] || {},
     },
 }

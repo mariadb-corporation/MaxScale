@@ -1,12 +1,6 @@
 <template>
     <div ref="wrapper" class="d-flex align-center left-buttons fill-height">
-        <v-btn
-            :disabled="isAddWkeDisabled"
-            small
-            class="float-left add-wke-btn"
-            icon
-            @click="addNewWs"
-        >
+        <v-btn :disabled="isAddWkeDisabled" small class="float-left add-wke-btn" icon @click="add">
             <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
         </v-btn>
     </div>
@@ -28,7 +22,8 @@
  * Emits
  * $emit('get-total-width', v:number)
  */
-import { mapActions, mapGetters } from 'vuex'
+import { mapGetters } from 'vuex'
+import { insertWke } from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     name: 'wke-toolbar-left-ctr',
@@ -42,7 +37,9 @@ export default {
         this.$nextTick(() => this.$emit('get-total-width', this.$refs.wrapper.clientWidth))
     },
     methods: {
-        ...mapActions({ addNewWs: 'wke/addNewWs' }),
+        add() {
+            insertWke()
+        },
     },
 }
 </script>

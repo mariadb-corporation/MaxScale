@@ -40,6 +40,7 @@
  * update:execSqlDlg?: (object)
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
 import DdlEditorToolbar from './DdlEditorToolbar.vue'
 
@@ -67,7 +68,6 @@ export default {
     },
     computed: {
         ...mapState({
-            active_wke_id: state => state.wke.active_wke_id,
             tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
         ...mapGetters({
@@ -432,7 +432,7 @@ export default {
                 })
         },
         clearAlterResult() {
-            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
+            this.PATCH_EXE_STMT_RESULT_MAP({ id: Worksheet.getters('getActiveWkeId') })
         },
     },
 }

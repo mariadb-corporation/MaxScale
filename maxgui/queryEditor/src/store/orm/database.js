@@ -20,7 +20,8 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 // entities to be stored only in memory
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
-
+// Store modules
+import worksheets from '@queryEditorSrc/store/modules/worksheets'
 const database = new Database()
 //TODO: Register a model and vuex module to Database.
 database.register(Editor)
@@ -28,7 +29,7 @@ database.register(QueryConn)
 database.register(QueryResult)
 database.register(QueryTab)
 database.register(SchemaSidebar)
-database.register(Worksheet)
+database.register(Worksheet, worksheets)
 database.register(QueryTabMem)
 database.register(WorksheetMem)
 
