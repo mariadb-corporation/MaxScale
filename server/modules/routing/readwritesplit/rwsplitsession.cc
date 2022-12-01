@@ -487,8 +487,10 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
 
 void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
 {
-    mxb_assert_message(m_trx.target(), "Transaction target must be assigned when it ends");
-    MXB_INFO("Transaction complete on '%s'", m_trx.target()->name());
+    // m_trx.target() can be null if the client sends two COMMIT statements in a row. Although unlikely to
+    // appear on purpose, we cannot assert this until the transaction state is tracked at the component level
+    // in the routing chain.
+    MXB_INFO("Transaction complete on '%s'", m_trx.target() ? m_trx.target()->name() : "<no target>");
     m_trx.close();
     m_can_replay_trx = true;
 }
