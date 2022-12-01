@@ -436,10 +436,7 @@ export default {
         },
         getIsConnBusyByQueryTabId: () => {
             return query_tab_id => {
-                const { is_conn_busy = false } =
-                    QueryTabMem.query()
-                        .where(t => t.query_tab_id === query_tab_id)
-                        .first() || {}
+                const { is_conn_busy = false } = QueryTabMem.find(query_tab_id) || {}
                 return is_conn_busy
             }
         },

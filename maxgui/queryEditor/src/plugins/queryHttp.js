@@ -26,7 +26,7 @@ function patchIsConnBusyMap({ value, sql_conn_id }) {
     const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
     if (query_tab_id)
         QueryTabMem.update({
-            where: m => m.query_tab_id === query_tab_id,
+            where: query_tab_id,
             data: { is_conn_busy: value },
         })
 }
@@ -47,7 +47,7 @@ function analyzeRes({ res, sql_conn_id }) {
         const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
         if (query_tab_id)
             QueryTabMem.update({
-                where: m => m.query_tab_id === query_tab_id,
+                where: query_tab_id,
                 data: { lost_cnn_err_msg_obj: lostCnnErrMsgs[0] },
             })
     }

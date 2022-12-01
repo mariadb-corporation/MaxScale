@@ -40,7 +40,7 @@ export default class QueryTab extends Extender {
             QueryTab.delete(id) // delete itself
 
             // delete record in its the relational tables
-            QueryTabMem.delete(m => m.query_tab_id === id)
+            QueryTabMem.delete(id)
             Editor.delete(e => e.query_tab_id === id)
             QueryResult.delete(r => r.query_tab_id === id)
             QueryConn.delete(c => c.query_tab_id === id)
@@ -77,7 +77,7 @@ export default class QueryTab extends Extender {
                     },
                 })
                 // refresh its relations
-                QueryTabMem.refresh(m => m.query_tab_id === id)
+                QueryTabMem.refresh(id)
                 // keep query_txt and blob_file data even after refresh all fields
                 Editor.refresh(e => e.query_tab_id === id, ['blob_file', 'query_txt'])
                 QueryResult.refresh(r => r.query_tab_id === id)
@@ -95,7 +95,7 @@ export default class QueryTab extends Extender {
             // relationship fields
             editor: this.hasOne(Editor, 'query_tab_id'),
             queryResult: this.hasOne(QueryResult, 'query_tab_id'),
-            queryTabMem: this.hasOne(QueryTabMem, 'query_tab_id'),
+            queryTabMem: this.hasOne(QueryTabMem, 'id'),
         }
     }
 }

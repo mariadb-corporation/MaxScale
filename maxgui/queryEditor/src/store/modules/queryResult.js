@@ -152,7 +152,7 @@ export default {
                      * is aborted, this needs to be called manually.
                      */
                     QueryTabMem.update({
-                        where: m => m.query_tab_id === active_query_tab_id,
+                        where: active_query_tab_id,
                         data: { is_conn_busy: false },
                     })
                 } else {

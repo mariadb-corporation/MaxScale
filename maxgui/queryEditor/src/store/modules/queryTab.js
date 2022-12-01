@@ -208,8 +208,6 @@ export default {
         },
         getQueryTabById: state => id => state.query_tabs.find(s => s.id === id) || {},
         getActiveQueryTabMem: (state, getters) =>
-            QueryTabMem.query()
-                .where(t => t.query_tab_id === getters.getActiveQueryTabId)
-                .first() || {},
+            QueryTabMem.find(getters.getActiveQueryTabId) || {},
     },
 }

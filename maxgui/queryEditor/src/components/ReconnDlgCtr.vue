@@ -59,7 +59,7 @@ export default {
             },
             set() {
                 QueryTabMem.update({
-                    where: m => m.query_tab_id === this.getActiveQueryTabId,
+                    where: this.getActiveQueryTabId,
                     data: { lost_cnn_err_msg_obj: {} },
                 })
             },

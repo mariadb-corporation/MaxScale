@@ -54,8 +54,8 @@ function initMemEntities() {
         .with('queryTabs')
         .all()
     worksheets.forEach(w => {
-        WorksheetMem.create({ data: { worksheet_id: w.id } })
-        w.queryTabs.forEach(t => QueryTabMem.create({ data: { query_tab_id: t.id } }))
+        WorksheetMem.create({ data: { id: w.id } })
+        w.queryTabs.forEach(t => QueryTabMem.create({ data: { id: t.id } }))
     })
 }
 export default () => {
