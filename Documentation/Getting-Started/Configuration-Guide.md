@@ -458,6 +458,9 @@ The maximum value for threads is 256.
 threads=auto
 ```
 
+From 23.02 onwards it is possible to change the number threads at runtime.
+Please see [Threads](#threads-1) for more details.
+
 Additional threads will be created to execute other internal services within
 MariaDB MaxScale. This setting is used to configure the number of threads that
 will be used to manage the user connections.
@@ -3625,6 +3628,118 @@ used which is present by default in most Vault installations.
 
 The connection and request timeout used with the Vault server.
 
+# Threads
+
+For routing, MaxScale uses asynchronous I/O and a fixed number of threads
+(aka _routing workers_), whose number up until 23.02 was fixed at startup.
+From 23.02 onwards the number of threads can be altered at runtime, which
+is convenient, for instance, if MaxScale is running in a container whose
+properties are changed during the lifetime of the container.
+
+A thread can be in three different states:
+   * **Active**: The thread is routing client traffic and is listening
+     for new connections.
+   * **Draining**: The thread is routing client traffic but is **not**
+     listening for new connections.
+   * **Dormant**: The thread is not routing client traffic (all sessions
+     have ended), and is not listening for new connections, and is waiting
+     to be terminated.
+
+All threads start as _Active_ and may become _Draining_ if the number of
+threads is reduced. A draining thread will eventually become _Dormant_,
+unless the number of threads is increased while the thread is still _Draining_.
+
+Note that it is not possible to terminate a specific thread, but it is only
+possible to specify the _number_ of threads that MaxScale should use, and
+that the threads will be terminated from the end. This has implications
+if the number of threads is reduced by more than 1, as a _Dormant_ thread
+will not be terminated before it is the last thread.
+
+In the following, MaxScale has been started with `threads=4`.
+```
+$ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬────────┬────────┬─────┐
+│ Id                     │ 0      │ 1      │ 2      │ 3      │ All │
+├────────────────────────┼────────┼────────┼────────┼────────┼─────┤
+│ State                  │ Active │ Active │ Active │ Active │ N/A │
+├────────────────────────┼────────┼────────┼────────┼────────┼─────┤
+...
+```
+All threads are _Active_. If we now decrease the number of threads
+```
+$ bin/maxctrl alter maxscale threads=2
+OK
+$ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬──────────┬──────────┬─────────┐
+│ Id                     │ 0      │ 1      │ 2        │ 3        │ All     │
+├────────────────────────┼────────┼────────┼──────────┼──────────┼─────────┤
+│ State                  │ Active │ Active │ Draining │ Draining │ N/A     │
+├────────────────────────┼────────┼────────┼──────────┼──────────┼─────────┤
+...
+```
+we will see that the threads 2 and 3 are now _Draining_. The reason is
+that threads 2 and 3 still handle client sessions. If some client sessions
+now end, the situation may become like
+```
+┌────────────────────────┬────────┬────────┬─────────┬──────────┬────────┐
+│ Id                     │ 0      │ 1      │ 2       │ 3        │ All    │
+├────────────────────────┼────────┼────────┼─────────┼──────────┼────────┤
+│ State                  │ Active │ Active │ Dormant │ Draining │ N/A    │
+├────────────────────────┼────────┼────────┼─────────┼──────────┼────────┤
+...
+```
+That is, thread 2 is _Dormant_ and thread 3 is _Draining_. All client sessions
+that were handled by thread 2 have ended and the thread is ready to be
+terminated. However, as thread 3 is still _Draining_, thread 2 will not be
+terminated but stay _Dormant_.
+
+If the sessions handled by thread 3 end, then it will become _Dormant_ at
+which point first thread 3 will be terminatad and immediately after that
+thread 2.
+```
+$ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬──────┐
+│ Id                     │ 0      │ 1      │ All  │
+├────────────────────────┼────────┼────────┼──────┤
+│ State                  │ Active │ Active │ N/A  │
+├────────────────────────┼────────┼────────┼──────┤
+...
+```
+If the situation is like
+```
+$ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬─────────┬──────────┬────────┐
+│ Id                     │ 0      │ 1      │ 2       │ 3        │ All    │
+├────────────────────────┼────────┼────────┼─────────┼──────────┼────────┤
+│ State                  │ Active │ Active │ Dormant │ Draining │ N/A    │
+├────────────────────────┼────────┼────────┼─────────┼──────────┼────────┤
+...
+```
+that is, the number of threads was 4 but has been reduced to 2, and while
+thread 2 has become drained it stays as _Dormant_ since thread 3 is still
+_Draining_, it is possible to make thread 2 _Active_ again by increasing the
+number of threads to 3.
+```
+$ bin/maxctrl alter maxscale threads=3
+OK
+wikman@johan-P53s:maxscale $ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬────────┬──────────┬────────┐
+│ Id                     │ 0      │ 1      │ 2      │ 3        │ All    │
+├────────────────────────┼────────┼────────┼────────┼──────────┼────────┤
+│ State                  │ Active │ Active │ Active │ Draining │ N/A    │
+├────────────────────────┼────────┼────────┼────────┼──────────┼────────┤
+...
+```
+Once the sessions of thread 3 ends, we will have
+```
+$ bin/maxctrl show threads
+┌────────────────────────┬────────┬────────┬────────┬──────┐
+│ Id                     │ 0      │ 1      │ 2      │ All  │
+├────────────────────────┼────────┼────────┼────────┼──────┤
+│ State                  │ Active │ Active │ Active │ N/A  │
+├────────────────────────┼────────┼────────┼────────┼──────┤
+...
+```
 # Error Reporting
 
 MariaDB MaxScale is designed to be executed as a service, therefore all error
