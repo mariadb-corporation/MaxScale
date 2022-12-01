@@ -12,7 +12,6 @@
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@queryEditorSrc/store/config'
-import { uuidv1 } from '@share/utils/helpers'
 
 export default class Editor extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.EDITORS
@@ -23,19 +22,17 @@ export default class Editor extends Extender {
     static getNonKeyFields() {
         return {
             query_text: this.string(''),
-            curr_ddl_alter_spec: this.string(''),
             blob_file: this.attr(null),
             curr_editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
+            curr_ddl_alter_spec: this.string(''),
             tbl_creation_info: this.attr(null),
         }
     }
 
     static fields() {
         return {
-            id: this.uid(() => uuidv1()),
+            id: this.attr(null), // use QueryTab Id as PK for this table
             ...this.getNonKeyFields(),
-            //FK
-            query_tab_id: this.attr(null),
         }
     }
 }

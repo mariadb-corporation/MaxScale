@@ -41,8 +41,8 @@ export default class QueryTab extends Extender {
 
             // delete record in its the relational tables
             QueryTabMem.delete(id)
-            Editor.delete(e => e.query_tab_id === id)
-            QueryResult.delete(r => r.query_tab_id === id)
+            Editor.delete(id)
+            QueryResult.delete(id)
             QueryConn.delete(c => c.query_tab_id === id)
         })
     }
@@ -79,8 +79,8 @@ export default class QueryTab extends Extender {
                 // refresh its relations
                 QueryTabMem.refresh(id)
                 // keep query_txt and blob_file data even after refresh all fields
-                Editor.refresh(e => e.query_tab_id === id, ['blob_file', 'query_txt'])
-                QueryResult.refresh(r => r.query_tab_id === id)
+                Editor.refresh(id, ['blob_file', 'query_txt'])
+                QueryResult.refresh(id)
             }
         })
     }
@@ -92,8 +92,8 @@ export default class QueryTab extends Extender {
             //FK
             worksheet_id: this.attr(null),
             // relationship fields
-            editor: this.hasOne(Editor, 'query_tab_id'),
-            queryResult: this.hasOne(QueryResult, 'query_tab_id'),
+            editor: this.hasOne(Editor, 'id'),
+            queryResult: this.hasOne(QueryResult, 'id'),
             queryTabMem: this.hasOne(QueryTabMem, 'id'),
         }
     }

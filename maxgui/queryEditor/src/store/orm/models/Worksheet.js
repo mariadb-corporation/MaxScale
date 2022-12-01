@@ -39,7 +39,7 @@ export default class Worksheet extends Extender {
             Worksheet.delete(id) // delete itself
             // delete records in its relational tables
             WorksheetMem.delete(id)
-            SchemaSidebar.delete(s => s.worksheet_id === id)
+            SchemaSidebar.delete(id)
             QueryConn.delete(c => c.worksheet_id === id)
             QueryTab.cascadeDelete(t => t.worksheet_id === id)
         })
@@ -62,7 +62,7 @@ export default class Worksheet extends Extender {
             Worksheet.refresh(id) // refresh itself
             // refresh its relations
             WorksheetMem.refresh(id)
-            SchemaSidebar.refresh(s => s.worksheet_id === id)
+            SchemaSidebar.refresh(id)
             // refresh all queryTabs and its relations
             QueryTab.cascadeRefresh(t => t.worksheet_id === id)
         })
@@ -74,7 +74,7 @@ export default class Worksheet extends Extender {
             ...this.getNonKeyFields(),
             // relationship fields
             queryTabs: this.hasMany(QueryTab, 'worksheet_id'),
-            schemaSidebar: this.hasOne(SchemaSidebar, 'worksheet_id'),
+            schemaSidebar: this.hasOne(SchemaSidebar, 'id'),
             worksheetMem: this.hasOne(WorksheetMem, 'id'),
         }
     }

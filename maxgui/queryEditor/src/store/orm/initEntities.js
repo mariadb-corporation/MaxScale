@@ -28,11 +28,11 @@ export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv
         data: {
             id: fields.worksheet_id,
             name: 'WORKSHEET',
-            schemaSidebar: new SchemaSidebar(),
         },
     })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
     WorksheetMem.insert({ data: { id: fields.worksheet_id } })
+    SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
     insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
 }
 
@@ -59,14 +59,16 @@ export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }
             count,
             name,
             worksheet_id,
-            editor: new Editor(),
-            queryResult: new QueryResult(),
             ...fields,
         },
     })
+
+    Editor.insert({ data: { id: fields.query_tab_id } })
+    QueryResult.insert({ data: { id: fields.query_tab_id } })
+    QueryTabMem.insert({ data: { id: fields.query_tab_id } })
+
     // update active_query_tab_map state
     QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = fields.query_tab_id))
-    QueryTabMem.insert({ data: { id: fields.query_tab_id } })
 }
 
 /**

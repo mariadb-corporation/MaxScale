@@ -12,7 +12,6 @@
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@queryEditorSrc/store/config'
-import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryResult extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS
@@ -29,10 +28,8 @@ export default class QueryResult extends Extender {
 
     static fields() {
         return {
-            id: this.uid(() => uuidv1()),
+            id: this.attr(null), // use QueryTab Id as PK for this table
             ...this.getNonKeyFields(),
-            //FK
-            query_tab_id: this.attr(null),
         }
     }
 }

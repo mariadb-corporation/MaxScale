@@ -11,7 +11,6 @@
  * Public License.
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
-import { uuidv1 } from '@share/utils/helpers'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 
 export default class SchemaSidebar extends Extender {
@@ -29,10 +28,8 @@ export default class SchemaSidebar extends Extender {
 
     static fields() {
         return {
-            id: this.uid(() => uuidv1()),
+            id: this.attr(null), // use QueryTab Id as PK for this table
             ...this.getNonKeyFields(),
-            //FK
-            worksheet_id: this.attr(null),
         }
     }
 }
