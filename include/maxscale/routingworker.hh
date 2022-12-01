@@ -592,9 +592,10 @@ private:
     void evict_dcb(BackendDCB* pDcb);
     void close_pooled_dcb(BackendDCB* pDcb);
 
-    bool try_shutdown();
-
 private:
+    void start_try_shutdown();
+    bool try_shutdown_dcall();
+
     void set_state(State s)
     {
         mxb_assert((m_state == State::ACTIVE && (s == State::DRAINING || s == State::DORMANT))

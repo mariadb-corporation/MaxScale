@@ -1506,6 +1506,18 @@ void RoutingWorker::post_run()
     modules_thread_finish();
     // TODO: Add service_thread_finish().
     this_thread.pCurrent_worker = nullptr;
+
+    auto i = index();
+
+    if (i != 0)
+    {
+        // Was not the last, so shutdown the previous one.
+        auto* pWorker = this_unit.ppWorkers[i - 1];
+
+        pWorker->execute([pWorker]() {
+                pWorker->start_try_shutdown();
+            }, EXECUTE_QUEUED);
+    }
 }
 
 /**
@@ -2347,10 +2359,18 @@ RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
 // static
 void RoutingWorker::start_shutdown()
 {
-    broadcast([]() {
-                  auto worker = RoutingWorker::get_current();
-                  worker->m_callable.dcall(100ms, &RoutingWorker::try_shutdown, worker);
-              }, nullptr, EXECUTE_AUTO);
+    // The routing workers are shutdown serially from the end, to ensure that
+    // the finish_for(...) calls are done in the inverse order of how the
+    // init_for(...) calls were made.
+
+    auto nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+    mxb_assert(nRunning > 0);
+
+    auto* pWorker = this_unit.ppWorkers[nRunning - 1];
+
+    pWorker->execute([pWorker]() {
+            pWorker->start_try_shutdown();
+        }, EXECUTE_QUEUED);
 }
 
 //static
@@ -2422,15 +2442,29 @@ bool RoutingWorker::termination_in_process()
     return this_unit.termination_in_process;
 }
 
-bool RoutingWorker::try_shutdown()
+void RoutingWorker::start_try_shutdown()
 {
     mxb_assert(Worker::is_current());
+
+    if (try_shutdown_dcall())
+    {
+        // Should be called again.
+        m_callable.dcall(100ms, &RoutingWorker::try_shutdown_dcall, this);
+    }
+}
+
+bool RoutingWorker::try_shutdown_dcall()
+{
+    mxb_assert(Worker::is_current());
+
+    bool rv = true;
 
     pool_close_all_conns();
 
     if (m_sessions.empty())
     {
         shutdown();
+        rv = false;
     }
     else
     {
@@ -2440,7 +2474,7 @@ bool RoutingWorker::try_shutdown()
         }
     }
 
-    return true;
+    return rv;
 }
 
 void RoutingWorker::register_session(MXS_SESSION* ses)
