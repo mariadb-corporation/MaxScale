@@ -80,6 +80,8 @@ import { mapActions, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+
 export default {
     name: 'query-tab-nav-ctr',
     components: { QueryTabNavToolbarCtr },
@@ -105,10 +107,10 @@ export default {
             },
             set(v) {
                 if (v)
-                    this.SET_ACTIVE_QUERY_TAB_MAP({
-                        payload: v,
-                        id: Worksheet.getters('getActiveWkeId'),
-                    })
+                    QueryTab.commit(
+                        state =>
+                            (state.active_query_tab_map[Worksheet.getters('getActiveWkeId')] = v)
+                    )
             },
         },
     },
@@ -120,7 +122,6 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_ACTIVE_QUERY_TAB_MAP: 'queryTab/SET_ACTIVE_QUERY_TAB_MAP',
             SET_FILE_DLG_DATA: 'editor/SET_FILE_DLG_DATA',
         }),
         ...mapActions({

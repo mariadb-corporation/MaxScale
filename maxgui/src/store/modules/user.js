@@ -116,7 +116,6 @@ export default {
             const queryEditorPersistedState = this.vue.$helpers.lodash.cloneDeep({
                 queryPersisted,
                 queryTab: {
-                    active_query_tab_map: queryTab.active_query_tab_map,
                     query_tabs: queryTab.query_tabs,
                 },
             })

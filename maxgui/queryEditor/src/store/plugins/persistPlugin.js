@@ -28,7 +28,6 @@ export default new VuexPersistence({
         //TODO: remove below fields once ORM is completely added
         queryTab: {
             query_tabs: state.queryTab.query_tabs,
-            active_query_tab_map: state.queryTab.active_query_tab_map,
         },
     }),
 }).plugin

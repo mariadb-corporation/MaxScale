@@ -21,8 +21,6 @@ export default {
     namespaced: true,
     state: {
         query_tabs: init.get_def_query_tabs, // persisted
-        // each key holds a string value of the active queryTab id of a worksheet
-        active_query_tab_map: {}, // persisted
     },
     mutations: {
         ADD_NEW_QUERY_TAB(state, { wke_id, name: custName }) {
@@ -49,14 +47,6 @@ export default {
             state.query_tabs = this.vue.$helpers.immutableUpdate(state.query_tabs, {
                 [idx]: { $set: queryTab },
             })
-        },
-        SET_ACTIVE_QUERY_TAB_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.active_query_tab_map, id)
-            else
-                state.active_query_tab_map = {
-                    ...state.active_query_tab_map,
-                    [id]: payload,
-                }
         },
         /**
          * This mutation resets all properties of the provided targetQueryTab object
@@ -114,11 +104,6 @@ export default {
                         { root: true }
                     )
                 }
-                // Change active queryTab
-                commit('SET_ACTIVE_QUERY_TAB_MAP', {
-                    id: wke_id,
-                    payload: newQueryTabId,
-                })
             } catch (e) {
                 this.vue.$logger.error(e)
                 commit(

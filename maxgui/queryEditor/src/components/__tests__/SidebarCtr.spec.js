@@ -93,21 +93,21 @@ describe('sidebar-ctr', () => {
         it(`Should process fetchNodePrvwData method as expected`, () => {
             let clearDataPreviewCallCount = 0
             let queryModeParam, fetchPrvwParams
-            const active_query_tab_id = 'QUERY_TAB_123_45'
+            const activeQueryTabId = 'QUERY_TAB_123_45'
             wrapper = mountFactory({
                 methods: {
                     clearDataPreview: () => clearDataPreviewCallCount++,
                     SET_CURR_QUERY_MODE: mode => (queryModeParam = mode),
                     fetchPrvw: params => (fetchPrvwParams = params),
                 },
-                computed: { getActiveQueryTabId: () => active_query_tab_id },
+                computed: { getActiveQueryTabId: () => activeQueryTabId },
             })
             const mockParam = { query_mode: 'PRVW_DATA', qualified_name: 'test.t1' }
             wrapper.vm.fetchNodePrvwData(mockParam)
             expect(clearDataPreviewCallCount).to.be.equals(1)
             expect(queryModeParam).to.be.eql({
                 payload: mockParam.query_mode,
-                id: active_query_tab_id,
+                id: activeQueryTabId,
             })
             expect(fetchPrvwParams).to.be.deep.equals({
                 qualified_name: mockParam.qualified_name,

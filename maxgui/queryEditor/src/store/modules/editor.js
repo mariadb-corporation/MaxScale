@@ -116,7 +116,7 @@ export default {
         },
         async queryTblCreationInfo({ commit, state, rootGetters }, node) {
             const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
-            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
             const {
                 $queryHttp,
                 $helpers: { getObjectRows, getErrorsArr },
@@ -124,7 +124,7 @@ export default {
             } = this.vue
 
             commit('SET_TBL_CREATION_INFO', {
-                id: active_query_tab_id,
+                id: activeQueryTabId,
                 payload: {
                     ...state.tbl_creation_info,
                     loading_tbl_creation_info: true,
@@ -144,7 +144,7 @@ export default {
             )
             if (tblOptError || colsOptsError) {
                 commit('SET_TBL_CREATION_INFO', {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: { ...state.tbl_creation_info, loading_tbl_creation_info: false },
                 })
                 let errTxt = []
@@ -167,7 +167,7 @@ export default {
                 const db = schemas[0]
 
                 commit(`SET_TBL_CREATION_INFO`, {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: {
                         ...state.tbl_creation_info,
                         data: {

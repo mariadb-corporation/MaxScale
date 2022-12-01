@@ -42,8 +42,6 @@ export default class Worksheet extends Extender {
             SchemaSidebar.delete(s => s.worksheet_id === id)
             QueryConn.delete(c => c.worksheet_id === id)
             QueryTab.cascadeDelete(t => t.worksheet_id === id)
-            // update active_query_tab_map state
-            QueryTab.commit(state => delete state.active_query_tab_map[id]) // delete worksheet key
         })
     }
 

@@ -42,11 +42,11 @@ export default {
             { qualified_name, query_mode }
         ) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
-            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
             const request_sent_time = new Date().valueOf()
             try {
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: {
                         request_sent_time,
                         total_duration: 0,
@@ -73,7 +73,7 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -94,7 +94,7 @@ export default {
                 )
             } catch (e) {
                 commit(`PATCH_${query_mode}_MAP`, {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: { is_loading: false },
                 })
                 this.vue.$logger.error(e)
@@ -106,12 +106,12 @@ export default {
         async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const request_sent_time = new Date().valueOf()
-            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
             const abort_controller = new AbortController()
             const config = rootState.queryEditorConfig.config
             try {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: {
                         data: {},
                         request_sent_time,
@@ -132,9 +132,9 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 // If the KILL command was sent for the query is being run, the query request is aborted/canceled
-                if (getters.getHasKillFlagMapByQueryTabId(active_query_tab_id)) {
+                if (getters.getHasKillFlagMapByQueryTabId(activeQueryTabId)) {
                     commit('PATCH_HAS_KILL_FLAG_MAP', {
-                        id: active_query_tab_id,
+                        id: activeQueryTabId,
                         payload: { value: false },
                     })
                     res = {
@@ -152,7 +152,7 @@ export default {
                      * is aborted, this needs to be called manually.
                      */
                     QueryTabMem.update({
-                        where: active_query_tab_id,
+                        where: activeQueryTabId,
                         data: { is_conn_busy: false },
                     })
                 } else {
@@ -161,7 +161,7 @@ export default {
                         await dispatch('queryConns/updateActiveDb', {}, { root: true })
                 }
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -181,7 +181,7 @@ export default {
                 )
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: { is_loading: false },
                 })
                 this.vue.$logger.error(e)
@@ -193,10 +193,10 @@ export default {
          */
         async stopQuery({ commit, getters, rootGetters }) {
             const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
-            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
+            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 commit('PATCH_HAS_KILL_FLAG_MAP', {
-                    id: active_query_tab_id,
+                    id: activeQueryTabId,
                     payload: { value: true },
                 })
                 const wkeConn = rootGetters['queryConns/getActiveWkeConn']
@@ -219,7 +219,7 @@ export default {
                     )
                 else {
                     const abort_controller = getters.getAbortControllerByQueryTabId(
-                        active_query_tab_id
+                        activeQueryTabId
                     )
                     abort_controller.abort() // abort the running query
                 }
@@ -233,9 +233,9 @@ export default {
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview({ commit, rootGetters }) {
-            const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
-            commit(`PATCH_PRVW_DATA_MAP`, { id: active_query_tab_id })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: active_query_tab_id })
+            const activeQueryTabId = rootGetters['queryTab/getActiveQueryTabId']
+            commit(`PATCH_PRVW_DATA_MAP`, { id: activeQueryTabId })
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: activeQueryTabId })
         },
     },
     getters: {
