@@ -42,7 +42,7 @@
                         class="ml-1 del-tab-btn"
                         icon
                         x-small
-                        :disabled="$typy(is_conn_busy_map[queryTab.id], 'value').safeBoolean"
+                        :disabled="getIsConnBusyByQueryTabId(queryTab.id)"
                         @click.stop.prevent="
                             getIsFileUnsavedByQueryTabId(queryTab.id)
                                 ? openFileDlg(queryTab)
@@ -51,11 +51,7 @@
                     >
                         <v-icon
                             size="8"
-                            :color="
-                                $typy(is_conn_busy_map[queryTab.id], 'value').safeBoolean
-                                    ? ''
-                                    : 'error'
-                            "
+                            :color="getIsConnBusyByQueryTabId(queryTab.id) ? '' : 'error'"
                         >
                             $vuetify.icons.mxs_close
                         </v-icon>
@@ -95,10 +91,10 @@ export default {
     },
     computed: {
         ...mapState({
-            is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
             active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
+            getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
             getActiveQueryTab: 'queryTab/getActiveQueryTab',
             getQueryTabsOfActiveWke: 'queryTab/getQueryTabsOfActiveWke',

@@ -30,7 +30,6 @@ export default new VuexPersistence({
             worksheets_arr: state.wke.worksheets_arr,
             active_wke_id: state.wke.active_wke_id,
         },
-        queryConn: { sql_conns: state.queryConn.sql_conns },
         queryTab: {
             query_tabs: state.queryTab.query_tabs,
             active_query_tab_map: state.queryTab.active_query_tab_map,

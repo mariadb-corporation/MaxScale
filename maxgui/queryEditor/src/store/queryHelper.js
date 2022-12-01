@@ -19,6 +19,7 @@ import {
     SYS_SCHEMAS,
 } from '@queryEditorSrc/store/config'
 import { lodash } from '@share/utils/helpers'
+import { t } from 'typy'
 import { getObjectRows } from '@queryEditorSrc/utils/helpers'
 
 /**
@@ -377,9 +378,9 @@ export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
  * is changed in persisted array then causes other properties also
  * have to recompute. A better method would be to create relational
  * keys between modules, but for now, stick with the old approach.
- * Module states to be synced to query_tabs: editor, queryConn, queryResult
+ * Module states to be synced to query_tabs: editor, queryResult
  * Module states to be synced to worksheets_arr: schemaSidebar
- * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
+ * @param {String} namespace -  module namespace. i.e. editor, queryResult, schemaSidebar
  * @returns {Object} - return flat state for the provided namespace module
  */
 function syncStateCreator(namespace) {
@@ -403,23 +404,6 @@ function syncStateCreator(namespace) {
                  */
                 tbl_creation_info: {},
             }
-        case 'queryConn':
-            return {
-                /**
-                 * has these properties:
-                 * id?: string. sql connection id.
-                 * attributes?: object. connection attributes.
-                 * name?: string. Connection name. e.g. server_0
-                 * type?: string. listeners, servers or services
-                 * clone_of_conn_id?: string. The connection id that was used to make this clone connection.
-                 * wke_id_fk?: string. Id of the worksheet that the connection is bound to. WORKSHEET binding_type
-                 * query_tab_id_fk?: string. Id of the queryTab that the connection is bound to. QUERY_TAB binding_type
-                 * binding_type?: string. QUERY_CONN_BINDING_TYPES
-                 * If it doesn't have clone_of_conn_id, it's a default connection
-                 */
-                active_sql_conn: {},
-                active_db: '',
-            }
         case 'queryResult':
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
         case 'schemaSidebar':
@@ -436,7 +420,6 @@ function syncStateCreator(namespace) {
  * This function helps to generate vuex mutations for states to by mutated to
  * flat states and synced to persistedObj.
  * The name of mutation follows this pattern SET_STATE_NAME.
- * e.g. Mutation for active_sql_conn state is SET_ACTIVE_SQL_CONN
  * @param {Object} param.statesToBeSynced. states to be mutated and synced
  * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
  * @returns {Object} - returns vuex mutations
@@ -480,24 +463,11 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
  * The state uses worksheet id as key or queryTab id. This helps to preserve
  * multiple worksheet's data or queryTab's data in memory.
  * Use `memStatesMutationCreator` to create corresponding mutations
- * @param {String} namespace -  module namespace. i.e. queryConn, queryResult, schemaSidebar
+ * @param {String} namespace -  module namespace. i.e. queryResult, schemaSidebar
  * @returns {Object} - returns states that are stored in memory
  */
 function memStateCreator(namespace) {
     switch (namespace) {
-        case 'queryConn':
-            return {
-                /**
-                 * each state has these properties:
-                 * value?: boolean
-                 */
-                is_conn_busy_map: {},
-                /**
-                 * each state has these properties:
-                 * value?: object
-                 */
-                lost_cnn_err_msg_obj_map: {},
-            }
         case 'queryResult':
             return {
                 /**
@@ -576,7 +546,7 @@ function memStatesMutationCreator(memStates) {
 /**
  * @public
  * This helps to commit mutations to release data storing in memory
- * @param {Object} param.namespace - module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
+ * @param {Object} param.namespace - module namespace. i.e. editor, queryResult, schemaSidebar
  * @param {Function} param.commit - vuex commit function
  * @param {String} param.id - wke_id or query_tab_id
  * @param {Object} param.memStates - memStates storing in memory
@@ -619,6 +589,38 @@ function filterEntity(entity, payload) {
     if (entity.find(payload)) return [entity.find(payload)]
     return []
 }
+/**
+ *
+ * @param {Object} apiConnMap - connections from API
+ * @param {Array} persistentConns - current persistent connections
+ * @returns {Object} - { alive_conn_map: {}, expired_conn_map: {}, orphaned_conn_ids: [] }
+ * alive_conn_map: stores connections that exists in the response of a GET to /sql/
+ * orphaned_conn_ids: When wke connection expires but its cloned connections (query tabs) are still alive,
+ * those are orphaned connections
+ */
+function categorizeSqlConns({ apiConnMap, persistentConns }) {
+    let alive_conn_map = {},
+        expired_conn_map = {},
+        orphaned_conn_ids = []
+
+    if (!t(apiConnMap).isEmptyObject) {
+        persistentConns.forEach(conn => {
+            const connId = conn.id
+            if (apiConnMap[connId]) {
+                // if this has value, it is a cloned connection from the wke connection
+                const wkeConnId = t(conn, 'clone_of_conn_id').safeString
+                if (wkeConnId && !apiConnMap[wkeConnId]) orphaned_conn_ids.push(conn.id)
+                else
+                    alive_conn_map[connId] = {
+                        ...conn,
+                        // update attributes
+                        attributes: apiConnMap[connId].attributes,
+                    }
+            } else expired_conn_map[connId] = conn
+        })
+    }
+    return { alive_conn_map, expired_conn_map, orphaned_conn_ids }
+}
 
 export default {
     getNodeGroupSQL,
@@ -634,4 +636,5 @@ export default {
     syncToPersistedObj,
     detectUnsavedChanges,
     filterEntity,
+    categorizeSqlConns,
 }

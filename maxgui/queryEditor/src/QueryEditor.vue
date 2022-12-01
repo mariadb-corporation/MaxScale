@@ -51,7 +51,6 @@ import '@queryEditorSrc/styles/queryEditor.scss'
 import WkeCtr from '@queryEditorSrc/components/WkeCtr.vue'
 import WkeNavCtr from '@queryEditorSrc/components/WkeNavCtr.vue'
 import { EventBus } from '@queryEditorSrc/components/EventBus'
-import initEntities from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     name: 'query-editor',
@@ -69,14 +68,13 @@ export default {
         ...mapState({
             active_wke_id: state => state.wke.active_wke_id,
             is_fullscreen: state => state.queryPersisted.is_fullscreen,
-            is_validating_conn: state => state.queryConn.is_validating_conn,
+            is_validating_conn: state => state.queryConns.is_validating_conn,
             QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
             worksheets_arr: state => state.wke.worksheets_arr,
             hidden_comp: state => state.queryEditorConfig.hidden_comp,
         }),
         ...mapGetters({
             getActiveWke: 'wke/getActiveWke',
-            getIsTxtEditor: 'editor/getIsTxtEditor',
         }),
         wkeNavCtrHeight() {
             return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
@@ -109,7 +107,6 @@ export default {
     },
     created() {
         this.handleAutoClearQueryHistory()
-        initEntities()
     },
     mounted() {
         this.$nextTick(() => this.setDim(), this.setQueryEditorTopSlotHeight())

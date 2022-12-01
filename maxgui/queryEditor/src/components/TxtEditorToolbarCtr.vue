@@ -213,7 +213,6 @@ export default {
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             query_txt: state => state.editor.query_txt,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             selected_query_txt: state => state.editor.selected_query_txt,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,

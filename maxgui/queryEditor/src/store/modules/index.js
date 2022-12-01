@@ -1,5 +1,5 @@
 import wke from './wke'
-import queryConn from './queryConn'
+import queryConns from './queryConns'
 import editor from './editor'
 import schemaSidebar from './schemaSidebar'
 import queryResult from './queryResult'
@@ -11,7 +11,7 @@ import mxsApp from '@share/store/mxsApp'
 export default {
     mxsApp,
     wke,
-    queryConn,
+    queryConns,
     editor,
     schemaSidebar,
     queryResult,

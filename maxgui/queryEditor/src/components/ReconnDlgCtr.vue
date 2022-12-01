@@ -36,7 +36,9 @@
  * Public License.
  */
 
-import { mapActions, mapGetters, mapMutations } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+
 export default {
     name: 'reconn-dlg-ctr',
     props: {
@@ -44,8 +46,8 @@ export default {
     },
     computed: {
         ...mapGetters({
-            getLostCnnErrMsgObj: 'queryConn/getLostCnnErrMsgObj',
-            getCurrWkeConn: 'queryConn/getCurrWkeConn',
+            getLostCnnErrMsgObj: 'queryConns/getLostCnnErrMsgObj',
+            getActiveWkeConn: 'queryConns/getActiveWkeConn',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         queryErrMsg() {
@@ -56,20 +58,20 @@ export default {
                 return Boolean(this.queryErrMsg)
             },
             set() {
-                this.PATCH_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.getActiveQueryTabId })
+                QueryTabMem.update({
+                    where: m => m.query_tab_id === this.getActiveQueryTabId,
+                    data: { lost_cnn_err_msg_obj: {} },
+                })
             },
         },
     },
     methods: {
-        ...mapMutations({
-            PATCH_LOST_CNN_ERR_MSG_OBJ_MAP: 'queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP',
-        }),
         ...mapActions({
-            reconnect: 'queryConn/reconnect',
-            disconnect: 'queryConn/disconnect',
+            reconnect: 'queryConns/reconnect',
+            disconnect: 'queryConns/disconnect',
         }),
         async deleteConn() {
-            await this.disconnect({ id: this.getCurrWkeConn.id })
+            await this.disconnect({ id: this.getActiveWkeConn.id })
         },
         async handleReconnect() {
             await this.reconnect()

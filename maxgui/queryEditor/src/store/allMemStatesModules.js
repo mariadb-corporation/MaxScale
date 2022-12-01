@@ -1,6 +1,7 @@
+//TODO: Remove this file once ORM replacement is done
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
-const modules = ['queryConn', 'queryResult', 'schemaSidebar']
+const modules = ['queryResult', 'schemaSidebar']
 
 export default modules.reduce((acc, m) => {
     acc[m] = queryHelper.memStateCreator(m)

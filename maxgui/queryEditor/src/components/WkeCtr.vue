@@ -123,10 +123,10 @@ export default {
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
             curr_editor_mode: state => state.editor.curr_editor_mode,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             query_tabs: state => state.queryTab.query_tabs,
         }),
         ...mapGetters({
+            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
             getIsTxtEditor: 'editor/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
@@ -191,7 +191,7 @@ export default {
         this.watch_active_sql_conn()
     },
     deactivated() {
-        this.$typy(this.unwatch_active_sql_conn).safeFunction()
+        this.$typy(this.unwatch_getActiveQueryTabConn).safeFunction()
     },
     methods: {
         ...mapActions({ handleInitialFetch: 'wke/handleInitialFetch' }),
@@ -200,14 +200,14 @@ export default {
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
         }),
         /**
-         * A watcher on active_sql_conn state that is triggered immediately
+         * A watcher on getActiveQueryTabConn state that is triggered immediately
          * to behave like a created hook. The watcher is watched/unwatched based on
          * activated/deactivated hook to prevent it from being triggered while changing
-         * the value of active_sql_conn in another worksheet.
+         * the value of getActiveQueryTabConn in another worksheet.
          */
         watch_active_sql_conn() {
-            this.unwatch_active_sql_conn = this.$watch(
-                'active_sql_conn',
+            this.unwatch_getActiveQueryTabConn = this.$watch(
+                'getActiveQueryTabConn',
                 async () => await this.handleInitialFetch(),
                 { deep: true, immediate: true }
             )

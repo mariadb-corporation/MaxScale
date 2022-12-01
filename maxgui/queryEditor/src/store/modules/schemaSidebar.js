@@ -33,7 +33,7 @@ export default {
     actions: {
         async initialFetch({ dispatch }) {
             await dispatch('fetchSchemas')
-            await dispatch('queryConn/updateActiveDb', {}, { root: true })
+            await dispatch('queryConns/updateActiveDb', {}, { root: true })
         },
         /**
          * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
@@ -41,10 +41,11 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getNewDbTree({ rootState }, { nodeGroup, db_tree, cmpList }) {
+        async getNewDbTree({ rootGetters }, { nodeGroup, db_tree, cmpList }) {
+            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const sql = queryHelper.getNodeGroupSQL(nodeGroup)
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql,
                 })
             )
@@ -84,9 +85,9 @@ export default {
                 this.vue.$logger.error(e)
             }
         },
-        async fetchSchemas({ commit, dispatch, state, rootState, getters }) {
+        async fetchSchemas({ commit, dispatch, state, getters, rootState, rootGetters }) {
             const active_wke_id = rootState.wke.active_wke_id
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
 
             commit('PATCH_DB_TREE_MAP', {
@@ -95,7 +96,7 @@ export default {
             })
 
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql: getters.getDbSql,
                 })
             )
@@ -135,7 +136,7 @@ export default {
                             loading_db_tree: false,
                             data: tree,
                             db_completion_list: completionList,
-                            data_of_conn: active_sql_conn.name,
+                            data_of_conn: activeQueryTabConn.name,
                         },
                     })
                 }
@@ -152,13 +153,16 @@ export default {
          * @param {String} payload.action - action name. e.g. DROP TABLE table_name
          * @param {Boolean} payload.showSnackbar - show successfully snackbar message
          */
-        async exeStmtAction({ rootState, dispatch, commit }, { sql, action, showSnackbar = true }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+        async exeStmtAction(
+            { rootState, rootGetters, dispatch, commit },
+            { sql, action, showSnackbar = true }
+        ) {
+            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const active_wke_id = rootState.wke.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
                 let stmt_err_msg_obj = {}
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,
                 })
@@ -192,7 +196,7 @@ export default {
                         name: queryAction,
                         sql,
                         res,
-                        connection_name: active_sql_conn.name,
+                        connection_name: activeQueryTabConn.name,
                         queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }

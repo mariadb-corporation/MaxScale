@@ -89,7 +89,7 @@ export default {
             }
         },
         async logout({ commit, dispatch, rootState }) {
-            await dispatch('queryConn/disconnectAll', {}, { root: true })
+            await dispatch('queryConns/disconnectAll', {}, { root: true })
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })

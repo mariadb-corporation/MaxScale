@@ -1,3 +1,4 @@
+//TODO: Remove this file once ORM replacement is done
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -20,7 +21,6 @@ export function defQueryTabState(wke_id) {
         name: 'Query Tab 1',
         wke_id_fk: wke_id,
         count: 1,
-        ...queryHelper.syncStateCreator('queryConn'),
         ...queryHelper.syncStateCreator('editor'),
         ...queryHelper.syncStateCreator('queryResult'),
     }

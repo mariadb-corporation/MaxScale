@@ -4,7 +4,7 @@
     >
         <div ref="buttonWrapper" class="d-flex align-center px-2">
             <v-btn
-                :disabled="$typy(active_sql_conn).isEmptyObject"
+                :disabled="$typy(getActiveQueryTabConn).isEmptyObject"
                 small
                 class="float-left add-query-tab-btn"
                 icon
@@ -29,14 +29,16 @@
  * Public License.
  */
 
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
     computed: {
         ...mapState({
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             active_wke_id: state => state.wke.active_wke_id,
+        }),
+        ...mapGetters({
+            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
     },
     mounted() {

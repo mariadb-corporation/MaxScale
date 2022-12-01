@@ -24,8 +24,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions } from 'vuex'
 import ConfirmLeaveDlg from '@queryEditorSrc/components/ConfirmLeaveDlg.vue'
+import initEntities from '@queryEditorSrc/store/orm/initEntities'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+
 export default {
     name: 'query-page',
     components: {
@@ -39,9 +42,9 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            sql_conns: state => state.queryConn.sql_conns,
-        }),
+        allConns() {
+            return QueryConn.all()
+        },
     },
     beforeRouteLeave(to, from, next) {
         if (this.to) {
@@ -52,7 +55,7 @@ export default {
              * Allow to leave page immediately if next path is to login page (user logouts)
              * or if there is no active connections
              */
-            if (Object.keys(this.sql_conns).length === 0) this.leavePage()
+            if (Object.keys(this.allConns).length === 0) this.leavePage()
             else
                 switch (to.path) {
                     case '/login':
@@ -60,8 +63,7 @@ export default {
                         break
                     case '/404':
                         this.cancelLeave()
-                        this.clearConn()
-                        this.validateConns({ sqlConns: this.sql_conns })
+                        this.validateConns({ persistentConns: this.allConns })
                         break
                     default:
                         this.shouldDelAll = true
@@ -70,13 +72,13 @@ export default {
         }
     },
     async created() {
-        await this.validateConns({ sqlConns: this.sql_conns })
+        initEntities()
+        await this.validateConns({ persistentConns: this.allConns })
     },
     methods: {
         ...mapActions({
-            validateConns: 'queryConn/validateConns',
-            disconnectAll: 'queryConn/disconnectAll',
-            clearConn: 'queryConn/clearConn',
+            validateConns: 'queryConns/validateConns',
+            disconnectAll: 'queryConns/disconnectAll',
         }),
         async onLeave() {
             if (this.shouldDelAll) await this.disconnectAll()

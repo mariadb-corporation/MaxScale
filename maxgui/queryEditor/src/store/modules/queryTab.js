@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
 import init, { defQueryTabState } from '@queryEditorSrc/store/initQueryEditorState'
@@ -97,18 +100,16 @@ export default {
                 commit('ADD_NEW_QUERY_TAB', { wke_id, name })
                 const newQueryTabId = state.query_tabs[state.query_tabs.length - 1].id
                 // Clone the wke conn and bind it to the new queryTab
-                const wke_conn = rootGetters['queryConn/getWkeConnByWkeId'](wke_id)
-                let queryTabConn
+                const wke_conn = rootGetters['queryConns/getWkeConnByWkeId'](wke_id)
                 if (wke_conn.id) {
                     await dispatch(
-                        'queryConn/cloneConn',
+                        'queryConns/cloneConn',
                         {
                             conn_to_be_cloned: wke_conn,
                             binding_type:
                                 rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
                                     .QUERY_TAB,
-                            query_tab_id_fk: newQueryTabId,
-                            getCloneObjRes: obj => (queryTabConn = obj),
+                            query_tab_id: newQueryTabId,
                         },
                         { root: true }
                     )
@@ -118,16 +119,6 @@ export default {
                     id: wke_id,
                     payload: newQueryTabId,
                 })
-                // Switch to use new clone connection
-                if (queryTabConn)
-                    commit(
-                        'queryConn/SET_ACTIVE_SQL_CONN',
-                        {
-                            payload: queryTabConn,
-                            id: newQueryTabId,
-                        },
-                        { root: true }
-                    )
             } catch (e) {
                 this.vue.$logger.error(e)
                 commit(
@@ -146,18 +137,16 @@ export default {
          * @param {Object} queryTab - A queryTab object
 
          */
-        async handleDeleteQueryTab({ commit, rootState, dispatch }, queryTab) {
-            const bound_conns = Object.values(rootState.queryConn.sql_conns).filter(
-                c => c.query_tab_id_fk === queryTab.id
-            )
+        async handleDeleteQueryTab({ commit, dispatch }, queryTab) {
+            const bound_conns = QueryConn.all().filter(c => c.query_tab_id === queryTab.id)
             for (const { id } of bound_conns) {
-                if (id) await dispatch('queryConn/disconnectClone', { id }, { root: true })
+                if (id) await dispatch('queryConns/disconnectClone', { id }, { root: true })
             }
             dispatch('releaseQueryModulesMem', queryTab.id)
             commit('DELETE_QUERY_TAB', queryTab.id)
         },
         /**
-         * Clear all queryTab's data except active_sql_conn data
+         * Clear all queryTab's data
          * @param {Object} param.queryTab - queryTab to be cleared
          */
         handleClearTheLastQueryTab({ commit, dispatch, getters }, queryTab) {
@@ -166,7 +155,6 @@ export default {
                 id: queryTab.id,
                 name: 'Query Tab 1',
                 count: 1,
-                active_sql_conn: queryTab.active_sql_conn,
             }
             commit('UPDATE_QUERY_TAB', freshQueryTab)
             dispatch('releaseQueryModulesMem', queryTab.id)
@@ -178,7 +166,6 @@ export default {
          * @param {Object} param.queryTab - queryTab object to be sync to flat states
          */
         handleSyncQueryTab({ commit }, queryTab) {
-            commit('queryConn/SYNC_WITH_PERSISTED_OBJ', queryTab, { root: true })
             commit('queryResult/SYNC_WITH_PERSISTED_OBJ', queryTab, { root: true })
             commit('editor/SYNC_WITH_PERSISTED_OBJ', queryTab, { root: true })
         },
@@ -188,7 +175,7 @@ export default {
          */
         releaseQueryModulesMem({ commit }, query_tab_id) {
             Object.keys(allMemStatesModules).forEach(namespace => {
-                // Only 'queryConn', 'queryResult' modules have memStates keyed by query_tab_id
+                // Only 'queryResult' modules have memStates keyed by query_tab_id
                 if (namespace !== 'schemaSidebar')
                     queryHelper.releaseMemory({
                         namespace,
@@ -198,49 +185,31 @@ export default {
                     })
             })
         },
-        /**
-         * queryTabs cleanup
-         * release memStates that uses queryTab id as key,
-         * refresh targetQueryTab to its initial state. The target queryTab
-         * can be either found by using conn_id or query_tab_id
-         * @param {String} param.conn_id - connection id
-         * @param {String} param.query_tab_id - queryTab id
-         */
-        resetQueryTabStates(
-            { state, rootState, commit, dispatch, getters },
-            { conn_id, query_tab_id }
-        ) {
-            const targetQueryTab = conn_id
-                ? getters.getQueryTabByConnId(conn_id)
-                : state.query_tabs.find(s => s.id === query_tab_id)
-            dispatch('releaseQueryModulesMem', targetQueryTab.id)
-            commit('REFRESH_QUERY_TAB_OF_A_WKE', targetQueryTab)
-            const freshQueryTab = rootState.queryTab.query_tabs.find(
-                s => s.id === targetQueryTab.id
-            )
-            // only sync if targetQueryTab is the active queryTab of the worksheet
-            if (getters.getActiveQueryTabId === query_tab_id)
-                dispatch('handleSyncQueryTab', freshQueryTab)
-        },
     },
     getters: {
-        getActiveQueryTabId: (state, getters, rootState) => {
-            return state.active_query_tab_map[rootState.wke.active_wke_id]
+        getActiveQueryTabId: (state, getters, rootState, rootGetters) => {
+            const {
+                ORM_NAMESPACE,
+                ORM_PERSISTENT_ENTITIES: { QUERY_TABS },
+            } = rootState.queryEditorConfig.config
+            const { active_query_tab_map } = rootState[ORM_NAMESPACE][QUERY_TABS] || {}
+            return active_query_tab_map[rootGetters['wke/getActiveWkeId']]
         },
         getActiveQueryTab: (state, getters) => {
             return state.query_tabs.find(s => s.id === getters.getActiveQueryTabId) || {}
         },
-        getQueryTabsOfActiveWke: (state, getters, rootState) => {
-            return state.query_tabs.filter(s => s.wke_id_fk === rootState.wke.active_wke_id)
+        getQueryTabsOfActiveWke: (state, getters, rootState, rootGetters) => {
+            return QueryTab.query()
+                .where(t => t.worksheet_id === rootGetters['wke/getActiveWkeId'])
+                .get()
         },
         getQueryTabsByWkeId: state => {
             return wke_id => state.query_tabs.filter(s => s.wke_id_fk === wke_id)
         },
-        getQueryTabByConnId: state => {
-            return conn_id =>
-                state.query_tabs.find(s => s.active_sql_conn && s.active_sql_conn.id === conn_id) ||
-                {}
-        },
         getQueryTabById: state => id => state.query_tabs.find(s => s.id === id) || {},
+        getActiveQueryTabMem: (state, getters) =>
+            QueryTabMem.query()
+                .where(t => t.query_tab_id === getters.getActiveQueryTabId)
+                .first() || {},
     },
 }

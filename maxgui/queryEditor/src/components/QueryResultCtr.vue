@@ -112,7 +112,7 @@ export default {
             curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
         ...mapGetters({
-            getIsConnBusy: 'queryConn/getIsConnBusy',
+            getIsConnBusy: 'queryConns/getIsConnBusy',
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',

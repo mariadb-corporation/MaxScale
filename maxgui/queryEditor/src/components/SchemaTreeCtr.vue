@@ -34,7 +34,8 @@
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
-                                node.type === NODE_TYPES.SCHEMA && active_db === node.name,
+                                node.type === NODE_TYPES.SCHEMA &&
+                                getActiveQueryTabConn.active_db === node.name,
                         }"
                     >
                         {{ node.name }}
@@ -134,7 +135,6 @@ export default {
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
             expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.wke.active_wke_id,
-            active_db: state => state.queryConn.active_db,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
         }),
@@ -143,6 +143,7 @@ export default {
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
             getAlteredActiveNode: 'editor/getAlteredActiveNode',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
+            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)

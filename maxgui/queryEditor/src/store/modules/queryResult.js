@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryResult')
@@ -40,7 +41,7 @@ export default {
             { rootState, commit, dispatch, rootGetters },
             { qualified_name, query_mode }
         ) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const request_sent_time = new Date().valueOf()
             try {
@@ -65,7 +66,7 @@ export default {
                         break
                 }
 
-                let res = await this.vue.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                let res = await this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,
                 })
@@ -86,7 +87,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name: active_sql_conn.name,
+                        connection_name: activeQueryTabConn.name,
                         queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
@@ -103,7 +104,7 @@ export default {
          * @param {String} query - SQL query string
          */
         async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const request_sent_time = new Date().valueOf()
             const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const abort_controller = new AbortController()
@@ -121,7 +122,7 @@ export default {
                 })
 
                 let res = await this.vue.$queryHttp.post(
-                    `/sql/${active_sql_conn.id}/queries`,
+                    `/sql/${activeQueryTabConn.id}/queries`,
                     {
                         sql: query,
                         max_rows: rootState.queryPersisted.query_row_limit,
@@ -150,15 +151,14 @@ export default {
                      * This is done automatically in queryHttp.interceptors.response. However, because the request
                      * is aborted, this needs to be called manually.
                      */
-                    commit(
-                        'queryConn/PATCH_IS_CONN_BUSY_MAP',
-                        { id: active_query_tab_id, payload: { value: false } },
-                        { root: true }
-                    )
+                    QueryTabMem.update({
+                        where: m => m.query_tab_id === active_query_tab_id,
+                        data: { is_conn_busy: false },
+                    })
                 } else {
                     const USE_REG = /(use|drop database)\s/i
                     if (query.match(USE_REG))
-                        await dispatch('queryConn/updateActiveDb', {}, { root: true })
+                        await dispatch('queryConns/updateActiveDb', {}, { root: true })
                 }
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_query_tab_id,
@@ -174,7 +174,7 @@ export default {
                         startTime: now,
                         sql: query,
                         res,
-                        connection_name: active_sql_conn.name,
+                        connection_name: activeQueryTabConn.name,
                         queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.USER_LOGS,
                     },
                     { root: true }
@@ -191,19 +191,19 @@ export default {
          * This action uses the current active worksheet connection to send
          * KILL QUERY thread_id
          */
-        async stopQuery({ commit, getters, rootGetters, rootState }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+        async stopQuery({ commit, getters, rootGetters }) {
+            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
             const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             try {
                 commit('PATCH_HAS_KILL_FLAG_MAP', {
                     id: active_query_tab_id,
                     payload: { value: true },
                 })
-                const wkeConn = rootGetters['queryConn/getCurrWkeConn']
+                const wkeConn = rootGetters['queryConns/getActiveWkeConn']
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
                 } = await this.vue.$queryHttp.post(`/sql/${wkeConn.id}/queries`, {
-                    sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
+                    sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}`,
                 })
                 if (this.vue.$typy(results, '[0].errno').isDefined)
                     commit(
@@ -285,11 +285,15 @@ export default {
         getIsRunBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
                 const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
+                    queryTab.id
+                )
+
                 if (!queryTab) return true
                 return (
                     !queryTab.query_txt ||
-                    !queryTab.active_sql_conn.id ||
-                    rootGetters['queryConn/getIsConnBusyByQueryTabId'](queryTab.id) ||
+                    !queryTabConn.id ||
+                    rootGetters['queryConns/getIsConnBusyByQueryTabId'](queryTab.id) ||
                     getters.getLoadingQueryResultByQueryTabId(queryTab.id)
                 )
             }
@@ -297,10 +301,14 @@ export default {
         getIsVisBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
             return id => {
                 const queryTab = rootState.queryTab.query_tabs.find(s => s.id === id)
+                const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
+                    queryTab.id
+                )
+
                 if (!queryTab) return true
                 return (
-                    !queryTab.active_sql_conn.id ||
-                    (rootGetters['queryConn/getIsConnBusyByQueryTabId'](queryTab.id) &&
+                    !queryTabConn.id ||
+                    (rootGetters['queryConns/getIsConnBusyByQueryTabId'](queryTab.id) &&
                         getters.getLoadingQueryResultByQueryTabId(queryTab.id))
                 )
             }

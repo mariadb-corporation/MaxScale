@@ -11,43 +11,45 @@
  * Public License.
  */
 import ax from 'axios'
+import { t } from 'typy'
+import { lodash, getErrorsArr } from '@share/utils/helpers'
+import { MARIADB_NET_ERRNO } from '@queryEditorSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
-
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 /**
  *
- * @param {Object} param.store - vuex store
  * @param {Boolean} param.value - is connection busy
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
-function patchIsConnBusyMap({ store, value, sql_conn_id }) {
-    const { id: active_query_tab_id } =
-        store.getters['queryTab/getQueryTabByConnId'](sql_conn_id) || {}
-    if (active_query_tab_id)
-        store.commit('queryConn/PATCH_IS_CONN_BUSY_MAP', {
-            id: active_query_tab_id,
-            payload: { value },
+function patchIsConnBusyMap({ value, sql_conn_id }) {
+    const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
+    if (query_tab_id)
+        QueryTabMem.update({
+            where: m => m.query_tab_id === query_tab_id,
+            data: { is_conn_busy: value },
         })
 }
 /**
  * This function helps to check if there is a lost connection error that has either
  * 2006 or 2013 errno value and update the corresponding error message object to lost_cnn_err_msg_obj_map state
  * @param {Object} param.res - response of every request from queryHttp axios instance
- * @param {Object} param.store - vuex store
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
-function analyzeRes({ res, store, sql_conn_id }) {
-    const results = store.vue.$typy(res, 'data.data.attributes.results').safeArray
+function analyzeRes({ res, sql_conn_id }) {
+    const results = t(res, 'data.data.attributes.results').safeArray
     const lostCnnErrMsgs = results.filter(res => {
-        const errno = store.vue.$typy(res, 'errno').safeNumber
-        return store.state.queryEditorConfig.config.MARIADB_NET_ERRNO.includes(errno)
+        const errno = t(res, 'errno').safeNumber
+        return MARIADB_NET_ERRNO.includes(errno)
     })
+
     if (lostCnnErrMsgs.length) {
-        const { id: active_query_tab_id } =
-            store.getters['queryTab/getQueryTabByConnId'](sql_conn_id) || {}
-        store.commit('queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP', {
-            id: active_query_tab_id,
-            payload: { value: lostCnnErrMsgs[0] },
-        })
+        const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
+        if (query_tab_id)
+            QueryTabMem.update({
+                where: m => m.query_tab_id === query_tab_id,
+                data: { lost_cnn_err_msg_obj: lostCnnErrMsgs[0] },
+            })
     }
 }
 function getSqlConnId(url) {
@@ -72,11 +74,8 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            config = store.vue.$helpers.lodash.merge(
-                config,
-                store.state.queryEditorConfig.axios_opts
-            )
-            patchIsConnBusyMap({ store, value: true, sql_conn_id: getSqlConnId(config.url) })
+            config = lodash.merge(config, store.state.queryEditorConfig.axios_opts)
+            patchIsConnBusyMap({ value: true, sql_conn_id: getSqlConnId(config.url) })
             return { ...config }
         },
         error => Promise.reject(error)
@@ -84,15 +83,13 @@ function queryHttp(store) {
     queryHttp.interceptors.response.use(
         response => {
             patchIsConnBusyMap({
-                store,
                 value: false,
                 sql_conn_id: getSqlConnId(response.config.url),
             })
-            analyzeRes({ res: response, store, sql_conn_id: getSqlConnId(response.config.url) })
+            analyzeRes({ res: response, sql_conn_id: getSqlConnId(response.config.url) })
             return response
         },
         async error => {
-            const { getErrorsArr } = store.vue.$helpers
             const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
             switch (status) {
                 case null:
@@ -112,7 +109,7 @@ function queryHttp(store) {
                 default:
                     defErrStatusHandler({ store, error })
             }
-            patchIsConnBusyMap({ store, value: false, sql_conn_id: getSqlConnId(url) })
+            patchIsConnBusyMap({ value: false, sql_conn_id: getSqlConnId(url) })
         }
     )
     return queryHttp

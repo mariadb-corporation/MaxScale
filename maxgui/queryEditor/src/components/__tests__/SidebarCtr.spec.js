@@ -27,7 +27,7 @@ const mountFactory = opts =>
 function mockShowingDbListTree() {
     return {
         getLoadingDbTree: () => false,
-        active_sql_conn: () => ({ id: '1', name: 'server_0', type: 'servers' }),
+        getActiveQueryTabConn: () => ({ id: '1', name: 'server_0', type: 'servers' }),
     }
 }
 

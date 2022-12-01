@@ -47,11 +47,11 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// To have an active connection, getCurrWkeConn should have value
+// To have an active connection, getActiveWkeConn should have value
 function mockActiveConnState() {
     return {
         getWkeConns: () => Object.values(dummy_sql_conns),
-        getCurrWkeConn: () => dummy_sql_conns['1'],
+        getActiveWkeConn: () => dummy_sql_conns['1'],
         getActiveQueryTabId: () => 'QUERY_TAB_123_45',
     }
 }
@@ -177,14 +177,14 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should assign getCurrWkeConn value to chosenWkeConn if there is an active connection
+    it(`Should assign getActiveWkeConn value to chosenWkeConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.getCurrWkeConn)
+        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.getActiveWkeConn)
     })
     it(`Should assign an empty object to chosenWkeConn if there is no active connection
       bound to the worksheet`, () => {
-        wrapper = mountFactory({ computed: { getCurrWkeConn: () => ({}) } })
+        wrapper = mountFactory({ computed: { getActiveWkeConn: () => ({}) } })
         wrapper.vm.$nextTick(() => {
             expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
         })

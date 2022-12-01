@@ -89,7 +89,7 @@ export default {
             { commit, dispatch, rootState, rootGetters },
             { type, conn_name }
         ) {
-            const conn = rootGetters['queryConn/getWkeConns'].find(c => c.name === conn_name)
+            const conn = rootGetters['queryConns/getWkeConns'].find(c => c.name === conn_name)
             const targetWke = rootState.wke.worksheets_arr.find(
                 w => w.id === this.vue.$typy(conn, 'wke_id_fk').safeString
             )
@@ -122,7 +122,7 @@ export default {
                     )
                 } else await dispatch('wke/addNewWs', { root: true })
                 commit(
-                    'queryConn/SET_PRE_SELECT_CONN_RSRC',
+                    'queryConns/SET_PRE_SELECT_CONN_RSRC',
                     { type, id: conn_name },
                     { root: true }
                 )

@@ -223,9 +223,9 @@ export default {
     },
     computed: {
         ...mapState({
-            rc_target_names_map: state => state.queryConn.rc_target_names_map,
-            conn_err_state: state => state.queryConn.conn_err_state,
-            pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
+            rc_target_names_map: state => state.queryConns.rc_target_names_map,
+            conn_err_state: state => state.queryConns.conn_err_state,
+            pre_select_conn_rsrc: state => state.queryConns.pre_select_conn_rsrc,
         }),
         isOpened: {
             get() {
@@ -286,10 +286,10 @@ export default {
     },
     methods: {
         ...mapActions({
-            fetchRcTargetNames: 'queryConn/fetchRcTargetNames',
+            fetchRcTargetNames: 'queryConns/fetchRcTargetNames',
         }),
         ...mapMutations({
-            SET_PRE_SELECT_CONN_RSRC: 'queryConn/SET_PRE_SELECT_CONN_RSRC',
+            SET_PRE_SELECT_CONN_RSRC: 'queryConns/SET_PRE_SELECT_CONN_RSRC',
         }),
         async handleFetchRsrcs(rscType) {
             // fetch if it's not been fetched

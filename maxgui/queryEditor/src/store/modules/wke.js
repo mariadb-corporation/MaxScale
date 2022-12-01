@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import allMemStatesModules from '@queryEditorSrc/store/allMemStatesModules'
 import init, { defWorksheetState } from '@queryEditorSrc/store/initQueryEditorState'
@@ -60,18 +61,20 @@ export default {
          * This calls action to populate schema-tree and change the wke name to
          * the connection name.
          */
-        async handleInitialFetch({ dispatch, rootState, rootGetters }) {
+        async handleInitialFetch({ dispatch, rootGetters }) {
             try {
-                const { id: conn_id, name: conn_name } = rootState.queryConn.active_sql_conn || {}
-                const hasConnId = conn_id
+                const { id: connId, name: connName } = rootGetters[
+                    'queryConns/getActiveQueryTabConn'
+                ]
+                const hasConnId = Boolean(connId)
                 const isSchemaTreeEmpty = rootGetters['schemaSidebar/getDbTreeData'].length === 0
                 const hasSchemaTreeAlready =
                     this.vue.$typy(rootGetters['schemaSidebar/getCurrDbTree'], 'data_of_conn')
-                        .safeString === conn_name
+                        .safeString === connName
                 if (hasConnId) {
                     if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
                         await dispatch('schemaSidebar/initialFetch', {}, { root: true })
-                        dispatch('changeWkeName', conn_name)
+                        dispatch('changeWkeName', connName)
                     }
                     if (rootGetters['editor/getIsDDLEditor'])
                         await dispatch('editor/queryAlterTblSuppData', {}, { root: true })
@@ -108,10 +111,10 @@ export default {
                 dispatch('releaseQueryModulesMem', id)
 
                 const queryTabs = rootGetters['queryTab/getQueryTabsByWkeId'](id)
-                const { id: wkeConnId = '' } = rootGetters['queryConn/getWkeConnByWkeId'](id)
-                // First call queryConn/disconnect to delete the wke connection and its clones (query tabs)
+                const { id: wkeConnId = '' } = rootGetters['queryConns/getWkeConnByWkeId'](id)
+                // First call queryConns/disconnect to delete the wke connection and its clones (query tabs)
                 if (wkeConnId)
-                    await dispatch('queryConn/disconnect', { id: wkeConnId }, { root: true })
+                    await dispatch('queryConns/disconnect', { id: wkeConnId }, { root: true })
                 // delete queryTab objects
                 for (const queryTab of queryTabs)
                     await dispatch('queryTab/handleDeleteQueryTab', queryTab, { root: true })
@@ -153,8 +156,8 @@ export default {
          * @param {String} wkeConnId - id of the connection has binding_type === WORKSHEET
          */
         resetWkeStates({ commit, rootState, dispatch, getters }, wkeConnId) {
-            const wkeConn = rootState.queryConn.sql_conns[wkeConnId]
-            const targetWke = getters.getWkeById(wkeConn.wke_id_fk)
+            const wkeConn = QueryConn.find(wkeConnId) || {}
+            const targetWke = getters.getWkeById(wkeConn.worksheet_id)
             if (targetWke) {
                 dispatch('releaseQueryModulesMem', targetWke.id)
                 commit('REFRESH_WKE', targetWke)
@@ -177,6 +180,14 @@ export default {
         },
         getWkeById: state => {
             return id => state.worksheets_arr.find(w => w.id === id) || {}
+        },
+        getActiveWkeId: (state, getters, rootState) => {
+            const {
+                ORM_NAMESPACE,
+                ORM_PERSISTENT_ENTITIES: { WORKSHEETS },
+            } = rootState.queryEditorConfig.config
+            const { active_wke_id } = rootState[ORM_NAMESPACE][WORKSHEETS] || {}
+            return active_wke_id
         },
     },
 }

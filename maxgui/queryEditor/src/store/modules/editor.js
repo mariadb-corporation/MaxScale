@@ -52,9 +52,10 @@ export default {
         },
     },
     actions: {
-        async queryCharsetCollationMap({ rootState, commit }) {
+        async queryCharsetCollationMap({ commit, rootGetters }) {
+            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
                         // eslint-disable-next-line vue/max-len
                         'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
@@ -77,9 +78,10 @@ export default {
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             }
         },
-        async queryDefDbCharsetMap({ rootState, commit }) {
+        async queryDefDbCharsetMap({ rootGetters, commit }) {
+            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
                         // eslint-disable-next-line vue/max-len
                         'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
@@ -96,9 +98,10 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ rootState, commit }) {
+        async queryEngines({ rootGetters, commit }) {
+            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${rootState.queryConn.active_sql_conn.id}/queries`, {
+                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })
             )
@@ -111,8 +114,8 @@ export default {
             if (this.vue.$typy(state.def_db_charset_map).isEmptyObject)
                 await dispatch('queryDefDbCharsetMap')
         },
-        async queryTblCreationInfo({ commit, state, rootState, rootGetters }, node) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
+        async queryTblCreationInfo({ commit, state, rootGetters }, node) {
+            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
             const active_query_tab_id = rootGetters['queryTab/getActiveQueryTabId']
             const {
                 $queryHttp,
@@ -130,12 +133,12 @@ export default {
             })
             let tblOptsData, colsOptsData
             const [tblOptError, tblOptsRes] = await this.vue.$helpers.asyncTryCatch(
-                $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                $queryHttp.post(`/sql/${connId.id}/queries`, {
                     sql: queryHelper.getAlterTblOptsSQL(node),
                 })
             )
             const [colsOptsError, colsOptsRes] = await this.vue.$helpers.asyncTryCatch(
-                $queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
+                $queryHttp.post(`/sql/${connId.id}/queries`, {
                     sql: queryHelper.getAlterColsOptsSQL(node),
                 })
             )

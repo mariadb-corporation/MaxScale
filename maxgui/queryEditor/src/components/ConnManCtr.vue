@@ -103,6 +103,7 @@
 import { mapActions, mapGetters, mapState } from 'vuex'
 import ConnDlgCtr from './ConnDlgCtr.vue'
 import ReconnDlgCtr from './ReconnDlgCtr.vue'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'conn-man-ctr',
@@ -120,15 +121,17 @@ export default {
     },
     computed: {
         ...mapState({
-            pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
+            pre_select_conn_rsrc: state => state.queryConns.pre_select_conn_rsrc,
             active_wke_id: state => state.wke.active_wke_id,
-            sql_conns: state => state.queryConn.sql_conns,
         }),
         ...mapGetters({
-            getWkeConns: 'queryConn/getWkeConns',
-            getCurrWkeConn: 'queryConn/getCurrWkeConn',
-            getIsConnBusy: 'queryConn/getIsConnBusy',
+            getWkeConns: 'queryConns/getWkeConns',
+            getActiveWkeConn: 'queryConns/getActiveWkeConn',
+            getIsConnBusy: 'queryConns/getIsConnBusy',
         }),
+        allConns() {
+            return QueryConn.all()
+        },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
             return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.wke_id_fk) }))
@@ -168,10 +171,10 @@ export default {
     },
     methods: {
         ...mapActions({
-            openConnect: 'queryConn/openConnect',
-            disconnect: 'queryConn/disconnect',
-            onChangeConn: 'queryConn/onChangeConn',
-            validateConns: 'queryConn/validateConns',
+            openConnect: 'queryConns/openConnect',
+            disconnect: 'queryConns/disconnect',
+            onChangeConn: 'queryConns/onChangeConn',
+            validateConns: 'queryConns/validateConns',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
@@ -195,8 +198,8 @@ export default {
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
-            if (this.$typy(this.getCurrWkeConn).isEmptyObject) this.chosenWkeConn = {}
-            else this.chosenWkeConn = this.getCurrWkeConn
+            if (this.$typy(this.getActiveWkeConn).isEmptyObject) this.chosenWkeConn = {}
+            else this.chosenWkeConn = this.getActiveWkeConn
         },
         openConnDialog() {
             this.isConnDlgOpened = true
@@ -213,7 +216,7 @@ export default {
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
         },
         async onReconnectCb() {
-            await this.validateConns({ sqlConns: this.sql_conns, silentValidation: true })
+            await this.validateConns({ persistentConns: this.allConns, silentValidation: true })
         },
     },
 }

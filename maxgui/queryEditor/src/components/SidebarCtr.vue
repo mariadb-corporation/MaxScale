@@ -111,7 +111,6 @@ export default {
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
             EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
-            active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             search_schema: state => state.schemaSidebar.search_schema,
             tbl_creation_info: state => state.editor.tbl_creation_info,
@@ -119,7 +118,8 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
-            getIsConnBusy: 'queryConn/getIsConnBusy',
+            getIsConnBusy: 'queryConns/getIsConnBusy',
+            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
         }),
         filterTxt: {
@@ -137,7 +137,7 @@ export default {
             return this.getIsConnBusy && !this.getLoadingDbTree
         },
         hasConn() {
-            return Boolean(this.$typy(this.active_sql_conn, 'id').safeString)
+            return Boolean(this.$typy(this.getActiveQueryTabConn, 'id').safeString)
         },
     },
     methods: {
@@ -155,7 +155,7 @@ export default {
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
             loadChildNodes: 'schemaSidebar/loadChildNodes',
-            useDb: 'queryConn/useDb',
+            useDb: 'queryConns/useDb',
             queryAlterTblSuppData: 'editor/queryAlterTblSuppData',
             queryTblCreationInfo: 'editor/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',

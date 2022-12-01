@@ -49,17 +49,13 @@
                                 class="ml-1 del-tab-btn"
                                 icon
                                 x-small
-                                :disabled="
-                                    $typy(is_conn_busy_map[getActiveQueryTabId], 'value')
-                                        .safeBoolean
-                                "
+                                :disabled="getIsConnBusyByQueryTabId(getActiveQueryTabId)"
                                 @click.stop.prevent="handleDeleteWke(wke.id)"
                             >
                                 <v-icon
                                     size="8"
                                     :color="
-                                        $typy(is_conn_busy_map[getActiveQueryTabId], 'value')
-                                            .safeBoolean
+                                        getIsConnBusyByQueryTabId(getActiveQueryTabId)
                                             ? ''
                                             : 'error'
                                     "
@@ -111,11 +107,11 @@ export default {
         ...mapState({
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
-            is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
         }),
         ...mapGetters({
             getActiveQueryTabId: 'queryTab/getActiveQueryTabId',
-            getWkeConnByWkeId: 'queryConn/getWkeConnByWkeId',
+            getWkeConnByWkeId: 'queryConns/getWkeConnByWkeId',
+            getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),
         activeWkeID: {
