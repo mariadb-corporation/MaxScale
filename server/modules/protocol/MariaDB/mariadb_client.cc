@@ -3250,6 +3250,11 @@ std::tuple<bool, GWBUF> MariaDBClientConnection::read_protocol_packet()
         uint8_t seq = MYSQL_GET_PACKET_NO(buffer.data());
         m_sequence = seq;
         m_next_sequence = seq + 1;
+        // The buffer must be unique to guarantee that multiple COM_QUERY packets received in the same read()
+        // call don't end up sharing the same query classification data. Currently the query classification
+        // data is stored in the shared data when it should be stored in the GWBUF itself.
+        buffer.ensure_unique();
+        mxb_assert(!buffer.get_classifier_data());
     }
     return {read_ok, move(buffer)};
 }

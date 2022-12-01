@@ -14,6 +14,9 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4421](https://jira.mariadb.org/browse/MXS-4421) Query classification data is unintentionally shared between multiple queries
+* [MXS-4418](https://jira.mariadb.org/browse/MXS-4418) use-after-free in regexfilter
+* [MXS-4416](https://jira.mariadb.org/browse/MXS-4416) Stalling connection after running some command
 * [MXS-4415](https://jira.mariadb.org/browse/MXS-4415) Warning for xpandmon for 'leaving' / 'late, leaving' being an unknown sub-state
 * [MXS-4413](https://jira.mariadb.org/browse/MXS-4413) UPDATE with user variable breaks replication
 * [MXS-4406](https://jira.mariadb.org/browse/MXS-4406) State Shown was Not Correct by 'maxctrl list servers' Command
