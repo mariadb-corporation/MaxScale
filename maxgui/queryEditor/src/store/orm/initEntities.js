@@ -20,45 +20,68 @@ import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 
 /**
- * Initialize default entities which will be persisted in indexedDB
+ * Initialize a blank worksheet and its mandatory relational entities
+ * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
  */
-function initDefEntities() {
-    const worksheet_id = uuidv1()
-    const query_tab_id = uuidv1()
-
-    Worksheet.create({
+export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
+    Worksheet.insert({
         data: {
-            id: worksheet_id,
+            id: fields.worksheet_id,
             name: 'WORKSHEET',
             schemaSidebar: new SchemaSidebar(),
         },
     })
-    QueryTab.create({
-        data: {
-            id: query_tab_id,
-            worksheet_id,
-            editor: new Editor(),
-            queryResult: new QueryResult(),
-        },
-    })
-    Worksheet.commit(state => (state.active_wke_id = worksheet_id))
-    // update active_query_tab_map state
-    QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = query_tab_id))
+    Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
+    WorksheetMem.insert({ data: { id: fields.worksheet_id } })
+    insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
 }
 
 /**
- * Initialize entities that will be kept only in memory
+ * Initialize a blank QueryTab and its mandatory relational entities
+ * @param {String} worksheet_id  - id of the worksheet has QueryTab being inserted
+ * @param {Object} [ fields = { query_tab_id : uuidv1() } ] - fields
+ */
+export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }) {
+    let name = 'Query Tab 1',
+        count = 1
+
+    const lastQueryTabOfWke = QueryTab.query()
+        .where(t => t.worksheet_id === worksheet_id)
+        .last()
+
+    if (lastQueryTabOfWke) {
+        count = lastQueryTabOfWke.count + 1
+        name = `Query Tab ${count}`
+    }
+    QueryTab.insert({
+        data: {
+            id: fields.query_tab_id,
+            count,
+            name,
+            worksheet_id,
+            editor: new Editor(),
+            queryResult: new QueryResult(),
+            ...fields,
+        },
+    })
+    // update active_query_tab_map state
+    QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = fields.query_tab_id))
+    QueryTabMem.insert({ data: { id: fields.query_tab_id } })
+}
+
+/**
+ * Initialize entities that will be kept only in memory for all worksheets and queryTabs
  */
 function initMemEntities() {
     const worksheets = Worksheet.query()
         .with('queryTabs')
         .all()
     worksheets.forEach(w => {
-        WorksheetMem.create({ data: { id: w.id } })
-        w.queryTabs.forEach(t => QueryTabMem.create({ data: { id: t.id } }))
+        WorksheetMem.insert({ data: { id: w.id } })
+        w.queryTabs.forEach(t => QueryTabMem.insert({ data: { id: t.id } }))
     })
 }
 export default () => {
-    if (Worksheet.all().length === 0) initDefEntities()
-    initMemEntities()
+    if (Worksheet.all().length === 0) insertWke()
+    else initMemEntities()
 }
