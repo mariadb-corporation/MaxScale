@@ -1302,9 +1302,9 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     return local_result;
 }
 
-void TestConnections::reset_timeout()
+void TestConnections::reset_timeout(uint32_t limit)
 {
-    m_reset_timeout = true;
+    m_reset_timeout = limit;
 }
 
 void TestConnections::set_log_copy_interval(uint32_t interval_seconds)
@@ -1378,10 +1378,10 @@ void TestConnections::timeout_thread_func()
     while (!m_stop_threads.load(relax))
     {
         auto now = mxb::Clock::now();
-        if (m_reset_timeout.load(relax))
+        if (uint32_t timeout = m_reset_timeout.exchange(0, relax))
         {
             timeout_start = now;
-            m_reset_timeout = false;
+            timeout_limit = mxb::from_secs(timeout);
         }
 
         if (now - timeout_start > timeout_limit)

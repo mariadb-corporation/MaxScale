@@ -176,8 +176,10 @@ public:
 
     /**
      * Restarts timeout counter to delay test shutdown.
+     *
+     * @param limit The timeout to set, defaults to 300 seconds. A value of zero is ignored.
      */
-    void reset_timeout();
+    void reset_timeout(uint32_t limit = 300);
 
     /**
      * Set interval for periodic log copying. Can only be called once per test.
@@ -393,10 +395,10 @@ private:
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::thread      m_timeout_thread;  /**< Timeout thread */
-    std::atomic_bool m_reset_timeout {false};
-    std::thread      m_log_copy_thread; /**< Log copying thread */
-    std::atomic_bool m_stop_threads {false};
+    std::thread           m_timeout_thread; /**< Timeout thread */
+    std::atomic<uint32_t> m_reset_timeout {0};
+    std::thread           m_log_copy_thread;/**< Log copying thread */
+    std::atomic_bool      m_stop_threads {false};
 
     std::atomic_uint32_t m_log_copy_interval {300};     /**< Seconds between log copies */
 
