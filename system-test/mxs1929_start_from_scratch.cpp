@@ -86,11 +86,6 @@ int main(int argc, char** argv)
         "destroy filter filter2",
         "destroy listener service1 listener1",
         "destroy listener service2 listener2",
-        // Draining the servers makes sure they aren't used
-        "drain server server1",
-        "drain server server2",
-        "drain server server3",
-        "drain server server4",
         "destroy service service1",
         "destroy service service2",
         "destroy monitor monitor1",
