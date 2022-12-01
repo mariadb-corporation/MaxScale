@@ -63,7 +63,6 @@ export default class Worksheet extends Extender {
             // refresh its relations
             WorksheetMem.refresh(id)
             SchemaSidebar.refresh(s => s.worksheet_id === id)
-            QueryConn.refresh(c => c.worksheet_id === id)
             // refresh all queryTabs and its relations
             QueryTab.cascadeRefresh(t => t.worksheet_id === id)
         })
