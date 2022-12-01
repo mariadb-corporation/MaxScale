@@ -909,6 +909,9 @@ add_test_executable(auto_tune.cpp auto_tune auto_tune LABELS REPL_BACKEND)
 # MXS-4194: QC cache size keeps growing
 add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_cache_size LABELS REPL_BACKEND readwritesplit)
 
+# Runs the Connector/R2DBC test suite through MaxScale
+add_test_executable(connector_r2dbc.cc connector_r2dbc connector_r2dbc LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

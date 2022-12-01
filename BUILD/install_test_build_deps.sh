@@ -56,12 +56,8 @@ then
      fi
   fi
 
-  ${apt_cmd} install php-mysql
-  ${apt_cmd} install openjdk-8-jdk
-  if [ $? != 0 ]
-  then
-      ${apt_cmd} install openjdk-7-jdk
-  fi
+  # Installing maven installs the correct version of Java as a dependency
+  ${apt_cmd} install maven
 else
   ## RPM-based distro
   install_libdir=/usr/lib64
@@ -111,7 +107,8 @@ EOL
                  gnutls-devel \
                  libatomic \
                  cyrus-sasl-devel libxml2-devel krb5-devel
-    sudo yum install -y --nogpgcheck java-1.8.0-openjdk
+    # Installing maven installs the correct version of Java as a dependency
+    sudo yum install -y --nogpgcheck maven
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
     sudo yum install -y --nogpgcheck php-mysql
