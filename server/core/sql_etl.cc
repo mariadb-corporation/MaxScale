@@ -44,6 +44,31 @@ mxb::Json get(const mxb::Json& json, const std::string& path, mxb::Json::Type ty
 
     return elem;
 }
+
+std::string field_from_result(mxq::ODBC& source, const std::string& sql, int field)
+{
+    std::string rval;
+    mxq::TextResult textresult;
+
+    if (source.query(sql, &textresult))
+    {
+        if (auto val = textresult.get_field(field))
+        {
+            rval = *val;
+        }
+        else
+        {
+            mxb_assert_message(!true, "Query did not return a result: %s", sql.c_str());
+            throw problem("Unexpected empty result");
+        }
+    }
+    else
+    {
+        throw problem(source.error());
+    }
+
+    return rval;
+}
 }
 
 namespace sql_etl
@@ -91,23 +116,8 @@ public:
 
     std::string create_table(mxq::ODBC& source, const Table& table) override
     {
-        std::string rval;
         std::string sql = mxb::string_printf("SHOW CREATE TABLE `%s`.`%s`", table.schema(), table.table());
-
-        mxq::TextResult textresult;
-        if (source.query(sql, &textresult))
-        {
-            if (auto val = textresult.get_field(1))
-            {
-                rval = "USE `"s + table.schema() + "`;\n" + *val;
-            }
-        }
-        else
-        {
-            throw problem(source.error());
-        }
-
-        return rval;
+        return field_from_result(source, sql, 1);
     }
 
     std::string select(mxq::ODBC& source, const Table& table) override
@@ -122,28 +132,8 @@ WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND IS_GENERATED = 'NEVER'
 GROUP BY TABLE_SCHEMA, TABLE_NAME;
 )";
 
-        std::string rval;
         std::string sql = mxb::string_printf(format, table.schema(), table.table());
-        mxq::TextResult textresult;
-
-        if (source.query(sql, &textresult))
-        {
-            if (auto val = textresult.get_field(0))
-            {
-                rval = *val;
-            }
-            else
-            {
-                mxb_assert_message(!true, "Query did not return a result: %s", sql.c_str());
-                throw problem("Unexpected empty result");
-            }
-        }
-        else
-        {
-            throw problem(source.error());
-        }
-
-        return rval;
+        return field_from_result(source, sql, 0);
     }
 
     std::string insert(mxq::ODBC& source, const Table& table) override
@@ -159,28 +149,8 @@ WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND IS_GENERATED = 'NEVER'
 GROUP BY TABLE_SCHEMA, TABLE_NAME;
 )";
 
-        std::string rval;
         std::string sql = mxb::string_printf(format, table.schema(), table.table());
-        mxq::TextResult textresult;
-
-        if (source.query(sql, &textresult))
-        {
-            if (auto val = textresult.get_field(0))
-            {
-                rval = *val;
-            }
-            else
-            {
-                mxb_assert_message(!true, "Query did not return a result: %s", sql.c_str());
-                throw problem("Unexpected empty result");
-            }
-        }
-        else
-        {
-            throw problem(source.error());
-        }
-
-        return rval;
+        return field_from_result(source, sql, 0);
     }
 };
 
