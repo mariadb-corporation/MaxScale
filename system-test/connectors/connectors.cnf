@@ -27,3 +27,13 @@ type=listener
 service=RW-Split-Router
 protocol=MySQLClient
 port=4006
+
+[RW-Split-Listener-SSL]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=4007
+ssl=true
+ssl_cert=/###access_homedir###/certs/server-cert.pem
+ssl_key=/###access_homedir###/certs/server-key.pem
+ssl_ca_cert=/###access_homedir###/certs/ca.pem
