@@ -154,6 +154,293 @@ GROUP BY TABLE_SCHEMA, TABLE_NAME;
     }
 };
 
+class PostgresqlExtractor final : public Extractor
+{
+public:
+    void init_connection(mxq::ODBC& source) override
+    {
+        if (!source.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        {
+            throw problem("Failed to start transaction: ", source.error());
+        }
+    }
+
+    void start(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        for (const auto& t : tables)
+        {
+            auto sql = mxb::string_printf(R"(LOCK TABLE "%s"."%s" IN ACCESS SHARE MODE)",
+                                          t.schema(), t.table());
+
+            if (!source.query(sql))
+            {
+                throw problem("Failed to lock table `", t.schema(), "`.`", t.table(), "`: ", source.error());
+            }
+        }
+
+        mxq::TextResult textresult;
+        if (source.query("SELECT pg_export_snapshot()", &textresult))
+        {
+            if (auto val = textresult.get_field(0))
+            {
+                m_snapshot = *val;
+            }
+            else
+            {
+                throw problem("Transaction snapshot was null");
+            }
+        }
+        else
+        {
+            throw problem("Failed to retrieve transaction snapshot: ", source.error());
+        }
+    }
+
+    void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        // Taking a shared lock on the tables prevents them from being deleted or modified while the
+        // transaction is ongoing. The NOWAIT option is what prevents deadlocks from happening: if an outside
+        // connection manages to request an exclusive lock after we get the initial shared locks but before
+        // all of the threads have acquired their own locks, they would be blocked by the exclusive lock which
+        // in turn would be blocked by the initial shared locks.
+        for (const auto& t : tables)
+        {
+            auto sql = mxb::string_printf(R"(LOCK TABLE "%s"."%s" IN ACCESS SHARE MODE NOWAIT)",
+                                          t.schema(), t.table());
+
+            if (!source.query(sql))
+            {
+                throw problem("Locking conflict for table `", t.schema(), "`.`", t.table(), "`",
+                              ", cannot proceed: ", source.error());
+            }
+        }
+
+        if (!source.query("SET TRANSACTION SNAPSHOT '" + m_snapshot + "'"))
+        {
+            throw problem("Failed to import transaction snapshot: ", source.error());
+        }
+    }
+
+    void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) override
+    {
+        // Tables are unlocked when the transaction ends
+    }
+
+    std::string create_table(mxq::ODBC& source, const Table& table) override
+    {
+        /**
+         * The various PostgreSQL types are converted as follows:
+         *
+         * - If a.attndims is larger than zero, then the field is an array and it is converted into a JSON
+         *   array
+         *
+         * - The hstore key-value type is converted into a JSON object
+         *
+         * - JSONB is converted into JSON, MariaDB doesn't have a binary type
+         *
+         * - The PostgreSQL-only geometry types 'line', 'lseg', 'box' and 'circle' are converted to TEXT
+         *
+         * - The 'geometry' type is converted into a plain GEOMETRY type, Postgres otherwise declares it as a
+         *   non-standard type.
+         *
+         * - The INET type is converted into INET6 as PostgreSQL supports a mix of IPv4 and IPv6 addresses.
+         *
+         * - All PostgreSQL SERIAL types are converted into MariaDB AUTO_INCREMENT fields. This isn't a 100%
+         *   compatible mapping as PostgreSQL uses a SEQUENCE to implement it which allows multiple SERIAL
+         *   fields to be defined and they do not need to be a part of the PRIMARY KEY to work. MariaDB
+         *   requires that there is only one AUTO_INCREMENT field and it must be a part of the primary key.
+         *
+         * - Fields with with 'NULL::' as the starting of the expression mean that the field has a default
+         *   value of NULL. This usually seems to happen when an explicit NULL default is used instead of an
+         *   implicit one.
+         *
+         * - Fields that use a sequence for their default value are converted to use the MariaDB syntax.
+         *
+         * - If a.attgenerated is an empty string, then the field has a default value. Otherwise, the field is
+         *   a generated column.
+         *
+         * - CHECK constrains are extracted as-is which means they must be compatible with MariaDB.
+         */
+        std::ostringstream ss;
+        ss <<
+            R"(
+SELECT '`' || a.attname || '` ' ||
+  CASE
+    WHEN a.attndims > 0 THEN 'JSON'
+    WHEN t.typname IN ('jsonb', 'json', 'hstore') THEN 'JSON'
+    WHEN t.typname LIKE 'timestamp%' THEN 'TIMESTAMP'
+    WHEN t.typname LIKE 'time%' THEN 'TIME'
+    WHEN t.typname IN ('line', 'lseg', 'box', 'circle', 'cidr', 'macaddr', 'macaddr8') THEN 'TEXT'
+    WHEN t.typname = 'geometry' THEN 'GEOMETRY'
+    WHEN t.typname = 'inet' THEN 'INET6'
+    ELSE UPPER(pg_catalog.format_type(a.atttypid, a.atttypmod))
+  END ||
+  CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
+  CASE
+    WHEN pg_catalog.pg_get_serial_sequence(c.relname, a.attname) IS NOT NULL
+      THEN ' AUTO_INCREMENT'
+    WHEN pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) LIKE 'NULL::%'
+      THEN ' DEFAULT NULL'
+    WHEN pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) LIKE 'nextval(%'
+      THEN ' DEFAULT ' || TRANSLATE(REPLACE(pg_catalog.pg_get_expr(d.adbin, d.adrelid, true), '::regclass', ''), '''', '')
+    ELSE
+      COALESCE(CASE WHEN a.attgenerated = '' THEN ' DEFAULT ' ELSE ' AS ' END || '(' || pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) || ')', '')
+  END  ||
+  COALESCE(' ' || pg_catalog.pg_get_constraintdef(ct.oid), '')
+  colcol
+FROM pg_class c
+  JOIN pg_namespace n ON (n.oid = c.relnamespace)
+  JOIN pg_attribute a ON (a.attrelid = c.oid)
+  JOIN pg_type t ON (t.oid = a.atttypid)
+  LEFT JOIN pg_attrdef d ON (d.adrelid = a.attrelid AND d.adnum = a.attnum)
+  LEFT JOIN pg_constraint ct ON (ct.conrelid = c.oid AND a.attnum = ANY(ct.conkey) AND ct.contype = 'c')
+WHERE a.attnum > 0
+AND n.nspname = ')" << table.schema() << R"('
+AND c.relname = ')" << table.table() << R"('
+ORDER BY a.attnum
+)";
+        std::string col_sql = ss.str();
+        ss.str("");
+
+        /**
+         * PostgreSQL has many index types and the ones that MariaDB support are primary keys, unique keys,
+         * normal indexes and spatial indexes. There doesn't seem to be built-in fulltext indexes but there
+         * are some contributed modules. For now, ignore those and let the user deal with those.
+         */
+        ss <<
+            R"(
+SELECT
+  CASE
+    WHEN BOOL_OR(ix.indisprimary) THEN 'PRIMARY KEY'
+    WHEN BOOL_OR(ix.indisunique) THEN 'UNIQUE KEY `' || i.relname || '`'
+    ELSE 'KEY `' || i.relname || '`'
+  END
+  || '(' || STRING_AGG('`' || a.attname || '`', ', ') || ')' idx
+FROM pg_class t, pg_class i, pg_index ix, pg_attribute a, pg_namespace n, pg_am am
+WHERE
+  t.oid = ix.indrelid
+  AND i.oid = ix.indexrelid
+  AND n.oid = t.relnamespace
+  AND a.attrelid = t.oid
+  AND i.relam = am.oid
+  AND a.attnum = ANY(ix.indkey)
+  AND t.relkind = 'r'
+  AND n.nspname = ')" << table.schema() << R"('
+  AND t.relname = ')" << table.table() << R"('
+GROUP BY i.relname, t.relname, am.amname
+)";
+        std::string idx_sql = ss.str();
+
+        // Processing the results separately avoids the need to use CTEs and STRING_AGG to combine the fields.
+        // It also allows us to format the result to look similar to SHOW CREATE TABLE.
+        std::vector<std::string> values;
+
+        for (auto sql : {col_sql, idx_sql})
+        {
+            mxq::TextResult textresult;
+
+            if (source.query(sql, &textresult))
+            {
+                if (textresult.result().size() != 1)
+                {
+                    mxb_assert_message(!true, "Wrong number of results (%lu): %s",
+                                       textresult.result().size(), sql.c_str());
+                    throw problem("Unexpected number of results");
+                }
+
+                for (const auto& row : textresult.result()[0])
+                {
+                    if (row.size() != 1 || !row[0])
+                    {
+                        mxb_assert_message(!true, "Wrong number of results (%lu) or null row", row.size());
+                        throw problem("Unexpected result value");
+                    }
+
+                    values.push_back(*row[0]);
+                }
+            }
+            else
+            {
+                throw problem(source.error());
+            }
+        }
+
+        ss.str("");
+        ss << "CREATE TABLE `" << table.schema() << "`.`" << table.table() << "`(\n  ";
+        ss << mxb::join(values, ",\n  ");
+        ss << "\n)";
+        return ss.str();
+    }
+
+    std::string select(mxq::ODBC& source, const Table& table) override
+    {
+        /**
+         * The SELECT statement must also be generated based on the table layout and possibly also on the data
+         * itself. The generated SQL is minimally formatted into a somewhat readable form. The following data
+         * type conversions are done on the PostgreSQL side:
+         *
+         * - Geometry types are extracted into their WKT form, the native display format is something else.
+         *
+         * - hstore and array are read in their JSON form.
+         *
+         * - As the inet type in PostgreSQL is a mix of IPv4 and IPv6 addresses, we need to map IPv4 addresses
+         *   into the IPv6 form. The inet type also stores a netmask which must be stripped off as MariaDB
+         *   doesn't support them.
+         */
+        const char* format =
+            R"(
+SELECT
+  E'SELECT\n' ||
+  STRING_AGG(
+    '  ' ||
+    CASE
+    WHEN data_type IN ('point', 'path', 'polygon', 'geometry')
+      THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY))'
+    WHEN udt_name IN ('hstore')
+      THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ')'
+    WHEN data_type = 'array'
+      THEN 'array_to_json(' || QUOTE_IDENT(column_name) || ')'
+    WHEN data_type = 'inet'
+      THEN 'CASE FAMILY(' || QUOTE_IDENT(column_name) || ') WHEN 4 THEN ''::ffff:'' ELSE '''' END || HOST(' || QUOTE_IDENT(column_name) || ')'
+    ELSE
+      QUOTE_IDENT(column_name)
+    END
+    || ' ' || QUOTE_IDENT(column_name),
+    E',\n' ORDER BY ordinal_position) ||
+  E'\nFROM ' || QUOTE_IDENT(table_schema) || '.' || QUOTE_IDENT(table_name)
+FROM information_schema.columns
+WHERE table_schema = '%s' AND table_name = '%s' AND is_generated = 'NEVER'
+GROUP BY table_schema, table_name;
+)";
+
+        std::string sql = mxb::string_printf(format, table.schema(), table.table());
+        return field_from_result(source, sql, 0);
+    }
+
+    std::string insert(mxq::ODBC& source, const Table& table) override
+    {
+        const char* format =
+            R"(
+SELECT
+  'INSERT INTO `%s`.`%s` (' ||
+  STRING_AGG( '`' || column_name || '`', ',' ORDER BY ordinal_position)
+  || ') VALUES (' || STRING_AGG('?', ',') || ')'
+FROM information_schema.columns
+WHERE table_schema = '%s' AND table_name = '%s' AND is_generated = 'NEVER'
+GROUP BY table_schema, table_name;
+)";
+
+        std::string sql = mxb::string_printf(format,
+                                             table.schema(), table.table(),
+                                             table.schema(), table.table());
+
+        return field_from_result(source, sql, 0);
+    }
+
+private:
+    std::string m_snapshot;
+};
+
 std::unique_ptr<ETL> create(const mxb::Json& json,
                             const HttpSql::ConnectionConfig& src_cc,
                             const HttpSql::ConnectionConfig& dest_cc)
@@ -207,9 +494,23 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
     auto type_str = get(json, "type", Type::STRING).get_string();
     std::unique_ptr<Extractor> extractor;
 
+    std::string src = src_cc.odbc_string;
+
     if (type_str == "mariadb")
     {
         extractor = std::make_unique<MariaDBExtractor>();
+    }
+    else if (type_str == "postgresql")
+    {
+        // The Postgres ODBC driver by default wraps all SQL statements in their own SAVEPOINT commands in
+        // order to be able to roll them back. We don't want them as they interfere with the
+        // pg_export_snapshot() functionality. Postgres 7.4 implemented the protocol version 3 and the -0 at
+        // the end of the Protocol option is what disables the SAVEPOINT functionality.
+        src += ";Protocol=7.4-0";
+        // It also emulates cursors by default which end up causing the whole resultset to be read
+        // into memory. This would cause MaxScale to run out of memory so we need to use real cursors.
+        src += ";UseDeclareFetch=1";
+        extractor = std::make_unique<PostgresqlExtractor>();
     }
     else
     {
@@ -223,7 +524,7 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
         throw problem("No tables defined");
     }
 
-    Config cnf{src_cc.odbc_string, ss.str()};
+    Config cnf{src, ss.str()};
     cnf.threads = std::min(16UL, tables.size());
 
     if (int64_t threads = maybe_get(json, "threads", mxb::Json::Type::INTEGER).get_int(); threads > 0)
