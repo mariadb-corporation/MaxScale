@@ -12,7 +12,6 @@
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
-import { t } from 'typy'
 import { uuidv1 } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryResult from './QueryResult'
@@ -42,6 +41,7 @@ export default class QueryTab extends Extender {
             // delete record in its the relational tables
             QueryTabMem.delete(id)
             Editor.delete(id)
+            Editor.commit(state => delete state.blob_file_map[id])
             QueryResult.delete(id)
             QueryConn.delete(c => c.query_tab_id === id)
         })
@@ -66,19 +66,9 @@ export default class QueryTab extends Extender {
                 .whereId(id)
                 .first()
             if (target) {
-                //----------------------- refresh itself --------------------------
-                QueryTab.update({
-                    where: id,
-                    data: {
-                        // refresh the name if the editor doesn't have a blob_file
-                        name: t(target, 'editor.blob_file').isNull
-                            ? `Query Tab ${target.count}`
-                            : target.name,
-                    },
-                })
                 // refresh its relations
                 QueryTabMem.refresh(id)
-                // keep query_txt and blob_file data even after refresh all fields
+                // keep query_txt data even after refresh all fields
                 Editor.refresh(id, ['query_txt'])
                 QueryResult.refresh(id)
             }

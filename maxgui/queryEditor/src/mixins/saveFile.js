@@ -21,6 +21,7 @@ export default {
             getQueryTabFileHandle: 'editors/getQueryTabFileHandle',
             getQueryTabFileHandleName: 'editors/getQueryTabFileHandleName',
             checkQueryTabFileHandleValidity: 'editors/checkQueryTabFileHandleValidity',
+            getBlobFileByQueryTabId: 'editors/getBlobFileByQueryTabId',
         }),
     },
     methods: {
@@ -101,9 +102,11 @@ export default {
             a.click()
             document.body.removeChild(a)
             // update blob_file
-            Editor.update({
-                where: queryTabId,
-                data: { blob_file: { ...queryTab.blob_file, txt: query_txt } },
+            Editor.commit(state => {
+                state.blob_file_map[queryTabId] = {
+                    ...this.getBlobFileByQueryTabId(queryTabId),
+                    txt: query_txt,
+                }
             })
         },
         /**
@@ -119,9 +122,8 @@ export default {
                 await this.writeFile({ fileHandle, contents: query_txt })
                 QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
                 // update blob_file
-                Editor.update({
-                    where: queryTab.id,
-                    data: { blob_file: { file_handle: fileHandle, txt: query_txt } },
+                Editor.commit(state => {
+                    state.blob_file_map[queryTab.id] = { file_handle: fileHandle, txt: query_txt }
                 })
             } catch (ex) {
                 this.$logger.error('Unable to write file')
@@ -150,9 +152,11 @@ export default {
                     const { query_txt } = Editor.find(queryTab.id) || {}
                     await this.writeFile({ fileHandle, contents: query_txt })
                     // update blob_file
-                    Editor.update({
-                        where: queryTab.id,
-                        data: { blob_file: { file_handle: fileHandle, txt: query_txt } },
+                    Editor.commit(state => {
+                        state.blob_file_map[queryTab.id] = {
+                            file_handle: fileHandle,
+                            txt: query_txt,
+                        }
                     })
                 }
             } catch (e) {

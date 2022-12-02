@@ -208,12 +208,21 @@ export default {
         hasFileSystemReadOnlyAccess: () => Boolean(supported),
         hasFileSystemRWAccess: (state, getters) =>
             getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-        getIsFileUnsavedByQueryTabId: () => id => {
-            const { query_txt = '', blob_file = {} } = Editor.find(id) || {}
+        getBlobFileByQueryTabId: (state, getters, rootState) => query_tab_id => {
+            const {
+                ORM_NAMESPACE,
+                ORM_PERSISTENT_ENTITIES: { EDITORS },
+            } = rootState.queryEditorConfig.config
+            const { blob_file_map } = rootState[ORM_NAMESPACE][EDITORS] || {}
+            return blob_file_map[query_tab_id] || {}
+        },
+        getIsFileUnsavedByQueryTabId: (state, getters) => id => {
+            const blob_file = getters.getBlobFileByQueryTabId(id)
+            const { query_txt = '' } = Editor.find(id) || {}
             return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
         },
-        getQueryTabFileHandle: () => queryTab => {
-            const { blob_file: { file_handle = {} } = {} } = Editor.find(queryTab.id) || {}
+        getQueryTabFileHandle: (state, getters) => queryTab => {
+            const { file_handle = {} } = getters.getBlobFileByQueryTabId(queryTab.id)
             return file_handle
         },
         getQueryTabFileHandleName: (state, getters) => queryTab =>

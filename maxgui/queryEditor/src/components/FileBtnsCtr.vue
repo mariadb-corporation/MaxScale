@@ -183,28 +183,24 @@ export default {
         async loadFileToActiveQueryTab(blob) {
             const blobTxt = await this.getFileTxt(blob.handle)
             QueryTab.update({ where: this.queryTab.id, data: { name: blob.handle.name } })
-
             if (!this.hasFileSystemReadOnlyAccess)
                 /**
                  * clear the uploader file input so that if the user upload the same file,
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
-            // once file is loaded, store file_handle to the queryTab
-            Editor.update({
-                where: this.queryTab.id,
-                data: {
-                    blob_file: {
-                        file_handle: blob.handle,
-                        /* store its txt so it can be retrieved
-                         * because the permission to read the file is withdrawn
-                         * when the browser is refreshed or closed
-                         */
-                        txt: blobTxt,
-                    },
-                    query_txt: blobTxt,
-                },
+            // once file is loaded, store file_handle
+            Editor.commit(state => {
+                state.blob_file_map[this.queryTab.id] = {
+                    file_handle: blob.handle,
+                    /* store its txt so it can be retrieved
+                     * because the permission to read the file is withdrawn
+                     * when the browser is refreshed or closed
+                     */
+                    txt: blobTxt,
+                }
             })
+            Editor.update({ where: this.queryTab.id, data: { query_txt: blobTxt } })
         },
 
         shortKeyHandler(key) {
