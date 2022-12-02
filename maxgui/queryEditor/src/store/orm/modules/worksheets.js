@@ -35,7 +35,7 @@ export default {
                         dispatch('changeWkeName', connName)
                     }
                     if (rootGetters['editors/getIsDDLEditor'])
-                        await dispatch('editors/queryAlterTblSuppData', {}, { root: true })
+                        await dispatch('editorsMem/queryAlterTblSuppData', {}, { root: true })
                 }
             } catch (e) {
                 this.vue.$logger.error(e)

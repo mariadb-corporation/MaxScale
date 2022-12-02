@@ -73,7 +73,7 @@ export default {
     props: { queryTab: { type: Object, required: true } },
     computed: {
         ...mapState({
-            file_dlg_data: state => state.editors.file_dlg_data,
+            file_dlg_data: state => state.editorsMem.file_dlg_data,
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
         ...mapGetters({
@@ -104,7 +104,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
-            SET_FILE_DLG_DATA: 'editors/SET_FILE_DLG_DATA',
+            SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
         }),
         /**
          * Legacy support for reading uploaded file

@@ -84,9 +84,9 @@ export default {
     computed: {
         ...mapState({
             DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
-            charset_collation_map: state => state.editors.charset_collation_map,
-            engines: state => state.editors.engines,
-            def_db_charset_map: state => state.editors.def_db_charset_map,
+            charset_collation_map: state => state.editorsMem.charset_collation_map,
+            engines: state => state.editorsMem.engines,
+            def_db_charset_map: state => state.editorsMem.def_db_charset_map,
         }),
         ...mapGetters({
             getCurrDdlAlterSpec: 'editors/getCurrDdlAlterSpec',

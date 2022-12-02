@@ -161,7 +161,7 @@ export default {
             fetchPrvw: 'queryResult/fetchPrvw',
             loadChildNodes: 'schemaSidebar/loadChildNodes',
             useDb: 'queryConns/useDb',
-            queryAlterTblSuppData: 'editors/queryAlterTblSuppData',
+            queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
             queryTblCreationInfo: 'editors/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),

@@ -269,7 +269,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_SELECTED_QUERY_TXT: 'editors/SET_SELECTED_QUERY_TXT',
+            SET_SELECTED_QUERY_TXT: 'editorsMem/SET_SELECTED_QUERY_TXT',
             SET_QUERY_PANE_PCT_HEIGHT: 'queryPersisted/SET_QUERY_PANE_PCT_HEIGHT',
             SET_TAB_MOVES_FOCUS: 'queryPersisted/SET_TAB_MOVES_FOCUS',
         }),

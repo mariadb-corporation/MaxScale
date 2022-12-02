@@ -213,7 +213,7 @@ export default {
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            selected_query_txt: state => state.editors.selected_query_txt,
+            selected_query_txt: state => state.editorsMem.selected_query_txt,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({

@@ -116,7 +116,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_FILE_DLG_DATA: 'editors/SET_FILE_DLG_DATA',
+            SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
         }),
         /**
          * @param {Object} queryTab - queryTab object
