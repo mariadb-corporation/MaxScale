@@ -22,12 +22,6 @@ import QueryTabMem from './QueryTabMem'
 export default class QueryTab extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
 
-    static state() {
-        return {
-            active_query_tab_map: {}, // Persistence, key is worksheet_id, value is entity id
-        }
-    }
-
     /**
      * If a record is deleted, then the corresponding records in the child
      * tables will be automatically deleted

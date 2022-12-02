@@ -89,7 +89,6 @@
 
 import { mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import WkeToolbar from './WkeToolbar.vue'
 
 export default {
@@ -113,7 +112,7 @@ export default {
             return Worksheet.all()
         },
         activeQueryTabId() {
-            return QueryTab.getters('getActiveQueryTabId')
+            return Worksheet.getters('getActiveQueryTabId')
         },
         activeWkeID: {
             get() {

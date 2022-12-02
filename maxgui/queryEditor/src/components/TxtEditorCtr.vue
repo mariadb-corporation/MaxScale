@@ -108,7 +108,7 @@
  * Public License.
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
@@ -238,7 +238,7 @@ export default {
             },
             set(value) {
                 Editor.update({
-                    where: QueryTab.getters('getActiveQueryTabId'),
+                    where: Worksheet.getters('getActiveQueryTabId'),
                     data: {
                         query_txt: value,
                     },

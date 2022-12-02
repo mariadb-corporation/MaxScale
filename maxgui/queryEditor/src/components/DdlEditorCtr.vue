@@ -41,7 +41,6 @@
  */
 import { mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
 import DdlEditorToolbar from './DdlEditorToolbar.vue'
@@ -422,7 +421,7 @@ export default {
             })
             if (!this.isExecFailed)
                 Editor.update({
-                    where: QueryTab.getters('getActiveQueryTabId'),
+                    where: Worksheet.getters('getActiveQueryTabId'),
                     data: {
                         tbl_creation_info: {
                             ...this.tblCreationInfo,

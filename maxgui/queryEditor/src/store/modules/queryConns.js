@@ -392,7 +392,7 @@ export default {
         getAllConns: () => QueryConn.all(),
         getActiveQueryTabConn: () =>
             QueryConn.query()
-                .where('query_tab_id', QueryTab.getters('getActiveQueryTabId'))
+                .where('query_tab_id', Worksheet.getters('getActiveQueryTabId'))
                 .first() || {},
         getActiveWkeConn: () =>
             QueryConn.query()

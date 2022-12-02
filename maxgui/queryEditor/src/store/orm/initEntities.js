@@ -68,9 +68,10 @@ export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }
 
     QueryResult.insert({ data: { id: fields.query_tab_id } })
     QueryTabMem.insert({ data: { id: fields.query_tab_id } })
-
-    // update active_query_tab_map state
-    QueryTab.commit(state => (state.active_query_tab_map[worksheet_id] = fields.query_tab_id))
+    Worksheet.update({
+        where: Worksheet.getters('getActiveWkeId'),
+        data: { active_query_tab_id: fields.query_tab_id },
+    })
 }
 
 /**

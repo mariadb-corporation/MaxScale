@@ -13,6 +13,7 @@
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { insertQueryTab } from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
@@ -55,21 +56,14 @@ export default {
         refreshLastQueryTab(_, query_tab_id) {
             QueryTab.cascadeRefresh(query_tab_id)
             QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
+            Editor.refresh(query_tab_id)
+            Editor.commit(state => delete state.blob_file_map[query_tab_id])
         },
     },
     getters: {
         getAllQueryTabs: () => QueryTab.all(),
-        getActiveQueryTabId: (state, getters, rootState) => {
-            const {
-                ORM_NAMESPACE,
-                ORM_PERSISTENT_ENTITIES: { QUERY_TABS },
-            } = rootState.queryEditorConfig.config
-            const { active_query_tab_map } = rootState[ORM_NAMESPACE][QUERY_TABS] || {}
-            return active_query_tab_map[Worksheet.getters('getActiveWkeId')]
-        },
-        getActiveQueryTab: (state, getters) => {
-            return QueryTab.find(getters.getActiveQueryTabId) || {}
-        },
+
+        getActiveQueryTab: () => QueryTab.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getQueryTabsOfActiveWke: () =>
             QueryTab.query()
                 .where(t => t.worksheet_id === Worksheet.getters('getActiveWkeId'))
@@ -79,7 +73,7 @@ export default {
                 .where(t => t.worksheet_id === wke_id)
                 .get(),
         getQueryTabById: () => id => QueryTab.find(id) || {},
-        getActiveQueryTabMem: (state, getters) =>
-            QueryTabMem.find(getters.getActiveQueryTabId) || {},
+        getActiveQueryTabMem: () =>
+            QueryTabMem.find(Worksheet.getters('getActiveQueryTabId')) || {},
     },
 }

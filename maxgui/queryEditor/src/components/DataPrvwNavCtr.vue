@@ -33,7 +33,7 @@
  * Public License.
  */
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 
 export default {
     name: 'data-prvw-nav-ctr',
@@ -60,7 +60,7 @@ export default {
                 )
                     this.SET_CURR_QUERY_MODE({
                         payload: value,
-                        id: QueryTab.getters('getActiveQueryTabId'),
+                        id: Worksheet.getters('getActiveQueryTabId'),
                     })
             },
         },

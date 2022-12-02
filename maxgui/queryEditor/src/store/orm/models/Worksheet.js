@@ -72,6 +72,7 @@ export default class Worksheet extends Extender {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
+            active_query_tab_id: this.attr(null).nullable(),
             // relationship fields
             queryTabs: this.hasMany(QueryTab, 'worksheet_id'),
             schemaSidebar: this.hasOne(SchemaSidebar, 'id'),

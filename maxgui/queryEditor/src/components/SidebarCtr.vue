@@ -127,7 +127,7 @@ export default {
             return Worksheet.getters('getActiveWkeId')
         },
         activeQueryTabId() {
-            return QueryTab.getters('getActiveQueryTabId')
+            return Worksheet.getters('getActiveQueryTabId')
         },
         filterTxt: {
             get() {

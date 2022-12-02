@@ -72,5 +72,6 @@ export default {
             const { active_wke_id } = rootState[ORM_NAMESPACE][WORKSHEETS] || {}
             return active_wke_id
         },
+        getActiveQueryTabId: () => Worksheet.getters('getActiveWke').active_query_tab_id,
     },
 }

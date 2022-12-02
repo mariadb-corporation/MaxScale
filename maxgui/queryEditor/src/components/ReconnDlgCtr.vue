@@ -37,7 +37,7 @@
  */
 
 import { mapActions, mapGetters } from 'vuex'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 
 export default {
@@ -59,7 +59,7 @@ export default {
             },
             set() {
                 QueryTabMem.update({
-                    where: QueryTab.getters('getActiveQueryTabId'),
+                    where: Worksheet.getters('getActiveQueryTabId'),
                     data: { lost_cnn_err_msg_obj: {} },
                 })
             },

@@ -100,14 +100,16 @@ export default {
         }),
         activeQueryTabId: {
             get() {
-                return QueryTab.getters('getActiveQueryTabId')
+                return Worksheet.getters('getActiveQueryTabId')
             },
             set(v) {
                 if (v)
-                    QueryTab.commit(
-                        state =>
-                            (state.active_query_tab_map[Worksheet.getters('getActiveWkeId')] = v)
-                    )
+                    Worksheet.update({
+                        where: Worksheet.getters('getActiveWkeId'),
+                        data: {
+                            active_query_tab_id: v,
+                        },
+                    })
             },
         },
         queryTabsOfActiveWke() {

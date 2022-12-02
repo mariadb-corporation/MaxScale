@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { supported } from 'browser-fs-access'
@@ -20,7 +20,7 @@ export default {
     actions: {
         async queryTblCreationInfo({ commit, getters, rootGetters }, node) {
             const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
-            const activeQueryTabId = QueryTab.getters('getActiveQueryTabId')
+            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const {
                 $queryHttp,
                 $helpers: { getObjectRows, getErrorsArr },
@@ -95,7 +95,7 @@ export default {
         },
     },
     getters: {
-        getEditor: () => Editor.find(QueryTab.getters('getActiveQueryTabId')) || {},
+        getEditor: () => Editor.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getQueryTxt: (state, getters) => getters.getEditor.query_txt || '',
         getCurrDdlAlterSpec: (state, getters) => getters.getEditor.curr_ddl_alter_spec || '',
         //editor mode getter

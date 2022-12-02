@@ -138,7 +138,7 @@ export default {
             return QueryTab.all()
         },
         activeQueryTabId() {
-            return QueryTab.getters('getActiveQueryTabId')
+            return Worksheet.getters('getActiveQueryTabId')
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })

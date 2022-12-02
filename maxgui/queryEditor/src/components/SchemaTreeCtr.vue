@@ -113,7 +113,6 @@ This component emits the following events
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
@@ -149,7 +148,7 @@ export default {
             return Worksheet.getters('getActiveWkeId')
         },
         activeQueryTabId() {
-            return QueryTab.getters('getActiveQueryTabId')
+            return Worksheet.getters('getActiveQueryTabId')
         },
         alteredActiveNode() {
             return Editor.getters('getAlteredActiveNode')
