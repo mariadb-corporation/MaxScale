@@ -54,12 +54,6 @@ string to_json_value(const MaxRest::Value& value)
 class MaxRest::SystemTestImp : public MaxRest::Imp
 {
 public:
-    SystemTestImp(TestConnections* pTest)
-        : m_test(*pTest)
-        , m_maxscale(*pTest->maxscale)
-    {
-    }
-
     SystemTestImp(TestConnections* pTest, mxt::MaxScale* pMaxscale)
         : m_test(*pTest)
         , m_maxscale(*pMaxscale)
@@ -98,13 +92,14 @@ private:
 class MaxRest::LocalImp : public MaxRest::Imp
 {
 public:
-    LocalImp()
+    LocalImp(TestConnections* pTest)
+        : m_test(*pTest)
     {
     }
 
     TestConnections& test() const override final
     {
-        throw std::runtime_error("A local MaxRest does not have a TestConnections instance (yet).");
+        return m_test;
     }
 
     void raise(bool fail_on_error, const std::string& message) const override final
@@ -165,23 +160,21 @@ public:
 
         return rv;
     }
+
+private:
+    TestConnections& m_test;
 };
 
 //
 // MaxRest
 //
-MaxRest::MaxRest()
-    : m_sImp(new LocalImp())
-{
-}
-
 MaxRest::MaxRest(TestConnections* pTest)
-    : m_sImp(new SystemTestImp(pTest))
+    : m_sImp(create_imp(pTest))
 {
 }
 
 MaxRest::MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale)
-    : m_sImp(new SystemTestImp(pTest, pMaxscale))
+    : m_sImp(create_imp(pTest, pMaxscale))
 {
 }
 
@@ -530,4 +523,24 @@ string MaxRest::get<string>(json_t* pObject, const string& key, Presence presenc
     }
 
     return pValue ? json_string_value(pValue) : "";
+}
+
+MaxRest::Imp* MaxRest::create_imp(TestConnections* pTest, mxt::MaxScale* pMaxscale)
+{
+    if (!pMaxscale)
+    {
+        pMaxscale = pTest->maxscale;
+    }
+
+    Imp* pImp;
+    if (pTest->is_local_test())
+    {
+        pImp = new LocalImp(pTest);
+    }
+    else
+    {
+        pImp = new SystemTestImp(pTest, pMaxscale);
+    }
+
+    return pImp;
 }

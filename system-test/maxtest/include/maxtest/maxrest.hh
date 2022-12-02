@@ -66,11 +66,6 @@ public:
     MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale);
 
     /**
-     * Local Constructor, to be used with a local MaxScale instance.
-     */
-    MaxRest();
-
-    /**
      * @return  The TestConnections instance used by this instance.
      */
     TestConnections& test() const
@@ -354,6 +349,8 @@ private:
     class SystemTestImp;
 
 private:
+    static Imp* create_imp(TestConnections* pTest, mxt::MaxScale* pMaxscale = nullptr);
+
     bool                 m_fail_on_error  {true};
     std::unique_ptr<Imp> m_sImp;
 };

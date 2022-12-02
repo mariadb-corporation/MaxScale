@@ -64,7 +64,7 @@ void create_service_with_dormant_worker(TestConnections& test, MaxRest& maxrest)
 
 void test_main(TestConnections& test)
 {
-    MaxRest maxrest;
+    MaxRest maxrest(&test);
 
     try
     {

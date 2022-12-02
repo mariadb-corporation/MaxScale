@@ -539,7 +539,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
 
 void test_main(TestConnections& test)
 {
-    MaxRest maxrest;
+    MaxRest maxrest(&test);
 
     try
     {
