@@ -21,8 +21,8 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 // Store modules
-import worksheets from '@queryEditorSrc/store/modules/worksheets'
-import queryTabs from '@queryEditorSrc/store/modules/queryTabs'
+import worksheets from '@queryEditorSrc/store/orm/modules/worksheets'
+import queryTabs from '@queryEditorSrc/store/orm/modules/queryTabs'
 
 const database = new Database()
 //TODO: Register a model and vuex module to Database.
