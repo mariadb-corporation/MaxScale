@@ -55,7 +55,7 @@
             btnClass="create-snippet-btn toolbar-square-btn"
             text
             color="accent-dark"
-            :disabled="!getActiveQueryTxt"
+            :disabled="!queryTxt"
             @click="openSnippetDlg"
         >
             <template v-slot:btn-content>
@@ -171,6 +171,7 @@
  * @disable-tab-move-focus : void
  */
 import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
 import FileBtnsCtr from './FileBtnsCtr.vue'
@@ -221,10 +222,12 @@ export default {
             getHasKillFlagMapByQueryTabId: 'queryResult/getHasKillFlagMapByQueryTabId',
             getIsRunBtnDisabledByQueryTabId: 'queryResult/getIsRunBtnDisabledByQueryTabId',
             getIsVisBtnDisabledByQueryTabId: 'queryResult/getIsVisBtnDisabledByQueryTabId',
-            getActiveQueryTxt: 'editors/getActiveQueryTxt',
         }),
         eventBus() {
             return EventBus
+        },
+        queryTxt() {
+            return Editor.getters('getQueryTxt')
         },
         isRowLimitValid: {
             get() {
@@ -272,7 +275,7 @@ export default {
         shouldOpenDialog(mode) {
             return (
                 (mode === 'selected' && this.selected_query_txt) ||
-                (mode === 'all' && this.getActiveQueryTxt)
+                (mode === 'all' && this.queryTxt)
             )
         },
         async handleRun(mode) {
@@ -290,7 +293,7 @@ export default {
                         sqlTxt:
                             this.activeRunMode === 'selected'
                                 ? this.selected_query_txt
-                                : this.getActiveQueryTxt,
+                                : this.queryTxt,
                         onSave: this.confirmRunning,
                     }
                 }
@@ -309,7 +312,7 @@ export default {
             })
             switch (mode) {
                 case 'all':
-                    if (this.getActiveQueryTxt) await this.fetchQueryResult(this.getActiveQueryTxt)
+                    if (this.queryTxt) await this.fetchQueryResult(this.queryTxt)
                     break
                 case 'selected':
                     if (this.selected_query_txt)
@@ -318,7 +321,7 @@ export default {
             }
         },
         openSnippetDlg() {
-            if (this.getActiveQueryTxt) {
+            if (this.queryTxt) {
                 this.snippet.date = new Date().valueOf()
                 this.snippet.name = ''
                 this.confDlg = {
@@ -327,16 +330,14 @@ export default {
                     title: this.$mxs_t('confirmations.createSnippet'),
                     type: 'create',
                     isCreatingSnippet: true,
-                    sqlTxt: this.selected_query_txt
-                        ? this.selected_query_txt
-                        : this.getActiveQueryTxt,
+                    sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.queryTxt,
                     onSave: this.addSnippet,
                 }
             }
         },
         addSnippet() {
             let payload = {
-                sql: this.getActiveQueryTxt,
+                sql: this.queryTxt,
                 ...this.snippet,
             }
             if (this.selected_query_txt) payload.sql = this.selected_query_txt

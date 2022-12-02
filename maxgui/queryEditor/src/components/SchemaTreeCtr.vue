@@ -143,15 +143,16 @@ export default {
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
-            getAlteredActiveNode: 'editors/getAlteredActiveNode',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-            getTblCreationInfo: 'editors/getTblCreationInfo',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
         },
         activeQueryTabId() {
             return QueryTab.getters('getActiveQueryTabId')
+        },
+        alteredActiveNode() {
+            return Editor.getters('getAlteredActiveNode')
         },
         nodesHaveCtxMenu() {
             return Object.values(this.NODE_TYPES)
@@ -190,12 +191,12 @@ export default {
                 [TRIGGER]: this.txtOpts,
             }
         },
-        // Use either getActivePrvwNode or getAlteredActiveNode
+        // Use either getActivePrvwNode or alteredActiveNode
         activeNodes: {
             get() {
                 let nodes = []
-                if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
-                    nodes = [...nodes, this.getAlteredActiveNode]
+                if (this.$typy(this.alteredActiveNode, 'id').safeString)
+                    nodes = [...nodes, this.alteredActiveNode]
                 else if (this.$typy(this.getActivePrvwNode, 'id').safeString)
                     nodes = [...nodes, this.getActivePrvwNode]
                 return nodes
@@ -203,12 +204,12 @@ export default {
             set(v) {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
-                    if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
+                    if (this.$typy(this.alteredActiveNode, 'id').safeString)
                         Editor.update({
                             where: this.activeQueryTabId,
                             data: {
                                 tbl_creation_info: {
-                                    ...this.getTblCreationInfo,
+                                    ...Editor.getters('getTblCreationInfo'),
                                     altered_active_node: activeNodes[0],
                                 },
                             },

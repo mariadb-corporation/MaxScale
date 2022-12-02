@@ -29,7 +29,7 @@
                 class="mb-4 pt-2 pl-2 mxs-color-helper all-border-table-border"
                 :style="{ height: `${editorHeight}px` }"
             >
-                <!-- Workaround: assign true to skipRegCompleters props when getIsTxtEditor is TXT_EDITOR
+                <!-- Workaround: assign true to skipRegCompleters props when curr_editor_mode is TXT_EDITOR
                in order to not call regCompleters. In other words, when multiple editors are visible
                on the same page, they all re-call registerCompletionItemProvider which causes duplicated
                completion items

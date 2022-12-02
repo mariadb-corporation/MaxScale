@@ -60,7 +60,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters, mapMutations } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { fileOpen } from 'browser-fs-access'
@@ -76,20 +76,22 @@ export default {
             file_dlg_data: state => state.editorsMem.file_dlg_data,
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
-        ...mapGetters({
-            getIsFileUnsavedByQueryTabId: 'editors/getIsFileUnsavedByQueryTabId',
-            hasFileSystemReadOnlyAccess: 'editors/hasFileSystemReadOnlyAccess',
-            hasFileSystemRWAccess: 'editors/hasFileSystemRWAccess',
-            checkQueryTabFileHandleValidity: 'editors/checkQueryTabFileHandleValidity',
-        }),
-        isFileUnsaved() {
-            return this.getIsFileUnsavedByQueryTabId(this.queryTab.id)
+        hasFileSystemReadOnlyAccess() {
+            return Editor.getters('hasFileSystemReadOnlyAccess')
+        },
+        hasFileSystemRWAccess() {
+            return Editor.getters('hasFileSystemRWAccess')
+        },
+        isQueryTabUnsaved() {
+            return Editor.getters('getIsQueryTabUnsaved')(this.queryTab.id)
         },
         isSaveFileDisabled() {
-            return !this.isFileUnsaved || !this.checkQueryTabFileHandleValidity(this.queryTab)
+            return (
+                !this.isQueryTabUnsaved || !Editor.getters('getIsFileHandleValid')(this.queryTab.id)
+            )
         },
         isSaveFileAsDisabled() {
-            return !this.isFileUnsaved
+            return !this.isQueryTabUnsaved
         },
         eventBus() {
             return EventBus
@@ -158,7 +160,7 @@ export default {
          * @param {Blob} blob - blob
          */
         async handleLoadFile(blob) {
-            if (this.isFileUnsaved) {
+            if (this.isQueryTabUnsaved) {
                 this.SET_FILE_DLG_DATA({
                     is_opened: true,
                     title: this.$mxs_t('openScript'),

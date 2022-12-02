@@ -95,19 +95,18 @@ export default {
         },
     },
     getters: {
-        getActiveEditor: () => Editor.find(QueryTab.getters('getActiveQueryTabId')) || {},
-        getActiveQueryTxt: (state, getters) => getters.getActiveEditor.query_txt || '',
-        getCurrDdlAlterSpec: (state, getters) => getters.getActiveEditor.curr_ddl_alter_spec || '',
-        getCurrEditorMode: (state, getters) => getters.getActiveEditor.curr_editor_mode || '',
+        getEditor: () => Editor.find(QueryTab.getters('getActiveQueryTabId')) || {},
+        getQueryTxt: (state, getters) => getters.getEditor.query_txt || '',
+        getCurrDdlAlterSpec: (state, getters) => getters.getEditor.curr_ddl_alter_spec || '',
         //editor mode getter
         getIsTxtEditor: (state, getters, rootState) =>
-            getters.getActiveEditor.curr_editor_mode ===
+            getters.getEditor.curr_editor_mode ===
             rootState.queryEditorConfig.config.EDITOR_MODES.TXT_EDITOR,
         getIsDDLEditor: (state, getters, rootState) =>
-            getters.getActiveEditor.curr_editor_mode ===
+            getters.getEditor.curr_editor_mode ===
             rootState.queryEditorConfig.config.EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
-        getTblCreationInfo: (state, getters) => getters.getActiveEditor.tbl_creation_info || {},
+        getTblCreationInfo: (state, getters) => getters.getEditor.tbl_creation_info || {},
         getLoadingTblCreationInfo: (state, getters) =>
             getters.getTblCreationInfo.loading_tbl_creation_info || true,
         getAlteredActiveNode: (state, getters) =>
@@ -116,26 +115,21 @@ export default {
         hasFileSystemReadOnlyAccess: () => Boolean(supported),
         hasFileSystemRWAccess: (state, getters) =>
             getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-        getBlobFileByQueryTabId: (state, getters, rootState) => query_tab_id => {
+        getBlobFile: (state, getters, rootState) => id => {
             const {
                 ORM_NAMESPACE,
                 ORM_PERSISTENT_ENTITIES: { EDITORS },
             } = rootState.queryEditorConfig.config
             const { blob_file_map } = rootState[ORM_NAMESPACE][EDITORS] || {}
-            return blob_file_map[query_tab_id] || {}
+            return blob_file_map[id] || {}
         },
-        getIsFileUnsavedByQueryTabId: (state, getters) => id => {
-            const blob_file = getters.getBlobFileByQueryTabId(id)
+        getIsQueryTabUnsaved: (state, getters) => id => {
+            const blob_file = getters.getBlobFile(id)
             const { query_txt = '' } = Editor.find(id) || {}
             return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
         },
-        getQueryTabFileHandle: (state, getters) => queryTab => {
-            const { file_handle = {} } = getters.getBlobFileByQueryTabId(queryTab.id)
-            return file_handle
-        },
-        getQueryTabFileHandleName: (state, getters) => queryTab =>
-            getters.getQueryTabFileHandle(queryTab).name || '',
-        checkQueryTabFileHandleValidity: (state, getters) => queryTab =>
-            Boolean(getters.getQueryTabFileHandleName(queryTab)),
+        getFileHandle: (state, getters) => id => getters.getBlobFile(id).file_handle || {},
+        getFileHandleName: (state, getters) => id => getters.getFileHandle(id).name || '',
+        getIsFileHandleValid: (state, getters) => id => Boolean(getters.getFileHandleName(id)),
     },
 }

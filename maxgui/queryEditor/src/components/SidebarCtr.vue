@@ -122,7 +122,6 @@ export default {
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConns/getIsConnBusy',
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-            getTblCreationInfo: 'editors/getTblCreationInfo',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -162,7 +161,6 @@ export default {
             loadChildNodes: 'schemaSidebar/loadChildNodes',
             useDb: 'queryConns/useDb',
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
-            queryTblCreationInfo: 'editors/queryTblCreationInfo',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
 
@@ -184,11 +182,14 @@ export default {
                 data: {
                     curr_editor_mode: this.EDITOR_MODES.DDL_EDITOR,
                     curr_ddl_alter_spec: this.DDL_ALTER_SPECS.COLUMNS,
-                    tbl_creation_info: { ...this.getTblCreationInfo, altered_active_node: node },
+                    tbl_creation_info: {
+                        ...Editor.getters('getTblCreationInfo'),
+                        altered_active_node: node,
+                    },
                 },
             })
             await this.queryAlterTblSuppData()
-            await this.queryTblCreationInfo(node)
+            await Editor.dispatch('queryTblCreationInfo', node)
         },
 
         handleOpenExecSqlDlg(sql) {

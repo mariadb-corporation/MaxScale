@@ -11,6 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 
 export default {
     namespaced: true,
@@ -34,7 +35,7 @@ export default {
                         await dispatch('schemaSidebar/initialFetch', {}, { root: true })
                         dispatch('changeWkeName', connName)
                     }
-                    if (rootGetters['editors/getIsDDLEditor'])
+                    if (Editor.getters('getIsDDLEditor'))
                         await dispatch('editorsMem/queryAlterTblSuppData', {}, { root: true })
                 }
             } catch (e) {

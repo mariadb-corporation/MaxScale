@@ -15,15 +15,16 @@ import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@queryEditorSrc/store/con
 
 export default class Editor extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.EDITORS
-
+    //Persistence
     static state() {
         return {
             /**
              * vuex-orm serialized fields defined in the static fields(),
              * so FileSystemFileHandle can't be stored there.
              * This state stores fileHandle with key is the QueryTabId
+             * key is query_tab_id or editor id as they are the same, value is blob_file data
              */
-            blob_file_map: {}, // Persistence, key is query_tab_id, value is blob_file data
+            blob_file_map: {},
         }
     }
 

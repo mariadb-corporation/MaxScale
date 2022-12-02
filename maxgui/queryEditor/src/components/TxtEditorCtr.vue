@@ -164,7 +164,6 @@ export default {
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getChartResultSets: 'queryResult/getChartResultSets',
-            getActiveQueryTxt: 'editors/getActiveQueryTxt',
         }),
         eventBus() {
             return EventBus
@@ -235,7 +234,7 @@ export default {
         },
         allQueryTxt: {
             get() {
-                return this.getActiveQueryTxt
+                return Editor.getters('getQueryTxt')
             },
             set(value) {
                 Editor.update({

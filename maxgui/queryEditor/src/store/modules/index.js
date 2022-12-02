@@ -15,7 +15,6 @@
  * other ORM related modules should be registered via vuex-orm
  */
 import queryConns from './queryConns'
-import editors from './editors'
 import editorsMem from './editorsMem'
 import schemaSidebar from './schemaSidebar'
 import queryResult from './queryResult'
@@ -26,7 +25,6 @@ import mxsApp from '@share/store/mxsApp'
 export default {
     mxsApp,
     queryConns,
-    editors,
     editorsMem,
     schemaSidebar,
     queryResult,

@@ -26,7 +26,7 @@
                     <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
                         <template v-if="activeQueryTabId === queryTab.id">
                             <txt-editor-ctr
-                                v-if="getIsTxtEditor"
+                                v-if="isTxtEditor"
                                 ref="editor"
                                 :queryTab="queryTab"
                                 :dim="editorDim"
@@ -63,7 +63,7 @@
             :sqlTobeExecuted.sync="execSqlDlg.sql"
             :editorHeight="execSqlDlg.editorHeight"
             :dbCmplList="getDbCmplList"
-            :skipRegCompleters="getIsTxtEditor"
+            :skipRegCompleters="isTxtEditor"
             :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
             @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
@@ -87,6 +87,7 @@
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
 import TxtEditorCtr from './TxtEditorCtr.vue'
@@ -127,10 +128,12 @@ export default {
         }),
         ...mapGetters({
             getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-            getIsTxtEditor: 'editors/getIsTxtEditor',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
+        isTxtEditor() {
+            return Editor.getters('getIsTxtEditor')
+        },
         allQueryTabs() {
             return QueryTab.all()
         },

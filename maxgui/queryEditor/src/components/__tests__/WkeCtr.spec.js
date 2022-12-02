@@ -96,7 +96,7 @@ describe('wke-ctr', () => {
         }
         Object.keys(fnEvtMap).forEach(key => {
             it(`Should call ${key} if ${fnEvtMap[key]} event is emitted from sidebar-ctr`, () => {
-                wrapper = mountFactory({ shallow: false, computed: { getIsTxtEditor: () => true } })
+                wrapper = mountFactory({ shallow: false, computed: { isTxtEditor: () => true } })
                 const spyFn = sinon.spy(
                     wrapper.vm.$typy(wrapper.vm.$refs, 'editor[0]').safeObject,
                     key
@@ -124,7 +124,7 @@ describe('wke-ctr', () => {
         describe(`${mode} mode: child component's data communication tests`, () => {
             beforeEach(() => {
                 wrapper = mountFactory({
-                    computed: { getIsTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
+                    computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
                 })
             })
             const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-ctr' : 'ddl-editor-ctr'

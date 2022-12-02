@@ -39,7 +39,7 @@
  * 2-way data binding to execSqlDlg prop
  * update:execSqlDlg?: (object)
  */
-import { mapActions, mapGetters, mapMutations } from 'vuex'
+import { mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
@@ -69,20 +69,20 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            getLoadingTblCreationInfo: 'editors/getLoadingTblCreationInfo',
-            getTblCreationInfo: 'editors/getTblCreationInfo',
-        }),
+        tblCreationInfo() {
+            return Editor.getters('getTblCreationInfo')
+        },
         formDim() {
             return { ...this.dim, height: this.dim.height - this.ddlEditorToolbarHeight }
         },
         isLoading() {
             return Boolean(
-                this.getLoadingTblCreationInfo && this.$typy(this.initialData).isEmptyObject
+                Editor.getters('getLoadingTblCreationInfo') &&
+                    this.$typy(this.initialData).isEmptyObject
             )
         },
         initialData() {
-            return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
+            return this.$typy(this.tblCreationInfo, 'data').safeObjectOrEmpty
         },
         hasChanged() {
             return !this.$helpers.lodash.isEqual(
@@ -425,7 +425,7 @@ export default {
                     where: QueryTab.getters('getActiveQueryTabId'),
                     data: {
                         tbl_creation_info: {
-                            ...this.getTblCreationInfo,
+                            ...this.tblCreationInfo,
                             data: this.$helpers.lodash.cloneDeep(this.formData),
                         },
                     },

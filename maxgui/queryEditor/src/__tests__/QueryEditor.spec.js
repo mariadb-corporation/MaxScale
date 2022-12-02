@@ -31,7 +31,6 @@ const mountFactory = opts =>
                     allWorksheets: () => [{ id: 'WORKSHEET_123' }],
                     getActiveWkeId: () => 'WORKSHEET_123',
                     ctrDim: () => ({ width: 1280, height: 800 }),
-                    getIsTxtEditor: () => true,
                 },
                 stubs: {
                     'sql-editor': "<div class='stub'></div>",
