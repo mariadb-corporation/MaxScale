@@ -122,6 +122,8 @@ public:
     mariadb::SAuthData auth_data;   /**< Authentication data used by backends */
     ClientCapabilities client_caps; /**< Client capabilities from handshake response packet */
 
+    bool client_conn_encrypted {false};     /**< Is connection to client using SSL? */
+
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
 

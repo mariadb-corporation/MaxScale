@@ -17,6 +17,12 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+namespace Ed25519Authenticator
+{
+constexpr size_t ED_SCRAMBLE_LEN = 32;
+enum class Mode {ED, SHA256};
+}
+
 class Ed25519AuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
@@ -30,23 +36,42 @@ public:
     std::string name() const override;
 
     const std::unordered_set<std::string>& supported_plugins() const override;
-    static constexpr size_t scramble_len = 32;
+
+private:
+    explicit Ed25519AuthenticatorModule(Ed25519Authenticator::Mode mode);
+
+    const Ed25519Authenticator::Mode m_mode {Ed25519Authenticator::Mode::ED};
 };
 
 class Ed25519ClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
+    explicit Ed25519ClientAuthenticator(Ed25519Authenticator::Mode);
+
     ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:
-    enum class State {INIT, AUTHSWITCH_SENT, CHECK_SIGNATURE, DONE};
+    enum class State {INIT, ED_AUTHSWITCH_SENT, ED_CHECK_SIGNATURE, SHA_AUTHSWITCH_SENT, SHA_PW_REQUESTED,
+                      SHA_CHECK_PW, DONE};
+    State m_state {State::INIT};
 
-    State   m_state {State::INIT};
-    uint8_t m_scramble[Ed25519AuthenticatorModule::scramble_len];
+    const Ed25519Authenticator::Mode m_mode {Ed25519Authenticator::Mode::ED};
 
-    GWBUF create_auth_change_packet();
-    bool  read_signature(MYSQL_session* session, const GWBUF& buffer);
+    uint8_t m_scramble[Ed25519Authenticator::ED_SCRAMBLE_LEN];      /**< ed25519 scramble sent to client */
+
+    mariadb::ByteVec m_client_passwd;   /**< Cleartext password received from client */
+
+    GWBUF   ed_create_auth_change_packet();
+    bool    ed_read_signature(MYSQL_session* session, const GWBUF& buffer);
+    AuthRes ed_check_signature(const AuthenticationData& auth_data, const uint8_t* signature,
+                               const uint8_t* message, size_t message_len);
+
+    GWBUF   sha_create_auth_change_packet(MYSQL_session* session);
+    bool    sha_read_client_token(const GWBUF& buffer);
+    GWBUF   sha_create_request_encrypted_pw_packet() const;
+    void    sha_read_client_pw(const GWBUF& buffer);
+    AuthRes sha_check_cleartext_pw(AuthenticationData& auth_data);
 };
 
 class Ed25519BackendAuthenticator : public mariadb::BackendAuthenticator
@@ -57,8 +82,8 @@ public:
 
 private:
     enum class State {EXPECT_AUTHSWITCH, SIGNATURE_SENT, ERROR};
+    State m_state {State::EXPECT_AUTHSWITCH};
 
-    State                           m_state {State::EXPECT_AUTHSWITCH};
     const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
     uint8_t                         m_sequence {0}; /**< Next packet sequence number */
 

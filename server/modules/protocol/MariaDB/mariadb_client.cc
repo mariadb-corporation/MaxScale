@@ -2343,6 +2343,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 if (ssl_status == SSLState::COMPLETE)
                 {
                     m_handshake_state = HSState::EXPECT_HS_RESP;
+                    m_session_data->client_conn_encrypted = true;
                 }
                 else if (ssl_status == SSLState::INCOMPLETE)
                 {
