@@ -295,7 +295,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     vector<Connection> connections;
     for (int i = 0; i < 4; ++i)
     {
-        connections.emplace_back("127.0.0.1", 4006, "maxskysql", "skysql");
+        connections.emplace_back(test.maxscale->ip(), 4006, "maxskysql", "skysql");
         // Make particular worker listening when connecting => each connection to different worker.
         make_listening(maxrest, i);
         test.expect(connections[i].connect(), "1: Could not connect to MaxScale.");
