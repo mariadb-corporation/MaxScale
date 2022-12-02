@@ -340,6 +340,7 @@ private:
     public:
         virtual ~Imp() = default;
 
+        virtual std::string body_quote() const = 0;
         virtual TestConnections& test() const = 0;
         virtual void raise(bool fail_on_error, const std::string& message) const = 0;
         virtual mxt::CmdResult execute_curl_command(const std::string& curl_command) const = 0;

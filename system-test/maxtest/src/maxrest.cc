@@ -65,6 +65,11 @@ public:
         return m_test;
     }
 
+    std::string body_quote() const override final
+    {
+        return "'\\''";
+    }
+
     void raise(bool fail_on_error, const std::string& message) const override final
     {
         if (fail_on_error)
@@ -100,6 +105,11 @@ public:
     TestConnections& test() const override final
     {
         return m_test;
+    }
+
+    std::string body_quote() const override final
+    {
+        return "'";
     }
 
     void raise(bool fail_on_error, const std::string& message) const override final
@@ -461,9 +471,11 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
 
     if (!body.empty())
     {
-        curl_command += " -d '";
+        string quote = m_sImp->body_quote();
+
+        curl_command += " -d " + quote;
         curl_command += body;
-        curl_command += "'";
+        curl_command += quote;
     }
 
     mxt::CmdResult result = m_sImp->execute_curl_command(curl_command);
