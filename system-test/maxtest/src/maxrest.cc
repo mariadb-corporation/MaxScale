@@ -119,7 +119,7 @@ public:
 
     mxt::CmdResult execute_curl_command(const std::string& curl_command) const override final
     {
-        mxt::CmdResult rv;
+        mxt::CmdResult result;
         FILE* pFile = popen(curl_command.c_str(), "r");
 
         if (pFile)
@@ -127,7 +127,7 @@ public:
             int c;
             while ((c = fgetc(pFile)) != EOF)
             {
-                rv.output += (char)c;
+                result.output += (char)c;
             }
 
             int rc = pclose(pFile);
@@ -137,38 +137,17 @@ public:
                 raise(true, "Execution of curl failed.");
             }
 
-            int curl_rc = WEXITSTATUS(rc);
-
-            switch (curl_rc)
-            {
-            case 0:
-                break;
-
-            case 22:
-                // 22 HTTP page not retrieved. The requested url was not found or returned another
-                //    error with the HTTP error code being 400 or above. This return code only
-                //    appears if -f, --fail is used.
-                raise(true, "Curl error 22: HTTP page not retrieved for command '"
-                      + curl_command + "'");
-                break;
-
-            default:
-                {
-                    ostringstream ss;
-                    ss << "Curl failed with exit code " << curl_rc << ".";
-                    raise(true, ss.str());
-                }
-            }
+            result.rc = WEXITSTATUS(rc);
         }
         else
         {
             ostringstream ss;
             ss << "Could not popen '%s': " << mxb_strerror(errno);
 
-            rv.output = ss.str();
+            raise(true, ss.str());
         }
 
-        return rv;
+        return result;
     }
 
 private:
@@ -479,6 +458,27 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
     }
 
     mxt::CmdResult result = m_sImp->execute_curl_command(curl_command);
+
+    switch (result.rc)
+    {
+    case 0:
+        break;
+
+    case 22:
+        // 22 HTTP page not retrieved. The requested url was not found or returned another
+        //    error with the HTTP error code being 400 or above. This return code only
+        //    appears if -f, --fail is used.
+        raise("Curl error 22: HTTP page not retrieved for command '" + curl_command + "'");
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "Curl failed with exit code " << result.rc << " for command '"
+               << curl_command << "'";
+            raise(ss.str());
+        }
+    }
 
     mxb::Json rv;
 
