@@ -359,6 +359,8 @@ public:
 
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd, const std::string& errmsg = "");
 
+    bool is_local_test() const;
+
 private:
     bool read_test_info();
 
@@ -450,8 +452,6 @@ private:
      * Counts the number of TCP connections in the TIME_WAIT state
      */
     int count_tcp_time_wait() const;
-
-    bool is_local_test() const;
 };
 
 /**
