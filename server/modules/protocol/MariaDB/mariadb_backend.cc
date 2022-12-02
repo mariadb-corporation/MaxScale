@@ -1799,7 +1799,16 @@ bool MariaDBBackendConnection::capability_mismatch() const
         mismatch = true;
     }
 
-    // TODO: Check that the server sends MXS_MARIA_CAP_CACHE_METADATA if the client expects it
+    uint32_t client_extra = mysql_session()->extra_capabilities();
+
+    if ((client_extra & extra_capabilities) != client_extra)
+    {
+        MXB_INFO("Client uses extended capabilities that the server does not implement: %u != %u",
+                 client_extra, extra_capabilities);
+        mxb_assert(!true);
+        mismatch = true;
+    }
+
 
     return mismatch;
 }
@@ -1905,9 +1914,18 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     }
 
     mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+    // Skip the scramble length
+    payload += 1;
 
-    // skip 10 zero bytes
-    payload += 11;
+    // skip 6 bytes of filler
+    payload += 6;
+
+    if ((conn->server_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    {
+        conn->extra_capabilities = mariadb::get_byte4(payload);
+    }
+
+    payload += 4;
 
     // copy the second part of the scramble
     memcpy(scramble_data_2, payload, scramble_len - GW_SCRAMBLE_LENGTH_323);
