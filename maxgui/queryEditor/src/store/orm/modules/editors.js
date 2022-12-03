@@ -13,7 +13,6 @@
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
-import { supported } from 'browser-fs-access'
 
 export default {
     namespaced: true,
@@ -111,25 +110,5 @@ export default {
             getters.getTblCreationInfo.loading_tbl_creation_info || true,
         getAlteredActiveNode: (state, getters) =>
             getters.getTblCreationInfo.altered_active_node || {},
-        //browser fs getters
-        hasFileSystemReadOnlyAccess: () => Boolean(supported),
-        hasFileSystemRWAccess: (state, getters) =>
-            getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-        getBlobFile: (state, getters, rootState) => id => {
-            const {
-                ORM_NAMESPACE,
-                ORM_PERSISTENT_ENTITIES: { EDITORS },
-            } = rootState.queryEditorConfig.config
-            const { blob_file_map } = rootState[ORM_NAMESPACE][EDITORS] || {}
-            return blob_file_map[id] || {}
-        },
-        getIsQueryTabUnsaved: (state, getters) => id => {
-            const blob_file = getters.getBlobFile(id)
-            const { query_txt = '' } = Editor.find(id) || {}
-            return queryHelper.detectUnsavedChanges({ query_txt, blob_file })
-        },
-        getFileHandle: (state, getters) => id => getters.getBlobFile(id).file_handle || {},
-        getFileHandleName: (state, getters) => id => getters.getFileHandle(id).name || '',
-        getIsFileHandleValid: (state, getters) => id => Boolean(getters.getFileHandleName(id)),
     },
 }

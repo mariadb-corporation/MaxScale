@@ -12,17 +12,19 @@
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import { mapGetters, mapActions } from 'vuex'
 
 export default {
     computed: {
-        hasFileSystemRWAccess() {
-            return Editor.getters('hasFileSystemRWAccess')
-        },
+        ...mapGetters({
+            hasFileSystemRWAccess: 'fileSysAccess/hasFileSystemRWAccess',
+            getFileHandle: 'fileSysAccess/getFileHandle',
+            getFileHandleName: 'fileSysAccess/getFileHandleName',
+            getIsFileHandleValid: 'fileSysAccess/getIsFileHandleValid',
+        }),
     },
     methods: {
-        isFileHandleValid(query_tab_id) {
-            return Editor.getters('getIsFileHandleValid')(query_tab_id)
-        },
+        ...mapActions({ updateFileHandleDataMap: 'fileSysAccess/updateFileHandleDataMap' }),
         /**
          * @private
          * Verify the user has granted permission to read and write to the file, if
@@ -88,24 +90,20 @@ export default {
          * Download the file to user's disk
          * @param {Object} queryTab - queryTab object
          */
-        saveFileLegacy(queryTab) {
+        async saveFileLegacy(queryTab) {
             const { id: queryTabId, name: queryTabName } = queryTab
             const editor = Editor.find(queryTabId) || {}
             let a = document.createElement('a')
             // If there is no file_handle, use the current queryTab name
-            const fileName =
-                Editor.getters('getFileHandleName')(queryTab.id) || `${queryTabName}.sql`
+            const fileName = this.getFileHandleName(queryTab.id) || `${queryTabName}.sql`
             a.href = `data:application/text;charset=utf-8,${encodeURIComponent(editor.query_txt)}`
             a.download = fileName
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)
-            // update blob_file
-            Editor.commit(state => {
-                state.blob_file_map[editor.id] = {
-                    ...Editor.getters('getBlobFile')(editor.id),
-                    txt: editor.query_txt,
-                }
+            await this.updateFileHandleDataMap({
+                id: editor.id,
+                data: { txt: editor.query_txt },
             })
         },
         /**
@@ -114,15 +112,15 @@ export default {
          */
         async saveFileAs(queryTab) {
             let fileHandleName = queryTab.name
-            if (!this.isFileHandleValid(queryTab.id)) fileHandleName += '.sql'
+            if (!this.getIsFileHandleValid(queryTab.id)) fileHandleName += '.sql'
             const fileHandle = await this.getNewFileHandle(fileHandleName)
             try {
                 const { query_txt } = Editor.find(queryTab.id) || {}
                 await this.writeFile({ fileHandle, contents: query_txt })
                 QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
-                // update blob_file
-                Editor.commit(state => {
-                    state.blob_file_map[queryTab.id] = { file_handle: fileHandle, txt: query_txt }
+                await this.updateFileHandleDataMap({
+                    id: queryTab.id,
+                    data: { file_handle: fileHandle, txt: query_txt },
                 })
             } catch (ex) {
                 this.$logger.error('Unable to write file')
@@ -136,7 +134,7 @@ export default {
          */
         async handleSaveFileAs(queryTab) {
             if (this.hasFileSystemRWAccess) await this.saveFileAs(queryTab)
-            else this.saveFileLegacy(queryTab)
+            else await this.saveFileLegacy(queryTab)
         },
         /**
          * @public
@@ -145,17 +143,14 @@ export default {
          */
         async saveFileToDisk(queryTab) {
             try {
-                const fileHandle = Editor.getters('getFileHandle')(queryTab.id)
+                const fileHandle = this.getFileHandle(queryTab.id)
                 const hasPriv = await this.verifyWritePriv(fileHandle)
                 if (hasPriv) {
                     const { query_txt } = Editor.find(queryTab.id) || {}
                     await this.writeFile({ fileHandle, contents: query_txt })
-                    // update blob_file
-                    Editor.commit(state => {
-                        state.blob_file_map[queryTab.id] = {
-                            file_handle: fileHandle,
-                            txt: query_txt,
-                        }
+                    await this.updateFileHandleDataMap({
+                        id: queryTab.id,
+                        data: { file_handle: fileHandle, txt: query_txt },
                     })
                 }
             } catch (e) {
@@ -167,7 +162,7 @@ export default {
          * @param {Object} queryTab - queryTab object
          */
         async handleSaveFile(queryTab) {
-            if (this.hasFileSystemRWAccess && this.isFileHandleValid(queryTab.id))
+            if (this.hasFileSystemRWAccess && this.getIsFileHandleValid(queryTab.id))
                 await this.saveFileToDisk(queryTab)
             else await this.handleSaveFileAs(queryTab)
         },

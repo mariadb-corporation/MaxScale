@@ -11,6 +11,7 @@
  * Public License.
  */
 import * as config from '@queryEditorSrc/store/config'
+import initEntities from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -25,6 +26,12 @@ export default {
         },
         SET_AXIOS_OPTS(state, payload) {
             state.axios_opts = payload
+        },
+    },
+    actions: {
+        async initQueryEditor({ dispatch }) {
+            initEntities()
+            await dispatch('fileSysAccess/initStorage', {}, { root: true })
         },
     },
 }

@@ -35,7 +35,7 @@ export default class QueryTab extends Extender {
             // delete record in its the relational tables
             QueryTabMem.delete(id)
             Editor.delete(id)
-            Editor.commit(state => delete state.blob_file_map[id])
+            this.store().dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
             QueryResult.delete(id)
             QueryConn.delete(c => c.query_tab_id === id)
         })

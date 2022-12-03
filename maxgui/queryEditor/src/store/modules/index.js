@@ -16,6 +16,7 @@
  */
 import queryConns from './queryConns'
 import editorsMem from './editorsMem'
+import fileSysAccess from './fileSysAccess'
 import schemaSidebar from './schemaSidebar'
 import queryResult from './queryResult'
 import queryPersisted from './queryPersisted'
@@ -26,6 +27,7 @@ export default {
     mxsApp,
     queryConns,
     editorsMem,
+    fileSysAccess,
     schemaSidebar,
     queryResult,
     queryPersisted,

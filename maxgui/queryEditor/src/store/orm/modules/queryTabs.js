@@ -53,11 +53,11 @@ export default {
         /**
          * @param {Object} param.queryTab - queryTab to be cleared
          */
-        refreshLastQueryTab(_, query_tab_id) {
+        refreshLastQueryTab({ dispatch }, query_tab_id) {
             QueryTab.cascadeRefresh(query_tab_id)
             QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
             Editor.refresh(query_tab_id)
-            Editor.commit(state => delete state.blob_file_map[query_tab_id])
+            dispatch('fileSysAccess/deleteFileHandleData', query_tab_id, { root: true })
         },
     },
     getters: {

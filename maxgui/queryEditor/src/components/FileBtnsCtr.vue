@@ -60,7 +60,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapGetters, mapActions } from 'vuex'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { fileOpen } from 'browser-fs-access'
@@ -76,22 +76,20 @@ export default {
             file_dlg_data: state => state.editorsMem.file_dlg_data,
             OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
         }),
-        hasFileSystemReadOnlyAccess() {
-            return Editor.getters('hasFileSystemReadOnlyAccess')
-        },
-        hasFileSystemRWAccess() {
-            return Editor.getters('hasFileSystemRWAccess')
-        },
-        isQueryTabUnsaved() {
-            return Editor.getters('getIsQueryTabUnsaved')(this.queryTab.id)
-        },
+        ...mapGetters({
+            hasFileSystemReadOnlyAccess: 'fileSysAccess/hasFileSystemReadOnlyAccess',
+            hasFileSystemRWAccess: 'fileSysAccess/hasFileSystemRWAccess',
+            getIsFileHandleValid: 'fileSysAccess/getIsFileHandleValid',
+            getIsQueryTabUnsaved: 'fileSysAccess/getIsQueryTabUnsaved',
+        }),
         isSaveFileDisabled() {
             return (
-                !this.isQueryTabUnsaved || !Editor.getters('getIsFileHandleValid')(this.queryTab.id)
+                !this.getIsQueryTabUnsaved(this.queryTab.id) ||
+                !this.getIsFileHandleValid(this.queryTab.id)
             )
         },
         isSaveFileAsDisabled() {
-            return !this.isQueryTabUnsaved
+            return !this.$typy(Editor.find(this.queryTab.id), 'query_txt').safeString
         },
         eventBus() {
             return EventBus
@@ -104,6 +102,7 @@ export default {
         this.eventBus.$off('shortkey')
     },
     methods: {
+        ...mapActions({ updateFileHandleDataMap: 'fileSysAccess/updateFileHandleDataMap' }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
             SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
@@ -160,7 +159,7 @@ export default {
          * @param {Blob} blob - blob
          */
         async handleLoadFile(blob) {
-            if (this.isQueryTabUnsaved) {
+            if (this.getIsQueryTabUnsaved(this.queryTab.id)) {
                 this.SET_FILE_DLG_DATA({
                     is_opened: true,
                     title: this.$mxs_t('openScript'),
@@ -191,16 +190,17 @@ export default {
                  * onFileLoadChanged event handler can be triggered again to show the dialog
                  */
                 this.$refs.uploader.value = ''
-            // once file is loaded, store file_handle
-            Editor.commit(state => {
-                state.blob_file_map[this.queryTab.id] = {
+            // once file is loaded, store it
+            await this.updateFileHandleDataMap({
+                id: this.queryTab.id,
+                data: {
                     file_handle: blob.handle,
                     /* store its txt so it can be retrieved
                      * because the permission to read the file is withdrawn
                      * when the browser is refreshed or closed
                      */
                     txt: blobTxt,
-                }
+                },
             })
             Editor.update({ where: this.queryTab.id, data: { query_txt: blobTxt } })
         },

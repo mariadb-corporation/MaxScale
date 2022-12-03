@@ -444,28 +444,6 @@ function memStatesMutationCreator(memStates) {
 
 /**
  * @public
- * This helps to detect unsaved changes of the opened file or unsaved query tab.
- * @param {String} param.query_txt -current query text in the editor
- * @param {Object} param.blob_file - opened blob_file
- * @returns {Boolean} returns true if there is unsaved changes
- */
-function detectUnsavedChanges({ query_txt, blob_file }) {
-    const {
-        txt: file_handle_txt = '',
-        file_handle: { name: file_handle_name = '' } = {},
-    } = blob_file
-
-    // no unsaved changes if it's a blank queryTab
-    if (!query_txt && !file_handle_name) return false
-    /** If there is no file opened (e.g when file_handle_txt === ''), but there is value for query_txt
-     * return true.
-     * If there is a file opened and query_txt is !== its original file text, return true
-     */
-    return file_handle_txt !== query_txt
-}
-
-/**
- * @public
  * @param {Object} entity - ORM entity object
  * @param {String|Function} payload - either an entity id or a callback function that return Boolean (filter)
  * @returns {Array} returns entities
@@ -517,7 +495,6 @@ export default {
     syncStateCreator,
     memStateCreator,
     memStatesMutationCreator,
-    detectUnsavedChanges,
     filterEntity,
     categorizeSqlConns,
 }

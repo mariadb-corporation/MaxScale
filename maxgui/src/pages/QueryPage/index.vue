@@ -26,7 +26,6 @@
  */
 import { mapActions, mapGetters } from 'vuex'
 import ConfirmLeaveDlg from '@queryEditorSrc/components/ConfirmLeaveDlg.vue'
-import initEntities from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     name: 'query-page',
@@ -69,11 +68,12 @@ export default {
         }
     },
     async created() {
-        initEntities()
+        await this.initQueryEditor()
         await this.validateConns({ persistentConns: this.getAllConns })
     },
     methods: {
         ...mapActions({
+            initQueryEditor: 'queryEditorConfig/initQueryEditor',
             validateConns: 'queryConns/validateConns',
             disconnectAll: 'queryConns/disconnectAll',
         }),

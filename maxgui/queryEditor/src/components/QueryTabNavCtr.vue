@@ -26,7 +26,7 @@
                             :maxWidth="112"
                         />
                         <span
-                            v-if="isQueryTabUnsaved(queryTab.id)"
+                            v-if="getIsQueryTabUnsaved(queryTab.id)"
                             class="unsaved-changes-indicator"
                         />
                         <v-progress-circular
@@ -44,7 +44,7 @@
                         x-small
                         :disabled="getIsConnBusyByQueryTabId(queryTab.id)"
                         @click.stop.prevent="
-                            isQueryTabUnsaved(queryTab.id)
+                            getIsQueryTabUnsaved(queryTab.id)
                                 ? openFileDlg(queryTab)
                                 : handleDeleteTab(queryTab)
                         "
@@ -78,7 +78,6 @@
  */
 import { mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
@@ -97,6 +96,7 @@ export default {
         ...mapGetters({
             getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
+            getIsQueryTabUnsaved: 'fileSysAccess/getIsQueryTabUnsaved',
         }),
         activeQueryTabId: {
             get() {
@@ -120,9 +120,6 @@ export default {
         ...mapMutations({
             SET_FILE_DLG_DATA: 'editorsMem/SET_FILE_DLG_DATA',
         }),
-        isQueryTabUnsaved(queryTabId) {
-            return Editor.getters('getIsQueryTabUnsaved')(queryTabId)
-        },
         /**
          * @param {Object} queryTab - queryTab object
          */

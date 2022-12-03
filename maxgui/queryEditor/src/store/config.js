@@ -25,6 +25,7 @@ export const ORM_MEM_ENTITIES = {
     WORKSHEETS_MEM: 'worksheetsMem',
     QUERY_TABS_MEM: 'queryTabsMem',
 }
+export const FILE_SYS_ACCESS_NAMESPACE = 'queryEditorFileSysAccess'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     QUERY_TAB: 'QUERY_TAB',

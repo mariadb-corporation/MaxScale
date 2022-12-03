@@ -63,8 +63,6 @@ export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }
         },
     })
     Editor.insert({ data: { id: fields.query_tab_id } })
-    // initialize blob_file_map state
-    Editor.commit(state => (state.blob_file_map[fields.query_tab_id] = {}))
 
     QueryResult.insert({ data: { id: fields.query_tab_id } })
     QueryTabMem.insert({ data: { id: fields.query_tab_id } })
