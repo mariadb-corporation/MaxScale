@@ -154,7 +154,7 @@ export default {
             })
 
             this.editor = monaco.editor.create(this.$el, {
-                value: this.$helpers.formatSQL(this.value),
+                value: this.value,
                 theme: 'mariadb-theme',
                 language: this.language,
                 automaticLayout: true,
