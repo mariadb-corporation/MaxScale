@@ -67,13 +67,14 @@ export default {
                 }
         }
     },
+    async beforeCreate() {
+        await this.$store.dispatch('queryEditorConfig/initQueryEditor')
+    },
     async created() {
-        await this.initQueryEditor()
         await this.validateConns({ persistentConns: this.getAllConns })
     },
     methods: {
         ...mapActions({
-            initQueryEditor: 'queryEditorConfig/initQueryEditor',
             validateConns: 'queryConns/validateConns',
             disconnectAll: 'queryConns/disconnectAll',
         }),
