@@ -107,7 +107,7 @@ export default {
                 if (wkeConn) await dispatch('queryConns/onChangeConn', wkeConn, { root: true })
                 else
                     commit(
-                        'queryConns/SET_PRE_SELECT_CONN_RSRC',
+                        'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
                         { type, id: conn_name },
                         { root: true }
                     )

@@ -14,22 +14,24 @@
  * TODO: keep only queryPersisted, queryEditorConfig and mem modules
  * other ORM related modules should be registered via vuex-orm
  */
-import queryConns from './queryConns'
 import editorsMem from './editorsMem'
 import fileSysAccess from './fileSysAccess'
+import mxsApp from '@share/store/mxsApp'
 import schemaSidebar from './schemaSidebar'
+import queryConns from './queryConns'
+import queryConnsMem from './queryConnsMem'
+import queryEditorConfig from './queryEditorConfig'
 import queryResult from './queryResult'
 import queryPersisted from './queryPersisted'
-import queryEditorConfig from './queryEditorConfig'
-import mxsApp from '@share/store/mxsApp'
 
 export default {
-    mxsApp,
-    queryConns,
     editorsMem,
     fileSysAccess,
+    mxsApp,
     schemaSidebar,
+    queryConns,
+    queryConnsMem,
+    queryEditorConfig,
     queryResult,
     queryPersisted,
-    queryEditorConfig,
 }

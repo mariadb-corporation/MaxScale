@@ -18,41 +18,7 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 
 export default {
     namespaced: true,
-    state: {
-        is_validating_conn: true,
-        conn_err_state: false,
-        rc_target_names_map: {},
-        pre_select_conn_rsrc: null,
-    },
-    mutations: {
-        SET_RC_TARGET_NAMES_MAP(state, payload) {
-            state.rc_target_names_map = payload
-        },
-        SET_PRE_SELECT_CONN_RSRC(state, payload) {
-            state.pre_select_conn_rsrc = payload
-        },
-        SET_IS_VALIDATING_CONN(state, payload) {
-            state.is_validating_conn = payload
-        },
-        SET_CONN_ERR_STATE(state, payload) {
-            state.conn_err_state = payload
-        },
-    },
     actions: {
-        async fetchRcTargetNames({ state, commit }, resourceType) {
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
-            )
-            if (!e) {
-                const names = this.vue
-                    .$typy(res, 'data.data')
-                    .safeArray.map(({ id, type }) => ({ id, type }))
-                commit('SET_RC_TARGET_NAMES_MAP', {
-                    ...state.rc_target_names_map,
-                    [resourceType]: names,
-                })
-            }
-        },
         /**
          * @param {Array} connIds - alive connection ids that were cloned from expired worksheet connections
          */
@@ -69,7 +35,8 @@ export default {
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
         async validateConns({ commit, dispatch }, { persistentConns, silentValidation = false }) {
-            if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
+            if (!silentValidation)
+                commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
 
             const { $typy, $helpers, $queryHttp } = this.vue
 
@@ -93,7 +60,7 @@ export default {
                     QueryConn.update({ where: id, data: alive_conn_map[id] })
                 )
             }
-            commit('SET_IS_VALIDATING_CONN', false)
+            commit('queryConnsMem/SET_IS_VALIDATING_CONN', false, { root: true })
         },
         /**
          * Unbind the connection bound to the current worksheet and connections bound
@@ -167,7 +134,7 @@ export default {
             const [e, res] = await $helpers.asyncTryCatch(
                 $queryHttp.post(`/sql?persist=yes&max-age=604800`, body)
             )
-            if (e) commit('SET_CONN_ERR_STATE', true)
+            if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 dispatch('unbindConn')
                 commit(
@@ -196,7 +163,7 @@ export default {
                     })
 
                 if (body.db) await dispatch('useDb', body.db)
-                commit('SET_CONN_ERR_STATE', false)
+                commit('queryConnsMem/SET_CONN_ERR_STATE', false, { root: true })
             }
         },
         /**

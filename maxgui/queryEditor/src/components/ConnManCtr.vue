@@ -121,7 +121,7 @@ export default {
     },
     computed: {
         ...mapState({
-            pre_select_conn_rsrc: state => state.queryConns.pre_select_conn_rsrc,
+            pre_select_conn_rsrc: state => state.queryConnsMem.pre_select_conn_rsrc,
         }),
         ...mapGetters({
             getAllConns: 'queryConns/getAllConns',
