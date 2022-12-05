@@ -11,6 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import { insertWke } from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
@@ -87,8 +88,8 @@ export default {
          * set it as active and dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
          * @param {String} param.conn_name - connection name
          */
-        async chooseActiveQueryEditorWke({ commit, dispatch, rootGetters }, { type, conn_name }) {
-            const wkeConns = rootGetters['queryConns/getWkeConns']
+        async chooseActiveQueryEditorWke({ commit }, { type, conn_name }) {
+            const wkeConns = QueryConn.getters('getWkeConns')
             // Find connection
             const wkeConn = wkeConns.find(c => c.name === conn_name)
             // If it is already bound to a worksheet, set that worksheet as active
@@ -104,7 +105,7 @@ export default {
                 else insertWke()
 
                 // call onChangeConn to handle connection binding, otherwise popup connection dialog
-                if (wkeConn) await dispatch('queryConns/onChangeConn', wkeConn, { root: true })
+                if (wkeConn) await QueryConn.dispatch('onChangeConn', wkeConn)
                 else
                     commit(
                         'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',

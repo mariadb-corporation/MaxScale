@@ -11,14 +11,15 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import queryHelper from '@queryEditorSrc/store/queryHelper'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default {
     namespaced: true,
     actions: {
-        async queryTblCreationInfo({ commit, getters, rootGetters }, node) {
-            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
+        async queryTblCreationInfo({ commit, getters }, node) {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const {
                 $queryHttp,

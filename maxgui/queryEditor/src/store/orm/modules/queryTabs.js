@@ -13,6 +13,7 @@
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import { insertQueryTab } from '@queryEditorSrc/store/orm/initEntities'
 
@@ -26,27 +27,23 @@ export default {
          * @param {String} param.worksheet_id - worksheet id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab({ dispatch, rootState, rootGetters }, { worksheet_id, name }) {
+        async handleAddQueryTab({ rootState }, { worksheet_id, name }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
             let fields = { query_tab_id }
             if (name) fields.name = name
             insertQueryTab(worksheet_id, fields)
-            const activeWkeConn = rootGetters['queryConns/getActiveWkeConn']
+            const activeWkeConn = QueryConn.getters('getActiveWkeConn')
             // Clone the wke conn and bind it to the new queryTab
             if (activeWkeConn.id)
-                await dispatch(
-                    'queryConns/cloneConn',
-                    {
-                        conn_to_be_cloned: activeWkeConn,
-                        binding_type:
-                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
-                        query_tab_id,
-                    },
-                    { root: true }
-                )
+                await QueryConn.dispatch('cloneConn', {
+                    conn_to_be_cloned: activeWkeConn,
+                    binding_type:
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
+                    query_tab_id,
+                })
         },
-        async handleDeleteQueryTab({ rootGetters }, query_tab_id) {
-            const { id } = rootGetters['queryConns/getQueryTabConnByQueryTabId'](query_tab_id)
+        async handleDeleteQueryTab(_, query_tab_id) {
+            const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
             if (id) await this.vue.$helpers.asyncTryCatch(this.vue.$queryHttp.delete(`/sql/${id}`))
             QueryTab.cascadeDelete(query_tab_id)
         },

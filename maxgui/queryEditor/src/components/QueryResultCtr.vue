@@ -2,14 +2,14 @@
     <div class="fill-height mxs-color-helper border-top-table-border">
         <v-tabs v-model="activeTab" :height="24" class="v-tabs--mariadb-style">
             <v-tab
-                :disabled="getIsConnBusy && isLoading"
+                :disabled="isConnBusy && isLoading"
                 color="primary"
                 :href="`#${QUERY_MODES.QUERY_VIEW}`"
             >
                 <span> {{ $mxs_t('results') }} </span>
             </v-tab>
             <v-tab
-                :disabled="getIsConnBusy && isLoading"
+                :disabled="isConnBusy && isLoading"
                 color="primary"
                 :href="`#${QUERY_MODES.PRVW_DATA}`"
             >
@@ -83,6 +83,7 @@
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import DataPrvw from './DataPrvw.vue'
 import ResultsTab from './ResultsTab.vue'
 import HistoryAndSnippetsCtr from './HistoryAndSnippetsCtr.vue'
@@ -114,11 +115,13 @@ export default {
             curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
         ...mapGetters({
-            getIsConnBusy: 'queryConns/getIsConnBusy',
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
+        isConnBusy() {
+            return QueryConn.getters('getIsConnBusy')
+        },
         componentDynDim() {
             /*
              * width: dynDim.width - px-5

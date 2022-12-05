@@ -18,7 +18,6 @@ import editorsMem from './editorsMem'
 import fileSysAccess from './fileSysAccess'
 import mxsApp from '@share/store/mxsApp'
 import schemaSidebar from './schemaSidebar'
-import queryConns from './queryConns'
 import queryConnsMem from './queryConnsMem'
 import queryEditorConfig from './queryEditorConfig'
 import queryResult from './queryResult'
@@ -29,7 +28,6 @@ export default {
     fileSysAccess,
     mxsApp,
     schemaSidebar,
-    queryConns,
     queryConnsMem,
     queryEditorConfig,
     queryResult,

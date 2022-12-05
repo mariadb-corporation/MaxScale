@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters } from 'vuex'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import ConfirmLeaveDlg from '@queryEditorSrc/components/ConfirmLeaveDlg.vue'
 
 export default {
@@ -40,7 +40,9 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({ getAllConns: 'queryConns/getAllConns' }),
+        allConns() {
+            return QueryConn.all()
+        },
     },
     beforeRouteLeave(to, from, next) {
         if (this.to) {
@@ -51,7 +53,7 @@ export default {
              * Allow to leave page immediately if next path is to login page (user logouts)
              * or if there is no active connections
              */
-            if (Object.keys(this.getAllConns).length === 0) this.leavePage()
+            if (this.allConns.length === 0) this.leavePage()
             else
                 switch (to.path) {
                     case '/login':
@@ -59,7 +61,7 @@ export default {
                         break
                     case '/404':
                         this.cancelLeave()
-                        this.validateConns({ persistentConns: this.getAllConns })
+                        QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
                         break
                     default:
                         this.shouldDelAll = true
@@ -71,15 +73,11 @@ export default {
         await this.$store.dispatch('queryEditorConfig/initQueryEditor')
     },
     async created() {
-        await this.validateConns({ persistentConns: this.getAllConns })
+        await QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
     },
     methods: {
-        ...mapActions({
-            validateConns: 'queryConns/validateConns',
-            disconnectAll: 'queryConns/disconnectAll',
-        }),
         async onLeave() {
-            if (this.shouldDelAll) await this.disconnectAll()
+            if (this.shouldDelAll) await QueryConn.dispatch('disconnectAll')
             this.leavePage()
         },
         leavePage() {

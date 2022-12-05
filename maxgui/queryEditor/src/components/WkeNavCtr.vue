@@ -89,6 +89,7 @@
 
 import { mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import WkeToolbar from './WkeToolbar.vue'
 
 export default {
@@ -104,8 +105,6 @@ export default {
     },
     computed: {
         ...mapGetters({
-            getWkeConnByWkeId: 'queryConns/getWkeConnByWkeId',
-            getIsConnBusyByQueryTabId: 'queryConns/getIsConnBusyByQueryTabId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),
         allWorksheets() {
@@ -124,6 +123,12 @@ export default {
         },
     },
     methods: {
+        getWkeConnByWkeId(id) {
+            return QueryConn.getters('getWkeConnByWkeId')(id)
+        },
+        getIsConnBusyByQueryTabId(id) {
+            return QueryConn.getters('getIsConnBusyByQueryTabId')(id)
+        },
         deleteWke(id) {
             Worksheet.dispatch('handleDeleteWke', id)
         },

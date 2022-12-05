@@ -15,13 +15,13 @@ import mount from '@tests/unit/setup'
 import QueryPage from '../index.vue'
 import { lodash } from '@share/utils/helpers'
 
-const sql_conns_mock = {
-    1: {
+const allConnsMock = [
+    {
         id: '1',
         name: 'Read-Write-Listener',
         type: 'listeners',
     },
-}
+]
 const from_route_mock = { name: 'queryEditor', path: '/query' }
 const to_route_mock = { name: 'settings', path: '/settings' }
 function mockBeforeRouteLeave(wrapper) {
@@ -66,7 +66,7 @@ describe('QueryPage', () => {
                 shallow: true,
                 computed: {
                     // stub active connection
-                    sql_conns: () => sql_conns_mock,
+                    allConns: () => allConnsMock,
                 },
             })
             mockBeforeRouteLeave(wrapper)
@@ -77,7 +77,7 @@ describe('QueryPage', () => {
                 shallow: true,
                 computed: {
                     // stub for having no active connection
-                    sql_conns: () => ({}),
+                    allConns: () => [],
                 },
             })
             expect(wrapper.vm.sql_conns).to.be.empty
@@ -89,7 +89,7 @@ describe('QueryPage', () => {
                 shallow: true,
                 computed: {
                     // stub for having no active connection
-                    sql_conns: () => ({}),
+                    allConns: () => [],
                 },
                 methods: {
                     leavePage: () => sinon.stub(),
@@ -110,7 +110,7 @@ describe('QueryPage', () => {
                 shallow: true,
                 computed: {
                     // stub active connection
-                    sql_conns: () => sql_conns_mock,
+                    allConns: () => allConnsMock,
                 },
             })
         })

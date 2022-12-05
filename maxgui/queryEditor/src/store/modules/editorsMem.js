@@ -10,6 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+
 export default {
     namespaced: true,
     state: {
@@ -44,8 +46,8 @@ export default {
         },
     },
     actions: {
-        async queryCharsetCollationMap({ commit, rootGetters }) {
-            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
+        async queryCharsetCollationMap({ commit }) {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
@@ -70,8 +72,8 @@ export default {
                 commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
             }
         },
-        async queryDefDbCharsetMap({ rootGetters, commit }) {
-            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
+        async queryDefDbCharsetMap({ commit }) {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
@@ -90,8 +92,8 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ rootGetters, commit }) {
-            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
+        async queryEngines({ commit }) {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',

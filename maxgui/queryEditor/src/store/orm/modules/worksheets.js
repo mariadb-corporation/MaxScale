@@ -11,6 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 
 export default {
@@ -22,9 +23,7 @@ export default {
          */
         async handleInitialFetch({ dispatch, rootGetters }) {
             try {
-                const { id: connId, name: connName } = rootGetters[
-                    'queryConns/getActiveQueryTabConn'
-                ]
+                const { id: connId, name: connName } = QueryConn.getters('getActiveQueryTabConn')
                 const hasConnId = Boolean(connId)
                 const isSchemaTreeEmpty = rootGetters['schemaSidebar/getDbTreeData'].length === 0
                 const hasSchemaTreeAlready =
@@ -44,15 +43,14 @@ export default {
         },
         /**
          * If there is a connection bound to the worksheet being deleted, it
-         * first calls queryConns/disconnect to disconnect it and its cloned connections.
+         * disconnects the connection bound to the worksheet and its cloned connections.
          * After that all entities related to the worksheet and itself will be purged.
          * @param {String} id - worksheet_id
          */
-        async handleDeleteWke({ dispatch, rootGetters }, id) {
-            const { id: wkeConnId = '' } = rootGetters['queryConns/getWkeConnByWkeId'](id)
-            // First call queryConns/disconnect to delete the wke connection and its clones (query tabs)
-            if (wkeConnId)
-                await dispatch('queryConns/disconnect', { id: wkeConnId }, { root: true })
+        async handleDeleteWke(_, id) {
+            const { id: wkeConnId = '' } = QueryConn.getters('getWkeConnByWkeId')(id)
+            // delete the wke connection and its clones (query tabs)
+            if (wkeConnId) await QueryConn.dispatch('disconnect', { id: wkeConnId })
             Worksheet.cascadeDelete(id)
         },
         changeWkeName({ getters }, name) {

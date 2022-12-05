@@ -11,7 +11,7 @@
     >
         <template v-slot:form-body>
             <table v-if="showReconnDialog" class="tbl-code pa-4">
-                <tr v-for="(v, key) in getLostCnnErrMsgObj" :key="key">
+                <tr v-for="(v, key) in lostCnnErrMsgObj" :key="key">
                     <td>
                         <b>{{ key }}</b>
                     </td>
@@ -35,10 +35,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { mapActions, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'reconn-dlg-ctr',
@@ -46,12 +45,11 @@ export default {
         onReconnectCb: { type: Function, default: () => null },
     },
     computed: {
-        ...mapGetters({
-            getLostCnnErrMsgObj: 'queryConns/getLostCnnErrMsgObj',
-            getActiveWkeConn: 'queryConns/getActiveWkeConn',
-        }),
+        lostCnnErrMsgObj() {
+            return QueryConn.getters('getLostCnnErrMsgObj')
+        },
         queryErrMsg() {
-            return this.$typy(this.getLostCnnErrMsgObj, 'message').safeString
+            return this.$typy(this.lostCnnErrMsgObj, 'message').safeString
         },
         showReconnDialog: {
             get() {
@@ -66,15 +64,11 @@ export default {
         },
     },
     methods: {
-        ...mapActions({
-            reconnect: 'queryConns/reconnect',
-            disconnect: 'queryConns/disconnect',
-        }),
         async deleteConn() {
-            await this.disconnect({ id: this.getActiveWkeConn.id })
+            await QueryConn.dispatch('disconnect', { id: QueryConn.getters('getActiveWkeConn').id })
         },
         async handleReconnect() {
-            await this.reconnect()
+            await QueryConn.dispatch('reconnect')
             await this.onReconnectCb()
         },
     },

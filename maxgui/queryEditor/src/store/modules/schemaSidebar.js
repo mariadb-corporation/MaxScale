@@ -11,6 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -30,7 +31,7 @@ export default {
     actions: {
         async initialFetch({ dispatch }) {
             await dispatch('fetchSchemas')
-            await dispatch('queryConns/updateActiveDb', {}, { root: true })
+            await QueryConn.dispatch('updateActiveDb', {})
         },
         /**
          * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
@@ -38,8 +39,8 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getNewDbTree({ rootGetters }, { nodeGroup, db_tree, cmpList }) {
-            const { id: connId } = rootGetters['queryConns/getActiveQueryTabConn']
+        async getNewDbTree(_, { nodeGroup, db_tree, cmpList }) {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const sql = queryHelper.getNodeGroupSQL(nodeGroup)
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
@@ -82,9 +83,9 @@ export default {
                 this.vue.$logger.error(e)
             }
         },
-        async fetchSchemas({ commit, dispatch, state, getters, rootState, rootGetters }) {
+        async fetchSchemas({ commit, dispatch, state, getters, rootState }) {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
-            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
+            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const expanded_nodes = this.vue.$helpers.lodash.cloneDeep(state.expanded_nodes)
 
             commit('PATCH_DB_TREE_MAP', {
@@ -150,11 +151,8 @@ export default {
          * @param {String} payload.action - action name. e.g. DROP TABLE table_name
          * @param {Boolean} payload.showSnackbar - show successfully snackbar message
          */
-        async exeStmtAction(
-            { rootState, rootGetters, dispatch, commit },
-            { sql, action, showSnackbar = true }
-        ) {
-            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
+        async exeStmtAction({ rootState, dispatch, commit }, { sql, action, showSnackbar = true }) {
+            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const request_sent_time = new Date().valueOf()
             try {

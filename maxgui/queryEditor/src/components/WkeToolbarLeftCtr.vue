@@ -22,15 +22,14 @@
  * Emits
  * $emit('get-total-width', v:number)
  */
-import { mapGetters } from 'vuex'
 import { insertWke } from '@queryEditorSrc/store/orm/initEntities'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'wke-toolbar-left-ctr',
     computed: {
-        ...mapGetters({ getAllConns: 'queryConns/getAllConns' }),
         isAddWkeDisabled() {
-            return !this.getAllConns.length
+            return !QueryConn.all().length
         },
     },
     mounted() {

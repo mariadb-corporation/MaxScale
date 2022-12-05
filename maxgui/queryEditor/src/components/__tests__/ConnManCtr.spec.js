@@ -47,11 +47,11 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// To have an active connection, getActiveWkeConn should have value
+// To have an active connection, activeWkeConn should have value
 function mockActiveConnState() {
     return {
-        getWkeConns: () => Object.values(dummy_sql_conns),
-        getActiveWkeConn: () => dummy_sql_conns['1'],
+        connOptions: () => Object.values(dummy_sql_conns),
+        activeWkeConn: () => dummy_sql_conns['1'],
         getActiveQueryTabId: () => 'QUERY_TAB_123_45',
     }
 }
@@ -112,7 +112,7 @@ describe(`ConnManCtr - child component's data communication tests `, () => {
         expect(returnObject).to.be.true
         expect(placeholder).to.be.equals(wrapper.vm.$mxs_t('selectConnection'))
         expect(noDataText).to.be.equals(wrapper.vm.$mxs_t('noConnAvail'))
-        expect(disabled).to.be.equals(wrapper.vm.getIsConnBusy)
+        expect(disabled).to.be.equals(wrapper.vm.isConnBusy)
     })
 })
 
@@ -177,14 +177,14 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should assign getActiveWkeConn value to chosenWkeConn if there is an active connection
+    it(`Should assign activeWkeConn value to chosenWkeConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.getActiveWkeConn)
+        expect(wrapper.vm.chosenWkeConn).to.be.deep.equals(wrapper.vm.activeWkeConn)
     })
     it(`Should assign an empty object to chosenWkeConn if there is no active connection
       bound to the worksheet`, () => {
-        wrapper = mountFactory({ computed: { getActiveWkeConn: () => ({}) } })
+        wrapper = mountFactory({ computed: { activeWkeConn: () => ({}) } })
         wrapper.vm.$nextTick(() => {
             expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
         })

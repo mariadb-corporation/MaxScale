@@ -4,7 +4,7 @@
     >
         <div ref="buttonWrapper" class="d-flex align-center px-2">
             <v-btn
-                :disabled="$typy(getActiveQueryTabConn).isEmptyObject"
+                :disabled="$typy(activeQueryTabConn).isEmptyObject"
                 small
                 class="float-left add-query-tab-btn"
                 icon
@@ -28,19 +28,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
     computed: {
-        ...mapGetters({
-            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
-        }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
+        },
+        activeQueryTabConn() {
+            return QueryConn.getters('getActiveQueryTabConn')
         },
     },
     mounted() {

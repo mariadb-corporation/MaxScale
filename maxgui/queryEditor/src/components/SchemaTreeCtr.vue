@@ -35,7 +35,7 @@
                         :class="{
                             'font-weight-bold':
                                 node.type === NODE_TYPES.SCHEMA &&
-                                getActiveQueryTabConn.active_db === node.name,
+                                activeQueryTabConn.active_db === node.name,
                         }"
                     >
                         {{ node.name }}
@@ -113,6 +113,7 @@ This component emits the following events
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
@@ -142,10 +143,12 @@ export default {
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
-            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
+        },
+        activeQueryTabConn() {
+            return QueryConn.getters('getActiveQueryTabConn')
         },
         activeQueryTabId() {
             return Worksheet.getters('getActiveQueryTabId')

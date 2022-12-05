@@ -95,6 +95,7 @@
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import SchemaTreeCtr from './SchemaTreeCtr.vue'
 
@@ -120,8 +121,6 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
-            getIsConnBusy: 'queryConns/getIsConnBusy',
-            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -141,10 +140,10 @@ export default {
             return !this.hasConn || this.getLoadingDbTree
         },
         isSidebarDisabled() {
-            return this.getIsConnBusy && !this.getLoadingDbTree
+            return QueryConn.getters('getIsConnBusy') && !this.getLoadingDbTree
         },
         hasConn() {
-            return Boolean(this.$typy(this.getActiveQueryTabConn, 'id').safeString)
+            return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)
         },
     },
     methods: {
@@ -159,11 +158,12 @@ export default {
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
             loadChildNodes: 'schemaSidebar/loadChildNodes',
-            useDb: 'queryConns/useDb',
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
             exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
-
+        async useDb(param) {
+            await QueryConn.dispatch('useDb', param)
+        },
         async fetchNodePrvwData({ query_mode, qualified_name }) {
             this.clearDataPreview()
             this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.activeQueryTabId })

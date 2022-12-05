@@ -87,6 +87,7 @@
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import SidebarCtr from './SidebarCtr.vue'
 import DdlEditorCtr from './DdlEditorCtr.vue'
@@ -127,10 +128,12 @@ export default {
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
         }),
         ...mapGetters({
-            getActiveQueryTabConn: 'queryConns/getActiveQueryTabConn',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
+        activeQueryTabConn() {
+            return QueryConn.getters('getActiveQueryTabConn')
+        },
         isTxtEditor() {
             return Editor.getters('getIsTxtEditor')
         },
@@ -196,10 +199,10 @@ export default {
         this.$nextTick(() => this.handleSetDefSidebarPct())
     },
     activated() {
-        this.watch_getActiveQueryTabConn()
+        this.watch_activeQueryTabConn()
     },
     deactivated() {
-        this.$typy(this.unwatch_getActiveQueryTabConn).safeFunction()
+        this.$typy(this.unwatch_activeQueryTabConn).safeFunction()
     },
     methods: {
         ...mapMutations({
@@ -207,14 +210,14 @@ export default {
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
         }),
         /**
-         * A watcher on getActiveQueryTabConn state that is triggered immediately
+         * A watcher on activeQueryTabConn state that is triggered immediately
          * to behave like a created hook. The watcher is watched/unwatched based on
          * activated/deactivated hook to prevent it from being triggered while changing
-         * the value of getActiveQueryTabConn in another worksheet.
+         * the value of activeQueryTabConn in another worksheet.
          */
-        watch_getActiveQueryTabConn() {
-            this.unwatch_getActiveQueryTabConn = this.$watch(
-                'getActiveQueryTabConn',
+        watch_activeQueryTabConn() {
+            this.unwatch_activeQueryTabConn = this.$watch(
+                'activeQueryTabConn',
                 async () => await Worksheet.dispatch('handleInitialFetch'),
                 { deep: true, immediate: true }
             )

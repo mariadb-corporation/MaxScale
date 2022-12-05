@@ -17,7 +17,7 @@
             return-object
             :placeholder="$mxs_t('selectConnection')"
             :no-data-text="$mxs_t('noConnAvail')"
-            :disabled="getIsConnBusy"
+            :disabled="isConnBusy"
             @change="onSelectConn"
         >
             <template v-slot:selection="{ item }">
@@ -100,7 +100,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import ConnDlgCtr from './ConnDlgCtr.vue'
 import ReconnDlgCtr from './ReconnDlgCtr.vue'
@@ -123,18 +124,21 @@ export default {
         ...mapState({
             pre_select_conn_rsrc: state => state.queryConnsMem.pre_select_conn_rsrc,
         }),
-        ...mapGetters({
-            getAllConns: 'queryConns/getAllConns',
-            getWkeConns: 'queryConns/getWkeConns',
-            getActiveWkeConn: 'queryConns/getActiveWkeConn',
-            getIsConnBusy: 'queryConns/getIsConnBusy',
-        }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
         },
+        activeWkeConn() {
+            return QueryConn.getters('getActiveWkeConn')
+        },
+        isConnBusy() {
+            return QueryConn.getters('getIsConnBusy')
+        },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
-            return this.getWkeConns.map(c => ({ ...c, disabled: Boolean(c.worksheet_id) }))
+            return QueryConn.getters('getWkeConns').map(c => ({
+                ...c,
+                disabled: Boolean(c.worksheet_id),
+            }))
         },
         availableConnOpts() {
             return this.connOptions.filter(cnn => !cnn.disabled)
@@ -170,12 +174,6 @@ export default {
         else if (!this.connOptions.length) this.openConnDialog()
     },
     methods: {
-        ...mapActions({
-            openConnect: 'queryConns/openConnect',
-            disconnect: 'queryConns/disconnect',
-            onChangeConn: 'queryConns/onChangeConn',
-            validateConns: 'queryConns/validateConns',
-        }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
          * bind it to the current worksheet. otherwise open dialog
@@ -194,12 +192,12 @@ export default {
          * Function is called after selecting a connection
          */
         async onSelectConn(chosenWkeConn) {
-            await this.onChangeConn(chosenWkeConn)
+            await QueryConn.dispatch('onChangeConn', chosenWkeConn)
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
-            if (this.$typy(this.getActiveWkeConn).isEmptyObject) this.chosenWkeConn = {}
-            else this.chosenWkeConn = this.getActiveWkeConn
+            if (this.$typy(this.activeWkeConn).isEmptyObject) this.chosenWkeConn = {}
+            else this.chosenWkeConn = this.activeWkeConn
         },
         openConnDialog() {
             this.isConnDlgOpened = true
@@ -209,14 +207,17 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
-            await this.openConnect(opts)
+            await QueryConn.dispatch('openConnect', opts)
             this.assignActiveWkeConn()
         },
         async confirmDelConn() {
-            await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
+            await QueryConn.dispatch('disconnect', { showSnackbar: true, id: this.targetConn.id })
         },
         async onReconnectCb() {
-            await this.validateConns({ persistentConns: this.getAllConns, silentValidation: true })
+            await QueryConn.dispatch('validateConns', {
+                persistentConns: QueryConn.all(),
+                silentValidation: true,
+            })
         },
     },
 }

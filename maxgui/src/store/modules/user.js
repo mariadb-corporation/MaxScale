@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import localForage from 'localforage'
@@ -88,8 +89,8 @@ export default {
                 commit('SET_LOGIN_ERR_MSG', errMsg)
             }
         },
-        async logout({ commit, dispatch, rootState }) {
-            await dispatch('queryConns/disconnectAll', {}, { root: true })
+        async logout({ commit, rootState }) {
+            await QueryConn.dispatch('disconnectAll')
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })

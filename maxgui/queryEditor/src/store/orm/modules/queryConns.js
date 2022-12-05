@@ -39,7 +39,6 @@ export default {
                 commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
 
             const { $typy, $helpers, $queryHttp } = this.vue
-
             const [e, res] = await $helpers.asyncTryCatch($queryHttp.get(`/sql/`))
             const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
 
@@ -356,7 +355,6 @@ export default {
         },
     },
     getters: {
-        getAllConns: () => QueryConn.all(),
         getActiveQueryTabConn: () =>
             QueryConn.query()
                 .where('query_tab_id', Worksheet.getters('getActiveQueryTabId'))

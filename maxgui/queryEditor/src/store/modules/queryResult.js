@@ -13,6 +13,7 @@
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -36,11 +37,8 @@ export default {
          * @param {String} param.qualified_name - Table id (database_name.table_name).
          * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
          */
-        async fetchPrvw(
-            { rootState, commit, dispatch, rootGetters },
-            { qualified_name, query_mode }
-        ) {
-            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
+        async fetchPrvw({ rootState, commit, dispatch }, { qualified_name, query_mode }) {
+            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const request_sent_time = new Date().valueOf()
             try {
@@ -102,8 +100,8 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ commit, dispatch, getters, rootState, rootGetters }, query) {
-            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
+        async fetchQueryResult({ commit, dispatch, getters, rootState }, query) {
+            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const request_sent_time = new Date().valueOf()
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const abort_controller = new AbortController()
@@ -156,8 +154,7 @@ export default {
                     })
                 } else {
                     const USE_REG = /(use|drop database)\s/i
-                    if (query.match(USE_REG))
-                        await dispatch('queryConns/updateActiveDb', {}, { root: true })
+                    if (query.match(USE_REG)) await QueryConn.dispatch('updateActiveDb', {})
                 }
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: activeQueryTabId,
@@ -190,15 +187,15 @@ export default {
          * This action uses the current active worksheet connection to send
          * KILL QUERY thread_id
          */
-        async stopQuery({ commit, getters, rootGetters }) {
-            const activeQueryTabConn = rootGetters['queryConns/getActiveQueryTabConn']
+        async stopQuery({ commit, getters }) {
+            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             try {
                 commit('PATCH_HAS_KILL_FLAG_MAP', {
                     id: activeQueryTabId,
                     payload: { value: true },
                 })
-                const wkeConn = rootGetters['queryConns/getActiveWkeConn']
+                const wkeConn = QueryConn.getters('getActiveWkeConn')
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
                 } = await this.vue.$queryHttp.post(`/sql/${wkeConn.id}/queries`, {
@@ -279,34 +276,30 @@ export default {
             if (map) return map[Worksheet.getters('getActiveQueryTabId')] || {}
             return {}
         },
-        getIsRunBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
+        getIsRunBtnDisabledByQueryTabId: (state, getters) => {
             return id => {
                 const queryTab = QueryTab.find(id) || {}
-                const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
-                    queryTab.id
-                )
+                const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(queryTab.id)
                 const { query_txt } = Editor.find(queryTab.id) || {}
 
                 if (!queryTab) return true
                 return (
                     !query_txt ||
                     !queryTabConn.id ||
-                    rootGetters['queryConns/getIsConnBusyByQueryTabId'](queryTab.id) ||
+                    QueryConn.getters('getIsConnBusyByQueryTabId')(queryTab.id) ||
                     getters.getLoadingQueryResultByQueryTabId(queryTab.id)
                 )
             }
         },
-        getIsVisBtnDisabledByQueryTabId: (state, getters, rootState, rootGetters) => {
+        getIsVisBtnDisabledByQueryTabId: (state, getters) => {
             return id => {
                 const queryTab = QueryTab.find(id) || {}
-                const queryTabConn = rootGetters['queryConns/getQueryTabConnByQueryTabId'](
-                    queryTab.id
-                )
+                const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(queryTab.id)
 
                 if (!queryTab) return true
                 return (
                     !queryTabConn.id ||
-                    (rootGetters['queryConns/getIsConnBusyByQueryTabId'](queryTab.id) &&
+                    (QueryConn.getters('getIsConnBusyByQueryTabId')(queryTab.id) &&
                         getters.getLoadingQueryResultByQueryTabId(queryTab.id))
                 )
             }
