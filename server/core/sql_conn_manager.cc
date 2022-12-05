@@ -123,6 +123,24 @@ bool ConnectionManager::erase(const std::string& id)
     return rval;
 }
 
+bool ConnectionManager::cancel(const std::string& id)
+{
+    bool rval = false;
+    LockGuard guard(m_connection_lock);
+
+    if (auto it = m_connections.find(id); it != m_connections.end())
+    {
+        rval = true;
+
+        if (it->second->busy.load(std::memory_order_acquire))
+        {
+            it->second->cancel();
+        }
+    }
+
+    return rval;
+}
+
 bool ConnectionManager::is_query(const std::string& conn_id, int64_t query_id) const
 {
     bool rval = false;
@@ -344,6 +362,22 @@ bool ConnectionManager::MariaDBConnection::ping()
     return m_conn.ping();
 }
 
+void ConnectionManager::MariaDBConnection::cancel()
+{
+    mxq::MariaDB other;
+    auto& sett = other.connection_settings();
+    sett.user = config.user;
+    sett.password = config.password;
+    sett.timeout = config.timeout;
+    sett.ssl = config.ssl;
+    sett.proxy_protocol = config.proxy_protocol;
+
+    if (other.open(config.host, config.port, config.db))
+    {
+        other.cmd("KILL QUERY " + std::to_string(thread_id()));
+    }
+}
+
 json_t* ConnectionManager::MariaDBConnection::generate_column_info(
     const mxq::MariaDBQueryResult::Fields& fields_info)
 {
@@ -535,5 +569,10 @@ bool ConnectionManager::ODBCConnection::ping()
 {
     mxq::NoResult empty;
     return m_conn.query("SELECT 1", &empty);
+}
+
+void ConnectionManager::ODBCConnection::cancel()
+{
+    m_conn.cancel();
 }
 }

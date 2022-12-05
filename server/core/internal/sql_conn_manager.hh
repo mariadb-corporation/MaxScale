@@ -76,6 +76,8 @@ public:
 
         virtual bool ping() = 0;
 
+        virtual void cancel() = 0;
+
         std::atomic_bool busy {false};
         int64_t          current_query_id {0};
         mxb::TimePoint   last_query_started;
@@ -96,6 +98,7 @@ public:
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
+        void        cancel() override final;
 
     private:
         mxb::Json generate_json_representation(int64_t max_rows);
@@ -117,6 +120,7 @@ public:
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
+        void        cancel() override final;
 
     private:
         mxq::ODBC m_conn;
@@ -165,6 +169,15 @@ public:
      * @return True if erased. False if id not found or was busy.
      */
     bool erase(const std::string& id);
+
+    /**
+     * Cancels an ongoing query
+     *
+     * @param id The connection ID
+     *
+     * @return True if the connection was found
+     */
+    bool cancel(const std::string& id);
 
     bool is_query(const std::string& conn_id, int64_t query_id) const;
     bool is_connection(const std::string& conn_id) const;

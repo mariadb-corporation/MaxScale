@@ -684,6 +684,29 @@ HttpResponse disconnect(const HttpRequest& request)
     });
 }
 
+HttpResponse cancel(const HttpRequest& request)
+{
+    auto [id, err] = get_connection_id(request, request.uri_part(1));
+
+    if (id.empty())
+    {
+        return create_error(err);
+    }
+
+    return HttpResponse(
+        [id]() {
+        HttpResponse response;
+
+        if (!this_unit.manager.cancel(id))
+        {
+            string errmsg = mxb::string_printf("ID %s was not found.", id.c_str());
+            response = create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return response;
+    });
+}
+
 template<auto func>
 HttpResponse run_etl_task(const HttpRequest& request)
 {

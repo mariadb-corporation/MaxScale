@@ -1150,6 +1150,11 @@ HttpResponse cb_sql_disconnect(const HttpRequest& request)
     return HttpSql::disconnect(request);
 }
 
+HttpResponse cb_sql_cancel(const HttpRequest& request)
+{
+    return HttpSql::cancel(request);
+}
+
 HttpResponse cb_sql_erase_query_result(const HttpRequest& request)
 {
     return HttpSql::erase_query_result(request);
@@ -1549,6 +1554,7 @@ public:
         m_post.emplace_back(REQ_BODY, cb_sql_connect, "sql");
         m_post.emplace_back(cb_sql_reconnect, "sql", ":connection_id", "reconnect");
         m_post.emplace_back(cb_sql_clone, "sql", ":connection_id", "clone");
+        m_post.emplace_back(cb_sql_cancel, "sql", ":connection_id", "cancel");
         m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
         m_post.emplace_back(REQ_BODY, cb_sql_etl_prepare, "sql", ":connection_id", "etl", "prepare");
         m_post.emplace_back(REQ_BODY, cb_sql_etl_start, "sql", ":connection_id", "etl", "start");

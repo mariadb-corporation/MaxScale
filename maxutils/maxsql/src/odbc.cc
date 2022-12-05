@@ -62,6 +62,8 @@ public:
 
     std::string get_string_info(int type) const;
 
+    void cancel();
+
     std::map<std::string, std::map<std::string, std::string>> drivers();
 
     bool ok_result(int64_t rows_affected, int64_t warnings) override;
@@ -759,6 +761,11 @@ std::string ODBCImp::get_string_info(int type) const
     return buf;
 }
 
+void ODBCImp::cancel()
+{
+    SQLCancel(m_stmt);
+}
+
 bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
 {
     mxb_assert(handler);
@@ -1148,6 +1155,11 @@ std::string ODBC::driver_name() const
 std::string ODBC::driver_version() const
 {
     return m_imp->get_string_info(SQL_DRIVER_VER);
+}
+
+void ODBC::cancel()
+{
+    return m_imp->cancel();
 }
 
 // static

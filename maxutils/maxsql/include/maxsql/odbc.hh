@@ -311,6 +311,11 @@ public:
      */
     std::string driver_version() const;
 
+    /**
+     * Attempts to cancel the currently active query.
+     */
+    void cancel();
+
 private:
     std::unique_ptr<ODBCImp> m_imp;
 };

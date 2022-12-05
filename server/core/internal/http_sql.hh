@@ -35,6 +35,7 @@ HttpResponse query(const HttpRequest& request);
 HttpResponse query_result(const HttpRequest& request);
 HttpResponse erase_query_result(const HttpRequest& request);
 HttpResponse disconnect(const HttpRequest& request);
+HttpResponse cancel(const HttpRequest& request);
 HttpResponse etl_prepare(const HttpRequest& request);
 HttpResponse etl_start(const HttpRequest& request);
 HttpResponse odbc_drivers(const HttpRequest& request);
