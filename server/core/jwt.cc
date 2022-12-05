@@ -523,6 +523,8 @@ mxs::JwtAlgo auto_detect_algorithm(const mxs::Config& cnf, const std::string& ke
         default:
             break;
         }
+
+        EVP_PKEY_free(pk);
     }
 
     BIO_free(b);
