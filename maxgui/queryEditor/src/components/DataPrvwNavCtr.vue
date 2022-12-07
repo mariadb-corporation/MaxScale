@@ -32,8 +32,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
+import { mapState, mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 
 export default {
     name: 'data-prvw-nav-ctr',
@@ -45,9 +46,6 @@ export default {
         ...mapState({
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
-        }),
-        ...mapGetters({
-            getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         activeView: {
             get() {
@@ -86,8 +84,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
                         await this.fetchPrvw({
-                            qualified_name: this.$typy(this.getActivePrvwNode, 'qualified_name')
-                                .safeString,
+                            qualified_name: SchemaSidebar.getters('getActivePrvwNodeFQN'),
                             query_mode,
                         })
                     }

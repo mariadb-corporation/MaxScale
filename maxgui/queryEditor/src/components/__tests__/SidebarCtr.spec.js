@@ -26,7 +26,7 @@ const mountFactory = opts =>
 
 function mockShowingDbListTree() {
     return {
-        getLoadingDbTree: () => false,
+        isLoadingDbTree: () => false,
         hasConn: () => true,
     }
 }
@@ -81,7 +81,7 @@ describe('sidebar-ctr', () => {
             wrapper = mountFactory({
                 computed: {
                     hasConn: () => false,
-                    getLoadingDbTree: () => true,
+                    isLoadingDbTree: () => true,
                 },
             })
             expect(wrapper.vm.reloadDisabled).to.be.true

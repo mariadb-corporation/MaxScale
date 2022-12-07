@@ -21,14 +21,14 @@ export default class SchemaSidebar extends Extender {
      */
     static getNonKeyFields() {
         return {
-            search_schema: this.string(''),
+            filter_txt: this.string(''),
             expanded_nodes: this.attr([]),
         }
     }
 
     static fields() {
         return {
-            id: this.attr(null), // use QueryTab Id as PK for this table
+            id: this.attr(null), // use Worksheet Id as PK for this table
             ...this.getNonKeyFields(),
         }
     }

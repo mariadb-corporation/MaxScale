@@ -21,7 +21,7 @@ const mountFactory = opts =>
             {
                 shallow: true,
                 component: SchemaTree,
-                computed: { getDbTreeData: () => dummy_db_tree_data },
+                computed: { dbTreeData: () => dummy_db_tree_data },
             },
             opts
         )
@@ -123,7 +123,7 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
     let wrapper
     afterEach(() => wrapper.destroy())
     it(`Should not render mxs-treeview component if there is no data`, () => {
-        wrapper = mountFactory({ computed: { getDbTreeData: () => [] } })
+        wrapper = mountFactory({ computed: { dbTreeData: () => [] } })
         expect(wrapper.find('.mxs-treeview').exists()).to.be.false
     })
     it(`Should pass accurate data to mxs-treeview via props`, () => {
@@ -140,7 +140,7 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
             returnObject,
         } = wrapper.find('.mxs-treeview').vm.$props
         expect(items).to.be.deep.equals(dummy_db_tree_data)
-        expect(search).to.be.equals(wrapper.vm.search_schema)
+        expect(search).to.be.equals(wrapper.vm.filterTxt)
         expect(filter).to.be.equals(wrapper.vm.filter)
         expect(hoverable).to.be.true
         expect(openOnClick).to.be.true

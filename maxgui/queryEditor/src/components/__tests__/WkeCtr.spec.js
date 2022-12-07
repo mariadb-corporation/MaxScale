@@ -181,7 +181,7 @@ describe('wke-ctr', () => {
                 expect(wrapper.vm.stmtErrMsgObj).to.be.an('object').and.be.empty
                 // When there is an error message
                 wrapper = mountFactory({
-                    computed: { getExeStmtResultMap: () => dummy_exe_stmt_result },
+                    computed: { exeStmtResult: () => dummy_exe_stmt_result },
                 })
                 expect(wrapper.vm.stmtErrMsgObj).to.be.deep.equals(
                     dummy_exe_stmt_result.stmt_err_msg_obj
@@ -194,7 +194,7 @@ describe('wke-ctr', () => {
                 expect(wrapper.vm.isExecFailed).to.be.false
                 // When there is an error message
                 wrapper = mountFactory({
-                    computed: { getExeStmtResultMap: () => dummy_exe_stmt_result },
+                    computed: { exeStmtResult: () => dummy_exe_stmt_result },
                 })
                 expect(wrapper.vm.isExecFailed).to.be.true
             })

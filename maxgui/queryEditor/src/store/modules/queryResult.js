@@ -11,6 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
@@ -304,7 +305,7 @@ export default {
                 )
             }
         },
-        getChartResultSets: (state, getters, rootState, rootGetters) => ({ scope }) => {
+        getChartResultSets: (state, getters, rootState) => ({ scope }) => {
             let resSets = []
             // user query result data
             const userQueryResults = scope.$helpers.stringifyClone(
@@ -320,7 +321,7 @@ export default {
             // preview data
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
             const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
-            const activePrvwNode = rootGetters['schemaSidebar/getActivePrvwNode']
+            const activePrvwNode = SchemaSidebar.getters('getActivePrvwNode')
             for (const mode of prvwModes) {
                 const data = scope.$helpers.stringifyClone(
                     scope.$typy(getters.getPrvwData(mode), 'data.attributes.results[0]')

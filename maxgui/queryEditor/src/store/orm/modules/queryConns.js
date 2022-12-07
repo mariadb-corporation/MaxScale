@@ -15,6 +15,7 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 
 export default {
     namespaced: true,
@@ -249,7 +250,7 @@ export default {
             for (const { id } of getters.getWkeConns)
                 await dispatch('disconnect', { showSnackbar: false, id })
         },
-        async reconnect({ commit, dispatch, getters }) {
+        async reconnect({ commit, getters }) {
             const activeQueryTabConn = getters.getActiveQueryTabConn
 
             let connIds = []
@@ -279,7 +280,7 @@ export default {
                     },
                     { root: true }
                 )
-                await dispatch('schemaSidebar/initialFetch', {}, { root: true })
+                await SchemaSidebar.dispatch('initialFetch')
             }
         },
         async updateActiveDb({ getters }) {

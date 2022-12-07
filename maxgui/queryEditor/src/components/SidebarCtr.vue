@@ -92,8 +92,10 @@
  * 2-way data binding to execSqlDlg prop
  * update:execSqlDlg?: (object)
  */
-import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
+import { mapState, mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
@@ -117,10 +119,6 @@ export default {
             DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
             EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
-            search_schema: state => state.schemaSidebar.search_schema,
-        }),
-        ...mapGetters({
-            getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -130,17 +128,20 @@ export default {
         },
         filterTxt: {
             get() {
-                return this.search_schema
+                return SchemaSidebar.getters('getFilterTxt')
             },
             set(v) {
-                this.SET_SEARCH_SCHEMA({ payload: v, id: this.activeWkeId })
+                SchemaSidebar.update({ where: this.activeWkeId, data: { filter_txt: v } })
             },
         },
+        isLoadingDbTree() {
+            return SchemaSidebar.getters('getLoadingDbTree')
+        },
         reloadDisabled() {
-            return !this.hasConn || this.getLoadingDbTree
+            return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
-            return QueryConn.getters('getIsConnBusy') && !this.getLoadingDbTree
+            return QueryConn.getters('getIsConnBusy') && !this.isLoadingDbTree
         },
         hasConn() {
             return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)
@@ -148,19 +149,17 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
-            PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
         }),
         ...mapActions({
-            fetchSchemas: 'schemaSidebar/fetchSchemas',
             clearDataPreview: 'queryResult/clearDataPreview',
             fetchPrvw: 'queryResult/fetchPrvw',
-            loadChildNodes: 'schemaSidebar/loadChildNodes',
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
-            exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
+        async fetchSchemas() {
+            await SchemaSidebar.dispatch('fetchSchemas')
+        },
         async useDb(param) {
             await QueryConn.dispatch('useDb', param)
         },
@@ -170,7 +169,7 @@ export default {
             await this.fetchPrvw({ qualified_name: qualified_name, query_mode })
         },
         async handleLoadChildren(node) {
-            await this.loadChildNodes(node)
+            await SchemaSidebar.dispatch('loadChildNodes', node)
         },
         async onAlterTable(node) {
             await QueryTab.dispatch('handleAddQueryTab', {
@@ -205,10 +204,13 @@ export default {
             this.actionName = sql.slice(0, -1)
         },
         async confirmExeStatements() {
-            await this.exeStmtAction({ sql: this.execSqlDlg.sql, action: this.actionName })
+            await Worksheet.dispatch('exeStmtAction', {
+                sql: this.execSqlDlg.sql,
+                action: this.actionName,
+            })
         },
         clearExeStatementsResult() {
-            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.activeWkeId })
+            WorksheetMem.update({ where: this.activeWkeId, data: { exe_stmt_result: {} } })
         },
     },
 }

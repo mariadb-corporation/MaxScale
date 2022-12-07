@@ -83,6 +83,7 @@
  */
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import DataPrvw from './DataPrvw.vue'
 import ResultsTab from './ResultsTab.vue'
@@ -117,7 +118,6 @@ export default {
         ...mapGetters({
             getUserQueryRes: 'queryResult/getUserQueryRes',
             getPrvwData: 'queryResult/getPrvwData',
-            getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         isConnBusy() {
             return QueryConn.getters('getIsConnBusy')
@@ -178,7 +178,7 @@ export default {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
         activePrvwNodeQualifiedName() {
-            return this.$typy(this.getActivePrvwNode, 'qualified_name').safeString
+            return SchemaSidebar.getters('getActivePrvwNodeFQN')
         },
     },
 

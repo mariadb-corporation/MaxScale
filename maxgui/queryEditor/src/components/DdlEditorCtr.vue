@@ -39,8 +39,8 @@
  * 2-way data binding to execSqlDlg prop
  * update:execSqlDlg?: (object)
  */
-import { mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import DdlEditorFormCtr from './DdlEditorFormCtr.vue'
 import DdlEditorToolbar from './DdlEditorToolbar.vue'
@@ -60,7 +60,7 @@ export default {
         return {
             ddlEditorToolbarHeight: 28,
             /**
-             * TODO: move formData to syncStateCreator so that the changes can be kept
+             * TODO: move formData to SchemaSidebar model so that the changes can be kept
              * after page refresh, changing active queryTab or worksheet.
              */
             formData: {},
@@ -124,10 +124,6 @@ export default {
         this.$typy(this.unwatch_initialData).safeFunction()
     },
     methods: {
-        ...mapMutations({
-            PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
-        }),
-        ...mapActions({ exeStmtAction: 'schemaSidebar/exeStmtAction' }),
         //Watcher to work with multiple worksheets which are kept alive
         watch_initialData() {
             this.unwatch_initialData = this.$watch(
@@ -415,7 +411,7 @@ export default {
         async confirmAlter() {
             const { escapeIdentifiers: escape } = this.$helpers
             const { dbName, table_name } = this.formData.table_opts_data
-            await this.exeStmtAction({
+            await Worksheet.dispatch('exeStmtAction', {
                 sql: this.execSqlDlg.sql,
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
@@ -431,7 +427,10 @@ export default {
                 })
         },
         clearAlterResult() {
-            this.PATCH_EXE_STMT_RESULT_MAP({ id: Worksheet.getters('getActiveWkeId') })
+            WorksheetMem.update({
+                where: Worksheet.getters('getActiveWkeId'),
+                data: { exe_stmt_result: {} },
+            })
         },
     },
 }

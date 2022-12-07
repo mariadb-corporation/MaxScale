@@ -1,10 +1,10 @@
 <template>
     <!-- TODO: Virtual scroll treeview -->
-    <div v-if="getDbTreeData.length">
+    <div v-if="dbTreeData.length">
         <mxs-treeview
             class="mxs-treeview"
-            :items="getDbTreeData"
-            :search="search_schema"
+            :items="dbTreeData"
+            :search="filterTxt"
             :filter="filter"
             hoverable
             dense
@@ -30,7 +30,7 @@
                         {{ iconSheet(node) }}
                     </v-icon>
                     <span
-                        v-mxs-highlighter="{ keyword: search_schema, txt: node.name }"
+                        v-mxs-highlighter="{ keyword: filterTxt, txt: node.name }"
                         class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
@@ -111,9 +111,11 @@ This component emits the following events
 @on-dragging: Event.
 @on-dragend: Event.
 */
-import { mapGetters, mapMutations, mapState } from 'vuex'
+import { mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
@@ -137,12 +139,6 @@ export default {
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
-            expanded_nodes: state => state.schemaSidebar.expanded_nodes,
-            search_schema: state => state.schemaSidebar.search_schema,
-        }),
-        ...mapGetters({
-            getDbTreeData: 'schemaSidebar/getDbTreeData',
-            getActivePrvwNode: 'schemaSidebar/getActivePrvwNode',
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -152,6 +148,15 @@ export default {
         },
         activeQueryTabId() {
             return Worksheet.getters('getActiveQueryTabId')
+        },
+        filterTxt() {
+            return SchemaSidebar.getters('getFilterTxt')
+        },
+        dbTreeData() {
+            return SchemaSidebar.getters('getDbTreeData')
+        },
+        activePrvwNode() {
+            return SchemaSidebar.getters('getActivePrvwNode')
         },
         alteredActiveNode() {
             return Editor.getters('getAlteredActiveNode')
@@ -193,14 +198,14 @@ export default {
                 [TRIGGER]: this.txtOpts,
             }
         },
-        // Use either getActivePrvwNode or alteredActiveNode
+        // Use either activePrvwNode or alteredActiveNode
         activeNodes: {
             get() {
                 let nodes = []
                 if (this.$typy(this.alteredActiveNode, 'id').safeString)
                     nodes = [...nodes, this.alteredActiveNode]
-                else if (this.$typy(this.getActivePrvwNode, 'id').safeString)
-                    nodes = [...nodes, this.getActivePrvwNode]
+                else if (this.$typy(this.activePrvwNode, 'id').safeString)
+                    nodes = [...nodes, this.activePrvwNode]
                 return nodes
             },
             set(v) {
@@ -217,10 +222,13 @@ export default {
                             },
                         })
                     else
-                        this.PATCH_DB_TREE_MAP({
-                            id: this.activeWkeId,
-                            payload: {
-                                active_prvw_node: activeNodes[0],
+                        WorksheetMem.update({
+                            where: this.activeWkeId,
+                            data: {
+                                db_tree: {
+                                    ...SchemaSidebar.getters('getCurrDbTree'),
+                                    active_prvw_node: activeNodes[0],
+                                },
                             },
                         })
                 }
@@ -233,17 +241,13 @@ export default {
         },
     },
     activated() {
-        this.expandedNodes = this.expanded_nodes
+        this.expandedNodes = SchemaSidebar.getters('getExpandedNodes')
         this.watch_expandedNodes()
     },
     deactivated() {
         this.$typy(this.unwatch_expandedNodes).safeFunction()
     },
     methods: {
-        ...mapMutations({
-            PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
-            SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
-        }),
         watch_expandedNodes() {
             this.unwatch_expandedNodes = this.$watch(
                 'expandedNodes',
@@ -258,14 +262,18 @@ export default {
                         // Auto collapse all expanded nodes if schema node is collapsed
                         let validLevels = nodes.map(node => node.level)
                         if (validLevels[0] === 0)
-                            this.SET_EXPANDED_NODES({
-                                payload: nodes,
-                                id: this.activeWkeId,
+                            SchemaSidebar.update({
+                                where: this.activeWkeId,
+                                data: {
+                                    expanded_nodes: nodes,
+                                },
                             })
                         else
-                            this.SET_EXPANDED_NODES({
-                                payload: [],
-                                id: this.activeWkeId,
+                            SchemaSidebar.update({
+                                where: this.activeWkeId,
+                                data: {
+                                    expanded_nodes: [],
+                                },
                             })
                     }
                 },

@@ -62,7 +62,7 @@
             :errMsgObj="stmtErrMsgObj"
             :sqlTobeExecuted.sync="execSqlDlg.sql"
             :editorHeight="execSqlDlg.editorHeight"
-            :dbCmplList="getDbCmplList"
+            :dbCmplList="dbCmplList"
             :skipRegCompleters="isTxtEditor"
             :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
@@ -84,8 +84,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
@@ -127,10 +128,6 @@ export default {
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
             sidebar_pct_width: state => state.queryPersisted.sidebar_pct_width,
         }),
-        ...mapGetters({
-            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
-            getDbCmplList: 'schemaSidebar/getDbCmplList',
-        }),
         activeQueryTabConn() {
             return QueryConn.getters('getActiveQueryTabConn')
         },
@@ -142,6 +139,12 @@ export default {
         },
         activeQueryTabId() {
             return Worksheet.getters('getActiveQueryTabId')
+        },
+        dbCmplList() {
+            return SchemaSidebar.getters('getDbCmplList')
+        },
+        exeStmtResult() {
+            return Worksheet.getters('getExeStmtResult')
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })
@@ -160,10 +163,10 @@ export default {
             return statementCounts > 1 ? 2 : 1
         },
         stmtErrMsgObj() {
-            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
+            return this.$typy(this.exeStmtResult, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
         isExecFailed() {
-            if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
+            if (this.$typy(this.exeStmtResult).isEmptyObject) return false
             return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
         sidebarWidth() {

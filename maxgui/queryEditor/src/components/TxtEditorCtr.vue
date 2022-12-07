@@ -109,6 +109,7 @@
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
@@ -162,7 +163,6 @@ export default {
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         ...mapGetters({
-            getDbCmplList: 'schemaSidebar/getDbCmplList',
             getChartResultSets: 'queryResult/getChartResultSets',
         }),
         eventBus() {
@@ -188,7 +188,7 @@ export default {
             }))
         },
         cmplList() {
-            return [...this.getDbCmplList, ...this.snippetList]
+            return [...SchemaSidebar.getters('getDbCmplList'), ...this.snippetList]
         },
         showVisChart() {
             const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray

@@ -228,13 +228,13 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
 
 /**
  * @public
- * @param {Array} param.db_tree - Array of tree nodes to be updated
+ * @param {Array} param.treeData - Array of tree nodes to be updated
  * @param {Object} param.nodeId - id of the node to be updated
  * @param {Array} param.children -  Array of children nodes
- * @returns {Array} new db_tree
+ * @returns {Array} new tree data
  */
-function deepReplaceNode({ db_tree, nodeId, children }) {
-    return lodash.cloneDeepWith(db_tree, value => {
+function deepReplaceNode({ treeData, nodeId, children }) {
+    return lodash.cloneDeepWith(treeData, value => {
         return value && value.id === nodeId ? { ...value, children } : undefined
     })
 }
@@ -338,19 +338,13 @@ function getAlterColsOptsSQL(node) {
  * have to recompute. A better method would be to create relational
  * keys between modules, but for now, stick with the old approach.
  * Module states to be synced to query_tabs: editor, queryResult
- * Module states to be synced to worksheets_arr: schemaSidebar
- * @param {String} namespace -  module namespace. i.e. editor, queryResult, schemaSidebar
+ * @param {String} namespace -  module namespace. i.e. editor, queryResult
  * @returns {Object} - return flat state for the provided namespace module
  */
 function syncStateCreator(namespace) {
     switch (namespace) {
         case 'queryResult':
             return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
-        case 'schemaSidebar':
-            return {
-                search_schema: '',
-                expanded_nodes: [],
-            }
         default:
             return null
     }
@@ -361,7 +355,7 @@ function syncStateCreator(namespace) {
  * The state uses worksheet id as key or queryTab id. This helps to preserve
  * multiple worksheet's data or queryTab's data in memory.
  * Use `memStatesMutationCreator` to create corresponding mutations
- * @param {String} namespace -  module namespace. i.e. queryResult, schemaSidebar
+ * @param {String} namespace -  module namespace. i.e. queryResult
  * @returns {Object} - returns states that are stored in memory
  */
 function memStateCreator(namespace) {
@@ -385,26 +379,6 @@ function memStateCreator(namespace) {
                  * value?: boolean
                  */
                 has_kill_flag_map: {},
-            }
-        case 'schemaSidebar':
-            return {
-                /**
-                 * each state has these properties:
-                 * loading_db_tree?: boolean
-                 * db_completion_list?: array,
-                 * data? array. Contains schemas array
-                 * //TODO: Make active_prvw_node an object hash with queryTab id as key
-                 * active_prvw_node? object. Contains active node in the schemas array
-                 * data_of_conn?: string. Name of the connection using to fetch data
-                 */
-                db_tree_map: {},
-                /**
-                 * each state has these properties:
-                 * data? object. Contains res.data.data.attributes of a query
-                 * stmt_err_msg_obj? object.
-                 * result?: array. error msg array.
-                 */
-                exe_stmt_result_map: {},
             }
         default:
             return null
