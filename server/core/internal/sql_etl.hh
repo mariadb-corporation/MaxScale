@@ -171,13 +171,14 @@ public:
     }
 
 private:
-    ETL&        m_etl;
-    std::string m_schema;
-    std::string m_table;
-    std::string m_create;
-    std::string m_select;
-    std::string m_insert;
-    std::string m_error;
+    ETL&          m_etl;
+    std::string   m_schema;
+    std::string   m_table;
+    std::string   m_create;
+    std::string   m_select;
+    std::string   m_insert;
+    std::string   m_error;
+    mxb::Duration m_duration {0};
 };
 
 struct ETL

@@ -588,6 +588,11 @@ mxb::Json Table::to_json() const
         obj.set_string("error", m_error);
     }
 
+    if (m_duration.count())
+    {
+        obj.set_float("execution_time", mxb::to_secs(m_duration));
+    }
+
     return obj;
 }
 
@@ -652,6 +657,7 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
     try
     {
         mxb_assert(!m_select.empty() && !m_insert.empty());
+        auto start = mxb::Clock::now();
 
         if (!source.prepare(m_select))
         {
@@ -667,6 +673,9 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
         {
             throw problem("Failed to load data: ", source.error(), dest.error());
         }
+
+        auto end = mxb::Clock::now();
+        m_duration = end - start;
     }
     catch (const Error& e)
     {
