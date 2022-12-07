@@ -3315,7 +3315,28 @@ cmd ::= SET set_scope(X) TRANSACTION transaction_characteristics(Y). {
   maxscaleSetTransaction(pParse, X, Y);
 }
 
-cmd ::= SET STATEMENT variable_assignments(X) FOR cmd. {
+// variable_assignent[s] cannot be used with SET STATEMENT as that would,
+// due to the maxscaleSetVariable() calls, cause wrong bits to be turned on.
+%type statement_variable_assignment {Expr*}
+%destructor statement_variable_assignment {sqlite3ExprDelete(pParse->db, $$);}
+
+statement_variable_assignment(A) ::= variable(X) EQ expr(Y). {
+  A = sqlite3PExpr(pParse, TK_EQ, X.pExpr, Y.pExpr, 0);
+}
+
+%type statement_variable_assignments {ExprList*}
+%destructor statement_variable_assignments {sqlite3ExprListDelete(pParse->db, $$);}
+
+statement_variable_assignments(A) ::= statement_variable_assignment(X). {
+  A = sqlite3ExprListAppend(pParse, 0, X);
+}
+
+statement_variable_assignments(A) ::=
+  statement_variable_assignments(X) COMMA statement_variable_assignment(Y). {
+  A = sqlite3ExprListAppend(pParse, X, Y);
+}
+
+cmd ::= SET STATEMENT statement_variable_assignments(X) FOR cmd. {
   // The parsing of cmd will cause the relevant maxscale-callback to
   // be called, so we neither need to call it here, nor free cmd (as
   // it will be freed by that callback). The variable definitions we
