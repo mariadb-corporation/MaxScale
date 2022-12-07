@@ -56,8 +56,6 @@ public:
     uint64_t        thread_id() const;
     mxs::Component* upstream() const override;
 
-    uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
-
 private:
     enum class State
     {
@@ -238,6 +236,9 @@ private:
     bool        m_opening_cursor = false;   /**< Whether we are opening a cursor */
     bool        m_large_query = false;
     mxs::Reply  m_reply;
+
+    uint32_t server_capabilities {0};   /**< Server capabilities */
+    uint32_t extra_capabilities {0};   /**< Extra MariaDB capabilities */
 
     // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
     // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
