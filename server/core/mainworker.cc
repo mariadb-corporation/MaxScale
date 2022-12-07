@@ -271,9 +271,14 @@ void MainWorker::start_shutdown()
             mxs::ConfigManager::get()->stop_sync();
             Listener::stop_all();
 
-            // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
-            // will exit the event loop.
-            mxs::RoutingWorker::start_shutdown();
+            // If there was a problem with the config, the routing workers were never started
+            // in which case they need not be shutdown.
+            if (mxs::RoutingWorker::is_running())
+            {
+                // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
+                // will exit the event loop.
+                mxs::RoutingWorker::start_shutdown();
+            }
 
             // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
             auto self = MainWorker::get();
