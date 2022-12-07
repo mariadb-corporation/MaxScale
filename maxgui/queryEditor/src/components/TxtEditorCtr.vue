@@ -81,7 +81,7 @@
             </template>
             <template slot="pane-right">
                 <chart-config
-                    v-if="show_vis_sidebar"
+                    v-if="isVisSidebarShown"
                     v-model="chartOpt"
                     :chartTypes="SQL_CHART_TYPES"
                     :axisTypes="CHART_AXIS_TYPES"
@@ -107,10 +107,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import TxtEditorToolbarCtr from './TxtEditorToolbarCtr.vue'
 import SqlEditor from './SqlEditor'
 import QueryResultCtr from './QueryResultCtr.vue'
@@ -153,7 +154,6 @@ export default {
     },
     computed: {
         ...mapState({
-            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_snippets: state => state.queryPersisted.query_snippets,
             query_pane_pct_height: state => state.queryPersisted.query_pane_pct_height,
             CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
@@ -162,11 +162,11 @@ export default {
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
-        ...mapGetters({
-            getChartResultSets: 'queryResult/getChartResultSets',
-        }),
         eventBus() {
             return EventBus
+        },
+        isVisSidebarShown() {
+            return QueryResult.getters('getIsVisSidebarShown')
         },
         isTabMoveFocus: {
             get() {
@@ -177,7 +177,47 @@ export default {
             },
         },
         resultSets() {
-            return this.getChartResultSets({ scope: this })
+            let resSets = []
+            // user query result data
+            const userQueryResults = this.$helpers.stringifyClone(
+                this.$typy(QueryResult.getters('getUserQueryRes'), 'data.attributes.results')
+                    .safeArray
+            )
+            let resSetCount = 0
+            for (const res of userQueryResults) {
+                if (res.data) {
+                    ++resSetCount
+                    resSets.push({ id: `RESULT SET ${resSetCount}`, ...res })
+                }
+            }
+            // preview data
+            const { PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
+            const prvwModes = [PRVW_DATA, PRVW_DATA_DETAILS]
+            const activePrvwNode = SchemaSidebar.getters('getActivePrvwNode')
+            for (const mode of prvwModes) {
+                const data = this.$helpers.stringifyClone(
+                    this.$typy(
+                        QueryResult.getters('getPrvwData')(mode),
+                        'data.attributes.results[0]'
+                    ).safeObjectOrEmpty
+                )
+                if (!this.$typy(data).isEmptyObject) {
+                    let resName = ''
+                    switch (mode) {
+                        case PRVW_DATA:
+                            resName = this.$mxs_t('previewData')
+                            break
+                        case PRVW_DATA_DETAILS:
+                            resName = this.$mxs_t('viewDetails')
+                            break
+                    }
+                    resSets.push({
+                        id: `${resName} of ${activePrvwNode.qualified_name}`,
+                        ...data,
+                    })
+                }
+            }
+            return resSets
         },
         snippetList() {
             return this.query_snippets.map(q => ({
@@ -210,7 +250,7 @@ export default {
             })
         },
         mainPanePct() {
-            if (this.show_vis_sidebar) return 100 - this.visSidebarPct
+            if (this.isVisSidebarShown) return 100 - this.visSidebarPct
             return 100
         },
         queryPaneMinPctHeight() {
@@ -246,7 +286,7 @@ export default {
             },
         },
         resultPaneDim() {
-            const visSideBarWidth = this.show_vis_sidebar ? this.visSidebarWidth : 0
+            const visSideBarWidth = this.isVisSidebarShown ? this.visSidebarWidth : 0
             return {
                 width: this.panesDim.width - visSideBarWidth,
                 height: (this.panesDim.height * (100 - this.queryPanePctHeight)) / 100,

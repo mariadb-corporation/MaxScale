@@ -19,7 +19,6 @@ import fileSysAccess from './fileSysAccess'
 import mxsApp from '@share/store/mxsApp'
 import queryConnsMem from './queryConnsMem'
 import queryEditorConfig from './queryEditorConfig'
-import queryResult from './queryResult'
 import queryPersisted from './queryPersisted'
 
 export default {
@@ -28,6 +27,5 @@ export default {
     mxsApp,
     queryConnsMem,
     queryEditorConfig,
-    queryResult,
     queryPersisted,
 }

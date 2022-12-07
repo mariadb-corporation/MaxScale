@@ -329,95 +329,6 @@ function getAlterColsOptsSQL(node) {
 
 /**
  * @public
- * The value of each state is replicated from the persisted object in the
- * persisted array. e.g. worksheets_arr
- * Using this to reduce unnecessary recomputation instead of
- * directly accessing the value in the persisted array because vuex getters
- * or vue.js computed properties will recompute when a property
- * is changed in persisted array then causes other properties also
- * have to recompute. A better method would be to create relational
- * keys between modules, but for now, stick with the old approach.
- * Module states to be synced to query_tabs: editor, queryResult
- * @param {String} namespace -  module namespace. i.e. editor, queryResult
- * @returns {Object} - return flat state for the provided namespace module
- */
-function syncStateCreator(namespace) {
-    switch (namespace) {
-        case 'queryResult':
-            return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
-        default:
-            return null
-    }
-}
-/**
- * @public
- * Below states are stored in hash map structure.
- * The state uses worksheet id as key or queryTab id. This helps to preserve
- * multiple worksheet's data or queryTab's data in memory.
- * Use `memStatesMutationCreator` to create corresponding mutations
- * @param {String} namespace -  module namespace. i.e. queryResult
- * @returns {Object} - returns states that are stored in memory
- */
-function memStateCreator(namespace) {
-    switch (namespace) {
-        case 'queryResult':
-            return {
-                /**
-                 * prvw_data_map, prvw_data_details_map and query_results_map has these properties:
-                 * request_sent_time?: number
-                 * total_duration?: number
-                 * is_loading?: boolean,
-                 * data? object
-                 * query_results_map has another property called `abort_controller` which is used to
-                 * abort the running query
-                 */
-                prvw_data_map: {},
-                prvw_data_details_map: {},
-                query_results_map: {},
-                /**
-                 * each state has these properties:
-                 * value?: boolean
-                 */
-                has_kill_flag_map: {},
-            }
-        default:
-            return null
-    }
-}
-/**
- * @public
- * Mutations creator for states storing in hash map structure (storing in memory).
- * The state uses worksheet id as key or queryTab id. This helps to preserve multiple worksheet's
- * data or queryTab's data in memory.
- * The name of mutation follows this pattern PATCH_STATE_NAME.
- * e.g. Mutation for is_conn_busy_map state is PATCH_IS_CONN_BUSY_MAP
- * @param {Object} param.memStates - memStates storing in memory
- * @returns {Object} - returns mutations for provided memStates
- */
-function memStatesMutationCreator(memStates) {
-    return Object.keys(memStates).reduce((mutations, stateName) => {
-        return {
-            ...mutations,
-            /**
-             * if payload is not provided, the id (wke_id or query_tab_id) key will be removed from the map
-             * @param {String} param.id - wke_id or query_tab_id
-             * @param {Object} param.payload - always an object
-             */
-            [`PATCH_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
-                if (!payload) this.vue.$delete(state[stateName], id)
-                else {
-                    state[stateName] = {
-                        ...state[stateName],
-                        ...{ [id]: { ...state[stateName][id], ...payload } },
-                    }
-                }
-            },
-        }
-    }, {})
-}
-
-/**
- * @public
  * @param {Object} entity - ORM entity object
  * @param {String|Function} payload - either an entity id or a callback function that return Boolean (filter)
  * @returns {Array} returns entities
@@ -466,9 +377,6 @@ export default {
     deepReplaceNode,
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
-    syncStateCreator,
-    memStateCreator,
-    memStatesMutationCreator,
     filterEntity,
     categorizeSqlConns,
 }

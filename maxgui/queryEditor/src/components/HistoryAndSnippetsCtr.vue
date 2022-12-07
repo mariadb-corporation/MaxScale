@@ -205,6 +205,7 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import ResultDataTable from './ResultDataTable'
 
 export default {
@@ -233,23 +234,24 @@ export default {
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
             NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
-            curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.queryPersisted.query_history,
             query_snippets: state => state.queryPersisted.query_snippets,
         }),
-
+        currQueryMode() {
+            return QueryResult.getters('getCurrQueryMode')
+        },
         activeView: {
             get() {
-                return this.curr_query_mode
+                return this.currQueryMode
             },
-            set(value) {
+            set(v) {
                 if (
-                    this.curr_query_mode === this.QUERY_MODES.HISTORY ||
-                    this.curr_query_mode === this.QUERY_MODES.SNIPPETS
+                    this.currQueryMode === this.QUERY_MODES.HISTORY ||
+                    this.currQueryMode === this.QUERY_MODES.SNIPPETS
                 )
-                    this.SET_CURR_QUERY_MODE({
-                        payload: value,
-                        id: Worksheet.getters('getActiveQueryTabId'),
+                    QueryResult.update({
+                        where: Worksheet.getters('getActiveQueryTabId'),
+                        data: { curr_query_mode: v },
                     })
             },
         },
@@ -378,7 +380,6 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_QUERY_HISTORY: 'queryPersisted/SET_QUERY_HISTORY',
             SET_QUERY_SNIPPETS: 'queryPersisted/SET_QUERY_SNIPPETS',
         }),

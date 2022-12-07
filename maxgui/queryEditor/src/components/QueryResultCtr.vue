@@ -45,7 +45,7 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
-                    :currQueryMode="curr_query_mode"
+                    :currQueryMode="currQueryMode"
                     :activePrvwNodeQualifiedName="activePrvwNodeQualifiedName"
                     :isLoading="isLoading"
                     :data="queryData"
@@ -81,10 +81,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations, mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import DataPrvw from './DataPrvw.vue'
 import ResultsTab from './ResultsTab.vue'
 import HistoryAndSnippetsCtr from './HistoryAndSnippetsCtr.vue'
@@ -113,11 +114,6 @@ export default {
     computed: {
         ...mapState({
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
-            curr_query_mode: state => state.queryResult.curr_query_mode,
-        }),
-        ...mapGetters({
-            getUserQueryRes: 'queryResult/getUserQueryRes',
-            getPrvwData: 'queryResult/getPrvwData',
         }),
         isConnBusy() {
             return QueryConn.getters('getIsConnBusy')
@@ -129,9 +125,12 @@ export default {
              */
             return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 }
         },
+        currQueryMode() {
+            return QueryResult.getters('getCurrQueryMode')
+        },
         activeTab: {
             get() {
-                switch (this.curr_query_mode) {
+                switch (this.currQueryMode) {
                     case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.QUERY_MODES.PRVW_DATA:
                         return this.QUERY_MODES.PRVW_DATA
@@ -139,13 +138,13 @@ export default {
                     case this.QUERY_MODES.HISTORY:
                         return this.QUERY_MODES.HISTORY
                     default:
-                        return this.curr_query_mode
+                        return this.currQueryMode
                 }
             },
-            set(value) {
-                this.SET_CURR_QUERY_MODE({
-                    payload: value,
-                    id: Worksheet.getters('getActiveQueryTabId'),
+            set(v) {
+                QueryResult.update({
+                    where: Worksheet.getters('getActiveQueryTabId'),
+                    data: { curr_query_mode: v },
                 })
             },
         },
@@ -154,12 +153,12 @@ export default {
         },
         queryData() {
             const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS } = this.QUERY_MODES
-            switch (this.curr_query_mode) {
+            switch (this.currQueryMode) {
                 case QUERY_VIEW:
-                    return this.getUserQueryRes
+                    return QueryResult.getters('getUserQueryRes')
                 case PRVW_DATA:
                 case PRVW_DATA_DETAILS:
-                    return this.getPrvwData(this.curr_query_mode)
+                    return QueryResult.getters('getPrvwData')(this.currQueryMode)
                 default:
                     return {}
             }
@@ -180,10 +179,6 @@ export default {
         activePrvwNodeQualifiedName() {
             return SchemaSidebar.getters('getActivePrvwNodeFQN')
         },
-    },
-
-    methods: {
-        ...mapMutations({ SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE' }),
     },
 }
 </script>

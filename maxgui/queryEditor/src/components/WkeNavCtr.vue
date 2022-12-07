@@ -36,7 +36,7 @@
                                     {{ wke.name }}
                                 </span>
                                 <v-progress-circular
-                                    v-if="isWkeLoadingQueryResult(wke.id)"
+                                    v-if="getIsWkeLoadingQueryResult(wke.id)"
                                     class="ml-2"
                                     size="16"
                                     width="2"
@@ -86,10 +86,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import WkeToolbar from './WkeToolbar.vue'
 
 export default {
@@ -104,9 +104,6 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
-        }),
         allWorksheets() {
             return Worksheet.all()
         },
@@ -128,6 +125,17 @@ export default {
         },
         getIsConnBusyByQueryTabId(id) {
             return QueryConn.getters('getIsConnBusyByQueryTabId')(id)
+        },
+        getIsWkeLoadingQueryResult(wkeId) {
+            const queryTabIds = QueryTab.getters('getQueryTabsByWkeId')(wkeId).map(s => s.id)
+            let isLoading = false
+            for (const id of queryTabIds) {
+                if (QueryResult.getters('getLoadingQueryResultByQueryTabId')(id)) {
+                    isLoading = true
+                    break
+                }
+            }
+            return isLoading
         },
         deleteWke(id) {
             Worksheet.dispatch('handleDeleteWke', id)

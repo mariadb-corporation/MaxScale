@@ -99,6 +99,7 @@ import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import SchemaTreeCtr from './SchemaTreeCtr.vue'
 
 export default {
@@ -150,11 +151,8 @@ export default {
     methods: {
         ...mapMutations({
             SET_IS_SIDEBAR_COLLAPSED: 'queryPersisted/SET_IS_SIDEBAR_COLLAPSED',
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
         }),
         ...mapActions({
-            clearDataPreview: 'queryResult/clearDataPreview',
-            fetchPrvw: 'queryResult/fetchPrvw',
             queryAlterTblSuppData: 'editorsMem/queryAlterTblSuppData',
         }),
         async fetchSchemas() {
@@ -164,9 +162,14 @@ export default {
             await QueryConn.dispatch('useDb', param)
         },
         async fetchNodePrvwData({ query_mode, qualified_name }) {
-            this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: query_mode, id: this.activeQueryTabId })
-            await this.fetchPrvw({ qualified_name: qualified_name, query_mode })
+            QueryResult.dispatch('clearDataPreview')
+            QueryResult.update({
+                where: this.activeQueryTabId,
+                data: {
+                    curr_query_mode: query_mode,
+                },
+            })
+            await QueryResult.dispatch('fetchPrvw', { qualified_name: qualified_name, query_mode })
         },
         async handleLoadChildren(node) {
             await SchemaSidebar.dispatch('loadChildNodes', node)

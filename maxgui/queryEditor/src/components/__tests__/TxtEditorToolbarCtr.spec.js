@@ -114,9 +114,9 @@ describe(`txt-editor-toolbar-ctr`, () => {
             it(des, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultByQueryTabId: () => () => true,
-                        getIsRunBtnDisabledByQueryTabId: () => () => true,
-                        getIsVisBtnDisabledByQueryTabId: () => () => true,
+                        isExecuting: () => true,
+                        isRunBtnDisabled: () => true,
+                        isVisBtnDisabled: () => true,
                     },
                 })
                 if (btn === 'run-btn') {
@@ -129,31 +129,31 @@ describe(`txt-editor-toolbar-ctr`, () => {
             it(`${btn} should be clickable if it matches certain conditions`, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultByQueryTabId: () => () => false,
-                        getIsRunBtnDisabledByQueryTabId: () => () => false,
-                        getIsVisBtnDisabledByQueryTabId: () => () => false,
+                        isExecuting: () => false,
+                        isRunBtnDisabled: () => false,
+                        isVisBtnDisabled: () => false,
                     },
                 })
                 const btnComponent = wrapper.find(`.${btn}`)
                 expect(btnComponent.element.disabled).to.be.false
             })
-            let handler = 'SET_SHOW_VIS_SIDEBAR'
+            let handler = 'toggleVisSidebar'
             if (btn === 'run-btn') handler = 'handleRun'
             it(`Should call ${handler}`, () => {
                 wrapper = mountFactory({
                     computed: {
-                        getLoadingQueryResultByQueryTabId: () => () => false,
-                        getIsRunBtnDisabledByQueryTabId: () => () => false,
-                        getIsVisBtnDisabledByQueryTabId: () => () => false,
+                        isExecuting: () => false,
+                        isRunBtnDisabled: () => false,
+                        isVisBtnDisabled: () => false,
                     },
                 })
                 const spy = sinon.spy(wrapper.vm, handler)
-                const show_vis_sidebar = wrapper.vm.show_vis_sidebar
+                const isVisSidebarShown = wrapper.vm.isVisSidebarShown
                 wrapper.find(`.${btn}`).trigger('click')
                 switch (btn) {
                     case 'visualize-btn':
                         spy.should.have.been.calledOnceWithExactly({
-                            payload: !show_vis_sidebar,
+                            payload: !isVisSidebarShown,
                             id: dummy_query_tab.id,
                         })
                         break
@@ -172,7 +172,7 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 computed: {
                     queryTxt: () => 'SELECT 1',
                     query_confirm_flag: () => 1,
-                    getIsRunBtnDisabledByQueryTabId: () => () => false,
+                    isRunBtnDisabled: () => false,
                 },
             })
             sinon.stub(wrapper.vm, 'onRun')
@@ -186,14 +186,14 @@ describe(`txt-editor-toolbar-ctr`, () => {
             let setQueryConfirmFlagCallCount = 0
             wrapper = mountFactory({
                 computed: {
-                    getIsRunBtnDisabledByQueryTabId: () => () => false,
+                    isRunBtnDisabled: () => false,
                     query_confirm_flag: () => 1,
                 },
                 methods: {
                     SET_QUERY_CONFIRM_FLAG: () => setQueryConfirmFlagCallCount++,
                 },
             })
-            sinon.stub(wrapper.vm, 'fetchQueryResult')
+            sinon.stub(wrapper.vm, 'fetchUserQuery')
             sinon.stub(wrapper.vm, 'SET_CURR_QUERY_MODE')
             await wrapper.setData({
                 dontShowConfirm: true,
@@ -208,8 +208,8 @@ describe(`txt-editor-toolbar-ctr`, () => {
         it(`Should render stop-btn if query result is loading`, () => {
             wrapper = mountFactory({
                 computed: {
-                    getLoadingQueryResultByQueryTabId: () => () => true,
-                    getIsRunBtnDisabledByQueryTabId: () => () => false,
+                    isExecuting: () => true,
+                    isRunBtnDisabled: () => false,
                 },
             })
             expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)

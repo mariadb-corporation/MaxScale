@@ -80,6 +80,7 @@ import { mapMutations, mapGetters } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
 import saveFile from '@queryEditorSrc/mixins/saveFile'
 
@@ -94,10 +95,7 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
-            getIsQueryTabUnsaved: 'fileSysAccess/getIsQueryTabUnsaved',
-        }),
+        ...mapGetters({ getIsQueryTabUnsaved: 'fileSysAccess/getIsQueryTabUnsaved' }),
         activeQueryTabId: {
             get() {
                 return Worksheet.getters('getActiveQueryTabId')
@@ -122,6 +120,9 @@ export default {
         }),
         getIsConnBusyByQueryTabId(id) {
             return QueryConn.getters('getIsConnBusyByQueryTabId')(id)
+        },
+        getLoadingQueryResultByQueryTabId(id) {
+            return QueryResult.getters('getLoadingQueryResultByQueryTabId')(id)
         },
         /**
          * @param {Object} queryTab - queryTab object

@@ -11,7 +11,9 @@
             :loading="hasKillFlag"
             @click="
                 () =>
-                    isExecuting ? stopQuery() : handleRun(selected_query_txt ? 'selected' : 'all')
+                    isExecuting
+                        ? stopUserQuery()
+                        : handleRun(selected_query_txt ? 'selected' : 'all')
             "
         >
             <template v-slot:btn-content>
@@ -36,18 +38,18 @@
         </mxs-tooltip-btn>
         <mxs-tooltip-btn
             btnClass="visualize-btn toolbar-square-btn"
-            :depressed="show_vis_sidebar"
-            :text="!show_vis_sidebar"
-            :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+            :depressed="isVisSidebarShown"
+            :text="!isVisSidebarShown"
+            :color="isVisSidebarShown ? 'primary' : 'accent-dark'"
             :disabled="isVisBtnDisabled"
-            @click="SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, id: queryTab.id })"
+            @click="toggleVisSidebar"
         >
             <template v-slot:btn-content>
                 <v-icon size="16"> $vuetify.icons.mxs_reports </v-icon>
             </template>
             {{
                 $mxs_t('visualizedConfig', {
-                    action: show_vis_sidebar ? $mxs_t('hide') : $mxs_t('show'),
+                    action: isVisSidebarShown ? $mxs_t('hide') : $mxs_t('show'),
                 })
             }}
         </mxs-tooltip-btn>
@@ -170,8 +172,10 @@
  * Emits
  * @disable-tab-move-focus : void
  */
-import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
+import { mapMutations, mapState, mapActions } from 'vuex'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import RowLimitCtr from './RowLimitCtr.vue'
 import SqlEditor from './SqlEditor'
 import FileBtnsCtr from './FileBtnsCtr.vue'
@@ -212,19 +216,15 @@ export default {
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
-            is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
-            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
+            is_max_rows_valid: state => state.editorsMem.is_max_rows_valid,
             selected_query_txt: state => state.editorsMem.selected_query_txt,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
-        ...mapGetters({
-            getLoadingQueryResultByQueryTabId: 'queryResult/getLoadingQueryResultByQueryTabId',
-            getHasKillFlagMapByQueryTabId: 'queryResult/getHasKillFlagMapByQueryTabId',
-            getIsRunBtnDisabledByQueryTabId: 'queryResult/getIsRunBtnDisabledByQueryTabId',
-            getIsVisBtnDisabledByQueryTabId: 'queryResult/getIsVisBtnDisabledByQueryTabId',
-        }),
         eventBus() {
             return EventBus
+        },
+        isVisSidebarShown() {
+            return QueryResult.getters('getIsVisSidebarShown')
         },
         queryTxt() {
             return Editor.getters('getQueryTxt')
@@ -238,16 +238,28 @@ export default {
             },
         },
         isExecuting() {
-            return this.getLoadingQueryResultByQueryTabId(this.queryTab.id)
+            return QueryResult.getters('getLoadingQueryResultByQueryTabId')(this.queryTab.id)
         },
         hasKillFlag() {
-            return this.getHasKillFlagMapByQueryTabId(this.queryTab.id)
+            return QueryResult.getters('getHasKillFlagMapByQueryTabId')(this.queryTab.id)
         },
         isRunBtnDisabled() {
-            return this.getIsRunBtnDisabledByQueryTabId(this.queryTab.id)
+            const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
+            const { query_txt } = Editor.find(this.queryTab.id) || {}
+            return (
+                !query_txt ||
+                !queryTabConn.id ||
+                QueryConn.getters('getIsConnBusyByQueryTabId')(this.queryTab.id) ||
+                this.isExecuting
+            )
         },
         isVisBtnDisabled() {
-            return this.getIsVisBtnDisabledByQueryTabId(this.queryTab.id)
+            const queryTabConn = QueryConn.getters('getQueryTabConnByQueryTabId')(this.queryTab.id)
+            return (
+                !queryTabConn.id ||
+                (QueryConn.getters('getIsConnBusyByQueryTabId')(this.queryTab.id) &&
+                    this.isExecuting)
+            )
         },
     },
     activated() {
@@ -258,17 +270,21 @@ export default {
     },
     methods: {
         ...mapActions({
-            fetchQueryResult: 'queryResult/fetchQueryResult',
             pushToQuerySnippets: 'queryPersisted/pushToQuerySnippets',
-            stopQuery: 'queryResult/stopQuery',
         }),
         ...mapMutations({
             SET_QUERY_ROW_LIMIT: 'queryPersisted/SET_QUERY_ROW_LIMIT',
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'queryPersisted/SET_QUERY_CONFIRM_FLAG',
-            SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
-            SET_IS_MAX_ROWS_VALID: 'queryResult/SET_IS_MAX_ROWS_VALID',
+            SET_IS_MAX_ROWS_VALID: 'editorsMem/SET_IS_MAX_ROWS_VALID',
         }),
+        toggleVisSidebar() {
+            QueryResult.update({
+                where: this.queryTab.id,
+                data(obj) {
+                    obj.is_vis_sidebar_shown = !obj.is_vis_sidebar_shown
+                },
+            })
+        },
         /**
          * Only open dialog when its corresponding query text exists
          */
@@ -306,17 +322,19 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            this.SET_CURR_QUERY_MODE({
-                payload: this.QUERY_MODES.QUERY_VIEW,
-                id: this.queryTab.id,
+            QueryResult.update({
+                where: this.queryTab.id,
+                data: {
+                    curr_query_mode: this.QUERY_MODES.QUERY_VIEW,
+                },
             })
             switch (mode) {
                 case 'all':
-                    if (this.queryTxt) await this.fetchQueryResult(this.queryTxt)
+                    if (this.queryTxt) await QueryResult.dispatch('fetchUserQuery', this.queryTxt)
                     break
                 case 'selected':
                     if (this.selected_query_txt)
-                        await this.fetchQueryResult(this.selected_query_txt)
+                        await QueryResult.dispatch('fetchUserQuery', this.selected_query_txt)
                     break
             }
         },
@@ -350,7 +368,7 @@ export default {
                 return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
             return true
         },
-        shortKeyHandler(key) {
+        async shortKeyHandler(key) {
             switch (key) {
                 case 'ctrl-d':
                 case 'mac-cmd-d':
@@ -366,7 +384,7 @@ export default {
                     break
                 case 'ctrl-shift-c':
                 case 'mac-cmd-shift-c':
-                    if (this.isExecuting) this.stopQuery()
+                    if (this.isExecuting) await QueryResult.dispatch('stopUserQuery')
             }
         },
     },

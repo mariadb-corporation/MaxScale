@@ -23,6 +23,7 @@ export default {
             on_save: () => null,
             dont_save: () => null,
         },
+        is_max_rows_valid: true,
         // states for DDL_EDITOR
         charset_collation_map: {},
         def_db_charset_map: {},
@@ -34,6 +35,9 @@ export default {
         },
         SET_FILE_DLG_DATA(state, payload) {
             state.file_dlg_data = payload
+        },
+        SET_IS_MAX_ROWS_VALID(state, payload) {
+            state.is_max_rows_valid = payload
         },
         SET_CHARSET_COLLATION_MAP(state, payload) {
             state.charset_collation_map = payload

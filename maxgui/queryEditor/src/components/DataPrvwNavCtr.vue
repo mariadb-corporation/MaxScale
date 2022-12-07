@@ -32,9 +32,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions, mapMutations } from 'vuex'
+import { mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 
 export default {
     name: 'data-prvw-nav-ctr',
@@ -45,20 +46,22 @@ export default {
     computed: {
         ...mapState({
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
-            curr_query_mode: state => state.queryResult.curr_query_mode,
         }),
+        currQueryMode() {
+            return QueryResult.getters('getCurrQueryMode')
+        },
         activeView: {
             get() {
-                return this.curr_query_mode
+                return this.currQueryMode
             },
-            set(value) {
+            set(v) {
                 if (
-                    this.curr_query_mode === this.QUERY_MODES.PRVW_DATA ||
-                    this.curr_query_mode === this.QUERY_MODES.PRVW_DATA_DETAILS
+                    this.currQueryMode === this.QUERY_MODES.PRVW_DATA ||
+                    this.currQueryMode === this.QUERY_MODES.PRVW_DATA_DETAILS
                 )
-                    this.SET_CURR_QUERY_MODE({
-                        payload: value,
-                        id: Worksheet.getters('getActiveQueryTabId'),
+                    QueryResult.update({
+                        where: Worksheet.getters('getActiveQueryTabId'),
+                        data: { curr_query_mode: v },
                     })
             },
         },
@@ -70,8 +73,6 @@ export default {
         },
     },
     methods: {
-        ...mapMutations({ SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE' }),
-        ...mapActions({ fetchPrvw: 'queryResult/fetchPrvw' }),
         /**
          * This function checks if there is no preview data or details data
          * before dispatching action to fetch either preview data or details
@@ -83,7 +84,7 @@ export default {
                 case this.QUERY_MODES.PRVW_DATA:
                 case this.QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.resultData.fields) {
-                        await this.fetchPrvw({
+                        await QueryResult.dispatch('fetchPrvw', {
                             qualified_name: SchemaSidebar.getters('getActivePrvwNodeFQN'),
                             query_mode,
                         })
