@@ -21,13 +21,34 @@ export default {
     namespaced: true,
     actions: {
         /**
+         * If a record is deleted, then the corresponding records in its relational
+         * tables (Worksheet, QueryTab) will have their data refreshed
+         * @param {String|Function} payload - either a QueryConn id or a callback function that return Boolean (filter)
+         */
+        cascadeRefreshOnDelete(_, payload) {
+            const entities = queryHelper.filterEntity(QueryConn, payload)
+            entities.forEach(entity => {
+                /**
+                 * refresh its relations, when a connection bound to the worksheet is deleted,
+                 * all QueryTabs data should also be refreshed (Worksheet.dispatch('cascadeRefresh').
+                 * If the connection being deleted doesn't have worksheet_id FK but query_tab_id FK,
+                 * it is a connection bound to QueryTab, thus call QueryTab.dispatch('cascadeRefresh').
+                 */
+                if (entity.worksheet_id)
+                    Worksheet.dispatch('cascadeRefresh', w => w.id === entity.worksheet_id)
+                else if (entity.query_tab_id)
+                    QueryTab.dispatch('cascadeRefresh', t => t.id === entity.query_tab_id)
+                QueryConn.delete(entity.id) // delete itself
+            })
+        },
+        /**
          * @param {Array} connIds - alive connection ids that were cloned from expired worksheet connections
          */
-        async cleanUpOrphanedConns(_, connIds) {
+        async cleanUpOrphanedConns({ dispatch }, connIds) {
             const [e] = await this.vue.$helpers.asyncTryCatch(
                 Promise.all(connIds.map(id => this.vue.$queryHttp.delete(`/sql/${id}`)))
             )
-            QueryConn.cascadeRefreshOnDelete(c => connIds.includes(c.id))
+            dispatch('cascadeRefreshOnDelete', c => connIds.includes(c.id))
             if (e) this.vue.$logger('store-queryConns-cleanUpOrphanedConns').error(e)
         },
         /**
@@ -50,10 +71,12 @@ export default {
             } = queryHelper.categorizeSqlConns({ apiConnMap, persistentConns })
             if ($typy(alive_conn_map).isEmptyObject)
                 // delete all
-                QueryConn.cascadeRefreshOnDelete(c => Boolean(c.id))
+                dispatch('cascadeRefreshOnDelete', c => Boolean(c.id))
             else {
                 //cascade refresh relations and delete expired connections
-                QueryConn.cascadeRefreshOnDelete(c => Object.keys(expired_conn_map).includes(c.id))
+                dispatch('cascadeRefreshOnDelete', c =>
+                    Object.keys(expired_conn_map).includes(c.id)
+                )
                 await dispatch('cleanUpOrphanedConns', orphaned_conn_ids)
                 //TODO: Update mxs-query-editor document for new method to update QueryConn
                 Object.keys(alive_conn_map).forEach(id =>
@@ -243,7 +266,7 @@ export default {
                         },
                         { root: true }
                     )
-                QueryConn.cascadeRefreshOnDelete(target.id)
+                dispatch('cascadeRefreshOnDelete', target.id)
             }
         },
         async disconnectAll({ getters, dispatch }) {

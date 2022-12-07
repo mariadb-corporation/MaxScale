@@ -29,7 +29,6 @@ import schemaSidebars from '@queryEditorSrc/store/orm/modules/schemaSidebars'
 import worksheets from '@queryEditorSrc/store/orm/modules/worksheets'
 
 const database = new Database()
-//TODO: Register a model and vuex module to Database.
 database.register(Editor, editors)
 database.register(QueryConn, queryConns)
 database.register(QueryResult, queryResults)

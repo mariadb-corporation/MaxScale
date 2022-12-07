@@ -11,6 +11,6 @@
  * Public License.
  */
 import VuexORM from '@vuex-orm/core'
-import database from '../orm/database'
+import database from '@queryEditorSrc/store/orm/database'
 import { ORM_NAMESPACE } from '@queryEditorSrc/store/config'
 export default VuexORM.install(database, { namespace: ORM_NAMESPACE })

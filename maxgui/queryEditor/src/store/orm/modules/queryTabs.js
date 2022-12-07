@@ -15,11 +15,50 @@ import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import { insertQueryTab } from '@queryEditorSrc/store/orm/initEntities'
+import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default {
     namespaced: true,
     actions: {
+        /**
+         * If a record is deleted, then the corresponding records in the child
+         * tables will be automatically deleted
+         * @param {String|Function} payload - either a queryTab id or a callback function that return Boolean (filter)
+         */
+        cascadeDelete({ dispatch }, payload) {
+            const entityIds = queryHelper.filterEntity(QueryTab, payload).map(entity => entity.id)
+            entityIds.forEach(id => {
+                QueryTab.delete(id) // delete itself
+                // delete record in its the relational tables
+                QueryTabMem.delete(id)
+                Editor.delete(id)
+                dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
+                QueryResult.delete(id)
+                QueryConn.delete(c => c.query_tab_id === id)
+            })
+        },
+        /**
+         * Refresh non-key and non-relational fields of an entity and its relations
+         * @param {String|Function} payload - either a QueryTab id or a callback function that return Boolean (filter)
+         */
+        cascadeRefresh(_, payload) {
+            const entityIds = queryHelper.filterEntity(QueryTab, payload).map(entity => entity.id)
+            entityIds.forEach(id => {
+                const target = QueryTab.query()
+                    .with('editor') // get editor relational field
+                    .whereId(id)
+                    .first()
+                if (target) {
+                    // refresh its relations
+                    QueryTabMem.refresh(id)
+                    // keep query_txt data even after refresh all fields
+                    Editor.refresh(id, ['query_txt'])
+                    QueryResult.refresh(id)
+                }
+            })
+        },
         /**
          * This action add new queryTab to the provided worksheet id.
          * It uses the worksheet connection to clone into a new connection and bind it
@@ -42,16 +81,16 @@ export default {
                     query_tab_id,
                 })
         },
-        async handleDeleteQueryTab(_, query_tab_id) {
+        async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
             if (id) await this.vue.$helpers.asyncTryCatch(this.vue.$queryHttp.delete(`/sql/${id}`))
-            QueryTab.cascadeDelete(query_tab_id)
+            dispatch('cascadeDelete', query_tab_id)
         },
         /**
          * @param {Object} param.queryTab - queryTab to be cleared
          */
         refreshLastQueryTab({ dispatch }, query_tab_id) {
-            QueryTab.cascadeRefresh(query_tab_id)
+            dispatch('cascadeRefresh', query_tab_id)
             QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
             Editor.refresh(query_tab_id)
             dispatch('fileSysAccess/deleteFileHandleData', query_tab_id, { root: true })
