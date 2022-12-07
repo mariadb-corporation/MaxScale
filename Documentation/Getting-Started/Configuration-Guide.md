@@ -173,7 +173,7 @@ runtime and can only be defined in a configuration file:
 * `sharedir`
 * `sql_mode`
 * `substitute_variables`
-* `threads`
+* `threads_max`
 
 All other parameters that relate to objects can be altered at runtime or can be
 changed by destroying and recreating the object in question.
@@ -434,8 +434,8 @@ round, but only if the servers of the service are monitored by a monitor.
 - **Default**: `auto`
 - **Dynamic**: Yes
 
-This parameter controls the number of worker threads that are handling the
-events coming from the kernel. The default is `auto` which uses as many threads
+This parameter controls the number of worker threads that are routing
+client traffic. The default is `auto` which uses as many threads
 as there are CPU cores. MaxScale versions older than 6 used one thread by
 default.
 
@@ -452,7 +452,7 @@ _vCPU_ of the container rounded up to the nearest integer. For instance, if
 the _vCPU_ of the container is `0.5` then `1` is an appropriate value for
 `threads`, if the _vCPU_ is `2.3` then `3` is.
 
-The maximum value for threads is 256.
+The maximum value for `threads` is specified by [threads_max](#threads_max).
 
 ```
 # Valid options are:
@@ -468,6 +468,19 @@ Please see [Threads](#threads-1) for more details.
 Additional threads will be created to execute other internal services within
 MariaDB MaxScale. This setting is used to configure the number of threads that
 will be used to manage the user connections.
+
+### `threads_max`
+
+- **Type**: positive integer
+- **Default**: 256
+- **Dynamic**: No
+
+This parameter specifies the hard limit for the number of worker threads,
+which is specified using [threads](#threads).
+
+At startup, if the value of `threads` is larger than that of `threads_max`,
+the value of `threads` will be reduced to that. At runtime, an attempt to
+increase the value of `threads` beyond that of `threads_max` is an error.
 
 ### `rebalance_period`
 

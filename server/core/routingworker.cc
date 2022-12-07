@@ -75,13 +75,13 @@ namespace
 class ThisUnit
 {
 public:
-    static const auto MAX_COUNT = mxs::Config::ParamThreadsCount::MAX_COUNT;
-
     using WN = mxb::WatchdogNotifier;
 
     bool init(mxb::WatchdogNotifier* pNotifier)
     {
         mxb_assert(!this->initialized);
+
+        this->nMax = mxs::Config::get().n_threads_max;
 
         bool rv = false;
         int fd = epoll_create(Worker::MAX_EVENTS);
@@ -139,7 +139,7 @@ public:
 
     bool             initialized {false};            // Whether the initialization has been performed.
     bool             running {false};                // True if worker threads are running
-    const int        nMax {MAX_COUNT};               // Hard maximum of workers
+    int              nMax {0};                       // Hard maximum of workers
     std::atomic<int> nRunning {0};                   // "Running" amount of workers.
     std::atomic<int> nConfigured {0};                // The configured amount of workers.
     RoutingWorker**  ppWorkers {nullptr};            // Array of routing worker instances.

@@ -280,6 +280,7 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
 
     int nRunning = RoutingWorker::nRunning();
     int nRequested = s_n_threads.get(params);
+    int nThreads_max = s_n_threads_max.get(params);
 
     if (nRequested != nRunning)
     {
@@ -297,13 +298,13 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
                     rv = false;
                 }
             }
-        }
 
-        if (rv && (nRequested > ParamThreadsCount::MAX_COUNT))
-        {
-            MXB_ERROR("MaxScale can have at most %ld routing threads; a request for %d cannot be honored.",
-                      ParamThreadsCount::MAX_COUNT, nRequested);
-            rv = false;
+            if (rv && (nRequested > nThreads_max))
+            {
+                MXB_ERROR("MaxScale can have at most %d routing threads; a request for %d cannot be honored. "
+                          "The maximum can be increased with `threads_max`.", nThreads_max, nRequested);
+                rv = false;
+            }
         }
 
         if (rv && RoutingWorker::termination_in_process())
@@ -606,6 +607,13 @@ Config::ParamThreadsCount Config::s_n_threads(
     get_processor_count(), // default
     1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max(), // min, max
     config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamCount Config::s_n_threads_max(
+    &Config::s_specification,
+    CN_THREADS_MAX,
+    "This parameter specifies a hard maximum for the number of routing threads.",
+    Config::DEFAULT_THREADS_MAX,
+    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max()); // min, max
 
 config::ParamString Config::s_qc_name(
     &Config::s_specification,
@@ -1000,6 +1008,7 @@ Config::Config(int argc, char** argv)
 {
     add_native(&Config::auto_tune, &s_auto_tune);
     add_native<ParamThreadsCount, Config, ThreadsCount>(&Config::n_threads, &s_n_threads);
+    add_native(&Config::n_threads_max, &s_n_threads_max);
     add_native(&Config::qc_name, &s_qc_name);
     add_native(&Config::qc_args, &s_qc_args);
     add_native(&Config::qc_sql_mode, &s_qc_sql_mode);
@@ -1264,6 +1273,18 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // leading to problems related to initialization order
     // in the constructor, across translation units and threads.
     this->qc_cache_properties.max_size = this->qc_cache_max_size.get();
+
+    if (this->n_threads > this->n_threads_max)
+    {
+        // We should get this far only at startup.
+        mxb_assert(!RoutingWorker::is_running());
+
+        MXB_WARNING("MaxScale can have at most %d routing threads; the request for %d "
+                    "will be reduced to that. The maximum can be increased with `threads_max`.",
+                    (int)this->n_threads_max, (int)this->n_threads);
+
+        this->n_threads = this->n_threads_max;
+    }
 
     if (this->n_threads != RoutingWorker::nRunning())
     {
@@ -1603,17 +1624,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
                             "the number of processors available: %d",
                             (int)value,
                             processor_count);
-            }
-
-            // TODO: Update documentation once this limitation is removed
-            if (value > MAX_COUNT)
-            {
-                MXB_WARNING("Number of threads set to %d, which is greater than the "
-                            "hard maximum of %d. Number of threads adjusted down "
-                            "accordingly.",
-                            (int)value,
-                            (int)MAX_COUNT);
-                value = MAX_COUNT;
             }
 
             *pValue = value;

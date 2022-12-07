@@ -71,6 +71,9 @@ public:
     using seconds = std::chrono::seconds;
     using milliseconds = std::chrono::milliseconds;
 
+    // If this is changed, update the documentation of `threads_max` as well.
+    static const int64_t DEFAULT_THREADS_MAX = 256;
+
     /**
      * Initialize the config object. To be called *once* at program startup.
      *
@@ -229,8 +232,6 @@ public:
     public:
         using config::ParamCount::ParamCount;
 
-        static const value_type MAX_COUNT = 256; // If this is changed, update documentation as well.
-
         bool from_string(const std::string& value_as_string,
                          value_type* pValue,
                          std::string* pMessage) const override final;
@@ -282,6 +283,7 @@ public:
     ParamAutoTune::value_type auto_tune;        /**< Vector of parameter names. */
 
     int64_t       n_threads;                    /**< Number of polling threads */
+    int64_t       n_threads_max;                /**< Hard maximum for number of polling threads. */
     std::string   qc_name;                      /**< The name of the query classifier to load */
     std::string   qc_args;                      /**< Arguments for the query classifieer */
     qc_sql_mode_t qc_sql_mode;                  /**< The query classifier sql mode */
@@ -419,6 +421,7 @@ private:
     static config::ParamBool                            s_skip_name_resolve;
 
     static ParamThreadsCount                            s_n_threads;
+    static config::ParamCount                           s_n_threads_max;
     static config::ParamString                          s_qc_name;
     static config::ParamString                          s_qc_args;
     static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;

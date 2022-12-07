@@ -93,6 +93,7 @@ constexpr char CN_STATE[] = "state";
 constexpr char CN_SUBSTITUTE_VARIABLES[] = "substitute_variables";
 constexpr char CN_TARGETS[] = "targets";
 constexpr char CN_THREADS[] = "threads";
+constexpr char CN_THREADS_MAX[] = "threads_max";
 constexpr char CN_TYPE[] = "type";
 constexpr char CN_UNIX[] = "unix";
 constexpr char CN_USER[] = "user";
