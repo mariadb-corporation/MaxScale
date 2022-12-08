@@ -328,19 +328,18 @@ SELECT
     WHEN BOOL_OR(ix.indisunique) THEN 'UNIQUE KEY `' || i.relname || '`'
     ELSE 'KEY `' || i.relname || '`'
   END
-  || '(' || STRING_AGG('`' || a.attname || '`', ', ') || ')' idx
-FROM pg_class t, pg_class i, pg_index ix, pg_attribute a, pg_namespace n, pg_am am
+  || '(' || STRING_AGG('`' || a.attname || '`', ', ' ORDER BY array_positions(ix.indkey, a.attnum)) || ')' idx
+FROM pg_class t, pg_class i, pg_index ix, pg_attribute a, pg_namespace n
 WHERE
   t.oid = ix.indrelid
   AND i.oid = ix.indexrelid
   AND n.oid = t.relnamespace
   AND a.attrelid = t.oid
-  AND i.relam = am.oid
   AND a.attnum = ANY(ix.indkey)
   AND t.relkind = 'r'
   AND n.nspname = ')" << table.schema() << R"('
   AND t.relname = ')" << table.table() << R"('
-GROUP BY i.relname, t.relname, am.amname
+GROUP BY i.relname, t.relname
 )";
         std::string idx_sql = ss.str();
 
