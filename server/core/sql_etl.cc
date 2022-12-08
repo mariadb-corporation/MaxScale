@@ -159,9 +159,22 @@ class PostgresqlExtractor final : public Extractor
 public:
     void init_connection(mxq::ODBC& source) override
     {
-        if (!source.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        for (auto query : {
+                "SET DATESTYLE = ISO",
+                "SET INTERVALSTYLE = SQL_STANDARD",
+                "SET statement_timeout = 0",
+                "SET idle_in_transaction_session_timeout = 0",
+                "SET lock_timeout = 0",
+                "SET extra_float_digits = 3",
+                "SET client_encoding = UTF8",
+                "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ"
+            })
         {
-            throw problem("Failed to start transaction: ", source.error());
+            if (!source.query(query))
+            {
+                MXB_INFO("Query '%s' failed: %d, %s", query, source.errnum(), source.error().c_str());
+                throw problem("Failed to prepare connection: ", source.error());
+            }
         }
     }
 
