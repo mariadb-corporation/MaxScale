@@ -342,12 +342,35 @@ WHERE
 GROUP BY i.relname, t.relname
 )";
         std::string idx_sql = ss.str();
+        ss.str("");
+
+        /**
+         * PostgreSQL has a slightly different syntax when it comes to declaring foreign keys. They are of the
+         * form `[CONSTRAINT name] FOREIGN KEY (fk_columns) REFERENCES (pk_columns)` and the output of
+         * pg_get_constraintdef() never seems to contain the constraint name. We can map these into the
+         * MariaDB form by manually adding the constraint and index names into the foreign key definition.
+         * This is much easier than having to deal with the pg_constraint table and the arrays it uses
+         * to define the field order.
+         */
+        ss <<
+            R"(
+SELECT 'CONSTRAINT `' || ct.conname || '`' ||
+' FOREIGN KEY `' || (SELECT relname FROM pg_class WHERE oid = ct.conindid) || '` ' ||
+REPLACE(pg_catalog.pg_get_constraintdef(ct.oid), 'FOREIGN KEY (', '(')
+FROM pg_class t JOIN pg_constraint ct ON (t.oid = ct.conrelid)
+JOIN pg_namespace n ON (t.relnamespace = n.oid)
+WHERE
+  ct.contype = 'f'
+  AND n.nspname = ')" << table.schema() << R"('
+  AND t.relname = ')" << table.table() << R"('
+)";
+        std::string fk_sql = ss.str();
 
         // Processing the results separately avoids the need to use CTEs and STRING_AGG to combine the fields.
         // It also allows us to format the result to look similar to SHOW CREATE TABLE.
         std::vector<std::string> values;
 
-        for (auto sql : {col_sql, idx_sql})
+        for (auto sql : {col_sql, idx_sql, fk_sql})
         {
             mxq::TextResult textresult;
 
