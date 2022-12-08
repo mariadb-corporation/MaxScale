@@ -415,16 +415,15 @@ export default {
                 sql: this.execSqlDlg.sql,
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
-            if (!this.isExecFailed)
+            if (!this.isExecFailed) {
+                const data = this.$helpers.lodash.cloneDeep(this.formData)
                 Editor.update({
                     where: Worksheet.getters('getActiveQueryTabId'),
-                    data: {
-                        tbl_creation_info: {
-                            ...this.tblCreationInfo,
-                            data: this.$helpers.lodash.cloneDeep(this.formData),
-                        },
+                    data(editor) {
+                        editor.tbl_creation_info.data = data
                     },
                 })
+            }
         },
         clearAlterResult() {
             WorksheetMem.update({

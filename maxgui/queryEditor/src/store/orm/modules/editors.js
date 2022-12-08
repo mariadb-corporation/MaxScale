@@ -18,7 +18,7 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 export default {
     namespaced: true,
     actions: {
-        async queryTblCreationInfo({ commit, getters }, node) {
+        async queryTblCreationInfo({ commit }, node) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const {
@@ -29,12 +29,9 @@ export default {
 
             Editor.update({
                 where: activeQueryTabId,
-                data: {
-                    tbl_creation_info: {
-                        ...getters.getTblCreationInfo,
-                        loading_tbl_creation_info: true,
-                        altered_active_node: node,
-                    },
+                data(editor) {
+                    editor.tbl_creation_info.loading_tbl_creation_info = true
+                    editor.tbl_creation_info.altered_active_node = node
                 },
             })
 
@@ -52,11 +49,8 @@ export default {
             if (tblOptError || colsOptsError) {
                 Editor.update({
                     where: activeQueryTabId,
-                    data: {
-                        tbl_creation_info: {
-                            ...getters.getTblCreationInfo,
-                            loading_tbl_creation_info: false,
-                        },
+                    data(editor) {
+                        editor.tbl_creation_info.loading_tbl_creation_info = false
                     },
                 })
                 let errTxt = []
@@ -80,15 +74,12 @@ export default {
 
                 Editor.update({
                     where: activeQueryTabId,
-                    data: {
-                        tbl_creation_info: {
-                            ...getters.getTblCreationInfo,
-                            data: {
-                                table_opts_data: { dbName: db, ...tblOptsData },
-                                cols_opts_data: colsOptsData,
-                            },
-                            loading_tbl_creation_info: false,
-                        },
+                    data(editor) {
+                        editor.tbl_creation_info.data = {
+                            table_opts_data: { dbName: db, ...tblOptsData },
+                            cols_opts_data: colsOptsData,
+                        }
+                        editor.tbl_creation_info.loading_tbl_creation_info = false
                     },
                 })
             }

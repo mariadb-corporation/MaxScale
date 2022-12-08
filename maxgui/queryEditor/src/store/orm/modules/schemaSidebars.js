@@ -66,12 +66,9 @@ export default {
             })
             WorksheetMem.update({
                 where: activeWkeId,
-                data: {
-                    db_tree: {
-                        ...getters.getCurrDbTree,
-                        data,
-                        completion_list: completionList,
-                    },
+                data(obj) {
+                    obj.db_tree.data = data
+                    obj.db_tree.completion_list = completionList
                 },
             })
         },
@@ -81,11 +78,8 @@ export default {
 
             WorksheetMem.update({
                 where: activeWkeId,
-                data: {
-                    db_tree: {
-                        ...getters.getCurrDbTree,
-                        loading_db_tree: true,
-                    },
+                data(obj) {
+                    obj.db_tree.loading_db_tree = true
                 },
             })
 
@@ -97,11 +91,8 @@ export default {
             if (e)
                 WorksheetMem.update({
                     where: activeWkeId,
-                    data: {
-                        db_tree: {
-                            ...getters.getCurrDbTree,
-                            loading_db_tree: false,
-                        },
+                    data(obj) {
+                        obj.db_tree.loading_db_tree = false
                     },
                 })
             else {
@@ -132,14 +123,11 @@ export default {
                     }
                     WorksheetMem.update({
                         where: activeWkeId,
-                        data: {
-                            db_tree: {
-                                ...getters.getCurrDbTree,
-                                loading_db_tree: false,
-                                data,
-                                completion_list,
-                                data_of_conn: activeQueryTabConn.name,
-                            },
+                        data(obj) {
+                            obj.db_tree.loading_db_tree = false
+                            obj.db_tree.data = data
+                            obj.db_tree.completion_list = completion_list
+                            obj.db_tree.data_of_conn = activeQueryTabConn.name
                         },
                     })
                 }

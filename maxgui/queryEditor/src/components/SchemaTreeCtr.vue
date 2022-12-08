@@ -214,21 +214,15 @@ export default {
                     if (this.$typy(this.alteredActiveNode, 'id').safeString)
                         Editor.update({
                             where: this.activeQueryTabId,
-                            data: {
-                                tbl_creation_info: {
-                                    ...Editor.getters('getTblCreationInfo'),
-                                    altered_active_node: activeNodes[0],
-                                },
+                            data(editor) {
+                                editor.tbl_creation_info.altered_active_node = activeNodes[0]
                             },
                         })
                     else
                         WorksheetMem.update({
                             where: this.activeWkeId,
-                            data: {
-                                db_tree: {
-                                    ...SchemaSidebar.getters('getCurrDbTree'),
-                                    active_prvw_node: activeNodes[0],
-                                },
+                            data(obj) {
+                                obj.db_tree.active_prvw_node = activeNodes[0]
                             },
                         })
                 }

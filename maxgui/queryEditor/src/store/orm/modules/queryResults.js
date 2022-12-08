@@ -98,14 +98,11 @@ export default {
 
             QueryTabMem.update({
                 where: activeQueryTabId,
-                data: {
-                    query_results: {
-                        request_sent_time,
-                        total_duration: 0,
-                        is_loading: true,
-                        data: {},
-                        abort_controller,
-                    },
+                data(obj) {
+                    obj.query_results.request_sent_time = request_sent_time
+                    obj.query_results.total_duration = 0
+                    obj.query_results.is_loading = true
+                    obj.query_results.abort_controller = abort_controller
                 },
             })
 
@@ -159,12 +156,9 @@ export default {
                 QueryTabMem.update({
                     where: activeQueryTabId,
                     data(obj) {
-                        obj.query_results = {
-                            ...obj.query_results,
-                            data: Object.freeze(res.data.data),
-                            total_duration: parseFloat(total_duration),
-                            is_loading: false,
-                        }
+                        obj.query_results.data = Object.freeze(res.data.data)
+                        obj.query_results.total_duration = parseFloat(total_duration)
+                        obj.query_results.is_loading = false
                     },
                 })
 
