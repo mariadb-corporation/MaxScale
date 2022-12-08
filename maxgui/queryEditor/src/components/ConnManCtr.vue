@@ -133,12 +133,12 @@ export default {
         isConnBusy() {
             return QueryConn.getters('getIsConnBusy')
         },
+        wkeConns() {
+            return QueryConn.getters('getWkeConns')
+        },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
         connOptions() {
-            return QueryConn.getters('getWkeConns').map(c => ({
-                ...c,
-                disabled: Boolean(c.worksheet_id),
-            }))
+            return this.wkeConns.map(c => ({ ...c, disabled: Boolean(c.worksheet_id) }))
         },
         availableConnOpts() {
             return this.connOptions.filter(cnn => !cnn.disabled)

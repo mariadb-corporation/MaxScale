@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -16,29 +15,44 @@ import mount from '@tests/unit/setup'
 import ConnManCtr from '../ConnManCtr.vue'
 import { itemSelectMock } from '@tests/unit/utils'
 
-const dummy_sql_conns = {
-    1: {
+const dummyWkeConns = [
+    {
         id: '1',
+        active_db: 'test',
+        attributes: {},
+        binding_type: 'WORKSHEET',
         name: 'server_0',
         type: 'servers',
-        binding_type: 'WORKSHEET',
-        wke_id_fk: 'WKE_ID_123',
+        meta: {},
+        clone_of_conn_id: null,
+        worksheet_id: 'WKE_ID_123',
+        query_tab_id: null,
     },
-    2: {
+    {
         id: '2',
+        active_db: '',
+        attributes: {},
+        binding_type: 'WORKSHEET',
         name: 'server_1',
         type: 'servers',
-        binding_type: 'WORKSHEET',
-        wke_id_fk: 'WKE_ID_456',
+        meta: {},
+        clone_of_conn_id: null,
+        worksheet_id: 'WKE_ID_456',
+        query_tab_id: null,
     },
-    3: {
+    {
         id: '3',
+        active_db: '',
+        attributes: {},
+        binding_type: 'WORKSHEET',
         name: 'server_2',
         type: 'servers',
-        binding_type: 'WORKSHEET',
-        wke_id_fk: '',
+        meta: {},
+        clone_of_conn_id: null,
+        worksheet_id: null,
+        query_tab_id: 'QUERY_TAB_ID',
     },
-}
+]
 
 const mountFactory = opts =>
     mount({
@@ -50,24 +64,11 @@ const mountFactory = opts =>
 // To have an active connection, activeWkeConn should have value
 function mockActiveConnState() {
     return {
-        connOptions: () => Object.values(dummy_sql_conns),
-        activeWkeConn: () => dummy_sql_conns['1'],
-        getActiveQueryTabId: () => 'QUERY_TAB_123_45',
+        wkeConns: () => dummyWkeConns,
+        activeWkeConn: () => dummyWkeConns[0],
     }
 }
 
-function mockNewConnData() {
-    return {
-        body: {
-            target: 'server_0',
-            user: 'maxskysql',
-            password: 'skysql',
-            db: '',
-            timeout: 300,
-        },
-        resourceType: 'servers',
-    }
-}
 describe(`ConnManCtr - child component's data communication tests `, () => {
     let wrapper
     beforeEach(() => {
@@ -156,7 +157,7 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
         wrapper = mountFactory({
             computed: {
                 //stub availableConnOpts so that  server_1 is available to use
-                availableConnOpts: () => Object.values(dummy_sql_conns),
+                availableConnOpts: () => dummyWkeConns,
                 pre_select_conn_rsrc: () => preSelectConnRsrcStub,
             },
             methods: {
@@ -198,7 +199,7 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         // mock unlinkConn call
         wrapper.vm.unlinkConn(wrapper.vm.connOptions[0])
-        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_sql_conns['1'].name })
+        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: wrapper.vm.connOptions[0].name })
     })
 })
 
@@ -227,37 +228,5 @@ describe(`ConnManCtr - other tests`, () => {
         wrapper.vm.unlinkConn(connToBeDeleted)
         expect(wrapper.vm.isConfDlgOpened).to.be.true
         expect(wrapper.vm.targetConn).to.be.deep.equals(connToBeDeleted)
-    })
-    it(`Should call disconnect action with accurate args when
-      confirm deleting a connection`, () => {
-        const connToBeDeleted = wrapper.vm.connOptions[0]
-        const disconnectSpy = sinon.spy(ConnManCtr.methods, 'disconnect')
-        wrapper = mountFactory({
-            shallow: false,
-            computed: { ...mockActiveConnState() },
-            // mock opening confirm dialog
-            data: () => ({ isConfDlgOpened: true, targetConn: connToBeDeleted }),
-        })
-        wrapper.vm.confirmDelConn()
-        disconnectSpy.should.have.been.calledOnceWith({
-            showSnackbar: true,
-            id: connToBeDeleted.id,
-        })
-        disconnectSpy.restore()
-    })
-
-    const handleOpenConnCases = [
-        'worksheet is bound to a connection',
-        'worksheet is not bound to a connection',
-    ]
-    handleOpenConnCases.forEach(c => {
-        it(`Should handle dispatch openConnect action accurately when ${c}`, () => {
-            let openConnectArgs
-            wrapper = mountFactory({
-                methods: { openConnect: args => (openConnectArgs = args) },
-            })
-            wrapper.vm.handleOpenConn(mockNewConnData())
-            expect(openConnectArgs).to.be.deep.equals(mockNewConnData())
-        })
     })
 })

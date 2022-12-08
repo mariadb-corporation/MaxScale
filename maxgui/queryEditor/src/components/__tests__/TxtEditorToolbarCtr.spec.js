@@ -28,9 +28,6 @@ const mountFactory = opts =>
                 propsData: {
                     queryTab: dummy_query_tab,
                 },
-                computed: {
-                    getActiveQueryTabId: () => dummy_query_tab.id,
-                },
             },
             opts
         )
@@ -137,31 +134,27 @@ describe(`txt-editor-toolbar-ctr`, () => {
                 const btnComponent = wrapper.find(`.${btn}`)
                 expect(btnComponent.element.disabled).to.be.false
             })
-            let handler = 'toggleVisSidebar'
-            if (btn === 'run-btn') handler = 'handleRun'
+
+            const handler = btn === 'run-btn' ? 'handleRun' : 'toggleVisSidebar'
             it(`Should call ${handler}`, () => {
+                let callCount = 0,
+                    param = ''
                 wrapper = mountFactory({
                     computed: {
                         isExecuting: () => false,
                         isRunBtnDisabled: () => false,
                         isVisBtnDisabled: () => false,
                     },
+                    methods: {
+                        [handler]: args => {
+                            callCount++
+                            param = args
+                        },
+                    },
                 })
-                const spy = sinon.spy(wrapper.vm, handler)
-                const isVisSidebarShown = wrapper.vm.isVisSidebarShown
                 wrapper.find(`.${btn}`).trigger('click')
-                switch (btn) {
-                    case 'visualize-btn':
-                        spy.should.have.been.calledOnceWithExactly({
-                            payload: !isVisSidebarShown,
-                            id: dummy_query_tab.id,
-                        })
-                        break
-                    case 'run-btn':
-                        spy.should.have.been.calledOnceWithExactly('all')
-                        break
-                }
-                spy.restore()
+                expect(callCount).to.be.equal(1)
+                if (btn === 'run-btn') expect(param).to.be.equal('all')
             })
         })
     })
@@ -193,8 +186,6 @@ describe(`txt-editor-toolbar-ctr`, () => {
                     SET_QUERY_CONFIRM_FLAG: () => setQueryConfirmFlagCallCount++,
                 },
             })
-            sinon.stub(wrapper.vm, 'fetchUserQuery')
-            sinon.stub(wrapper.vm, 'SET_CURR_QUERY_MODE')
             await wrapper.setData({
                 dontShowConfirm: true,
                 isConfDlgOpened: true,

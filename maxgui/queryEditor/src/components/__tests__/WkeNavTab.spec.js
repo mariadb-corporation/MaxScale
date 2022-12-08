@@ -14,23 +14,31 @@
 import mount from '@tests/unit/setup'
 import WkeNavTab from '../WkeNavTab.vue'
 
-const mountFactory = opts => mount({ shallow: true, component: WkeNavTab, ...opts })
+const mountFactory = opts =>
+    mount({
+        shallow: false,
+        component: WkeNavTab,
+        propsData: {
+            worksheet: dummyWke,
+        },
+        ...opts,
+    })
 
+const dummyWke = {
+    id: '71cb4820-76d6-11ed-b6c2-dfe0423852da',
+    active_query_tab_id: '71cb4821-76d6-11ed-b6c2-dfe0423852da',
+    name: 'WORKSHEET',
+}
 describe('wke-nav-tab', () => {
     let wrapper
 
     beforeEach(() => {
         wrapper = mountFactory({
-            propsData: {
-                worksheet: {
-                    id: '71cb4820-76d6-11ed-b6c2-dfe0423852da',
-                    active_query_tab_id: '71cb4821-76d6-11ed-b6c2-dfe0423852da',
-                    name: 'WORKSHEET',
-                },
-            },
             computed: {
-                totalWorksheets: () => 1,
+                wkeId: () => dummyWke.id,
                 wkeConn: () => ({}),
+                isWkeLoadingQueryResult: () => false,
+                totalWorksheets: () => 1,
             },
         })
     })

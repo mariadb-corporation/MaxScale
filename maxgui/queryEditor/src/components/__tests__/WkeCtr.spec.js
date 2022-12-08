@@ -27,8 +27,8 @@ const mountFactory = opts =>
                     ctrDim: dummyCtrDim,
                 },
                 computed: {
-                    getAllQueryTabs: () => dummy_query_tabs,
-                    getActiveQueryTabId: () => dummy_query_tabs[0].id,
+                    allQueryTabs: () => dummy_query_tabs,
+                    activeQueryTabId: () => dummy_query_tabs[0].id,
                 },
                 stubs: {
                     'sql-editor': "<div class='stub'></div>",

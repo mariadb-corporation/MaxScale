@@ -27,11 +27,11 @@ describe(`wke-toolbar-left-ctr`, () => {
         })
     })
 
-    it(`Should call insertWke`, async () => {
+    it(`Should call add`, async () => {
         let isCalled = false
         let wrapper = mountFactory({
             computed: { isAddWkeDisabled: () => false },
-            methods: { insertWke: () => (isCalled = true) },
+            methods: { add: () => (isCalled = true) },
         })
         await wrapper.find('.add-wke-btn').trigger('click')
         expect(isCalled).to.be.true

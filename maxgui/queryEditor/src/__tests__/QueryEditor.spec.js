@@ -15,21 +15,16 @@ import mount from '@tests/unit/setup'
 import QueryEditor from '../QueryEditor.vue'
 import { lodash } from '@share/utils/helpers'
 
-const stubModuleMethods = {
-    handleAutoClearQueryHistory: () => null,
-    validateConns: () => null,
-}
-
 const mountFactory = opts =>
     mount(
         lodash.merge(
             {
-                shallow: false,
+                shallow: true,
                 component: QueryEditor,
                 computed: {
                     is_validating_conn: () => false,
                     allWorksheets: () => [{ id: 'WORKSHEET_123' }],
-                    getActiveWkeId: () => 'WORKSHEET_123',
+                    activeWkeId: () => 'WORKSHEET_123',
                     ctrDim: () => ({ width: 1280, height: 800 }),
                 },
                 stubs: {
@@ -50,7 +45,6 @@ describe('QueryEditor', () => {
             mountFactory({
                 shallow: true,
                 methods: {
-                    ...stubModuleMethods,
                     handleAutoClearQueryHistory: () => handleAutoClearQueryHistoryCallCount++,
                 },
             })

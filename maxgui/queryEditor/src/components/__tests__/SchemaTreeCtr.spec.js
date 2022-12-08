@@ -170,7 +170,7 @@ describe(`schema-tree-ctr - mxs-treeview tests`, () => {
         wrapper = mountFactory({
             shallow: false,
             computed: {
-                active_db: () => dummy_schema_node.name,
+                activeQueryTabConn: () => ({ active_db: dummy_schema_node.name }),
             },
         })
         const schemaNodeNameEle = wrapper

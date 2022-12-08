@@ -290,8 +290,8 @@ describe(`ConnDlgCtr - form input tests`, () => {
                     await itemSelectMock(dropDownComponent, null)
                     await wrapper.vm.$nextTick()
                     expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
-                        wrapper.vm.$mxs_t('errors.requiredInput', {
-                            inputName: wrapper.vm.$mxs_tc(wrapper.vm.resourceType, 1),
+                        wrapper.vm.$mxs_t('errors.existingRsrcConnection', {
+                            resourceType: wrapper.vm.resourceType,
                         })
                     )
                     break

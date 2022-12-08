@@ -148,7 +148,7 @@ export default {
         getExpandedNodes: (state, getters) => getters.getSchemaSidebar.expanded_nodes || [],
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
-        getCurrDbTree: () => WorksheetMem.find(Worksheet.getters('getActiveWkeId')).db_tree || {},
+        getCurrDbTree: () => Worksheet.getters('getWorksheetMem').db_tree || {},
         getActivePrvwNode: (state, getters) => getters.getCurrDbTree.active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
         getDbTreeData: (state, getters) => getters.getCurrDbTree.data || [],

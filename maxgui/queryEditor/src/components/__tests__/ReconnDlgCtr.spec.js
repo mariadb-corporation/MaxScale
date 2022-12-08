@@ -38,7 +38,7 @@ describe('ReconnDlgCtr', () => {
         expect(wrapper.vm.showReconnDialog).to.be.false
         wrapper = mountFactory({
             computed: {
-                getLostCnnErrMsgObj: () => dummy_conn_err_obj,
+                lostCnnErrMsgObj: () => dummy_conn_err_obj,
             },
         })
         expect(wrapper.vm.showReconnDialog).to.be.true
