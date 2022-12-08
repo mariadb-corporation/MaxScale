@@ -11,7 +11,7 @@
         <v-card
             :tile="tile"
             class="d-flex align-center justify-center flex-column detail-overview__card"
-            :class="[hover && 'pointer detail-overview__card--hover', ...cardClass]"
+            :class="[hover && 'pointer detail-overview__card--hover', cardClass]"
             height="75"
             outlined
             v-on="

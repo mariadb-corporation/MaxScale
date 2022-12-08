@@ -43,8 +43,9 @@
     },
     "peerDependencies": {
         "@mdi/font": "7.0.x",
+        "@vuex-orm/core": "0.36.x",
         "axios": "0.27.x",
-        "browser-fs-access": "0.30.x",
+        "browser-fs-access": "0.31.x",
         "chart.js": "2.9.x",
         "chartjs-plugin-trendline": "0.2.x",
         "deep-diff": "1.0.x",
