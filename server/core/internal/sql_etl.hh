@@ -127,10 +127,13 @@ struct Extractor
 
 
     /**
-     * Should return the SQL needed to insert the data into MariaDB.
+     * Should return the SQL for a prepared statment that is used to insert the data into MariaDB.
      *
-     * The SQL must be of the form `INSERT INTO table(columns ...) VALUE (values...)` and the INSERT must be
-     * directly compatible with the resultset of the SELECT statement used to read the data.
+     * Unlike the create_table() and select() functions, the SQL returned by this function is used to prepare
+     * an insert statement and should only contain placeholders. The SQL should be of the form `INSERT INTO
+     * table(columns ...) VALUE (?, ?, ...)` and the INSERT must be directly compatible with the resultset of
+     * the SELECT statement used to read the data. The field names should be explicitly defined to avoid any
+     * problems with generated columns in the middle of the table.
      *
      * @param source Connection to the source server
      * @param tables The table being imported
