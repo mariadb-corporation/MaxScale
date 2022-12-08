@@ -316,6 +316,26 @@ public:
      */
     void cancel();
 
+    //
+    // ODBC catalog functions
+    //
+
+    // SQLColumns: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
+    std::optional<TextResult::Result>
+    columns(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    // SQLStatistics: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlstatistics-function
+    std::optional<TextResult::Result>
+    statistics(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    // SQLPrimaryKeys: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprimarykeys-function
+    std::optional<TextResult::Result>
+    primary_keys(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    // SQLForeignKeys: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function
+    std::optional<TextResult::Result>
+    foreign_keys(std::string_view catalog, std::string_view schema, std::string_view table);
+
 private:
     std::unique_ptr<ODBCImp> m_imp;
 };

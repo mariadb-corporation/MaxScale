@@ -31,6 +31,12 @@ struct ThisUnit
 };
 
 ThisUnit this_unit;
+
+// Helper for converting empty string_views into null pointers
+SQLCHAR* to_sql_ptr(std::string_view str)
+{
+    return str.empty() ? nullptr : (SQLCHAR*)str.data();
+}
 }
 
 namespace maxsql
@@ -65,6 +71,18 @@ public:
     void cancel();
 
     std::map<std::string, std::map<std::string, std::string>> drivers();
+
+    std::optional<TextResult::Result>
+    columns(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    std::optional<TextResult::Result>
+    statistics(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    std::optional<TextResult::Result>
+    primary_keys(std::string_view catalog, std::string_view schema, std::string_view table);
+
+    std::optional<TextResult::Result>
+    foreign_keys(std::string_view catalog, std::string_view schema, std::string_view table);
 
     bool ok_result(int64_t rows_affected, int64_t warnings) override;
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
@@ -144,6 +162,8 @@ private:
     std::pair<bool, bool>   get_batch_result(int columns, Output* handler);
     bool                    data_truncation();
     bool                    can_batch();
+
+    std::optional<TextResult::Result> get_catalog_result(SQLRETURN ret, size_t min_num_fields);
 
     SQLHENV     m_env;
     SQLHDBC     m_conn;
@@ -658,6 +678,83 @@ std::map<std::string, std::map<std::string, std::string>> ODBCImp::drivers()
     return rval;
 }
 
+std::optional<TextResult::Result>  ODBCImp::get_catalog_result(SQLRETURN ret, size_t min_num_fields)
+{
+    std::optional<TextResult::Result> rval;
+    TextResult result;
+
+    if (process_response(ret, &result))
+    {
+        const auto& rset = result.result();
+        mxb_assert_message(rset.size() < 2, "Should return only one result");
+
+        if (rset.empty() || rset[0].empty() || rset[0][0].empty())
+        {
+            rval = TextResult::Result{};
+        }
+        else
+        {
+            if (rset[0][0].size() >= min_num_fields)
+            {
+                rval = rset.front();
+            }
+            else
+            {
+                m_error = "Malformed ODBC catalog result";
+            }
+        }
+    }
+
+    return rval;
+}
+
+std::optional<TextResult::Result>
+ODBCImp::columns(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    SQLRETURN ret = SQLColumns(m_stmt,
+                               to_sql_ptr(catalog), catalog.size(),
+                               to_sql_ptr(schema), schema.size(),
+                               to_sql_ptr(table), table.size(),
+                               nullptr, 0);
+    return get_catalog_result(ret, 18);
+}
+
+std::optional<TextResult::Result>
+ODBCImp::statistics(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    SQLRETURN ret = SQLStatistics(m_stmt,
+                                  to_sql_ptr(catalog), catalog.size(),
+                                  to_sql_ptr(schema), schema.size(),
+                                  to_sql_ptr(table), table.size(),
+                                  SQL_INDEX_ALL, SQL_QUICK);
+
+    return get_catalog_result(ret, 13);
+}
+
+std::optional<TextResult::Result>
+ODBCImp::primary_keys(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    SQLRETURN ret = SQLPrimaryKeys(m_stmt,
+                                   to_sql_ptr(catalog), catalog.size(),
+                                   to_sql_ptr(schema), schema.size(),
+                                   to_sql_ptr(table), table.size());
+
+    return get_catalog_result(ret, 6);
+}
+
+std::optional<TextResult::Result>
+ODBCImp::foreign_keys(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    SQLRETURN ret = SQLForeignKeys(m_stmt,
+                                   nullptr, 0, nullptr, 0, nullptr, 0,
+                                   to_sql_ptr(catalog), catalog.size(),
+                                   to_sql_ptr(schema), schema.size(),
+                                   to_sql_ptr(table), table.size()
+                                   );
+
+    return get_catalog_result(ret, 14);
+}
+
 bool ODBCImp::query(const std::string& query, Output* output)
 {
     log_statement(query);
@@ -1160,6 +1257,30 @@ std::string ODBC::driver_version() const
 void ODBC::cancel()
 {
     return m_imp->cancel();
+}
+
+std::optional<TextResult::Result>
+ODBC::columns(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    return m_imp->columns(catalog, schema, table);
+}
+
+std::optional<TextResult::Result>
+ODBC::statistics(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    return m_imp->statistics(catalog, schema, table);
+}
+
+std::optional<TextResult::Result>
+ODBC::primary_keys(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    return m_imp->primary_keys(catalog, schema, table);
+}
+
+std::optional<TextResult::Result>
+ODBC::foreign_keys(std::string_view catalog, std::string_view schema, std::string_view table)
+{
+    return m_imp->foreign_keys(catalog, schema, table);
 }
 
 // static
