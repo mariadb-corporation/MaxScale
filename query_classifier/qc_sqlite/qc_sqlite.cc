@@ -279,9 +279,6 @@ public:
         m_table_names.shrink_to_fit();
         size += m_table_names.capacity() * sizeof(QcTableName);
 
-        m_table_fullnames.shrink_to_fit();
-        size += m_table_fullnames.capacity() * sizeof(string_view);
-
         m_field_infos.shrink_to_fit();
         size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
 
@@ -3486,20 +3483,14 @@ private:
 
         if (collected_name.empty())
         {
-            string fullname;
-
             if (!database.empty())
             {
                 collected_name.db = get_string_view("database", string(database).c_str());
-                fullname = collected_name.db;
-                fullname += ".";
             }
 
             collected_name.table = get_string_view("table", string(table).c_str());
-            fullname += collected_name.table;
 
             m_table_names.push_back(collected_name);
-            m_table_fullnames.push_back(fullname);
         }
 
         return collected_name.table;
@@ -3627,8 +3618,6 @@ public:
     string                        m_canonical;               // The canonical version of the statement.
     vector<string_view>           m_database_names;          // Vector of database names used in the query.
     vector<QcTableName>           m_table_names;             // Vector of table names used in the query.
-    vector<string>                m_table_fullnames;         // Vector of qualified table names used in the
-                                                             // query.
     vector<QC_FIELD_INFO>         m_field_infos;             // Vector of fields used by the statement.
     vector<QC_FUNCTION_INFO>      m_function_infos;          // Vector of functions used by the statement.
     vector<vector<QC_FIELD_INFO>> m_function_field_usage;    // Vector of vector fields used by functions

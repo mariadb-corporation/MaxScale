@@ -282,7 +282,6 @@ public:
     string               created_table_name;
     vector<string>       database_names;
     vector<TableName>    table_names;
-    vector<string>       full_table_names;
     string               prepare_name;
     string               canonical;
     vector<vector<char>> scratchs;
@@ -1942,7 +1941,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, vector<QcTableName>* tables)
 
     auto* pi = get_pinfo(querybuf);
 
-    if (pi->table_names.empty() && pi->full_table_names.empty())
+    if (pi->table_names.empty())
     {
         if ((lex = get_lex(querybuf)) == NULL)
         {
@@ -1986,23 +1985,6 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, vector<QcTableName>* tables)
                         TableName t { db, table };
 
                         pi->table_names.push_back(t);
-                    }
-
-                    string fullname;
-
-                    if (!db.empty())
-                    {
-                        fullname += db;
-                        fullname += ".";
-                    }
-                    fullname += table;
-
-                    auto end2 = pi->full_table_names.end();
-                    auto it2 = find(pi->full_table_names.begin(), end2, fullname);
-
-                    if (it2 == end2)
-                    {
-                        pi->full_table_names.push_back(fullname);
                     }
                 }
 
