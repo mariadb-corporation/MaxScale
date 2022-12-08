@@ -743,15 +743,15 @@ bool qc_is_drop_table_query(GWBUF* query)
     return (is_drop_table != 0) ? true : false;
 }
 
-std::vector<std::string_view> qc_get_table_names(GWBUF* query, bool fullnames)
+std::vector<QcTableName> qc_get_table_names(GWBUF* query)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    std::vector<std::string_view> names;
+    std::vector<QcTableName> names;
 
     QCInfoCacheScope scope(query);
-    this_unit.classifier->qc_get_table_names(query, fullnames, &names);
+    this_unit.classifier->qc_get_table_names(query, &names);
 
     return names;
 }

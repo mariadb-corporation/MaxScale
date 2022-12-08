@@ -136,15 +136,14 @@ struct QUERY_CLASSIFIER
     /**
      * Returns all table names.
      *
-     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
-     * @param fullnames  If non-zero, the full (i.e. qualified) names are returned.
-     * @param names      On return, the names of the statement, if @c QC_RESULT_OK
-     *                   is returned.
+     * @param stmt   A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param names  On return, the names of the statement, if @c QC_RESULT_OK
+     *               is returned.
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string_view>* names);
+    int32_t (* qc_get_table_names)(GWBUF* stmt, std::vector<QcTableName>* names);
 
     /**
      * Reports the database names.

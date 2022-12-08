@@ -1159,7 +1159,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
 
     size_t default_database_len = default_database.length();
 
-    auto tables = qc_get_table_names((GWBUF*)query, false);
+    auto tables = qc_get_table_names((GWBUF*)query);
 
     std::string_view default_table;
 
@@ -1167,7 +1167,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0];
+        default_table = tables[0].table;
     }
 
     size_t default_table_len = default_table.length();
@@ -1277,7 +1277,7 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
         default_database = databases[0];
     }
 
-    auto tables = qc_get_table_names((GWBUF*)query, false);
+    auto tables = qc_get_table_names((GWBUF*)query);
 
     std::string_view default_table;
 
@@ -1285,7 +1285,7 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0];
+        default_table = tables[0].table;
     }
 
     const QC_FIELD_INFO* infos;
@@ -1432,13 +1432,11 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
     bool fullnames = true;
 
     // TODO: Make qc const-correct.
-    for (const auto& name : qc_get_table_names((GWBUF*)query, fullnames))
+    for (const auto& name : qc_get_table_names((GWBUF*)query))
     {
-        auto pos = name.find('.');
-
-        if (pos != std::string_view::npos)
+        if (!name.db.empty())
         {
-            matches = cache_rule_compare(self, name.substr(0, pos));
+            matches = cache_rule_compare(self, name.db);
         }
         else
         {
@@ -1495,9 +1493,8 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
     mxb_assert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
 
     bool matches = false;
-    bool fullnames = true;
 
-    auto names = qc_get_table_names((GWBUF*)query, fullnames);
+    auto names = qc_get_table_names((GWBUF*)query);
 
     if (!names.empty())
     {
@@ -1505,25 +1502,26 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
 
         for (const auto& name : names)
         {
-            auto pos = name.find('.');
-
-            if (pos == std::string::npos)
+            if (name.db.empty())
             {
                 // Only "tbl"
 
                 if (default_db)
                 {
-                    matches = cache_rule_compare(self, db + '.' + std::string(name));
+                    matches = cache_rule_compare(self, db + '.' + std::string(name.table));
                 }
                 else
                 {
-                    matches = cache_rule_compare(self, name);
+                    matches = cache_rule_compare(self, name.table);
                 }
             }
             else
             {
                 // A qualified name "db.tbl".
-                matches = cache_rule_compare(self, name);
+                std::string qname(name.db);
+                qname += '.';
+                qname += name.table;
+                matches = cache_rule_compare(self, qname);
             }
 
             if (matches)
@@ -1557,24 +1555,22 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
     bool matches = false;
     bool fullnames = self->simple.database;
 
-    for (const auto& name : qc_get_table_names((GWBUF*)query, fullnames))
+    for (const auto& name : qc_get_table_names((GWBUF*)query))
     {
         std::string_view database;
         std::string_view table;
 
         if (fullnames)
         {
-            auto pos = name.find('.');
-
-            if (pos != std::string::npos)
+            if (!name.db.empty())
             {
-                database = name.substr(0, pos);
-                table = name.substr(pos + 1);
+                database = name.db;
+                table = name.table;
             }
             else
             {
                 database = default_db;
-                table = name;
+                table = name.table;
             }
 
             if (!database.empty())
@@ -1584,7 +1580,7 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
         }
         else
         {
-            matches = sv_case_eq(self->simple.table, name);
+            matches = sv_case_eq(self->simple.table, name.table);
         }
 
         if (self->op == CACHE_OP_NEQ)

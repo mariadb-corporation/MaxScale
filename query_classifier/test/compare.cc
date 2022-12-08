@@ -543,32 +543,24 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
 bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
                              GWBUF* pCopy1,
                              QUERY_CLASSIFIER* pClassifier2,
-                             GWBUF* pCopy2,
-                             bool full)
+                             GWBUF* pCopy2)
 {
     bool success = false;
     const char* HEADING;
 
-    if (full)
-    {
-        HEADING = "qc_get_table_names(full) : ";
-    }
-    else
-    {
-        HEADING = "qc_get_table_names       : ";
-    }
+    HEADING = "qc_get_table_names       : ";
 
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<std::string_view> rv1;
-    pClassifier1->qc_get_table_names(pCopy1, full, &rv1);
-    std::vector<std::string_view> rv2;
-    pClassifier2->qc_get_table_names(pCopy2, full, &rv2);
+    std::vector<QcTableName> rv1;
+    pClassifier1->qc_get_table_names(pCopy1, &rv1);
+    std::vector<QcTableName> rv2;
+    pClassifier2->qc_get_table_names(pCopy2, &rv2);
 
     // The order need not be the same, so let's compare a set.
-    std::set<std::string_view> names1(rv1.begin(), rv1.end());
-    std::set<std::string_view> names2(rv2.begin(), rv2.end());
+    std::set<QcTableName> names1(rv1.begin(), rv1.end());
+    std::set<QcTableName> names2(rv2.begin(), rv2.end());
 
     stringstream ss;
     ss << HEADING;
@@ -1233,8 +1225,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1,
     errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
-    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, false);
-    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, true);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
     errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);

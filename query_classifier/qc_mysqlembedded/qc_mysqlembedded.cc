@@ -1930,7 +1930,7 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, vector<string_view>* tables)
+int32_t qc_mysql_get_table_names(GWBUF* querybuf, vector<QcTableName>* tables)
 {
     LEX* lex;
     TABLE_LIST* tbl;
@@ -2013,18 +2013,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, vector<stri
         }   /*< while(lex->current_select) */
     }
 
-    tables->clear();
-    if (fullnames)
-    {
-        copy(pi->full_table_names.begin(), pi->full_table_names.end(), back_inserter(*tables));
-    }
-    else
-    {
-        for (const TableName& tn : pi->table_names)
-        {
-            tables->push_back(tn.table);
-        }
-    }
+    tables->assign(pi->table_names.begin(), pi->table_names.end());
 
     return QC_RESULT_OK;
 }

@@ -1430,28 +1430,27 @@ void SchemaRouterSession::send_databases()
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
-    auto table_views = qc_get_table_names(buffer, true);
+    std::vector<QcTableName> table_names = qc_get_table_names(buffer);
 
-    // We get string_views, but we may need to modify elements so we need to
+    // We get QcTableNames, but as we need qualified names we need to
     // copy them over to a vector<string>.
     std::vector<std::string> tables;
-    tables.reserve(table_views.size());
+    tables.reserve(table_names.size());
 
-    for (auto sv : table_views)
+    for (const auto& tn : table_names)
     {
-        tables.emplace_back(std::string(sv));
+        std::string table = !tn.db.empty() ? std::string(tn.db) : m_current_db;
+        table += ".";
+        table += tn.table;
+
+        tables.emplace_back(table);
     }
 
     mxs::Target* rval = NULL;
 
-    table_views.clear();
-    for (auto& t : tables)
+    std::vector<std::string_view> table_views;
+    for (const auto& t : tables)
     {
-        if (t.find('.') == std::string::npos)
-        {
-            t = m_current_db + '.' + t;
-        }
-
         // Then we need to copy the modified strings back to our vector<string_view>.
         table_views.emplace_back(std::string_view(t));
     }
@@ -1482,7 +1481,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         {
             std::string_view stmt = qc_get_prepare_name(buffer);
 
-            if ((rval = m_shard.get_location(qc_get_table_names(pStmt, true))))
+            if ((rval = m_shard.get_location(qc_get_table_names(pStmt))))
             {
                 MXB_INFO("PREPARING NAMED %.*s ON SERVER %s", (int)stmt.length(), stmt.data(), rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1512,7 +1511,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        rval = m_shard.get_location(qc_get_table_names(buffer, true));
+        rval = m_shard.get_location(qc_get_table_names(buffer));
 
         if (rval)
         {

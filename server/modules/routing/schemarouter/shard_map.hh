@@ -54,7 +54,9 @@ public:
      * @return The database or NULL if no server contains the database
      */
     mxs::Target* get_location(std::string_view db);
+    mxs::Target* get_location(QcTableName name);
     mxs::Target* get_location(const std::vector<std::string_view>& db);
+    mxs::Target* get_location(const std::vector<QcTableName>& names);
 
     /**
      * Same as get_location except returns all servers that have it

@@ -1079,19 +1079,17 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
-    const bool fullnames = true;
-    std::vector<std::string_view> tables = qc_get_table_names(pPacket, fullnames);
+    std::vector<QcTableName> names = qc_get_table_names(pPacket);
 
-    for (auto& table : tables)
+    for (auto& name : names)
     {
         std::string qtable;
 
-        size_t dot = table.find('.');
-        if (dot == std::string_view::npos)
+        if (name.db.empty())
         {
             if (m_zDefaultDb)
             {
-                qtable = std::string(m_zDefaultDb) + "." + std::string(table);
+                qtable = std::string(m_zDefaultDb) + "." + std::string(name.table);
             }
             else
             {
@@ -1102,7 +1100,9 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
         }
         else
         {
-            qtable = table;
+            qtable = name.db;
+            qtable += '.';
+            qtable += name.table;
         }
 
         m_tables.insert(qtable);

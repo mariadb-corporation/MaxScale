@@ -104,10 +104,52 @@ mxs::Target* Shard::get_location(const std::vector<std::string_view>& tables)
     return targets.empty() ? nullptr : *targets.begin();
 }
 
+mxs::Target* Shard::get_location(const std::vector<QcTableName>& names)
+{
+    // TODO: Rewrite get_location() in terms of QcTableName, so that
+    // TODO: this conversion code can be removed.
+    std::vector<std::string> tables;
+    for (const auto& name : names)
+    {
+        std::string s;
+        if (!name.db.empty())
+        {
+            s += name.db;
+            s += '.';
+        }
+        s += name.table;
+
+        tables.push_back(s);
+    }
+
+    std::vector<std::string_view> table_views;
+    table_views.resize(tables.size());
+
+    copy(tables.begin(), tables.end(), table_views.begin());
+
+    return get_location(table_views);
+}
+
 mxs::Target* Shard::get_location(std::string_view table)
 {
     auto targets = get_all_locations(std::move(table));
     return targets.empty() ? nullptr : *targets.begin();
+}
+
+mxs::Target* Shard::get_location(QcTableName name)
+{
+    // TODO: Rewrite get_location() in terms of QcTableName, so that
+    // TODO: this conversion code can be removed.
+
+    std::string table;
+    if (!name.db.empty())
+    {
+        table += name.db;
+        table += '.';
+    }
+    table += name.table;
+
+    return get_location(table);
 }
 
 mxs::Target* Shard::get_statement(std::string stmt)

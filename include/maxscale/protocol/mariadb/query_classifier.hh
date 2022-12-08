@@ -348,10 +348,7 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
 /**
  * Returns the tables accessed by the statement.
  *
- * @param stmt       A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- * @param tblsize    Pointer to integer where the number of tables is stored.
- * @param fullnames  If true, a table names will include the database name
- *                   as well (if explicitly referred to in the statement).
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return Array of strings or NULL if a memory allocation fails.
  *
@@ -381,12 +378,39 @@ struct QcTableName
         return this->db == rhs.db && this->table == rhs.table;
     }
 
+    bool operator < (const QcTableName& rhs) const
+    {
+        return this->db < rhs.db || (this->db == rhs.db && this->table < rhs.table);
+    }
+
     bool empty() const
     {
         return this->db.empty() && this->table.empty();
     }
+
+    std::string to_string() const
+    {
+        std::string s;
+
+        if (!this->db.empty())
+        {
+            s = this->db;
+            s += ".";
+        }
+
+        s += table;
+
+        return s;
+    }
 };
-std::vector<std::string_view> qc_get_table_names(GWBUF* stmt, bool fullnames);
+
+inline std::ostream& operator << (std::ostream& out, const QcTableName& x)
+{
+    out << x.to_string();
+    return out;
+}
+
+std::vector<QcTableName> qc_get_table_names(GWBUF* stmt);
 
 /**
  * Returns a bitmask specifying the type(s) of the statement. The result

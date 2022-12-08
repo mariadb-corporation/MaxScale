@@ -159,19 +159,21 @@ bool foreach_table(QueryClassifier& qc,
 {
     bool rval = true;
 
-    for (const auto& t : qc_get_table_names(querybuf, true))
+    for (const auto& t : qc_get_table_names(querybuf))
     {
         std::string table;
 
-        if (t.find('.') == std::string_view::npos)
+        if (t.db.empty())
         {
-            table = qc_mysql_get_current_db(pSession) + '.';
-            table.append(t);
+            table = qc_mysql_get_current_db(pSession);
         }
         else
         {
-            table = t;
+            table = t.db;
         }
+
+        table += ".";
+        table += t.table;
 
         if (!func(qc, table))
         {
@@ -702,17 +704,19 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
     {
         std::string table;
 
-        for (const auto& t : qc_get_table_names(querybuf, true))
+        for (const auto& t : qc_get_table_names(querybuf))
         {
-            if (t.find('.') == std::string_view::npos)
+            if (t.db.empty())
             {
-                table = qc_mysql_get_current_db(session()) + ".";
-                table.append(t);
+                table = qc_mysql_get_current_db(session());
             }
             else
             {
-                table = t;
+                table = t.db;
             }
+
+            table += '.';
+            table += t.table;
             break;
         }
 

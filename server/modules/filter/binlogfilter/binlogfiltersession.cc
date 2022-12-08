@@ -416,14 +416,15 @@ static bool should_skip_query(const BinlogConfig::Values& config,
 {
     GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
-    auto tables = qc_get_table_names(buf, true);
+    std::vector<QcTableName> tables = qc_get_table_names(buf);
 
     if (qc_get_trx_type_mask(buf) == 0)
     {
         // Not a transaction management related command
         for (const auto& t : tables)
         {
-            std::string name = t.find('.') != std::string_view::npos ? std::string(t) : db + '.' + std::string(t);
+            std::string db = !t.db.empty() ? std::string(t.db) : db;
+            std::string name = db + '.' + std::string(t.table);
 
             if (should_skip(config, name))
             {
