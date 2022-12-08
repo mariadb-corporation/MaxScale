@@ -16,58 +16,7 @@
                 class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active"
             >
-                <v-tooltip
-                    :disabled="!$typy(getWkeConnByWkeId(wke.id), 'name').safeString"
-                    top
-                    transition="slide-x-transition"
-                    content-class="shadow-drop white"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            style="min-width:160px"
-                            class="fill-height d-flex align-center justify-space-between px-3"
-                            v-on="on"
-                        >
-                            <div class="d-inline-flex align-center">
-                                <span
-                                    class="tab-name d-inline-block text-truncate"
-                                    style="max-width:88px"
-                                >
-                                    {{ wke.name }}
-                                </span>
-                                <v-progress-circular
-                                    v-if="getIsWkeLoadingQueryResult(wke.id)"
-                                    class="ml-2"
-                                    size="16"
-                                    width="2"
-                                    color="primary"
-                                    indeterminate
-                                />
-                            </div>
-                            <v-btn
-                                v-if="allWorksheets.length > 1"
-                                class="ml-1 del-tab-btn"
-                                icon
-                                x-small
-                                :disabled="getIsConnBusyByQueryTabId(activeQueryTabId)"
-                                @click.stop.prevent="deleteWke(wke.id)"
-                            >
-                                <v-icon
-                                    size="8"
-                                    :color="
-                                        getIsConnBusyByQueryTabId(activeQueryTabId) ? '' : 'error'
-                                    "
-                                >
-                                    $vuetify.icons.mxs_close
-                                </v-icon>
-                            </v-btn>
-                        </div>
-                    </template>
-                    <span class="mxs-color-helper text-text py-2 px-4">
-                        {{ $mxs_t('connectedTo') }}
-                        {{ $typy(getWkeConnByWkeId(wke.id), 'name').safeString }}
-                    </span>
-                </v-tooltip>
+                <wke-nav-tab :worksheet="wke" />
             </v-tab>
         </v-tabs>
         <wke-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
@@ -87,14 +36,12 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import WkeToolbar from './WkeToolbar.vue'
+import WkeNavTab from './WkeNavTab.vue'
 
 export default {
     name: 'wke-nav-ctr',
-    components: { WkeToolbar },
+    components: { WkeToolbar, WkeNavTab },
     props: {
         height: { type: Number, required: true },
     },
@@ -107,9 +54,6 @@ export default {
         allWorksheets() {
             return Worksheet.all()
         },
-        activeQueryTabId() {
-            return Worksheet.getters('getActiveQueryTabId')
-        },
         activeWkeID: {
             get() {
                 return Worksheet.getters('getActiveWkeId')
@@ -117,28 +61,6 @@ export default {
             set(v) {
                 if (v) Worksheet.commit(state => (state.active_wke_id = v))
             },
-        },
-    },
-    methods: {
-        getWkeConnByWkeId(id) {
-            return QueryConn.getters('getWkeConnByWkeId')(id)
-        },
-        getIsConnBusyByQueryTabId(id) {
-            return QueryConn.getters('getIsConnBusyByQueryTabId')(id)
-        },
-        getIsWkeLoadingQueryResult(wkeId) {
-            const queryTabIds = QueryTab.getters('getQueryTabsByWkeId')(wkeId).map(s => s.id)
-            let isLoading = false
-            for (const id of queryTabIds) {
-                if (QueryResult.getters('getLoadingQueryResultByQueryTabId')(id)) {
-                    isLoading = true
-                    break
-                }
-            }
-            return isLoading
-        },
-        deleteWke(id) {
-            Worksheet.dispatch('handleDeleteWke', id)
         },
     },
 }

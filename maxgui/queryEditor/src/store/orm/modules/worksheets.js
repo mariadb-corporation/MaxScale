@@ -156,18 +156,8 @@ export default {
         },
     },
     getters: {
-        getAllWorksheets: () => Worksheet.all(),
-        getActiveWke: (state, getters) => {
-            return getters.getAllWorksheets.find(w => w.id === getters.getActiveWkeId) || {}
-        },
-        getActiveWkeId: (state, getters, rootState) => {
-            const {
-                ORM_NAMESPACE,
-                ORM_PERSISTENT_ENTITIES: { WORKSHEETS },
-            } = rootState.queryEditorConfig.config
-            const { active_wke_id } = rootState[ORM_NAMESPACE][WORKSHEETS] || {}
-            return active_wke_id
-        },
+        getActiveWkeId: state => state.active_wke_id,
+        getActiveWke: (state, getters) => Worksheet.find(getters.getActiveWkeId) || {},
         getActiveQueryTabId: () => Worksheet.getters('getActiveWke').active_query_tab_id,
         getExeStmtResult: () =>
             WorksheetMem.find(Worksheet.getters('getActiveWkeId')).exe_stmt_result || {},
