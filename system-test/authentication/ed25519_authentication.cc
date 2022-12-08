@@ -27,16 +27,16 @@ int main(int argc, char** argv)
 
 void test_main(TestConnections& test)
 {
-    auto try_conn = [&test](const string& user, const string& pass, const string& expected_user,
-                            bool expect_success) {
+    auto try_conn = [&test](int port, bool ssl, const string& user, const string& pass,
+                            const string& expected_user, bool expect_success) {
         mxt::MariaDB maxconn(test.logger());
         auto& sett = maxconn.connection_settings();
         sett.plugin_dir = "../../connector-c/install/lib/mariadb/plugin";
         sett.user = user;
         sett.password = pass;
+        sett.ssl.enabled = ssl;
 
         const string& host = test.maxscale->ip4();
-        int port = test.maxscale->rwsplit_port;
 
         test.tprintf("Trying to log in to [%s]:%i as '%s' using password '%s'.", host.c_str(), port,
                      user.c_str(), pass.c_str());
@@ -116,7 +116,8 @@ void test_main(TestConnections& test)
         string orig_ed_user = "supersecureuser";
         string orig_ed_pw = "RatherLongAnd53cur3P455w0rd_?*|.,";
 
-        const char create_ed_user[] = "CREATE USER %s IDENTIFIED VIA ed25519 USING PASSWORD('%s');";
+        const char create_ed_user[] = "create or replace user %s identified via "
+                                      "ed25519 using password('%s');";
         admin_conn->cmd_f(create_ed_user, orig_ed_user.c_str(), orig_ed_pw.c_str());
 
         string mapped_user = "lesssecureuser";
@@ -129,21 +130,35 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
-            try_conn(orig_ed_user, orig_ed_pw, mapped_user, true);
-            try_conn(orig_ed_user, "this_is_a_wrong_password", mapped_user, false);
+            test.tprintf("Testing mapping to standard auth.");
+            int mapped_port = 4006;
+            try_conn(mapped_port, false, orig_ed_user, orig_ed_pw, mapped_user, true);
+            try_conn(mapped_port, false, orig_ed_user, "this_is_a_wrong_password", mapped_user, false);
 
-            // Check that mapping a user to itself works.
+            test.tprintf("Testing self-mapping.");
             const string ed_user2 = "test_user2";
             const string ed_pw2 = "test_password2";
             admin_conn->cmd_f(create_ed_user, ed_user2.c_str(), ed_pw2.c_str());
             repl.sync_slaves();
-            try_conn(ed_user2, ed_pw2, ed_user2, true);
+            try_conn(mapped_port, false, ed_user2, ed_pw2, ed_user2, true);
             admin_conn->cmd_f(drop_fmt, ed_user2.c_str());
         }
 
         admin_conn->cmd_f(drop_fmt, mapped_user.c_str());
         admin_conn->cmd_f(drop_fmt, orig_ed_user.c_str());
 
-        test.repl->execute_query_all_nodes("UNINSTALL SONAME 'auth_ed25519';");
+        if (test.ok())
+        {
+            test.tprintf("Testing sha256-mode with ssl.");
+            const string ed_sha_user = "sha_user";
+            const string ed_sha_pw = "sha_password";
+            admin_conn->cmd_f(create_ed_user, ed_sha_user.c_str(), ed_sha_pw.c_str());
+
+            int sha256_port = 4007;
+            try_conn(sha256_port, true, ed_sha_user, ed_sha_pw, ed_sha_user, true);
+            admin_conn->cmd_f(drop_fmt, ed_sha_user.c_str());
+        }
+
+        repl.execute_query_all_nodes("UNINSTALL SONAME 'auth_ed25519';");
     }
 }

@@ -9,8 +9,24 @@ users_refresh_time=0s
 ###rwsplit_service###
 
 
-###rwsplit_listener###
+[RWSplit-Listener-Mapped]
+type=listener
+service=RW-Split-Router
+protocol=MariaDB
+port=4006
 authenticator=mariadbauth,ed25519auth
 user_mapping_file=/tmp/ed25519_auth_user_map.json
 
 ###server_definitions###
+
+[RWSplit-Listener-Sha256]
+type=listener
+service=RW-Split-Router
+protocol=MariaDB
+port=4007
+authenticator=ed25519auth
+authenticator_options=ed_mode=sha256
+ssl=true
+ssl_cert=###access_homedir###/certs/server-cert.pem
+ssl_key=###access_homedir###/certs/server-key.pem
+ssl_ca_cert=###access_homedir###/certs/ca.pem
