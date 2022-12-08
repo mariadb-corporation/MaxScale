@@ -358,6 +358,34 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
  * @note The returned array and the strings pointed to @b must be freed
  *       by the caller.
  */
+struct QcTableName
+{
+    QcTableName() = default;
+
+    QcTableName(std::string_view table)
+        : table(table)
+    {
+    }
+
+    QcTableName(std::string_view db, std::string_view table)
+        : db(db)
+        , table(table)
+    {
+    }
+
+    std::string_view db;
+    std::string_view table;
+
+    bool operator == (const QcTableName& rhs) const
+    {
+        return this->db == rhs.db && this->table == rhs.table;
+    }
+
+    bool empty() const
+    {
+        return this->db.empty() && this->table.empty();
+    }
+};
 std::vector<std::string_view> qc_get_table_names(GWBUF* stmt, bool fullnames);
 
 /**

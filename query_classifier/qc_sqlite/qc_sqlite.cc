@@ -277,7 +277,7 @@ public:
         size += m_canonical.size();
 
         m_table_names.shrink_to_fit();
-        size += m_table_names.capacity() * sizeof(string_view);
+        size += m_table_names.capacity() * sizeof(QcTableName);
 
         m_table_fullnames.shrink_to_fit();
         size += m_table_fullnames.capacity() * sizeof(string_view);
@@ -428,7 +428,10 @@ public:
             }
             else
             {
-                pTables->assign(m_table_names.begin(), m_table_names.end());
+                pTables->clear();
+                for_each(m_table_names.begin(), m_table_names.end(), [pTables](const auto& name) {
+                        pTables->push_back(name.table);
+                    });
             }
 
             rv = true;
@@ -2087,12 +2090,12 @@ public:
             // this information already.
             if (m_created_table_name.empty())
             {
-                m_created_table_name = m_table_names[0];
+                m_created_table_name = m_table_names[0].table;
             }
             else
             {
                 mxb_assert(m_collect != m_collected);
-                mxb_assert(m_created_table_name == m_table_names[0]);
+                mxb_assert(m_created_table_name == m_table_names[0].table);
             }
         }
     }
@@ -3461,22 +3464,13 @@ private:
         return pz;
     }
 
-    string_view table_name_collected(const char* pTable, size_t nTable)
+    QcTableName table_name_collected(string_view database, string_view table)
     {
-        string_view table(pTable, nTable);
+        QcTableName needle(database, table);
 
-        auto it = std::find(m_table_names.begin(), m_table_names.end(), table);
+        auto it = std::find(m_table_names.begin(), m_table_names.end(), needle);
 
-        return it != m_table_names.end() ? *it : string_view {};
-    }
-
-    string_view table_fullname_collected(const char* zTable)
-    {
-        string_view table(zTable);
-
-        auto it = std::find(m_table_fullnames.begin(), m_table_fullnames.end(), table);
-
-        return it != m_table_fullnames.end() ? *it : string_view {};
+        return it != m_table_names.end() ? *it : QcTableName {};
     }
 
     string_view database_name_collected(const char* zDatabase, size_t nDatabase)
@@ -3495,36 +3489,30 @@ private:
     {
         mxb_assert(zTable && nTable);
 
-        string_view collected_table = table_name_collected(zTable, nTable);
+        string_view database = (nDatabase != 0 ? string_view(zDatabase, nDatabase) : string_view {});
+        string_view table(zTable, nTable);
 
-        if (collected_table.empty())
+        QcTableName collected_name = table_name_collected(database, table);
+
+        if (collected_name.empty())
         {
-            collected_table = get_string_view("table", string(zTable, nTable).c_str());
+            string fullname;
 
-            m_table_names.push_back(collected_table);
+            if (!database.empty())
+            {
+                collected_name.db = get_string_view("database", string(database).c_str());
+                fullname = collected_name.db;
+                fullname += ".";
+            }
+
+            collected_name.table = get_string_view("table", string(table).c_str());
+            fullname += collected_name.table;
+
+            m_table_names.push_back(collected_name);
+            m_table_fullnames.push_back(fullname);
         }
 
-        char fullname[nDatabase + 1 + nTable + 1];
-
-        if (nDatabase)
-        {
-            memcpy(fullname, zDatabase, nDatabase);
-            fullname[nDatabase] = 0;
-            strcat(fullname, ".");
-        }
-        else
-        {
-            fullname[0] = 0;
-        }
-
-        strncat(fullname, zTable, nTable);
-
-        if (table_fullname_collected(fullname).empty())
-        {
-            m_table_fullnames.push_back(get_string_view("table", fullname));
-        }
-
-        return collected_table;
+        return collected_name.table;
     }
 
     string_view update_database_names(const char* zDatabase, size_t nDatabase)
@@ -3648,8 +3636,8 @@ public:
     QC_KILL                       m_kill;
     string                        m_canonical;               // The canonical version of the statement.
     vector<string_view>           m_database_names;          // Vector of database names used in the query.
-    vector<string_view>           m_table_names;             // Vector of table names used in the query.
-    vector<string_view>           m_table_fullnames;         // Vector of qualified table names used in the
+    vector<QcTableName>           m_table_names;             // Vector of table names used in the query.
+    vector<string>                m_table_fullnames;         // Vector of qualified table names used in the
                                                              // query.
     vector<QC_FIELD_INFO>         m_field_infos;             // Vector of fields used by the statement.
     vector<QC_FUNCTION_INFO>      m_function_infos;          // Vector of functions used by the statement.

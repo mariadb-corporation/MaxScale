@@ -167,6 +167,17 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
 
 #define MYSQL_COM_QUERY_HEADER_SIZE 5   /*< 3 bytes size, 1 sequence, 1 command */
 #define MAX_QUERYBUF_SIZE           2048
+struct TableName
+{
+    std::string db;
+    std::string table;
+
+    operator QcTableName() const
+    {
+        return QcTableName (this->db, this->table);
+    }
+};
+
 class parsing_info_t : public QC_STMT_INFO
 {
 public:
@@ -270,7 +281,7 @@ public:
     NAME_MAPPING*        function_name_mappings { 0 };
     string               created_table_name;
     vector<string>       database_names;
-    vector<string>       table_names;
+    vector<TableName>    table_names;
     vector<string>       full_table_names;
     string               prepare_name;
     string               canonical;
@@ -1951,44 +1962,45 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, vector<stri
 
             while (tbl)
             {
-                string name;
-                string fullname;
+                const char* zTable = qcme_string_get(tbl->table_name);
 
-                if (qcme_string_get(tbl->db)
-                    && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
-                    && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
+                if (strcmp(zTable, "*") != 0)
                 {
-                    string db = qcme_string_get(tbl->db);
+                    string db;
+                    const char* zDb = qcme_string_get(tbl->db);
+
+                    if (zDb && (strcmp(zDb, "skygw_virtual") != 0))
+                    {
+                        db = zDb;
+                    }
+
+                    string table(zTable);
+
+                    auto end1 = pi->table_names.end();
+                    auto it1 = find_if(pi->table_names.begin(), end1, [db, table](const auto& n) {
+                            return n.db == db && n.table == table;
+                        });
+
+                    if (it1 == end1)
+                    {
+                        TableName t { db, table };
+
+                        pi->table_names.push_back(t);
+                    }
+
+                    string fullname;
 
                     if (!db.empty())
                     {
-                        fullname = db;
+                        fullname += db;
                         fullname += ".";
-                        fullname += qcme_string_get(tbl->table_name);
                     }
-                }
+                    fullname += table;
 
-                // Sometimes the tablename is "*"; we exclude that.
-                if (strcmp(qcme_string_get(tbl->table_name), "*") != 0)
-                {
-                    name = qcme_string_get(tbl->table_name);
-                }
+                    auto end2 = pi->full_table_names.end();
+                    auto it2 = find(pi->full_table_names.begin(), end2, fullname);
 
-                if (!name.empty())
-                {
-                    if (fullname.empty())
-                    {
-                        fullname = name;
-                    }
-
-                    auto end = pi->table_names.end();
-                    if (find(pi->table_names.begin(), end, name) == end)
-                    {
-                        pi->table_names.push_back(name);
-                    }
-
-                    end = pi->full_table_names.end();
-                    if (find(pi->full_table_names.begin(), end, fullname) == end)
+                    if (it2 == end2)
                     {
                         pi->full_table_names.push_back(fullname);
                     }
@@ -2008,7 +2020,10 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, vector<stri
     }
     else
     {
-        copy(pi->table_names.begin(), pi->table_names.end(), back_inserter(*tables));
+        for (const TableName& tn : pi->table_names)
+        {
+            tables->push_back(tn.table);
+        }
     }
 
     return QC_RESULT_OK;
