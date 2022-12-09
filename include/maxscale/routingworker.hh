@@ -131,6 +131,19 @@ public:
 
     protected:
         Data();
+
+        /**
+         * Peform worker initialization.
+         *
+         * This call will, if the routing workers are already running, cause
+         * @c init_for() to be called for each worker. If the routing workers
+         * are not yet running, this call is a nop as in that case they will
+         * be initialized when started.
+         *
+         * @note This must be called by any class derived from Data and must
+         *       be called from MainWorker.
+         */
+        void initialize_workers();
     };
 
     /**

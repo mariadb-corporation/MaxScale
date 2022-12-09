@@ -559,6 +559,8 @@ Service::Service(const std::string& name, const std::string& router_name)
 {
     const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
+
+    RoutingWorker::Data::initialize_workers();
 }
 
 Service::~Service()

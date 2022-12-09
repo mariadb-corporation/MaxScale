@@ -32,6 +32,7 @@ QlaLog::QlaLog()
                 true,   // order updates.
                 true)   // Updates only
 {
+    Data::initialize_workers();
 }
 
 void QlaLog::init_for(maxscale::RoutingWorker* pWorker)

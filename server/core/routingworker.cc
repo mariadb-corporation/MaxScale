@@ -176,12 +176,33 @@ std::mutex RoutingWorker::s_datas_lock;
 
 RoutingWorker::Data::Data()
 {
+    mxb_assert(mxs::MainWorker::is_current());
+
     RoutingWorker::register_data(this);
 }
 
 RoutingWorker::Data::~Data()
 {
     RoutingWorker::deregister_data(this);
+}
+
+void RoutingWorker::Data::initialize_workers()
+{
+    mxb_assert(MainWorker::is_current());
+
+    if (RoutingWorker::is_running())
+    {
+        int nRunning = this_unit.nRunning.load(std::memory_order_relaxed);
+
+        for (int i = 0; i < nRunning; ++i)
+        {
+            auto* pWorker = this_unit.ppWorkers[i];
+
+            pWorker->call([pWorker, this]() {
+                    this->init_for(pWorker);
+                }, mxb::Worker::EXECUTE_QUEUED);
+        }
+    }
 }
 
 json_t* RoutingWorker::MemoryUsage::to_json() const

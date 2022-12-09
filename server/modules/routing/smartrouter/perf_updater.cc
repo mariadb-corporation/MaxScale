@@ -21,6 +21,7 @@ PerformanceInfoUpdater::PerformanceInfoUpdater()
                 3,                              // 3 copies. Not expecting the container to be very large.
                 true)                           // order updates.
 {
+    Data::initialize_workers();
 }
 
 void PerformanceInfoUpdater::init_for(maxscale::RoutingWorker* pWorker)
