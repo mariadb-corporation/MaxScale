@@ -97,8 +97,6 @@ export default {
         },
     },
     getters: {
-        getAllQueryTabs: () => QueryTab.all(),
-
         getActiveQueryTab: () => QueryTab.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getQueryTabsOfActiveWke: () =>
             QueryTab.query()
@@ -111,5 +109,6 @@ export default {
         getQueryTabById: () => id => QueryTab.find(id) || {},
         getActiveQueryTabMem: () =>
             QueryTabMem.find(Worksheet.getters('getActiveQueryTabId')) || {},
+        getQueryTabMemById: () => id => QueryTabMem.find(id) || {},
     },
 }

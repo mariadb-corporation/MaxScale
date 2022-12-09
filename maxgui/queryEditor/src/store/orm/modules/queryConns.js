@@ -13,7 +13,6 @@
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 
@@ -408,12 +407,8 @@ export default {
                 .get() || [],
 
         getIsConnBusy: () => QueryTab.getters('getActiveQueryTabMem').is_conn_busy || false,
-        getIsConnBusyByQueryTabId: () => {
-            return query_tab_id => {
-                const { is_conn_busy = false } = QueryTabMem.find(query_tab_id) || {}
-                return is_conn_busy
-            }
-        },
+        getIsConnBusyByQueryTabId: () => query_tab_id =>
+            QueryTab.getters('getQueryTabMemById')(query_tab_id).is_conn_busy || false,
         getLostCnnErrMsgObj: () =>
             QueryTab.getters('getActiveQueryTabMem').lost_cnn_err_msg_obj || {},
     },
