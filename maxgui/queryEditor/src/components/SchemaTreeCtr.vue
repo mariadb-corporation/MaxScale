@@ -113,7 +113,7 @@ This component emits the following events
 */
 import { mapState } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
@@ -219,7 +219,7 @@ export default {
                             },
                         })
                     else
-                        QueryTabMem.update({
+                        QueryTabTmp.update({
                             where: this.activeQueryTabId,
                             data: {
                                 active_prvw_node: activeNodes[0],

@@ -12,7 +12,7 @@
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
 import { uuidv1 } from '@share/utils/helpers'
-import { ORM_PERSISTENT_ENTITIES, ORM_MEM_ENTITIES } from '@queryEditorSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@queryEditorSrc/store/config'
 
 export default class Worksheet extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
@@ -32,7 +32,7 @@ export default class Worksheet extends Extender {
             // relationship fields
             queryTabs: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'worksheet_id'),
             schemaSidebar: this.hasOne(ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS, 'id'),
-            worksheetMem: this.hasOne(ORM_MEM_ENTITIES.WORKSHEETS_MEM, 'id'),
+            worksheetTmp: this.hasOne(ORM_TMP_ENTITIES.WORKSHEETS_TMP, 'id'),
         }
     }
 }

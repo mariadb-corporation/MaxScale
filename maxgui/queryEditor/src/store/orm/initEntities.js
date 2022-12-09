@@ -16,8 +16,8 @@ import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
-import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
+import WorksheetTmp from '@queryEditorSrc/store/orm/models/WorksheetTmp'
 
 /**
  * Initialize a blank worksheet and its mandatory relational entities
@@ -31,7 +31,7 @@ export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv
         },
     })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
-    WorksheetMem.insert({ data: { id: fields.worksheet_id } })
+    WorksheetTmp.insert({ data: { id: fields.worksheet_id } })
     SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
     insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
 }
@@ -65,7 +65,7 @@ export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }
     Editor.insert({ data: { id: fields.query_tab_id } })
 
     QueryResult.insert({ data: { id: fields.query_tab_id } })
-    QueryTabMem.insert({ data: { id: fields.query_tab_id } })
+    QueryTabTmp.insert({ data: { id: fields.query_tab_id } })
     Worksheet.update({
         where: Worksheet.getters('getActiveWkeId'),
         data: { active_query_tab_id: fields.query_tab_id },
@@ -80,8 +80,8 @@ function initMemEntities() {
         .with('queryTabs')
         .all()
     worksheets.forEach(w => {
-        WorksheetMem.insert({ data: { id: w.id } })
-        w.queryTabs.forEach(t => QueryTabMem.insert({ data: { id: t.id } }))
+        WorksheetTmp.insert({ data: { id: w.id } })
+        w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
     })
 }
 export default () => {

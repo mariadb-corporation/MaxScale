@@ -11,7 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 
@@ -40,7 +40,7 @@ export default {
                     field = 'prvw_data_details'
                     break
             }
-            QueryTabMem.update({
+            QueryTabTmp.update({
                 where: activeQueryTabId,
                 data(obj) {
                     obj[field].request_sent_time = request_sent_time
@@ -55,7 +55,7 @@ export default {
                 })
             )
             if (e)
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: activeQueryTabId,
                     data(obj) {
                         obj[field].is_loading = false
@@ -64,7 +64,7 @@ export default {
             else {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: activeQueryTabId,
                     data(obj) {
                         obj[field].data = Object.freeze(res.data.data)
@@ -96,7 +96,7 @@ export default {
             const abort_controller = new AbortController()
             const config = rootState.queryEditorConfig.config
 
-            QueryTabMem.update({
+            QueryTabTmp.update({
                 where: activeQueryTabId,
                 data(obj) {
                     obj.query_results.request_sent_time = request_sent_time
@@ -118,7 +118,7 @@ export default {
             )
 
             if (e)
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: activeQueryTabId,
                     data(obj) {
                         obj.query_results.is_loading = false
@@ -129,7 +129,7 @@ export default {
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 // If the KILL command was sent for the query is being run, the query request is aborted/canceled
                 if (getters.getHasKillFlagMapByQueryTabId(activeQueryTabId)) {
-                    QueryTabMem.update({
+                    QueryTabTmp.update({
                         where: activeQueryTabId,
                         data(obj) {
                             obj.has_kill_flag = false
@@ -153,7 +153,7 @@ export default {
                 } else if (query.match(/(use|drop database)\s/i))
                     await QueryConn.dispatch('updateActiveDb', {})
 
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: activeQueryTabId,
                     data(obj) {
                         obj.query_results.data = Object.freeze(res.data.data)
@@ -190,7 +190,7 @@ export default {
             )
             if (e) this.vue.$logger.error(e)
             else {
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: activeQueryTabId,
                     data(obj) {
                         obj.has_kill_flag = true
@@ -211,7 +211,7 @@ export default {
                     )
                 else
                     this.vue
-                        .$typy(QueryTabMem.find(activeQueryTabId), 'abort_controller.abort')
+                        .$typy(QueryTabTmp.find(activeQueryTabId), 'abort_controller.abort')
                         .safeFunction() // abort the running query
             }
         },
@@ -221,7 +221,7 @@ export default {
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview() {
-            QueryTabMem.update({
+            QueryTabTmp.update({
                 where: Worksheet.getters('getActiveQueryTabId'),
                 data(obj) {
                     obj.prvw_data = {}
@@ -235,7 +235,7 @@ export default {
         getCurrQueryMode: (state, getters) => getters.getQueryResult.curr_query_mode || '',
 
         // Getters for accessing query data stored in memory
-        getQueryTabMem: () => QueryTabMem.find(Worksheet.getters('getActiveQueryTabId')) || {},
+        getQueryTabMem: () => QueryTabTmp.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getUserQueryRes: (state, getters) => getters.getQueryTabMem.query_results || {},
         getPrvwData: (state, getters, rootState) => mode => {
             const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
@@ -250,7 +250,7 @@ export default {
         },
         // Getters by query_tab_id
         getUserQueryResByQueryTabId: () => query_tab_id => {
-            const { query_results = {} } = QueryTabMem.find(query_tab_id) || {}
+            const { query_results = {} } = QueryTabTmp.find(query_tab_id) || {}
             return query_results
         },
         getLoadingQueryResultByQueryTabId: (state, getters) => query_tab_id =>

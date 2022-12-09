@@ -18,8 +18,8 @@ import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 // entities to be stored only in memory
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
-import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
+import WorksheetTmp from '@queryEditorSrc/store/orm/models/WorksheetTmp'
 // Store modules
 import editors from '@queryEditorSrc/store/orm/modules/editors'
 import queryConns from '@queryEditorSrc/store/orm/modules/queryConns'
@@ -35,7 +35,7 @@ database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
-database.register(QueryTabMem)
-database.register(WorksheetMem)
+database.register(QueryTabTmp)
+database.register(WorksheetTmp)
 
 export default database

@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_MEM_ENTITIES } from '@queryEditorSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryTab extends Extender {
@@ -33,7 +33,7 @@ export default class QueryTab extends Extender {
             // relationship fields
             editor: this.hasOne(ORM_PERSISTENT_ENTITIES.EDITORS, 'id'),
             queryResult: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_RESULTS, 'id'),
-            queryTabMem: this.hasOne(ORM_MEM_ENTITIES.QUERY_TABS_MEM, 'id'),
+            queryTabTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_TABS_TMP, 'id'),
         }
     }
 }

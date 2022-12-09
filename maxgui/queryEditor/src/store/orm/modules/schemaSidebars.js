@@ -11,7 +11,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
+import WorksheetTmp from '@queryEditorSrc/store/orm/models/WorksheetTmp'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
@@ -65,7 +65,7 @@ export default {
                 data: getters.getDbTreeData,
                 completionList: getters.getDbCmplList,
             })
-            WorksheetMem.update({
+            WorksheetTmp.update({
                 where: activeWkeId,
                 data(obj) {
                     obj.db_tree = data
@@ -77,7 +77,7 @@ export default {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
 
-            WorksheetMem.update({
+            WorksheetTmp.update({
                 where: activeWkeId,
                 data: { loading_db_tree: true },
             })
@@ -88,7 +88,7 @@ export default {
                 })
             )
             if (e)
-                WorksheetMem.update({
+                WorksheetTmp.update({
                     where: activeWkeId,
                     data: { loading_db_tree: false },
                 })
@@ -118,7 +118,7 @@ export default {
                             completion_list = completionList
                         }
                     }
-                    WorksheetMem.update({
+                    WorksheetTmp.update({
                         where: activeWkeId,
                         data(obj) {
                             obj.loading_db_tree = false

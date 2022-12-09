@@ -36,7 +36,7 @@
  * Public License.
  */
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
@@ -56,7 +56,7 @@ export default {
                 return Boolean(this.queryErrMsg)
             },
             set() {
-                QueryTabMem.update({
+                QueryTabTmp.update({
                     where: Worksheet.getters('getActiveQueryTabId'),
                     data: { lost_cnn_err_msg_obj: {} },
                 })

@@ -16,7 +16,7 @@ import { lodash, getErrorsArr } from '@share/utils/helpers'
 import { MARIADB_NET_ERRNO } from '@queryEditorSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 /**
  *
  * @param {Boolean} param.value - is connection busy
@@ -25,7 +25,7 @@ import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
 function patchIsConnBusyMap({ value, sql_conn_id }) {
     const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
     if (query_tab_id)
-        QueryTabMem.update({
+        QueryTabTmp.update({
             where: query_tab_id,
             data: { is_conn_busy: value },
         })
@@ -46,7 +46,7 @@ function analyzeRes({ res, sql_conn_id }) {
     if (lostCnnErrMsgs.length) {
         const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
         if (query_tab_id)
-            QueryTabMem.update({
+            QueryTabTmp.update({
                 where: query_tab_id,
                 data: { lost_cnn_err_msg_obj: lostCnnErrMsgs[0] },
             })

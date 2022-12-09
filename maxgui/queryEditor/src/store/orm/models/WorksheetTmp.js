@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
-import { ORM_MEM_ENTITIES } from '@queryEditorSrc/store/config'
+import { ORM_TMP_ENTITIES } from '@queryEditorSrc/store/config'
 
-export default class WorksheetMem extends Extender {
-    static entity = ORM_MEM_ENTITIES.WORKSHEETS_MEM
+export default class WorksheetTmp extends Extender {
+    static entity = ORM_TMP_ENTITIES.WORKSHEETS_TMP
 
     /**
      * @returns {Object} - return fields that are not key, relational fields

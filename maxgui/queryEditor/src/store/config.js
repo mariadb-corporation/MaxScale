@@ -21,9 +21,9 @@ export const ORM_PERSISTENT_ENTITIES = {
     SCHEMA_SIDEBARS: 'schemaSidebars',
     WORKSHEETS: 'worksheets',
 }
-export const ORM_MEM_ENTITIES = {
-    WORKSHEETS_MEM: 'worksheetsMem',
-    QUERY_TABS_MEM: 'queryTabsMem',
+export const ORM_TMP_ENTITIES = {
+    WORKSHEETS_TMP: 'worksheetsTmp',
+    QUERY_TABS_TMP: 'queryTabsTmp',
 }
 export const FILE_SYS_ACCESS_NAMESPACE = 'queryEditorFileSysAccess'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'

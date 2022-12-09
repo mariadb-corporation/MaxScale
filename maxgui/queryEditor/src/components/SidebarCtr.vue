@@ -94,7 +94,7 @@
  */
 import { mapState, mapActions, mapMutations } from 'vuex'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
+import WorksheetTmp from '@queryEditorSrc/store/orm/models/WorksheetTmp'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
@@ -212,7 +212,7 @@ export default {
             })
         },
         clearExeStatementsResult() {
-            WorksheetMem.update({ where: this.activeWkeId, data: { exe_stmt_result: {} } })
+            WorksheetTmp.update({ where: this.activeWkeId, data: { exe_stmt_result: {} } })
         },
     },
 }

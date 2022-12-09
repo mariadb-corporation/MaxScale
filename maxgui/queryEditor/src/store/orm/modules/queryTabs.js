@@ -11,7 +11,7 @@
  * Public License.
  */
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
-import QueryTabMem from '@queryEditorSrc/store/orm/models/QueryTabMem'
+import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
@@ -32,7 +32,7 @@ export default {
             entityIds.forEach(id => {
                 QueryTab.delete(id) // delete itself
                 // delete record in its the relational tables
-                QueryTabMem.delete(id)
+                QueryTabTmp.delete(id)
                 Editor.delete(id)
                 dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
                 QueryResult.delete(id)
@@ -52,7 +52,7 @@ export default {
                     .first()
                 if (target) {
                     // refresh its relations
-                    QueryTabMem.refresh(id)
+                    QueryTabTmp.refresh(id)
                     // keep query_txt data even after refresh all fields
                     Editor.refresh(id, ['query_txt'])
                     QueryResult.refresh(id)
@@ -108,7 +108,7 @@ export default {
                 .get(),
         getQueryTabById: () => id => QueryTab.find(id) || {},
         getActiveQueryTabMem: () =>
-            QueryTabMem.find(Worksheet.getters('getActiveQueryTabId')) || {},
-        getQueryTabMemById: () => id => QueryTabMem.find(id) || {},
+            QueryTabTmp.find(Worksheet.getters('getActiveQueryTabId')) || {},
+        getQueryTabMemById: () => id => QueryTabTmp.find(id) || {},
     },
 }
