@@ -268,7 +268,13 @@ void MainWorker::start_shutdown()
                 // Stop cleanup-thread only after rest-api is shut down, so that no queries are active.
                 HttpSql::stop_cleanup();
             }
-            mxs::ConfigManager::get()->stop_sync();
+
+            auto* pConfig_manager = mxs::ConfigManager::get();
+            if (pConfig_manager)
+            {
+                pConfig_manager->stop_sync();
+            }
+
             Listener::stop_all();
 
             // If there was a problem with the config, the routing workers were never started

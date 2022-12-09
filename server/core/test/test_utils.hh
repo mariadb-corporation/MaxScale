@@ -30,6 +30,7 @@
 
 #include <sys/stat.h>
 
+#include "../internal/maxscale.hh"
 #include "../internal/modules.hh"
 
 /**
@@ -145,6 +146,16 @@ void run_unit_test(std::function<void ()> func)
 {
     mxs::test::start_test();
     init_test_env();
-    mxs::RoutingWorker::start_workers(config_threadcount());
-    mxs::RoutingWorker::get_first()->call(func, mxs::RoutingWorker::EXECUTE_AUTO);
+
+    mxs::MainWorker main_worker(watchdog_notifier);
+
+    main_worker.execute([&func]() {
+            mxs::RoutingWorker::start_workers(config_threadcount());
+
+            func();
+
+            maxscale_shutdown();
+        }, mxb::Worker::EXECUTE_QUEUED);
+
+    main_worker.run();
 }
