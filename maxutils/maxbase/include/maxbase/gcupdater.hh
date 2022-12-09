@@ -335,13 +335,13 @@ void GCUpdater<SD>::update_client_indices()
 template<typename SD>
 void GCUpdater<SD>::run()
 {
+    std::unique_lock client_lock(m_client_count_mutex);
     std::atomic<int> instance_ctr{0};
     auto name {MAKE_STR("GCUpdater-" << std::setw(2) << std::setfill('0') << ++instance_ctr)};
     maxbase::set_thread_name(m_thread, name);
 
     const maxbase::Duration garbage_wait_tmo {std::chrono::microseconds(100)};
     int gc_ptr_count = 0;
-    std::unique_lock client_lock(m_client_count_mutex);
 
     // Initially the threads may not yet have been created
     while (m_running.load(std::memory_order_acquire) && m_client_indices.size() == 0)
@@ -491,6 +491,7 @@ void GCUpdater<SD>::run()
 template<typename SD>
 void GCUpdater<SD>::start()
 {
+    std::unique_lock client_lock(m_client_count_mutex);
     m_running.store(true, std::memory_order_release);
     m_thread = std::thread(&GCUpdater<SD>::run, this);
 }
