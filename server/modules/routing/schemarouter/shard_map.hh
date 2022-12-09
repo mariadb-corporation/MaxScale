@@ -61,8 +61,11 @@ public:
     /**
      * Same as get_location except returns all servers that have it
      */
-    std::set<mxs::Target*> get_all_locations(std::string_view db);
-    std::set<mxs::Target*> get_all_locations(const std::vector<std::string_view>& db);
+    std::set<mxs::Target*> get_all_locations(std::string_view table_view);
+    std::set<mxs::Target*> get_all_locations(QcTableName name);
+    std::set<mxs::Target*> get_all_locations(std::string db, std::string tbl);
+    template<class T>  // std::string_view or QcTableName
+    std::set<mxs::Target*> get_all_locations(const std::vector<T>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);
     void         add_statement(uint32_t id, mxs::Target* target);
@@ -192,3 +195,27 @@ private:
     MapLimits          m_limits;
     int64_t            m_update_limit {1};
 };
+
+
+template<class T>
+std::set<mxs::Target*> Shard::get_all_locations(const std::vector<T>& tables)
+{
+    if (tables.empty())
+    {
+        return {};
+    }
+
+    auto it = tables.begin();
+    std::set<mxs::Target*> targets = get_all_locations(*it++);
+
+    for (; it != tables.end(); ++it)
+    {
+        std::set<mxs::Target*> right = get_all_locations(*it);
+        std::set<mxs::Target*> left;
+        left.swap(targets);
+        std::set_intersection(right.begin(), right.end(), left.begin(), left.end(),
+                              std::inserter(targets, targets.end()));
+    }
+
+    return targets;
+}
