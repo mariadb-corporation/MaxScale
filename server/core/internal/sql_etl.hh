@@ -37,6 +37,15 @@ struct Error : public std::runtime_error
     using std::runtime_error::runtime_error;
 };
 
+// Helper function for creating exceptions
+template<class ... Args>
+Error problem(Args&& ... args)
+{
+    std::ostringstream ss;
+    (ss << ... << args);
+    return Error(ss.str());
+}
+
 struct Config
 {
     Config(std::string odbc_src, std::string odbc_dest)

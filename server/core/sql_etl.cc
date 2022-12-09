@@ -12,20 +12,14 @@
  */
 
 #include "internal/sql_etl.hh"
+#include "internal/sql_etl_generic.hh"
 #include "internal/servermanager.hh"
 #include <maxbase/format.hh>
 
 namespace
 {
 using Type = mxb::Json::Type;
-
-template<class ... Args>
-sql_etl::Error problem(Args&& ... args)
-{
-    std::ostringstream ss;
-    (ss << ... << args);
-    return sql_etl::Error(ss.str());
-}
+using namespace sql_etl;
 
 mxb::Json maybe_get(const mxb::Json& json, const std::string& path, mxb::Json::Type type)
 {
@@ -546,6 +540,10 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
         // into memory. This would cause MaxScale to run out of memory so we need to use real cursors.
         src += ";UseDeclareFetch=1";
         extractor = std::make_unique<PostgresqlExtractor>();
+    }
+    else if (type_str == "generic")
+    {
+        extractor = std::make_unique<GenericExtractor>(get(json, "catalog", Type::STRING).get_string());
     }
     else
     {

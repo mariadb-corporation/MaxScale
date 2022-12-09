@@ -49,6 +49,7 @@ add_library(maxscale-common SHARED
   session_stats.cc
   sql_conn_manager.cc
   sql_etl.cc
+  sql_etl_generic.cc
   ssl.cc
   target.cc
   test.cc
