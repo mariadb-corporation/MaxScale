@@ -89,6 +89,7 @@ export default {
         getEditor: () => Editor.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getQueryTxt: (state, getters) => getters.getEditor.query_txt || '',
         getCurrDdlAlterSpec: (state, getters) => getters.getEditor.curr_ddl_alter_spec || '',
+        getIsVisSidebarShown: (state, getters) => getters.getEditor.is_vis_sidebar_shown || false,
         //editor mode getter
         getIsTxtEditor: (state, getters, rootState) =>
             getters.getEditor.curr_editor_mode ===

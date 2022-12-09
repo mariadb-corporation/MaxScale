@@ -10,10 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/**
- * TODO: keep only queryPersisted, queryEditorConfig and mem modules
- * other ORM related modules should be registered via vuex-orm
- */
 import editorsMem from './editorsMem'
 import fileSysAccess from './fileSysAccess'
 import mxsApp from '@share/store/mxsApp'

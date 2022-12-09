@@ -22,8 +22,6 @@ export default class QueryResult extends Extender {
     static getNonKeyFields() {
         return {
             curr_query_mode: this.string(QUERY_MODES.QUERY_VIEW),
-            //TODO: Move this to Editor model
-            is_vis_sidebar_shown: this.boolean(false),
         }
     }
 

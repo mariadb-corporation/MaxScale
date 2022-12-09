@@ -166,7 +166,7 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return QueryResult.getters('getIsVisSidebarShown')
+            return Editor.getters('getIsVisSidebarShown')
         },
         isTabMoveFocus: {
             get() {

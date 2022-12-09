@@ -20,6 +20,9 @@ import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default {
     namespaced: true,
+    state: {
+        active_wke_id: null, // Persistence
+    },
     actions: {
         /**
          * If a record is deleted, then the corresponding records in its relational

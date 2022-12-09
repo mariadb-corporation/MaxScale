@@ -233,8 +233,6 @@ export default {
     getters: {
         getQueryResult: () => QueryResult.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getCurrQueryMode: (state, getters) => getters.getQueryResult.curr_query_mode || '',
-        getIsVisSidebarShown: (state, getters) =>
-            getters.getQueryResult.is_vis_sidebar_shown || false,
 
         // Getters for accessing query data stored in memory
         getQueryTabMem: () => QueryTabMem.find(Worksheet.getters('getActiveQueryTabId')) || {},

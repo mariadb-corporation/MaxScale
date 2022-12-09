@@ -224,7 +224,7 @@ export default {
             return EventBus
         },
         isVisSidebarShown() {
-            return QueryResult.getters('getIsVisSidebarShown')
+            return Editor.getters('getIsVisSidebarShown')
         },
         queryTxt() {
             return Editor.getters('getQueryTxt')
@@ -278,7 +278,7 @@ export default {
             SET_IS_MAX_ROWS_VALID: 'editorsMem/SET_IS_MAX_ROWS_VALID',
         }),
         toggleVisSidebar() {
-            QueryResult.update({
+            Editor.update({
                 where: this.queryTab.id,
                 data(obj) {
                     obj.is_vis_sidebar_shown = !obj.is_vis_sidebar_shown

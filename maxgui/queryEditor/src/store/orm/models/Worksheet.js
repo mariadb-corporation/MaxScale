@@ -17,12 +17,6 @@ import { ORM_PERSISTENT_ENTITIES, ORM_MEM_ENTITIES } from '@queryEditorSrc/store
 export default class Worksheet extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
 
-    static state() {
-        return {
-            active_wke_id: null, // Persistence
-        }
-    }
-
     /**
      * @returns {Object} - return fields that are not key, relational fields
      */

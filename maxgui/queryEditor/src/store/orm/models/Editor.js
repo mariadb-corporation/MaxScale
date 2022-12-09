@@ -25,6 +25,7 @@ export default class Editor extends Extender {
             curr_ddl_alter_spec: this.string(''),
             curr_editor_mode: this.string(EDITOR_MODES.TXT_EDITOR),
             tbl_creation_info: this.attr({}),
+            is_vis_sidebar_shown: this.boolean(false),
         }
     }
 
