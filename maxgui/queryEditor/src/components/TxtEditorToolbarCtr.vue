@@ -368,6 +368,9 @@ export default {
                 return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
             return true
         },
+        async stopUserQuery() {
+            await QueryResult.dispatch('stopUserQuery')
+        },
         async shortKeyHandler(key) {
             switch (key) {
                 case 'ctrl-d':
@@ -384,7 +387,7 @@ export default {
                     break
                 case 'ctrl-shift-c':
                 case 'mac-cmd-shift-c':
-                    if (this.isExecuting) await QueryResult.dispatch('stopUserQuery')
+                    if (this.isExecuting) await this.stopUserQuery()
             }
         },
     },
