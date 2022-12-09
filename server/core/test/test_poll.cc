@@ -83,6 +83,11 @@ static void test1()
 
 int main(int argc, char** argv)
 {
-    run_unit_test(test1);
+    run_unit_test([]() {
+            mxs::RoutingWorker* pWorker = mxs::RoutingWorker::get_by_index(0);
+            mxb_assert(pWorker);
+
+            pWorker->call(test1, mxb::Worker::EXECUTE_QUEUED);
+        });
     return 0;
 }
