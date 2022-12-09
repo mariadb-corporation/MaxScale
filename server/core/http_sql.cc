@@ -938,7 +938,6 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
         }
         else
         {
-            MXB_NOTICE("Failed to connect with '%s'", config.odbc_string.c_str());
             *err = odbc.error();
         }
     }
