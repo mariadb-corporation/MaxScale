@@ -68,8 +68,8 @@ export default {
             WorksheetMem.update({
                 where: activeWkeId,
                 data(obj) {
-                    obj.db_tree.data = data
-                    obj.db_tree.completion_list = completionList
+                    obj.db_tree = data
+                    obj.completion_list = completionList
                 },
             })
         },
@@ -79,9 +79,7 @@ export default {
 
             WorksheetMem.update({
                 where: activeWkeId,
-                data(obj) {
-                    obj.db_tree.loading_db_tree = true
-                },
+                data: { loading_db_tree: true },
             })
 
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
@@ -92,9 +90,7 @@ export default {
             if (e)
                 WorksheetMem.update({
                     where: activeWkeId,
-                    data(obj) {
-                        obj.db_tree.loading_db_tree = false
-                    },
+                    data: { loading_db_tree: false },
                 })
             else {
                 const { nodes, cmpList } = queryHelper.genNodeData({
@@ -125,10 +121,10 @@ export default {
                     WorksheetMem.update({
                         where: activeWkeId,
                         data(obj) {
-                            obj.db_tree.loading_db_tree = false
-                            obj.db_tree.data = data
-                            obj.db_tree.completion_list = completion_list
-                            obj.db_tree.data_of_conn = activeQueryTabConn.name
+                            obj.loading_db_tree = false
+                            obj.completion_list = completion_list
+                            obj.db_tree_of_conn = activeQueryTabConn.name
+                            obj.db_tree = data
                         },
                     })
                 }
@@ -149,12 +145,12 @@ export default {
         getExpandedNodes: (state, getters) => getters.getSchemaSidebar.expanded_nodes || [],
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
-        getCurrDbTree: () => Worksheet.getters('getWorksheetMem').db_tree || {},
+        getLoadingDbTree: () => Worksheet.getters('getWorksheetMem').loading_db_tree || false,
+        getDbCmplList: () =>
+            lodash.uniqBy(Worksheet.getters('getWorksheetMem').completion_list || [], 'label'),
+        getDbTreeOfConn: () => Worksheet.getters('getWorksheetMem').db_tree_of_conn || '',
+        getDbTreeData: () => Worksheet.getters('getWorksheetMem').db_tree || {},
         getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabMem').active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
-        getDbTreeData: (state, getters) => getters.getCurrDbTree.data || [],
-        getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
-        getDbCmplList: (state, getters) =>
-            lodash.uniqBy(getters.getCurrDbTree.completion_list || [], 'label'),
     },
 }

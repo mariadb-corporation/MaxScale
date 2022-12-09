@@ -64,9 +64,7 @@ export default {
                 const { id: connId, name: connName } = QueryConn.getters('getActiveQueryTabConn')
                 const hasConnId = Boolean(connId)
                 const isSchemaTreeEmpty = SchemaSidebar.getters('getDbTreeData').length === 0
-                const hasSchemaTreeAlready =
-                    this.vue.$typy(SchemaSidebar.getters('getCurrDbTree'), 'data_of_conn')
-                        .safeString === connName
+                const hasSchemaTreeAlready = SchemaSidebar.getters('getDbTreeOfConn') === connName
                 if (hasConnId) {
                     if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
                         await SchemaSidebar.dispatch('initialFetch')

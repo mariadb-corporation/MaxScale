@@ -142,7 +142,7 @@ export default {
             return !this.hasConn || this.isLoadingDbTree
         },
         isSidebarDisabled() {
-            return QueryConn.getters('getIsConnBusy') && !this.isLoadingDbTree
+            return QueryConn.getters('getIsConnBusy') || this.isLoadingDbTree
         },
         hasConn() {
             return Boolean(this.$typy(QueryConn.getters('getActiveQueryTabConn'), 'id').safeString)

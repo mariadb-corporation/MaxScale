@@ -22,13 +22,10 @@ export default class WorksheetMem extends Extender {
     static getNonKeyFields() {
         return {
             // fields for SchemaSidebar
-            /**
-             * @property {boolean} loading_db_tree
-             * @property {array} completion_list
-             * @property {array} data - Contains schemas array
-             * @property {string} data_of_conn - Name of the connection using to fetch data
-             */
-            db_tree: this.attr({}),
+            loading_db_tree: this.boolean(false),
+            completion_list: this.attr([]),
+            db_tree_of_conn: this.string(''), // Name of the connection using to fetch data
+            db_tree: this.attr([]), // Contains schemas array
             // Fields for worksheet
             /**
              * @property {object} data - Contains res.data.data.attributes of a query
