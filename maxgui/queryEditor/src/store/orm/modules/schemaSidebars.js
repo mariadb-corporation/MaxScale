@@ -14,6 +14,7 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import WorksheetMem from '@queryEditorSrc/store/orm/models/WorksheetMem'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
@@ -149,7 +150,7 @@ export default {
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
         getCurrDbTree: () => Worksheet.getters('getWorksheetMem').db_tree || {},
-        getActivePrvwNode: (state, getters) => getters.getCurrDbTree.active_prvw_node || {},
+        getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabMem').active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
         getDbTreeData: (state, getters) => getters.getCurrDbTree.data || [],
         getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,

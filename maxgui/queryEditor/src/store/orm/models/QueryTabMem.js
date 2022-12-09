@@ -37,6 +37,10 @@ export default class QueryTabMem extends Extender {
             prvw_data: this.attr({}),
             prvw_data_details: this.attr({}),
             query_results: this.attr({}),
+            /**
+             * @property {object} active_prvw_node - Contains active node in the schemas array
+             */
+            active_prvw_node: this.attr({}),
         }
     }
 

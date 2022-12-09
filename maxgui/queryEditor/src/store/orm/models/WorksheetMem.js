@@ -23,11 +23,9 @@ export default class WorksheetMem extends Extender {
         return {
             // fields for SchemaSidebar
             /**
-             * TODO: Move active_prvw_node to QueryTabMem
              * @property {boolean} loading_db_tree
              * @property {array} completion_list
              * @property {array} data - Contains schemas array
-             * @property {object} active_prvw_node - Contains active node in the schemas array
              * @property {string} data_of_conn - Name of the connection using to fetch data
              */
             db_tree: this.attr({}),
