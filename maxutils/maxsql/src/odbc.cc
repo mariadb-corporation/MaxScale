@@ -88,7 +88,7 @@ public:
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end(bool) override;
+    bool resultset_end(bool ok, bool complete) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
 private:
@@ -482,7 +482,7 @@ bool JsonResult::resultset_rows(const std::vector<ColumnInfo>& metadata,
     return true;
 }
 
-bool JsonResult::resultset_end(bool complete)
+bool JsonResult::resultset_end(bool ok, bool complete)
 {
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_object("fields", std::move(m_fields));
@@ -544,7 +544,7 @@ bool TextResult::resultset_rows(const std::vector<ColumnInfo>& metadata,
     return true;
 }
 
-bool TextResult::resultset_end(bool complete)
+bool TextResult::resultset_end(bool ok, bool complete)
 {
     m_result.push_back(std::move(m_data));
     return true;
@@ -822,11 +822,11 @@ bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuff
     return SQL_SUCCEEDED(ret);
 }
 
-bool ODBCImp::resultset_end(bool complete)
+bool ODBCImp::resultset_end(bool ok, bool complete)
 {
     SQLFreeStmt(m_stmt, SQL_UNBIND);
     SQLFreeStmt(m_stmt, SQL_DROP);
-    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, m_conn, SQL_COMMIT);
+    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, m_conn, ok ? SQL_COMMIT : SQL_ROLLBACK);
 
     if (ret == SQL_ERROR)
     {
@@ -902,7 +902,7 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
                         get_batch_result(columns, handler) :
                         get_normal_result(columns, handler);
 
-                    if (!handler->resultset_end(complete))
+                    if (!handler->resultset_end(ok, complete))
                     {
                         MXB_DEBUG("Output failed to process resultset end");
                         ok = false;

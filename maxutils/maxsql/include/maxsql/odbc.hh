@@ -79,21 +79,57 @@ class Output
 public:
     virtual ~Output() = default;
 
-    // Called whenever an empty result (i.e. an OK packet) is received.
+    /**
+     * Called whenever an empty result (i.e. an OK packet) is received.
+     *
+     * @param rows_affected Number of rows affected
+     * @param warnings      Number of warnings
+     *
+     * @return True if the OK result processing was successful
+     */
     virtual bool ok_result(int64_t rows_affected, int64_t warnings) = 0;
 
-    // Called before the first row of the resultset is read.
+    /**
+     * Called before the first row of the resultset is read
+     *
+     * @param metadata Resultset metadata
+     *
+     * @return True if the resultset start processing was successful
+     */
     virtual bool resultset_start(const std::vector<ColumnInfo>& metadata) = 0;
 
-    // Called for each batch of rows read. The value of `rows_fetched` contains how many rows of data are
-    // available.
+    /**
+     * Called for each batch of rows read
+     *
+     * @param metadata     Resultset metadata
+     * @param res          The resultset rows
+     * @param rows_fetched Number of rows available in `res`
+     *
+     * @return True if the resultset rows processing was successful
+     */
     virtual bool resultset_rows(const std::vector<ColumnInfo>& metadata,
                                 ResultBuffer& res, uint64_t rows_fetched) = 0;
 
-    // Called when the resultset ends.
-    virtual bool resultset_end(bool complete) = 0;
+    /**
+     * Called when the resultset ends.
+     *
+     * @param ok       True if the resultset was read successfully
+     * @param complete True if the whole resultset was read. False if the result was truncated due to a row
+     *                 number limit being hit.
+     *
+     * @return True if the resultset end processing is successful
+     */
+    virtual bool resultset_end(bool ok, bool complete) = 0;
 
-    // An error occurred
+    /**
+     * Called when an error occurs
+     *
+     * @param errnum   Error number
+     * @param errmsg   Error message
+     * @param sqlstate Current SQLSTATE
+     *
+     * @return True if error processing was successful.
+     */
     virtual bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) = 0;
 };
 
@@ -104,7 +140,7 @@ struct JsonResult : public Output
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end(bool complete) override;
+    bool resultset_end(bool ok, bool complete) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
     mxb::Json result()
@@ -130,7 +166,7 @@ struct TextResult : public Output
     bool resultset_start(const std::vector<ColumnInfo>& metadata) override;
     bool resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuffer& res,
                         uint64_t rows_fetched) override;
-    bool resultset_end(bool complete) override;
+    bool resultset_end(bool ok, bool complete) override;
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override;
 
     const std::vector<Result>& result() const
@@ -165,7 +201,7 @@ struct NoResult : public Output
         return true;
     }
 
-    bool resultset_end(bool complete) override
+    bool resultset_end(bool ok, bool complete) override
     {
         return true;
     }
