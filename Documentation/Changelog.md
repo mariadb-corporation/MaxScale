@@ -19,6 +19,8 @@
   redirecting one during switchover and failover. When starting a new
   replication connection on a previous replica, Slave_Pos is used. When starting
   a new replication connection on a previous primary, Current_Pos is used.
+* Ed25519Auth-plugin added. The plugin enables authentication with the
+  MariaDB Server ed25519 authentication plugin.
 
 ## MariaDB MaxScale 22.08
 
