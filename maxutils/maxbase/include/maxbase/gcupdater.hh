@@ -335,7 +335,7 @@ void GCUpdater<SD>::update_client_indices()
 template<typename SD>
 void GCUpdater<SD>::run()
 {
-    std::atomic<int> instance_ctr{0};
+    static std::atomic<int> instance_ctr{-1};
     auto name {MAKE_STR("GCUpdater-" << std::setw(2) << std::setfill('0') << ++instance_ctr)};
     maxbase::set_thread_name(m_thread, name);
 
