@@ -339,12 +339,16 @@ GWBUF Ed25519ClientAuthenticator::sha_create_request_encrypted_pw_packet() const
     /**
      * Password request:
      * 4 bytes     - Header
+     * 1           - Bytes length
      * 4           - Pw request
      */
-    size_t total_len = MYSQL_HEADER_LEN + 1;
+    size_t plen = 2;
+    size_t total_len = MYSQL_HEADER_LEN + plen;
     GWBUF rval;
     auto [ptr, _] = rval.prepare_to_write(total_len);
-    ptr = mariadb::write_header(ptr, 1, 0);
+    ptr = mariadb::write_header(ptr, plen, 0);
+    // The request is given as byte<lenenc>.
+    *ptr++ = 1;
     *ptr++ = 4;
     rval.write_complete(total_len);
     return rval;
