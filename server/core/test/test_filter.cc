@@ -39,7 +39,7 @@ mxs::ConfigParameters params;
 static int test1()
 {
     SFilterDef f1, f2;
-    params.set("module", "qlafilter");
+    params.set("module", "hintfilter");
 
     if ((f1 = filter_alloc("test1", params)) == NULL)
     {
@@ -138,8 +138,6 @@ void run_tests()
 {
 
     preload_module("qlafilter", "server/modules/filter/qlafilter/", mxs::ModuleType::FILTER);
-
-    params.set("filebase", "/tmp/qlafilter");
 
     result += test1();
     result += test2();
