@@ -19,6 +19,8 @@
 #include <maxbase/string.hh>
 #include <maxbase/assert.hh>
 
+#include <atomic>
+
 #include <sql.h>
 #include <sqlext.h>
 #include <unistd.h>
@@ -162,6 +164,8 @@ private:
     std::pair<bool, bool>   get_batch_result(int columns, Output* handler);
     bool                    data_truncation();
     bool                    can_batch();
+    bool                    canceled() const;
+    void                    clear_errors();
 
     std::optional<TextResult::Result> get_catalog_result(SQLRETURN ret, size_t min_num_fields);
 
@@ -174,6 +178,7 @@ private:
     int         m_errnum = 0;
     size_t      m_row_limit = 0;
 
+    std::atomic<bool>       m_canceled {false};
     std::vector<ColumnInfo> m_columns;
 };
 
@@ -755,10 +760,21 @@ ODBCImp::foreign_keys(std::string_view catalog, std::string_view schema, std::st
     return get_catalog_result(ret, 14);
 }
 
+bool ODBCImp::canceled() const
+{
+    return m_canceled.load(std::memory_order_relaxed);
+}
+
+void ODBCImp::clear_errors()
+{
+    m_canceled.store(false, std::memory_order_relaxed);
+    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+}
+
 bool ODBCImp::query(const std::string& query, Output* output)
 {
     log_statement(query);
-    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+    clear_errors();
     SQLRETURN ret = SQLExecDirect(m_stmt, (SQLCHAR*)query.c_str(), query.size());
     return process_response(ret, output);
 }
@@ -766,7 +782,7 @@ bool ODBCImp::query(const std::string& query, Output* output)
 bool ODBCImp::prepare(const std::string& query)
 {
     log_statement(query);
-    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+    clear_errors();
     SQLRETURN ret = SQLPrepare(m_stmt, (SQLCHAR*)query.c_str(), query.size());
 
     if (ret == SQL_ERROR)
@@ -779,7 +795,7 @@ bool ODBCImp::prepare(const std::string& query)
 
 bool ODBCImp::execute(Output* output)
 {
-    std::tie(m_errnum, m_error, m_sqlstate) = std::make_tuple(0, "", "");
+    clear_errors();
     SQLRETURN ret = SQLExecute(m_stmt);
     return process_response(ret, output);
 }
@@ -817,6 +833,13 @@ bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuff
     if (ret == SQL_ERROR)
     {
         get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+    else if (canceled())
+    {
+        ret = SQL_ERROR;
+        m_errnum = 1927;
+        m_error = "Connection was killed";
+        m_sqlstate = "HY000";
     }
 
     return SQL_SUCCEEDED(ret);
@@ -860,6 +883,7 @@ std::string ODBCImp::get_string_info(int type) const
 
 void ODBCImp::cancel()
 {
+    m_canceled.store(true, std::memory_order_relaxed);
     SQLCancel(m_stmt);
 }
 
@@ -915,7 +939,7 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
                 }
             }
         }
-        while (ok && SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
+        while (ok && !canceled() && SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
 
         SQLCloseCursor(m_stmt);
     }
@@ -1032,7 +1056,7 @@ std::pair<bool, bool> ODBCImp::get_normal_result(int columns, Output* handler)
     size_t total_rows = 0;
     bool below_limit = true;
 
-    while (ok && SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
+    while (ok && !canceled() && SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
     {
         if (m_row_limit > 0 && ++total_rows > m_row_limit)
         {
@@ -1104,7 +1128,7 @@ std::pair<bool, bool> ODBCImp::get_batch_result(int columns, Output* handler)
     size_t total_rows = 0;
     bool below_limit = true;
 
-    while (ok && below_limit && SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
+    while (ok && below_limit && !canceled() && SQL_SUCCEEDED(ret = SQLFetch(m_stmt)))
     {
         total_rows += rows_fetched;
 

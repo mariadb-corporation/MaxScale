@@ -801,17 +801,22 @@ HttpResponse run_etl_task(const HttpRequest& request)
     auto exec_query_cb = [id, host = move(host), self = move(self), etl]() {
         if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
+            conn->set_cancel_handler([etl = etl](){
+                etl->cancel();
+            });
+
             // Ignore any results that have not yet been read
             conn->result.reset();
 
             int64_t query_id = ++conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-            conn->sql = "TODO: Add something here";
+            conn->sql = "ETL";
             conn->last_query_started = mxb::Clock::now();
 
-            mxs::thread_pool().execute([conn, etl = move(etl)]() {
+            mxs::thread_pool().execute([conn, id, etl = move(etl)]() {
                 conn->result = std::invoke(func, *etl);
                 conn->last_query_time = mxb::Clock::now();
+                conn->clear_cancel_handler();
                 conn->release();
             }, "etl-" + id_str);
 

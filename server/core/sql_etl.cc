@@ -703,7 +703,8 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
 
         if (!source.execute(dest.as_output()))
         {
-            throw problem("Failed to load data: ", source.error(), dest.error());
+            const char* who = !source.error().empty() ? "Source: " : "Destination: ";
+            throw problem("Failed to load data. ", who, source.error(), dest.error());
         }
 
         auto end = mxb::Clock::now();
@@ -754,6 +755,18 @@ std::pair<mxq::ODBC, mxq::ODBC> ETL::connect_to_both()
     return {std::move(source), std::move(dest)};
 }
 
+void ETL::interrupt_source(mxq::ODBC& source)
+{
+    source.cancel();
+}
+
+void ETL::interrupt_both(std::pair<mxq::ODBC, mxq::ODBC>& connections)
+{
+    auto& [source, dest] = connections;
+    source.cancel();
+    dest.cancel();
+}
+
 Table* ETL::next_table()
 {
     mxb_assert(!m_tables.empty());
@@ -790,7 +803,17 @@ void ETL::add_error()
     m_have_error = true;
 }
 
-template<auto connect_func, auto run_func>
+void ETL::cancel()
+{
+    std::lock_guard guard(m_lock);
+
+    if (m_interruptor)
+    {
+        m_interruptor();
+    }
+}
+
+template<auto connect_func, auto run_func, auto interrupt_func>
 mxb::Json ETL::run_job()
 {
     std::string error;
@@ -815,6 +838,15 @@ mxb::Json ETL::run_job()
             connections.emplace_back(std::invoke(connect_func, this));
         }
 
+        std::unique_lock guard(m_lock);
+        m_interruptor = [&](){
+            for (auto& c : connections)
+            {
+                std::invoke(interrupt_func, this, std::ref(c));
+            }
+        };
+        guard.unlock();
+
         mxb_assert(connections.size() <= m_tables.size());
 
         extractor().threads_started(coordinator, m_tables);
@@ -827,6 +859,10 @@ mxb::Json ETL::run_job()
         }
 
         std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+
+        guard.lock();
+        m_interruptor = nullptr;
+        guard.unlock();
     }
     catch (const Error& e)
     {
@@ -895,11 +931,11 @@ void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
 
 mxb::Json ETL::prepare()
 {
-    return run_job<&ETL::connect_to_source, &ETL::run_prepare_job>();
+    return run_job<&ETL::connect_to_source, &ETL::run_prepare_job, &ETL::interrupt_source>();
 }
 
 mxb::Json ETL::start()
 {
-    return run_job<&ETL::connect_to_both, &ETL::run_start_job>();
+    return run_job<&ETL::connect_to_both, &ETL::run_start_job, &ETL::interrupt_both>();
 }
 }

@@ -76,7 +76,11 @@ public:
 
         virtual bool ping() = 0;
 
-        virtual void cancel() = 0;
+        void cancel();
+
+        void set_cancel_handler(std::function<void()> fn);
+
+        void clear_cancel_handler();
 
         std::atomic_bool busy {false};
         int64_t          current_query_id {0};
@@ -86,6 +90,13 @@ public:
         ConnectionConfig config;
         std::string      sql;
         mxb::Json        result {mxb::Json::Type::UNDEFINED};
+
+    protected:
+        virtual void do_cancel() = 0;
+
+    private:
+        mutable std::mutex    m_lock;
+        std::function<void()> m_cancel_handler;
     };
 
     class MariaDBConnection : public Connection
@@ -98,7 +109,9 @@ public:
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
-        void        cancel() override final;
+
+    protected:
+        void do_cancel() override final;
 
     private:
         mxb::Json generate_json_representation(int64_t max_rows);
@@ -120,7 +133,9 @@ public:
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
-        void        cancel() override final;
+
+    protected:
+        void do_cancel() override final;
 
     private:
         mxq::ODBC m_conn;

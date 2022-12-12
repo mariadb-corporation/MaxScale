@@ -225,14 +225,19 @@ struct ETL
 
     void add_error();
 
+    void cancel();
+
 private:
-    template<auto connect_func, auto run_func>
+    template<auto connect_func, auto run_func, auto interrupt_func>
     mxb::Json run_job();
     void      run_prepare_job(mxq::ODBC& source) noexcept;
     void      run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept;
 
-    mxq::ODBC                       connect_to_source();
+    mxq::ODBC connect_to_source();
+    void      interrupt_source(mxq::ODBC& source);
+
     std::pair<mxq::ODBC, mxq::ODBC> connect_to_both();
+    void                            interrupt_both(std::pair<mxq::ODBC, mxq::ODBC>& connections);
 
     bool   checkpoint(int* current_checkpoint);
     Table* next_table();
@@ -243,6 +248,9 @@ private:
 
     std::mutex m_lock;
     bool       m_have_error{false};
+
+    // Protected by m_lock
+    std::function<void()> m_interruptor;
 
     mxb::latch          m_init_latch;
     mxb::latch          m_create_latch;

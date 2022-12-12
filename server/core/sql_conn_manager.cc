@@ -141,6 +141,30 @@ bool ConnectionManager::cancel(const std::string& id)
     return rval;
 }
 
+void ConnectionManager::Connection::cancel()
+{
+    do_cancel();
+
+    std::lock_guard guard(m_lock);
+
+    if (m_cancel_handler)
+    {
+        m_cancel_handler();
+    }
+}
+
+void ConnectionManager::Connection::set_cancel_handler(std::function<void()> fn)
+{
+    std::lock_guard guard(m_lock);
+    m_cancel_handler = std::move(fn);
+}
+
+void ConnectionManager::Connection::clear_cancel_handler()
+{
+    std::lock_guard guard(m_lock);
+    m_cancel_handler = nullptr;
+}
+
 bool ConnectionManager::is_query(const std::string& conn_id, int64_t query_id) const
 {
     bool rval = false;
@@ -362,7 +386,7 @@ bool ConnectionManager::MariaDBConnection::ping()
     return m_conn.ping();
 }
 
-void ConnectionManager::MariaDBConnection::cancel()
+void ConnectionManager::MariaDBConnection::do_cancel()
 {
     mxq::MariaDB other;
     auto& sett = other.connection_settings();
@@ -571,7 +595,7 @@ bool ConnectionManager::ODBCConnection::ping()
     return m_conn.query("SELECT 1", &empty);
 }
 
-void ConnectionManager::ODBCConnection::cancel()
+void ConnectionManager::ODBCConnection::do_cancel()
 {
     m_conn.cancel();
 }
