@@ -346,6 +346,25 @@ void MaxRest::create_listener(const std::string& service, const std::string& nam
     curl_post("listeners", body.str());
 }
 
+void MaxRest::destroy_listener(const std::string& listener)
+{
+    string path = "listeners/" + listener;
+
+    curl_delete(path);
+}
+
+void MaxRest::destroy_service(const std::string& name, bool force)
+{
+    string path = "services/" + name;
+
+    if (force)
+    {
+        path += "?force=1";
+    }
+
+    curl_delete(path);
+}
+
 MaxRest::Server MaxRest::show_server(const std::string& id) const
 {
     mxb::Json object = v1_servers(id);
@@ -402,6 +421,11 @@ json_t* MaxRest::get_leaf_object(json_t* pObject, const string& key, Presence pr
     return pObject;
 }
 
+mxb::Json MaxRest::curl_delete(const string& path) const
+{
+    return curl(DELETE, path);
+}
+
 mxb::Json MaxRest::curl_get(const string& path) const
 {
     return curl(GET, path);
@@ -429,6 +453,10 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
 
     switch (command)
     {
+    case DELETE:
+        curl_command += "-X DELETE ";
+        break;
+
     case GET:
         curl_command += "-X GET ";
         break;

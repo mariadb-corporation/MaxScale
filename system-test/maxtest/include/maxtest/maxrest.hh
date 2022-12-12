@@ -180,9 +180,18 @@ public:
     /**
      * create
      */
-    void create_service(const std::string& name, const std::string& router, const std::vector<Parameter>& parameters);
+    void create_service(const std::string& name,
+                        const std::string& router,
+                        const std::vector<Parameter>& parameters);
 
     void create_listener(const std::string& service, const std::string& name, int port);
+
+    /**
+     * destroy
+     */
+    void destroy_listener(const std::string& name);
+
+    void destroy_service(const std::string& name, bool force);
 
     /**
      * The equivalent of 'maxctrl list servers'
@@ -297,7 +306,7 @@ public:
     mxb::Json parse(const std::string& json) const;
 
     /**
-     * Issue a curl GET/PATCH/POST/PUT to the REST-API endpoint of MaxScale.
+     * Issue a curl DELETE/GET/PATCH/POST/PUT to the REST-API endpoint of MaxScale.
      *
      * The path will be appended to "http://127.0.0.1:8989/v1/".
      *
@@ -306,6 +315,7 @@ public:
      *
      * @return  The returned json_t object.
      */
+    mxb::Json curl_delete(const std::string& path) const;
     mxb::Json curl_get(const std::string& path) const;
     mxb::Json curl_patch(const std::string& path, const std::string& body) const;
     mxb::Json curl_post(const std::string& path, const std::string& body = std::string {}) const;
@@ -327,6 +337,7 @@ public:
 private:
     enum Command
     {
+        DELETE,
         GET,
         PATCH,
         POST,
