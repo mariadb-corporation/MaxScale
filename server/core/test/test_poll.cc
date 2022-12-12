@@ -33,19 +33,8 @@
  *
  */
 
-static void test1()
+static void test1(Service* service)
 {
-    /* Poll tests */
-    fprintf(stderr, "Add a DCB");
-    mxs::ConfigParameters parameters;
-    parameters.set(CN_CONNECTION_TIMEOUT, "10s");
-    parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
-    parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
-    parameters.set(CN_USER, "user");
-    parameters.set(CN_PASSWORD, "password");
-    parameters.set(CN_ROUTER, "readconnroute");
-    auto service = Service::create("service", parameters);
-
     mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");
     listener_params.set(CN_PORT, "3306");
@@ -84,10 +73,21 @@ static void test1()
 int main(int argc, char** argv)
 {
     run_unit_test([]() {
+            mxs::ConfigParameters parameters;
+            parameters.set(CN_CONNECTION_TIMEOUT, "10s");
+            parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
+            parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
+            parameters.set(CN_USER, "user");
+            parameters.set(CN_PASSWORD, "password");
+            parameters.set(CN_ROUTER, "readconnroute");
+            auto service = Service::create("service", parameters);
+
             mxs::RoutingWorker* pWorker = mxs::RoutingWorker::get_by_index(0);
             mxb_assert(pWorker);
 
-            pWorker->call(test1, mxb::Worker::EXECUTE_QUEUED);
+            pWorker->call([service]() {
+                    test1(service);
+                }, mxb::Worker::EXECUTE_QUEUED);
         });
     return 0;
 }
