@@ -26,7 +26,7 @@ export { default as MinMaxBtnCtr } from '@queryEditorSrc/components/MinMaxBtnCtr
 export { default as ConfirmLeaveDlg } from '@queryEditorSrc/components/ConfirmLeaveDlg.vue'
 export { default as ReconnDlgCtr } from '@queryEditorSrc/components/ReconnDlgCtr.vue'
 export { default as queryEditorStorePlugins } from '@queryEditorSrc/store/plugins/index'
-
+export { default as models } from '@queryEditorSrc/store/orm/models'
 export default /*#__PURE__*/ (() => {
     // Get component instance
     const installable = MxsQueryEditor

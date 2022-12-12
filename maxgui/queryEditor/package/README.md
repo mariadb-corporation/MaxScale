@@ -13,8 +13,9 @@ Query editor peerDependencies
 | Dependency                   | Version |
 | ---------------------------- | :-----: |
 | @mdi/font                    |  7.0.x  |
+| @vuex-orm/core               | 0.36.x  |
 | axios                        | 0.27.x  |
-| browser-fs-access            | 0.30.x  |
+| browser-fs-access            | 0.31.x  |
 | chart.js                     |  2.9.x  |
 | chartjs-plugin-trendline     |  0.2.x  |
 | deep-diff                    |  1.0.x  |
@@ -156,7 +157,7 @@ export default new Vuetify({
 })
 ```
 
-Register query editor vuex plugins. Query editor internally uses `vuex-persist`
+Register query editor vuex plugins. Query editor internally uses `vuex-orm, vuex-persist`
 and `localforage` packages to persist its states. So this needs to be
 registered manually.
 
@@ -230,8 +231,13 @@ example are importable.
 </template>
 
 <script>
-import { mapActions, mapState } from 'vuex'
-import { MinMaxBtnCtr, QueryCnfGearBtn, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-query-editor'
+import {
+    models,
+    MinMaxBtnCtr,
+    QueryCnfGearBtn,
+    ConfirmLeaveDlg,
+    ReconnDlgCtr,
+} from 'mxs-query-editor'
 export default {
     name: 'query-page',
     components: {
@@ -248,32 +254,31 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            sql_conns: state => state.queryConn.sql_conns,
-        }),
+        allConns() {
+            return models.QueryConn.all()
+        },
     },
     beforeRouteLeave(to, from, next) {
         if (this.to) {
             next()
         } else {
             this.to = to
-            if (Object.keys(this.sql_conns).length === 0) this.leavePage()
+            if (this.allConns.length === 0) this.leavePage()
             else {
                 this.shouldDelAll = true
                 this.isConfDlgOpened = true
             }
         }
     },
+    async beforeCreate() {
+        await this.$store.dispatch('queryEditorConfig/initQueryEditor')
+    },
     async created() {
-        await this.validateConns({ sqlConns: this.sql_conns })
+        await models.QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
     },
     methods: {
-        ...mapActions({
-            disconnectAll: 'queryConn/disconnectAll',
-            validateConns: 'queryConn/validateConns',
-        }),
         async onLeave() {
-            if (this.shouldDelAll) await this.disconnectAll()
+            if (this.shouldDelAll) await models.QueryConn.dispatch('disconnectAll')
             this.leavePage()
         },
         leavePage() {
@@ -283,7 +288,10 @@ export default {
             this.to = null
         },
         async onReconnectCb() {
-            await this.validateConns({ sqlConns: this.sql_conns, silentValidation: true })
+            await models.QueryConn.dispatch('validateConns', {
+                persistentConns: this.allConns,
+                silentValidation: true,
+            })
         },
     },
 }
@@ -306,13 +314,22 @@ If all connections belong to one MaxScale, use the below vuex action to clear
 all connections:
 
 ```js
-store.dispatch('queryConn/disconnectAll', { root: true })
+import { models } from 'mxs-query-editor'
+
+await models.QueryConn.dispatch('disconnectAll')
 ```
 
 If connections belongs to multiple MaxScale, use the below example to clear
 all connections of a MaxScale:
 
 ```js
+import { models } from 'mxs-query-editor'
+/**
+ * When creating a connection via `models.QueryConn.dispatch('openConnect', { body, resourceType, meta })`,
+ * The meta field can store information needed to identify which connections belong to which maxscale.
+ * To delete all open connections from the query editor, group all connections belong to one maxscale and
+ * delete one by one.
+ */
 for (const { id = '' } of connections_of_a_maxscale) {
     commit(
         'queryEditorConfig/SET_AXIOS_OPTS',
@@ -321,7 +338,7 @@ for (const { id = '' } of connections_of_a_maxscale) {
         },
         { root: true }
     )
-    await dispatch('disconnect', { showSnackbar: false, id })
+    await models.QueryConn.dispatch('disconnect', { showSnackbar: false, id })
 }
 ```
 
@@ -376,15 +393,13 @@ Certain keywords are reserved in order to make the query editor work properly.
 | mxs_icon_name      | Query editor icons, they have `mxs_`as the prefix. |
 | mxs-component-name |   Global Vue components with`mxs-`as the prefix    |
 | mxs-query-editor   |                Global Vue component                |
+| editorsMem         |                    Vuex module                     |
+| fileSysAccess      |                    Vuex module                     |
 | mxsApp             |                    Vuex module                     |
-| wke                |                    Vuex module                     |
-| queryConn          |                    Vuex module                     |
-| editor             |                    Vuex module                     |
-| schemaSidebar      |                    Vuex module                     |
-| queryResult        |                    Vuex module                     |
-| queryTab           |                    Vuex module                     |
-| queryPersisted     |                    Vuex module                     |
+| queryConnsMem      |                    Vuex module                     |
 | queryEditorConfig  |                    Vuex module                     |
+| queryPersisted     |                    Vuex module                     |
+| ORM                |                    Vuex module                     |
 | store.vue          |                     Vuex store                     |
 | \$mxs_t            |               Vue instance property                |
 | \$mxs_tc           |               Vue instance property                |
