@@ -59,29 +59,18 @@ export default {
             if (!silentValidation)
                 commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
 
-            const { $typy, $helpers, $queryHttp } = this.vue
+            const { $helpers, $queryHttp } = this.vue
             const [e, res] = await $helpers.asyncTryCatch($queryHttp.get(`/sql/`))
             const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
-
             const {
-                alive_conn_map = {},
-                expired_conn_map = {},
+                alive_conns = [],
+                expired_conn_ids = [],
                 orphaned_conn_ids = [],
             } = queryHelper.categorizeSqlConns({ apiConnMap, persistentConns })
-            if ($typy(alive_conn_map).isEmptyObject)
-                // delete all
-                dispatch('cascadeRefreshOnDelete', c => Boolean(c.id))
-            else {
-                //cascade refresh relations and delete expired connections
-                dispatch('cascadeRefreshOnDelete', c =>
-                    Object.keys(expired_conn_map).includes(c.id)
-                )
-                await dispatch('cleanUpOrphanedConns', orphaned_conn_ids)
-                //TODO: Update mxs-query-editor document for new method to update QueryConn
-                Object.keys(alive_conn_map).forEach(id =>
-                    QueryConn.update({ where: id, data: alive_conn_map[id] })
-                )
-            }
+            //cascade refresh relations and delete expired connections objects in ORM
+            dispatch('cascadeRefreshOnDelete', c => expired_conn_ids.includes(c.id))
+            await dispatch('cleanUpOrphanedConns', orphaned_conn_ids)
+            QueryConn.update({ data: alive_conns })
             commit('queryConnsMem/SET_IS_VALIDATING_CONN', false, { root: true })
         },
         /**

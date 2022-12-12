@@ -340,35 +340,34 @@ function filterEntity(entity, payload) {
 }
 /**
  *
- * @param {Object} apiConnMap - connections from API
+ * @param {Object} apiConnMap - connections from API mapped by id
  * @param {Array} persistentConns - current persistent connections
- * @returns {Object} - { alive_conn_map: {}, expired_conn_map: {}, orphaned_conn_ids: [] }
- * alive_conn_map: stores connections that exists in the response of a GET to /sql/
+ * @returns {Object} - { alive_conns: [], expired_conn_ids: [], orphaned_conn_ids: [] }
+ * alive_conns: stores connections that exists in the response of a GET to /sql/
  * orphaned_conn_ids: When wke connection expires but its cloned connections (query tabs) are still alive,
  * those are orphaned connections
  */
 function categorizeSqlConns({ apiConnMap, persistentConns }) {
-    let alive_conn_map = {},
-        expired_conn_map = {},
+    let alive_conns = [],
+        expired_conn_ids = [],
         orphaned_conn_ids = []
 
-    if (!t(apiConnMap).isEmptyObject) {
-        persistentConns.forEach(conn => {
-            const connId = conn.id
-            if (apiConnMap[connId]) {
-                // if this has value, it is a cloned connection from the wke connection
-                const wkeConnId = t(conn, 'clone_of_conn_id').safeString
-                if (wkeConnId && !apiConnMap[wkeConnId]) orphaned_conn_ids.push(conn.id)
-                else
-                    alive_conn_map[connId] = {
-                        ...conn,
-                        // update attributes
-                        attributes: apiConnMap[connId].attributes,
-                    }
-            } else expired_conn_map[connId] = conn
-        })
-    }
-    return { alive_conn_map, expired_conn_map, orphaned_conn_ids }
+    persistentConns.forEach(conn => {
+        const connId = conn.id
+        if (apiConnMap[connId]) {
+            // if this has value, it is a cloned connection from the wke connection
+            const wkeConnId = t(conn, 'clone_of_conn_id').safeString
+            if (wkeConnId && !apiConnMap[wkeConnId]) orphaned_conn_ids.push(conn.id)
+            else
+                alive_conns.push({
+                    ...conn,
+                    // update attributes
+                    attributes: apiConnMap[connId].attributes,
+                })
+        } else expired_conn_ids.push(connId)
+    })
+
+    return { alive_conns, expired_conn_ids, orphaned_conn_ids }
 }
 
 export default {

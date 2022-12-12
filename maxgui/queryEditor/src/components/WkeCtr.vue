@@ -220,8 +220,10 @@ export default {
          */
         watch_activeQueryTabConn() {
             this.unwatch_activeQueryTabConn = this.$watch(
-                'activeQueryTabConn',
-                async () => await Worksheet.dispatch('handleInitialFetch'),
+                'activeQueryTabConn.id',
+                async (v, oV) => {
+                    if (v !== oV) await Worksheet.dispatch('handleInitialFetch')
+                },
                 { deep: true, immediate: true }
             )
         },
