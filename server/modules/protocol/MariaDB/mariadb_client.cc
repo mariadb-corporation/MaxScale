@@ -2152,7 +2152,7 @@ bool MariaDBClientConnection::is_movable() const
 
 bool MariaDBClientConnection::is_idle() const
 {
-    return in_routing_state();
+    return in_routing_state() && m_num_responses == 0;
 }
 
 bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
