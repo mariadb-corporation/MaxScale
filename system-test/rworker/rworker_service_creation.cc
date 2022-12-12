@@ -59,6 +59,12 @@ void create_service_with_dormant_worker(TestConnections& test, MaxRest& maxrest)
     // Increase back to 5
     maxrest.alter_maxscale("threads", (int64_t)5);
     sleep(1);
+
+    // Cleanup
+    cout << "Destroying listener" << endl;
+    maxrest.destroy_listener("RT-Listener");
+    cout << "Destroying service" << endl;
+    maxrest.destroy_service("RT", true);
 }
 
 
