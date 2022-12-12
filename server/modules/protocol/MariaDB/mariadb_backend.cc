@@ -1397,6 +1397,15 @@ bool MariaDBBackendConnection::can_close() const
     return m_state == State::ROUTING || m_state == State::FAILED;
 }
 
+bool MariaDBBackendConnection::is_idle() const
+{
+    return m_state == State::ROUTING
+           && m_reply.state() == ReplyState::DONE
+           && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA
+           && m_track_queue.empty()
+           && m_ignore_replies == 0;
+}
+
 json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{sissss}", "connection_id", m_thread_id, "server", m_server.name(),

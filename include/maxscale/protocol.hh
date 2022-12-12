@@ -67,6 +67,16 @@ public:
     {
         return true;
     }
+
+    /**
+     * Is the connection idle.
+     *
+     * @return True if the connection is idle.
+     */
+    virtual bool is_idle() const
+    {
+        return true;
+    }
 };
 }
 /**

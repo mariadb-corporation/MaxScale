@@ -40,6 +40,7 @@ public:
     bool    established() override;
     void    ping() override;
     bool    can_close() const override;
+    bool    is_idle() const override;
     json_t* diagnostics() const override;
 
     /**
