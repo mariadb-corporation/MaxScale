@@ -19,6 +19,30 @@ using namespace std;
 
 #define ENTER_TEST() do { cout << __func__ << endl; } while (false)
 
+namespace
+{
+
+int alter_threads(MaxRest& maxrest, int nCurrent, int nDelta)
+{
+    int nThreads = nCurrent + nDelta;
+
+    maxrest.alter_maxscale("threads", nThreads);
+
+    if (nDelta < 0)
+    {
+        sleep(abs(nDelta) * 1 + 1);
+    }
+
+    auto& test = maxrest.test();
+
+    test.expect((int)maxrest.show_threads().size() == nThreads, "Expected %d threads, but found %d.",
+                nThreads, (int)maxrest.show_threads().size());
+
+    return nThreads;
+}
+
+}
+
 //
 // create_service_with_dormant_worker
 //
@@ -27,44 +51,55 @@ using namespace std;
 // - Create service
 // - Increase number of workers
 //
-void create_service_with_dormant_worker(TestConnections& test, MaxRest& maxrest)
+void create_service(TestConnections& test, MaxRest& maxrest)
 {
     ENTER_TEST();
 
     vector<MaxRest::Thread> threads;
 
-    // Assume 4 initial threads.
+    // Expect 4 initial threads.
+    int nThreads = 4;
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "1: Expected 4 initial threads, but found %d.", (int)threads.size());
 
-    // Increase to 5
-    maxrest.alter_maxscale("threads", (int64_t)5);
-    sleep(1);
+    if (threads.size() != 4)
+    {
+        // But tune if necessary to make the rest of the test meaningful.
+        nThreads = alter_threads(maxrest, threads.size(), 4 - threads.size());
+    }
 
-    // Decrease back to 4
-    maxrest.alter_maxscale("threads", (int64_t)4);
-    sleep(1);
+    nThreads = alter_threads(maxrest, nThreads, 1);
+    nThreads = alter_threads(maxrest, nThreads, -1);
 
-    // Create service and listener
+    // Create server, service and listener
     vector<MaxRest::Parameter> service_parameters;
     service_parameters.emplace_back("user", "maxskysql");
     service_parameters.emplace_back("password", "skysql");
-    service_parameters.emplace_back("servers", "Server1,Server2,Server3,Server4");
+    service_parameters.emplace_back("servers", "Server1,Server5");
+
+    cout << "Creating server" << endl;
+    maxrest.create_server("Server5", "127.0.0.1", 4711);
 
     cout << "Creating service" << endl;
+    nThreads = alter_threads(maxrest, nThreads, 1);
     maxrest.create_service("RT", "readwritesplit", service_parameters);
-    cout << "Creating listener" << endl;
-    maxrest.create_listener("RT", "RT-Listener", 5000);
 
-    // Increase back to 5
-    maxrest.alter_maxscale("threads", (int64_t)5);
-    sleep(1);
+    cout << "Creating listener" << endl;
+    nThreads = alter_threads(maxrest, nThreads, -1);
+    maxrest.create_listener("RT", "RT-Listener", 5000);
 
     // Cleanup
     cout << "Destroying listener" << endl;
+    nThreads = alter_threads(maxrest, nThreads, 1);
     maxrest.destroy_listener("RT-Listener");
+
     cout << "Destroying service" << endl;
+    nThreads = alter_threads(maxrest, nThreads, -1);
     maxrest.destroy_service("RT", true);
+
+    cout << "Destroying server" << endl;
+    nThreads = alter_threads(maxrest, nThreads, 1);
+    maxrest.destroy_server("Server5");
 }
 
 
@@ -74,9 +109,9 @@ void test_main(TestConnections& test)
 
     try
     {
-        create_service_with_dormant_worker(test, maxrest);
+        create_service(test, maxrest);
 
-        maxrest.alter_maxscale("threads", (int64_t)4);
+        maxrest.alter_maxscale("threads", 4);
     }
     catch (const std::exception& x)
     {
