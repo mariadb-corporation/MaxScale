@@ -137,7 +137,7 @@ static int test3()
 void run_tests()
 {
 
-    preload_module("qlafilter", "server/modules/filter/qlafilter/", mxs::ModuleType::FILTER);
+    preload_module("hintfilter", "server/modules/filter/hintfilter/", mxs::ModuleType::FILTER);
 
     result += test1();
     result += test2();
