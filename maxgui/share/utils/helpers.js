@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import moment from 'moment'
 import { logger } from '@share/plugins/logger'
 export const uuidv1 = require('uuid').v1
 
@@ -88,15 +89,12 @@ export function getErrorsArr(error) {
 }
 
 /**
- * TODO: Move this helper to somewhere else where it has access to moment object.
- * Right now, the moment needs to be passed as arg
  * Handle format date value
- * @param {Object} param.moment - moment
  * @param {String} param.value - String date to be formatted
  * @param {String} param.formatType - format type (default is HH:mm:ss MM.DD.YYYY)
  * @return {String} new date format
  */
-export function dateFormat({ moment, value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
+export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
     let date = new Date(value)
     const DATE_RFC2822 = 'ddd, DD MMM YYYY HH:mm:ss'
     let format

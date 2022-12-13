@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
 import * as commonHelpers from '@share/utils/helpers'
 
 describe('common helpers unit tests', () => {
@@ -65,7 +64,6 @@ describe('common helpers unit tests', () => {
             it(des, () => {
                 expect(
                     commonHelpers.dateFormat({
-                        moment: Vue.moment,
                         value: dummyValue,
                         formatType: type,
                     })

@@ -80,7 +80,6 @@
                             >
                                 {{
                                     $helpers.dateFormat({
-                                        moment: $moment,
                                         value,
                                         formatType: 'MM.DD.YYYY HH:mm:ss',
                                     })

@@ -84,7 +84,7 @@ export default {
                 rows.push({
                     id: id,
                     user: `${user}@${remote}`,
-                    connected: this.$helpers.dateFormat({ moment: this.$moment, value: connected }),
+                    connected: this.$helpers.dateFormat({ value: connected }),
                     idle: idle,
                     memory,
                     serviceIds: serviceIds,

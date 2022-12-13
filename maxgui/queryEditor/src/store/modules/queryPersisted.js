@@ -126,7 +126,6 @@ export default {
                         date: startTime, // Unix time
                         connection_name,
                         time: this.vue.$helpers.dateFormat({
-                            moment: this.vue.$moment,
                             value: startTime,
                             formatType: 'HH:mm:ss',
                         }),
@@ -151,7 +150,6 @@ export default {
                     payload: {
                         date, // Unix time
                         time: this.vue.$helpers.dateFormat({
-                            moment: this.vue.$moment,
                             value: date,
                             formatType: 'HH:mm:ss',
                         }),
@@ -172,12 +170,7 @@ export default {
             }
         },
         handleAutoClearQueryHistory({ state, commit }) {
-            if (
-                this.vue.$helpers.daysDiff({
-                    moment: this.vue.$moment,
-                    timestamp: state.query_history_expired_time,
-                }) <= 0
-            ) {
+            if (this.vue.$helpers.daysDiff(state.query_history_expired_time) <= 0) {
                 commit('SET_QUERY_HISTORY', [])
                 commit('SET_QUERY_HISTORY_EXPIRED_TIME', addDaysToNow(30))
             }

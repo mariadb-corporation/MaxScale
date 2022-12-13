@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import moment from 'moment'
 import { lodash } from '@share/utils/helpers'
 import sqlFormatter from '@queryEditorSrc/components/SqlEditor/formatter'
 
@@ -67,11 +68,10 @@ export function addDaysToNow(days) {
 }
 /**
  * This returns number of days between target timestamp and current date
- * @param {Object} param.moment - moment
- * @param {String} param.timestamp - target unix timestamp
+ * @param {String} timestamp - target unix timestamp
  * @returns {Number} - days diff
  */
-export function daysDiff({ moment, timestamp }) {
+export function daysDiff(timestamp) {
     const now = moment().startOf('day')
     const end = moment(timestamp).startOf('day')
     return end.diff(now, 'days')

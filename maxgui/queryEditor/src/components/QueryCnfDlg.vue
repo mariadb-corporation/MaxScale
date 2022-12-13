@@ -183,10 +183,9 @@ export default {
             return {
                 rowLimit: this.cnf.query_row_limit,
                 showQueryConfirm: Boolean(this.cnf.query_confirm_flag),
-                queryHistoryRetentionPeriod: this.$helpers.daysDiff({
-                    moment: this.$moment,
-                    timestamp: this.cnf.query_history_expired_time,
-                }),
+                queryHistoryRetentionPeriod: this.$helpers.daysDiff(
+                    this.cnf.query_history_expired_time
+                ),
                 showSysSchemas: Boolean(this.cnf.query_show_sys_schemas_flag),
                 tabMovesFocus: this.cnf.tab_moves_focus,
             }

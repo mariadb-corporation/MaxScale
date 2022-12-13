@@ -24,12 +24,7 @@
                         STARTED AT
                     </span>
                     <span class="started text-no-wrap text-body-2">
-                        {{
-                            $helpers.dateFormat({
-                                moment: $moment,
-                                value: currentService.attributes.started,
-                            })
-                        }}
+                        {{ $helpers.dateFormat({ value: currentService.attributes.started }) }}
                     </span>
                 </template>
             </outlined-overview-card>
