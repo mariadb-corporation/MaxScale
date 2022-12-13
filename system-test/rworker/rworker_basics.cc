@@ -179,13 +179,13 @@ void smoke_test1(TestConnections& test, MaxRest& maxrest)
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "1: Expected 4 initial threads, but found %d.", (int)threads.size());
 
-    maxrest.alter_maxscale("threads", (int64_t)8);
+    maxrest.alter_maxscale("threads", 8);
     sleep_enough(4, 8);
 
     threads = maxrest.show_threads();
     test.expect(threads.size() == 8, "2: Expected 8 threads, but found %d.", (int)threads.size());
 
-    maxrest.alter_maxscale("threads", (int64_t)4);
+    maxrest.alter_maxscale("threads", 4);
     sleep_enough(8, 4);
 
     threads = maxrest.show_threads();
@@ -208,9 +208,12 @@ void smoke_test2(TestConnections& test, MaxRest& maxrest)
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "Expected 4 initial threads, but found %d.", (int)threads.size());
 
+    // A failure now means that things work as expected.
+    maxrest.fail_on_error(false);
+
     try
     {
-        maxrest.alter_maxscale("threads", (int64_t)0);
+        maxrest.alter_maxscale("threads", 0);
         test.expect(false, "Setting the threads to 0 succeeded.");
     }
     catch (...)
@@ -219,12 +222,14 @@ void smoke_test2(TestConnections& test, MaxRest& maxrest)
 
     try
     {
-        maxrest.alter_maxscale("threads", (int64_t)1024);
+        maxrest.alter_maxscale("threads", 1024);
         test.expect(false, "Setting the threads to 1024 succeeded.");
     }
     catch (...)
     {
     }
+
+    maxrest.fail_on_error(true);
 }
 
 //
@@ -313,7 +318,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     check_value(test, threads, &MaxRest::Thread::state, string("Active"));
 
     // Tuning the number of threads to 1; as they all have connections, none should disappear.
-    maxrest.alter_maxscale("threads", (int64_t)1);
+    maxrest.alter_maxscale("threads", 1);
     sleep_enough(4, 1);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "2: Expected 4 threads but found %d.", (int)threads.size());
@@ -323,7 +328,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     check_value(test, ++threads.begin(), threads.end(), &MaxRest::Thread::state, string("Draining"));
 
     // Tuning the number of threads to 5.
-    maxrest.alter_maxscale("threads", (int64_t)5);
+    maxrest.alter_maxscale("threads", 5);
     sleep_enough(4, 5);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 5, "3: Expected 5 threads but found %d.", (int)threads.size());
@@ -332,7 +337,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
     check_value(test, threads, &MaxRest::Thread::state, string("Active"));
 
     // Tuning the number of threads to 1.
-    maxrest.alter_maxscale("threads", (int64_t)1);
+    maxrest.alter_maxscale("threads", 1);
     sleep_enough(5, 1);
     threads = maxrest.show_threads();
     // The fifth thread should go down, as there are no connections.
@@ -466,7 +471,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
                 break;
             }
 
-            maxrest.alter_maxscale("threads", (int64_t)i);
+            maxrest.alter_maxscale("threads", i);
 
             threads = maxrest.show_threads();
 
@@ -507,7 +512,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
                 break;
             }
 
-            maxrest.alter_maxscale("threads", (int64_t)i);
+            maxrest.alter_maxscale("threads", i);
 
             for (int j = 0; j < 5; ++j)
             {
@@ -550,7 +555,7 @@ void test_main(TestConnections& test)
 
         stress_test1(test, maxrest);
 
-        maxrest.alter_maxscale("threads", (int64_t)4);
+        maxrest.alter_maxscale("threads", 4);
     }
     catch (const std::exception& x)
     {
