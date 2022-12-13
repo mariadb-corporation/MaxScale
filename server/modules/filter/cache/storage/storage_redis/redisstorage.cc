@@ -149,6 +149,9 @@ namespace
 
 const int DEFAULT_REDIS_PORT = 6379;
 
+const char CN_STORAGE_ARG_USERNAME[] = "username";
+const char CN_STORAGE_ARG_PASSWORD[] = "password";
+
 struct
 {
     Storage::Limits default_limits;
@@ -568,11 +571,14 @@ public:
                        std::chrono::milliseconds timeout,
                        bool invalidate,
                        uint32_t ttl,
+                       const std::string& username,
+                       const std::string& password,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
 
-        RedisToken* pToken = new(std::nothrow) RedisToken(host, port, timeout, invalidate, ttl);
+        RedisToken* pToken = new(std::nothrow) RedisToken(host, port, timeout, invalidate, ttl,
+                                                          username, password);
 
         if (pToken)
         {
@@ -1232,12 +1238,16 @@ private:
                int port,
                std::chrono::milliseconds timeout,
                bool invalidate,
-               uint32_t ttl)
+               uint32_t ttl,
+               const string& username,
+               const string& password)
         : m_host(host)
         , m_port(port)
         , m_timeout(timeout)
-        , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
+        , m_username(username)
+        , m_password(password)
+        , m_pWorker(mxb::Worker::get_current())
         , m_set_format("SET %b %b")
     {
         if (ttl != 0)
@@ -1350,8 +1360,10 @@ private:
     string                                m_host;
     int                                   m_port;
     std::chrono::milliseconds             m_timeout;
-    mxb::Worker*                          m_pWorker;
     bool                                  m_invalidate;
+    string                                m_username;
+    string                                m_password;
+    mxb::Worker*                          m_pWorker;
     std::string                           m_set_format;
     std::chrono::steady_clock::time_point m_context_got;
     bool                                  m_connecting {false};
@@ -1363,11 +1375,15 @@ private:
 RedisStorage::RedisStorage(const string& name,
                            const Config& config,
                            const string& host,
-                           int port)
+                           int port,
+                           const std::string& username,
+                           const std::string& password)
     : m_name(name)
     , m_config(config)
     , m_host(host)
     , m_port(port)
+    , m_username(username)
+    , m_password(password)
     , m_invalidate(config.invalidate != CACHE_INVALIDATE_NEVER)
     , m_ttl(config.hard_ttl)
 {
@@ -1428,10 +1444,10 @@ RedisStorage* RedisStorage::create(const string& name,
     {
         bool error = false;
 
+        decltype(arguments)::iterator it;
+
         mxb::Host host;
-
-        auto it = arguments.find(CN_STORAGE_ARG_SERVER);
-
+        it = arguments.find(CN_STORAGE_ARG_SERVER);
         if (it != arguments.end())
         {
             if (!Storage::get_host(it->second, DEFAULT_REDIS_PORT, &host))
@@ -1447,6 +1463,29 @@ RedisStorage* RedisStorage::create(const string& name,
             error = true;
         }
 
+        string username;
+        it = arguments.find(CN_STORAGE_ARG_USERNAME);
+        if (it != arguments.end())
+        {
+            username = it->second;
+
+            arguments.erase(it);
+        }
+
+        string password;
+        it = arguments.find(CN_STORAGE_ARG_PASSWORD);
+        if (it != arguments.end())
+        {
+            password = it->second;
+
+            arguments.erase(it);
+        }
+
+        if (!username.empty() && password.empty())
+        {
+            MXB_WARNING("Only username but not password specified for `storage_redis`.");
+        }
+
         for (const auto& kv : arguments)
         {
             MXB_WARNING("Unknown `storage_redis` argument: %s=%s",
@@ -1455,7 +1494,8 @@ RedisStorage* RedisStorage::create(const string& name,
 
         if (!error)
         {
-            pStorage = new(std::nothrow) RedisStorage(name, config, host.address(), host.port());
+            pStorage = new(std::nothrow) RedisStorage(name, config, host.address(), host.port(),
+                                                      username, password);
         }
     }
 
@@ -1464,7 +1504,8 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_config.timeout, m_invalidate, m_ttl, psToken);
+    return RedisToken::create(m_host, m_port, m_config.timeout, m_invalidate, m_ttl,
+                              m_username, m_password, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)

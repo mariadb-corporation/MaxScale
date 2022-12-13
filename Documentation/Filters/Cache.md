@@ -1212,6 +1212,20 @@ stalled for `timeout` seconds.
 * `server` using which the location of the server is specified as `host[:port]`.
   If no port is provided, the default Redis port of `6379` is used.
 
+`storage_redis` has the following optional arguments:
+* `username` using which the username to be used when authenticating against
+   Redis is specified.
+* `password` using which the password to be used when authenticating against
+   Redis is specified.
+
+Note that if the authentication is specified using `requirepass`, then only
+the _password_ should be provided. If the Redis server version is 6 or higher
+and the _Redis ACL system_ is used, then both _username_ and _password_ should
+be provided.
+
+Note that as the arguments are separated by `,`, neither username, nor password
+can contain `,`.
+
 Example:
 ```
 storage_options="server=192.168.1.31:6379"
