@@ -195,6 +195,11 @@ public:
      */
     void create_listener(const std::string& service, const std::string& name, int port);
 
+    void create_server(const std::string& name,
+                       const std::string& address,
+                       int port,
+                       const std::vector<Parameter>& parameters = std::vector<Parameter>());
+
     void create_service(const std::string& name,
                         const std::string& router,
                         const std::vector<Parameter>& parameters);
@@ -203,6 +208,8 @@ public:
      * destroy
      */
     void destroy_listener(const std::string& name);
+
+    void destroy_server(const std::string& name);
 
     void destroy_service(const std::string& name, bool force);
 

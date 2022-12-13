@@ -45,6 +45,31 @@ string to_json_value(const MaxRest::Value& value)
     throw std::runtime_error("Variant contains value of wrong type.");
 }
 
+string to_string(const std::vector<MaxRest::Parameter>& parameters)
+{
+    stringstream body;
+
+    if (!parameters.empty())
+    {
+        auto end = parameters.end();
+        auto i = parameters.begin();
+
+        while (i != end)
+        {
+            const MaxRest::Parameter& parameter = *i;
+
+            body << "\"" << parameter.name << "\": " << to_json_value(parameter.value);
+
+            if (++i != end)
+            {
+                body << ", ";
+            }
+        }
+    }
+
+    return body.str();
+}
+
 }
 
 //
@@ -302,6 +327,29 @@ void MaxRest::create_listener(const std::string& service, const std::string& nam
     curl_post("listeners", body.str());
 }
 
+void MaxRest::create_server(const std::string& name,
+                            const std::string& address,
+                            int port,
+                            const std::vector<Parameter>& parameters)
+{
+    ostringstream body;
+    body << "{\"data\": {"
+         <<    "\"id\": " << to_json_value(name) << ","
+         <<    "\"attributes\": {"
+         <<      "\"parameters\": {"
+         <<        "\"address\": \"" << address << "\","
+         <<        "\"port\": " << port;
+
+    if (!parameters.empty())
+    {
+        body << ", " << to_string(parameters);
+    }
+
+    body << "}}}}";
+
+    curl_post("servers", body.str());
+}
+
 void MaxRest::create_service(const std::string& name,
                              const std::string& router,
                              const std::vector<Parameter>& parameters)
@@ -311,31 +359,23 @@ void MaxRest::create_service(const std::string& name,
          <<    "\"id\": " << to_json_value(name) << ","
          <<    "\"attributes\": {"
          <<      "\"router\": " << to_json_value(router) << ","
-         <<      "\"parameters\": {";
-
-    auto end = parameters.end();
-    auto i = parameters.begin();
-
-    while (i != end)
-    {
-        const Parameter& parameter = *i;
-
-        body << "\"" << parameter.name << "\": " << to_json_value(parameter.value);
-
-        if (++i != end)
-        {
-            body << ", ";
-        }
-    }
-
-    body << "}}}}";
+         <<      "\"parameters\": {"
+         << to_string(parameters)
+         << "}}}}";
 
     curl_post("services", body.str());
 }
 
-void MaxRest::destroy_listener(const std::string& listener)
+void MaxRest::destroy_listener(const std::string& name)
 {
-    string path = "listeners/" + listener;
+    string path = "listeners/" + name;
+
+    curl_delete(path);
+}
+
+void MaxRest::destroy_server(const std::string& name)
+{
+    string path = "servers/" + name;
 
     curl_delete(path);
 }
