@@ -307,27 +307,33 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     listener_params.set(CN_SERVICE, service->name());
 
     auto listener_data = mxs::Listener::create_test_data(listener_params);
-    mock::Client client("bob", "127.0.0.1");
-    mock::Session session(&client, listener_data);
-    mock::ResultSetBackend backend;
-    mock::RouterSession router_session(&backend, &session);
 
-    auto sFilter_session = filter_instance.newSession(&session,
-                                                      service,
-                                                      router_session.as_downstream(),
-                                                      client.as_upstream());
+    mxs::RoutingWorker* pWorker = mxs::RoutingWorker::get_by_index(0);
+    mxb_assert(pWorker);
 
-    if (sFilter_session.get())
-    {
-        session.set_downstream(sFilter_session.get());
-        router_session.set_upstream(sFilter_session.get());
+    pWorker->call([&]() {
+            mock::Client client("bob", "127.0.0.1");
+            mock::Session session(&client, listener_data);
+            mock::ResultSetBackend backend;
+            mock::RouterSession router_session(&backend, &session);
 
-        rv += test(session, *sFilter_session.get(), router_session, tc);
-    }
-    else
-    {
-        ++rv;
-    }
+            auto sFilter_session = filter_instance.newSession(&session,
+                                                              service,
+                                                              router_session.as_downstream(),
+                                                              client.as_upstream());
+
+            if (sFilter_session.get())
+            {
+                session.set_downstream(sFilter_session.get());
+                router_session.set_upstream(sFilter_session.get());
+
+                rv += test(session, *sFilter_session.get(), router_session, tc);
+            }
+            else
+            {
+                ++rv;
+            }
+        }, mxb::Worker::EXECUTE_QUEUED);
 
     return rv;
 }
@@ -434,6 +440,8 @@ int main(int argc, char* argv[])
 
         cout << rv << " failures." << endl;
 
+        maxscale_start_teardown();
+        service_destroy_instances();
         qc_process_end(QC_INIT_SELF);
     }
     else

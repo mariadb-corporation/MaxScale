@@ -115,6 +115,7 @@ Session::Session(Client* pClient, SListenerData listener_data)
 Session::~Session()
 {
     m_down->close();
+    delete client_connection();
     // This prevents the protocol module from freeing the data
     refcount = 0;
     client_dcb = nullptr;
