@@ -424,18 +424,17 @@ SELECT
     '  ' ||
     CASE
     WHEN data_type IN ('point', 'path', 'polygon', 'geometry')
-      THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY))'
+      THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY)) ' || QUOTE_IDENT(column_name)
     WHEN udt_name IN ('hstore')
-      THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ')'
+      THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     WHEN data_type = 'array'
-      THEN 'array_to_json(' || QUOTE_IDENT(column_name) || ')'
+      THEN 'array_to_json(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     WHEN data_type = 'inet'
-      THEN 'CASE FAMILY(' || QUOTE_IDENT(column_name) || ') WHEN 4 THEN ''::ffff:'' ELSE '''' END || HOST(' || QUOTE_IDENT(column_name) || ')'
+      THEN 'CASE FAMILY(' || QUOTE_IDENT(column_name) || ') WHEN 4 THEN ''::ffff:'' ELSE '''' END || HOST(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     ELSE
       QUOTE_IDENT(column_name)
     END
-    || ' ' || QUOTE_IDENT(column_name),
-    E',\n' ORDER BY ordinal_position) ||
+    , E',\n' ORDER BY ordinal_position) ||
   E'\nFROM ' || QUOTE_IDENT(table_schema) || '.' || QUOTE_IDENT(table_name)
 FROM information_schema.columns
 WHERE table_schema = '%s' AND table_name = '%s' AND is_generated = 'NEVER'
