@@ -94,11 +94,10 @@ public:
     ~Creds();
 
 private:
-    Creds(gnutls_privkey_t pkey, gnutls_pcert_st pcert, unsigned int num_pcert);
+    Creds(gnutls_privkey_t pkey, std::vector<gnutls_pcert_st> pcerts);
 
-    gnutls_privkey_t m_pkey;
-    gnutls_pcert_st  m_pcert;
-    unsigned int     m_num_pcert = 1000;    // Limit of how many certs to read
+    gnutls_privkey_t             m_pkey;
+    std::vector<gnutls_pcert_st> m_pcerts;
 };
 
 static struct ThisUnit
@@ -294,13 +293,17 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
     gnutls_datum_t data;
     data.data = cert.data();
     data.size = cert.size();
-    gnutls_pcert_st pcert;
-    unsigned int num_pcert = 1000;      // The maximum number of certificates that are read from the file
+    std::vector<gnutls_pcert_st> pcerts;
+    unsigned int num_pcert = 100;       // The maximum number of certificates that are read from the file
+    pcerts.resize(num_pcert);
 
-    int rc = gnutls_pcert_list_import_x509_raw(&pcert, &num_pcert, &data, GNUTLS_X509_FMT_PEM, 0);
+    int rc = gnutls_pcert_list_import_x509_raw(pcerts.data(), &num_pcert, &data, GNUTLS_X509_FMT_PEM, 0);
 
     if (rc == 0)
     {
+        pcerts.resize(num_pcert);
+        pcerts.shrink_to_fit();
+
         gnutls_privkey_t pkey;
         gnutls_privkey_init(&pkey);
 
@@ -311,13 +314,17 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
 
         if (rc == 0)
         {
-            rval.reset(new Creds(pkey, pcert, num_pcert));
+            rval.reset(new Creds(pkey, std::move(pcerts)));
         }
         else
         {
             MXB_ERROR("Failed to load REST API TLS private key: %s", gnutls_strerror(rc));
             gnutls_privkey_deinit(pkey);
-            gnutls_pcert_deinit(&pcert);
+
+            for (auto& cert : pcerts)
+            {
+                gnutls_pcert_deinit(&cert);
+            }
         }
     }
     else
@@ -332,22 +339,25 @@ void Creds::set(gnutls_pcert_st** pcert,
                 unsigned int* pcert_length,
                 gnutls_privkey_t* pkey)
 {
-    *pcert = &m_pcert;
-    *pcert_length = m_num_pcert;
+    *pcert = m_pcerts.data();
+    *pcert_length = m_pcerts.size();
     *pkey = m_pkey;
 }
 
-Creds::Creds(gnutls_privkey_t pkey, gnutls_pcert_st pcert, unsigned int num_pcert)
+Creds::Creds(gnutls_privkey_t pkey, std::vector<gnutls_pcert_st> pcerts)
     : m_pkey(pkey)
-    , m_pcert(pcert)
-    , m_num_pcert(num_pcert)
+    , m_pcerts(std::move(pcerts))
 {
 }
 
 Creds::~Creds()
 {
     gnutls_privkey_deinit(m_pkey);
-    gnutls_pcert_deinit(&m_pcert);
+
+    for (auto& cert : m_pcerts)
+    {
+        gnutls_pcert_deinit(&cert);
+    }
 }
 
 static bool load_ssl_certificates()
@@ -909,9 +919,9 @@ int Client::queue_delayed_response(const HttpResponse::Callback& cb)
 
     mxs::thread_pool().execute(
         [cb, this]() {
-            queue_response(cb());
-            MHD_resume_connection(m_connection);
-        }, "mhd_resume");
+        queue_response(cb());
+        MHD_resume_connection(m_connection);
+    }, "mhd_resume");
 
     return MHD_YES;
 }
