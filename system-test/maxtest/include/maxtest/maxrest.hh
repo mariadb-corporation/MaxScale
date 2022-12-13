@@ -193,11 +193,11 @@ public:
     /**
      * create
      */
+    void create_listener(const std::string& service, const std::string& name, int port);
+
     void create_service(const std::string& name,
                         const std::string& router,
                         const std::vector<Parameter>& parameters);
-
-    void create_listener(const std::string& service, const std::string& name, int port);
 
     /**
      * destroy
