@@ -14,21 +14,18 @@ import Extender from '@queryEditorSrc/store/orm/Extender'
 import { ORM_PERSISTENT_ENTITIES } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
-export default class QueryConn extends Extender {
-    static entity = ORM_PERSISTENT_ENTITIES.QUERY_CONNS
+export default class EtlTask extends Extender {
+    static entity = ORM_PERSISTENT_ENTITIES.ETL_TASKS
 
     /**
      * @returns {Object} - return fields that are not key, relational fields
      */
     static getNonKeyFields() {
         return {
-            active_db: this.string(''),
-            attributes: this.attr({}),
-            binding_type: this.string(''),
             name: this.string(''),
-            type: this.string(''),
-            meta: this.attr({}),
-            clone_of_conn_id: this.attr(null).nullable(),
+            status: this.string(''),
+            sql_script: this.string(''),
+            active_stage_index: this.number(0),
         }
     }
 
@@ -36,13 +33,7 @@ export default class QueryConn extends Extender {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
-            //FK EtlTask
-            etl_task_id: this.attr(null).nullable(),
-            //FK, one to one inverse
-            query_tab_id: this.attr(null).nullable(),
-            worksheet_id: this.attr(null).nullable(),
-            queryTab: this.belongsTo(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'query_tab_id'),
-            worksheet: this.belongsTo(ORM_PERSISTENT_ENTITIES.WORKSHEETS, 'worksheet_id'),
+            connections: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_CONNS, 'etl_task_id'),
         }
     }
 }

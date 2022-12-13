@@ -11,6 +11,7 @@
  * Public License.
  */
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
@@ -21,6 +22,7 @@ import WorksheetTmp from '@queryEditorSrc/store/orm/models/WorksheetTmp'
 
 export default {
     Editor,
+    EtlTask,
     QueryConn,
     QueryResult,
     QueryTab,

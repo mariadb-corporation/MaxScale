@@ -20,6 +20,7 @@ export const ORM_PERSISTENT_ENTITIES = {
     QUERY_TABS: 'queryTabs',
     SCHEMA_SIDEBARS: 'schemaSidebars',
     WORKSHEETS: 'worksheets',
+    ETL_TASKS: 'etlTasks',
 }
 export const ORM_TMP_ENTITIES = {
     WORKSHEETS_TMP: 'worksheetsTmp',
@@ -29,7 +30,7 @@ export const FILE_SYS_ACCESS_NAMESPACE = 'queryEditorFileSysAccess'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     QUERY_TAB: 'QUERY_TAB',
-    // Used by <conn-man-ctr/>. It's also used for stopping the running query
+    // Used by <wke-conn-man/>. It's also used for stopping the running query
     WORKSHEET: 'WORKSHEET',
 })
 export const QUERY_SHORTCUT_KEYS = Object.freeze({

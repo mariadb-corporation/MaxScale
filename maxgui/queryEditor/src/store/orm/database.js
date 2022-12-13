@@ -12,6 +12,7 @@
  */
 import { Database } from '@vuex-orm/core'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
+import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
@@ -30,6 +31,7 @@ import worksheets from '@queryEditorSrc/store/orm/modules/worksheets'
 
 const database = new Database()
 database.register(Editor, editors)
+database.register(EtlTask)
 database.register(QueryConn, queryConns)
 database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
