@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConnManCtr from '../ConnManCtr.vue'
+import WkeConnMan from '../WkeConnMan.vue'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummyWkeConns = [
@@ -57,7 +57,7 @@ const dummyWkeConns = [
 const mountFactory = opts =>
     mount({
         shallow: true,
-        component: ConnManCtr,
+        component: WkeConnMan,
         ...opts,
     })
 
@@ -69,7 +69,7 @@ function mockActiveConnState() {
     }
 }
 
-describe(`ConnManCtr - child component's data communication tests `, () => {
+describe(`WkeConnMan - child component's data communication tests `, () => {
     let wrapper
     beforeEach(() => {
         wrapper = mountFactory()
@@ -117,7 +117,7 @@ describe(`ConnManCtr - child component's data communication tests `, () => {
     })
 })
 
-describe(`ConnManCtr - on created hook tests `, () => {
+describe(`WkeConnMan - on created hook tests `, () => {
     let wrapper
     it(`Should auto open conn-dlg-ctr if no connection has been found
     and no pre_select_conn_rsrc after validating connections`, () => {
@@ -129,7 +129,7 @@ describe(`ConnManCtr - on created hook tests `, () => {
         expect(wrapper.vm.isConnDlgOpened).to.be.true
     })
     it(`Should call handlePreSelectConnRsrc if pre_select_conn_rsrc has value`, () => {
-        const fnSpy = sinon.spy(ConnManCtr.methods, 'handlePreSelectConnRsrc')
+        const fnSpy = sinon.spy(WkeConnMan.methods, 'handlePreSelectConnRsrc')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
         fnSpy.should.have.been.calledOnce
@@ -138,21 +138,21 @@ describe(`ConnManCtr - on created hook tests `, () => {
 
     it(`Should call assignActiveWkeConn if there is an active connection bound
     to the worksheet`, () => {
-        const fnSpy = sinon.spy(ConnManCtr.methods, 'assignActiveWkeConn')
+        const fnSpy = sinon.spy(WkeConnMan.methods, 'assignActiveWkeConn')
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
 })
 
-describe(`ConnManCtr - methods and computed properties tests `, () => {
+describe(`WkeConnMan - methods and computed properties tests `, () => {
     let wrapper
     afterEach(() => {
         wrapper.destroy()
     })
     it(`Should call onSelectConn if there is available connection has name
     equals to pre_select_conn_rsrc `, () => {
-        const fnSpy = sinon.spy(ConnManCtr.methods, 'onSelectConn')
+        const fnSpy = sinon.spy(WkeConnMan.methods, 'onSelectConn')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({
             computed: {
@@ -172,7 +172,7 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
     })
     it(`Should call openConnDialog if there is no available connection has name
     equals to pre_select_conn_rsrc `, () => {
-        const fnSpy = sinon.spy(ConnManCtr.methods, 'openConnDialog')
+        const fnSpy = sinon.spy(WkeConnMan.methods, 'openConnDialog')
         const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
         wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
         fnSpy.should.have.been.calledOnce
@@ -203,10 +203,10 @@ describe(`ConnManCtr - methods and computed properties tests `, () => {
     })
 })
 
-describe(`ConnManCtr - connection list dropdown tests`, () => {
+describe(`WkeConnMan - connection list dropdown tests`, () => {
     let wrapper
     it(`Should call onSelectConn method when select new connection`, async () => {
-        const onSelectConnSpy = sinon.spy(ConnManCtr.methods, 'onSelectConn')
+        const onSelectConnSpy = sinon.spy(WkeConnMan.methods, 'onSelectConn')
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
@@ -218,7 +218,7 @@ describe(`ConnManCtr - connection list dropdown tests`, () => {
     })
 })
 
-describe(`ConnManCtr - other tests`, () => {
+describe(`WkeConnMan - other tests`, () => {
     let wrapper
     it(`Should open confirm dialog when unlinkConn method is called`, () => {
         wrapper = mountFactory({

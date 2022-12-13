@@ -66,7 +66,7 @@ export default {
          * @param {String} param.worksheet_id - worksheet id
          * @param {String} param.name - queryTab name. If not provided, it'll be auto generated
          */
-        async handleAddQueryTab({ rootState }, { worksheet_id, name }) {
+        async handleAddQueryTab(_, { worksheet_id, name }) {
             const query_tab_id = this.vue.$helpers.uuidv1()
             let fields = { query_tab_id }
             if (name) fields.name = name
@@ -74,10 +74,8 @@ export default {
             const activeWkeConn = QueryConn.getters('getActiveWkeConn')
             // Clone the wke conn and bind it to the new queryTab
             if (activeWkeConn.id)
-                await QueryConn.dispatch('cloneConn', {
-                    conn_to_be_cloned: activeWkeConn,
-                    binding_type:
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
+                await QueryConn.dispatch('openQueryTabConn', {
+                    wkeConn: activeWkeConn,
                     query_tab_id,
                 })
         },

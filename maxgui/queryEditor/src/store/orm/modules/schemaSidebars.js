@@ -23,7 +23,7 @@ export default {
     actions: {
         async initialFetch({ dispatch }) {
             await dispatch('fetchSchemas')
-            await QueryConn.dispatch('updateActiveDb', {})
+            await QueryConn.dispatch('updateActiveDb')
         },
         /**
          * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)

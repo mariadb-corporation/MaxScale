@@ -65,10 +65,12 @@ export default {
     },
     methods: {
         async deleteConn() {
-            await QueryConn.dispatch('disconnect', { id: QueryConn.getters('getActiveWkeConn').id })
+            await QueryConn.dispatch('cascadeDisconnectWkeConn', {
+                id: QueryConn.getters('getActiveWkeConn').id,
+            })
         },
         async handleReconnect() {
-            await QueryConn.dispatch('reconnect')
+            await QueryConn.dispatch('cascadeReconnectWkeConn')
             await this.onReconnectCb()
         },
     },

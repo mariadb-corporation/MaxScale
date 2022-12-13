@@ -90,7 +90,7 @@ export default {
                 })
             )
         },
-        async onChangeConn({ getters, dispatch }, chosenWkeConn) {
+        async onChangeWkeConn({ getters, dispatch }, chosenWkeConn) {
             try {
                 dispatch('unbindConn')
                 // Replace the connection of all queryTabs of the worksheet
@@ -128,12 +128,12 @@ export default {
             }
         },
         /**
-         * Called by <conn-man-ctr/>
+         * Called by <wke-conn-man/>
          * @param {Object} param.body - request body
          * @param {String} param.resourceType - services, servers or listeners.
          * @param {Object} param.meta - meta - connection meta
          */
-        async openConnect({ dispatch, commit, rootState }, { body, resourceType, meta = {} }) {
+        async openWkeConn({ dispatch, commit, rootState }, { body, resourceType, meta = {} }) {
             const { $helpers, $queryHttp, $mxs_t } = this.vue
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
 
@@ -182,57 +182,42 @@ export default {
          * @param {Array} param.queryTabIds - queryTabIds
          * @param {Object} param.wkeConn - connection bound to a worksheet
          */
-        async cloneWkeConnToQueryTabs({ dispatch, rootState }, { queryTabIds, wkeConn }) {
+        async cloneWkeConnToQueryTabs({ dispatch }, { queryTabIds, wkeConn }) {
             // clone the connection and bind it to all queryTabs
             await Promise.all(
-                queryTabIds.map(id =>
-                    dispatch('cloneConn', {
-                        conn_to_be_cloned: wkeConn,
-                        binding_type:
-                            rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
-                        query_tab_id: id,
-                    })
-                )
+                queryTabIds.map(id => dispatch('openQueryTabConn', { wkeConn, query_tab_id: id }))
             )
         },
         /**
-         *  Clone a connection
-         * @param {Object} param.conn_to_be_cloned - connection to be cloned
-         * @param {String} param.binding_type - binding_type. QUERY_CONN_BINDING_TYPES
+         * Open a query tab connection
+         * @param {Object} param.wkeConn - Worksheet connection
          * @param {String} param.query_tab_id - id of the queryTab that binds this connection
          */
-        async cloneConn(_, { conn_to_be_cloned, binding_type, query_tab_id }) {
+        async openQueryTabConn({ rootState }, { wkeConn, query_tab_id }) {
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(
-                    `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=604800`
-                )
+                this.vue.$queryHttp.post(`/sql/${wkeConn.id}/clone?persist=yes&max-age=604800`)
             )
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201) {
                 const connId = res.data.data.id
                 const conn = {
-                    ...conn_to_be_cloned,
+                    ...wkeConn,
                     id: connId,
                     attributes: res.data.data.attributes,
-                    binding_type,
+                    binding_type:
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
                     query_tab_id,
-                    clone_of_conn_id: conn_to_be_cloned.id,
+                    clone_of_conn_id: wkeConn.id,
                 }
                 QueryConn.insert({ data: conn })
             }
         },
         /**
-         * This handles delete the worksheet connection. i.e. the
-         * connection created by the user in the <conn-man-ctr/>
-         * It will also delete its cloned connections by using `clone_of_conn_id` attribute.
-         * This action is meant to be used by:
-         * `conn-man-ctr` component to disconnect a resource connection
-         * `disconnectAll` action to delete all connection when leaving the page.
-         * `handleDeleteWke` action
+         * This handles delete the worksheet connection and its query tab connections.
          * @param {Boolean} param.showSnackbar - should show success message or not
          * @param {Number} param.id - connection id that is bound to the worksheet
          */
-        async disconnect({ dispatch, commit }, { showSnackbar, id }) {
+        async cascadeDisconnectWkeConn({ dispatch, commit }, { showSnackbar, id }) {
             const target = QueryConn.find(id)
             if (target) {
                 // Delete its clones first
@@ -257,11 +242,7 @@ export default {
                 dispatch('cascadeRefreshOnDelete', target.id)
             }
         },
-        async disconnectAll({ getters, dispatch }) {
-            for (const { id } of getters.getWkeConns)
-                await dispatch('disconnect', { showSnackbar: false, id })
-        },
-        async reconnect({ commit, getters }) {
+        async cascadeReconnectWkeConn({ commit, getters }) {
             const activeQueryTabConn = getters.getActiveQueryTabConn
 
             let connIds = []
@@ -294,6 +275,11 @@ export default {
                 await SchemaSidebar.dispatch('initialFetch')
             }
         },
+        async disconnectAll({ getters, dispatch }) {
+            for (const { id } of getters.getWkeConns)
+                await dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })
+            //TODO: delete ETL connections
+        },
         async updateActiveDb({ getters }) {
             const { id, active_db } = getters.getActiveQueryTabConn
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
@@ -307,16 +293,9 @@ export default {
                     .$typy(res, 'data.data.attributes.results[0].data')
                     .safeArray.flat()[0]
 
-                if (!resActiveDb)
-                    QueryConn.update({
-                        where: id,
-                        data: { active_db: '' },
-                    })
+                if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
                 else if (active_db !== resActiveDb)
-                    QueryConn.update({
-                        where: id,
-                        data: { active_db: resActiveDb },
-                    })
+                    QueryConn.update({ where: id, data: { active_db: resActiveDb } })
             }
         },
         /**

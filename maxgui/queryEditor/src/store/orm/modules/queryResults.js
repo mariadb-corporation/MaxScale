@@ -151,7 +151,7 @@ export default {
                         },
                     }
                 } else if (query.match(/(use|drop database)\s/i))
-                    await QueryConn.dispatch('updateActiveDb', {})
+                    await QueryConn.dispatch('updateActiveDb')
 
                 QueryTabTmp.update({
                     where: activeQueryTabId,

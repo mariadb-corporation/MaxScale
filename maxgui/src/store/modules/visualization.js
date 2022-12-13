@@ -104,8 +104,8 @@ export default {
                 if (blankWke) Worksheet.commit(state => (state.active_wke_id = blankWke.id))
                 else insertWke()
 
-                // call onChangeConn to handle connection binding, otherwise popup connection dialog
-                if (wkeConn) await QueryConn.dispatch('onChangeConn', wkeConn)
+                // call onChangeWkeConn to handle connection binding, otherwise popup connection dialog
+                if (wkeConn) await QueryConn.dispatch('onChangeWkeConn', wkeConn)
                 else
                     commit(
                         'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',

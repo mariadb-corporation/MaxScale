@@ -86,7 +86,7 @@ export default {
         async handleDeleteWke({ dispatch }, id) {
             const { id: wkeConnId = '' } = QueryConn.getters('getWkeConnByWkeId')(id)
             // delete the wke connection and its clones (query tabs)
-            if (wkeConnId) await QueryConn.dispatch('disconnect', { id: wkeConnId })
+            if (wkeConnId) await QueryConn.dispatch('cascadeDisconnectWkeConn', { id: wkeConnId })
             dispatch('cascadeDelete', id)
         },
         changeWkeName({ getters }, name) {

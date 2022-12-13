@@ -1,6 +1,6 @@
 <template>
     <div ref="wrapper" class="d-flex align-center right-buttons fill-height">
-        <conn-man-ctr class="mx-2" />
+        <wke-conn-man class="mx-2" />
         <query-cnf-gear-btn />
         <min-max-btn-ctr />
     </div>
@@ -19,14 +19,14 @@
  * Public License.
  */
 
-import ConnManCtr from './ConnManCtr.vue'
+import WkeConnMan from './WkeConnMan.vue'
 import QueryCnfGearBtn from './QueryCnfGearBtn.vue'
 import MinMaxBtnCtr from './MinMaxBtnCtr.vue'
 
 export default {
     name: 'wke-toolbar-right',
     components: {
-        ConnManCtr,
+        WkeConnMan,
         QueryCnfGearBtn,
         MinMaxBtnCtr,
     },

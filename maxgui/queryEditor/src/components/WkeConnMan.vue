@@ -107,7 +107,7 @@ import ConnDlgCtr from './ConnDlgCtr.vue'
 import ReconnDlgCtr from './ReconnDlgCtr.vue'
 
 export default {
-    name: 'conn-man-ctr',
+    name: 'wke-conn-man',
     components: {
         ConnDlgCtr,
         ReconnDlgCtr,
@@ -192,7 +192,7 @@ export default {
          * Function is called after selecting a connection
          */
         async onSelectConn(chosenWkeConn) {
-            await QueryConn.dispatch('onChangeConn', chosenWkeConn)
+            await QueryConn.dispatch('onChangeWkeConn', chosenWkeConn)
             this.assignActiveWkeConn()
         },
         assignActiveWkeConn() {
@@ -207,11 +207,14 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
-            await QueryConn.dispatch('openConnect', opts)
+            await QueryConn.dispatch('openWkeConn', opts)
             this.assignActiveWkeConn()
         },
         async confirmDelConn() {
-            await QueryConn.dispatch('disconnect', { showSnackbar: true, id: this.targetConn.id })
+            await QueryConn.dispatch('cascadeDisconnectWkeConn', {
+                showSnackbar: true,
+                id: this.targetConn.id,
+            })
         },
         async onReconnectCb() {
             await QueryConn.dispatch('validateConns', {

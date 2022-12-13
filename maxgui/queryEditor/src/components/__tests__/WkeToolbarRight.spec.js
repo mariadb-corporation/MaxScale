@@ -26,7 +26,7 @@ describe(`wke-toolbar-right`, () => {
             expect(wrapper.emitted()).to.have.property('get-total-width')
         })
     })
-    const childComps = ['conn-man-ctr', 'query-cnf-gear-btn', 'min-max-btn-ctr']
+    const childComps = ['wke-conn-man', 'query-cnf-gear-btn', 'min-max-btn-ctr']
     childComps.forEach(name => {
         it(`Should render ${name}`, () => {
             const comp = wrapper.findComponent({ name })
