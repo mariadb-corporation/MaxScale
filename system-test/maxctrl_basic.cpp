@@ -61,6 +61,33 @@ void test_reload_tls(TestConnections& test)
     test.maxscale->restart();
 }
 
+void test_cert_chain(TestConnections& test)
+{
+    const char* home = test.maxscale->access_homedir();
+
+    int rc = test.maxscale->ssh_node_f(
+        true, "cat %s/certs/server-cert.pem %s/certs/ca.pem > %s/certs/server-chain-cert.pem",
+        home, home, home);
+    test.expect(rc == 0, "Failed to combine certificates into a chain");
+
+    rc = test.maxscale->ssh_node_f(
+        true,
+        "sed -i "
+        " -e '/maxscale/ a admin_ssl_key=%s/certs/server-key.pem'"
+        " -e '/maxscale/ a admin_ssl_cert=%s/certs/server-chain-cert.pem'"
+        " /etc/maxscale.cnf", home, home);
+    test.expect(rc == 0, "Failed to enable encryption for the REST API");
+    test.maxscale->restart();
+
+    test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
+    test.expect(test.maxctrl("list servers").rc != 0, "Command without --secure should fail");
+    test.expect(test.maxctrl("-s -n false reload tls").rc == 0, "`reload tls` should work");
+    test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work after reload");
+
+    test.maxscale->ssh_node_f(true, "sed -i  -e '/admin_ssl/ d' /etc/maxscale.cnf");
+    test.maxscale->restart();
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -169,6 +196,9 @@ int main(int argc, char** argv)
     // Also checks that MaxCtrl works correctly when the REST API uses encryption.
     test.tprintf("MXS-4041: Reloading of REST API TLS certificates");
     test_reload_tls(test);
+
+    test.tprintf("MXS-4442: TLS certificate chain in admin_ssl_cert");
+    test_cert_chain(test);
 
     test.tprintf("MXS-4171: Runtime modifications to static parameters");
 
