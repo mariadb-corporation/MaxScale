@@ -54,8 +54,9 @@ string to_json_value(const MaxRest::Value& value)
 class MaxRest::SystemTestImp : public MaxRest::Imp
 {
 public:
-    SystemTestImp(TestConnections* pTest, mxt::MaxScale* pMaxscale)
-        : m_test(*pTest)
+    SystemTestImp(MaxRest* pOwner, TestConnections* pTest, mxt::MaxScale* pMaxscale)
+        : Imp(pOwner)
+        , m_test(*pTest)
         , m_maxscale(*pMaxscale)
     {
     }
@@ -68,16 +69,6 @@ public:
     std::string body_quote() const override final
     {
         return "'\\''";
-    }
-
-    void raise(bool fail_on_error, const std::string& message) const override final
-    {
-        if (fail_on_error)
-        {
-            ++m_test.global_result;
-        }
-
-        throw runtime_error(message);
     }
 
     mxt::CmdResult execute_curl_command(const std::string& curl_command) const override final
@@ -97,8 +88,9 @@ private:
 class MaxRest::LocalImp : public MaxRest::Imp
 {
 public:
-    LocalImp(TestConnections* pTest)
-        : m_test(*pTest)
+    LocalImp(MaxRest* pOwner, TestConnections* pTest)
+        : Imp(pOwner)
+        , m_test(*pTest)
     {
     }
 
@@ -110,11 +102,6 @@ public:
     std::string body_quote() const override final
     {
         return "'";
-    }
-
-    void raise(bool fail_on_error, const std::string& message) const override final
-    {
-        throw runtime_error(message);
     }
 
     mxt::CmdResult execute_curl_command(const std::string& curl_command) const override final
@@ -395,7 +382,7 @@ json_t* MaxRest::get_object(json_t* pObject, const string& key, Presence presenc
 
     if (!pValue && (presence == Presence::MANDATORY))
     {
-        raise("Mandatory key '" + key + "' not present.");
+        raise(true, "Mandatory key '" + key + "' not present.");
     }
 
     return pValue;
@@ -446,10 +433,95 @@ mxb::Json MaxRest::curl_put(const string& path) const
     return curl(PUT, path);
 }
 
+void MaxRest::raise(bool fail, const std::string& message) const
+{
+    if (fail)
+    {
+        test().add_failure("%s", message.c_str());
+    }
+
+    throw runtime_error(message);
+}
+
+void MaxRest::raise(int http_status, const std::string& message) const
+{
+    if (m_fail_on_error)
+    {
+        ++test().global_result;
+    }
+
+    throw Error(http_status, message);
+}
+
+
+namespace
+{
+
+std::pair<int, mxb::Json> parse_output(const MaxRest& maxrest, const std::string& output)
+{
+    string line;
+
+    auto end = output.end();
+    auto it = output.begin();
+    while (it != end)
+    {
+        if (*it == '\n')
+        {
+            ++it;
+            break;
+        }
+
+        line += *it;
+        ++it;
+    }
+
+    vector<string> tokens = mxb::strtok(line, " ");
+
+    if (tokens.size() < 2 || tokens[0] != "HTTP/1.1")
+    {
+        ostringstream ss;
+        ss << "'" << line << "' does not look like the first line of an HTTP header.";
+        maxrest.raise(true, ss.str());
+    }
+
+    int rv = std::stoi(tokens[1]);
+
+    while (it != end && *it != '{')
+    {
+        ++it;
+    }
+
+    string s(it, end);
+
+    mxb::Json body;
+
+    if (!s.empty())
+    {
+        if (!body.load_string(s))
+        {
+            ostringstream ss;
+            ss << "Could not parse '" << s << "' as JSON.";
+
+            maxrest.raise(true, ss.str());
+        }
+
+        mxb::Json errors = body.get_object("errors");
+
+        if (errors)
+        {
+            body = errors;
+        }
+    }
+
+    return make_pair(rv, body);
+}
+
+}
+
 mxb::Json MaxRest::curl(Command command, const string& path, const string& body) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
-    string curl_command = "curl --fail -s -u admin:mariadb ";
+    string curl_command = "curl -i -s -u admin:mariadb ";
 
     switch (command)
     {
@@ -487,42 +559,26 @@ mxb::Json MaxRest::curl(Command command, const string& path, const string& body)
 
     mxt::CmdResult result = m_sImp->execute_curl_command(curl_command);
 
-    switch (result.rc)
+    if (result.rc != 0)
     {
-    case 0:
-        break;
-
-    case 22:
-        // 22 HTTP page not retrieved. The requested url was not found or returned another
-        //    error with the HTTP error code being 400 or above. This return code only
-        //    appears if -f, --fail is used.
-        raise("Curl error 22: HTTP page not retrieved for command '" + curl_command + "'");
-        break;
-
-    default:
-        {
-            ostringstream ss;
-            ss << "Curl failed with exit code " << result.rc << " for command '"
-               << curl_command << "'";
-            raise(ss.str());
-        }
+        ostringstream ss;
+        ss << "Curl failed with exit code " << result.rc << " for command '"
+           << curl_command << "'";
+        raise(true, ss.str());
     }
 
-    mxb::Json rv;
+    auto [rv, json] = parse_output(*this, result.output);
 
-    if (!result.output.empty() && !rv.load_string(result.output))
+    if (rv < 200 || rv >= 300)
     {
-        raise("JSON parsing failed: " + rv.error_msg());
+        // - We do not expect anything < 200, so that's treated as an error.
+        // - We don't understand anything between 300 and 400, so it's also
+        //   treated as an error.
+        // - Everything > 400 are errors.
+        raise(rv, json.to_string());
     }
 
-    mxb::Json errors = rv.get_object("errors");
-
-    if (errors)
-    {
-        throw runtime_error(errors.to_string());
-    }
-
-    return rv;
+    return json;
 }
 
 
@@ -575,11 +631,11 @@ MaxRest::Imp* MaxRest::create_imp(TestConnections* pTest, mxt::MaxScale* pMaxsca
     Imp* pImp;
     if (pTest->is_local_test())
     {
-        pImp = new LocalImp(pTest);
+        pImp = new LocalImp(this, pTest);
     }
     else
     {
-        pImp = new SystemTestImp(pTest, pMaxscale);
+        pImp = new SystemTestImp(this, pTest, pMaxscale);
     }
 
     return pImp;

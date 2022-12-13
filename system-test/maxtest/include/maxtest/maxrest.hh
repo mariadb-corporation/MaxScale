@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include <stdexcept>
 #include <variant>
 #include <maxtest/testconnections.hh>
 #include <maxbase/json.hh>
@@ -27,6 +28,18 @@ class MaxRest
 public:
     MaxRest(const MaxRest&) = delete;
     MaxRest& operator=(const MaxRest&) = delete;
+
+    class Error : public std::runtime_error
+    {
+    public:
+        Error(int http_status, const std::string& message)
+            : std::runtime_error(std::to_string(http_status) + ": " + message)
+            , http_status(http_status)
+        {
+        }
+
+        const int http_status;
+    };
 
     /**
      * A class corresponding to a row in the output of 'maxctrl list servers'
@@ -321,10 +334,12 @@ public:
     mxb::Json curl_post(const std::string& path, const std::string& body = std::string {}) const;
     mxb::Json curl_put(const std::string& path) const;
 
+    void raise(bool fail, const std::string& message) const;
     void raise(const std::string& message) const
     {
-        m_sImp->raise(m_fail_on_error, message);
+        raise(m_fail_on_error, message);
     }
+    void raise(int http_status, const std::string& message) const;
 
     /**
      * Enable or disable failing the test whenever an exception is thrown
@@ -353,15 +368,27 @@ private:
 
         virtual std::string body_quote() const = 0;
         virtual TestConnections& test() const = 0;
-        virtual void raise(bool fail_on_error, const std::string& message) const = 0;
         virtual mxt::CmdResult execute_curl_command(const std::string& curl_command) const = 0;
+
+    protected:
+        Imp(MaxRest* pOwner)
+            : m_owner(*pOwner)
+        {
+        }
+
+        void raise(bool fail, const std::string& message) const
+        {
+            m_owner.raise(fail, message);
+        }
+
+        MaxRest& m_owner;
     };
 
     class LocalImp;
     class SystemTestImp;
 
 private:
-    static Imp* create_imp(TestConnections* pTest, mxt::MaxScale* pMaxscale = nullptr);
+    Imp* create_imp(TestConnections* pTest, mxt::MaxScale* pMaxscale = nullptr);
 
     bool                 m_fail_on_error  {true};
     std::unique_ptr<Imp> m_sImp;
