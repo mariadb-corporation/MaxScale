@@ -135,15 +135,20 @@ export default {
          */
         async openWkeConn({ dispatch, commit, rootState }, { body, resourceType, meta = {} }) {
             const { $helpers, $queryHttp, $mxs_t } = this.vue
+
+            const {
+                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
+                QUERY_CONN_BINDING_TYPES: { WORKSHEET },
+            } = rootState.queryEditorConfig.config
+
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
 
             const queryTabIdsOfActiveWke = QueryTab.query()
                 .where('worksheet_id', activeWorksheetId)
                 .get()
                 .map(t => t.id)
-
             const [e, res] = await $helpers.asyncTryCatch(
-                $queryHttp.post(`/sql?persist=yes&max-age=604800`, body)
+                $queryHttp.post(`/sql?${PERSIST_TOKEN_OPT}`, body)
             )
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
@@ -161,8 +166,7 @@ export default {
                     attributes: res.data.data.attributes,
                     name: body.target,
                     type: resourceType,
-                    binding_type:
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
+                    binding_type: WORKSHEET,
                     meta,
                 }
                 QueryConn.insert({ data: { ...wkeConn, worksheet_id: activeWorksheetId } })
@@ -194,8 +198,13 @@ export default {
          * @param {String} param.query_tab_id - id of the queryTab that binds this connection
          */
         async openQueryTabConn({ rootState }, { wkeConn, query_tab_id }) {
+            const {
+                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
+                QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
+            } = rootState.queryEditorConfig.config
+
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${wkeConn.id}/clone?persist=yes&max-age=604800`)
+                this.vue.$queryHttp.post(`/sql/${wkeConn.id}/clone?${PERSIST_TOKEN_OPT}`)
             )
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201) {
@@ -204,8 +213,7 @@ export default {
                     ...wkeConn,
                     id: connId,
                     attributes: res.data.data.attributes,
-                    binding_type:
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.QUERY_TAB,
+                    binding_type: QUERY_TAB,
                     query_tab_id,
                     clone_of_conn_id: wkeConn.id,
                 }

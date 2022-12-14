@@ -11,12 +11,13 @@
  * Public License.
  */
 import * as config from '@queryEditorSrc/store/config'
+import commonConfig from '@share/config'
 import initEntities from '@queryEditorSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
     state: {
-        config,
+        config: { ...config, COMMON_CONFIG: commonConfig },
         hidden_comp: [''],
         axios_opts: {},
     },

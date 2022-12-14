@@ -60,33 +60,30 @@ export default {
             )
             await http.get('/maxscale')
         },
-        async login({ commit, dispatch }, { rememberMe, auth }) {
-            try {
-                let url = '/auth?persist=yes'
-                let res = await authHttp.get(`${url}${rememberMe ? '&max-age=604800' : ''}`, {
-                    auth,
-                })
-                if (res.status === 204) {
-                    commit('SET_LOGGED_IN_USER', {
-                        name: auth.username,
-                        rememberMe: rememberMe,
-                        isLoggedIn: true,
-                    })
-                    router.push(router.app.$route.query.redirect || '/dashboard/servers')
-                    await dispatch('fetchLoggedInUserAttrs')
-                }
-            } catch (e) {
+        async login({ commit, dispatch, rootState }, { rememberMe, auth }) {
+            const {
+                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
+            } = rootState.app_config
+
+            const url = rememberMe ? `/auth?${PERSIST_TOKEN_OPT}` : '/auth?persist=yes'
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(authHttp.get(url, { auth }))
+            if (e) {
                 let errMsg = ''
-                if (e.response) {
+                if (e.response)
                     errMsg =
                         e.response.status === 401
                             ? this.vue.$mxs_t('errors.wrongCredentials')
                             : e.response.statusText
-                } else {
-                    this.vue.$logger.error(e)
-                    errMsg = e.toString()
-                }
+                else errMsg = e.toString()
                 commit('SET_LOGIN_ERR_MSG', errMsg)
+            } else if (res.status === 204) {
+                commit('SET_LOGGED_IN_USER', {
+                    name: auth.username,
+                    rememberMe: rememberMe,
+                    isLoggedIn: true,
+                })
+                router.push(router.app.$route.query.redirect || '/dashboard/servers')
+                await dispatch('fetchLoggedInUserAttrs')
             }
         },
         async logout({ commit, rootState }) {
