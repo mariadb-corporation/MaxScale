@@ -15,6 +15,14 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import {
+    getAliveConns,
+    openConn,
+    cloneConn,
+    reconnect,
+    deleteConn,
+} from '@queryEditorSrc/api/connection'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -45,7 +53,7 @@ export default {
          */
         async cleanUpOrphanedConns({ dispatch }, connIds) {
             const [e] = await this.vue.$helpers.asyncTryCatch(
-                Promise.all(connIds.map(id => this.vue.$queryHttp.delete(`/sql/${id}`)))
+                Promise.all(connIds.map(id => deleteConn(id)))
             )
             dispatch('cascadeRefreshOnDelete', c => connIds.includes(c.id))
             if (e) this.vue.$logger('store-queryConns-cleanUpOrphanedConns').error(e)
@@ -59,8 +67,8 @@ export default {
             if (!silentValidation)
                 commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
 
-            const { $helpers, $queryHttp } = this.vue
-            const [e, res] = await $helpers.asyncTryCatch($queryHttp.get(`/sql/`))
+            const { $helpers } = this.vue
+            const [e, res] = await $helpers.asyncTryCatch(getAliveConns())
             const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
             const {
                 alive_conns = [],
@@ -130,25 +138,21 @@ export default {
         /**
          * Called by <wke-conn-man/>
          * @param {Object} param.body - request body
-         * @param {Object} param.meta - meta - connection meta
+         * @param {Object} [param.meta] - meta - connection meta
          */
         async openWkeConn({ dispatch, commit, rootState }, { body, meta = {} }) {
-            const { $helpers, $queryHttp, $mxs_t } = this.vue
-
+            const { $helpers, $mxs_t } = this.vue
             const {
-                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
                 QUERY_CONN_BINDING_TYPES: { WORKSHEET },
             } = rootState.queryEditorConfig.config
 
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
-
             const queryTabIdsOfActiveWke = QueryTab.query()
                 .where('worksheet_id', activeWorksheetId)
                 .get()
                 .map(t => t.id)
-            const [e, res] = await $helpers.asyncTryCatch(
-                $queryHttp.post(`/sql?${PERSIST_TOKEN_OPT}`, body)
-            )
+
+            const [e, res] = await $helpers.asyncTryCatch(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 dispatch('unbindConn')
@@ -198,13 +202,11 @@ export default {
          */
         async openQueryTabConn({ rootState }, { wkeConn, query_tab_id }) {
             const {
-                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
             } = rootState.queryEditorConfig.config
 
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${wkeConn.id}/clone?${PERSIST_TOKEN_OPT}`)
-            )
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(cloneConn(wkeConn.id))
+
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201)
                 QueryConn.insert({
@@ -234,9 +236,7 @@ export default {
                     .map(c => c.id)
                 await dispatch('cleanUpOrphanedConns', clonedConnIds)
 
-                const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                    this.vue.$queryHttp.delete(`/sql/${target.id}`)
-                )
+                const [e, res] = await this.vue.$helpers.asyncTryCatch(deleteConn(target.id))
                 if (!e && res.status === 204 && showSnackbar)
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
@@ -259,7 +259,7 @@ export default {
             if (queryTabConnId) connIds.push(queryTabConnId)
 
             const [e, allRes] = await this.vue.$helpers.asyncTryCatch(
-                Promise.all(connIds.map(id => this.vue.$queryHttp.post(`/sql/${id}/reconnect`)))
+                Promise.all(connIds.map(id => reconnect(id)))
             )
             if (e)
                 commit(
@@ -290,12 +290,9 @@ export default {
         async updateActiveDb({ getters }) {
             const { id, active_db } = getters.getActiveQueryTabConn
             const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${id}/queries`, {
-                    sql: 'SELECT DATABASE()',
-                })
+                query({ id, body: { sql: 'SELECT DATABASE()' } })
             )
-            if (e) this.vue.$logger.error(e)
-            else {
+            if (!e && res) {
                 const resActiveDb = this.vue
                     .$typy(res, 'data.data.attributes.results[0].data')
                     .safeArray.flat()[0]
@@ -313,15 +310,12 @@ export default {
             const now = new Date().valueOf()
             const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
             const sql = `USE ${escapedDb};`
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
-                this.vue.$queryHttp.post(`/sql/${id}/queries`, { sql })
-            )
-            if (e) this.vue.$logger.error(e)
-            else {
+            const [e, res] = await this.vue.$helpers.asyncTryCatch(query({ id, body: { sql } }))
+            if (!e && res) {
                 let queryName = `Change default database to ${escapedDb}`
-
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')
                     .safeObjectOrEmpty
+
                 if (errObj.errno) {
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
