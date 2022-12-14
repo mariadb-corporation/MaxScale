@@ -254,13 +254,6 @@ bool SSLContext::init()
             return false;
         }
 
-        if (SSL_CTX_build_cert_chain(m_ctx, SSL_BUILD_CHAIN_FLAG_CHECK
-                                     | SSL_BUILD_CHAIN_FLAG_IGNORE_ERROR
-                                     | SSL_BUILD_CHAIN_FLAG_CLEAR_ERROR) == 0)
-        {
-            MXS_ERROR("Failed to build certificate chain: %s", get_ssl_errors());
-        }
-
 #ifdef OPENSSL_1_1
         X509* cert = SSL_CTX_get0_certificate(m_ctx);
         uint32_t usage = X509_get_extended_key_usage(cert);
