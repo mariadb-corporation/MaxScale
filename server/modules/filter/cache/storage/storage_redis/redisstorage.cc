@@ -561,11 +561,6 @@ public:
     {
     }
 
-    shared_ptr<RedisToken> get_shared()
-    {
-        return shared_from_this();
-    }
-
     static bool create(const string& host,
                        int port,
                        std::chrono::milliseconds timeout,
@@ -861,40 +856,7 @@ public:
     }
 
 private:
-    std::chrono::milliseconds reconnect_after() const
-    {
-        constexpr std::chrono::milliseconds max_after = 60s;
-
-        auto after = m_timeout + m_redis.io_error_count() * m_timeout;
-
-        return std::min(after, max_after);
-    }
-
-    void log_error(const char* zContext)
-    {
-        switch (m_redis.err())
-        {
-        case REDIS_ERR_EOF:
-            MXB_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
-                      "'timeout' is 0 (disabled) or very large. A reconnection will now be "
-                      "made, but this will hurt both the functionality and the performance.",
-                      zContext);
-            break;
-
-        case REDIS_ERR_IO:
-            {
-                int ms = reconnect_after().count();
-
-                MXB_ERROR("%s. I/O-error; will attempt to reconnect after a %d milliseconds, "
-                          "until then no caching: %s",
-                          zContext, ms, m_redis.errstr());
-            }
-            break;
-
-        default:
-            MXB_ERROR("%s: %s", zContext, m_redis.errstr());
-        }
-    }
+    // All functions that sends commands to Redis are in this private section.
 
     enum class RedisAction
     {
@@ -1279,6 +1241,37 @@ private:
         }
     }
 
+    shared_ptr<RedisToken> get_shared()
+    {
+        return shared_from_this();
+    }
+
+    void log_error(const char* zContext)
+    {
+        switch (m_redis.err())
+        {
+        case REDIS_ERR_EOF:
+            MXB_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
+                      "'timeout' is 0 (disabled) or very large. A reconnection will now be "
+                      "made, but this will hurt both the functionality and the performance.",
+                      zContext);
+            break;
+
+        case REDIS_ERR_IO:
+            {
+                int ms = reconnect_after().count();
+
+                MXB_ERROR("%s. I/O-error; will attempt to reconnect after a %d milliseconds, "
+                          "until then no caching: %s",
+                          zContext, ms, m_redis.errstr());
+            }
+            break;
+
+        default:
+            MXB_ERROR("%s: %s", zContext, m_redis.errstr());
+        }
+    }
+
     bool ready() const
     {
         return m_redis.connected();
@@ -1375,6 +1368,15 @@ private:
                 connect();
             }
         }
+    }
+
+    std::chrono::milliseconds reconnect_after() const
+    {
+        constexpr std::chrono::milliseconds max_after = 60s;
+
+        auto after = m_timeout + m_redis.io_error_count() * m_timeout;
+
+        return std::min(after, max_after);
     }
 
 private:
