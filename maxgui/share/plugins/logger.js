@@ -12,42 +12,35 @@
  */
 /* eslint-disable no-console */
 const stackParser = require('stacktrace-parser')
-const traceCaller = level => stackParser.parse(new Error().stack)[level]
-const defCaller = { file: 'n/a', lineNumber: 'n/a' }
-export const logger = {
-    info: (...args) => {
-        const caller = traceCaller(2) || defCaller
-        const style = 'color: white; background-color: green;'
 
+const getCallerInfo = () => {
+    const { file = 'n/a', lineNumber = 'n/a', methodName = 'n/a' } = stackParser
+        .parse(new Error().stack)
+        .at(-1)
+    return `[${file}:${lineNumber}:${methodName}]`
+}
+export const logger = {
+    info: (...args) =>
         console.info(
             '%c INFO ',
-            style,
-            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            'color: white; background-color: green;',
+            getCallerInfo(),
             ...args
-        )
-    },
-    warn: (...args) => {
-        const caller = traceCaller(2) || defCaller
-        const style = 'color: black; background-color: yellow;'
-
+        ),
+    warn: (...args) =>
         console.warn(
             '%c WARNING ',
-            style,
-            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            'color: black; background-color: yellow;',
+            getCallerInfo(),
             ...args
-        )
-    },
-    error: (...args) => {
-        const caller = traceCaller(2) || defCaller
-        const style = 'color: white; background-color: red;'
-
+        ),
+    error: (...args) =>
         console.error(
             '%c ERROR ',
-            style,
-            `[${caller.file}:${caller.lineNumber}:${caller.methodName}]`,
+            'color: white; background-color: red;',
+            getCallerInfo(),
             ...args
-        )
-    },
+        ),
 }
 
 export default {
