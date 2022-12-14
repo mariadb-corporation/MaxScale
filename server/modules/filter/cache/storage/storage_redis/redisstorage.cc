@@ -600,7 +600,7 @@ public:
                              GWBUF** ppValue,
                              std::function<void(cache_result_t, GWBUF*)> cb)
     {
-        if (!connected())
+        if (!ready())
         {
             reconnect();
             return CACHE_RESULT_NOT_FOUND;
@@ -664,7 +664,7 @@ public:
                              const GWBUF* pValue,
                              const std::function<void(cache_result_t)>& cb)
     {
-        if (!connected())
+        if (!ready())
         {
             reconnect();
             return CACHE_RESULT_OK;
@@ -718,7 +718,7 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              const std::function<void(cache_result_t)>& cb)
     {
-        if (!connected())
+        if (!ready())
         {
             reconnect();
             return CACHE_RESULT_NOT_FOUND;
@@ -789,7 +789,7 @@ public:
     {
         mxb_assert(m_invalidate);
 
-        if (!connected())
+        if (!ready())
         {
             reconnect();
             return CACHE_RESULT_OK;
@@ -830,7 +830,7 @@ public:
 
     cache_result_t clear()
     {
-        if (!connected())
+        if (!ready())
         {
             reconnect();
             return CACHE_RESULT_OK;
@@ -1257,7 +1257,7 @@ private:
         }
     }
 
-    bool connected() const
+    bool ready() const
     {
         return m_redis.connected();
     }
@@ -1282,7 +1282,7 @@ private:
 
         m_redis.reset(pContext);
 
-        if (connected())
+        if (ready())
         {
             if (m_reconnecting)
             {
