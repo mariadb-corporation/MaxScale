@@ -514,8 +514,18 @@ public:
             }
             else
             {
-                MXB_ERROR("Expected status message in the context of %s, "
-                          "but received a %s.", zContext, redis_type_to_string(reply.type()));
+                if (reply.type() == REDIS_REPLY_ERROR)
+                {
+                    MXB_ERROR("Expected status message in the context of %s, "
+                              "but received an ERROR: %.*s",
+                              zContext, (int)reply.len(), reply.str());
+                }
+                else
+                {
+                    MXB_ERROR("Expected status message in the context of %s, "
+                              "but received a %s.", zContext, redis_type_to_string(reply.type()));
+                }
+
                 rv = REDIS_ERR;
             }
         }
@@ -972,7 +982,7 @@ private:
                 }
                 else
                 {
-                    MXB_ERROR("Failed fatally when reading reply to EXEC: %s, %s",
+                    MXB_ERROR("Failed when reading reply to EXEC: %s, %s",
                               redis_error_to_string(rc).c_str(),
                               m_redis.errstr());
                     action = RedisAction::ERROR;
@@ -980,9 +990,7 @@ private:
             }
             else
             {
-                MXB_ERROR("Failed when reading response to MULTI: %s, %s",
-                          redis_error_to_string(rc).c_str(),
-                          m_redis.errstr());
+                MXB_ERROR("Failed when reading reply to MULTI.");
                 action = RedisAction::ERROR;
             }
         }
@@ -1200,10 +1208,7 @@ private:
                 }
                 else
                 {
-                    MXB_ERROR("Could not read MULTI reply from redis, the cache is now "
-                              "in an unknown state: %s, %s",
-                              redis_error_to_string(rc).c_str(),
-                              m_redis.errstr());
+                    MXB_ERROR("Failed when reading reply to MULTI.");
                     action = RedisAction::ERROR;
                 }
             }
@@ -1293,7 +1298,18 @@ private:
             break;
 
         default:
-            MXB_ERROR("%s: %s", zContext, m_redis.errstr());
+            {
+                const char* zError = m_redis.errstr();
+
+                if (zError && *zError != 0)
+                {
+                    MXB_ERROR("%s: %s", zContext, zError);
+                }
+                else
+                {
+                    MXB_ERROR("%s.", zContext);
+                }
+            }
         }
     }
 
