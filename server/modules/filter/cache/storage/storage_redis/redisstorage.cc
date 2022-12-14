@@ -611,8 +611,7 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, cb]() {
-            Redis::Reply reply = sThis->m_redis.command("GET %b", rkey.data(), rkey.size());
-            sThis->m_redis.check_for_io_error();
+            Redis::Reply reply = sThis->redis_get_value(rkey);
 
             GWBUF* pValue = nullptr;
             cache_result_t rv = CACHE_RESULT_ERROR;
@@ -679,8 +678,7 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
-            RedisAction action = sThis->put_value(rkey, invalidation_words, pClone);
-            sThis->m_redis.check_for_io_error();
+            RedisAction action = sThis->redis_put_value(rkey, invalidation_words, pClone);
 
             cache_result_t rv = CACHE_RESULT_ERROR;
 
@@ -729,8 +727,7 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, cb]() {
-            Redis::Reply reply = sThis->m_redis.command("DEL %b", rkey.data(), rkey.size());
-            sThis->m_redis.check_for_io_error();
+            Redis::Reply reply = sThis->redis_del_value(rkey);
 
             cache_result_t rv = CACHE_RESULT_ERROR;
 
@@ -798,8 +795,7 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, words, cb]() {
-            RedisAction action = sThis->invalidate(words);
-            sThis->m_redis.check_for_io_error();
+            RedisAction action = sThis->redis_invalidate(words);
 
             cache_result_t rv = CACHE_RESULT_ERROR;
 
@@ -907,10 +903,22 @@ private:
         ERROR
     };
 
-    RedisAction put_value(const vector<char>& rkey,
-                          const vector<std::string>& invalidation_words,
-                          GWBUF* pClone)
+    Redis::Reply redis_get_value(const vector<char>& rkey)
     {
+        mxb_assert(!mxb::Worker::get_current());
+
+        Redis::Reply reply = m_redis.command("GET %b", rkey.data(), rkey.size());
+
+        m_redis.check_for_io_error();
+        return reply;
+    }
+
+    RedisAction redis_put_value(const vector<char>& rkey,
+                                const vector<std::string>& invalidation_words,
+                                GWBUF* pClone)
+    {
+        mxb_assert(!mxb::Worker::get_current());
+
         RedisAction action = RedisAction::OK;
 
         int rc;
@@ -1023,11 +1031,24 @@ private:
             action = RedisAction::ERROR;
         }
 
+        m_redis.check_for_io_error();
         return action;
     }
 
-    RedisAction invalidate(const vector<string>& words)
+    Redis::Reply redis_del_value(const vector<char>& rkey)
     {
+        mxb_assert(!mxb::Worker::get_current());
+
+        Redis::Reply reply = m_redis.command("DEL %b", rkey.data(), rkey.size());
+
+        m_redis.check_for_io_error();
+        return reply;
+    }
+
+    RedisAction redis_invalidate(const vector<string>& words)
+    {
+        mxb_assert(!mxb::Worker::get_current());
+
         RedisAction action = RedisAction::OK;
 
         int rc;
@@ -1230,6 +1251,7 @@ private:
         // and the deleteing of the keys (and values) being done in separate
         // transactions.
 
+        m_redis.check_for_io_error();
         return action;
     }
 
