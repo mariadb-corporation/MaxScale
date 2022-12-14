@@ -132,9 +132,9 @@ construct_result_response(json_t* resultdata, const string& host, const std::str
     if (resultdata)
     {
         json_object_set_new(attr, "results", resultdata);
-        json_object_set_new(attr, "execution_time", json_real(mxb::to_secs(query_exec_time)));
     }
 
+    json_object_set_new(attr, "execution_time", json_real(mxb::to_secs(query_exec_time)));
     json_object_set_new(attr, "sql", json_string(sql.c_str()));
 
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
@@ -528,23 +528,19 @@ HttpResponse query(const HttpRequest& request)
             mxb::Json result_data(mxb::Json::Type::UNDEFINED);
             mxb::Duration exec_time {0};
 
-            managed_conn->sql = sql;
-            managed_conn->last_query_started = mxb::Clock::now();
-
             if (async)
             {
                 mxs::thread_pool().execute(
                     [managed_conn, sql, max_rows]() {
                     managed_conn->result = managed_conn->query(sql, max_rows);
-                    managed_conn->last_query_time = mxb::Clock::now();
                     managed_conn->release();
                 }, "sql" + id_str);
             }
             else
             {
                 result_data = managed_conn->query(sql, max_rows);
-                managed_conn->last_query_time = mxb::Clock::now();
-                exec_time = managed_conn->last_query_time - managed_conn->last_query_started;
+                const auto& info = managed_conn->info();
+                exec_time = info.last_query_ended - info.last_query_started;
                 managed_conn->release();
                 // 'managed_conn' is now effectively back in storage and should not be used.
             }
@@ -590,13 +586,13 @@ HttpResponse query_result(const HttpRequest& request)
     auto result_cb = [id, query_id = std::move(query_id), host = std::move(host), self = std::move(self)]() {
         HttpResponse response;
 
-        if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
+        if (auto [conn, reason, info] = this_unit.manager.get_connection(id); conn)
         {
             if (json_t* result_data = conn->result.get_json())
             {
-                auto exec_time = conn->last_query_time - conn->last_query_started;
+                auto exec_time = info.last_query_ended - info.last_query_started;
                 response = construct_result_response(json_incref(result_data),
-                                                     host, self, sql, query_id, exec_time);
+                                                     host, self, info.sql, query_id, exec_time);
             }
             else
             {
@@ -607,7 +603,8 @@ HttpResponse query_result(const HttpRequest& request)
         }
         else if (reason == Reason::BUSY)
         {
-            response = construct_result_response(nullptr, host, self, sql, query_id, 0s);
+            auto exec_time = mxb::Clock::now() - info.last_query_started;
+            response = construct_result_response(nullptr, host, self, info.sql, query_id, exec_time);
             response.set_code(MHD_HTTP_ACCEPTED);
             response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self);
         }
@@ -638,7 +635,7 @@ HttpResponse erase_query_result(const HttpRequest& request)
     auto result_cb = [id, host = std::move(host), self = std::move(self)]() {
         HttpResponse response;
 
-        if (auto [conn, reason, sql] = this_unit.manager.get_connection(id); conn)
+        if (auto [conn, reason, _] = this_unit.manager.get_connection(id); conn)
         {
             conn->result.reset();
             conn->release();
@@ -810,12 +807,13 @@ HttpResponse run_etl_task(const HttpRequest& request)
 
             int64_t query_id = ++conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-            conn->sql = "ETL";
-            conn->last_query_started = mxb::Clock::now();
+            // TODO: Add these back
+            // conn->sql = "ETL";
+            // conn->last_query_started = mxb::Clock::now();
 
             mxs::thread_pool().execute([conn, id, etl = move(etl)]() {
                 conn->result = std::invoke(func, *etl);
-                conn->last_query_time = mxb::Clock::now();
+                // conn->last_query_ended = mxb::Clock::now();
                 conn->clear_cancel_handler();
                 conn->release();
             }, "etl-" + id_str);
@@ -823,7 +821,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
             string self_id = self + "/queries/" + id_str;
             mxb::Duration exec_time {0};
             HttpResponse response = construct_result_response(nullptr, host, self_id,
-                                                              conn->sql, id_str, exec_time);
+                                                              "ETL", id_str, exec_time);
 
             response.set_code(MHD_HTTP_ACCEPTED);
             response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self_id);

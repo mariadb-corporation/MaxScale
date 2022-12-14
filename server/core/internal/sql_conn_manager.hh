@@ -58,6 +58,13 @@ public:
         Connection(const Connection&) = delete;
         Connection& operator=(const Connection&) = delete;
 
+        struct Info
+        {
+            mxb::TimePoint last_query_started;
+            mxb::TimePoint last_query_ended;
+            std::string    sql;
+        };
+
         Connection(const ConnectionConfig& cnf);
         virtual ~Connection();
         void release();
@@ -68,7 +75,7 @@ public:
 
         virtual bool cmd(const std::string& cmd) = 0;
 
-        virtual mxb::Json query(const std::string& sql, int64_t max_rows) = 0;
+        mxb::Json query(const std::string& sql, int64_t max_rows);
 
         virtual uint32_t thread_id() const = 0;
 
@@ -82,21 +89,24 @@ public:
 
         void clear_cancel_handler();
 
+        const Info& info() const;
+
         std::atomic_bool busy {false};
         int64_t          current_query_id {0};
-        mxb::TimePoint   last_query_started;
-        mxb::TimePoint   last_query_time;
         int64_t          last_max_rows {0};
         ConnectionConfig config;
-        std::string      sql;
         mxb::Json        result {mxb::Json::Type::UNDEFINED};
 
     protected:
-        virtual void do_cancel() = 0;
+        virtual mxb::Json do_query(const std::string& sql, int64_t max_rows) = 0;
+        virtual void      do_cancel() = 0;
 
     private:
+        friend class ConnectionManager;
+
         mutable std::mutex    m_lock;
         std::function<void()> m_cancel_handler;
+        Info                  m_info;
     };
 
     class MariaDBConnection : public Connection
@@ -105,13 +115,13 @@ public:
         MariaDBConnection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf);
         std::string error() override final;
         bool        cmd(const std::string& cmd) override final;
-        mxb::Json   query(const std::string& sql, int64_t max_rows) override final;
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
 
     protected:
-        void do_cancel() override final;
+        mxb::Json do_query(const std::string& sql, int64_t max_rows) override final;
+        void      do_cancel() override final;
 
     private:
         mxb::Json generate_json_representation(int64_t max_rows);
@@ -129,13 +139,13 @@ public:
 
         std::string error() override final;
         bool        cmd(const std::string& cmd) override final;
-        mxb::Json   query(const std::string& sql, int64_t max_rows) override final;
         uint32_t    thread_id() const override final;
         bool        reconnect() override final;
         bool        ping() override final;
 
     protected:
-        void do_cancel() override final;
+        mxb::Json do_query(const std::string& sql, int64_t max_rows) override final;
+        void      do_cancel() override final;
 
     private:
         mxq::ODBC m_conn;
@@ -157,9 +167,9 @@ public:
      * @param id Connection id
      *
      * @return Pointer to connection if found not busy, null otherwise. The Reason explains why a nullptr was
-     *         returned. If the connection is busy executing a SQL query, the query is also returned.
+     *         returned. If the connection was found, the connection info is also returned.
      */
-    std::tuple<Connection*, Reason, std::string> get_connection(const std::string& id);
+    std::tuple<Connection*, Reason, Connection::Info> get_connection(const std::string& id);
 
     /**
      * Get the configuration of a connection

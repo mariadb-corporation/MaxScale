@@ -58,27 +58,33 @@ int parse_version(std::string str)
 namespace HttpSql
 {
 
-std::tuple<ConnectionManager::Connection*, ConnectionManager::Reason, std::string>
+std::tuple<ConnectionManager::Connection*, ConnectionManager::Reason, ConnectionManager::Connection::Info>
 ConnectionManager::get_connection(const std::string& id)
 {
     Connection* rval = nullptr;
     Reason reason = Reason::NOT_FOUND;
-    std::string sql;
+    Connection::Info info;
     LockGuard guard(m_connection_lock);
     auto it = m_connections.find(id);
     if (it != m_connections.end())
     {
         reason = Reason::BUSY;
         auto elem = it->second.get();
-        sql = elem->sql;
+
         if (!elem->busy.load(std::memory_order_acquire))
         {
             reason = Reason::OK;
             rval = elem;
+            info = elem->info();
             elem->busy.store(true, std::memory_order_release);
         }
+        else
+        {
+            std::lock_guard guard(elem->m_lock);
+            info = elem->info();
+        }
     }
-    return {rval, reason, sql};
+    return {rval, reason, info};
 }
 
 std::optional<ConnectionConfig> ConnectionManager::get_configuration(const std::string& id)
@@ -165,6 +171,29 @@ void ConnectionManager::Connection::clear_cancel_handler()
     m_cancel_handler = nullptr;
 }
 
+mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t max_rows)
+{
+    // The update to the m_info struct must be done under a lock as other threads can access it concurrently
+    // from inside ConnectionManager::get_connection(). Although the last_query_started value is never
+    // accessed by more than one thread at a time, it should still be updated to make sure that the end time
+    // is always ahead or at the same point than the start time.
+    std::unique_lock guard(m_lock);
+    m_info.sql = sql;
+    m_info.last_query_started = mxb::Clock::now();
+    m_info.last_query_ended = m_info.last_query_started;
+    guard.unlock();
+
+    auto result = do_query(sql, max_rows);
+    m_info.last_query_ended = mxb::Clock::now();
+
+    return result;
+}
+
+const ConnectionManager::Connection::Info& ConnectionManager::Connection::info() const
+{
+    return m_info;
+}
+
 bool ConnectionManager::is_query(const std::string& conn_id, int64_t query_id) const
 {
     bool rval = false;
@@ -233,7 +262,7 @@ void ConnectionManager::cleanup_thread_func()
                 auto* managed_conn = kv.second.get();
                 // Assume idle_hard_limit > idle_suspect_limit.
                 if (!managed_conn->busy.load(std::memory_order_acquire)
-                    && (now - managed_conn->last_query_time > idle_suspect_limit))
+                    && (now - managed_conn->info().last_query_ended > idle_suspect_limit))
                 {
                     suspect_idle_ids.push_back(kv.first);
                 }
@@ -246,7 +275,7 @@ void ConnectionManager::cleanup_thread_func()
             {
                 // It's possible that the connection was used just after the previous loop, so check again.
                 bool should_close = false;
-                auto idle_time = now - managed_conn->last_query_time;
+                auto idle_time = now - managed_conn->info().last_query_ended;
                 // TODO: If auto-reconnection is ever enabled on the connector, may need to detect
                 // it happening. To do that, check if mysql thread id changes during 'ping'.
                 if ((idle_time > idle_hard_limit)
@@ -307,9 +336,9 @@ ConnectionManager::Connection::~Connection()
 }
 
 ConnectionManager::Connection::Connection(const ConnectionConfig& cnf)
-    : last_query_time(mxb::Clock::now())
-    , config(cnf)
+    : config(cnf)
 {
+    m_info.last_query_ended = mxb::Clock::now();
 }
 
 void ConnectionManager::Connection::release()
@@ -322,21 +351,25 @@ json_t* ConnectionManager::Connection::to_json() const
     auto now = mxb::Clock::now();
     double idle = 0;
     double exec_time = 0;
+    json_t* sql;
 
     if (busy.load(std::memory_order_acquire))
     {
-        exec_time = mxb::to_secs(now - last_query_started);
+        std::lock_guard guard(m_lock);
+        exec_time = mxb::to_secs(now - m_info.last_query_started);
+        sql = json_string(m_info.sql.c_str());
     }
     else
     {
-        exec_time = mxb::to_secs(last_query_time - last_query_started);
-        idle = mxb::to_secs(now - last_query_time);
+        exec_time = mxb::to_secs(m_info.last_query_ended - m_info.last_query_started);
+        idle = mxb::to_secs(now - m_info.last_query_ended);
+        sql = json_string(m_info.sql.c_str());
     }
 
     json_t* obj = json_object();
     json_object_set_new(obj, "thread_id", json_integer(thread_id()));
     json_object_set_new(obj, "seconds_idle", json_real(idle));
-    json_object_set_new(obj, "sql", json_string(sql.c_str()));
+    json_object_set_new(obj, "sql", sql);
     json_object_set_new(obj, "execution_time", json_real(exec_time));
     json_object_set_new(obj, "target", json_string(config.target.c_str()));
     return obj;
@@ -358,7 +391,7 @@ bool ConnectionManager::MariaDBConnection::cmd(const std::string& cmd)
     return m_conn.cmd(cmd);
 }
 
-mxb::Json ConnectionManager::MariaDBConnection::query(const std::string& sql, int64_t max_rows)
+mxb::Json ConnectionManager::MariaDBConnection::do_query(const std::string& sql, int64_t max_rows)
 {
     if (this->last_max_rows != max_rows)
     {
@@ -564,7 +597,7 @@ bool ConnectionManager::ODBCConnection::cmd(const std::string& cmd)
     return m_conn.query(cmd, &empty);
 }
 
-mxb::Json ConnectionManager::ODBCConnection::query(const std::string& sql, int64_t max_rows)
+mxb::Json ConnectionManager::ODBCConnection::do_query(const std::string& sql, int64_t max_rows)
 {
     mxq::JsonResult res;
     m_conn.set_row_limit(max_rows);
