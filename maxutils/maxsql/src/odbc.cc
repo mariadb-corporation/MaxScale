@@ -169,9 +169,9 @@ private:
 
     std::optional<TextResult::Result> get_catalog_result(SQLRETURN ret, size_t min_num_fields);
 
-    SQLHENV     m_env;
-    SQLHDBC     m_conn;
-    SQLHSTMT    m_stmt;
+    SQLHENV     m_env {SQL_NULL_HANDLE};
+    SQLHDBC     m_conn {SQL_NULL_HANDLE};
+    SQLHSTMT    m_stmt {SQL_NULL_HANDLE};
     std::string m_dsn;
     std::string m_error;
     std::string m_sqlstate;
@@ -576,23 +576,41 @@ std::optional<std::string> TextResult::get_field(size_t field, size_t row, size_
 ODBCImp::ODBCImp(std::string dsn)
     : m_dsn(std::move(dsn))
 {
-    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &m_env);
-    SQLSetEnvAttr(m_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
-    // The DBC handler must be allocated after the ODBC version is set, otherwise the SQLConnect
-    // function returns SQL_INVALID_HANDLE.
-    SQLAllocHandle(SQL_HANDLE_DBC, m_env, &m_conn);
+    if (SQL_SUCCEEDED(SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &m_env)))
+    {
+        SQLSetEnvAttr(m_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+        // The DBC handler must be allocated after the ODBC version is set, otherwise the SQLConnect
+        // function returns SQL_INVALID_HANDLE.
+        SQLAllocHandle(SQL_HANDLE_DBC, m_env, &m_conn);
+    }
 }
 
 ODBCImp::~ODBCImp()
 {
-    SQLFreeHandle(SQL_HANDLE_STMT, m_stmt);
-    SQLDisconnect(m_conn);
-    SQLFreeHandle(SQL_HANDLE_DBC, m_conn);
-    SQLFreeHandle(SQL_HANDLE_ENV, m_env);
+    if (m_stmt != SQL_NULL_HANDLE)
+    {
+        SQLFreeHandle(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    if (m_conn != SQL_NULL_HANDLE)
+    {
+        SQLDisconnect(m_conn);
+        SQLFreeHandle(SQL_HANDLE_DBC, m_conn);
+    }
+
+    if (m_env != SQL_NULL_HANDLE)
+    {
+        SQLFreeHandle(SQL_HANDLE_ENV, m_env);
+    }
 }
 
 bool ODBCImp::connect()
 {
+    if (m_env == SQL_NULL_HANDLE || m_conn == SQL_NULL_HANDLE)
+    {
+        return false;
+    }
+
     SQLCHAR outbuf[1024];
     SQLSMALLINT s2len;
     SQLRETURN ret = SQLDriverConnect(m_conn, nullptr, (SQLCHAR*)m_dsn.c_str(), m_dsn.size(),
@@ -604,7 +622,12 @@ bool ODBCImp::connect()
     }
     else
     {
-        SQLAllocHandle(SQL_HANDLE_STMT, m_conn, &m_stmt);
+        ret = SQLAllocHandle(SQL_HANDLE_STMT, m_conn, &m_stmt);
+
+        if (ret == SQL_ERROR)
+        {
+            get_error(SQL_HANDLE_DBC, m_conn);
+        }
     }
 
     return SQL_SUCCEEDED(ret);
