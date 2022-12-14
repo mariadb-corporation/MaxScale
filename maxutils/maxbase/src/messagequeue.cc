@@ -27,6 +27,10 @@
 
 namespace
 {
+const char* PIPE_FULL_WARNING =
+    " Consider increasing the pipe buffer size (sysctl fs.pipe-max-size). Slow domain name servers "
+    "can also cause problems. To disable reverse name resolution, add 'skip_name_resolve=true' under "
+    "the '[maxscale]' section.";
 
 static struct
 {
@@ -202,7 +206,7 @@ bool MessageQueue::post(const Message& message) const
         int fast = 0;
         int slow = 0;
         const int fast_size = 100;
-        const int slow_limit = 3;
+        const int slow_limit = 5;
         ssize_t n;
 
         while (true)
@@ -216,14 +220,31 @@ bool MessageQueue::post(const Message& message) const
                 {
                     fast = 0;
 
-                    if (++slow >= slow_limit)
+                    if (slow++ == slow_limit)
                     {
-                        break;
+                        const char* msg = "";
+                        static bool warn_when_pipe_full = true;
+
+                        if (warn_when_pipe_full)
+                        {
+                            msg = PIPE_FULL_WARNING;
+                            warn_when_pipe_full = false;
+                        }
+
+                        auto source_worker = mxb::Worker::get_current();
+                        std::string source_id = source_worker ?
+                            std::to_string(source_worker->id()) : "<no worker>";
+
+                        MXB_WARNING("Worker %s attempted to send a message to worker %d but it has been "
+                                    "busy for over %d seconds.%s",
+                                    source_id.c_str(), m_pWorker->id(), slow_limit, msg);
                     }
-                    else
-                    {
-                        sched_yield();
-                    }
+
+                    std::this_thread::sleep_for(1s);
+                }
+                else
+                {
+                    sched_yield();
                 }
             }
             else
@@ -236,14 +257,6 @@ bool MessageQueue::post(const Message& message) const
         {
             MXB_ERROR("Failed to write message to worker %d: %d, %s",
                       m_pWorker->id(), errno, mxb_strerror(errno));
-
-            static bool warn_pipe_buffer_size = true;
-
-            if ((errno == EAGAIN || errno == EWOULDBLOCK) && warn_pipe_buffer_size)
-            {
-                MXB_ERROR("Consider increasing pipe buffer size (sysctl fs.pipe-max-size)");
-                warn_pipe_buffer_size = false;
-            }
         }
     }
     else
