@@ -502,21 +502,24 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
 bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (m_first_reply)
+    if (m_active)
     {
-        m_first_response_time = m_pSession->worker()->epoll_tick_now();
-    }
+        if (m_first_reply)
+        {
+            m_first_response_time = m_pSession->worker()->epoll_tick_now();
+        }
 
-    if (reply.is_complete())
-    {
-        LogEventElems elems(m_begin_time,
-                            m_sql,
-                            m_first_response_time,
-                            m_pSession->worker()->epoll_tick_now(),
-                            reply,
-                            down);
+        if (reply.is_complete())
+        {
+            LogEventElems elems(m_begin_time,
+                                m_sql,
+                                m_first_response_time,
+                                m_pSession->worker()->epoll_tick_now(),
+                                reply,
+                                down);
 
-        write_log_entries(elems);
+            write_log_entries(elems);
+        }
     }
 
     return mxs::FilterSession::clientReply(queue, down, reply);
