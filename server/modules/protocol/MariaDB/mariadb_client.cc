@@ -2146,7 +2146,7 @@ bool MariaDBClientConnection::is_movable() const
 
 bool MariaDBClientConnection::is_idle() const
 {
-    return in_routing_state();
+    return in_routing_state() && m_num_responses == 0;
 }
 
 size_t MariaDBClientConnection::sizeof_buffers() const

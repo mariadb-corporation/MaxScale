@@ -908,6 +908,9 @@ add_test_executable(auto_tune.cpp auto_tune auto_tune LABELS REPL_BACKEND)
 # MXS-4194: QC cache size keeps growing
 add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_cache_size LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4440: connection_keepalive doesn't work with long queries
+add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive mxs4440_long_query_keepalive LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
