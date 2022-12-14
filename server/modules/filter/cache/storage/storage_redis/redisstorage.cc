@@ -142,6 +142,7 @@
 using std::map;
 using std::shared_ptr;
 using std::string;
+using std::string_view;
 using std::vector;
 
 namespace
@@ -402,7 +403,7 @@ public:
         }
     }
 
-    void reset(redisContext* pContext)
+    void reset(redisContext* pContext = nullptr)
     {
         redisFree(m_pContext);
         m_pContext = pContext;
@@ -566,8 +567,8 @@ public:
                        std::chrono::milliseconds timeout,
                        bool invalidate,
                        uint32_t ttl,
-                       const std::string& username,
-                       const std::string& password,
+                       const string& username,
+                       const string& password,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
@@ -625,11 +626,11 @@ public:
                         break;
 
                     case REDIS_REPLY_ERROR:
-                        MXB_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        MXB_ERROR("Redis, get failed: %.*s", (int)reply.len(), reply.str());
                         break;
 
                     default:
-                        MXB_WARNING("Unexpected redis redis return type (%s) received.",
+                        MXB_WARNING("Redis get, unexpected return type: %s",
                                     redis_type_to_string(reply.type()));
                 }
             }
@@ -654,7 +655,7 @@ public:
     }
 
     cache_result_t put_value(const CacheKey& key,
-                             const vector<std::string>& invalidation_words,
+                             const vector<string>& invalidation_words,
                              const GWBUF* pValue,
                              const std::function<void(cache_result_t)>& cb)
     {
@@ -751,11 +752,11 @@ public:
                         break;
 
                     case REDIS_REPLY_ERROR:
-                        MXB_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        MXB_ERROR("Redis, del failed: %.*s", (int)reply.len(), reply.str());
                         break;
 
                     default:
-                        MXB_WARNING("Unexpected redis return type (%s) received.",
+                        MXB_WARNING("Redis del, unexpected return type (%s) received.",
                                     redis_type_to_string(reply.type()));
                         break;
                 }
@@ -876,7 +877,7 @@ private:
     }
 
     RedisAction redis_put_value(const vector<char>& rkey,
-                                const vector<std::string>& invalidation_words,
+                                const vector<string>& invalidation_words,
                                 GWBUF* pClone)
     {
         mxb_assert(!mxb::Worker::get_current());
@@ -1081,7 +1082,7 @@ private:
                         }
                         else
                         {
-                            MXB_ERROR("Unexpected type returned by redis: %s",
+                            MXB_ERROR("Redis invalidate, unexpected return type: %s",
                                       redis_type_to_string(element.type()));
                         }
                     }
@@ -1217,6 +1218,25 @@ private:
         return action;
     }
 
+    Redis::Reply redis_authenticate()
+    {
+        mxb_assert(!mxb::Worker::get_current());
+
+        Redis::Reply reply;
+
+        if (m_username.empty())
+        {
+            reply = m_redis.command("AUTH %s", m_password.c_str());
+        }
+        else
+        {
+            reply = m_redis.command("AUTH %s %s", m_username.c_str(), m_password.c_str());
+        }
+
+        m_redis.check_for_io_error();
+        return reply;
+    }
+
 private:
     RedisToken(const string& host,
                int port,
@@ -1233,6 +1253,11 @@ private:
         , m_password(password)
         , m_pWorker(mxb::Worker::get_current())
         , m_set_format("SET %b %b")
+        , m_connecting(false)
+        , m_reconnecting(false)
+        , m_authenticated(password.empty())
+        , m_should_authenticate(!password.empty())
+        , m_authenticating(false)
     {
         if (ttl != 0)
         {
@@ -1274,7 +1299,17 @@ private:
 
     bool ready() const
     {
+        return connected() && authenticated();
+    }
+
+    bool connected() const
+    {
         return m_redis.connected();
+    }
+
+    bool authenticated() const
+    {
+        return m_authenticated;
     }
 
     void set_context(redisContext* pContext)
@@ -1297,15 +1332,31 @@ private:
 
         m_redis.reset(pContext);
 
-        if (ready())
+        if (connected())
         {
-            if (m_reconnecting)
+            if (m_should_authenticate)
             {
-                // Reconnected after having been disconnected, let's log a note.
-                // But we can't claim that we actually have been connected as that will
-                // become apparent only later.
-                MXB_NOTICE("Redis caching will again be attempted.");
+                authenticate();
             }
+            else
+            {
+                connect_attempt_done(true);
+            }
+        }
+        else
+        {
+            connect_attempt_done(false);
+        }
+    }
+
+    void connect_attempt_done(bool ready)
+    {
+        if (ready && m_reconnecting)
+        {
+            // Reconnected after having been disconnected, let's log a note.
+            // But we can't claim that we actually have been connected as that will
+            // become apparent only later.
+            MXB_NOTICE("Redis caching will again be attempted.");
         }
 
         m_context_got = std::chrono::steady_clock::now();
@@ -1354,6 +1405,84 @@ private:
         }, "redis-connect");
     }
 
+    void authentication_attempt_done(bool authenticated)
+    {
+        mxb_assert(m_connecting);
+        mxb_assert(m_authenticating);
+
+        m_authenticated = authenticated;
+        m_authenticating = false;
+
+        if (m_authenticated)
+        {
+            MXB_NOTICE("Redis authentication succeeded.");
+        }
+        else
+        {
+            m_redis.reset();
+        }
+
+        connect_attempt_done(m_authenticated);
+    }
+
+    void authenticate()
+    {
+        mxb_assert(m_connecting);
+        mxb_assert(!m_authenticating);
+
+        m_authenticating = true;
+
+        auto sThis = get_shared();
+
+        mxs::thread_pool().execute([sThis]() {
+                Redis::Reply reply = sThis->redis_authenticate();
+
+                cache_result_t rv = CACHE_RESULT_ERROR;
+
+                if (reply)
+                {
+                    switch (reply.type())
+                    {
+                    case REDIS_REPLY_ERROR:
+                        MXB_ERROR("Redis authentication failed: %.*s", (int)reply.len(), reply.str());
+                        break;
+
+                    case REDIS_REPLY_STATUS:
+                        {
+                            string_view status(reply.str(), reply.len());
+
+                            if (status == "OK")
+                            {
+                                rv = CACHE_RESULT_OK;
+                            }
+                            else
+                            {
+                                MXB_ERROR("Redis, unexpected authentication status code: %.*s",
+                                          (int)status.length(), status.data());
+                            }
+                        }
+                        break;
+
+                    default:
+                        MXB_WARNING("Redis auth, unexpected return type: %s",
+                                    redis_type_to_string(reply.type()));
+                    }
+                }
+                else
+                {
+                    sThis->log_error("Failed when authenticating against Redis");
+                }
+
+                sThis->m_pWorker->execute([sThis, rv]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            sThis->authentication_attempt_done(rv == CACHE_RESULT_OK);
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            }, "redis-authenticate");
+
+    }
+
     void reconnect()
     {
         if (!m_connecting)
@@ -1388,10 +1517,13 @@ private:
     string                                m_username;
     string                                m_password;
     mxb::Worker*                          m_pWorker;
-    std::string                           m_set_format;
+    string                                m_set_format;
     std::chrono::steady_clock::time_point m_context_got;
-    bool                                  m_connecting {false};
-    bool                                  m_reconnecting {false};
+    bool                                  m_connecting;
+    bool                                  m_reconnecting;
+    bool                                  m_authenticated;
+    bool                                  m_should_authenticate;
+    bool                                  m_authenticating;
 };
 }
 
@@ -1400,8 +1532,8 @@ RedisStorage::RedisStorage(const string& name,
                            const Config& config,
                            const string& host,
                            int port,
-                           const std::string& username,
-                           const std::string& password)
+                           const string& username,
+                           const string& password)
     : m_name(name)
     , m_config(config)
     , m_host(host)
@@ -1437,7 +1569,7 @@ void RedisStorage::finalize()
 }
 
 // static
-bool RedisStorage::get_limits(const std::string&, Limits* pLimits)
+bool RedisStorage::get_limits(const string&, Limits* pLimits)
 {
     *pLimits = this_unit.default_limits;
     return true;
@@ -1446,7 +1578,7 @@ bool RedisStorage::get_limits(const std::string&, Limits* pLimits)
 //static
 RedisStorage* RedisStorage::create(const string& name,
                                    const Config& config,
-                                   const std::string& argument_string)
+                                   const string& argument_string)
 {
     RedisStorage* pStorage = nullptr;
 
@@ -1507,7 +1639,8 @@ RedisStorage* RedisStorage::create(const string& name,
 
         if (!username.empty() && password.empty())
         {
-            MXB_WARNING("Only username but not password specified for `storage_redis`.");
+            MXB_ERROR("'username' but not 'password' specified for `storage_redis`.");
+            error = true;
         }
 
         for (const auto& kv : arguments)
