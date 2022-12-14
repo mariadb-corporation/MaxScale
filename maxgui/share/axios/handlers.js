@@ -29,15 +29,14 @@ export async function defErrStatusHandler({ store, error }) {
      */
     if (store.state.mxsApp.overlay_type !== null)
         await delay(600).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
-    return Promise.reject(error)
 }
 
 export function handleNullStatusCode({ store, error }) {
     if (error.toString().includes(CANCEL_MESSAGE))
         // request is cancelled by user, so no response is received
-        return store.vue.$logger.info(error.toString())
+        store.vue.$logger.info(error.toString())
     else
-        return store.commit(
+        store.commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
                 text: ['Lost connection to MaxScale, please check if MaxScale is running'],

@@ -66,6 +66,7 @@ function http(store) {
                 default:
                     defErrStatusHandler({ store, error })
             }
+            return Promise.reject(error)
         }
     )
     return http

@@ -89,7 +89,7 @@ function queryHttp(store) {
             analyzeRes({ res: response, sql_conn_id: getSqlConnId(response.config.url) })
             return response
         },
-        async error => {
+        error => {
             const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
             switch (status) {
                 case null:
@@ -110,6 +110,7 @@ function queryHttp(store) {
                     defErrStatusHandler({ store, error })
             }
             patchIsConnBusyMap({ value: false, sql_conn_id: getSqlConnId(url) })
+            return Promise.reject(error)
         }
     )
     return queryHttp

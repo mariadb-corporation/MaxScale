@@ -267,11 +267,11 @@ export function stringifyClone(data) {
  * @param {Promise} promise
  * @returns { Promise }
  */
-export function asyncTryCatch(promise) {
+export async function asyncTryCatch(promise) {
     return promise
         .then(data => [null, data])
         .catch(err => {
-            logger.error(err)
+            logger.error(getErrorsArr(err).toString())
             return [err, undefined]
         })
 }
