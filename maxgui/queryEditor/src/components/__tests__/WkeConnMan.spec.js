@@ -78,11 +78,11 @@ describe(`WkeConnMan - child component's data communication tests `, () => {
         expect(wrapper.findComponent({ name: 'reconn-dlg-ctr' }).exists()).to.be.true
     })
     it(`Should pass accurate data to conn-dlg-ctr via props`, () => {
-        const { value, connOptions, handleSave } = wrapper.findComponent({
+        const { value, wkeConnOpts, handleSave } = wrapper.findComponent({
             name: 'conn-dlg-ctr',
         }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isConnDlgOpened)
-        expect(connOptions).to.be.deep.equals(wrapper.vm.connOptions)
+        expect(wkeConnOpts).to.be.deep.equals(wrapper.vm.wkeConnOpts)
         expect(handleSave).to.be.equals(wrapper.vm.handleOpenConn)
     })
     it(`Should pass accurate data to mxs-conf-dlg via props`, () => {
@@ -108,7 +108,7 @@ describe(`WkeConnMan - child component's data communication tests `, () => {
         } = wrapper.findComponent({ name: 'v-select' }).vm.$props
 
         expect(value).to.be.equals(wrapper.vm.$data.chosenWkeConn)
-        expect(items).to.be.deep.equals(wrapper.vm.connOptions)
+        expect(items).to.be.deep.equals(wrapper.vm.wkeConnOpts)
         expect(itemText).to.be.equals('name')
         expect(returnObject).to.be.true
         expect(placeholder).to.be.equals(wrapper.vm.$mxs_t('selectConnection'))
@@ -190,16 +190,16 @@ describe(`WkeConnMan - methods and computed properties tests `, () => {
             expect(wrapper.vm.chosenWkeConn).to.be.an('object').and.be.empty
         })
     })
-    it(`Should disabled connections that are bound to a worksheet in connOptions`, () => {
+    it(`Should disabled connections that are bound to a worksheet in wkeConnOpts`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.connOptions[1]).to.have.property('disabled')
-        expect(wrapper.vm.connOptions[1].disabled).to.be.true
+        expect(wrapper.vm.wkeConnOpts[1]).to.have.property('disabled')
+        expect(wrapper.vm.wkeConnOpts[1].disabled).to.be.true
     })
     it(`Should return accurate value for connToBeDel computed property`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         // mock unlinkConn call
-        wrapper.vm.unlinkConn(wrapper.vm.connOptions[0])
-        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: wrapper.vm.connOptions[0].name })
+        wrapper.vm.unlinkConn(wrapper.vm.wkeConnOpts[0])
+        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: wrapper.vm.wkeConnOpts[0].name })
     })
 })
 
@@ -212,7 +212,7 @@ describe(`WkeConnMan - connection list dropdown tests`, () => {
             computed: { ...mockActiveConnState() },
             methods: { SET_ACTIVE_SQL_CONN: () => null },
         })
-        await itemSelectMock(wrapper, wrapper.vm.connOptions[1], '.conn-dropdown')
+        await itemSelectMock(wrapper, wrapper.vm.wkeConnOpts[1], '.conn-dropdown')
         onSelectConnSpy.should.have.been.calledOnce
         onSelectConnSpy.restore()
     })
@@ -224,7 +224,7 @@ describe(`WkeConnMan - other tests`, () => {
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
         })
-        const connToBeDeleted = wrapper.vm.connOptions[0]
+        const connToBeDeleted = wrapper.vm.wkeConnOpts[0]
         wrapper.vm.unlinkConn(connToBeDeleted)
         expect(wrapper.vm.isConfDlgOpened).to.be.true
         expect(wrapper.vm.targetConn).to.be.deep.equals(connToBeDeleted)

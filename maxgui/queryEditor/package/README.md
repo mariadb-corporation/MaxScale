@@ -325,7 +325,7 @@ all connections of a MaxScale:
 ```js
 import { models } from 'mxs-query-editor'
 /**
- * When creating a connection via `models.QueryConn.dispatch('openWkeConn', { body, resourceType, meta })`,
+ * When creating a connection via `models.QueryConn.dispatch('openWkeConn', { body, meta })`,
  * The meta field can store information needed to identify which connections belong to which maxscale.
  * To delete all open connections from the query editor, group all connections belong to one maxscale and
  * delete one by one.

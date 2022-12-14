@@ -91,9 +91,9 @@ export default {
         async chooseActiveQueryEditorWke({ commit }, { type, conn_name }) {
             const wkeConns = QueryConn.getters('getWkeConns')
             // Find connection
-            const wkeConn = wkeConns.find(c => c.name === conn_name) || {}
+            const wkeConn = wkeConns.find(c => c.name === conn_name)
             // If it is already bound to a worksheet, set that worksheet as active
-            if (wkeConn.worksheet_id)
+            if (this.vue.$typy(wkeConn, 'worksheet_id').safeString)
                 Worksheet.commit(state => (state.active_wke_id = wkeConn.worksheet_id))
             else {
                 const unavailableWkeIds = wkeConns.map(c => c.worksheet_id)
@@ -103,7 +103,6 @@ export default {
                 // Use a blank wke if there is one, otherwise create a new one
                 if (blankWke) Worksheet.commit(state => (state.active_wke_id = blankWke.id))
                 else insertWke()
-
                 // call onChangeWkeConn to handle connection binding, otherwise popup connection dialog
                 if (wkeConn) await QueryConn.dispatch('onChangeWkeConn', wkeConn)
                 else

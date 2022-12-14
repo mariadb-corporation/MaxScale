@@ -41,7 +41,7 @@ const mountFactory = opts =>
                 component: ConnDlgCtr,
                 propsData: {
                     value: true, // open dialog by default
-                    connOptions: [],
+                    wkeConnOpts: [],
                     handleSave: sinon.stub(),
                 },
             },
@@ -166,7 +166,7 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
             // assume first resource are connected already
             const dummy_connOptions = [{ ...resources[0], name: resources[0].id, id: 0 }]
             wrapper = mountFactory({
-                propsData: { connOptions: dummy_connOptions },
+                propsData: { wkeConnOpts: dummy_connOptions },
                 computed: { rc_target_names_map: () => dummy_rc_target_names_map },
             })
             expect(wrapper.vm.resourceItems).to.not.include(resources[0])
@@ -206,7 +206,7 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
             id: i,
         }))
         wrapper = mountFactory({
-            propsData: { connOptions: dummy_connOptions },
+            propsData: { wkeConnOpts: dummy_connOptions },
             computed: { rc_target_names_map: () => dummy_rc_target_names_map },
         })
         await wrapper.vm.$nextTick()

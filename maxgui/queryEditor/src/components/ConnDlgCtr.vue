@@ -186,7 +186,7 @@ export default {
     name: 'conn-dlg-ctr',
     props: {
         value: { type: Boolean, required: true },
-        connOptions: { type: Array, required: true },
+        wkeConnOpts: { type: Array, required: true },
         handleSave: { type: Function, required: true },
     },
     data() {
@@ -237,22 +237,11 @@ export default {
         },
         resourceItems() {
             const selectedRsrcType = this.resourceType
-            // Get list of resource name that have been connected
-            const connectedResourceNames = this.connOptions.reduce((acc, item) => {
-                if (item.type === selectedRsrcType) {
-                    acc.push(item.name)
-                }
-                return acc
-            }, [])
+            // worksheet connection name is also resource id
+            const wkeConnNames = this.wkeConnOpts.map(c => c.name)
             const allRsrcs = this.rc_target_names_map[selectedRsrcType] || []
-
             // Keep only resources that have not been connected
-            const availRsrcs = allRsrcs.reduce((acc, rsrc) => {
-                if (!connectedResourceNames.includes(rsrc.id)) {
-                    acc.push(rsrc)
-                }
-                return acc
-            }, [])
+            const availRsrcs = allRsrcs.filter(rsrc => !wkeConnNames.includes(rsrc.id))
             return availRsrcs
         },
         hasSavingErr() {
@@ -311,7 +300,6 @@ export default {
             const { id: resourceName = null } = this.selectedResource
             await this.handleSave({
                 body: { target: resourceName, ...this.body },
-                resourceType: this.resourceType,
             })
         },
     },

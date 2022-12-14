@@ -26,7 +26,6 @@ export default class QueryConn extends Extender {
             attributes: this.attr({}),
             binding_type: this.string(''),
             name: this.string(''),
-            type: this.string(''),
             meta: this.attr({}),
             clone_of_conn_id: this.attr(null).nullable(),
         }

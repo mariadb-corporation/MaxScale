@@ -130,10 +130,9 @@ export default {
         /**
          * Called by <wke-conn-man/>
          * @param {Object} param.body - request body
-         * @param {String} param.resourceType - services, servers or listeners.
          * @param {Object} param.meta - meta - connection meta
          */
-        async openWkeConn({ dispatch, commit, rootState }, { body, resourceType, meta = {} }) {
+        async openWkeConn({ dispatch, commit, rootState }, { body, meta = {} }) {
             const { $helpers, $queryHttp, $mxs_t } = this.vue
 
             const {
@@ -165,11 +164,11 @@ export default {
                     id: res.data.data.id,
                     attributes: res.data.data.attributes,
                     name: body.target,
-                    type: resourceType,
                     binding_type: WORKSHEET,
+                    worksheet_id: activeWorksheetId,
                     meta,
                 }
-                QueryConn.insert({ data: { ...wkeConn, worksheet_id: activeWorksheetId } })
+                QueryConn.insert({ data: wkeConn })
 
                 if (queryTabIdsOfActiveWke.length)
                     await dispatch('cloneWkeConnToQueryTabs', {
@@ -207,18 +206,18 @@ export default {
                 this.vue.$queryHttp.post(`/sql/${wkeConn.id}/clone?${PERSIST_TOKEN_OPT}`)
             )
             if (e) this.vue.$logger.error(e)
-            else if (res.status === 201) {
-                const connId = res.data.data.id
-                const conn = {
-                    ...wkeConn,
-                    id: connId,
-                    attributes: res.data.data.attributes,
-                    binding_type: QUERY_TAB,
-                    query_tab_id,
-                    clone_of_conn_id: wkeConn.id,
-                }
-                QueryConn.insert({ data: conn })
-            }
+            else if (res.status === 201)
+                QueryConn.insert({
+                    data: {
+                        id: res.data.data.id,
+                        name: wkeConn.name,
+                        attributes: res.data.data.attributes,
+                        binding_type: QUERY_TAB,
+                        query_tab_id,
+                        clone_of_conn_id: wkeConn.id,
+                        meta: wkeConn.meta,
+                    },
+                })
         },
         /**
          * This handles delete the worksheet connection and its query tab connections.

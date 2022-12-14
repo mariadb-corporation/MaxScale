@@ -2,7 +2,7 @@
     <div :style="{ maxWidth: '225px' }">
         <v-select
             v-model="chosenWkeConn"
-            :items="connOptions"
+            :items="wkeConnOpts"
             outlined
             dense
             class="vuetify-input--override mariadb-select-input conn-dropdown"
@@ -71,7 +71,7 @@
         </v-select>
         <conn-dlg-ctr
             v-model="isConnDlgOpened"
-            :connOptions="connOptions"
+            :wkeConnOpts="wkeConnOpts"
             :handleSave="handleOpenConn"
         />
         <mxs-conf-dlg
@@ -137,11 +137,11 @@ export default {
             return QueryConn.getters('getWkeConns')
         },
         // all connections having binding_type === QUERY_CONN_BINDING_TYPES.WORKSHEET
-        connOptions() {
+        wkeConnOpts() {
             return this.wkeConns.map(c => ({ ...c, disabled: Boolean(c.worksheet_id) }))
         },
         availableConnOpts() {
-            return this.connOptions.filter(cnn => !cnn.disabled)
+            return this.wkeConnOpts.filter(cnn => !cnn.disabled)
         },
         connToBeDel() {
             return { id: this.targetConn.name }
@@ -171,7 +171,7 @@ export default {
     async created() {
         if (this.pre_select_conn_rsrc) await this.handlePreSelectConnRsrc()
         //Auto open dialog if there is no connections and pre_select_conn_rsrc
-        else if (!this.connOptions.length) this.openConnDialog()
+        else if (!this.wkeConnOpts.length) this.openConnDialog()
     },
     methods: {
         /**
