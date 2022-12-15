@@ -22,7 +22,7 @@ import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
  * @param {Boolean} param.value - is connection busy
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
-function patchIsConnBusyMap({ value, sql_conn_id }) {
+function updateConnBusyStatus({ value, sql_conn_id }) {
     const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
     if (query_tab_id)
         QueryTabTmp.update({
@@ -75,14 +75,14 @@ function queryHttp(store) {
     queryHttp.interceptors.request.use(
         config => {
             config = lodash.merge(config, store.state.queryEditorConfig.axios_opts)
-            patchIsConnBusyMap({ value: true, sql_conn_id: getSqlConnId(config.url) })
+            updateConnBusyStatus({ value: true, sql_conn_id: getSqlConnId(config.url) })
             return { ...config }
         },
         error => Promise.reject(error)
     )
     queryHttp.interceptors.response.use(
         response => {
-            patchIsConnBusyMap({
+            updateConnBusyStatus({
                 value: false,
                 sql_conn_id: getSqlConnId(response.config.url),
             })
@@ -109,7 +109,7 @@ function queryHttp(store) {
                 default:
                     defErrStatusHandler({ store, error })
             }
-            patchIsConnBusyMap({ value: false, sql_conn_id: getSqlConnId(url) })
+            updateConnBusyStatus({ value: false, sql_conn_id: getSqlConnId(url) })
             return Promise.reject(error)
         }
     )
