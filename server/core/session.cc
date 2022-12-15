@@ -1560,7 +1560,8 @@ void Session::tick(int64_t idle)
     {
         const auto& bc = backend_connections();
 
-        if (!std::all_of(bc.begin(), bc.end(), std::mem_fn(&mxs::BackendConnection::is_idle)))
+        if (client_connection()->dcb()->seconds_idle() < interval
+            || !std::all_of(bc.begin(), bc.end(), std::mem_fn(&mxs::BackendConnection::is_idle)))
         {
             // At least one connection is not idle. Ping all the connections that have been idle for
             // longer than the configured keepalive interval. The value from seconds_idle() alone can't be
