@@ -17,6 +17,7 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -34,11 +35,7 @@ export default {
         async getNewTreeData(_, { nodeGroup, data, completionList }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const sql = queryHelper.getNodeGroupSQL(nodeGroup)
-            const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
-                    sql,
-                })
-            )
+            const [e, res] = await this.vue.$helpers.to(query({ id: connId, body: { sql } }))
             if (e) return { data: {}, completionList: [] }
             else {
                 const { nodes: children, cmpList: partCmpList } = queryHelper.genNodeData({
@@ -83,9 +80,7 @@ export default {
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
-                    sql: getters.getDbSql,
-                })
+                query({ id: activeQueryTabConn.id, body: { sql: getters.getDbSql } })
             )
             if (e)
                 WorksheetTmp.update({

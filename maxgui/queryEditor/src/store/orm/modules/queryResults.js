@@ -14,6 +14,7 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -49,9 +50,9 @@ export default {
                 },
             })
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
-                    sql,
-                    max_rows: rootState.queryPersisted.query_row_limit,
+                query({
+                    id: activeQueryTabConn.id,
+                    body: { sql, max_rows: rootState.queryPersisted.query_row_limit },
                 })
             )
             if (e)
@@ -87,9 +88,9 @@ export default {
             }
         },
         /**
-         * @param {String} query - SQL query string
+         * @param {String} sql - SQL string
          */
-        async fetchUserQuery({ dispatch, getters, rootState }, query) {
+        async fetchUserQuery({ dispatch, getters, rootState }, sql) {
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const request_sent_time = new Date().valueOf()
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
@@ -107,14 +108,11 @@ export default {
             })
 
             let [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(
-                    `/sql/${activeQueryTabConn.id}/queries`,
-                    {
-                        sql: query,
-                        max_rows: rootState.queryPersisted.query_row_limit,
-                    },
-                    { signal: abort_controller.signal }
-                )
+                query({
+                    id: activeQueryTabConn.id,
+                    body: { sql, max_rows: rootState.queryPersisted.query_row_limit },
+                    config: { signal: abort_controller.signal },
+                })
             )
 
             if (e)
@@ -145,12 +143,12 @@ export default {
                             data: {
                                 attributes: {
                                     results: [{ message: config.QUERY_CANCELED }],
-                                    sql: query,
+                                    sql,
                                 },
                             },
                         },
                     }
-                } else if (query.match(/(use|drop database)\s/i))
+                } else if (sql.match(/(use|drop database)\s/i))
                     await QueryConn.dispatch('updateActiveDb')
 
                 QueryTabTmp.update({
@@ -166,7 +164,7 @@ export default {
                     'queryPersisted/pushQueryLog',
                     {
                         startTime: now,
-                        sql: query,
+                        sql,
                         res,
                         connection_name: activeQueryTabConn.name,
                         queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.USER_LOGS,
@@ -184,8 +182,9 @@ export default {
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const wkeConn = QueryConn.getters('getActiveWkeConn')
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${wkeConn.id}/queries`, {
-                    sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}`,
+                query({
+                    id: wkeConn.id,
+                    body: { sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}` },
                 })
             )
             if (e) this.vue.$logger.error(e)

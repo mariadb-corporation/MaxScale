@@ -18,6 +18,7 @@ import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import QueryResult from '@queryEditorSrc/store/orm/models/QueryResult'
 import { insertQueryTab } from '@queryEditorSrc/store/orm/initEntities'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { deleteConn } from '@queryEditorSrc/api/connection'
 
 export default {
     namespaced: true,
@@ -81,7 +82,7 @@ export default {
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
-            if (id) await this.vue.$helpers.to(this.vue.$queryHttp.delete(`/sql/${id}`))
+            if (id) await this.vue.$helpers.to(deleteConn(id))
             dispatch('cascadeDelete', query_tab_id)
         },
         /**

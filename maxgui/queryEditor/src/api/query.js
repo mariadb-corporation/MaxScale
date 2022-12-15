@@ -21,8 +21,9 @@ const http = () => Vue.prototype.$queryHttp
 /**
  * @param {String} id - connection ID
  * @param {Object} body - payload
+ * @param {Object} [config] - axios config
  * @returns {Promise}
  */
-export async function query({ id, body }) {
-    return await http().post(`/sql/${id}/queries`, body)
+export async function query({ id, body, config = {} }) {
+    return await http().post(`/sql/${id}/queries`, body, config)
 }

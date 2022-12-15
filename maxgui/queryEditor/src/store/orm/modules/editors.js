@@ -14,6 +14,7 @@ import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -22,7 +23,6 @@ export default {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const {
-                $queryHttp,
                 $helpers: { getObjectRows, getErrorsArr },
                 $typy,
             } = this.vue
@@ -37,14 +37,10 @@ export default {
 
             let tblOptsData, colsOptsData
             const [tblOptError, tblOptsRes] = await this.vue.$helpers.to(
-                $queryHttp.post(`/sql/${connId}/queries`, {
-                    sql: queryHelper.getAlterTblOptsSQL(node),
-                })
+                query({ id: connId, body: { sql: queryHelper.getAlterTblOptsSQL(node) } })
             )
             const [colsOptsError, colsOptsRes] = await this.vue.$helpers.to(
-                $queryHttp.post(`/sql/${connId}/queries`, {
-                    sql: queryHelper.getAlterColsOptsSQL(node),
-                })
+                query({ id: connId, body: { sql: queryHelper.getAlterColsOptsSQL(node) } })
             )
             if (tblOptError || colsOptsError) {
                 Editor.update({

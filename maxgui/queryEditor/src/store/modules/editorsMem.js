@@ -11,6 +11,7 @@
  * Public License.
  */
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -53,10 +54,13 @@ export default {
         async queryCharsetCollationMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
-                    sql:
-                        // eslint-disable-next-line vue/max-len
-                        'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
+                query({
+                    id: connId,
+                    body: {
+                        sql:
+                            // eslint-disable-next-line vue/max-len
+                            'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
+                    },
                 })
             )
             if (!e) {
@@ -79,10 +83,13 @@ export default {
         async queryDefDbCharsetMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
-                    sql:
-                        // eslint-disable-next-line vue/max-len
-                        'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
+                query({
+                    id: connId,
+                    body: {
+                        sql:
+                            // eslint-disable-next-line vue/max-len
+                            'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
+                    },
                 })
             )
             if (!e) {
@@ -99,8 +106,11 @@ export default {
         async queryEngines({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
-                    sql: 'SELECT engine FROM information_schema.ENGINES',
+                query({
+                    id: connId,
+                    body: {
+                        sql: 'SELECT engine FROM information_schema.ENGINES',
+                    },
                 })
             )
             if (!e) commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())

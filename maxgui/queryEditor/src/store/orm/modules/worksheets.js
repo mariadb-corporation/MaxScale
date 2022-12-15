@@ -17,6 +17,7 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import Editor from '@queryEditorSrc/store/orm/models/Editor'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { query } from '@queryEditorSrc/api/query'
 
 export default {
     namespaced: true,
@@ -107,9 +108,9 @@ export default {
             const request_sent_time = new Date().valueOf()
             let stmt_err_msg_obj = {}
             const [e, res] = await this.vue.$helpers.to(
-                this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
-                    sql,
-                    max_rows: rootState.queryPersisted.query_row_limit,
+                query({
+                    id: activeQueryTabConn.id,
+                    body: { sql, max_rows: rootState.queryPersisted.query_row_limit },
                 })
             )
             if (e) this.vue.$logger.error(e)
