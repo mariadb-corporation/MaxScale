@@ -425,6 +425,9 @@ add_test_executable(cache_users.cpp cache_users cache_users LABELS cachefilter R
 # Test of Cache filter - distributed storages, transparently taken in and out of use
 add_test_executable(cache_distributed.cpp cache_distributed cache_distributed LABELS cachefilter REPL_BACKEND)
 
+# Test of Cache filter - redis authentication
+add_test_executable(cache_redis_security.cpp cache_redis_security cache_redis_security LABELS cachefilter REPL_BACKEND)
+
 # Test of Cache bug MXS-3694
 add_test_executable(mxs3694_cache.cpp mxs3694_cache mxs3694_cache LABELS cachefilter REPL_BACKEND)
 
