@@ -26,6 +26,7 @@ export default class EtlTask extends Extender {
             status: this.string(''),
             sql_script: this.string(''),
             active_stage_index: this.number(0),
+            meta: this.attr({}),
         }
     }
 

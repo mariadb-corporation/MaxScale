@@ -11,6 +11,7 @@
  * Public License.
  */
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
@@ -242,6 +243,16 @@ export default {
                         binding_type,
                         meta,
                         etl_task_id,
+                    },
+                })
+                /**
+                 * Store connection name to EtlTask so even after finishing an ETL task, connections
+                 * are closed, the users can still see the name of the source and destination connection.
+                 */
+                EtlTask.update({
+                    where: etl_task_id,
+                    data(obj) {
+                        obj.meta[binding_type] = name
                     },
                 })
             }
