@@ -30,3 +30,13 @@ ssl=true
 ssl_cert=###access_homedir###/certs/server-cert.pem
 ssl_key=###access_homedir###/certs/server-key.pem
 ssl_ca_cert=###access_homedir###/certs/ca.pem
+
+[RWSplit-Listener-Sha256-NoSSL]
+type=listener
+service=RW-Split-Router
+protocol=MariaDB
+port=4008
+authenticator=ed25519auth
+authenticator_options=ed_mode=sha256,
+ ed_rsa_privkey_path=/tmp/rsa_private_key.pem,
+ ed_rsa_pubkey_path=/tmp/rsa_public_key.pem
