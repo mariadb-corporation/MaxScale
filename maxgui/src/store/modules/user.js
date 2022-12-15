@@ -66,7 +66,7 @@ export default {
             } = rootState.app_config
 
             const url = rememberMe ? `/auth?${PERSIST_TOKEN_OPT}` : '/auth?persist=yes'
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(authHttp.get(url, { auth }))
+            const [e, res] = await this.vue.$helpers.to(authHttp.get(url, { auth }))
             if (e) {
                 let errMsg = ''
                 if (e.response)

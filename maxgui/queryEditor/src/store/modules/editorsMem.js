@@ -52,7 +52,7 @@ export default {
     actions: {
         async queryCharsetCollationMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
                         // eslint-disable-next-line vue/max-len
@@ -78,7 +78,7 @@ export default {
         },
         async queryDefDbCharsetMap({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql:
                         // eslint-disable-next-line vue/max-len
@@ -98,7 +98,7 @@ export default {
         },
         async queryEngines({ commit }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })

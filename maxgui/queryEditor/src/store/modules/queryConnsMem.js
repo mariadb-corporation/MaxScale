@@ -35,7 +35,7 @@ export default {
     },
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
             )
             if (!e) {

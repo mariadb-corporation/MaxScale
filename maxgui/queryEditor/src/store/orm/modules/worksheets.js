@@ -106,7 +106,7 @@ export default {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const request_sent_time = new Date().valueOf()
             let stmt_err_msg_obj = {}
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,

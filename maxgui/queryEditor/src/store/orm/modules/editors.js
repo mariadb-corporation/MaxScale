@@ -36,12 +36,12 @@ export default {
             })
 
             let tblOptsData, colsOptsData
-            const [tblOptError, tblOptsRes] = await this.vue.$helpers.asyncTryCatch(
+            const [tblOptError, tblOptsRes] = await this.vue.$helpers.to(
                 $queryHttp.post(`/sql/${connId}/queries`, {
                     sql: queryHelper.getAlterTblOptsSQL(node),
                 })
             )
-            const [colsOptsError, colsOptsRes] = await this.vue.$helpers.asyncTryCatch(
+            const [colsOptsError, colsOptsRes] = await this.vue.$helpers.to(
                 $queryHttp.post(`/sql/${connId}/queries`, {
                     sql: queryHelper.getAlterColsOptsSQL(node),
                 })

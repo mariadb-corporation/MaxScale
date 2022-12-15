@@ -81,7 +81,7 @@ export default {
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const { id } = QueryConn.getters('getQueryTabConnByQueryTabId')(query_tab_id)
-            if (id) await this.vue.$helpers.asyncTryCatch(this.vue.$queryHttp.delete(`/sql/${id}`))
+            if (id) await this.vue.$helpers.to(this.vue.$queryHttp.delete(`/sql/${id}`))
             dispatch('cascadeDelete', query_tab_id)
         },
         /**

@@ -263,11 +263,11 @@ export function stringifyClone(data) {
 }
 
 /**
- * A try catch wrapper
+ * An async await wrapper
  * @param {Promise} promise
  * @returns { Promise }
  */
-export async function asyncTryCatch(promise) {
+export async function to(promise) {
     return promise
         .then(data => [null, data])
         .catch(err => {

@@ -34,7 +34,7 @@ export default {
         async getNewTreeData(_, { nodeGroup, data, completionList }) {
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
             const sql = queryHelper.getNodeGroupSQL(nodeGroup)
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${connId}/queries`, {
                     sql,
                 })
@@ -82,7 +82,7 @@ export default {
                 data: { loading_db_tree: true },
             })
 
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql: getters.getDbSql,
                 })

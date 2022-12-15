@@ -48,7 +48,7 @@ export default {
                     obj[field].is_loading = true
                 },
             })
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${activeQueryTabConn.id}/queries`, {
                     sql,
                     max_rows: rootState.queryPersisted.query_row_limit,
@@ -106,7 +106,7 @@ export default {
                 },
             })
 
-            let [e, res] = await this.vue.$helpers.asyncTryCatch(
+            let [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(
                     `/sql/${activeQueryTabConn.id}/queries`,
                     {
@@ -183,7 +183,7 @@ export default {
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const wkeConn = QueryConn.getters('getActiveWkeConn')
-            const [e, res] = await this.vue.$helpers.asyncTryCatch(
+            const [e, res] = await this.vue.$helpers.to(
                 this.vue.$queryHttp.post(`/sql/${wkeConn.id}/queries`, {
                     sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}`,
                 })
