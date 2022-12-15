@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { getDrivers } from '@queryEditorSrc/api/connection'
 
 export default {
     namespaced: true,
@@ -18,6 +19,7 @@ export default {
         conn_err_state: false,
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
+        odbc_drivers: [],
     },
     mutations: {
         SET_IS_VALIDATING_CONN(state, payload) {
@@ -31,6 +33,9 @@ export default {
         },
         SET_PRE_SELECT_CONN_RSRC(state, payload) {
             state.pre_select_conn_rsrc = payload
+        },
+        SET_ODBC_DRIVERS(state, payload) {
+            state.odbc_drivers = payload
         },
     },
     actions: {
@@ -47,6 +52,10 @@ export default {
                     [resourceType]: names,
                 })
             }
+        },
+        async getOdbcDrivers({ commit }) {
+            const [e, res] = await this.vue.$helpers.to(getDrivers())
+            if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
         },
     },
 }

@@ -32,6 +32,8 @@ export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     QUERY_TAB: 'QUERY_TAB',
     // Used by <wke-conn-man/>. It's also used for stopping the running query
     WORKSHEET: 'WORKSHEET',
+    ETL_SRC: 'ETL_SOURCE',
+    ETL_DEST: 'ETL_DESTINATION',
 })
 export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'ctrl-d': ['ctrl', 'd'],

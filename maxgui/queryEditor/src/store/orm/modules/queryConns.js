@@ -220,6 +220,44 @@ export default {
                 })
         },
         /**
+         * @param {String} param.connection_string - connection_string
+         * @param {String} param.binding_type - QUERY_CONN_BINDING_TYPES: Either ETL_SRC or ETL_DEST
+         * @param {String} param.name - name of the connection, for UX matter.
+         * @param {String} param.etl_task_id - EtlTask ID
+         * @param {Object} [param.meta] - connection meta
+         * @param {Boolean} [param.showMsg] - show message related to connection in a snackbar
+         */
+        async openEtlConn(
+            { commit },
+            { body, binding_type, name, etl_task_id, meta = {}, showMsg = false }
+        ) {
+            const [e, res] = await this.vue.$helpers.to(openConn(body))
+            if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
+            else if (res.status === 201) {
+                QueryConn.insert({
+                    data: {
+                        id: res.data.data.id,
+                        name,
+                        attributes: res.data.data.attributes,
+                        binding_type,
+                        meta,
+                        etl_task_id,
+                    },
+                })
+            }
+            if (showMsg)
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: e
+                            ? this.vue.$helpers.getErrorsArr(e)
+                            : [this.vue.$mxs_t('info.connSuccessfully')],
+                        type: e ? 'error' : 'success',
+                    },
+                    { root: true }
+                )
+        },
+        /**
          * This handles delete the worksheet connection and its query tab connections.
          * @param {Boolean} param.showSnackbar - should show success message or not
          * @param {Number} param.id - connection id that is bound to the worksheet
@@ -283,7 +321,14 @@ export default {
         async disconnectAll({ getters, dispatch }) {
             for (const { id } of getters.getWkeConns)
                 await dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })
-            //TODO: delete ETL connections
+            await this.vue.$helpers.to(
+                Promise.all(
+                    getters.getEtlConns.map(({ id }) => {
+                        deleteConn(id)
+                        QueryConn.delete(id)
+                    })
+                )
+            )
         },
         async updateActiveDb({ getters }) {
             const { id, active_db } = getters.getActiveQueryTabConn
@@ -372,6 +417,15 @@ export default {
             QueryConn.query()
                 .where('clone_of_conn_id', wkeConnId)
                 .get() || [],
+        getEtlConns: (state, getters, rootState) => {
+            const {
+                ETL_SRC,
+                ETL_DEST,
+            } = rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
+            return QueryConn.query()
+                .where('binding_type', v => v === ETL_SRC || v === ETL_DEST)
+                .get()
+        },
 
         getIsConnBusy: () => QueryTab.getters('getActiveQueryTabMem').is_conn_busy || false,
         getIsConnBusyByQueryTabId: () => query_tab_id =>

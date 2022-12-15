@@ -63,3 +63,10 @@ export async function reconnect(connId) {
 export async function deleteConn(connId) {
     return await http().delete(`/sql/${connId}`)
 }
+
+/**
+ * @returns {Promise}
+ */
+export async function getDrivers() {
+    return await http().get('/sql/odbc/drivers')
+}
