@@ -58,7 +58,7 @@ public:
 
 private:
     enum class State {INIT, ED_AUTHSWITCH_SENT, ED_CHECK_SIGNATURE, SHA_AUTHSWITCH_SENT, SHA_PW_REQUESTED,
-                      SHA_CHECK_PW, DONE};
+                      SHA_PUBKEY_SENT, SHA_CHECK_PW, DONE};
     State m_state {State::INIT};
 
     const Ed25519Authenticator::Mode m_mode {Ed25519Authenticator::Mode::ED};
@@ -78,6 +78,8 @@ private:
     bool    sha_read_client_token(const GWBUF& buffer);
     GWBUF   sha_create_request_encrypted_pw_packet() const;
     void    sha_read_client_pw(const GWBUF& buffer);
+    GWBUF   sha_create_pubkey_packet() const;
+    bool    sha_decrypt_rsa_pw(const GWBUF& buffer, MYSQL_session* session);
     AuthRes sha_check_cleartext_pw(AuthenticationData& auth_data);
 };
 

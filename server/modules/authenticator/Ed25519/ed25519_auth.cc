@@ -225,6 +225,9 @@ Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Aut
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
 
+    const size_t pubkey_req_buflen = MYSQL_HEADER_LEN + 1;
+    const size_t rsa_pw_buflen = MYSQL_HEADER_LEN + 256;
+
     switch (m_state)
     {
     case State::INIT:
@@ -252,10 +255,6 @@ Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Aut
             rval.status = ExchRes::Status::READY;
             m_state = State::ED_CHECK_SIGNATURE;
         }
-        else
-        {
-            m_state = State::DONE;
-        }
         break;
 
     case State::SHA_AUTHSWITCH_SENT:
@@ -271,17 +270,62 @@ Ed25519ClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, Aut
     case State::SHA_PW_REQUESTED:
         if (session->client_conn_encrypted)
         {
+            // Client should have sent the password.
             sha_read_client_pw(buffer);
             rval.status = ExchRes::Status::READY;
             m_state = State::SHA_CHECK_PW;
         }
+        else if (m_rsa_privkey.empty())
+        {
+            MXB_ERROR("Cannot authenticate client %s with %s via an unencrypted connection. Either "
+                      "configure the listener for SSL or configure RSA keypair with authenticator settings "
+                      "'%s' and '%s'.", session->user_and_host().c_str(), SHA2::CLIENT_PLUGIN_NAME,
+                      SHA2::OPT_RSA_PRIVKEY.c_str(), SHA2::OPT_RSA_PUBKEY.c_str());
+        }
+        else if (buffer.length() == pubkey_req_buflen)
+        {
+            // Looks like client is asking for public key.
+            if (buffer[MYSQL_HEADER_LEN] == 2)
+            {
+                rval.packet = sha_create_pubkey_packet();
+                rval.status = ExchRes::Status::INCOMPLETE;
+                m_state = State::SHA_PUBKEY_SENT;
+            }
+            else
+            {
+                MXB_ERROR("Client %s sent an invalid public key request packet.",
+                          session->user_and_host().c_str());
+            }
+        }
+        else if (buffer.length() == rsa_pw_buflen)
+        {
+            // Looks like an RSA-encrypted pw. The client must have known the pubkey in advance.
+            if (sha_decrypt_rsa_pw(buffer, session))
+            {
+                rval.status = ExchRes::Status::READY;
+                m_state = State::SHA_CHECK_PW;
+            }
+        }
         else
         {
-            // The client will either ask for the public key or send RSA-encrypted password. In any case,
-            // not supported yet.
-            MXB_ERROR("Cannot authenticate client %s with %s via an unencrypted connection. Configure the "
-                      "listener for SSL.", session->user_and_host().c_str(), SHA2::CLIENT_PLUGIN_NAME);
-            m_state = State::DONE;
+            MXB_ERROR("Unrecognized packet from client %s. Expected length %zu or %zu, got %zu.",
+                      session->user_and_host().c_str(), pubkey_req_buflen, rsa_pw_buflen, buffer.length());
+        }
+        break;
+
+    case State::SHA_PUBKEY_SENT:
+        if (buffer.length() == rsa_pw_buflen)
+        {
+            if (sha_decrypt_rsa_pw(buffer, session))
+            {
+                rval.status = ExchRes::Status::READY;
+                m_state = State::SHA_CHECK_PW;
+            }
+        }
+        else
+        {
+            MXB_ERROR("Unrecognized packet from client %s. Expected length %zu (encrypted password), "
+                      "got %zu.", session->user_and_host().c_str(), rsa_pw_buflen, buffer.length());
         }
         break;
 
@@ -463,6 +507,108 @@ void Ed25519ClientAuthenticator::sha_read_client_pw(const GWBUF& buffer)
 {
     // The packet should contain the null-terminated cleartext pw.
     m_client_passwd.assign(buffer.data() + MYSQL_HEADER_LEN, buffer.end() - 1);
+}
+
+GWBUF Ed25519ClientAuthenticator::sha_create_pubkey_packet() const
+{
+    /**
+     * Public key:
+     * 4 bytes     - Header
+     * 1           - Fixed
+     * byte<EOF>   - Public key data
+     */
+    size_t plen = 1 + m_rsa_pubkey.size();
+    size_t total_len = MYSQL_HEADER_LEN + plen;
+    GWBUF rval;
+    auto [ptr, _] = rval.prepare_to_write(total_len);
+    ptr = mariadb::write_header(ptr, plen, 0);
+    *ptr++ = 1;
+    mariadb::copy_bytes(ptr, m_rsa_pubkey.data(), m_rsa_pubkey.size());
+    rval.write_complete(total_len);
+    return rval;
+}
+
+bool Ed25519ClientAuthenticator::sha_decrypt_rsa_pw(const GWBUF& buffer, MYSQL_session* session)
+{
+    const char* failed_func = nullptr;
+    unsigned long open_ssl_eno = 0;
+    string openssl_errmsg;
+
+    bool rval = false;
+    ERR_clear_error();
+    BIO* bio = BIO_new_mem_buf(m_rsa_privkey.data(), m_rsa_privkey.size());
+    EVP_PKEY* key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+    if (key)
+    {
+        EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(key, nullptr);
+        if (ctx)
+        {
+            if (EVP_PKEY_decrypt_init(ctx) == 1)
+            {
+                if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) >= 1)
+                {
+                    const uint8_t* in = buffer.data() + MYSQL_HEADER_LEN;
+                    size_t in_len = buffer.length() - MYSQL_HEADER_LEN;
+                    size_t decrypted_len = EVP_PKEY_size(key);
+                    uint8_t decrypted[decrypted_len];
+                    if (EVP_PKEY_decrypt(ctx, decrypted, &decrypted_len, in, in_len) == 1)
+                    {
+                        // The pw was XORred with the original scramble before encryption, so XOR again.
+                        uint8_t unscrambled[decrypted_len];
+                        const uint8_t* scramble = session->scramble;
+                        for (size_t i = 0; i < decrypted_len; i++)
+                        {
+                            unscrambled[i] = decrypted[i] ^ scramble[i % MYSQL_SCRAMBLE_LEN];
+                        }
+                        // Decrypted data includes the 0-byte.
+                        if (decrypted_len > 1)
+                        {
+                            m_client_passwd.assign(unscrambled, unscrambled + decrypted_len - 1);
+                        }
+                        rval = true;
+                    }
+                    else
+                    {
+                        failed_func = "EVP_PKEY_decrypt()";
+                    }
+                }
+                else
+                {
+                    failed_func = "EVP_PKEY_CTX_set_rsa_padding()";
+                }
+            }
+            else
+            {
+                failed_func = "EVP_PKEY_decrypt_init()";
+            }
+
+            if (failed_func)
+            {
+                std::tie(open_ssl_eno, openssl_errmsg) = get_openssl_error();
+            }
+            EVP_PKEY_CTX_free(ctx);
+        }
+        else
+        {
+            failed_func = "EVP_PKEY_CTX_new()";
+            std::tie(open_ssl_eno, openssl_errmsg) = get_openssl_error();
+        }
+        EVP_PKEY_free(key);
+    }
+    else
+    {
+        failed_func = "PEM_read_bio_PrivateKey()";
+        std::tie(open_ssl_eno, openssl_errmsg) = get_openssl_error();
+    }
+    BIO_free(bio);
+
+    if (!rval)
+    {
+        MXB_ERROR("OpenSSL %s failed for client %s. Error %lu: %s", failed_func,
+                  session->user_and_host().c_str(), open_ssl_eno, openssl_errmsg.c_str());
+    }
+
+    return rval;
 }
 
 AuthRes Ed25519ClientAuthenticator::sha_check_cleartext_pw(mariadb::AuthenticationData& auth_data)
