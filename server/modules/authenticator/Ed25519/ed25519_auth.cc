@@ -15,21 +15,36 @@
 #define MXB_MODULE_NAME "Ed25519Auth"
 
 #include "ed25519_auth.hh"
+#include <maxbase/filesystem.hh>
 #include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+#include <fstream>
 #include "ref10/exports/crypto_sign.h"
 #include "ref10/exports/api.h"
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
+using mariadb::ByteVec;
 using std::string;
 
 namespace
 {
 const std::unordered_set<std::string> plugins = {"ed25519"};    // Name of plugin in mysql.user
+
+std::tuple<unsigned long, string> get_openssl_error()
+{
+    auto eno = ERR_get_error();
+    size_t len = 256;
+    char buf[len];
+    ERR_error_string_n(eno, buf, len);
+    return {eno, buf};
+}
 }
 
 namespace ED
@@ -45,6 +60,8 @@ const size_t SCRAMBLE_LEN = Ed25519Authenticator::ED_SCRAMBLE_LEN;
 namespace SHA2
 {
 const char CLIENT_PLUGIN_NAME[] = "caching_sha2_password";
+const string OPT_RSA_PUBKEY = "ed_rsa_pubkey_path";
+const string OPT_RSA_PRIVKEY = "ed_rsa_privkey_path";
 }
 
 Ed25519AuthenticatorModule* Ed25519AuthenticatorModule::create(mxs::ConfigParameters* options)
@@ -70,11 +87,96 @@ Ed25519AuthenticatorModule* Ed25519AuthenticatorModule::create(mxs::ConfigParame
             error = true;
         }
     }
-    return error ? nullptr : new Ed25519AuthenticatorModule(mode);
+
+    ByteVec rsa_privkey;
+    ByteVec rsa_pubkey;
+
+    bool rsa_privkey_found = options->contains(SHA2::OPT_RSA_PRIVKEY);
+    bool rsa_pubkey_found = options->contains(SHA2::OPT_RSA_PUBKEY);
+    if (rsa_privkey_found != rsa_pubkey_found)
+    {
+        const string& found = rsa_privkey_found ? SHA2::OPT_RSA_PRIVKEY : SHA2::OPT_RSA_PUBKEY;
+        const string& missing = rsa_privkey_found ? SHA2::OPT_RSA_PUBKEY : SHA2::OPT_RSA_PRIVKEY;
+        MXB_ERROR("'%s' is set in authenticator options, '%s' must also be set.",
+                  found.c_str(), missing.c_str());
+        error = true;
+    }
+    else if (rsa_privkey_found)
+    {
+        auto load_keydata = [](const string& path, ByteVec& out) {
+            bool success = false;
+            auto [data, err] = mxb::load_file<ByteVec>(path);
+            if (err.empty() && !data.empty())
+            {
+                out = std::move(data);
+                success = true;
+            }
+            else if (err.empty())
+            {
+                MXB_ERROR("Couldn't read any data from RSA keyfile '%s'.", path.c_str());
+            }
+            else
+            {
+                MXB_ERROR("Failed to open RSA keyfile '%s'. %s", path.c_str(), err.c_str());
+            }
+            return success;
+        };
+
+        string privkey_path = options->get_string(SHA2::OPT_RSA_PRIVKEY);
+        options->remove(SHA2::OPT_RSA_PRIVKEY);
+        string pubkey_path = options->get_string(SHA2::OPT_RSA_PUBKEY);
+        options->remove(SHA2::OPT_RSA_PUBKEY);
+
+        if (load_keydata(privkey_path, rsa_privkey) && load_keydata(pubkey_path, rsa_pubkey))
+        {
+            // Check that the data can actually be used by OpenSSL.
+            ERR_clear_error();
+            const char errmsg_fmt[] = "Could not read RSA key from '%s'. OpenSSL %s failed. Error %lu: %s";
+            BIO* bio = BIO_new_mem_buf(rsa_privkey.data(), rsa_privkey.size());
+            EVP_PKEY* key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+            if (key)
+            {
+                EVP_PKEY_free(key);
+            }
+            else
+            {
+                auto [eno, msg] = get_openssl_error();
+                MXB_ERROR("Could not read RSA key from '%s'. OpenSSL PEM_read_bio_PrivateKey() failed. "
+                          "Error %lu: %s", privkey_path.c_str(), eno, msg.c_str());
+                error = true;
+            }
+            BIO_free(bio);
+
+            ERR_clear_error();
+            bio = BIO_new_mem_buf(rsa_pubkey.data(), rsa_pubkey.size());
+            key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
+            if (key)
+            {
+                EVP_PKEY_free(key);
+            }
+            else
+            {
+                auto [eno, msg] = get_openssl_error();
+                MXB_ERROR("Could not read RSA key from '%s'. OpenSSL PEM_read_bio_PUBKEY() failed. "
+                          "Error %lu: %s", pubkey_path.c_str(), eno, msg.c_str());
+                error = true;
+            }
+            BIO_free(bio);
+        }
+        else
+        {
+            error = true;
+        }
+    }
+    return error ? nullptr : new Ed25519AuthenticatorModule(mode, std::move(rsa_privkey),
+                                                            std::move(rsa_pubkey));
 }
 
-Ed25519AuthenticatorModule::Ed25519AuthenticatorModule(Ed25519Authenticator::Mode mode)
+Ed25519AuthenticatorModule::Ed25519AuthenticatorModule(Ed25519Authenticator::Mode mode,
+                                                       ByteVec&& rsa_privkey, ByteVec&& rsa_pubkey)
     : m_mode(mode)
+    , m_rsa_privkey(std::move(rsa_privkey))
+    , m_rsa_pubkey(std::move(rsa_pubkey))
 {
 }
 
@@ -100,7 +202,7 @@ const std::unordered_set<std::string>& Ed25519AuthenticatorModule::supported_plu
 
 mariadb::SClientAuth Ed25519AuthenticatorModule::create_client_authenticator()
 {
-    return std::make_unique<Ed25519ClientAuthenticator>(m_mode);
+    return std::make_unique<Ed25519ClientAuthenticator>(m_mode, m_rsa_privkey, m_rsa_pubkey);
 }
 
 mariadb::SBackendAuth
@@ -109,8 +211,11 @@ Ed25519AuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthDat
     return std::make_unique<Ed25519BackendAuthenticator>(auth_data);
 }
 
-Ed25519ClientAuthenticator::Ed25519ClientAuthenticator(Ed25519Authenticator::Mode mode)
+Ed25519ClientAuthenticator::Ed25519ClientAuthenticator(Ed25519Authenticator::Mode mode,
+                                                       const ByteVec& rsa_privkey, const ByteVec& rsa_pubkey)
     : m_mode(mode)
+    , m_rsa_privkey(rsa_privkey)
+    , m_rsa_pubkey(rsa_pubkey)
 {
 }
 

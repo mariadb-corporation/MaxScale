@@ -38,15 +38,20 @@ public:
     const std::unordered_set<std::string>& supported_plugins() const override;
 
 private:
-    explicit Ed25519AuthenticatorModule(Ed25519Authenticator::Mode mode);
+    explicit Ed25519AuthenticatorModule(Ed25519Authenticator::Mode mode, mariadb::ByteVec&& rsa_privkey,
+                                        mariadb::ByteVec&& rsa_pubkey);
 
     const Ed25519Authenticator::Mode m_mode {Ed25519Authenticator::Mode::ED};
+
+    mariadb::ByteVec m_rsa_privkey;
+    mariadb::ByteVec m_rsa_pubkey;
 };
 
 class Ed25519ClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    explicit Ed25519ClientAuthenticator(Ed25519Authenticator::Mode);
+    explicit Ed25519ClientAuthenticator(Ed25519Authenticator::Mode, const mariadb::ByteVec& rsa_privkey,
+                                        const mariadb::ByteVec& rsa_pubkey);
 
     ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
@@ -57,6 +62,8 @@ private:
     State m_state {State::INIT};
 
     const Ed25519Authenticator::Mode m_mode {Ed25519Authenticator::Mode::ED};
+    const mariadb::ByteVec&          m_rsa_privkey;
+    const mariadb::ByteVec&          m_rsa_pubkey;
 
     uint8_t m_scramble[Ed25519Authenticator::ED_SCRAMBLE_LEN];      /**< ed25519 scramble sent to client */
 
