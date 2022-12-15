@@ -18,7 +18,7 @@ ExternalProject_add(hiredis
   SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis
   CONFIGURE_COMMAND ""
   BUILD_IN_SOURCE 1
-  BUILD_COMMAND make
+  BUILD_COMMAND make USE_SSL=1
 # The install command is intentionally left out: for some strange and
 # unknown reason it causes the library to be installed as a part of the
 # MaxScale package in the location where it would be installed. This is
@@ -34,4 +34,4 @@ ExternalProject_add(hiredis
   )
 
 set(HIREDIS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis CACHE INTERNAL "")
-set(HIREDIS_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis.a)
+set(HIREDIS_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis.a ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis_ssl.a)
