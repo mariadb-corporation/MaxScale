@@ -89,47 +89,12 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $mxs_t('username') }}
-                        </label>
-                        <v-text-field
-                            id="db-user"
-                            v-model.trim="body.user"
-                            :rules="rules.user"
-                            class="vuetify-input--override error--text__bottom user"
-                            name="db-user"
-                            autocomplete="new-username"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            outlined
-                            required
-                        />
+                        <uid-input v-model="body.user" />
+                    </v-col>
+                    <v-col cols="12" md="6" class="pa-1">
+                        <pwd-input v-model="body.password" />
                     </v-col>
 
-                    <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label mxs-color-helper text-small-text label-required">
-                            {{ $mxs_t('password') }}
-                        </label>
-                        <v-text-field
-                            id="db-password"
-                            v-model.trim="body.password"
-                            :rules="rules.password"
-                            :type="isPwdVisible ? 'text' : 'password'"
-                            class="vuetify-input--override error--text__bottom password"
-                            name="db-password"
-                            autocomplete="new-password"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            outlined
-                            required
-                        >
-                            <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
-                                {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
-                            </v-icon>
-                        </v-text-field>
-                    </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text">
                             {{ $mxs_t('database') }}
@@ -181,9 +146,12 @@
  * Public License.
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
+import UidInput from './UidInput.vue'
+import PwdInput from './PwdInput.vue'
 
 export default {
     name: 'conn-dlg-ctr',
+    components: { UidInput, PwdInput },
     props: {
         value: { type: Boolean, required: true },
         wkeConnOpts: { type: Array, required: true },
@@ -193,28 +161,11 @@ export default {
         return {
             resourceType: '',
             selectedResource: {},
-            isPwdVisible: false,
             body: {
                 user: '',
                 password: '',
                 db: '',
                 timeout: 300,
-            },
-            rules: {
-                user: [
-                    val =>
-                        !!val ||
-                        this.$mxs_t('errors.requiredInput', {
-                            inputName: this.$mxs_t('username'),
-                        }),
-                ],
-                password: [
-                    val =>
-                        !!val ||
-                        this.$mxs_t('errors.requiredInput', {
-                            inputName: this.$mxs_t('password'),
-                        }),
-                ],
             },
             isFormValid: false,
             resourceTypes: ['listeners', 'servers', 'services'],
@@ -258,7 +209,7 @@ export default {
                     this.resourceType = rscType
                 } // reset to initial state and bind this context
                 else {
-                    this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+                    Object.assign(this.$data, this.$options.data.apply(this))
                     this.SET_PRE_SELECT_CONN_RSRC(null)
                 }
             },

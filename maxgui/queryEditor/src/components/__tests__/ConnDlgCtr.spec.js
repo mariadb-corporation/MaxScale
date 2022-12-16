@@ -241,7 +241,6 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
         wrapper.vm.onSave()
         expect(handleSaveArgs).to.be.deep.equals({
             body: { target: mockSelectedResource.id, ...mockBodyFormData },
-            resourceType: mockSelectedResourceType,
         })
     })
 })
@@ -254,49 +253,22 @@ describe(`ConnDlgCtr - form input tests`, () => {
         expect(wrapper.vm.body.timeout).to.be.equals(300)
     })
 
-    const requiredFields = ['user', 'password', 'selectedResource']
-    requiredFields.forEach(field => {
-        it(`Should show error message if ${field} value is empty`, async () => {
-            wrapper = mountFactory({
-                shallow: false,
-                data: () => ({
-                    resourceType: 'listeners',
-                    selectedResource: dummy_rc_target_names_map.listeners[0],
-                    body: {
-                        user: 'maxskysql',
-                        password: 'skysql',
-                        db: '',
-                        timeout: 300,
-                    },
-                }),
-            })
-            const dlg = wrapper.findComponent({ name: 'mxs-dlg' })
-            switch (field) {
-                case 'user':
-                case 'password': {
-                    const inputComponent = dlg.find(`.${field}`)
-                    await inputChangeMock(inputComponent, '')
-                    expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-                        wrapper.vm.$mxs_t('errors.requiredInput', {
-                            inputName: wrapper.vm.$mxs_t(
-                                field === 'user' ? 'username' : 'password'
-                            ),
-                        })
-                    )
-                    break
-                }
-                case 'selectedResource': {
-                    const dropDownComponent = dlg.find('.resource-dropdown')
-                    await itemSelectMock(dropDownComponent, null)
-                    await wrapper.vm.$nextTick()
-                    expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
-                        wrapper.vm.$mxs_t('errors.existingRsrcConnection', {
-                            resourceType: wrapper.vm.resourceType,
-                        })
-                    )
-                    break
-                }
-            }
+    it(`Should show error message if selectedResource field value is empty`, async () => {
+        wrapper = mountFactory({
+            shallow: false,
+            data: () => ({
+                resourceType: 'listeners',
+                selectedResource: dummy_rc_target_names_map.listeners[0],
+            }),
         })
+        const dlg = wrapper.findComponent({ name: 'mxs-dlg' })
+        const dropDownComponent = dlg.find('.resource-dropdown')
+        await itemSelectMock(dropDownComponent, null)
+        await wrapper.vm.$nextTick()
+        expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
+            wrapper.vm.$mxs_t('errors.requiredInput', {
+                inputName: wrapper.vm.$mxs_tc('listeners'),
+            })
+        )
     })
 })
