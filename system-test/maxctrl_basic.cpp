@@ -6,6 +6,7 @@
 
 void test_reload_tls(TestConnections& test)
 {
+    test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
     const char* home = test.maxscale->access_homedir();
     int rc = test.maxscale->ssh_node_f(true, "sed -i "
                                              " -e '/maxscale/ a admin_ssl_key=%s/certs/server-key.pem'"
@@ -63,6 +64,7 @@ void test_reload_tls(TestConnections& test)
 
 void test_cert_chain(TestConnections& test)
 {
+    test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
     const char* home = test.maxscale->access_homedir();
 
     int rc = test.maxscale->ssh_node_f(
