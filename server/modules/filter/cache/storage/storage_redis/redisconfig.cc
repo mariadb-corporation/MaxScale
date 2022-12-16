@@ -11,6 +11,7 @@
  * Public License.
  */
 #include "redisconfig.hh"
+#include <maxscale/cn_strings.hh>
 
 namespace config = mxs::config;
 
@@ -66,6 +67,33 @@ config::ParamString password(
     "password",
     "The password to use when authenticating to Redis.",
     "");
+
+config::ParamBool ssl(
+    &specification,
+    CN_SSL,
+    "Enable TLS for server",
+    false);
+
+config::ParamPath ssl_cert(
+    &specification,
+    CN_SSL_CERT,
+    "TLS public certificate",
+    config::ParamPath::R,
+    "");
+
+config::ParamPath ssl_key(
+    &specification,
+    CN_SSL_KEY, "TLS private key",
+    config::ParamPath::R,
+    "");
+
+config::ParamPath ssl_ca(
+    &specification,
+    CN_SSL_CA,
+    "TLS certificate authority",
+    config::ParamPath::R,
+    "");
+
 }
 
 template<class Params>
@@ -96,6 +124,10 @@ RedisConfig::RedisConfig(const string& name)
     add_native(&RedisConfig::host, &storage_redis::host);
     add_native(&RedisConfig::username, &storage_redis::username);
     add_native(&RedisConfig::password, &storage_redis::password);
+    add_native(&RedisConfig::ssl, &storage_redis::ssl);
+    add_native(&RedisConfig::ssl_key, &storage_redis::ssl_key);
+    add_native(&RedisConfig::ssl_cert, &storage_redis::ssl_cert);
+    add_native(&RedisConfig::ssl_ca, &storage_redis::ssl_ca);
 }
 
 //static

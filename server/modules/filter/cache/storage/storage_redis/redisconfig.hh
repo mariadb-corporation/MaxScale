@@ -27,6 +27,10 @@ public:
     mxb::Host   host;
     std::string username;
     std::string password;
+    bool        ssl;
+    std::string ssl_key;
+    std::string ssl_cert;
+    std::string ssl_ca;
 
     static const mxs::config::Specification& specification();
 };
