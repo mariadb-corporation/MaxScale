@@ -568,19 +568,15 @@ public:
     {
     }
 
-    static bool create(const string& host,
-                       int port,
+    static bool create(const RedisConfig* pConfig,
                        std::chrono::milliseconds timeout,
                        bool invalidate,
                        uint32_t ttl,
-                       const string& username,
-                       const string& password,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
 
-        RedisToken* pToken = new(std::nothrow) RedisToken(host, port, timeout, invalidate, ttl,
-                                                          username, password);
+        RedisToken* pToken = new(std::nothrow) RedisToken(pConfig, timeout, invalidate, ttl);
 
         if (pToken)
         {
@@ -1225,13 +1221,13 @@ private:
 
         Redis::Reply reply;
 
-        if (m_username.empty())
+        if (m_config.username.empty())
         {
-            reply = m_redis.command("AUTH %s", m_password.c_str());
+            reply = m_redis.command("AUTH %s", m_config.password.c_str());
         }
         else
         {
-            reply = m_redis.command("AUTH %s %s", m_username.c_str(), m_password.c_str());
+            reply = m_redis.command("AUTH %s %s", m_config.username.c_str(), m_config.password.c_str());
         }
 
         m_redis.check_for_io_error();
@@ -1239,25 +1235,19 @@ private:
     }
 
 private:
-    RedisToken(const string& host,
-               int port,
+    RedisToken(const RedisConfig* pConfig,
                std::chrono::milliseconds timeout,
                bool invalidate,
-               uint32_t ttl,
-               const string& username,
-               const string& password)
-        : m_host(host)
-        , m_port(port)
+               uint32_t ttl)
+        : m_config(*pConfig)
         , m_timeout(timeout)
         , m_invalidate(invalidate)
-        , m_username(username)
-        , m_password(password)
         , m_pWorker(mxb::Worker::get_current())
         , m_set_format("SET %b %b")
         , m_connecting(false)
         , m_reconnecting(false)
-        , m_authenticated(password.empty())
-        , m_should_authenticate(!password.empty())
+        , m_authenticated(pConfig->password.empty())
+        , m_should_authenticate(!pConfig->password.empty())
         , m_authenticating(false)
     {
         if (ttl != 0)
@@ -1334,7 +1324,7 @@ private:
             {
                 MXB_ERROR("%s. Is the address '%s:%d' valid? Caching will not be enabled.",
                           pContext->errstr[0] != 0 ? pContext->errstr : "Could not connect to redis",
-                          m_host.c_str(), m_port);
+                          m_config.host.address().c_str(), m_config.host.port());
             }
         }
         else
@@ -1383,8 +1373,8 @@ private:
 
         auto sThis = get_shared();
 
-        auto host = m_host;
-        auto port = m_port;
+        auto host = m_config.host.address();
+        auto port = m_config.host.port();
         auto timeout = m_timeout;
 
         mxs::thread_pool().execute([sThis, host, port, timeout]() {
@@ -1521,13 +1511,10 @@ private:
     }
 
 private:
+    const RedisConfig&                    m_config;
     Redis                                 m_redis;
-    string                                m_host;
-    int                                   m_port;
     std::chrono::milliseconds             m_timeout;
     bool                                  m_invalidate;
-    string                                m_username;
-    string                                m_password;
     mxb::Worker*                          m_pWorker;
     string                                m_set_format;
     std::chrono::steady_clock::time_point m_context_got;
@@ -1616,13 +1603,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    auto address = m_redis_config.host.address();
-    auto port = m_redis_config.host.port();
-    auto username = m_redis_config.username;
-    auto password = m_redis_config.password;
-
-    return RedisToken::create(address, port, m_config.timeout, m_invalidate, m_ttl,
-                              username, password, psToken);
+    return RedisToken::create(&m_redis_config, m_config.timeout, m_invalidate, m_ttl, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)
