@@ -12,8 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
-#include "../../cache_storage_api.hh"
+#include "storage_redis.hh"
 
 class RedisStorage : public Storage
 {

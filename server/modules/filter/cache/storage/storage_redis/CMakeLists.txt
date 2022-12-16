@@ -3,6 +3,7 @@ include(./BuildHiredis.cmake)
 include_directories(${HIREDIS_INCLUDE_DIR})
 
 add_library(storage_redis SHARED
+  redisconfig.cc
   redisstorage.cc
   storage_redis.cc
   )

@@ -138,6 +138,7 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/threadpool.hh>
+#include "redisconfig.hh"
 
 using std::map;
 using std::shared_ptr;
@@ -147,11 +148,6 @@ using std::vector;
 
 namespace
 {
-
-const int DEFAULT_REDIS_PORT = 6379;
-
-const char CN_STORAGE_ARG_USERNAME[] = "username";
-const char CN_STORAGE_ARG_PASSWORD[] = "password";
 
 struct
 {
@@ -1611,55 +1607,21 @@ RedisStorage* RedisStorage::create(const string& name,
     }
 
     mxs::ConfigParameters parameters;
-
     if (Storage::parse_argument_string(argument_string, &parameters))
     {
-        bool error = false;
-
-        mxb::Host host;
-        string value = parameters.get_string(CN_STORAGE_ARG_SERVER);
-        if (!value.empty())
+        RedisConfig redis_config(name);
+        if (RedisConfig::specification().validate(&redis_config, parameters))
         {
-            if (!Storage::get_host(value, DEFAULT_REDIS_PORT, &host))
-            {
-                error = true;
-            }
+            MXB_AT_DEBUG(bool success =) redis_config.configure(parameters);
+            mxb_assert(success);
 
-            parameters.remove(CN_STORAGE_ARG_SERVER);
-        }
-        else
-        {
-            MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
-            error = true;
-        }
+            auto address = redis_config.host.address();
+            auto port = redis_config.host.port();
+            auto username = redis_config.username;
+            auto password = redis_config.password;
 
-        string username = parameters.get_string(CN_STORAGE_ARG_USERNAME);
-        if (!username.empty())
-        {
-            parameters.remove(CN_STORAGE_ARG_USERNAME);
-        }
-
-        string password = parameters.get_string(CN_STORAGE_ARG_PASSWORD);
-        if (!password.empty())
-        {
-            parameters.remove(CN_STORAGE_ARG_PASSWORD);
-        }
-
-        if (!username.empty() && password.empty())
-        {
-            MXB_ERROR("'username' but not 'password' specified for `storage_redis`.");
-            error = true;
-        }
-
-        for (const auto& kv : parameters)
-        {
-            MXB_WARNING("Unknown `storage_redis` argument: %s=%s",
-                        kv.first.c_str(), kv.second.c_str());
-        }
-
-        if (!error)
-        {
-            pStorage = new(std::nothrow) RedisStorage(name, config, host.address(), host.port(),
+            pStorage = new(std::nothrow) RedisStorage(name, config,
+                                                      address, port,
                                                       username, password);
         }
     }

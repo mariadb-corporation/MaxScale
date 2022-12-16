@@ -10,23 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
-#include "storage_redis.hh"
-#include "../storagemodule.hh"
-#include "redisstorage.hh"
-
-namespace
-{
-
-StorageModuleT<RedisStorage> module;
-
-}
-
-extern "C"
-{
-
-StorageModule* CacheGetStorageModule()
-{
-    return &module;
-}
-}
+#define MXB_MODULE_NAME "storage_redis"
+#include <maxscale/ccdefs.hh>
+#include "../../cache_storage_api.hh"
