@@ -224,6 +224,8 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
+            test.tprintf("Test database created and row added. Preparing backup directory.");
+
             // At this point, clear the backup folder. It may contain old backups from a previous failed
             // test run.
             const char bu_dir[] = "/tmp/backups";
@@ -238,7 +240,7 @@ void test_main(TestConnections& test)
             bu_vm.run_cmd_output_sudof("sudo chown %s:%s %s", ssh_user, ssh_user, bu_dir);
             install_tools(0); // Backup tools may be missing from server1.
 
-            test.tprintf("Test database created and row added.");
+            test.tprintf("Creating backups.");
             const char create_backup_fmt[] = "call command mariadbmon async-create-backup MariaDB-Monitor "
                                              "server1 %s";
             string backup_cmd = mxb::string_printf(create_backup_fmt, "bu1");
