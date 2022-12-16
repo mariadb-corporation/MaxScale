@@ -501,11 +501,24 @@ template<typename SD>
 void GCUpdater<SD>::stop()
 {
     m_running.store(false, std::memory_order_release);
+
+    // The client count may have gone to zero (dynamic threading)
+    bool have_clients = false;
     for (auto& s : m_shared_data)
     {
-        s->reset_ptrs();
+        have_clients = true;
+        s->reset_ptrs();    // release data for garbage collection
     }
-    m_shared_data[0]->shutdown();
+
+    if (have_clients)
+    {
+        // Roundabout way to notify m_thread to wake up to
+        // perform shutdown. The thread does not actually
+        // block anymore, but should the functionality change,
+        // this prevents an unwelcome surprise.
+        m_shared_data[0]->shutdown();
+    }
+
     m_thread.join();
 }
 
