@@ -20,6 +20,11 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
+### [MXS-4106](https://jira.mariadb.org/browse/MXS-4106) Redis authentication
+
+Authentication can be enabled when Redis is used as the cache storage. See
+[here](../Filters/Cache.md#storage_redis) for more information.
+
 ### [MXS-4270](https://jira.mariadb.org/browse/MXS-4270) ed25519 authentication support
 
 MariaDB Server ed25519 authentication plugin support added. See

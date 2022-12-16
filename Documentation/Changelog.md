@@ -21,6 +21,7 @@
   a new replication connection on a previous primary, Current_Pos is used.
 * Ed25519Auth-plugin added. The plugin enables authentication with the
   MariaDB Server ed25519 authentication plugin.
+* Authentication can now be enabled when Redis is used as the cache storage.
 
 ## MariaDB MaxScale 22.08
 
