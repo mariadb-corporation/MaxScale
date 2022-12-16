@@ -22,6 +22,7 @@ public:
     static const int DEFAULT_PORT = 6379;
 
     RedisConfig(const std::string& name);
+    RedisConfig(RedisConfig&& other) = default;
 
     mxb::Host   host;
     std::string username;

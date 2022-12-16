@@ -13,6 +13,7 @@
 #pragma once
 
 #include "storage_redis.hh"
+#include "redisconfig.hh"
 
 class RedisStorage : public Storage
 {
@@ -63,19 +64,11 @@ public:
     cache_result_t get_items(uint64_t* pItems) const override final;
 
 private:
-    RedisStorage(const std::string& name,
-                 const Config& config,
-                 const std::string& host,
-                 int port,
-                 const std::string& username,
-                 const std::string& password);
+    RedisStorage(const std::string& name, const Config& config, RedisConfig&& redis_config);
 
     const std::string m_name;
     const Config      m_config;
-    const std::string m_host;
-    const int         m_port;
-    const std::string m_username;
-    const std::string m_password;
     bool              m_invalidate;
     uint32_t          m_ttl;
+    const RedisConfig m_redis_config;
 };

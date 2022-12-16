@@ -1540,20 +1540,12 @@ private:
 }
 
 
-RedisStorage::RedisStorage(const string& name,
-                           const Config& config,
-                           const string& host,
-                           int port,
-                           const string& username,
-                           const string& password)
+RedisStorage::RedisStorage(const string& name, const Config& config, RedisConfig&& redis_config)
     : m_name(name)
     , m_config(config)
-    , m_host(host)
-    , m_port(port)
-    , m_username(username)
-    , m_password(password)
     , m_invalidate(config.invalidate != CACHE_INVALIDATE_NEVER)
     , m_ttl(config.hard_ttl)
+    , m_redis_config(std::move(redis_config))
 {
     if (config.soft_ttl != config.hard_ttl)
     {
@@ -1615,14 +1607,7 @@ RedisStorage* RedisStorage::create(const string& name,
             MXB_AT_DEBUG(bool success =) redis_config.configure(parameters);
             mxb_assert(success);
 
-            auto address = redis_config.host.address();
-            auto port = redis_config.host.port();
-            auto username = redis_config.username;
-            auto password = redis_config.password;
-
-            pStorage = new(std::nothrow) RedisStorage(name, config,
-                                                      address, port,
-                                                      username, password);
+            pStorage = new(std::nothrow) RedisStorage(name, config, std::move(redis_config));
         }
     }
 
@@ -1631,8 +1616,13 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_config.timeout, m_invalidate, m_ttl,
-                              m_username, m_password, psToken);
+    auto address = m_redis_config.host.address();
+    auto port = m_redis_config.host.port();
+    auto username = m_redis_config.username;
+    auto password = m_redis_config.password;
+
+    return RedisToken::create(address, port, m_config.timeout, m_invalidate, m_ttl,
+                              username, password, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)

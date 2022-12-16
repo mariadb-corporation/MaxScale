@@ -28,18 +28,18 @@ private:
     template<class Params>
     bool do_post_validate(Params& params) const;
 
-    bool post_validate(const config::Configuration* config,
+    bool post_validate(const config::Configuration* pConfig,
                        const mxs::ConfigParameters& params,
                        const map<string, mxs::ConfigParameters>& nested_params) const override final
     {
         return do_post_validate(params);
     }
 
-    bool post_validate(const config::Configuration* config,
-                       json_t* json,
+    bool post_validate(const config::Configuration* pConfig,
+                       json_t* pJson,
                        const map<string, json_t*>& nested_params) const override final
     {
-        return do_post_validate(json);
+        return do_post_validate(pJson);
     }
 };
 
