@@ -1610,24 +1610,22 @@ RedisStorage* RedisStorage::create(const string& name,
                     "a maximum number of items in the cache storage.");
     }
 
-    map<string, string> arguments;
+    mxs::ConfigParameters parameters;
 
-    if (Storage::split_arguments(argument_string, &arguments))
+    if (Storage::parse_argument_string(argument_string, &parameters))
     {
         bool error = false;
 
-        decltype(arguments)::iterator it;
-
         mxb::Host host;
-        it = arguments.find(CN_STORAGE_ARG_SERVER);
-        if (it != arguments.end())
+        string value = parameters.get_string(CN_STORAGE_ARG_SERVER);
+        if (!value.empty())
         {
-            if (!Storage::get_host(it->second, DEFAULT_REDIS_PORT, &host))
+            if (!Storage::get_host(value, DEFAULT_REDIS_PORT, &host))
             {
                 error = true;
             }
 
-            arguments.erase(it);
+            parameters.remove(CN_STORAGE_ARG_SERVER);
         }
         else
         {
@@ -1635,22 +1633,16 @@ RedisStorage* RedisStorage::create(const string& name,
             error = true;
         }
 
-        string username;
-        it = arguments.find(CN_STORAGE_ARG_USERNAME);
-        if (it != arguments.end())
+        string username = parameters.get_string(CN_STORAGE_ARG_USERNAME);
+        if (!username.empty())
         {
-            username = it->second;
-
-            arguments.erase(it);
+            parameters.remove(CN_STORAGE_ARG_USERNAME);
         }
 
-        string password;
-        it = arguments.find(CN_STORAGE_ARG_PASSWORD);
-        if (it != arguments.end())
+        string password = parameters.get_string(CN_STORAGE_ARG_PASSWORD);
+        if (!password.empty())
         {
-            password = it->second;
-
-            arguments.erase(it);
+            parameters.remove(CN_STORAGE_ARG_PASSWORD);
         }
 
         if (!username.empty() && password.empty())
@@ -1659,7 +1651,7 @@ RedisStorage* RedisStorage::create(const string& name,
             error = true;
         }
 
-        for (const auto& kv : arguments)
+        for (const auto& kv : parameters)
         {
             MXB_WARNING("Unknown `storage_redis` argument: %s=%s",
                         kv.first.c_str(), kv.second.c_str());

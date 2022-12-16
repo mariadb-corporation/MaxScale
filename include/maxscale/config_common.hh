@@ -175,6 +175,11 @@ public:
     ContainerType::const_iterator begin() const;
     ContainerType::const_iterator end() const;
 
+    void swap(mxs::ConfigParameters& other)
+    {
+        m_contents.swap(other.m_contents);
+    }
+
 private:
     ContainerType m_contents;
 };

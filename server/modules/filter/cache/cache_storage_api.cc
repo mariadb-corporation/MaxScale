@@ -57,13 +57,13 @@ vector<char> CacheKey::to_vector() const
     return rv;
 }
 
-bool Storage::split_arguments(const std::string& argument_string,
-                              map<std::string, std::string>* pArguments)
+bool Storage::parse_argument_string(const std::string& argument_string,
+                                    mxs::ConfigParameters* pParameters)
 {
     bool rv = true;
 
     vector<string> arguments = mxb::strtok(argument_string, ",");
-    map<string, string> values_by_keys;
+    mxs::ConfigParameters parameters;
 
     for (const auto& argument : arguments)
     {
@@ -71,12 +71,8 @@ bool Storage::split_arguments(const std::string& argument_string,
 
         switch (key_value.size())
         {
-        case 1:
-            values_by_keys[mxb::trimmed_copy(key_value[0])] = "";
-            break;
-
         case 2:
-            values_by_keys[mxb::trimmed_copy(key_value[0])] = mxb::trimmed_copy(key_value[1]);
+            parameters.set(mxb::trimmed_copy(key_value[0]), mxb::trimmed_copy(key_value[1]));
             break;
 
         default:
@@ -88,7 +84,7 @@ bool Storage::split_arguments(const std::string& argument_string,
 
     if (rv)
     {
-        pArguments->swap(values_by_keys);
+        pParameters->swap(parameters);
     }
 
     return rv;

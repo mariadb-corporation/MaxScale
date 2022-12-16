@@ -26,6 +26,7 @@
 #include <maxbase/host.hh>
 #include <maxbase/jansson.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 extern const char CN_STORAGE_ARG_SERVER[];
@@ -493,8 +494,8 @@ protected:
      *
      * @return True, if the string is of the valid format.
      */
-    static bool split_arguments(const std::string& argument_string,
-                                std::map<std::string, std::string>* pArguments);
+    static bool parse_argument_string(const std::string& argument_string,
+                                      mxs::ConfigParameters* pParameters);
 
     /**
      * Converts an argument string "host[:port]" to a host string and port number.
