@@ -89,26 +89,14 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <uid-input v-model="body.user" />
+                        <uid-input v-model.trim="body.user" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <pwd-input v-model="body.password" />
+                        <pwd-input v-model.trim="body.password" />
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label mxs-color-helper text-small-text">
-                            {{ $mxs_t('database') }}
-                        </label>
-                        <v-text-field
-                            v-model.trim="body.db"
-                            class="vuetify-input--override error--text__bottom"
-                            name="db"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            outlined
-                            required
-                        />
+                        <db-input v-model.trim="body.db" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text">
@@ -148,10 +136,11 @@
 import { mapActions, mapMutations, mapState } from 'vuex'
 import UidInput from './UidInput.vue'
 import PwdInput from './PwdInput.vue'
+import DbInput from './DbInput.vue'
 
 export default {
     name: 'conn-dlg-ctr',
-    components: { UidInput, PwdInput },
+    components: { UidInput, PwdInput, DbInput },
     props: {
         value: { type: Boolean, required: true },
         wkeConnOpts: { type: Array, required: true },

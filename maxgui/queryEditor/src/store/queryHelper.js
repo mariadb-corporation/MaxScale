@@ -369,6 +369,20 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
 
     return { alive_conns, expired_conn_ids, orphaned_conn_ids }
 }
+/**
+ * @param {String} param.driver
+ * @param {String} param.server
+ * @param {Number} param.port
+ * @param {String} param.user
+ * @param {String} param.password
+ * @param {String} [param.db] - required if driver is PostgreSQL
+ * @returns {String}  ODBC connection_string
+ */
+function genConnStr({ driver, server, port, user, password, db }) {
+    let connStr = `DRIVER=${driver};SERVER=${server};PORT=${port};UID=${user};PWD={${password}}`
+    if (db) connStr += `;DATABASE=${db}`
+    return connStr
+}
 
 export default {
     getNodeGroupSQL,
@@ -378,4 +392,5 @@ export default {
     getAlterColsOptsSQL,
     filterEntity,
     categorizeSqlConns,
+    genConnStr,
 }
