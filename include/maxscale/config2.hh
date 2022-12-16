@@ -1151,9 +1151,30 @@ public:
     ParamHost(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
+              int default_port,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamHost(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type(),
+                    default_port)
+    {
+    }
+
+    ParamHost(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
               value_type default_value,
               Modifiable modifiable = Modifiable::AT_STARTUP)
         : ParamHost(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
+    {
+    }
+
+    ParamHost(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              value_type default_value,
+              int default_port,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamHost(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value,
+                    default_port)
     {
     }
 
@@ -1173,11 +1194,15 @@ private:
               const char* zDescription,
               Modifiable modifiable,
               Kind kind,
-              const value_type& default_value)
+              const value_type& default_value,
+              int default_port = mxb::Host::InvalidPort)
         : ConcreteParam<ParamHost, maxbase::Host>(pSpecification, zName, zDescription,
                                                   modifiable, kind, default_value)
+        , m_default_port(default_port)
     {
     }
+
+    int m_default_port;
 };
 
 /**

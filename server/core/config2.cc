@@ -1268,7 +1268,7 @@ bool ParamHost::from_string(const std::string& value_as_string,
                             value_type* pValue,
                             std::string* pMessage) const
 {
-    mxb::Host host = mxb::Host::from_string(value_as_string);
+    mxb::Host host = mxb::Host::from_string(value_as_string, m_default_port);
 
     if (host.is_valid())
     {
