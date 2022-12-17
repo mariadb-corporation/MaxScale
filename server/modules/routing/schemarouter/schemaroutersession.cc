@@ -227,7 +227,7 @@ mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t 
     {
         for (const auto& b : m_backends)
         {
-            if (b->target()->is_usable())
+            if (b->in_use())
             {
                 route_target = TARGET_NAMED_SERVER;
                 target = b->target();
@@ -437,6 +437,8 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     if (TARGET_IS_NAMED_SERVER(route_target) && target)
     {
+        uint8_t cmd = mxs_mysql_get_command(pPacket);
+
         if (SRBackend* bref = get_shard_backend(target->name()))
         {
             if (op == QUERY_OP_LOAD_LOCAL)
@@ -445,8 +447,6 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
             }
 
             MXB_INFO("Route query to \t%s <", bref->name());
-
-            uint8_t cmd = mxs_mysql_get_command(pPacket);
 
             auto responds = mxs_mysql_command_will_respond(cmd) ?
                 mxs::Backend::EXPECT_RESPONSE :
@@ -465,6 +465,10 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 // TODO: Refactor things so that there is no ambiguity.
                 // gwbuf_free(pPacket);
             }
+        }
+        else
+        {
+            MXB_ERROR("Could not find valid server for %s, closing connection.", STRPACKETTYPE(cmd));
         }
     }
 
