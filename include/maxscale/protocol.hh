@@ -76,6 +76,14 @@ public:
      * logically idle, meaning no queries are ongoing and no results are expected, the session will be
      * modified. If the connection is not idle, the modification is postponed until the connection is idle.
      *
+     * Note that for the client protocol, this will always return true inside the routeQuery and clientReply
+     * functions. This happens as the client protocol stops being idle the moment the routeQuery is called and
+     * becomes idle only after all results have been read.
+     *
+     * TODO: This should be changed so that the session is idle for the duration of routeQuery and only goes
+     *       non-idle when the routeQuery successfully returns. This is currently must done this way as some
+     *       modules call clientReply directly from routeQuery.
+     *
      * @return True if the connection is idle.
      */
     virtual bool is_idle() const

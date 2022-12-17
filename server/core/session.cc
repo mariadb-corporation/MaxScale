@@ -1240,7 +1240,9 @@ void Session::dump_session_log()
 
 bool Session::routeQuery(GWBUF* buffer)
 {
-    if (m_rebuild_chain && is_idle())
+    if (m_rebuild_chain
+        && std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+                       std::mem_fn(&mxs::BackendConnection::is_idle)))
     {
         m_filters = std::move(m_pending_filters);
         m_rebuild_chain = false;
