@@ -303,7 +303,7 @@ void ConnectionManager::cleanup_thread_func()
 
 ConnectionManager::~ConnectionManager()
 {
-    // There are cases where the call to HttpSQL::stop_cleanup() is not done before shutdown. This mostly
+    // There are cases where the call to HttpSQL::finish() is not done before shutdown. This mostly
     // happens when multiple termination signals are sent one after another and MaxScale is doing something
     // that is blocking the shutdown temporarily (e.g. blocking TCP connection).
     stop_cleanup_thread();
@@ -326,6 +326,19 @@ void ConnectionManager::stop_cleanup_thread()
     {
         m_stop_running_notifier.notify_one();
         m_cleanup_thread.join();
+    }
+}
+
+void ConnectionManager::cancel_all_connections()
+{
+    LockGuard guard(m_connection_lock);
+
+    for (const auto& [id, conn] : m_connections)
+    {
+        if (conn->busy.load(std::memory_order_acquire))
+        {
+            conn->cancel();
+        }
     }
 }
 

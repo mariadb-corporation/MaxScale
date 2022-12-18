@@ -275,13 +275,14 @@ HttpResponse create_connect_response(const std::string& host, const std::string&
 namespace HttpSql
 {
 
-void start_cleanup()
+void init()
 {
     this_unit.manager.start_cleanup_thread();
 }
 
-void stop_cleanup()
+void finish()
 {
+    this_unit.manager.cancel_all_connections();
     this_unit.manager.stop_cleanup_thread();
 }
 

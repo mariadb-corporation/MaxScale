@@ -213,6 +213,7 @@ public:
 
     void start_cleanup_thread();
     void stop_cleanup_thread();
+    void cancel_all_connections();
 
 private:
     mutable std::mutex m_connection_lock;   /**< Protects access to connections map and next id */

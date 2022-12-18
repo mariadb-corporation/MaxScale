@@ -266,7 +266,7 @@ void MainWorker::start_shutdown()
             {
                 mxs_admin_shutdown();
                 // Stop cleanup-thread only after rest-api is shut down, so that no queries are active.
-                HttpSql::stop_cleanup();
+                HttpSql::finish();
             }
 
             auto* pConfig_manager = mxs::ConfigManager::get();

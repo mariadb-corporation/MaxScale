@@ -2040,7 +2040,7 @@ int main(int argc, char** argv)
                     MXB_NOTICE("Started REST API on [%s]:%d",
                                cnf.admin_host.c_str(), (int)cnf.admin_port);
                     // Start HttpSql cleanup thread.
-                    HttpSql::start_cleanup();
+                    HttpSql::init();
                 }
                 else
                 {
