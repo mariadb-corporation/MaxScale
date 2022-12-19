@@ -736,24 +736,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
     }
 
-    Server* server = ServerManager::find_by_unique_name(target);
-
-    if (server)
-    {
-        dest_cc.target = target;
-        dest_cc.host = server->address();
-        dest_cc.port = server->port();
-        dest_cc.ssl = server->ssl_config();
-
-        json.try_get_string("db", &dest_cc.db);
-
-        if (!json.try_get_string("user", &dest_cc.user)
-            || !json.try_get_string("password", &dest_cc.password))
-        {
-            return create_error("The `user` and `password` fields are mandatory for this `target`");
-        }
-    }
-    else if (auto cnf = this_unit.manager.get_configuration(target))
+    if (auto cnf = this_unit.manager.get_configuration(target))
     {
         std::string token = request.get_option("target_token");
         std::string cookie = get_conn_id_cookie(request, target);
@@ -766,9 +749,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
             return create_error("Validation of target connection failed: " + target_err);
         }
 
-        server = ServerManager::find_by_unique_name(cnf->target);
-
-        if (!server)
+        if (!ServerManager::find_by_unique_name(cnf->target))
         {
             return create_error("The target '" + cnf->target + "' of connection '"
                                 + target + "' is not a server in MaxScale.");
@@ -778,8 +759,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
     }
     else
     {
-        return create_error("The target '" + target
-                            + "' is not the name of a server in MaxScale nor is it a connection to one.");
+        return create_error("The target '" + target + "' is not a valid connection ID.");
     }
 
     std::shared_ptr<sql_etl::ETL> etl;
