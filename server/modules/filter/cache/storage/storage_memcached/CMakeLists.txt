@@ -7,6 +7,7 @@ if(HAVE_SASL)
   include_directories(${LIBMEMCACHED_INCLUDE_DIR})
 
   add_library(storage_memcached SHARED
+    memcachedconfig.cc
     memcachedstorage.cc
     storage_memcached.cc
     )

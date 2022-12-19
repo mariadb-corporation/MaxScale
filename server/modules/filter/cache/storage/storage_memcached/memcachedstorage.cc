@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#define MXB_MODULE_NAME "storage_memcached"
 #include "memcachedstorage.hh"
 #include <memory>
 #include <libmemcached/memcached.h>
@@ -49,8 +48,7 @@ public:
         return shared_from_this();
     }
 
-    static bool create(const string& address,
-                       int port,
+    static bool create(const MemcachedConfig* pConfig,
                        std::chrono::milliseconds timeout,
                        uint32_t soft_ttl,
                        uint32_t hard_ttl,
@@ -62,9 +60,9 @@ public:
         string arguments;
 
         arguments += "--SERVER=";
-        arguments += address;
+        arguments += pConfig->host.address();
         arguments += ":";
-        arguments += std::to_string(port);
+        arguments += std::to_string(pConfig->host.port());
 
         arguments += " --CONNECT-TIMEOUT=";
         arguments += std::to_string(timeout.count());
@@ -78,7 +76,7 @@ public:
 
             if (memcached_success(mrv))
             {
-                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, address, port, timeout,
+                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, pConfig, timeout,
                                                                            soft_ttl, hard_ttl, mcd_ttl);
 
                 if (pToken)
@@ -339,12 +337,11 @@ public:
 
 private:
     MemcachedToken(memcached_st* pMemc,
-                   const string& address,
-                   int port,
+                   const MemcachedConfig* pConfig,
                    std::chrono::milliseconds timeout,
                    uint32_t soft_ttl, uint32_t hard_ttl, uint32_t mcd_ttl)
         : m_pMemc(pMemc)
-        , m_address(address)
+        , m_config(*pConfig)
         , m_timeout(timeout)
         , m_pWorker(mxb::Worker::get_current())
         , m_soft_ttl(soft_ttl)
@@ -442,7 +439,7 @@ private:
 
 private:
     memcached_st*                         m_pMemc;
-    string                                m_address;
+    const MemcachedConfig&                m_config;
     std::chrono::milliseconds             m_timeout;
     mxb::Worker*                          m_pWorker;
     uint32_t                              m_soft_ttl; // Soft TTL in milliseconds
@@ -458,15 +455,11 @@ private:
 
 MemcachedStorage::MemcachedStorage(const string& name,
                                    const Config& config,
-                                   const string& address,
-                                   int port,
-                                   uint32_t max_value_size)
+                                   MemcachedConfig&& memcached_config)
     : m_name(name)
     , m_config(config)
-    , m_address(address)
-    , m_port(port)
-    , m_limits(max_value_size)
     , m_mcd_ttl(config.hard_ttl)
+    , m_memcached_config(std::move(memcached_config))
 {
     // memcached supports a TTL with a granularity of a second.
     // A millisecond TTL is honored in get_value.
@@ -533,7 +526,7 @@ bool MemcachedStorage::get_limits(const mxs::ConfigParameters& parameters, Limit
 //static
 MemcachedStorage* MemcachedStorage::create(const string& name,
                                            const Config& config,
-                                           const mxs::ConfigParameters& original_parameters)
+                                           const mxs::ConfigParameters& parameters)
 {
     MemcachedStorage* pStorage = nullptr;
 
@@ -555,64 +548,13 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
                         "a maximum number of items in the cache storage.");
         }
 
-        mxs::ConfigParameters parameters = original_parameters; // TODO: Take config::Configuration into use
-        bool error = false;
-
-        mxb::Host host;
-        int max_value_size = DEFAULT_MAX_VALUE_SIZE;
-
-        string value;
-
-        value = parameters.get_string(CN_STORAGE_ARG_SERVER);
-        if (!value.empty())
+        MemcachedConfig memcached_config(name);
+        if (MemcachedConfig::specification().validate(&memcached_config, parameters))
         {
-            if (!Storage::get_host(value, DEFAULT_MEMCACHED_PORT, &host))
-            {
-                error = true;
-            }
+            MXB_AT_DEBUG(bool success =) memcached_config.configure(parameters);
+            mxb_assert(success);
 
-            parameters.remove(CN_STORAGE_ARG_SERVER);
-        }
-        else
-        {
-            MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
-            error = true;
-        }
-
-        value = parameters.get_string(CN_MEMCACHED_MAX_VALUE_SIZE);
-        if (!value.empty())
-        {
-            uint64_t size;
-            if (get_suffixed_size(value, &size) && (size <= std::numeric_limits<uint32_t>::max()))
-            {
-                max_value_size = size;
-            }
-            else
-            {
-                MXB_ERROR("'%s' is not a valid value for '%s'.",
-                          value.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
-                error = true;
-            }
-
-            parameters.remove(CN_MEMCACHED_MAX_VALUE_SIZE);
-        }
-
-        for (const auto& kv : parameters)
-        {
-            MXB_WARNING("Unknown `storage_memcached` argument: %s=%s",
-                        kv.first.c_str(), kv.second.c_str());
-        }
-
-        if (!error)
-        {
-            MXB_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
-                       max_value_size, name.c_str());
-
-            pStorage = new (std::nothrow) MemcachedStorage(name,
-                                                           config,
-                                                           host.address(),
-                                                           host.port(),
-                                                           max_value_size);
+            pStorage = new (std::nothrow) MemcachedStorage(name, config, std::move(memcached_config));
         }
     }
 
@@ -621,8 +563,7 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
 
 bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
-    return MemcachedToken::create(m_address,
-                                  m_port,
+    return MemcachedToken::create(&m_memcached_config,
                                   m_config.timeout,
                                   m_config.soft_ttl,
                                   m_config.hard_ttl,
@@ -637,7 +578,7 @@ void MemcachedStorage::get_config(Config* pConfig)
 
 void MemcachedStorage::get_limits(Limits* pLimits)
 {
-    *pLimits = m_limits;
+    *pLimits = Limits(m_memcached_config.max_value_size);
 }
 
 cache_result_t MemcachedStorage::get_info(uint32_t what, json_t** ppInfo) const

@@ -12,8 +12,8 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
-#include "../../cache_storage_api.hh"
+#include "storage_memcached.hh"
+#include "memcachedconfig.hh"
 
 class MemcachedStorage : public Storage
 {
@@ -66,14 +66,10 @@ public:
 private:
     MemcachedStorage(const std::string& name,
                      const Config& config,
-                     const std::string& address,
-                     int port,
-                     uint32_t max_value_size);
+                     MemcachedConfig&& memcached_config);
 
-    std::string  m_name;
-    const Config m_config;
-    std::string  m_address;
-    int          m_port;
-    const Limits m_limits;
-    uint32_t     m_mcd_ttl { 0 };
+    std::string           m_name;
+    const Config          m_config;
+    uint32_t              m_mcd_ttl { 0 };
+    const MemcachedConfig m_memcached_config;
 };

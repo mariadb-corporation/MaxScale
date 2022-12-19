@@ -11,9 +11,7 @@
  * Public License.
  */
 
-#define MXB_MODULE_NAME "storage_memcached"
-#include <maxscale/ccdefs.hh>
-#include "../../cache_storage_api.hh"
+#include "storage_memcached.hh"
 #include "../storagemodule.hh"
 #include "memcachedstorage.hh"
 

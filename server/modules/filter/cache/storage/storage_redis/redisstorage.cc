@@ -131,7 +131,6 @@
 // for everyone.
 //
 
-#define MXB_MODULE_NAME "storage_redis"
 #include "redisstorage.hh"
 #include <algorithm>
 #include <hiredis.h>
