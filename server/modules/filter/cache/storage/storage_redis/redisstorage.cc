@@ -134,6 +134,7 @@
 #include "redisstorage.hh"
 #include <algorithm>
 #include <hiredis.h>
+#include <hiredis_ssl.h>
 #include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/threadpool.hh>
@@ -565,6 +566,8 @@ class RedisToken : public std::enable_shared_from_this<RedisToken>
 public:
     ~RedisToken()
     {
+        redisFreeSSLContext(m_pSsl_context);
+        m_pSsl_context = nullptr;
     }
 
     static bool create(const RedisConfig* pConfig,
@@ -573,18 +576,44 @@ public:
                        uint32_t ttl,
                        shared_ptr<Storage::Token>* psToken)
     {
-        bool rv = false;
+        bool rv = true;
 
-        RedisToken* pToken = new(std::nothrow) RedisToken(pConfig, timeout, invalidate, ttl);
+        redisSSLContext* pSsl_context = nullptr;
 
-        if (pToken)
+        if (pConfig->ssl)
         {
-            psToken->reset(pToken);
+            const char* zCa = pConfig->ssl_ca.c_str();
+            const char* zCert = pConfig->ssl_cert.c_str();
+            const char* zKey = pConfig->ssl_key.c_str();
 
-            // The call to connect() (-> get_shared() -> shared_from_this()) can be made only
-            // after the pointer has been stored in a shared_ptr.
-            pToken->connect();
-            rv = true;
+            redisSSLContextError ssl_error = REDIS_SSL_CTX_NONE;
+            pSsl_context = redisCreateSSLContext(zCa, nullptr, zCert, zKey, nullptr, &ssl_error);
+
+            if (!pSsl_context || (ssl_error != REDIS_SSL_CTX_NONE))
+            {
+                MXB_ERROR("Could not create Redis SSL context: %s", redisSSLContextGetError(ssl_error));
+                redisFreeSSLContext(pSsl_context);
+                pSsl_context = nullptr;
+
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            rv = false;
+
+            RedisToken* pToken = new(std::nothrow) RedisToken(pSsl_context, pConfig, timeout, invalidate, ttl);
+
+            if (pToken)
+            {
+                psToken->reset(pToken);
+
+                // The call to connect() (-> get_shared() -> shared_from_this()) can be made only
+                // after the pointer has been stored in a shared_ptr.
+                pToken->connect();
+                rv = true;
+            }
         }
 
         return rv;
@@ -1234,11 +1263,13 @@ private:
     }
 
 private:
-    RedisToken(const RedisConfig* pConfig,
+    RedisToken(redisSSLContext* pSsl_context,
+               const RedisConfig* pConfig,
                std::chrono::milliseconds timeout,
                bool invalidate,
                uint32_t ttl)
-        : m_config(*pConfig)
+        : m_pSsl_context(pSsl_context)
+        , m_config(*pConfig)
         , m_timeout(timeout)
         , m_invalidate(invalidate)
         , m_pWorker(mxb::Worker::get_current())
@@ -1391,6 +1422,16 @@ private:
                     MXB_ERROR("Could not set timeout; in case of Redis errors, "
                               "operations may hang indefinitely.");
                 }
+
+                if (sThis->m_pSsl_context)
+                {
+                    if (redisInitiateSSLWithContext(pContext, sThis->m_pSsl_context) != REDIS_OK)
+                    {
+                        MXB_ERROR("Could not initialize SSL: %s", pContext->errstr);
+                        redisFree(pContext);
+                        pContext = nullptr;
+                    }
+                }
             }
 
             sThis->m_pWorker->execute([sThis, pContext]() {
@@ -1510,6 +1551,7 @@ private:
     }
 
 private:
+    redisSSLContext*                      m_pSsl_context;
     const RedisConfig&                    m_config;
     Redis                                 m_redis;
     std::chrono::milliseconds             m_timeout;

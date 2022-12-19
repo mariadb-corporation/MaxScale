@@ -15,6 +15,8 @@
 #include "../storagemodule.hh"
 #include "redisstorage.hh"
 
+// redisInitOpenSSL() need not be called, as OpenSSL is always initialized in gateway.cc
+
 namespace
 {
 
