@@ -117,7 +117,7 @@ Ed25519AuthenticatorModule* Ed25519AuthenticatorModule::create(mxs::ConfigParame
             }
             else
             {
-                MXB_ERROR("Failed to open RSA keyfile '%s'. %s", path.c_str(), err.c_str());
+                MXB_ERROR("Failed to open RSA keyfile. %s", err.c_str());
             }
             return success;
         };

@@ -30,7 +30,7 @@ namespace maxbase
  * @return The file contents if the file was loaded successfully or an error message if it wasn't
  */
 template<class Container>
-std::pair<Container, std::string> load_file(std::string file)
+std::pair<Container, std::string> load_file(const std::string& file)
 {
     static_assert(sizeof(typename Container::iterator::value_type) == sizeof(char));
     std::string err;
@@ -49,13 +49,13 @@ std::pair<Container, std::string> load_file(std::string file)
             data.clear();
         }
     }
-    else if (errno != ENOENT)
+    else
     {
         err = mxb::string_printf("Failed to open file '%s': %d, %s",
                                  file.c_str(), errno, mxb_strerror(errno));
     }
 
-    return {data, err};
+    return {std::move(data), std::move(err)};
 }
 
 /**
