@@ -53,7 +53,7 @@ export default {
                 })
             }
         },
-        async getOdbcDrivers({ commit }) {
+        async fetchOdbcDrivers({ commit }) {
             const [e, res] = await this.vue.$helpers.to(getDrivers())
             if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
         },
