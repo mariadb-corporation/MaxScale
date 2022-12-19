@@ -59,7 +59,7 @@
                     />
                 </div>
             </portal>
-            <div class="pl-6">
+            <div>
                 <icon-sprite-sheet
                     size="16"
                     class="monitor-state-icon mr-1"

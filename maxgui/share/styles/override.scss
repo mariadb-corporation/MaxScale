@@ -108,6 +108,9 @@
             .v-text-field__details {
                 padding: 4px 0px 0px;
             }
+            .v-messages__message::first-letter {
+                text-transform: uppercase;
+            }
         }
     }
 }

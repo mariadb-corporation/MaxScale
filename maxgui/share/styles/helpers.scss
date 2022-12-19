@@ -194,6 +194,10 @@ tooltip needs to be disabled.
 
 .field__label {
     font-size: 0.625rem !important;
+    display: inline-block;
+    &::first-letter {
+        text-transform: uppercase;
+    }
 }
 
 .v-menu--with-arrow {

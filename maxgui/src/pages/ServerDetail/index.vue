@@ -43,7 +43,6 @@
                             </v-col>
                             <v-col cols="8">
                                 <sessions-table
-                                    :search="search_keyword"
                                     collapsible
                                     delayLoading
                                     :headers="sessionsTableHeader"
