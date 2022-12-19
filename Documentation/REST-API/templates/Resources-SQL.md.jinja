@@ -9,6 +9,10 @@ The SQL resource represents a database connection.
 The following endpoints provide a simple REST API interface for executing
 SQL queries on servers and services in MaxScale.
 
+This endpoint also supports executing SQL queries using an ODBC driver. The
+results returned by connections that use ODBC drivers can differ from the ones
+returned by normal SQL connections to objects in MaxScale.
+
 This document uses the `:id` value in the URL to represent a connection ID and
 the `:query_id` to represent a query ID. These values do not need to be manually
 added as the relevant links are returned in the request body of each endpoint.
@@ -117,28 +121,35 @@ The request body must be a JSON object consisting of the following fields:
 
 - `target`
 
-  - The object in MaxScale to connect to. This is a mandatory value and the
+  - The object to connect to. This is a mandatory value and the
     given value must be the name of a valid server, service or listener in
-    MaxScale.
+    MaxScale or the value `odbc` if an ODBC connection is being made.
 
 - `user`
 
-  - The username to use when creating the connection. This is a mandatory value.
+  - The username to use when creating the connection. This is a mandatory value
+    when connecting to an object in MaxScale.
 
 - `password`
 
-  - The password for the user. This is a mandatory value.
+  - The password for the user. This is a mandatory value when connecting to an
+    object in MaxScale.
 
 - `db`
 
   - The default database for the connection. By default the connection will have
-    no default database.
+    no default database. This is ignored by ODBC connections.
 
 - `timeout`
 
   - Connection timeout in seconds. The default connection timeout is 10
     seconds. This controls how long the SQL connection creation can take before
-    an error is returned.
+    an error is returned. This is ignored by ODBC connections.
+
+- `connection_string`
+
+  - Connection string that defines the ODBC connection. This is a required value
+    for ODBC type connections and is ignored by all other connection types.
 
 Here is an example request body:
 
@@ -149,6 +160,16 @@ Here is an example request body:
     "target": "server1",
     "db": "test",
     "timeout": 15
+}
+```
+
+And here is an example request that uses an ODBC driver to connect to a remote
+server:
+
+```
+{
+    "target": "odbc",
+    "connection_string": "Driver=MariaDB;SERVER=127.0.0.1;UID=maxuser;PWD=maxpwd"
 }
 ```
 
@@ -501,8 +522,10 @@ GET /v1/sql/:id/queries/:query_id
 ```
 
 The results are only available if a `POST /v1/sql/:id/queries` was executed with
-the `async` field set to `true`. The result of any asynchronous query can only
-be read once.
+the `async` field set to `true`. The result of any asynchronous query can be
+read multiple times. Only the latest result is stored: executing a new query
+will cause the latest result to be erased. Results can be explicitly erased
+with a `DELETE` request.
 
 #### Response
 
@@ -547,3 +570,74 @@ Fatal connection error:
 - If the API returns this response, the connection to the database server was
   lost. The only valid action to take at this point is to close it with the
   `DELETE /v1/sql/:id` endpoint.
+
+### Erase Asynchronous Query Results
+
+```
+DELETE /v1/sql/:id/queries/:query_id
+```
+
+Erases the latest result of an asynchronously executed query.
+
+#### Response
+
+Result erased:
+
+`Status: 200 OK`
+
+Connection is busy or it was not found:
+
+`Status: 503 Service Unavailable`
+
+Missing connection token:
+
+`Status: 400 Bad Request`
+
+### Cancel a Query
+
+```
+POST /v1/sql/:id/cancel
+```
+
+This endpoint cancels the current query being executed by this connection. If no
+query is being done and the connection is idle, no action is taken.
+
+If the connection is busy but it is not executing a query, an attempt to cancel
+is still made: in this case the results of this operation are undefined for ODBC
+connections, for MariaDB connections this will cause a `KILL QUERY` command to
+be executed.
+
+#### Response
+
+Query was canceled:
+
+`Status: 200 OK`
+
+Connection was not found:
+
+`Status: 503 Service Unavailable`
+
+Missing connection token:
+
+`Status: 400 Bad Request`
+
+### List ODBC Drivers
+
+```
+GET /v1/sql/odbc/drivers
+```
+
+Get the list of configured ODBC drivers found by the driver manager. The list of
+drivers includes all drivers known to the driver manager for which an installed
+library was found (i.e. `Driver` or `Driver64` in `/etc/odbcinst.ini` points to
+a file).
+
+#### Response
+
+The response contains a resource collection with all available drivers.
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/sql/odbc/drivers")}}
+```
