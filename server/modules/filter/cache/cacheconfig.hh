@@ -79,10 +79,7 @@ public:
     milliseconds          timeout;
     mxs::ConfigParameters storage_params;
 
-    static const config::Specification* specification()
-    {
-        return &s_specification;
-    }
+    static const config::Specification* specification();
 
 private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
@@ -92,25 +89,4 @@ private:
 
 private:
     CacheFilter* m_pFilter;
-
-    static config::Specification s_specification;
-
-    static config::ParamString                     s_storage;
-    static config::ParamString                     s_storage_options;
-    static config::ParamDuration<milliseconds>     s_hard_ttl;
-    static config::ParamDuration<milliseconds>     s_soft_ttl;
-    static config::ParamCount                      s_max_resultset_rows;
-    static config::ParamSize                       s_max_resultset_size;
-    static config::ParamCount                      s_max_count;
-    static config::ParamSize                       s_max_size;
-    static config::ParamPath                       s_rules;
-    static config::ParamBitMask                    s_debug;
-    static config::ParamEnum<cache_thread_model_t> s_thread_model;
-    static config::ParamEnum<cache_selects_t>      s_selects;
-    static config::ParamEnum<cache_in_trxs_t>      s_cache_in_trxs;
-    static config::ParamBool                       s_enabled;
-    static config::ParamEnum<cache_invalidate_t>   s_invalidate;
-    static config::ParamBool                       s_clear_cache_on_parse_errors;
-    static config::ParamEnum<cache_users_t>        s_users;
-    static config::ParamDuration<milliseconds>     s_timeout;
 };

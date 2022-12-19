@@ -16,25 +16,69 @@
 #include "cache.hh"
 #include "cachefilter.hh"
 
-config::Specification CacheConfig::s_specification(MXB_MODULE_NAME, config::Specification::FILTER);
+namespace config = mxs::config;
 
-config::ParamString CacheConfig::s_storage(
-    &s_specification,
+namespace
+{
+
+namespace cache
+{
+
+class ParamStorage final : public config::ParamString
+{
+public:
+    using ParamString::ParamString;
+
+    bool takes_parameters() const override
+    {
+        return true;
+    }
+
+    bool validate_parameters(const std::string& value,
+                             const mxs::ConfigParameters& params,
+                             mxs::ConfigParameters* pUnrecognized) const override
+    {
+        return do_validate_parameters(value, params);
+    }
+
+    bool validate_parameters(const std::string& value,
+                             json_t* pParams,
+                             std::set<std::string>* pUnrecognized) const override
+    {
+        return do_validate_parameters(value, pParams);
+    }
+
+private:
+    template<class Params>
+    bool do_validate_parameters(const std::string& value, Params& params) const
+    {
+        // We don't validate the nested parameters, as, in order to be able to
+        // do that, we would have to load the storage and ask it to validate
+        // them. If they are not valid, it will be noticed when the cache
+        // is actually created.
+        return true;
+    }
+};
+
+config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
+
+ParamStorage storage(
+    &specification,
     "storage",
     "The name of the module that provides the storage implementation for the cache.",
     "storage_inmemory"
     );
 
-config::ParamString CacheConfig::s_storage_options(
-    &s_specification,
+config::ParamString storage_options(
+    &specification,
     "storage_options",
     "A comma separated list of arguments to be provided to the storage module "
     "specified with 'storage'.",
     ""
     );
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> hard_ttl(
+    &specification,
     "hard_ttl",
     "Hard time to live; the maximum amount of time the cached result is "
     "used before it is discarded and the result is fetched from the backend. "
@@ -42,8 +86,8 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
     std::chrono::milliseconds {0}
     );
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> soft_ttl(
+    &specification,
     "soft_ttl",
     "Soft time to live; the maximum amount of time the cached result is "
     "used before the first client querying for the result is used for refreshing "
@@ -51,40 +95,40 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
     std::chrono::milliseconds {0}
     );
 
-config::ParamCount CacheConfig::s_max_resultset_rows(
-    &s_specification,
+config::ParamCount max_resultset_rows(
+    &specification,
     "max_resultset_rows",
     "Specifies the maximum number of rows a resultset can have in order to be "
     "stored in the cache. A resultset larger than this, will not be stored.",
     0
     );
 
-config::ParamSize CacheConfig::s_max_resultset_size(
-    &s_specification,
+config::ParamSize max_resultset_size(
+    &specification,
     "max_resultset_size",
     "Specifies the maximum size of a resultset, for it to be stored in the cache. "
     "A resultset larger than this, will not be stored.",
     0
     );
 
-config::ParamCount CacheConfig::s_max_count(
-    &s_specification,
+config::ParamCount max_count(
+    &specification,
     "max_count",
     "The maximum number of items the cache may contain. If the limit has been "
     "reached and a new item should be stored, then an older item will be evicted.",
     0
     );
 
-config::ParamSize CacheConfig::s_max_size(
-    &s_specification,
+config::ParamSize max_size(
+    &specification,
     "max_size",
     "The maximum size the cache may occupy. If the limit has been reached and a new "
     "item should be stored, then some older item(s) will be evicted to make space.",
     0
     );
 
-config::ParamPath CacheConfig::s_rules(
-    &s_specification,
+config::ParamPath rules(
+    &specification,
     "rules",
     "Specifies the path of the file where the caching rules are stored. A relative "
     "path is interpreted relative to the data directory of MariaDB MaxScale.",
@@ -92,8 +136,8 @@ config::ParamPath CacheConfig::s_rules(
     ""
     );
 
-config::ParamBitMask CacheConfig::s_debug(
-    &s_specification,
+config::ParamBitMask debug(
+    &specification,
     "debug",
     "An integer value, using which the level of debug logging made by the cache "
     "can be controlled.",
@@ -102,8 +146,8 @@ config::ParamBitMask CacheConfig::s_debug(
     CACHE_DEBUG_MAX
     );
 
-config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(
-    &s_specification,
+config::ParamEnum<cache_thread_model_t> thread_model(
+    &specification,
     "cached_data",
     "An enumeration option specifying how data is shared between threads.",
 {
@@ -113,8 +157,8 @@ config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(
     CACHE_THREAD_MODEL_ST
     );
 
-config::ParamEnum<cache_selects_t> CacheConfig::s_selects(
-    &s_specification,
+config::ParamEnum<cache_selects_t> selects(
+    &specification,
     "selects",
     "An enumeration option specifying what approach the cache should take with "
     "respect to SELECT statements.",
@@ -125,8 +169,8 @@ config::ParamEnum<cache_selects_t> CacheConfig::s_selects(
     CACHE_SELECTS_ASSUME_CACHEABLE
     );
 
-config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(
-    &s_specification,
+config::ParamEnum<cache_in_trxs_t> cache_in_trxs(
+    &specification,
     "cache_in_transactions",
     "An enumeration option specifying how the cache should behave when there "
     "are active transactions.",
@@ -138,8 +182,8 @@ config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(
     CACHE_IN_TRXS_ALL
     );
 
-config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(
-    &s_specification,
+config::ParamEnum<cache_invalidate_t> invalidate(
+    &specification,
     "invalidate",
     "An enumeration options specifying how the cache should perform cache invalidation.",
 {
@@ -149,23 +193,23 @@ config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(
     CACHE_INVALIDATE_NEVER
     );
 
-config::ParamBool CacheConfig::s_enabled(
-    &s_specification,
+config::ParamBool enabled(
+    &specification,
     "enabled",
     "Specifies whether the cache is initially enabled or disabled.",
     true
     );
 
-config::ParamBool CacheConfig::s_clear_cache_on_parse_errors(
-    &s_specification,
+config::ParamBool clear_cache_on_parse_errors(
+    &specification,
     "clear_cache_on_parse_errors",
     "Specifies whether the cache should be cleared if an UPDATE/INSERT/DELETE statement "
     "cannot be parsed. This setting has only effect if invalidation has been enabled.",
     true
     );
 
-config::ParamEnum<cache_users_t> CacheConfig::s_users(
-    &s_specification,
+config::ParamEnum<cache_users_t> users(
+    &specification,
     "users",
     "Specifies whether cached data is shared between users.",
 {
@@ -175,40 +219,50 @@ config::ParamEnum<cache_users_t> CacheConfig::s_users(
     CACHE_USERS_MIXED
     );
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> timeout(
+    &specification,
     "timeout",
     "The timeout when performing operations to distributed storages.",
     CACHE_DEFAULT_TIMEOUT
     );
 
+}
+
+}
+
 
 CacheConfig::CacheConfig(const std::string& name, CacheFilter* filter)
-    : config::Configuration(name, &s_specification)
+    : config::Configuration(name, &cache::specification)
     , m_pFilter(filter)
 {
-    add_native(&CacheConfig::storage, &s_storage);
-    add_native(&CacheConfig::storage_options, &s_storage_options);
-    add_native(&CacheConfig::hard_ttl, &s_hard_ttl);
-    add_native(&CacheConfig::soft_ttl, &s_soft_ttl);
-    add_native(&CacheConfig::max_resultset_rows, &s_max_resultset_rows);
-    add_native(&CacheConfig::max_resultset_size, &s_max_resultset_size);
-    add_native(&CacheConfig::max_count, &s_max_count);
-    add_native(&CacheConfig::max_size, &s_max_size);
-    add_native(&CacheConfig::rules, &s_rules);
-    add_native(&CacheConfig::debug, &s_debug);
-    add_native(&CacheConfig::thread_model, &s_thread_model);
-    add_native(&CacheConfig::selects, &s_selects);
-    add_native(&CacheConfig::cache_in_trxs, &s_cache_in_trxs);
-    add_native(&CacheConfig::enabled, &s_enabled);
-    add_native(&CacheConfig::invalidate, &s_invalidate);
-    add_native(&CacheConfig::clear_cache_on_parse_errors, &s_clear_cache_on_parse_errors);
-    add_native(&CacheConfig::users, &s_users);
-    add_native(&CacheConfig::timeout, &s_timeout);
+    add_native(&CacheConfig::storage, &cache::storage);
+    add_native(&CacheConfig::storage_options, &cache::storage_options);
+    add_native(&CacheConfig::hard_ttl, &cache::hard_ttl);
+    add_native(&CacheConfig::soft_ttl, &cache::soft_ttl);
+    add_native(&CacheConfig::max_resultset_rows, &cache::max_resultset_rows);
+    add_native(&CacheConfig::max_resultset_size, &cache::max_resultset_size);
+    add_native(&CacheConfig::max_count, &cache::max_count);
+    add_native(&CacheConfig::max_size, &cache::max_size);
+    add_native(&CacheConfig::rules, &cache::rules);
+    add_native(&CacheConfig::debug, &cache::debug);
+    add_native(&CacheConfig::thread_model, &cache::thread_model);
+    add_native(&CacheConfig::selects, &cache::selects);
+    add_native(&CacheConfig::cache_in_trxs, &cache::cache_in_trxs);
+    add_native(&CacheConfig::enabled, &cache::enabled);
+    add_native(&CacheConfig::invalidate, &cache::invalidate);
+    add_native(&CacheConfig::clear_cache_on_parse_errors, &cache::clear_cache_on_parse_errors);
+    add_native(&CacheConfig::users, &cache::users);
+    add_native(&CacheConfig::timeout, &cache::timeout);
 }
 
 CacheConfig::~CacheConfig()
 {
+}
+
+//static
+const config::Specification* CacheConfig::specification()
+{
+    return &cache::specification;
 }
 
 bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
