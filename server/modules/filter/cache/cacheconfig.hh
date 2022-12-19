@@ -59,24 +59,25 @@ public:
 
     using milliseconds = std::chrono::milliseconds;
 
-    std::string          storage;
-    std::string          storage_options;
-    milliseconds         hard_ttl;
-    milliseconds         soft_ttl;
-    int64_t              max_resultset_rows;
-    int64_t              max_resultset_size;
-    int64_t              max_count;
-    int64_t              max_size;
-    std::string          rules;
-    int64_t              debug; // bitmask
-    cache_thread_model_t thread_model;
-    cache_selects_t      selects;
-    cache_in_trxs_t      cache_in_trxs;
-    bool                 enabled;
-    cache_invalidate_t   invalidate;
-    bool                 clear_cache_on_parse_errors;
-    cache_users_t        users;
-    milliseconds         timeout;
+    std::string           storage;
+    std::string           storage_options;
+    milliseconds          hard_ttl;
+    milliseconds          soft_ttl;
+    int64_t               max_resultset_rows;
+    int64_t               max_resultset_size;
+    int64_t               max_count;
+    int64_t               max_size;
+    std::string           rules;
+    int64_t               debug; // bitmask
+    cache_thread_model_t  thread_model;
+    cache_selects_t       selects;
+    cache_in_trxs_t       cache_in_trxs;
+    bool                  enabled;
+    cache_invalidate_t    invalidate;
+    bool                  clear_cache_on_parse_errors;
+    cache_users_t         users;
+    milliseconds          timeout;
+    mxs::ConfigParameters storage_params;
 
     static const config::Specification* specification()
     {
@@ -85,6 +86,9 @@ public:
 
 private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
+    bool is_config_valid(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+    void make_config_adjustements();
 
 private:
     CacheFilter* m_pFilter;

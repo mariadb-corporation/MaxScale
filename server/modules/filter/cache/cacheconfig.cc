@@ -213,10 +213,67 @@ CacheConfig::~CacheConfig()
 
 bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    mxb_assert(nested_params.empty());
+    bool configured = is_config_valid(nested_params);
 
-    bool configured = true;
+    if (configured)
+    {
+        make_config_adjustements();
 
+        // The check for m_pFilter here is for the unit tests that don't allocate a
+        // CacheFilter instance. This should be changed in some way so that the
+        // post-configuration step is handled in a more abstract manner.
+        if (m_pFilter)
+        {
+            configured = m_pFilter->post_configure();
+        }
+    }
+
+    return configured;
+}
+
+bool CacheConfig::is_config_valid(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    bool valid = true;
+
+    auto it = nested_params.find(this->storage);
+
+    if (it != nested_params.end())
+    {
+        if (this->storage_options.empty())
+        {
+            if (nested_params.size() == 1)
+            {
+                this->storage_params = it->second;
+            }
+            else
+            {
+                MXB_ERROR("In section %s, nested parameters can only be provided for %s.",
+                          name().c_str(), this->storage.c_str());
+                valid = false;
+            }
+        }
+        else
+        {
+            MXB_ERROR("In section %s, the storage parameters of %s must either be provided using "
+                      "'storage_options' (deprecated) or using nested parameters (e.g. '%s.server=...').",
+                      name().c_str(), this->storage.c_str(), this->storage.c_str());
+            valid = false;
+        }
+    }
+    else
+    {
+        MXB_WARNING("In section %s, providing storage parameters using 'storage_options' has "
+                    "been deprecated. Use nested parameters (e.g. '%s.server=...') instead.",
+                    name().c_str(), this->storage.c_str());
+
+        valid = Storage::parse_argument_string(this->storage_options, &this->storage_params);
+    }
+
+    return valid;
+}
+
+void CacheConfig::make_config_adjustements()
+{
     if (this->soft_ttl > this->hard_ttl)
     {
         MXB_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
@@ -246,13 +303,4 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
             this->max_resultset_size = this->max_size;
         }
     }
-
-    // The check for m_pFilter here is for the unit tests that don't allocate a CacheFilter instance. This
-    // should be changed in some way so that the post-configuration step is handled in a more abstract manner.
-    if (configured && m_pFilter)
-    {
-        configured = m_pFilter->post_configure();
-    }
-
-    return configured;
 }

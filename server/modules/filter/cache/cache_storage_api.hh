@@ -482,9 +482,6 @@ public:
      */
     virtual cache_result_t get_items(uint64_t* pItems) const = 0;
 
-protected:
-    Storage() {}
-
     /**
      * Split argument string of the format "key1[:value1](, key2[:value2])"
      * into the constituent parts.
@@ -496,6 +493,9 @@ protected:
      */
     static bool parse_argument_string(const std::string& argument_string,
                                       mxs::ConfigParameters* pParameters);
+
+protected:
+    Storage() {}
 
     /**
      * Converts an argument string "host[:port]" to a host string and port number.
