@@ -36,6 +36,12 @@ int main(int argc, char* argv[])
     test.check_maxctrl(cmd_no_filters);
     test.expect(conn.field("SELECT 1") == "1", "Filter should not be applied. Error: %s", conn.error());
 
+    test.expect(conn.send_query("SELECT SLEEP(3)"), "Failed to send query: %s", conn.error());
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    test.check_maxctrl(cmd_one_filter);
+    test.expect(conn.read_query_result(), "Failed to read query result: %s", conn.error());
+    test.expect(conn.field("SELECT 1") == "2", "Filter should be applied");
+
     test.tprintf("Modification of filters under load");
 
     std::atomic<bool> keep_going {true};

@@ -711,7 +711,15 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
 
     if (mxs_mysql_command_will_respond(cmd))
     {
-        type = backend == m_sescmd_replier ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
+        if (backend == m_sescmd_replier)
+        {
+            MXB_INFO("Will return response from '%s' to the client", backend->name());
+            type = mxs::Backend::EXPECT_RESPONSE;
+        }
+        else
+        {
+            type = mxs::Backend::IGNORE_RESPONSE;
+        }
     }
 
     if (backend->write(buffer.release(), type))
@@ -726,6 +734,36 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
     }
 
     return ok;
+}
+
+SRBackend* SchemaRouterSession::get_sescmd_replier()
+{
+    for (const auto& db : m_shard.get_content())
+    {
+        for (auto& tbl : db.second)
+        {
+            for (mxs::Target* t : tbl.second)
+            {
+                for (const auto& b : m_backends)
+                {
+                    if (b->in_use() && b->target() == t)
+                    {
+                        return b.get();
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use())
+        {
+            return b.get();
+        }
+    }
+
+    return nullptr;
 }
 
 /**
@@ -747,13 +785,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
     mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
 
-    for (const auto& b : m_backends)
-    {
-        if (b->in_use() && !m_sescmd_replier)
-        {
-            m_sescmd_replier = b.get();
-        }
-    }
+    m_sescmd_replier = get_sescmd_replier();
 
     for (const auto& b : m_backends)
     {
