@@ -56,10 +56,10 @@ void test_main(TestConnections& test)
         }
         sleep(1);
 
-        check_semisync_status(test, 0, true, false, 3);
         check_semisync_status(test, 1, true, true, 0);
         check_semisync_status(test, 2, true, true, 0);
         check_semisync_status(test, 3, true, true, 0);
+        check_semisync_status(test, 0, true, false, 3);
 
         if (test.ok())
         {

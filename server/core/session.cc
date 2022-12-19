@@ -1252,7 +1252,8 @@ void Session::dump_session_log()
 
 bool Session::routeQuery(GWBUF* buffer)
 {
-    if (is_idle())
+    if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+                    std::mem_fn(&mxs::BackendConnection::is_idle)))
     {
         if (m_restart && m_client_conn->safe_to_restart())
         {

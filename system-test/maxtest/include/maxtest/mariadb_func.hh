@@ -326,6 +326,24 @@ public:
         return execute_query_silent(m_conn, q.c_str()) == 0;
     }
 
+    bool send_query(std::string q)
+    {
+        return mysql_send_query(m_conn, q.c_str(), q.size()) == 0;
+    }
+
+    bool read_query_result()
+    {
+        bool ok = false;
+
+        if (mysql_read_query_result(m_conn) == 0)
+        {
+            mysql_free_result(mysql_use_result(m_conn));
+            ok = true;
+        }
+
+        return ok;
+    }
+
     bool check(std::string q, std::string res)
     {
         Row row = get_row(m_conn, q);
