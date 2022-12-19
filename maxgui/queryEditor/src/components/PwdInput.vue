@@ -1,26 +1,12 @@
 <template>
-    <div>
-        <label class="field__label mxs-color-helper text-small-text label-required">
-            {{ $mxs_t('password') }}
-        </label>
-        <v-text-field
-            v-bind="{ ...$attrs }"
-            :rules="rule"
-            :type="isPwdVisible ? 'text' : 'password'"
-            class="vuetify-input--override error--text__bottom password"
-            autocomplete="new-password"
-            dense
-            :height="36"
-            hide-details="auto"
-            outlined
-            required
-            v-on="$listeners"
-        >
-            <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
-                {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
-            </v-icon>
-        </v-text-field>
-    </div>
+    <mxs-txt-field-with-label
+        v-bind="{ ...$attrs }"
+        :required="true"
+        :type="isPwdVisible ? 'text' : 'password'"
+        autocomplete="new-password"
+        :label="$mxs_t('password')"
+        v-on="$listeners"
+    />
 </template>
 
 <script>
@@ -43,11 +29,6 @@ export default {
     data() {
         return {
             isPwdVisible: false,
-            rule: [
-                val =>
-                    !!val ||
-                    this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('password') }),
-            ],
         }
     },
 }

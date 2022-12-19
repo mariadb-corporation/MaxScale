@@ -1,22 +1,9 @@
 <template>
-    <div>
-        <label
-            class="field__label mxs-color-helper text-small-text"
-            :class="{ 'label-required': $attrs.required }"
-        >
-            {{ $mxs_t('database') }}
-        </label>
-        <v-text-field
-            v-bind="{ ...$attrs }"
-            class="vuetify-input--override error--text__bottom"
-            name="db"
-            dense
-            :height="36"
-            hide-details="auto"
-            outlined
-            v-on="$listeners"
-        />
-    </div>
+    <mxs-txt-field-with-label
+        v-bind="{ ...$attrs }"
+        :label="$mxs_t('database')"
+        v-on="$listeners"
+    />
 </template>
 
 <script>

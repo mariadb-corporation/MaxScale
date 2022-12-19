@@ -1,21 +1,11 @@
 <template>
-    <div>
-        <label class="field__label mxs-color-helper text-small-text label-required">
-            {{ $mxs_t('username') }}
-        </label>
-        <v-text-field
-            v-bind="{ ...$attrs }"
-            :rules="rule"
-            class="vuetify-input--override error--text__bottom user"
-            autocomplete="new-username"
-            dense
-            :height="36"
-            hide-details="auto"
-            outlined
-            required
-            v-on="$listeners"
-        />
-    </div>
+    <mxs-txt-field-with-label
+        v-bind="{ ...$attrs }"
+        :required="true"
+        autocomplete="new-username"
+        :label="$mxs_t('username')"
+        v-on="$listeners"
+    />
 </template>
 
 <script>
@@ -35,14 +25,5 @@
 export default {
     name: 'uid-input',
     inheritAttrs: false,
-    data() {
-        return {
-            rule: [
-                val =>
-                    !!val ||
-                    this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('username') }),
-            ],
-        }
-    },
 }
 </script>

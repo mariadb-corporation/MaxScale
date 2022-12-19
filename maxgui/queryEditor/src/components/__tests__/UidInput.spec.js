@@ -20,7 +20,7 @@ describe(`uid-input - form input tests`, () => {
 
     it(`Should show error message if userID value is empty`, async () => {
         wrapper = mount({ shallow: false, component: UidInput, attrs: { value: 'maxskysql' } })
-        const inputComponent = wrapper.find(`.user`)
+        const inputComponent = wrapper
         await inputChangeMock(inputComponent, '')
         expect(getErrMsgEle(inputComponent).text()).to.be.equals(
             wrapper.vm.$mxs_t('errors.requiredInput', { inputName: wrapper.vm.$mxs_t('username') })

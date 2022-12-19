@@ -24,6 +24,7 @@ import MxsSubMenu from '@share/components/common/MxsSubMenu'
 import MxsTooltipBtn from '@share/components/common/MxsTooltipBtn'
 import MxsTreeview from '@share/components/common/MxsTreeview'
 import MxsTruncateStr from '@share/components/common/MxsTruncateStr'
+import MxsTxtFieldWithLabel from './MxsTxtFieldWithLabel'
 import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
 
 export default {
@@ -40,5 +41,6 @@ export default {
     'mxs-tooltip-btn': MxsTooltipBtn,
     'mxs-treeview': MxsTreeview,
     ...MxsTruncateStr,
+    'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
 }

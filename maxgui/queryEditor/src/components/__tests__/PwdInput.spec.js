@@ -20,7 +20,7 @@ describe(`pwd-input - form input tests`, () => {
 
     it(`Should show error message if pwd value is empty`, async () => {
         wrapper = mount({ shallow: false, component: PwdInput, attrs: { value: 'skysql' } })
-        const inputComponent = wrapper.find(`.password`)
+        const inputComponent = wrapper
         await inputChangeMock(inputComponent, '')
         expect(getErrMsgEle(inputComponent).text()).to.be.equals(
             wrapper.vm.$mxs_t('errors.requiredInput', { inputName: wrapper.vm.$mxs_t('password') })

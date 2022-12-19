@@ -27,6 +27,7 @@ import MxsSubMenu from './MxsSubMenu'
 import MxsTooltipBtn from './MxsTooltipBtn'
 import MxsTreeview from './MxsTreeview'
 import MxsTruncateStr from './MxsTruncateStr'
+import MxsTxtFieldWithLabel from './MxsTxtFieldWithLabel'
 import MxsVirtualScrollTbl from './MxsVirtualScrollTbl'
 import PageWrapper from './PageWrapper'
 import Parameters from './Parameters'
@@ -55,6 +56,7 @@ export default {
     'mxs-tooltip-btn': MxsTooltipBtn,
     'mxs-treeview': MxsTreeview,
     ...MxsTruncateStr,
+    'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
     'page-wrapper': PageWrapper,
     ...Parameters,
