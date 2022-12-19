@@ -1560,7 +1560,7 @@ void RedisStorage::finalize()
 }
 
 // static
-bool RedisStorage::get_limits(const string&, Limits* pLimits)
+bool RedisStorage::get_limits(const mxs::ConfigParameters&, Limits* pLimits)
 {
     *pLimits = this_unit.default_limits;
     return true;
@@ -1569,7 +1569,7 @@ bool RedisStorage::get_limits(const string&, Limits* pLimits)
 //static
 RedisStorage* RedisStorage::create(const string& name,
                                    const Config& config,
-                                   const string& argument_string)
+                                   const mxs::ConfigParameters& parameters)
 {
     RedisStorage* pStorage = nullptr;
 
@@ -1585,17 +1585,13 @@ RedisStorage* RedisStorage::create(const string& name,
                     "a maximum number of items in the cache storage.");
     }
 
-    mxs::ConfigParameters parameters;
-    if (Storage::parse_argument_string(argument_string, &parameters))
+    RedisConfig redis_config(name);
+    if (RedisConfig::specification().validate(&redis_config, parameters))
     {
-        RedisConfig redis_config(name);
-        if (RedisConfig::specification().validate(&redis_config, parameters))
-        {
-            MXB_AT_DEBUG(bool success =) redis_config.configure(parameters);
-            mxb_assert(success);
+        MXB_AT_DEBUG(bool success =) redis_config.configure(parameters);
+        mxb_assert(success);
 
-            pStorage = new(std::nothrow) RedisStorage(name, config, std::move(redis_config));
-        }
+        pStorage = new(std::nothrow) RedisStorage(name, config, std::move(redis_config));
     }
 
     return pStorage;

@@ -148,15 +148,15 @@ StorageFactory* StorageFactory::open(const char* zName)
     return pFactory;
 }
 
-bool StorageFactory::get_limits(const std::string& arguments, StorageLimits* pLimits) const
+bool StorageFactory::get_limits(const mxs::ConfigParameters& parameters, StorageLimits* pLimits) const
 {
     mxb_assert(m_pModule);
-    return m_pModule->get_limits(arguments, pLimits);
+    return m_pModule->get_limits(parameters, pLimits);
 }
 
 Storage* StorageFactory::create_storage(const char* zName,
                                         const Storage::Config& config,
-                                        const std::string& arguments)
+                                        const mxs::ConfigParameters& parameters)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -164,10 +164,10 @@ Storage* StorageFactory::create_storage(const char* zName,
     switch (m_kind)
     {
     case CACHE_STORAGE_PRIVATE:
-        return create_private_storage(zName, config, arguments);
+        return create_private_storage(zName, config, parameters);
 
     case CACHE_STORAGE_SHARED:
-        return create_shared_storage(zName, config, arguments);
+        return create_shared_storage(zName, config, parameters);
     }
 
     mxb_assert(!true);
@@ -176,17 +176,17 @@ Storage* StorageFactory::create_storage(const char* zName,
 
 Storage* StorageFactory::create_raw_storage(const char* zName,
                                             const Storage::Config& config,
-                                            const std::string& arguments)
+                                            const mxs::ConfigParameters& parameters)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
 
-    return m_pModule->create_storage(zName, config, arguments);
+    return m_pModule->create_storage(zName, config, parameters);
 }
 
 Storage* StorageFactory::create_private_storage(const char* zName,
                                                 const Storage::Config& config,
-                                                const std::string& arguments)
+                                                const mxs::ConfigParameters& parameters)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -223,7 +223,7 @@ Storage* StorageFactory::create_private_storage(const char* zName,
         }
     }
 
-    Storage* pStorage = create_raw_storage(zName, storage_config, arguments);
+    Storage* pStorage = create_raw_storage(zName, storage_config, parameters);
 
     if (pStorage)
     {
@@ -267,7 +267,7 @@ Storage* StorageFactory::create_private_storage(const char* zName,
 
 Storage* StorageFactory::create_shared_storage(const char* zName,
                                                const Storage::Config& config,
-                                               const std::string& arguments)
+                                               const mxs::ConfigParameters& parameters)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -302,5 +302,5 @@ Storage* StorageFactory::create_shared_storage(const char* zName,
         storage_config.max_size = 0;
     }
 
-    return create_raw_storage(zName, storage_config, arguments);
+    return create_raw_storage(zName, storage_config, parameters);
 }

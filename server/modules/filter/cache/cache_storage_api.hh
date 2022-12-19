@@ -531,12 +531,13 @@ public:
     /**
      * Returns the limits of a storage created with this factory.
      *
-     * @param arguments  Arguments for the storage.
+     * @param parameters Parameters for the storage.
      * @param pLimits    Pointer to object that will be updated.
      *
      * @return True, if the arguments were valid and sufficient, false otherwise.
      */
-    virtual bool get_limits(const std::string& arguments, Storage::Limits* pLimits) const = 0;
+    virtual bool get_limits(const mxs::ConfigParameters& parameters,
+                            Storage::Limits* pLimits) const = 0;
 
     /**
      * Creates an instance of cache storage. This function should, if necessary,
@@ -545,16 +546,15 @@ public:
      *
      * @param name       The name of the cache instance.
      * @param config     The storage configuration.
-     * @param arguments  Array of arguments, as passed in the `storage_options`
-     *                   parameter in the cache section in the MaxScale configuration
-     *                   file.
+     * @param parameters The parameters of the storage, passed as nested parameters
+     *                   in the cache section in the MaxScale configuration file.
      *
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
     virtual Storage* create_storage(const char* name,
                                     const Storage::Config& config,
-                                    const std::string& arguments) = 0;
+                                    const mxs::ConfigParameters& parameters) = 0;
 };
 
 

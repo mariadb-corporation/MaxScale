@@ -26,11 +26,11 @@ public:
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
-    static bool get_limits(const std::string& arguments, Limits* pLimits);
+    static bool get_limits(const mxs::ConfigParameters& parameters, Limits* pLimits);
 
     static RedisStorage* create(const std::string& name,
                                 const Config& config,
-                                const std::string& arguments);
+                                const mxs::ConfigParameters& parameters);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
 

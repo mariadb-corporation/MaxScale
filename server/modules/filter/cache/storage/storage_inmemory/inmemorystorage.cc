@@ -67,7 +67,7 @@ void InMemoryStorage::finalize()
 }
 
 //static
-bool InMemoryStorage::get_limits(const std::string&, Limits* pLimits)
+bool InMemoryStorage::get_limits(const mxs::ConfigParameters&, Limits* pLimits)
 {
     *pLimits = this_unit.default_limits;
     return true;
@@ -76,7 +76,7 @@ bool InMemoryStorage::get_limits(const std::string&, Limits* pLimits)
 //static
 InMemoryStorage* InMemoryStorage::create(const char* zName,
                                          const Config& config,
-                                         const std::string& arguments)
+                                         const mxs::ConfigParameters& parameters)
 {
     mxb_assert(zName);
 
@@ -94,10 +94,10 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
                     (unsigned long)config.max_size);
     }
 
-    if (!arguments.empty())
+    if (!parameters.empty())
     {
-        MXB_WARNING("Arguments '%s' provided, although 'storage_inmemory' does not "
-                    "accept any arguments.", arguments.c_str());
+        MXB_WARNING("Parameters provided, although 'storage_inmemory' does not "
+                    "accept any parameters.");
     }
 
     unique_ptr<InMemoryStorage> sStorage;

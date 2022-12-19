@@ -28,17 +28,17 @@ public:
         StorageType::finalize();
     }
 
-    bool get_limits(const std::string& arguments, Storage::Limits* pLimits) const override final
+    bool get_limits(const mxs::ConfigParameters& parameters, Storage::Limits* pLimits) const override final
     {
-        return StorageType::get_limits(arguments, pLimits);
+        return StorageType::get_limits(parameters, pLimits);
     }
 
     Storage* create_storage(const char* zName,
                             const Storage::Config& config,
-                            const std::string& arguments) override final
+                            const mxs::ConfigParameters& parameters) override final
     {
         mxb_assert(zName);
 
-        return StorageType::create(zName, config, arguments);
+        return StorageType::create(zName, config, parameters);
     }
 };

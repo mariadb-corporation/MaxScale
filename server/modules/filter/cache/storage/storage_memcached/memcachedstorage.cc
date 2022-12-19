@@ -499,39 +499,32 @@ void MemcachedStorage::finalize()
 }
 
 //static
-bool MemcachedStorage::get_limits(const std::string& argument_string, Limits* pLimits)
+bool MemcachedStorage::get_limits(const mxs::ConfigParameters& parameters, Limits* pLimits)
 {
-    bool rv = false;
+    bool rv = true;
 
-    mxs::ConfigParameters parameters;
+    int max_value_size = DEFAULT_MAX_VALUE_SIZE;
 
-    if (Storage::parse_argument_string(argument_string, &parameters))
+    string value = parameters.get_string(CN_MEMCACHED_MAX_VALUE_SIZE);
+
+    if (!value.empty())
     {
-        rv = true;
-
-        int max_value_size = DEFAULT_MAX_VALUE_SIZE;
-
-        string value = parameters.get_string(CN_MEMCACHED_MAX_VALUE_SIZE);
-
-        if (!value.empty())
+        uint64_t size;
+        if (get_suffixed_size(value, &size) && (size <= std::numeric_limits<uint32_t>::max()))
         {
-            uint64_t size;
-            if (get_suffixed_size(value, &size) && (size <= std::numeric_limits<uint32_t>::max()))
-            {
-                max_value_size = size;
-            }
-            else
-            {
-                MXB_ERROR("'%s' is not a valid value for '%s'.",
-                          value.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
-                rv = false;
-            }
+            max_value_size = size;
         }
-
-        if (rv)
+        else
         {
-            *pLimits = Limits(max_value_size);
+            MXB_ERROR("'%s' is not a valid value for '%s'.",
+                      value.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
+            rv = false;
         }
+    }
+
+    if (rv)
+    {
+        *pLimits = Limits(max_value_size);
     }
 
     return rv;
@@ -540,7 +533,7 @@ bool MemcachedStorage::get_limits(const std::string& argument_string, Limits* pL
 //static
 MemcachedStorage* MemcachedStorage::create(const string& name,
                                            const Config& config,
-                                           const std::string& argument_string)
+                                           const mxs::ConfigParameters& original_parameters)
 {
     MemcachedStorage* pStorage = nullptr;
 
@@ -562,72 +555,64 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
                         "a maximum number of items in the cache storage.");
         }
 
-        mxs::ConfigParameters parameters;
+        mxs::ConfigParameters parameters = original_parameters; // TODO: Take config::Configuration into use
+        bool error = false;
 
-        if (Storage::parse_argument_string(argument_string, &parameters))
+        mxb::Host host;
+        int max_value_size = DEFAULT_MAX_VALUE_SIZE;
+
+        string value;
+
+        value = parameters.get_string(CN_STORAGE_ARG_SERVER);
+        if (!value.empty())
         {
-            bool error = false;
-
-            mxb::Host host;
-            int max_value_size = DEFAULT_MAX_VALUE_SIZE;
-
-            string value;
-
-            value = parameters.get_string(CN_STORAGE_ARG_SERVER);
-            if (!value.empty())
+            if (!Storage::get_host(value, DEFAULT_MEMCACHED_PORT, &host))
             {
-                if (!Storage::get_host(value, DEFAULT_MEMCACHED_PORT, &host))
-                {
-                    error = true;
-                }
-
-                parameters.remove(CN_STORAGE_ARG_SERVER);
-            }
-            else
-            {
-                MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
                 error = true;
             }
 
-            value = parameters.get_string(CN_MEMCACHED_MAX_VALUE_SIZE);
-            if (!value.empty())
-            {
-                uint64_t size;
-                if (get_suffixed_size(value, &size) && (size <= std::numeric_limits<uint32_t>::max()))
-                {
-                    max_value_size = size;
-                }
-                else
-                {
-                    MXB_ERROR("'%s' is not a valid value for '%s'.",
-                              value.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
-                    error = true;
-                }
-
-                parameters.remove(CN_MEMCACHED_MAX_VALUE_SIZE);
-            }
-
-            for (const auto& kv : parameters)
-            {
-                MXB_WARNING("Unknown `storage_memcached` argument: %s=%s",
-                            kv.first.c_str(), kv.second.c_str());
-            }
-
-            if (!error)
-            {
-                MXB_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
-                           max_value_size, name.c_str());
-
-                pStorage = new (std::nothrow) MemcachedStorage(name,
-                                                               config,
-                                                               host.address(),
-                                                               host.port(),
-                                                               max_value_size);
-            }
+            parameters.remove(CN_STORAGE_ARG_SERVER);
         }
         else
         {
-            MXB_ERROR("Invalid argument string: '%s'", argument_string.c_str());
+            MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
+            error = true;
+        }
+
+        value = parameters.get_string(CN_MEMCACHED_MAX_VALUE_SIZE);
+        if (!value.empty())
+        {
+            uint64_t size;
+            if (get_suffixed_size(value, &size) && (size <= std::numeric_limits<uint32_t>::max()))
+            {
+                max_value_size = size;
+            }
+            else
+            {
+                MXB_ERROR("'%s' is not a valid value for '%s'.",
+                          value.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
+                error = true;
+            }
+
+            parameters.remove(CN_MEMCACHED_MAX_VALUE_SIZE);
+        }
+
+        for (const auto& kv : parameters)
+        {
+            MXB_WARNING("Unknown `storage_memcached` argument: %s=%s",
+                        kv.first.c_str(), kv.second.c_str());
+        }
+
+        if (!error)
+        {
+            MXB_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
+                       max_value_size, name.c_str());
+
+            pStorage = new (std::nothrow) MemcachedStorage(name,
+                                                           config,
+                                                           host.address(),
+                                                           host.port(),
+                                                           max_value_size);
         }
     }
 

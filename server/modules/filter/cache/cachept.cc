@@ -74,7 +74,7 @@ void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 
 void CachePT::get_limits(Storage::Limits* pLimits) const
 {
-    MXB_AT_DEBUG(bool rv=) m_sFactory->get_limits(m_config.storage_options, pLimits);
+    MXB_AT_DEBUG(bool rv=) m_sFactory->get_limits(m_config.storage_params, pLimits);
     mxb_assert(rv);
 }
 

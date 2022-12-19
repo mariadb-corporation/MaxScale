@@ -58,12 +58,12 @@ public:
     /**
      * Returns the limits of a storage created with this factory.
      *
-     * @param arguments  Arguments for the storage.
+     * @param parameters Parameters for the storage.
      * @param pLimits    Pointer to object that will be updated.
      *
-     * @return True, if the arguments were valid and sufficient, false otherwise.
+     * @return True, if the parameters were valid and sufficient, false otherwise.
      */
-    bool get_limits(const std::string& arguments, StorageLimits* pLimits) const;
+    bool get_limits(const mxs::ConfigParameters& parameters, StorageLimits* pLimits) const;
 
     /**
      * Create storage instance.
@@ -75,13 +75,13 @@ public:
      *
      * @param zName      The name of the storage.
      * @param config     The storagfe configuration.
-     * @param arguments  Storage specific arguments.
+     * @param parameters Storage specific parameters.
      *
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_storage(const char* zName,
                             const Storage::Config& config,
-                            const std::string& arguments = std::string());
+                            const mxs::ConfigParameters& parameters = mxs::ConfigParameters());
 
     /**
      * Create raw storage instance.
@@ -93,13 +93,13 @@ public:
      *
      * @param zName      The name of the storage.
      * @param config     The storagfe configuration.
-     * @param arguments  Storage specific arguments.
+     * @param parameters Storage specific parameters.
      *
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_raw_storage(const char* zName,
                                 const Storage::Config& config,
-                                const std::string& arguments = std::string());
+                                const mxs::ConfigParameters& parameters = mxs::ConfigParameters());
 
 private:
     StorageFactory(void* handle,
@@ -109,11 +109,11 @@ private:
 
     Storage* create_private_storage(const char* zName,
                                     const Storage::Config& config,
-                                    const std::string& arguments);
+                                    const mxs::ConfigParameters& parameters);
 
     Storage* create_shared_storage(const char* zName,
                                    const Storage::Config& config,
-                                   const std::string& arguments);
+                                   const mxs::ConfigParameters& parameters);
 
 private:
     void*                m_handle;        /*< dl handle of storage. */

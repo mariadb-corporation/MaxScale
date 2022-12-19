@@ -94,9 +94,9 @@ CacheST* CacheST::create(const std::string& name,
                                    pConfig->invalidate,
                                    pConfig->timeout);
 
-    const auto& storage_arguments = pConfig->storage_options;
+    const auto& storage_params = pConfig->storage_params;
 
-    Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, storage_arguments);
+    Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, storage_params);
 
     if (pStorage)
     {
