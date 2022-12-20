@@ -22,6 +22,8 @@
 * Ed25519Auth-plugin added. The plugin enables authentication with the
   MariaDB Server ed25519 authentication plugin.
 * Authentication can now be enabled when Redis is used as the cache storage.
+* SSL/TLS can now be used in the communication between MaxScale and Redis
+  when Redis is used as the storage for the cache.
 
 ## MariaDB MaxScale 22.08
 
