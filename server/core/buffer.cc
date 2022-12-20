@@ -277,8 +277,19 @@ GWBUF GWBUF::split(uint64_t n_bytes)
     }
     else
     {
-        // Shallow clone buffer, then consume and trim accordingly.
-        rval = *this;
+        // Shallow clone buffer, then consume and trim accordingly. As the data is split, many of the
+        // fields revert to default values on both fragments.
+        rval.m_sbuf = m_sbuf;
+        rval.m_start = m_start;
+        rval.m_end = m_end;
+
+        hints.clear();
+        m_type = TYPE_UNDEFINED;
+        m_id = 0;
+        m_stmt_info = nullptr;
+        m_sql.clear();
+        m_canonical.clear();
+
         consume(n_bytes);
         rval.rtrim(len - n_bytes);
     }
