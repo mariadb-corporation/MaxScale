@@ -214,9 +214,14 @@ See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
 
+**NOTE** Deprecated in 23.02.
+
 A string that is provided verbatim to the storage module specified in `storage`,
 when the module is loaded. Note that the needed arguments and their format depend
 upon the specific module.
+
+From 23.02 onwards, the storage module configuration should be provided using
+nested parameters.
 
 #### `hard_ttl`
 
@@ -1154,24 +1159,48 @@ there can be unintended sharing.
 ```
 storage=storage_memcached
 ```
-`storage_memcache` has the following mandatory arguments:
+`storage_memcache` has the following parameters:
 
-* `server` using which the location of the server is specified as `host[:port]`.
-  If no port is provided, the default Memcached port of `11211` is used.
+#### `server`
 
-`storage_memcached` has the following optional arguments:
+- **Type**: The Memcached server address specified as `host[:port]`
+- **Mandatory**: Yes
+- **Dynamic**: No
 
-* `max_value_size` using which the maximum size of a cached value is specified.
-  By default, the maximum size of a value stored to memcached is 1MB, but that
-  configured to be something else. The value of `max_value_size` will be used
-  for capping `max_resultset_size`, that is, unless memcached is configured to
-  allow larger  values that 1M and `max_value_size` has been set accordingly,
-  only resultsets up to 1MB in size will be cached. The value can be specified
-  as documented [here](../Getting-Started/Configuration-Guide.md/#sizes).
+If no port is provided, then the default port `11211` will be used.
 
-Example:
+#### `max_value_size`
+
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: 1Mi
+
+By default, the maximum size of a value stored to memcached is 1MiB, but that
+can be configured to something else, in which case this parameter should be
+set accordingly.
+
+The value of `max_value_size` will be used for capping `max_resultset_size`,
+that is, if memcached has been configured to allow larger values than 1MiB
+but `max_value_size` has not been set accordingly, only resultsets up to 1MiB
+in size will be cached.
+
+#### Example
+
+From MaxScale 23.02 onwards, the storage configuration should be provided
+as nested parameters.
 ```
-storage_options="server=192.168.1.31:11211, max_value_size=10M"
+[Cache-Filter]
+type=filter
+module=cache
+storage=storage_memcached
+storage_memcached.server=192.168.1.31
+storage_memcached.max_value_size=10M
+```
+Although _deprecated_ in 23.02, the configuration can also be provided
+using `storage_options`:
+```
+storage_options="server=192.168.1.31,max_value_size=10M"
 ```
 #### Limitations
 * Invalidation is not supported.
@@ -1186,6 +1215,10 @@ memcached server or to the network have access to the cached data.
 
 This storage module uses [redis](https://redis.io/) for storing the
 cached data.
+
+Note that Redis should be configured with no idle timeout or with a timeout that
+is very large. Otherwise MaxScale may have to repeatedly connect to Redis, which
+will hurt both the functionality and the performance.
 
 Multiple MaxScale instances can share the same redis server and items
 cached by one MaxScale instance will be used by the other. Note that all
@@ -1207,34 +1240,120 @@ the delay will stay at one minute. Note that each time a reconnection attempt
 is made, unless the reason for the timeout has disappeared, the client will be
 stalled for `timeout` seconds.
 
-`storage_redis` has the following mandatory arguments:
+`storage_redis` has the following parameters:
 
-* `server` using which the location of the server is specified as `host[:port]`.
-  If no port is provided, the default Redis port of `6379` is used.
+#### `server`
 
-`storage_redis` has the following optional arguments:
-* `username` using which the username to be used when authenticating against
-   Redis is specified.
-* `password` using which the password to be used when authenticating against
-   Redis is specified.
+- **Type**: The Redis server address specified as `host[:port]`
+- **Mandatory**: Yes
+- **Dynamic**: No
 
-Note that if the authentication is specified using `requirepass`, then only
-the _password_ should be provided. If the Redis server version is 6 or higher
-and the _Redis ACL system_ is used, then both _username_ and _password_ should
-be provided.
+If no port is provided, then the default port `6379` will be used.
 
-Note that as the arguments are separated by `,`, neither username, nor password
-can contain `,`.
+#### `username`
 
-Example:
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+Please see [authentication](#authentication) for more information.
+
+#### `password`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+Please see [authentication](#authentication) for more information.
+
+#### `ssl`
+
+- **Type**: boolean
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+Please see [ssl](#ssl-1) for more information.
+
+#### `ssl_cert`
+
+- **Type**: Path to existing readable file.
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+The SSL client certificate that MaxScale should use with the Redis
+server. The certificate must match the key defined in `ssl_key`.
+
+Please see [ssl](#ssl-1) for more information.
+
+#### `ssl_key`
+
+- **Type**: Path to existing readable file.
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+The SSL client private key MaxScale should use with the Redis server.
+
+Please see [ssl](#ssl-1) for more information.
+
+#### `ssl_ca`
+
+- **Type**: Path to existing readable file.
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+The Certificate Authority (CA) certificate for the CA that signed the
+certificate specified with `ssl_cert`.
+
+Please see [ssl](#ssl-1) for more information.
+
+#### Authentication
+
+If `password` is provided, MaxScale will authenticate against Redis when a connection
+has been created. The authentication is performed using the
+[auth](https://redis.io/commands/auth/) command, with only the `password` as argument,
+if no `username` was provided in the configuration, or `username` and `password` as
+arguments, if both were.
+
+Note that if the authentication is in the Redis configuration file
+specified using `requirepass`, then only the _password_ should be provided.
+If the Redis server version is 6 or higher and the _Redis ACL system_ is used,
+then both _username_ and _password_ must be provided.
+
+#### SSL
+
+If `ssl_key`, `ssl_cert` and `ssl_ca` are provided, then SSL/TLS will be used
+in the communication with the Redis server, if `ssl` is set to `true`.
+
+Note that the SSL/TLS support is only available in Redis from version 6
+onwards and that the support is not by default built into Redis, but has
+to be specifically enabled at compile time as explained
+[here](https://redis.io/docs/management/security/encryption/).
+
+#### Example
+
+From MaxScale 23.02 onwards, the storage configuration should be provided
+as nested parameters.
 ```
-storage_options="server=192.168.1.31:6379"
+[Cache-Filter]
+type=filter
+module=cache
+storage=storage_redis
+storage_redis.server=192.168.1.31
+storage_redis.username=hello
+storage_redis.password=world
 ```
 
-Note that Redis should be configured with no idle timeout or with a timeout that
-is very large. Otherwise MaxScale may have to repeatedly connect to Redis, which
-will hurt both the functionality and the performance.
-
+Although _deprecated_ in 23.02, the configuration can also be provided
+using `storage_options`:
+```
+storage_options="server=192.168.1.31,username=hello,password=world"
+```
 #### Limitations
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
 * Configuration values given to `max_size` and `max_count` are ignored.
@@ -1252,9 +1371,11 @@ $ redis-cli flushall
 ```
 
 #### Security
-_Neither_ the data in the redis server _nor_ the traffic between MaxScale and
-the redis server is encrypted. Consequently, _anybody_ with access to the
-redis server or to the network have access to the cached data.
+The data in the redis server is _not_ encrypted. Consequently, _anybody_ with
+access to the redis server has access to the cached data.
+
+Unless [SSL](#ssl) has been enabled, _anybody_ with access to the network has
+access to the cached data.
 
 ## Example
 
