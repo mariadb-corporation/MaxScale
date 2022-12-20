@@ -236,7 +236,7 @@ bool Specification::validate(const Configuration* pConfig,
                     }
                 }
 
-                if (!param_valid && !unrecognized.empty())
+                if (!param_valid || !unrecognized.empty())
                 {
                     valid = false;
                 }
@@ -378,7 +378,7 @@ bool Specification::validate(const Configuration* pConfig,
                     }
                 }
 
-                if (!param_valid && !unrecognized.empty())
+                if (!param_valid || !unrecognized.empty())
                 {
                     valid = false;
                 }
@@ -561,7 +561,8 @@ bool Param::validate_parameters(const std::string& value,
         *pUnrecognized = params;
     }
 
-    return pUnrecognized == nullptr;
+    // No nested parameters for a parameter not taking nested parameters is valid.
+    return params.empty();
 }
 
 bool Param::validate_parameters(const std::string& value,
@@ -578,7 +579,8 @@ bool Param::validate_parameters(const std::string& value,
         }
     }
 
-    return pUnrecognized == nullptr;
+    // No nested parameters for a parameter not taking nested parameters is valid.
+    return json_object_size(pParams) == 0;
 }
 
 Param::Modifiable Param::modifiable() const
