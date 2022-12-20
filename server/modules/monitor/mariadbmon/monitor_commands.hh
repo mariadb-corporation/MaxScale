@@ -136,6 +136,7 @@ private:
 
     int                  m_rebuild_port {0};
     std::chrono::seconds m_ssh_timeout {0};
+    std::chrono::seconds m_port_open_delay {0};
 
     ssh_util::SSession m_target_ses;
     ssh_util::SSession m_source_ses;

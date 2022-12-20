@@ -1569,26 +1569,58 @@ void RebuildServer::test_datalink()
     using Status = ssh_util::AsyncCmd::Status;
     auto& error_out = m_result.output;
     bool success = false;
-    // Test the datalink between source and target by steaming some bytes.
+    // Test the datalink between source and target by streaming some bytes.
     string test_serve_cmd = mxb::string_printf("socat -u EXEC:'echo %s' TCP-LISTEN:%i,reuseaddr",
                                                link_test_msg, m_rebuild_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, test_serve_cmd);
     if (cmd_handle)
     {
+        // According to testing, the listen port sometimes takes a bit of time to actually open.
+        // To account for this, try to connect a few times before giving up.
         string test_receive_cmd = mxb::string_printf("socat -u TCP:%s:%i,connect-timeout=%i STDOUT",
                                                      m_source->server->address(), m_rebuild_port,
                                                      socat_timeout_s);
-        auto res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
+        ssh_util::CmdResult res;
+        const int max_tries = 5;
+        for (int i = 0; i < max_tries; i++)
+        {
+            res = ssh_util::run_cmd(*m_target_ses, test_receive_cmd, m_ssh_timeout);
+            if (res.type == RType::OK)
+            {
+                if (res.rc == 0)
+                {
+                    m_port_open_delay = i * 1s;
+                    break;
+                }
+                else if (i + 1 < max_tries)
+                {
+                    sleep(1);
+                }
+            }
+            else
+            {
+                // Unexpected error.
+                break;
+            }
+        }
+
         if (res.type == RType::OK && res.rc == 0)
         {
             mxb::trim(res.output);
             bool data_ok = (res.output == link_test_msg);
-            auto source_status = cmd_handle->update_status();
-            if (source_status == Status::BUSY)
+            // Wait for the source to quit. Usually happens immediately.
+            auto source_status = Status::BUSY;
+            for (int i = 0; i < max_tries; i++)
             {
-                // Maybe source is slow to quit?
-                sleep(1);
                 source_status = cmd_handle->update_status();
+                if (source_status == Status::BUSY && (i + 1 < max_tries))
+                {
+                    sleep(1);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             if (data_ok && source_status == Status::READY)
@@ -1658,6 +1690,8 @@ bool RebuildServer::serve_backup()
             rval = true;
             m_source_cmd = move(cmd_handle);
             MXB_NOTICE("%s serving backup on port %i.", m_source->name(), m_rebuild_port);
+            // Wait a bit more to ensure listen port is open.
+            sleep(m_port_open_delay.count() + 1);
         }
         else if (status == ssh_util::AsyncCmd::Status::READY)
         {
@@ -1705,7 +1739,7 @@ bool RebuildServer::prepare_target()
         if (run_cmd_on_target("sudo systemctl stop mariadb", "stop MariaDB Server")
             && run_cmd_on_target(clear_datadir, "empty data directory"))
         {
-            MXB_NOTICE("MariaDB Server on %s stopped, data and log directories cleared.", m_target->name());
+            MXB_NOTICE("MariaDB Server %s stopped, data and log directories cleared.", m_target->name());
             target_prepared = true;
         }
     }
