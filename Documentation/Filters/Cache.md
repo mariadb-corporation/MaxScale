@@ -225,52 +225,59 @@ nested parameters.
 
 #### `hard_ttl`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0s` (no limit)
+
 _Hard time to live_; the maximum amount of time the cached
 result is used before it is discarded and the result is fetched from the
-backend (and cached). See also `soft_ttl` below.
+backend (and cached). See also [soft_ttl](#soft_ttl).
 
 ```
 hard_ttl=60s
 ```
-The default value is `0s`, which means no limit.
-
-The duration can be specified as explained
-[here](../Getting-Started/Configuration-Guide.md#durations).
-If no explicit unit has been specified, the value is interpreted as seconds
-in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
 
 #### `soft_ttl`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0s` (no limit)
 
 _Soft time to live_; the amount of time - in seconds - the cached result is
 used before it is refreshed from the server. When `soft_ttl` has passed, the
 result will be refreshed when the _first_ client requests the value.
 
-However, as long as `hard_ttl` has not passed, _all_ other clients requesting
-the same value will use the result from the cache while it is being fetched
-from the backend. That is, as long as `soft_ttl` but not `hard_ttl` has passed,
-even if several clients request the same value at the same time, there will be
-just one request to the backend.
+However, as long as [hard_ttl](#hard_ttl) has not passed, _all_ other clients
+requesting the same value will use the result from the cache while it is being
+fetched from the backend. That is, as long as `soft_ttl` but not `hard_ttl`
+has passed, even if several clients request the same value at the same time,
+there will be just one request to the backend.
 ```
 soft_ttl=60s
 ```
-The default value is `0`, which means no limit. If the value of `soft_ttl` is
-larger than `hard_ttl` it will be adjusted down to the same value.
-
-The duration can be specified as explained
-[here](../Getting-Started/Configuration-Guide.md#durations).
-If no explicit unit has been specified, the value is interpreted as seconds
-in MaxScale 2.4. In subsequent versions a value without a unit may be rejected.
+If the value of `soft_ttl` is larger than `hard_ttl` it will be adjusted
+down to the same value.
 
 #### `max_resultset_rows`
+
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0` (no limit)
 
 Specifies the maximum number of rows a resultset can have in order to be
 stored in the cache. A resultset larger than this, will not be stored.
 ```
 max_resultset_rows=1000
 ```
-The default value is `0`, which means no limit.
-
 #### `max_resultset_size`
+
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0` (no limit)
 
 Specifies the maximum size of a resultset, for it to be stored in the cache.
 A resultset larger than this, will not be stored. The size can be specified
@@ -278,12 +285,16 @@ as described [here](../Getting-Started/Configuration-Guide.md#sizes).
 ```
 max_resultset_size=128Ki
 ```
-The default value is `0`, which means no limit.
 
 Note that the value of `max_resultset_size` should not be larger than the
 value of `max_size`.
 
 #### `max_count`
+
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0` (no limit)
 
 The maximum number of items the cache may contain. If the limit has been
 reached and a new item should be stored, then an older item will be evicted.
@@ -295,14 +306,16 @@ of `max_count`.
 ```
 max_count=1000
 ```
-The default value is `0`, which means no limit.
 
 #### `max_size`
 
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0` (no limit)
+
 The maximum size the cache may occupy. If the limit has been reached and a new
 item should be stored, then some older item(s) will be evicted to make space.
-The size can be specified as described
-[here](../Getting-Started/Configuration-Guide.md#sizes).
 
 Note that if `cached_data` is `thread_specific` then this limit will be
 applied to each cache _separately_. That is, if a thread specific cache
@@ -310,9 +323,13 @@ is used, then the total size is #threads * the value of `max_size`.
 ```
 max_size=100Mi
 ```
-The default value is `0`, which means no limit.
 
 #### `rules`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""` (no rules)
 
 Specifies the path of the file where the caching rules are stored. A relative
 path is interpreted relative to the _data directory_ of MariaDB MaxScale.
@@ -426,6 +443,11 @@ same effect as changing the isolation level of the backend to `read_committed`.
 
 #### `debug`
 
+- **Type**: number
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0`
+
 An integer value, using which the level of debug logging made by the cache
 can be controlled. The value is actually a bitfield with different bits
 denoting different logging.
@@ -445,12 +467,15 @@ debug=31
 
 #### `enabled`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `true`
+
 Specifies whether the cache is initially enabled or disabled.
 ```
 enabled=false
 ```
-Default is `true`.
-
 The value affects the initial state of the MaxScale user
 variables using which the behaviour of the cache can be modified
 at runtime. Please see
@@ -489,6 +514,11 @@ of who has caused them, then a combination of `invalidate=current`
 and `cached_data=shared` _must_ be used.
 
 #### `clear_cache_on_parse_errors`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `true`
 
 This boolean option specifies how the cache should behave in case of
 parsing errors when invalidation has been enabled.
@@ -530,17 +560,17 @@ cause more traffic to the backend compared to a `mixed` cache.
 
 #### `timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `5s`
+
 The _timeout_ used when performing operations to distributed storages
 such as _redis_ or _memcached_.
 
 ```
 timeout=7000ms
 ```
-
-The default value is `5000ms`, that is 5 seconds.
-
-The duration can be specified as explained
-[here](../Getting-Started/Configuration-Guide.md#durations).
 
 ### Runtime Configuration
 
@@ -1270,7 +1300,7 @@ Please see [authentication](#authentication) for more information.
 
 #### `ssl`
 
-- **Type**: boolean
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
 - **Dynamic**: No
 - **Default**: `false`
