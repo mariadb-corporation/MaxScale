@@ -23,6 +23,8 @@ public:
     MemcachedStorage(const MemcachedStorage&) = delete;
     MemcachedStorage& operator=(const MemcachedStorage&) = delete;
 
+    static const mxs::config::Specification& specification();
+
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 

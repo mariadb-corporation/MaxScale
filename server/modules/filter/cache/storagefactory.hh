@@ -33,6 +33,11 @@ public:
     }
 
     /**
+     * @return The specification of the storage created by this factory.
+     */
+    const mxs::config::Specification& specification() const;
+
+    /**
      * The capabilities of storages created using this factory.
      * These capabilities may be a superset of those reported
      * by @c storage_capabilities.

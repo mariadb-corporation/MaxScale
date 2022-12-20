@@ -41,4 +41,9 @@ public:
 
         return StorageType::create(zName, config, parameters);
     }
+
+    const mxs::config::Specification& specification() const override final
+    {
+        return StorageType::specification();
+    }
 };

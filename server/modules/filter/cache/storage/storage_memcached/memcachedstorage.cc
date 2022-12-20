@@ -479,6 +479,12 @@ MemcachedStorage::~MemcachedStorage()
 }
 
 //static
+const mxs::config::Specification& MemcachedStorage::specification()
+{
+    return MemcachedConfig::specification();
+}
+
+//static
 bool MemcachedStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities)
 {
     *pKind = CACHE_STORAGE_SHARED;

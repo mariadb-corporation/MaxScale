@@ -22,9 +22,17 @@
 using std::unique_ptr;
 using std::string;
 
+namespace config = mxs::config;
 
 namespace
 {
+
+namespace storage_inmemory
+{
+
+config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
+
+}
 
 const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 
@@ -50,6 +58,12 @@ InMemoryStorage::InMemoryStorage(const string& name, const Config& config)
 
 InMemoryStorage::~InMemoryStorage()
 {
+}
+
+//static
+const mxs::config::Specification& InMemoryStorage::specification()
+{
+    return storage_inmemory::specification;
 }
 
 //static

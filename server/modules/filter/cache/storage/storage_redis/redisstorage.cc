@@ -1587,6 +1587,12 @@ RedisStorage::~RedisStorage()
 {
 }
 
+//static
+const mxs::config::Specification& RedisStorage::specification()
+{
+    return RedisConfig::specification();
+}
+
 // static
 bool RedisStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities)
 {

@@ -23,6 +23,8 @@ public:
     RedisStorage(const RedisStorage&) = delete;
     RedisStorage& operator=(const RedisStorage&) = delete;
 
+    static const mxs::config::Specification& specification();
+
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 

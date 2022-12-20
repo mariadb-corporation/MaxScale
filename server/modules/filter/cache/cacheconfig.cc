@@ -15,6 +15,7 @@
 #include "cacheconfig.hh"
 #include "cache.hh"
 #include "cachefilter.hh"
+#include "storagefactory.hh"
 
 namespace config = mxs::config;
 
@@ -38,25 +39,32 @@ public:
                              const mxs::ConfigParameters& params,
                              mxs::ConfigParameters* pUnrecognized) const override
     {
-        return do_validate_parameters(value, params);
+        return do_validate_parameters(value, params, pUnrecognized);
     }
 
     bool validate_parameters(const std::string& value,
                              json_t* pParams,
                              std::set<std::string>* pUnrecognized) const override
     {
-        return do_validate_parameters(value, pParams);
+        return do_validate_parameters(value, pParams, pUnrecognized);
     }
 
 private:
-    template<class Params>
-    bool do_validate_parameters(const std::string& value, Params& params) const
+    template<class Params, class Unrecognized>
+    bool do_validate_parameters(const std::string& value,
+                                Params& params,
+                                Unrecognized* pUnrecognized) const
     {
-        // We don't validate the nested parameters, as, in order to be able to
-        // do that, we would have to load the storage and ask it to validate
-        // them. If they are not valid, it will be noticed when the cache
-        // is actually created.
-        return true;
+        bool rv = false;
+
+        std::unique_ptr<StorageFactory> sFactory(StorageFactory::open(value));
+
+        if (sFactory)
+        {
+            rv = sFactory->specification().validate(nullptr, params, pUnrecognized);
+        }
+
+        return rv;
     }
 };
 

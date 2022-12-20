@@ -148,6 +148,12 @@ StorageFactory* StorageFactory::open(const char* zName)
     return pFactory;
 }
 
+const mxs::config::Specification& StorageFactory::specification() const
+{
+    mxb_assert(m_pModule);
+    return m_pModule->specification();
+}
+
 bool StorageFactory::get_limits(const mxs::ConfigParameters& parameters, StorageLimits* pLimits) const
 {
     mxb_assert(m_pModule);

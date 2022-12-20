@@ -26,7 +26,7 @@
 #include <maxbase/host.hh>
 #include <maxbase/jansson.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/config_common.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 extern const char CN_STORAGE_ARG_SERVER[];
@@ -555,6 +555,11 @@ public:
     virtual Storage* create_storage(const char* name,
                                     const Storage::Config& config,
                                     const mxs::ConfigParameters& parameters) = 0;
+
+    /**
+     * @return The specification of the storage created by this module.
+     */
+    virtual const mxs::config::Specification& specification() const = 0;
 };
 
 
