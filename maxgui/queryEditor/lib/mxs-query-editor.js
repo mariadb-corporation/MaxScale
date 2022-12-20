@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MxsQueryEditor from '@queryEditorSrc/MxsQueryEditor.vue'
+import MxsQueryEditor from './MxsQueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'

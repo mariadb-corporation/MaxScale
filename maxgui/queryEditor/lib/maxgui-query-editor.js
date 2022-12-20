@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryEditor from '@queryEditorSrc/QueryEditor.vue'
+import QueryEditor from '@queryEditorSrc/views/QueryEditor.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 

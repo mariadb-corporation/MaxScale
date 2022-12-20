@@ -67,7 +67,7 @@ function copyrightBanner() {
 // Export config
 export default [
     {
-        input: `${queryEditorSrcPath}/mxs-query-editor.js`,
+        input: `${queryEditorPath}/lib/mxs-query-editor.js`,
         output: [
             { file: 'dist/mxs-query-editor.esm.js', format: 'esm', exports: 'named' },
             { file: 'dist/mxs-query-editor.js', format: 'cjs', exports: 'named' },

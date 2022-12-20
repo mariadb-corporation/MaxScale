@@ -35,7 +35,7 @@ import '@share/styles/chartTooltip.scss'
 import LoadingTransparentOverlay from '@share/components/overlay/LoadingTransparentOverlay'
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import Snackbars from '@share/components/Snackbars'
-import QueryEditor from '@queryEditorSrc/QueryEditor.vue'
+import QueryEditor from '@queryEditorSrc/views/QueryEditor.vue'
 import { mapState } from 'vuex'
 
 export default /*#__PURE__*/ {

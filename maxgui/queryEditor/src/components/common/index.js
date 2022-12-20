@@ -24,7 +24,7 @@ import MxsSubMenu from '@share/components/common/MxsSubMenu'
 import MxsTooltipBtn from '@share/components/common/MxsTooltipBtn'
 import MxsTreeview from '@share/components/common/MxsTreeview'
 import MxsTruncateStr from '@share/components/common/MxsTruncateStr'
-import MxsTxtFieldWithLabel from './MxsTxtFieldWithLabel'
+import MxsTxtFieldWithLabel from '@share/components/common/MxsTxtFieldWithLabel'
 import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
 
 export default {
