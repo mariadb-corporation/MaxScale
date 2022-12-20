@@ -144,3 +144,9 @@ export const QUERY_LOG_TYPES = Object.freeze({
 export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927]
 
 export const QUERY_CANCELED = 'Query canceled'
+
+export const ETL_ACTIONS = Object.freeze({
+    DELETE: 'delete',
+    CANCEL: 'cancel',
+    CREATE: 'create',
+})

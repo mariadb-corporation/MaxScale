@@ -142,6 +142,7 @@
         "dashboards": "dashboard | dashboards",
         "data": "Data",
         "database": "Database",
+        "dataMigration": "Data Migration",
         "dataPrvw": "Data Preview",
         "default": "Default",
         "default_value": "default value",
@@ -191,6 +192,13 @@
             "requiredInput": "{inputName} is required",
             "serviceUnavailable": "MaxScale is temporarily unavailable",
             "wrongCredentials": "Incorrect password or username"
+        },
+        "etlOps": {
+            "actions": {
+                "create": "Create task",
+                "delete": "Delete task",
+                "cancel": "Cancel task"
+            }
         },
         "execute": "Execute",
         "exeTime": "Execution Time",

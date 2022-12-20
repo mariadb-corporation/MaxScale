@@ -26,6 +26,7 @@ import MxsTreeview from '@share/components/common/MxsTreeview'
 import MxsTruncateStr from '@share/components/common/MxsTruncateStr'
 import MxsTxtFieldWithLabel from '@share/components/common/MxsTxtFieldWithLabel'
 import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
+import PageWrapper from '@share/components/common/PageWrapper'
 
 export default {
     ...MxsDlgs,
@@ -43,4 +44,5 @@ export default {
     ...MxsTruncateStr,
     'mxs-txt-field-with-label': MxsTxtFieldWithLabel,
     'mxs-virtual-scroll-tbl': MxsVirtualScrollTbl,
+    'page-wrapper': PageWrapper,
 }

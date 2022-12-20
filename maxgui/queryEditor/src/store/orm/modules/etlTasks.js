@@ -16,14 +16,14 @@ export default {
     namespaced: true,
     actions: {
         insertEtlTask(_, name) {
+            const now = this.vue.$helpers.dateFormat({
+                value: new Date(),
+                formatType: 'DATE_RFC2822',
+            })
             EtlTask.insert({
                 data: {
-                    name:
-                        name ||
-                        `ETL - ${this.vue.$helpers.dateFormat({
-                            value: new Date(),
-                            formatType: 'DATE_RFC2822',
-                        })}`,
+                    name: name || `ETL - ${now}`,
+                    created: now,
                 },
             })
         },
