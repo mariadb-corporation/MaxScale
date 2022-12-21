@@ -75,10 +75,10 @@ void create_service(TestConnections& test, MaxRest& maxrest)
     vector<MaxRest::Parameter> service_parameters;
     service_parameters.emplace_back("user", "maxskysql");
     service_parameters.emplace_back("password", "skysql");
-    service_parameters.emplace_back("servers", "Server1,Server5");
+    service_parameters.emplace_back("servers", "server1,server5");
 
     cout << "Creating server" << endl;
-    maxrest.create_server("Server5", "127.0.0.1", 4711);
+    maxrest.create_server("server5", "127.0.0.1", 4711);
 
     cout << "Creating service" << endl;
     nThreads = alter_threads(maxrest, nThreads, 1);
@@ -99,7 +99,7 @@ void create_service(TestConnections& test, MaxRest& maxrest)
 
     cout << "Destroying server" << endl;
     nThreads = alter_threads(maxrest, nThreads, 1);
-    maxrest.destroy_server("Server5");
+    maxrest.destroy_server("server5");
 }
 
 
