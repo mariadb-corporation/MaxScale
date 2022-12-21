@@ -158,7 +158,7 @@ export default {
                     EtlTask.delete(task.id)
                     break
                 case CANCEL:
-                    //TODO: Call cancelEtlTask
+                    await EtlTask.dispatch('cancelEtlTask', task.id)
                     break
             }
         },

@@ -11,6 +11,7 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import { cancel } from '@queryEditorSrc/api/etl'
 
 export default {
     namespaced: true,
@@ -25,5 +26,66 @@ export default {
                 },
             })
         },
+        /**
+         * @param {String} id - etl task id
+         */
+        async cancelEtlTask({ commit, getters, rootState }, id) {
+            const { id: srcConnId } = getters.getSrcConnByEtlTaskId(id)
+            if (srcConnId) {
+                const [e, res] = await this.vue.$helpers.to(cancel(srcConnId))
+                const { CANCELED, ERROR } = rootState.queryEditorConfig.config.ETL_STATUS
+                let etlStatus = CANCELED
+                if (e) {
+                    etlStatus = ERROR
+                    commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.vue.$mxs_t('error.etlCanceledFailed')],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                } else if (res.status === 200) {
+                    commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.vue.$mxs_t('info.etlCanceledSuccessfully')],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                }
+                EtlTask.update({
+                    where: id,
+                    data: { status: etlStatus },
+                })
+            }
+        },
+    },
+    getters: {
+        getEtlTaskWithRelationById: () => etl_task_id => {
+            return EtlTask.query()
+                .whereId(etl_task_id)
+                .with('connections')
+                .first()
+        },
+        getEtlConnsByTaskId: (state, getters) => etl_task_id =>
+            getters.getEtlTaskWithRelationById(etl_task_id).connections || [],
+        getSrcConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
+            getters
+                .getEtlConnsByTaskId(etl_task_id)
+                .find(
+                    c =>
+                        c.binding_type ===
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
+                ) || {},
+        getDestConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
+            getters
+                .getEtlConnsByTaskId(etl_task_id)
+                .find(
+                    c =>
+                        c.binding_type ===
+                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
+                ) || {},
     },
 }
