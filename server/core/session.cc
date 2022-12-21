@@ -556,6 +556,7 @@ public:
     DelayedRoutingTask(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer)
         : m_session(session_get_ref(session))
         , m_down(down)
+        , m_endpoint(down->endpoint())
         , m_buffer(buffer)
     {
     }
@@ -577,7 +578,7 @@ public:
         MXS_SESSION::Scope scope(m_session);
         Action action = DISPOSE;
 
-        if (m_session->state() == MXS_SESSION::State::STARTED)
+        if (m_session->state() == MXS_SESSION::State::STARTED && m_endpoint.is_open())
         {
             if (mxs::RoutingWorker::get_current() == m_session->worker())
             {
@@ -615,9 +616,10 @@ public:
     }
 
 private:
-    MXS_SESSION*   m_session;
-    mxs::Routable* m_down;
-    GWBUF*         m_buffer;
+    MXS_SESSION*         m_session;
+    mxs::Routable*       m_down;
+    const mxs::Endpoint& m_endpoint;
+    GWBUF*               m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
