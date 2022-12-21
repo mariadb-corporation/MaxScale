@@ -2060,20 +2060,20 @@ void RoutingWorker::terminate()
             }
             else if (time_passed > TERMINATION_DELAY)
             {
-                MXB_NOTICE("Terminating worker %d going down as %d seconds has "
+                MXB_NOTICE("Terminating worker %d going down as %d milliseconds has "
                            "passed since termination was started.",
                            index(),
-                           (int)std::chrono::duration_cast<std::chrono::seconds>(time_passed).count());
+                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count());
                 ready_to_proceed = true;
             }
             else
             {
                 std::chrono::duration remaining = TERMINATION_DELAY - time_passed;
-                MXB_NOTICE("Terminating worker %d has been idle for %d seconds, "
-                           "still waiting %d seconds before going down.",
+                MXB_NOTICE("Terminating worker %d has been idle for %d milliseconds, "
+                           "still waiting %d milliseconds before going down.",
                            index(),
-                           (int)std::chrono::duration_cast<std::chrono::seconds>(time_passed).count(),
-                           (int)std::chrono::duration_cast<std::chrono::seconds>(remaining).count());
+                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(time_passed).count(),
+                           (int)std::chrono::duration_cast<std::chrono::milliseconds>(remaining).count());
             }
 
             if (ready_to_proceed)
