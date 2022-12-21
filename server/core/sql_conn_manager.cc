@@ -352,6 +352,7 @@ ConnectionManager::Connection::Connection(const ConnectionConfig& cnf)
     : config(cnf)
 {
     m_info.last_query_ended = mxb::Clock::now();
+    m_info.last_query_started = m_info.last_query_ended;
 }
 
 void ConnectionManager::Connection::release()
@@ -363,18 +364,15 @@ json_t* ConnectionManager::Connection::to_json() const
 {
     auto now = mxb::Clock::now();
     double idle = 0;
-    double exec_time = 0;
     json_t* sql;
 
     if (busy.load(std::memory_order_acquire))
     {
         std::lock_guard guard(m_lock);
-        exec_time = mxb::to_secs(now - m_info.last_query_started);
         sql = json_string(m_info.sql.c_str());
     }
     else
     {
-        exec_time = mxb::to_secs(m_info.last_query_ended - m_info.last_query_started);
         idle = mxb::to_secs(now - m_info.last_query_ended);
         sql = json_string(m_info.sql.c_str());
     }
@@ -383,7 +381,6 @@ json_t* ConnectionManager::Connection::to_json() const
     json_object_set_new(obj, "thread_id", json_integer(thread_id()));
     json_object_set_new(obj, "seconds_idle", json_real(idle));
     json_object_set_new(obj, "sql", sql);
-    json_object_set_new(obj, "execution_time", json_real(exec_time));
     json_object_set_new(obj, "target", json_string(config.target.c_str()));
     return obj;
 }
