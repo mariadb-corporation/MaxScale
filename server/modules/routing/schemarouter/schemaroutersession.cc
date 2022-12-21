@@ -231,17 +231,12 @@ mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t 
 
     if (TARGET_IS_ANY(route_target))
     {
-        for (const auto& b : m_backends)
+        if (SRBackend* b = get_any_backend())
         {
-            if (b->in_use())
-            {
-                route_target = TARGET_NAMED_SERVER;
-                target = b->target();
-                break;
-            }
+            route_target = TARGET_NAMED_SERVER;
+            target = b->target();
         }
-
-        if (TARGET_IS_ANY(route_target))
+        else
         {
             /**No valid backends alive*/
             MXS_ERROR("Failed to route query, no backends are available.");
@@ -737,22 +732,13 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
     return ok;
 }
 
-SRBackend* SchemaRouterSession::get_sescmd_replier()
+SRBackend* SchemaRouterSession::get_any_backend()
 {
-    for (const auto& db : m_shard.get_content())
+    for (const auto& b : m_backends)
     {
-        for (auto& tbl : db.second)
+        if (b->in_use() && m_shard.uses_target(b->target()))
         {
-            for (mxs::Target* t : tbl.second)
-            {
-                for (const auto& b : m_backends)
-                {
-                    if (b->in_use() && b->target() == t)
-                    {
-                        return b.get();
-                    }
-                }
-            }
+            return b.get();
         }
     }
 
@@ -786,7 +772,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
     mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
 
-    m_sescmd_replier = get_sescmd_replier();
+    m_sescmd_replier = get_any_backend();
 
     for (const auto& b : m_backends)
     {

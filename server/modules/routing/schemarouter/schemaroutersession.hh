@@ -104,7 +104,7 @@ private:
 
     /** Routing functions */
     bool         route_session_write(GWBUF* querybuf, uint8_t command);
-    SRBackend*   get_sescmd_replier();
+    SRBackend*   get_any_backend();
     bool         write_session_command(SRBackend* backend, mxs::Buffer buffer, uint8_t cmd);
     mxs::Target* resolve_query_target(GWBUF* pPacket,
                                       uint32_t type,
