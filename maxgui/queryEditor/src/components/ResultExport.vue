@@ -293,10 +293,7 @@ export default {
             }
         },
         getDefFileName() {
-            return `${this.defExportFileName} - ${this.$helpers.dateFormat({
-                value: new Date(),
-                formatType: 'DATE_RFC2822',
-            })}`
+            return `${this.defExportFileName} - ${this.$helpers.dateFormat({ value: new Date() })}`
         },
         openConfigDialog() {
             this.isConfigDialogOpened = !this.isConfigDialogOpened

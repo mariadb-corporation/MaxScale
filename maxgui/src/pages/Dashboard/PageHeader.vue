@@ -81,7 +81,7 @@
                                 {{
                                     $helpers.dateFormat({
                                         value,
-                                        formatType: 'MM.DD.YYYY HH:mm:ss',
+                                        formatType: 'DD MMM YYYY HH:mm:ss',
                                     })
                                 }}
                             </div>

@@ -133,6 +133,7 @@ export default {
             const { DELETE, CANCEL } = this.ETL_ACTIONS
             return EtlTask.all().map(t => ({
                 ...t,
+                created: this.$helpers.dateFormat({ value: t.created }),
                 menu: [this.actions[CANCEL], this.actions[DELETE]],
             }))
         },

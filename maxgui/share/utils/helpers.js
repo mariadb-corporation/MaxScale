@@ -91,21 +91,11 @@ export function getErrorsArr(error) {
 /**
  * Handle format date value
  * @param {String} param.value - String date to be formatted
- * @param {String} param.formatType - format type (default is HH:mm:ss MM.DD.YYYY)
+ * @param {String} param.formatType - format type (default is DATE_RFC2822: ddd, DD MMM YYYY HH:mm:ss)
  * @return {String} new date format
  */
-export function dateFormat({ value, formatType = 'HH:mm:ss MM.DD.YYYY' }) {
-    let date = new Date(value)
-    const DATE_RFC2822 = 'ddd, DD MMM YYYY HH:mm:ss'
-    let format
-    switch (formatType) {
-        case 'DATE_RFC2822':
-            format = DATE_RFC2822
-            break
-        default:
-            format = formatType
-    }
-    return moment(date).format(format)
+export function dateFormat({ value, formatType = 'ddd, DD MMM YYYY HH:mm:ss' }) {
+    return moment(new Date(value)).format(formatType)
 }
 
 export function capitalizeFirstLetter(string) {

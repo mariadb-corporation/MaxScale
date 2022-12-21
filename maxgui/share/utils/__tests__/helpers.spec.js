@@ -51,16 +51,12 @@ describe('common helpers unit tests', () => {
 
     describe('dateFormat assertions', () => {
         const dummyValue = 'Tue, 01 Sep 2020 05:55:56 GMT'
-        const dummyFormatTypes = ['DATE_RFC2822', 'MM.DD.YYYY HH:mm:ss', undefined]
-        const expectedReturn = [
-            'Tue, 01 Sep 2020 08:55:56',
-            '09.01.2020 08:55:56',
-            '08:55:56 09.01.2020',
-        ]
+        const dummyFormatTypes = [undefined, 'HH:mm:ss']
+        const expectedReturn = ['Tue, 01 Sep 2020 08:55:56', '08:55:56']
         dummyFormatTypes.forEach((type, i) => {
             let des = `Should return date string with format ${type}`
             if (type === undefined)
-                des = des.replace(`format ${type}`, 'default format HH:mm:ss MM.DD.YYYY')
+                des = des.replace('default format ddd, DD MMM YYYY HH:mm:ss', `format ${type}`)
             it(des, () => {
                 expect(
                     commonHelpers.dateFormat({

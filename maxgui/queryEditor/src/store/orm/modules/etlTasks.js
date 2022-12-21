@@ -17,10 +17,7 @@ export default {
     actions: {
         insertEtlTask(_, name) {
             const timestamp = Date.now()
-            const date = this.vue.$helpers.dateFormat({
-                value: timestamp,
-                formatType: 'DATE_RFC2822',
-            })
+            const date = this.vue.$helpers.dateFormat({ value: timestamp })
             EtlTask.insert({
                 data: {
                     name: name || `ETL - ${date}`,

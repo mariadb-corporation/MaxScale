@@ -303,7 +303,6 @@ export default {
         getDefFileName() {
             return `MaxScale ${this.type} Chart - ${this.$helpers.dateFormat({
                 value: new Date(),
-                formatType: 'DATE_RFC2822',
             })}`
         },
         createCanvasFrame() {
