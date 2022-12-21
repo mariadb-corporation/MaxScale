@@ -10,13 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-
-/**
- * $queryHttp is available when query-editor is registered as a plugin
- * @returns axios instance
- */
-const http = () => Vue.prototype.$queryHttp
+import http from '@queryEditorSrc/utils/http'
 
 /**
  * @param {String} id - connection ID
@@ -26,4 +20,12 @@ const http = () => Vue.prototype.$queryHttp
  */
 export async function query({ id, body, config = {} }) {
     return await http().post(`/sql/${id}/queries`, body, config)
+}
+/**
+ * @param {String} id - connection ID
+ * @param {String} queryId - query ID
+ * @returns {Promise}
+ */
+export async function getAsyncResult({ id, queryId }) {
+    return await http().get(`/sql/${id}/queries/${queryId}`)
 }

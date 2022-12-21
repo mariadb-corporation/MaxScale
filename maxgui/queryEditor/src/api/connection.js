@@ -10,15 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
+import http from '@queryEditorSrc/utils/http'
 import commonConfig from '@share/config'
 
 const { PERSIST_TOKEN_OPT } = commonConfig
-/**
- * $queryHttp is available when query-editor is registered as a plugin
- * @returns axios instance
- */
-const http = () => Vue.prototype.$queryHttp
 
 /**
  * @returns {Promise}
