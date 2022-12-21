@@ -53,9 +53,9 @@ export default {
          * @param {Array} connIds - alive connection ids that were cloned from expired worksheet connections
          */
         async cleanUpOrphanedConns({ dispatch }, connIds) {
-            const [e] = await this.vue.$helpers.to(Promise.all(connIds.map(id => deleteConn(id))))
-            dispatch('cascadeRefreshOnDelete', c => connIds.includes(c.id))
-            if (e) this.vue.$logger('store-queryConns-cleanUpOrphanedConns').error(e)
+            await this.vue.$helpers.to(
+                Promise.all(connIds.map(id => dispatch('disconnect', { id })))
+            )
         },
         /**
          * Validate provided persistentConns
@@ -269,22 +269,13 @@ export default {
                 )
         },
         /**
-         * This handles delete the worksheet connection and its query tab connections.
-         * @param {Boolean} param.showSnackbar - should show success message or not
-         * @param {Number} param.id - connection id that is bound to the worksheet
+         * Disconnect a connection and its persisted data
+         * @param {String} id - connection id
          */
-        async cascadeDisconnectWkeConn({ dispatch, commit }, { showSnackbar, id }) {
-            const target = QueryConn.find(id)
-            if (target) {
-                // Delete its clones first
-                const clonedConnIds = QueryConn.query()
-                    .where(c => c.clone_of_conn_id === target.id)
-                    .get()
-                    .map(c => c.id)
-                await dispatch('cleanUpOrphanedConns', clonedConnIds)
-
-                const [e, res] = await this.vue.$helpers.to(deleteConn(target.id))
-                if (!e && res.status === 204 && showSnackbar)
+        async disconnect({ commit, dispatch }, { id, showSnackbar }) {
+            const [e, res] = await this.vue.$helpers.to(deleteConn(id))
+            if (!e && res.status === 204) {
+                if (showSnackbar)
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
@@ -293,7 +284,24 @@ export default {
                         },
                         { root: true }
                     )
-                dispatch('cascadeRefreshOnDelete', target.id)
+                dispatch('cascadeRefreshOnDelete', id)
+            }
+        },
+        /**
+         * This handles delete the worksheet connection and its query tab connections.
+         * @param {Boolean} param.showSnackbar - should show success message or not
+         * @param {Number} param.id - connection id that is bound to the worksheet
+         */
+        async cascadeDisconnectWkeConn({ dispatch }, { showSnackbar, id }) {
+            const target = QueryConn.find(id)
+            if (target) {
+                // Delete its clones first
+                const clonedConnIds = QueryConn.query()
+                    .where(c => c.clone_of_conn_id === id)
+                    .get()
+                    .map(c => c.id)
+                await dispatch('cleanUpOrphanedConns', clonedConnIds)
+                await dispatch('disconnect', { id, showSnackbar })
             }
         },
         async cascadeReconnectWkeConn({ commit, getters }) {
@@ -333,12 +341,7 @@ export default {
             for (const { id } of getters.getWkeConns)
                 await dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })
             await this.vue.$helpers.to(
-                Promise.all(
-                    getters.getEtlConns.map(({ id }) => {
-                        deleteConn(id)
-                        QueryConn.delete(id)
-                    })
-                )
+                Promise.all(getters.getEtlConns.map(({ id }) => dispatch('disconnect', { id })))
             )
         },
         async updateActiveDb({ getters }) {
