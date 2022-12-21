@@ -150,3 +150,11 @@ export const ETL_ACTIONS = Object.freeze({
     CANCEL: 'cancel',
     CREATE: 'create',
 })
+
+export const ETL_STATUS = Object.freeze({
+    INITIALIZING: 'initializing',
+    RUNNING: 'running',
+    CANCELED: 'canceled',
+    ERROR: 'error',
+    DONE: 'done',
+})

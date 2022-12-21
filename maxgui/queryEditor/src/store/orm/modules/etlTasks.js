@@ -16,17 +16,17 @@ export default {
     namespaced: true,
     actions: {
         insertEtlTask(_, name) {
-            const now = this.vue.$helpers.dateFormat({
-                value: new Date(),
+            const timestamp = Date.now()
+            const date = this.vue.$helpers.dateFormat({
+                value: timestamp,
                 formatType: 'DATE_RFC2822',
             })
             EtlTask.insert({
                 data: {
-                    name: name || `ETL - ${now}`,
-                    created: now,
+                    name: name || `ETL - ${date}`,
+                    created: timestamp,
                 },
             })
         },
-        //TODO: add cancel ETL task action
     },
 }
