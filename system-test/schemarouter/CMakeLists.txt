@@ -50,3 +50,8 @@ add_test_executable_ex(NAME mxs2972_shard_caching SOURCE mxs2972_shard_caching.c
 # https://jira.mariadb.org/browse/MXS-4092
 add_test_executable_ex(NAME mxs4092_distinct_tables SOURCE mxs4092_distinct_tables.cc
         CONFIG mxs4092_distinct_tables.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4460: Crash if auth failure happens during table mapping
+# https://jira.mariadb.org/browse/MXS-4460
+add_test_executable_ex(NAME mxs4460_failed_auth SOURCE mxs4460_failed_auth.cc
+        CONFIG mxs4460_failed_auth.cnf VMS repl_backend LABELS schemarouter)
