@@ -428,6 +428,9 @@ add_test_executable(cache_distributed.cpp cache_distributed cache_distributed LA
 # Test of Cache filter - redis authentication
 add_test_executable(cache_redis_security.cpp cache_redis_security cache_redis_security LABELS cachefilter REPL_BACKEND)
 
+# Test of Cache filter - redis ssl
+add_test_executable(cache_redis_ssl.cpp cache_redis_ssl cache_redis_ssl LABELS cachefilter REPL_BACKEND)
+
 # Test of Cache bug MXS-3694
 add_test_executable(mxs3694_cache.cpp mxs3694_cache mxs3694_cache LABELS cachefilter REPL_BACKEND)
 
