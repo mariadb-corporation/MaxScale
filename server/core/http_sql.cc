@@ -774,7 +774,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
 
     try
     {
-        etl = sql_etl::create(json, src_cc, dest_cc);
+        etl = sql_etl::create(id, json, src_cc, dest_cc);
     }
     catch (const sql_etl::Error& e)
     {

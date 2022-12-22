@@ -198,8 +198,9 @@ private:
 
 struct ETL
 {
-    ETL(Config config, std::unique_ptr<Extractor> extractor)
-        : m_config(std::move(config))
+    ETL(std::string_view id, Config config, std::unique_ptr<Extractor> extractor)
+        : m_id(id)
+        , m_config(std::move(config))
         , m_extractor(std::move(extractor))
         , m_init_latch{(std::ptrdiff_t)m_config.threads}
         , m_create_latch{(std::ptrdiff_t)m_config.threads}
@@ -245,6 +246,7 @@ private:
     bool   checkpoint(int* current_checkpoint);
     Table* next_table();
 
+    std::string                m_id;
     Config                     m_config;
     std::vector<Table>         m_tables;
     std::unique_ptr<Extractor> m_extractor;
@@ -264,6 +266,7 @@ private:
 /**
  * Create ETL operation
  *
+ * @param id      The ID for this ETL operation
  * @param json    The JSON needed to configure the operation
  * @param src_cc  The connection configuration to the source server
  * @param dest_cc The connection configuration to the destination server
@@ -272,7 +275,7 @@ private:
  *
  * @throws ETLError
  */
-std::unique_ptr<ETL> create(const mxb::Json& json,
+std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
                             const HttpSql::ConnectionConfig& src_cc,
                             const HttpSql::ConnectionConfig& dest_cc);
 }

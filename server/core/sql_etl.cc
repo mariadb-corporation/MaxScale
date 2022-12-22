@@ -469,7 +469,7 @@ private:
     std::string m_snapshot;
 };
 
-std::unique_ptr<ETL> create(const mxb::Json& json,
+std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
                             const HttpSql::ConnectionConfig& src_cc,
                             const HttpSql::ConnectionConfig& dest_cc)
 {
@@ -569,7 +569,7 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
         cnf.timeout = std::chrono::seconds{timeout};
     }
 
-    std::unique_ptr<ETL> etl = std::make_unique<ETL>(cnf, std::move(extractor));
+    std::unique_ptr<ETL> etl = std::make_unique<ETL>(id, cnf, std::move(extractor));
 
     for (const auto& val : tables)
     {
@@ -821,10 +821,12 @@ void ETL::cancel()
 template<auto connect_func, auto run_func, auto interrupt_func>
 mxb::Json ETL::run_job()
 {
+    mxb::LogScope scope(m_id.c_str());
     std::string error;
 
     try
     {
+        MXB_INFO("Starting ETL.");
         mxq::ODBC coordinator(m_config.src, m_config.timeout);
 
         if (!coordinator.connect())
@@ -834,6 +836,7 @@ mxb::Json ETL::run_job()
 
         extractor().init_connection(coordinator);
         extractor().start(coordinator, m_tables);
+        MXB_INFO("Coordinator connection created and initialized.");
 
         using Connection = decltype(std::invoke(connect_func, this));
         std::vector<Connection> connections;
@@ -854,6 +857,7 @@ mxb::Json ETL::run_job()
 
         mxb_assert(connections.size() <= m_tables.size());
 
+        MXB_INFO("Created %lu threads.", m_config.threads);
         extractor().threads_started(coordinator, m_tables);
 
         std::vector<std::thread> threads;
@@ -864,6 +868,7 @@ mxb::Json ETL::run_job()
         }
 
         std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+        MXB_INFO("ETL complete.");
 
         guard.lock();
         m_interruptor = nullptr;
@@ -897,19 +902,24 @@ mxb::Json ETL::run_job()
 
 void ETL::run_prepare_job(mxq::ODBC& source) noexcept
 {
+    mxb::LogScope scope(m_id.c_str());
+
     while (auto t = next_table())
     {
+        MXB_INFO("Read SQL: %s.%s", t->schema(), t->table());
         t->read_sql(source);
     }
 }
 
 void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
 {
+    mxb::LogScope scope(m_id.c_str());
     auto& [source, dest] = connections;
     int my_checkpoint = 0;
 
     while (auto t = next_table())
     {
+        MXB_INFO("Read SQL: %s.%s", t->schema(), t->table());
         t->read_sql(source);
     }
 
@@ -919,6 +929,7 @@ void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
     {
         while (auto t = next_table())
         {
+            MXB_INFO("Create objects: %s.%s", t->schema(), t->table());
             t->create_objects(source, dest);
         }
 
@@ -928,6 +939,7 @@ void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
         {
             while (auto t = next_table())
             {
+                MXB_INFO("Load data: %s.%s", t->schema(), t->table());
                 t->load_data(source, dest);
             }
         }
