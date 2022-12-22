@@ -54,6 +54,7 @@
                             <v-list-item
                                 v-for="action in item.menu"
                                 :key="action.text"
+                                :disabled="action.disabled"
                                 @click="actionHandler({ type: action.type, task: item })"
                             >
                                 <v-list-item-title
@@ -112,6 +113,7 @@ export default {
             QUERY_CONN_BINDING_TYPES: state =>
                 state.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES,
             ETL_ACTIONS: state => state.queryEditorConfig.config.ETL_ACTIONS,
+            ETL_STATUS: state => state.queryEditorConfig.config.ETL_STATUS,
         }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
@@ -132,12 +134,15 @@ export default {
                 { text: '', value: 'menu', sortable: false, width: '1px' },
             ]
         },
-        tableRows() {
+        actions() {
             const { CREATE } = this.ETL_ACTIONS
+            return Object.values(this.actionMap).filter(o => o.type !== CREATE)
+        },
+        tableRows() {
             return EtlTask.all().map(t => ({
                 ...t,
                 created: this.$helpers.dateFormat({ value: t.created }),
-                menu: Object.values(this.actionMap).filter(o => o.type !== CREATE),
+                menu: this.genActions(t),
             }))
         },
     },
@@ -145,6 +150,30 @@ export default {
         parseMeta(meta) {
             const { ETL_DEST, ETL_SRC } = this.QUERY_CONN_BINDING_TYPES
             return { from: meta[ETL_SRC] || 'Unknown', to: meta[ETL_DEST] || 'Unknown' }
+        },
+        /**
+         * @param {Object} task
+         * @returns {Array} - etl actions
+         */
+        genActions(task) {
+            const { CANCEL, DELETE, DISCONNECT } = this.ETL_ACTIONS
+            const status = task.status
+            const { RUNNING } = this.ETL_STATUS
+            return this.actions.map(o => {
+                let disabled = false
+                switch (o.type) {
+                    case CANCEL:
+                        if (status !== RUNNING) disabled = true
+                        break
+                    case DELETE:
+                        if (status === RUNNING) disabled = true
+                        break
+                    case DISCONNECT:
+                        disabled = EtlTask.getters('getEtlConnsByTaskId')(task.id).length === 0
+                        break
+                }
+                return { ...o, disabled }
+            })
         },
         async disconnectConnsFromTask(task) {
             await this.$helpers.to(
