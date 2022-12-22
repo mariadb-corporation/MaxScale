@@ -444,13 +444,14 @@ public:
     /**
      * @brief Route the query again but using a custom function
      *
-     * This version of the function can be used to
+     * This version of the function can be used to route to a custom function.
      *
+     * @param down    The downstream component, either a filter or a router
      * @param buffer  The buffer to route
      * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
      * @param fn      The function to call
      */
-    void delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn);
+    void delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn);
 
     /**
      * Returns memory statistics of the session.

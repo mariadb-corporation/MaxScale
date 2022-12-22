@@ -47,6 +47,30 @@ public:
      * @return True for success, false for error
      */
     virtual bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
+
+    /**
+     * Set the Endpoint that this Routable is a part of
+     *
+     * @param endpoint The Endpoint for this Routable
+     */
+    void setEndpoint(const mxs::Endpoint* endpoint)
+    {
+        m_endpoint = endpoint;
+    }
+
+    /**
+     * Get the Endpoint of this Routable
+     *
+     * @return The Endpoint of this Routable
+     */
+    const mxs::Endpoint& endpoint() const
+    {
+        mxb_assert(m_endpoint);
+        return *m_endpoint;
+    }
+
+private:
+    const mxs::Endpoint* m_endpoint = nullptr;
 };
 }
 

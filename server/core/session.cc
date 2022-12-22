@@ -643,12 +643,12 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds,
+                                std::function<bool(GWBUF*)>&& fn)
 {
     auto session = this;
-
-    auto cb = [session, fn, buffer](mxb::Worker::Callable::Action action){
-        if (action == mxb::Worker::Callable::EXECUTE)
+    auto cb = [session, fn, buffer, ep = &down->endpoint()](mxb::Worker::Callable::Action action){
+        if (action == mxb::Worker::Callable::EXECUTE && ep->is_open())
         {
             MXS_SESSION::Scope scope(session);
             mxb_assert(session->state() == MXS_SESSION::State::STARTED);
@@ -674,7 +674,7 @@ void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(G
 
 void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds)
 {
-    delay_routing(buffer, seconds, [down](GWBUF* buffer){
+    delay_routing(down, buffer, seconds, [down](GWBUF* buffer){
         return down->routeQuery(buffer);
     });
 }
