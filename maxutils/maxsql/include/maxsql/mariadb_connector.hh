@@ -206,6 +206,15 @@ public:
      */
     uint32_t thread_id() const;
 
+    /**
+     * Set connection timeouts
+     *
+     * The timeout will affect network reads and writes and reconnections if they take place.
+     *
+     * @param timeout Timeout in seconds
+     */
+    void set_timeout(int timeout);
+
 private:
     void clear_errors();
     bool run_query(const std::string& query, const std::function<bool()>& result_handler);

@@ -171,7 +171,7 @@ void ConnectionManager::Connection::clear_cancel_handler()
     m_cancel_handler = nullptr;
 }
 
-mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t max_rows)
+mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t max_rows, int64_t timeout)
 {
     // The update to the m_info struct must be done under a lock as other threads can access it concurrently
     // from inside ConnectionManager::get_connection(). Although the last_query_started value is never
@@ -183,7 +183,7 @@ mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t m
     m_info.last_query_ended = m_info.last_query_started;
     guard.unlock();
 
-    auto result = do_query(sql, max_rows);
+    auto result = do_query(sql, max_rows, timeout);
     m_info.last_query_ended = mxb::Clock::now();
 
     return result;
@@ -401,13 +401,25 @@ bool ConnectionManager::MariaDBConnection::cmd(const std::string& cmd)
     return m_conn.cmd(cmd);
 }
 
-mxb::Json ConnectionManager::MariaDBConnection::do_query(const std::string& sql, int64_t max_rows)
+mxb::Json ConnectionManager::MariaDBConnection::do_query(const std::string& sql,
+                                                         int64_t max_rows,
+                                                         int64_t timeout)
 {
     if (this->last_max_rows != max_rows)
     {
         std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
         this->cmd("SET sql_select_limit=" + limit);
         this->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
+    }
+
+    if (this->last_timeout != timeout)
+    {
+        // Use a slightly longer timeout for the connector's network timeouts. This way the server will kill
+        // the query before the network read times out and we get a better error message.
+        m_conn.set_timeout(timeout ? timeout + 1 : std::numeric_limits<int>::max());
+        std::string limit = timeout ? std::to_string(timeout) : "DEFAULT";
+        this->cmd("SET max_statement_time=" + limit);
+        this->last_timeout = timeout ? timeout : std::numeric_limits<int64_t>::max();
     }
 
     m_conn.streamed_query(sql);
@@ -607,11 +619,14 @@ bool ConnectionManager::ODBCConnection::cmd(const std::string& cmd)
     return m_conn.query(cmd, &empty);
 }
 
-mxb::Json ConnectionManager::ODBCConnection::do_query(const std::string& sql, int64_t max_rows)
+mxb::Json ConnectionManager::ODBCConnection::do_query(const std::string& sql,
+                                                      int64_t max_rows,
+                                                      int64_t timeout)
 {
     mxq::JsonResult res;
     m_conn.set_row_limit(max_rows);
     this->last_max_rows = max_rows;
+    m_conn.set_query_timeout(std::chrono::seconds {timeout});
     std::string final_sql = m_wrap_in_atomic_block ? wrap_in_atomic_block(sql) : sql;
     m_conn.query(final_sql, &res);
     auto result = res.result();

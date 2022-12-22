@@ -514,11 +514,19 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("`max_rows` cannot be negative."));
     }
 
+    int64_t timeout = json.get_int("timeout");
+
+    if (timeout < 0)
+    {
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("`timeout` cannot be negative."));
+    }
+
     bool async = request.is_truthy_option("async");
     string host = request.host();
     string self = request.get_uri();
 
-    auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self), async]() {
+    auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self),
+                          async, timeout]() {
         if (auto [managed_conn, reason, _] = this_unit.manager.get_connection(id); managed_conn)
         {
             // Ignore any results that have not yet been read
@@ -532,14 +540,14 @@ HttpResponse query(const HttpRequest& request)
             if (async)
             {
                 mxs::thread_pool().execute(
-                    [managed_conn, sql, max_rows]() {
-                    managed_conn->result = managed_conn->query(sql, max_rows);
+                    [managed_conn, sql, max_rows, timeout]() {
+                    managed_conn->result = managed_conn->query(sql, max_rows, timeout);
                     managed_conn->release();
                 }, "sql" + id_str);
             }
             else
             {
-                result_data = managed_conn->query(sql, max_rows);
+                result_data = managed_conn->query(sql, max_rows, timeout);
                 const auto& info = managed_conn->info();
                 exec_time = info.last_query_ended - info.last_query_started;
                 managed_conn->release();

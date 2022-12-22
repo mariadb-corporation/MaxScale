@@ -68,6 +68,8 @@ public:
 
     void set_row_limit(size_t limit);
 
+    void set_query_timeout(std::chrono::seconds timeout);
+
     std::string get_string_info(int type) const;
 
     void cancel();
@@ -903,6 +905,16 @@ void ODBCImp::set_row_limit(size_t limit)
     m_row_limit = limit;
 }
 
+void ODBCImp::set_query_timeout(std::chrono::seconds timeout)
+{
+    m_timeout = timeout;
+
+    if (m_stmt != SQL_NULL_HANDLE)
+    {
+        SQLSetStmtAttr(m_stmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)m_timeout.count(), 0);
+    }
+}
+
 std::string ODBCImp::get_string_info(int type) const
 {
     char buf[512];
@@ -1297,6 +1309,11 @@ Output* ODBC::as_output()
 void ODBC::set_row_limit(size_t limit)
 {
     m_imp->set_row_limit(limit);
+}
+
+void ODBC::set_query_timeout(std::chrono::seconds timeout)
+{
+    m_imp->set_query_timeout(timeout);
 }
 
 std::string ODBC::driver_name() const

@@ -75,7 +75,7 @@ public:
 
         virtual bool cmd(const std::string& cmd) = 0;
 
-        mxb::Json query(const std::string& sql, int64_t max_rows);
+        mxb::Json query(const std::string& sql, int64_t max_rows, int64_t timeout);
 
         virtual uint32_t thread_id() const = 0;
 
@@ -98,7 +98,7 @@ public:
         mxb::Json        result {mxb::Json::Type::UNDEFINED};
 
     protected:
-        virtual mxb::Json do_query(const std::string& sql, int64_t max_rows) = 0;
+        virtual mxb::Json do_query(const std::string& sql, int64_t max_rows, int64_t timeout) = 0;
         virtual void      do_cancel() = 0;
 
     private:
@@ -120,7 +120,7 @@ public:
         bool        ping() override final;
 
     protected:
-        mxb::Json do_query(const std::string& sql, int64_t max_rows) override final;
+        mxb::Json do_query(const std::string& sql, int64_t max_rows, int64_t timeout) override final;
         void      do_cancel() override final;
 
     private:
@@ -130,6 +130,7 @@ public:
                                           const mxq::MariaDBQueryResult::Fields& field_info);
 
         mxq::MariaDB m_conn;
+        int64_t      last_timeout {0};
     };
 
     class ODBCConnection : public Connection
@@ -144,7 +145,7 @@ public:
         bool        ping() override final;
 
     protected:
-        mxb::Json do_query(const std::string& sql, int64_t max_rows) override final;
+        mxb::Json do_query(const std::string& sql, int64_t max_rows, int64_t timeout) override final;
         void      do_cancel() override final;
 
     private:

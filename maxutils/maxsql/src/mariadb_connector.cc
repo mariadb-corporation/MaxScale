@@ -451,6 +451,18 @@ uint32_t MariaDB::thread_id() const
     return mysql_thread_id(m_conn);
 }
 
+void MariaDB::set_timeout(int timeout)
+{
+    m_settings.timeout = timeout;
+
+    if (m_conn && m_settings.timeout > 0)
+    {
+        mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+        mysql_optionsv(m_conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+        mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+    }
+}
+
 bool MariaDB::ping()
 {
     bool rval = false;
