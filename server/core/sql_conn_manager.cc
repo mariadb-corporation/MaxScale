@@ -171,7 +171,7 @@ void ConnectionManager::Connection::clear_cancel_handler()
     m_cancel_handler = nullptr;
 }
 
-mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t max_rows, int64_t timeout)
+void ConnectionManager::Connection::query_start(const std::string& sql)
 {
     // The update to the m_info struct must be done under a lock as other threads can access it concurrently
     // from inside ConnectionManager::get_connection(). Although the last_query_started value is never
@@ -182,11 +182,20 @@ mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t m
     m_info.last_query_started = mxb::Clock::now();
     m_info.last_query_ended = m_info.last_query_started;
     guard.unlock();
+}
 
+mxb::Json ConnectionManager::Connection::query(const std::string& sql, int64_t max_rows, int64_t timeout)
+{
+    query_start(sql);
     auto result = do_query(sql, max_rows, timeout);
-    m_info.last_query_ended = mxb::Clock::now();
+    query_end();
 
     return result;
+}
+
+void ConnectionManager::Connection::query_end()
+{
+    m_info.last_query_ended = mxb::Clock::now();
 }
 
 const ConnectionManager::Connection::Info& ConnectionManager::Connection::info() const

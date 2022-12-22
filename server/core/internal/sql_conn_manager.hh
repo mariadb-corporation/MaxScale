@@ -85,6 +85,10 @@ public:
 
         void cancel();
 
+        void query_start(const std::string& sql);
+
+        void query_end();
+
         void set_cancel_handler(std::function<void()> fn);
 
         void clear_cancel_handler();

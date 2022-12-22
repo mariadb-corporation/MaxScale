@@ -796,13 +796,11 @@ HttpResponse run_etl_task(const HttpRequest& request)
 
             int64_t query_id = ++conn->current_query_id;
             string id_str = mxb::string_printf("%s.%li", id.c_str(), query_id);
-            // TODO: Add these back
-            // conn->sql = "ETL";
-            // conn->last_query_started = mxb::Clock::now();
+            conn->query_start("ETL");
 
             mxs::thread_pool().execute([conn, id, etl = move(etl)]() {
                 conn->result = std::invoke(func, *etl);
-                // conn->last_query_ended = mxb::Clock::now();
+                conn->query_end();
                 conn->clear_cancel_handler();
                 conn->release();
             }, "etl-" + id_str);
