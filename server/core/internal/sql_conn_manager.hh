@@ -93,7 +93,6 @@ public:
 
         std::atomic_bool busy {false};
         int64_t          current_query_id {0};
-        int64_t          last_max_rows {0};
         ConnectionConfig config;
         mxb::Json        result {mxb::Json::Type::UNDEFINED};
 
@@ -130,6 +129,7 @@ public:
                                           const mxq::MariaDBQueryResult::Fields& field_info);
 
         mxq::MariaDB m_conn;
+        int64_t      last_max_rows {0};
         int64_t      last_timeout {0};
     };
 

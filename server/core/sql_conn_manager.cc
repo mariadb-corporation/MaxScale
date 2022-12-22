@@ -625,7 +625,6 @@ mxb::Json ConnectionManager::ODBCConnection::do_query(const std::string& sql,
 {
     mxq::JsonResult res;
     m_conn.set_row_limit(max_rows);
-    this->last_max_rows = max_rows;
     m_conn.set_query_timeout(std::chrono::seconds {timeout});
     std::string final_sql = m_wrap_in_atomic_block ? wrap_in_atomic_block(sql) : sql;
     m_conn.query(final_sql, &res);
