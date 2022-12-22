@@ -196,9 +196,11 @@
         },
         "etlOps": {
             "actions": {
-                "create": "Create task",
-                "delete": "Delete task",
-                "cancel": "Cancel task"
+                "cancel": "Cancel",
+                "create": "Create",
+                "delete": "Delete",
+                "disconnect": "Disconnect",
+                "view": "View"
             }
         },
         "execute": "Execute",

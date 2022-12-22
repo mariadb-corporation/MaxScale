@@ -146,15 +146,17 @@ export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927
 export const QUERY_CANCELED = 'Query canceled'
 
 export const ETL_ACTIONS = Object.freeze({
-    DELETE: 'delete',
     CANCEL: 'cancel',
     CREATE: 'create',
+    DELETE: 'delete',
+    DISCONNECT: 'disconnect',
+    VIEW: 'view',
 })
 
 export const ETL_STATUS = Object.freeze({
-    INITIALIZING: 'initializing',
-    RUNNING: 'running',
-    CANCELED: 'canceled',
-    ERROR: 'error',
-    DONE: 'done',
+    INITIALIZING: 'Initializing',
+    RUNNING: 'Running',
+    CANCELED: 'Canceled',
+    ERROR: 'Error',
+    COMPLETE: 'Complete',
 })

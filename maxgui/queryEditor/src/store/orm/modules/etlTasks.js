@@ -63,12 +63,11 @@ export default {
         },
     },
     getters: {
-        getEtlTaskWithRelationById: () => etl_task_id => {
-            return EtlTask.query()
+        getEtlTaskWithRelationById: () => etl_task_id =>
+            EtlTask.query()
                 .whereId(etl_task_id)
                 .with('connections')
-                .first()
-        },
+                .first() || {},
         getEtlConnsByTaskId: (state, getters) => etl_task_id =>
             getters.getEtlTaskWithRelationById(etl_task_id).connections || [],
         getSrcConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>

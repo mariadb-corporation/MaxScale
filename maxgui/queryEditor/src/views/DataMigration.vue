@@ -20,9 +20,9 @@
                     depressed
                     small
                     color="accent-dark"
-                    @click="create"
+                    @click="actionHandler({ type: ETL_ACTIONS.CREATE })"
                 >
-                    + {{ actions[ETL_ACTIONS.CREATE].text }}
+                    + {{ actionMap[ETL_ACTIONS.CREATE].text }}
                 </v-btn>
             </div>
         </portal>
@@ -56,7 +56,16 @@
                                 :key="action.text"
                                 @click="actionHandler({ type: action.type, task: item })"
                             >
-                                <v-list-item-title>{{ action.text }}</v-list-item-title>
+                                <v-list-item-title
+                                    class="mxs-color-helper"
+                                    :class="[
+                                        action.type === ETL_ACTIONS.DELETE
+                                            ? 'text-error'
+                                            : ' text-text',
+                                    ]"
+                                >
+                                    {{ action.text }}
+                                </v-list-item-title>
                             </v-list-item>
                         </v-list>
                     </v-menu>
@@ -93,6 +102,7 @@
  */
 import { mapState } from 'vuex'
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'etl-tasks',
@@ -103,22 +113,15 @@ export default {
                 state.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES,
             ETL_ACTIONS: state => state.queryEditorConfig.config.ETL_ACTIONS,
         }),
-        actions() {
-            const { DELETE, CANCEL, CREATE } = this.ETL_ACTIONS
-            return {
-                [CREATE]: {
-                    text: this.$mxs_t(`etlOps.actions.${CREATE}`),
-                    type: CREATE,
-                },
-                [DELETE]: {
-                    text: this.$mxs_t(`etlOps.actions.${DELETE}`),
-                    type: DELETE,
-                },
-                [CANCEL]: {
-                    text: this.$mxs_t(`etlOps.actions.${CANCEL}`),
-                    type: CANCEL,
-                },
-            }
+        actionMap() {
+            return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
+                const value = this.ETL_ACTIONS[key]
+                obj[value] = {
+                    text: this.$mxs_t(`etlOps.actions.${value}`),
+                    type: value,
+                }
+                return obj
+            }, {})
         },
         tableHeaders() {
             return [
@@ -130,35 +133,51 @@ export default {
             ]
         },
         tableRows() {
-            const { DELETE, CANCEL } = this.ETL_ACTIONS
+            const { CREATE } = this.ETL_ACTIONS
             return EtlTask.all().map(t => ({
                 ...t,
                 created: this.$helpers.dateFormat({ value: t.created }),
-                menu: [this.actions[CANCEL], this.actions[DELETE]],
+                menu: Object.values(this.actionMap).filter(o => o.type !== CREATE),
             }))
         },
     },
     methods: {
-        create() {
-            //TODO: Open ETL task form
-            EtlTask.dispatch('insertEtlTask')
-        },
         parseMeta(meta) {
             const { ETL_DEST, ETL_SRC } = this.QUERY_CONN_BINDING_TYPES
             return { from: meta[ETL_SRC] || 'Unknown', to: meta[ETL_DEST] || 'Unknown' }
+        },
+        async disconnectConnsFromTask(task) {
+            await this.$helpers.to(
+                Promise.all(
+                    EtlTask.getters('getEtlConnsByTaskId')(task.id).map(({ id }) =>
+                        QueryConn.dispatch('disconnect', { id })
+                    )
+                )
+            )
         },
         /**
          * @param {String} param.type - delete||cancel
          * @param {Object} param.task - task
          */
         async actionHandler({ type, task }) {
-            const { DELETE, CANCEL } = this.ETL_ACTIONS
+            const { CANCEL, CREATE, DELETE, DISCONNECT, VIEW } = this.ETL_ACTIONS
             switch (type) {
-                case DELETE:
-                    EtlTask.delete(task.id)
-                    break
                 case CANCEL:
                     await EtlTask.dispatch('cancelEtlTask', task.id)
+                    break
+                case CREATE:
+                    //TODO: Open ETL task form (mode creation)
+                    EtlTask.dispatch('insertEtlTask')
+                    break
+                case DELETE:
+                    EtlTask.delete(task.id)
+                    await this.disconnectConnsFromTask(task)
+                    break
+                case DISCONNECT:
+                    await this.disconnectConnsFromTask(task)
+                    break
+                case VIEW:
+                    //TODO: Open ETL task form (mode view or edit, depends on the status of the task)
                     break
             }
         },
