@@ -46,7 +46,7 @@ namespace maxsql
 class ODBCImp : public Output
 {
 public:
-    ODBCImp(std::string dsn);
+    ODBCImp(std::string dsn, std::chrono::seconds timeout);
 
     ~ODBCImp();
 
@@ -178,6 +178,7 @@ private:
     int         m_errnum = 0;
     size_t      m_row_limit = 0;
 
+    std::chrono::seconds    m_timeout;
     std::atomic<bool>       m_canceled {false};
     std::vector<ColumnInfo> m_columns;
 };
@@ -573,8 +574,9 @@ std::optional<std::string> TextResult::get_field(size_t field, size_t row, size_
     }
 }
 
-ODBCImp::ODBCImp(std::string dsn)
+ODBCImp::ODBCImp(std::string dsn, std::chrono::seconds timeout)
     : m_dsn(std::move(dsn))
+    , m_timeout(timeout)
 {
     if (SQL_SUCCEEDED(SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &m_env)))
     {
@@ -582,6 +584,8 @@ ODBCImp::ODBCImp(std::string dsn)
         // The DBC handler must be allocated after the ODBC version is set, otherwise the SQLConnect
         // function returns SQL_INVALID_HANDLE.
         SQLAllocHandle(SQL_HANDLE_DBC, m_env, &m_conn);
+        SQLSetConnectAttr(m_conn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
+        SQLSetConnectAttr(m_conn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
     }
 }
 
@@ -627,6 +631,10 @@ bool ODBCImp::connect()
         if (ret == SQL_ERROR)
         {
             get_error(SQL_HANDLE_DBC, m_conn);
+        }
+        else
+        {
+            SQLSetStmtAttr(m_stmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)m_timeout.count(), 0);
         }
     }
 
@@ -1221,8 +1229,8 @@ bool ODBCImp::can_batch()
     return true;
 }
 
-ODBC::ODBC(std::string dsn)
-    : m_imp(std::make_unique<mxq::ODBCImp>(std::move(dsn)))
+ODBC::ODBC(std::string dsn, std::chrono::seconds timeout)
+    : m_imp(std::make_unique<mxq::ODBCImp>(std::move(dsn), timeout))
 {
 }
 
@@ -1335,7 +1343,7 @@ std::map<std::string, std::map<std::string, std::string>> ODBC::drivers()
 {
     // This simplifies the driver querying. We don't need a connection but we do need a valid environment
     // handle to get the drivers.
-    auto tmp = std::make_unique<mxq::ODBCImp>("");
+    auto tmp = std::make_unique<mxq::ODBCImp>("", 0s);
     return tmp->drivers();
 }
 

@@ -914,7 +914,7 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     }
     else
     {
-        mxq::ODBC odbc(process_connection_string(config.odbc_string));
+        mxq::ODBC odbc(process_connection_string(config.odbc_string), std::chrono::seconds{config.timeout});
 
         if (odbc.connect())
         {

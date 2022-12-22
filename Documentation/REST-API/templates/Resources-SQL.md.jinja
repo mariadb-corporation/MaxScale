@@ -144,7 +144,7 @@ The request body must be a JSON object consisting of the following fields:
 
   - Connection timeout in seconds. The default connection timeout is 10
     seconds. This controls how long the SQL connection creation can take before
-    an error is returned. This is ignored by ODBC connections.
+    an error is returned. This is accepted by all connection types.
 
 - `connection_string`
 
@@ -707,6 +707,11 @@ The request body must be a JSON object consisting of the following fields:
 
   The number of parallel connections used during the ETL operation. By default
   the ETL operation will use up to 16 connections.
+
+- `timeout`
+
+  The connection and query timeout in seconds. By default a timeout of 30
+  seconds is used.
 
 Here is an example payload that prepares the table `test.t1` for extraction from
 a MariaDB server.

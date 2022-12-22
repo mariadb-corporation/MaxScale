@@ -62,6 +62,9 @@ struct Config
 
     // How many threads are used to do the data dump.
     size_t threads = 1;
+
+    // Connection and query timeout
+    std::chrono::seconds timeout = 30s;
 };
 
 class Table;

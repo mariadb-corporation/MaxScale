@@ -564,6 +564,11 @@ std::unique_ptr<ETL> create(const mxb::Json& json,
         cnf.threads = std::min((size_t)threads, tables.size());
     }
 
+    if (int64_t timeout = maybe_get(json, "timeout", mxb::Json::Type::INTEGER).get_int(); timeout > 0)
+    {
+        cnf.timeout = std::chrono::seconds{timeout};
+    }
+
     std::unique_ptr<ETL> etl = std::make_unique<ETL>(cnf, std::move(extractor));
 
     for (const auto& val : tables)
@@ -719,7 +724,7 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
 
 mxq::ODBC ETL::connect_to_source()
 {
-    mxq::ODBC source(config().src);
+    mxq::ODBC source(config().src, config().timeout);
 
     if (!source.connect())
     {
@@ -734,7 +739,7 @@ mxq::ODBC ETL::connect_to_source()
 std::pair<mxq::ODBC, mxq::ODBC> ETL::connect_to_both()
 {
     mxq::ODBC source = connect_to_source();
-    mxq::ODBC dest(config().dest);
+    mxq::ODBC dest(config().dest, config().timeout);
 
     if (!dest.connect())
     {
@@ -820,7 +825,7 @@ mxb::Json ETL::run_job()
 
     try
     {
-        mxq::ODBC coordinator(m_config.src);
+        mxq::ODBC coordinator(m_config.src, m_config.timeout);
 
         if (!coordinator.connect())
         {

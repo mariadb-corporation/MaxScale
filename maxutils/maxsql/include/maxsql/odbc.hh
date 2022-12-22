@@ -236,9 +236,10 @@ public:
     /**
      * Create a new ODBC instance
      *
-     * @param dsn The connection string given to the driver manager
+     * @param dsn     The connection string given to the driver manager
+     * @param timeout Connection and query timeout
      */
-    ODBC(std::string dsn);
+    ODBC(std::string dsn, std::chrono::seconds timeout = 30s);
 
     ~ODBC();
 
