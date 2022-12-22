@@ -2,7 +2,7 @@
     <page-wrapper>
         <v-sheet class="mt-2">
             <page-header />
-            <v-tabs v-model="currentActiveTab" class="v-tabs--mariadb-style">
+            <v-tabs v-model="currentActiveTab" class="v-tabs--mariadb">
                 <v-tab v-for="tab in tabs" :key="tab" :href="'#' + tab">
                     {{ tab }}
                 </v-tab>

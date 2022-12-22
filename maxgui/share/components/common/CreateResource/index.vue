@@ -30,9 +30,9 @@
                     outlined
                     dense
                     :height="36"
-                    class="mt-4 resource-select vuetify-input--override mariadb-select-input error--text__bottom"
+                    class="mt-4 resource-select vuetify-input--override v-select--mariadb error--text__bottom"
                     :menu-props="{
-                        contentClass: 'mariadb-select-v-menu',
+                        contentClass: 'v-select--menu-mariadb',
                         bottom: true,
                         offsetY: true,
                     }"
@@ -388,7 +388,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.mariadb-select-input {
+.v-select--mariadb {
     ::v-deep .v-select__selection--comma {
         font-weight: bold;
     }

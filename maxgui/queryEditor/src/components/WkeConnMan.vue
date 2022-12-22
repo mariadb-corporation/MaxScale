@@ -5,9 +5,9 @@
             :items="wkeConnOpts"
             outlined
             dense
-            class="vuetify-input--override mariadb-select-input conn-dropdown"
+            class="vuetify-input--override v-select--mariadb conn-dropdown"
             :menu-props="{
-                contentClass: 'mariadb-select-v-menu',
+                contentClass: 'v-select--menu-mariadb conn-menu',
                 bottom: true,
                 offsetY: true,
             }"
@@ -32,8 +32,8 @@
                 </div>
             </template>
             <template v-slot:item="{ item }">
-                <div class="v-list-item__title d-flex align-center flex-row flex-grow-1">
-                    <v-icon class="mr-2" size="16" :color="item.disabled ? '' : 'accent-dark'">
+                <v-list-item-title class="flex-row flex-grow-1">
+                    <v-icon class="mr-2" size="16" color="accent-dark">
                         $vuetify.icons.mxs_server
                     </v-icon>
                     <mxs-truncate-str
@@ -51,11 +51,13 @@
                         @click.stop="unlinkConn(item)"
                     >
                         <template v-slot:btn-content>
-                            <v-icon size="18" color="error">$vuetify.icons.mxs_unlink</v-icon>
+                            <v-icon size="18">
+                                $vuetify.icons.mxs_unlink
+                            </v-icon>
                         </template>
                         {{ $mxs_t('disconnect') }}
                     </mxs-tooltip-btn>
-                </div>
+                </v-list-item-title>
             </template>
             <template v-slot:append-item>
                 <v-divider />
@@ -227,14 +229,12 @@ export default {
 </script>
 
 <style lang="scss">
-.conn-dropdown {
-    .v-input__control {
-        fieldset {
-            border: thin solid $accent-dark !important;
-        }
-    }
-}
 .disconnect-conn {
     pointer-events: all;
+}
+.v-select--menu-mariadb.conn-menu .v-list .disconnect-conn {
+    svg {
+        color: $error !important;
+    }
 }
 </style>

@@ -40,7 +40,7 @@
                         transition="slide-y-transition"
                         offset-y
                         left
-                        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+                        content-class="v-menu--mariadb v-menu--mariadb-full-border"
                     >
                         <template v-slot:activator="{ on, attrs }">
                             <v-btn icon v-bind="attrs" v-on="on">
@@ -61,7 +61,7 @@
                                     :class="[
                                         action.type === ETL_ACTIONS.DELETE
                                             ? 'text-error'
-                                            : ' text-text',
+                                            : 'text-text',
                                     ]"
                                 >
                                     {{ action.text }}

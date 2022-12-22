@@ -6,9 +6,9 @@
         v-model.number="rowLimit"
         outlined
         dense
-        class="vuetify-input--override mariadb-select-input row-limit-dropdown row-limit-dropdown--fieldset-border"
+        class="vuetify-input--override v-select--mariadb row-limit-dropdown"
         :menu-props="{
-            contentClass: 'mariadb-select-v-menu',
+            contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"
@@ -73,13 +73,6 @@ export default {
     .v-input__control {
         .v-text-field__prefix {
             color: $small-text;
-        }
-    }
-}
-.row-limit-dropdown--fieldset-border {
-    .v-input__control {
-        fieldset {
-            border: thin solid $accent-dark !important;
         }
     }
 }

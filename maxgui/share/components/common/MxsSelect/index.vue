@@ -10,9 +10,9 @@
         outlined
         dense
         :height="36"
-        class="vuetify-input--override mariadb-select-input"
+        class="vuetify-input--override v-select--mariadb"
         :class="[required && 'error--text__bottom']"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
+        :menu-props="{ contentClass: 'v-select--menu-mariadb', bottom: true, offsetY: true }"
         :placeholder="
             showPlaceHolder
                 ? $mxs_tc('select', multiple ? 2 : 1, {

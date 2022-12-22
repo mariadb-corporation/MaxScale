@@ -15,7 +15,7 @@
             v-if="!isEmptyFormData && activated"
             v-model="activeColSpec"
             :height="24"
-            class="v-tabs--mariadb-style"
+            class="v-tabs--mariadb"
         >
             <v-tab v-for="spec of DDL_ALTER_SPECS" :key="spec" color="primary" :href="`#${spec}`">
                 <span> {{ $mxs_t(spec.toLowerCase()) }}</span>

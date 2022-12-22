@@ -11,8 +11,7 @@
  * Public License.
  */
 // Override vuetify component style by adding these class to the component
-.v-radio--custom-label,
-.v-checkbox--custom-label {
+.v-checkbox--mariadb {
     label {
         color: $small-text;
         font-size: 0.75rem;
@@ -22,7 +21,7 @@
     }
 }
 
-.v-checkbox--scale-reduce {
+.v-checkbox--mariadb-xs {
     transform: scale(0.75);
     transform-origin: 50% 50%;
     .v-input--selection-controls__input {
@@ -30,7 +29,7 @@
     }
 }
 
-.v-tabs--mariadb-style {
+.v-tabs--mariadb {
     .v-slide-group__wrapper {
         border-bottom: thin solid $table-border !important;
     }
@@ -52,7 +51,7 @@
     }
 }
 
-.v-card--custom {
+.v-card--mariadb {
     box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
     border: 1px solid #e3e6ea !important;
     border-radius: 0.625rem !important;
@@ -115,7 +114,45 @@
     }
 }
 
-.mariadb-select-v-menu {
+.v-list--mariadb {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 0px;
+    .v-list-item {
+        min-height: 36px !important;
+        font-size: 0.875rem;
+        letter-spacing: 0;
+        display: flex;
+        align-items: center;
+        &__title {
+            display: flex;
+            align-items: center;
+            font-weight: 400 !important;
+            font-size: 0.875rem !important;
+        }
+        &__content {
+            padding: 5px 0 !important;
+        }
+        &__action {
+            margin: 0px 0;
+            margin-right: 12px !important;
+            .v-simple-checkbox {
+                line-height: 10px;
+            }
+        }
+        &--disabled {
+            i,
+            svg {
+                color: rgba(0, 0, 0, 0.26) !important;
+            }
+            .v-list-item__title {
+                color: rgba(0, 0, 0, 0.26) !important;
+            }
+        }
+    }
+}
+
+.v-menu--mariadb {
     font-size: 0.875rem;
     color: $navigation;
     margin-top: -1px;
@@ -123,53 +160,35 @@
     border-radius: 0 0 4px 4px !important;
     border-top: 0;
     box-shadow: none !important;
-    &--full-border {
+    &-full-border {
         border-top: 1px solid $text-subtle !important;
         margin-top: 0px !important;
     }
-    &--no-border {
+    &-no-border {
         border: none !important;
         border-radius: 0 !important;
         margin-top: 0px !important;
     }
+
     .v-list {
-        padding-top: 0;
-        padding-bottom: 0;
-        border-radius: 0px;
-        &-item {
-            min-height: 36px !important;
-            font-size: 0.875rem;
-            letter-spacing: 0;
-            display: flex;
-            align-items: center;
-            &__title {
-                font-weight: 400 !important;
-                font-size: 0.875rem !important;
-            }
-            &__content {
-                padding: 5px 0 !important;
-            }
-            &__action {
-                margin: 0px 0;
-                margin-right: 12px !important;
-                .v-simple-checkbox {
-                    line-height: 10px;
-                }
-            }
-        }
+        @extend .v-list--mariadb;
+    }
+}
+
+.v-select--menu-mariadb {
+    @extend .v-menu--mariadb;
+    .v-list .v-list-item {
+        padding: 0 12px;
     }
 }
 
 // vuetify select restyle
-.vuetify-input--override.mariadb-select-input {
+.v-select--mariadb {
     font-size: 0.875rem;
     color: $navigation;
 
     &.v-select--is-menu-active {
         border-radius: 4px 4px 0 0;
-        fieldset {
-            border: 1px solid $text-subtle;
-        }
     }
     .v-input__control {
         .v-select__selection--comma {

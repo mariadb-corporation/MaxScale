@@ -43,9 +43,9 @@
                 :items="resourceTypes"
                 name="resourceName"
                 outlined
-                class="mt-4 vuetify-input--override mariadb-select-input error--text__bottom resource-type-dropdown"
+                class="mt-4 vuetify-input--override v-select--mariadb error--text__bottom resource-type-dropdown"
                 :menu-props="{
-                    contentClass: 'mariadb-select-v-menu',
+                    contentClass: 'v-select--menu-mariadb',
                     bottom: true,
                     offsetY: true,
                 }"
@@ -59,9 +59,9 @@
                     </div>
                 </template>
                 <template v-slot:item="{ item, on, attrs }">
-                    <div class="v-list-item__title" v-bind="attrs" v-on="on">
+                    <v-list-item-title v-bind="attrs" v-on="on">
                         {{ $helpers.resourceTxtTransform(item) }}
-                    </div>
+                    </v-list-item-title>
                 </template>
             </v-select>
         </template>

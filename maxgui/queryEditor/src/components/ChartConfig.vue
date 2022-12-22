@@ -8,9 +8,9 @@
             v-model="chartOpt.type"
             :items="Object.values(chartTypes)"
             outlined
-            class="vuetify-input--override mariadb-select-input error--text__bottom"
+            class="vuetify-input--override v-select--mariadb error--text__bottom"
             :menu-props="{
-                contentClass: 'mariadb-select-v-menu',
+                contentClass: 'v-select--menu-mariadb',
                 bottom: true,
                 offsetY: true,
             }"
@@ -26,9 +26,9 @@
                 v-model="resSet"
                 :items="resultSets"
                 outlined
-                class="vuetify-input--override mariadb-select-input error--text__bottom"
+                class="vuetify-input--override v-select--mariadb error--text__bottom"
                 :menu-props="{
-                    contentClass: 'mariadb-select-v-menu',
+                    contentClass: 'v-select--menu-mariadb',
                     bottom: true,
                     offsetY: true,
                 }"
@@ -59,9 +59,9 @@
                                 v-model="scaleLabels[axisId]"
                                 :items="axisFields"
                                 outlined
-                                class="vuetify-input--override mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override v-select--mariadb error--text__bottom"
                                 :menu-props="{
-                                    contentClass: 'mariadb-select-v-menu',
+                                    contentClass: 'v-select--menu-mariadb',
                                     bottom: true,
                                     offsetY: true,
                                 }"
@@ -80,9 +80,9 @@
                                 v-model="axesType[axisId]"
                                 :items="Object.values(axisTypes)"
                                 outlined
-                                class="vuetify-input--override mariadb-select-input error--text__bottom"
+                                class="vuetify-input--override v-select--mariadb error--text__bottom"
                                 :menu-props="{
-                                    contentClass: 'mariadb-select-v-menu',
+                                    contentClass: 'v-select--menu-mariadb',
                                     bottom: true,
                                     offsetY: true,
                                 }"
@@ -105,7 +105,7 @@
                     v-model="showTrendline"
                     dense
                     color="primary"
-                    class="mt-2 v-checkbox--custom-label"
+                    class="mt-2 v-checkbox--mariadb"
                     hide-details
                 >
                     <template v-slot:label>

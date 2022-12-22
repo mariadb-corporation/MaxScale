@@ -5,7 +5,7 @@
             <slot :name="slot" v-bind="props" />
         </template>
         <template v-slot:setting-menu>
-            <v-list class="py-0">
+            <v-list class="v-list--mariadb">
                 <template v-for="(op, i) in monitorOps">
                     <v-divider v-if="op.divider" :key="`divider-${i}`" />
                     <v-subheader
@@ -25,21 +25,13 @@
                         :class="`${op.type}-op`"
                         @click="onChooseOp(op)"
                     >
-                        <v-list-item-title
-                            class="d-flex mxs-color-helper text-text align-center op-item font-weight-regular"
-                            :class="{ 'op-item--disabled': op.disabled }"
-                        >
+                        <v-list-item-title class="mxs-color-helper text-text">
                             <div class="d-inline-block text-center mr-2" style="width:24px">
-                                <v-icon
-                                    v-if="op.icon"
-                                    class="node-op-item__icon"
-                                    :color="op.color"
-                                    :size="op.iconSize"
-                                >
+                                <v-icon v-if="op.icon" :color="op.color" :size="op.iconSize">
                                     {{ op.icon }}
                                 </v-icon>
                             </div>
-                            <span class="node-op-item__text">{{ op.text }}</span>
+                            {{ op.text }}
                         </v-list-item-title>
                     </v-list-item>
                 </template>
@@ -104,9 +96,9 @@
                             "
                             outlined
                             dense
-                            class="vuetify-input--override mariadb-select-input error--text__bottom mb-3"
+                            class="vuetify-input--override v-select--mariadb error--text__bottom mb-3"
                             :menu-props="{
-                                contentClass: 'mariadb-select-v-menu',
+                                contentClass: 'v-select--menu-mariadb',
                                 bottom: true,
                                 offsetY: true,
                             }"
@@ -524,19 +516,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-::v-deep.op-item {
-    &--disabled {
-        .node-op-item__icon {
-            color: rgba(0, 0, 0, 0.26) !important;
-            svg {
-                color: rgba(0, 0, 0, 0.26) !important;
-            }
-        }
-        .node-op-item__text {
-            color: rgba(0, 0, 0, 0.26) !important;
-        }
-    }
-}
 .op-subheader {
     height: 32px;
 }

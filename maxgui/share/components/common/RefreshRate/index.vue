@@ -2,7 +2,7 @@
     <v-menu
         transition="slide-y-transition"
         offset-y
-        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+        content-class="v-menu--mariadb v-menu--mariadb-full-border"
         :max-width="200"
     >
         <template v-slot:activator="{ on: menu, attrs }">

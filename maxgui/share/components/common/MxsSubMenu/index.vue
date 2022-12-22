@@ -8,7 +8,7 @@
         :nudge-bottom="nudgeBottom"
         :offset-x="isOffsetX"
         :offset-y="isOffsetY"
-        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+        content-class="v-menu--mariadb v-menu--mariadb-full-border"
         :close-on-content-click="false"
         :open-on-hover="openOnHover"
         :open-delay="openDelay"
@@ -16,13 +16,9 @@
         @input="$emit('input', $event)"
     >
         <template v-if="!activator" v-slot:activator="{ on }">
-            <v-list-item
-                v-if="isSubMenu"
-                class="d-flex justify-space-between mxs-color-helper text-text"
-                v-on="on"
-            >
+            <v-list-item v-if="isSubMenu" class="d-flex justify-space-between" v-on="on">
                 <v-list-item-title class="mxs-color-helper text-text" v-text="text" />
-                <v-icon size="24">
+                <v-icon size="24" color="primary">
                     mdi-menu-right
                 </v-icon>
             </v-list-item>

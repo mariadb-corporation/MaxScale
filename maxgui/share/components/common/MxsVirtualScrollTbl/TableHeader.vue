@@ -14,7 +14,7 @@
                     :input-value="isAllselected"
                     :indeterminate="indeterminate"
                     dense
-                    class="v-checkbox--scale-reduce ma-0"
+                    class="v-checkbox--mariadb-xs ma-0"
                     primary
                     hide-details
                     @change="val => $emit('toggle-select-all', val)"

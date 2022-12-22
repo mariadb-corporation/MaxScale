@@ -13,8 +13,8 @@
             outlined
             dense
             :height="36"
-            class="vuetify-input--override mariadb-select-input error--text__bottom"
-            :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
+            class="vuetify-input--override v-select--mariadb error--text__bottom"
+            :menu-props="{ contentClass: 'v-select--menu-mariadb', bottom: true, offsetY: true }"
             :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(moduleName, 1) })"
             :rules="[
                 v => !!v || $mxs_t('errors.requiredInput', { inputName: $mxs_tc(moduleName, 1) }),

@@ -86,7 +86,7 @@
             <template v-if="confDlg.type === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
                 <v-checkbox
                     v-model="confDlg.forceClosing"
-                    class="v-checkbox--custom-label mt-2 mb-4"
+                    class="v-checkbox--mariadb mt-2 mb-4"
                     :label="$mxs_t('forceClosing')"
                     color="primary"
                     dense

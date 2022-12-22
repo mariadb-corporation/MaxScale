@@ -60,9 +60,9 @@
                         :items="engines"
                         name="table_engine"
                         outlined
-                        class="vuetify-input--override mariadb-select-input error--text__bottom"
+                        class="vuetify-input--override v-select--mariadb error--text__bottom"
                         :menu-props="{
-                            contentClass: 'mariadb-select-v-menu',
+                            contentClass: 'v-select--menu-mariadb',
                             bottom: true,
                             offsetY: true,
                         }"

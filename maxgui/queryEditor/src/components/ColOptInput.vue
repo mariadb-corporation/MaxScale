@@ -2,10 +2,10 @@
     <v-combobox
         v-if="input.type === 'column_type'"
         v-model="input.value"
-        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="input.type"
         :menu-props="{
-            contentClass: 'mariadb-select-v-menu',
+            contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"
@@ -22,10 +22,10 @@
     <v-select
         v-else-if="input.type === 'enum'"
         v-model="input.value"
-        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="input.type"
         :menu-props="{
-            contentClass: 'mariadb-select-v-menu',
+            contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"
@@ -41,7 +41,7 @@
         v-else-if="input.type === 'bool'"
         v-model="input.value"
         dense
-        class="v-checkbox--scale-reduce ma-0 pa-0"
+        class="v-checkbox--mariadb-xs ma-0 pa-0"
         primary
         hide-details
         :disabled="isDisabled"

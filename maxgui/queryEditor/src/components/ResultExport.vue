@@ -58,9 +58,9 @@
                                     outlined
                                     dense
                                     :height="36"
-                                    class="vuetify-input--override mariadb-select-input error--text__bottom"
+                                    class="vuetify-input--override v-select--mariadb error--text__bottom"
                                     :menu-props="{
-                                        contentClass: 'mariadb-select-v-menu',
+                                        contentClass: 'v-select--menu-mariadb',
                                         bottom: true,
                                         offsetY: true,
                                     }"
@@ -118,7 +118,7 @@
                                 >
                                     <v-checkbox
                                         v-model="csvCheckboxOpts[key]"
-                                        class="pa-0 ma-0 v-checkbox--custom-label"
+                                        class="pa-0 ma-0 v-checkbox--mariadb"
                                         color="primary"
                                         hide-details="auto"
                                     >

@@ -23,10 +23,10 @@
             <template v-slot:append>
                 <v-select
                     v-model="input.suffix"
-                    class="vuetify-input--override mariadb-select-input duration-dropdown__num-input--select"
+                    class="vuetify-input--override v-select--mariadb duration-dropdown__num-input--select"
                     :height="$attrs.height"
                     :menu-props="{
-                        contentClass: 'mariadb-select-v-menu',
+                        contentClass: 'v-select--menu-mariadb',
                         bottom: true,
                         offsetY: true,
                     }"

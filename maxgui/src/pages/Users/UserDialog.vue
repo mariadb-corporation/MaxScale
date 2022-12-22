@@ -68,9 +68,9 @@
                         v-model="currUser.role"
                         :items="Object.values(USER_ROLES)"
                         outlined
-                        class="vuetify-input--override mariadb-select-input error--text__bottom mt-4"
+                        class="vuetify-input--override v-select--mariadb error--text__bottom mt-4"
                         :menu-props="{
-                            contentClass: 'mariadb-select-v-menu',
+                            contentClass: 'v-select--menu-mariadb',
                             bottom: true,
                             offsetY: true,
                         }"

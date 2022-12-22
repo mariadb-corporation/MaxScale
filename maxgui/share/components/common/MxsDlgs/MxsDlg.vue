@@ -12,7 +12,7 @@
         @input="$emit('input', $event)"
     >
         <v-card
-            class="v-card--custom"
+            class="v-card--mariadb"
             :min-width="minBodyWidth"
             :max-width="isDynamicWidth ? 'unset' : minBodyWidth"
         >

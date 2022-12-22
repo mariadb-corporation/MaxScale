@@ -1,5 +1,5 @@
 <template>
-    <v-card class="v-card--custom" style="max-width: 463px; z-index: 2;border-radius: 10px;">
+    <v-card class="v-card--mariadb" style="max-width: 463px; z-index: 2;border-radius: 10px;">
         <v-card-text style="padding:60px 80px 0px" align-center>
             <div class="">
                 <h1 align="left" class="pb-4 mxs-color-helper text-deep-ocean">
@@ -51,7 +51,7 @@
                     </v-text-field>
                     <v-checkbox
                         v-model="rememberMe"
-                        class="v-checkbox--custom-label mt-2 mb-4"
+                        class="v-checkbox--mariadb mt-2 mb-4"
                         :label="$mxs_t('rememberMe')"
                         color="primary"
                         hide-details

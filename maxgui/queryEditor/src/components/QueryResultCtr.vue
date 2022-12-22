@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height mxs-color-helper border-top-table-border">
-        <v-tabs v-model="activeTab" :height="24" class="v-tabs--mariadb-style">
+        <v-tabs v-model="activeTab" :height="24" class="v-tabs--mariadb">
             <v-tab
                 :disabled="isConnBusy && isLoading"
                 color="primary"

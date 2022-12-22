@@ -61,9 +61,9 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
-        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
+        :menu-props="{ contentClass: 'v-select--menu-mariadb', bottom: true, offsetY: true }"
         :items="[true, false]"
         outlined
         dense
@@ -78,9 +78,9 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model="targetItem.value"
         :name="targetItem.id"
-        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
+        :menu-props="{ contentClass: 'v-select--menu-mariadb', bottom: true, offsetY: true }"
         :items="targetItem.enum_values"
         outlined
         dense
@@ -135,9 +135,9 @@
             <v-select
                 v-model="chosenSuffix"
                 :name="targetItem.id"
-                class="vuetify-input--override mariadb-select-input suffix-select"
+                class="vuetify-input--override v-select--mariadb suffix-select"
                 :menu-props="{
-                    contentClass: 'mariadb-select-v-menu',
+                    contentClass: 'v-select--menu-mariadb',
                     bottom: true,
                     offsetY: true,
                 }"

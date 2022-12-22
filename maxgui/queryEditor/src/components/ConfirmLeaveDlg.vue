@@ -12,7 +12,7 @@
         <template v-slot:body-append>
             <v-checkbox
                 v-model="confirmDelAll"
-                class="v-checkbox--custom-label"
+                class="v-checkbox--mariadb"
                 :label="$mxs_t('disconnectAll')"
                 color="primary"
                 dense

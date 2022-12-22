@@ -55,7 +55,7 @@
                         transition="slide-y-transition"
                         offset-y
                         nudge-left="100%"
-                        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+                        content-class="v-menu--mariadb v-menu--mariadb-full-border"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn small class="gear-btn" icon v-on="on">
@@ -64,40 +64,29 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-
                         <v-list>
-                            <template v-for="(op, i) in nodeOps">
-                                <v-divider v-if="op.divider" :key="`divider-${i}`" />
-                                <v-list-item
-                                    v-else
-                                    :key="i"
-                                    dense
-                                    link
-                                    :disabled="op.disabled"
-                                    class="px-2"
-                                    @click="$emit('on-choose-op', { op, target: node })"
-                                >
-                                    <v-list-item-title
-                                        class="mxs-color-helper text-text align-center node-op-item"
-                                        :class="{ 'node-op-item--disabled': op.disabled }"
-                                    >
-                                        <div
+                            <v-list-item
+                                v-for="(op, i) in nodeOps"
+                                :key="i"
+                                dense
+                                link
+                                :disabled="op.disabled"
+                                class="px-2"
+                                @click="$emit('on-choose-op', { op, target: node })"
+                            >
+                                <v-list-item-title class="mxs-color-helper text-text">
+                                    <div class="d-inline-block text-center mr-2" style="width:22px">
+                                        <v-icon
                                             v-if="op.icon"
-                                            class="d-inline-block text-center mr-1"
-                                            style="width:22px"
+                                            :color="op.color"
+                                            :size="op.iconSize"
                                         >
-                                            <v-icon
-                                                class="node-op-item__icon"
-                                                :color="op.color"
-                                                :size="op.iconSize"
-                                            >
-                                                {{ op.icon }}
-                                            </v-icon>
-                                        </div>
-                                        <span class="node-op-item__text">{{ op.text }}</span>
-                                    </v-list-item-title>
-                                </v-list-item>
-                            </template>
+                                            {{ op.icon }}
+                                        </v-icon>
+                                    </div>
+                                    {{ op.text }}
+                                </v-list-item-title>
+                            </v-list-item>
                         </v-list>
                     </v-menu>
                 </div>
@@ -289,19 +278,6 @@ export default {
         }
         .readonly-val {
             color: white !important;
-        }
-    }
-}
-
-::v-deep.node-op-item {
-    &--disabled {
-        .node-op-item__icon {
-            svg {
-                color: rgba(0, 0, 0, 0.26) !important;
-            }
-        }
-        .node-op-item__text {
-            color: rgba(0, 0, 0, 0.26) !important;
         }
     }
 }

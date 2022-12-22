@@ -56,7 +56,7 @@
                     >
                         <v-checkbox
                             v-model="config[key]"
-                            class="v-checkbox--custom-label pa-0 ma-0"
+                            class="v-checkbox--mariadb pa-0 ma-0"
                             dense
                             :class="[key]"
                             color="primary"

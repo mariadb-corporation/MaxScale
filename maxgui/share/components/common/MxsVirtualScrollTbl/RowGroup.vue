@@ -22,7 +22,7 @@
                 v-if="showSelect"
                 :input-value="isRowGroupSelected"
                 dense
-                class="v-checkbox--scale-reduce ma-0 pa-0"
+                class="v-checkbox--mariadb-xs ma-0 pa-0"
                 primary
                 hide-details
                 @change="handleSelectGroup"

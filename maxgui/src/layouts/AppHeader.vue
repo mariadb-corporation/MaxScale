@@ -24,7 +24,7 @@
             allow-overflow
             transition="slide-y-transition"
             offset-y
-            content-class="mariadb-select-v-menu mariadb-select-v-menu--no-border"
+            content-class="v-menu--mariadb v-menu--mariadb-no-border"
         >
             <template v-slot:activator="{ on }">
                 <v-btn dark class="mr-0 arrow-toggle" text tile v-on="on">

@@ -2,9 +2,9 @@
     <v-combobox
         v-bind="{ ...$attrs }"
         outlined
-        class="vuetify-input--override mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        class="vuetify-input--override v-select--mariadb error--text__bottom error--text__bottom--no-margin"
         :menu-props="{
-            contentClass: 'mariadb-select-v-menu',
+            contentClass: 'v-select--menu-mariadb',
             bottom: true,
             offsetY: true,
         }"

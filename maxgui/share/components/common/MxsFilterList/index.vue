@@ -4,7 +4,7 @@
         transition="slide-y-transition"
         offset-y
         left
-        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+        content-class="v-menu--mariadb v-menu--mariadb-full-border"
         :close-on-content-click="false"
     >
         <template v-slot:activator="{ on, attrs, value }">
