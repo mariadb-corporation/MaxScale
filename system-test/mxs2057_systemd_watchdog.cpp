@@ -64,17 +64,13 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
         {
             test.tprintf("Maxscale was killed by systemd - ok");
 
-            bool core_removed = false;
-
-            for (int i = 0; i < 30 && !core_removed; i++)
+            for (int i = 0; i < 30; i++)
             {
                 if (test.maxscale->ssh_output("rm /tmp/core*", true).rc == 0)
                 {
-                    core_removed = true;
+                    break;
                 }
             }
-
-            test.expect(core_removed, "Removing core files should work:");
         }
     }
 }

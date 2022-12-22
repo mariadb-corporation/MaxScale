@@ -17,6 +17,7 @@
 
 Shard::Shard()
     : m_map(std::make_shared<ServerMap>())
+    , m_targets(std::make_shared<TargetSet>())
     , m_last_updated(time(NULL))
 {
 }
@@ -29,6 +30,7 @@ void Shard::add_location(std::string db, std::string table, mxs::Target* target)
 {
     mxb_assert(m_map.unique());
     (*m_map)[std::move(db)][std::move(table)].insert(target);
+    m_targets->insert(target);
 }
 
 void Shard::add_statement(std::string stmt, mxs::Target* target)
@@ -157,6 +159,11 @@ bool Shard::empty() const
 const ServerMap& Shard::get_content() const
 {
     return *m_map;
+}
+
+bool Shard::uses_target(mxs::Target* target) const
+{
+    return m_targets->count(target);
 }
 
 bool Shard::newer_than(const Shard& shard) const

@@ -27,6 +27,7 @@ using namespace maxscale;
 
 /** This contains the database to server mapping */
 typedef std::unordered_map<std::string, std::unordered_map<std::string, std::set<mxs::Target*>>> ServerMap;
+using TargetSet = std::set<mxs::Target*>;
 
 typedef std::unordered_map<std::string, mxs::Target*> StmtMap;
 typedef std::unordered_map<uint64_t, mxs::Target*>    BinaryPSMap;
@@ -108,6 +109,13 @@ public:
     const ServerMap& get_content() const;
 
     /**
+     * @brief Check if the target is used by this shard
+     *
+     * @return Whether the target is used by this shard
+     */
+    bool uses_target(mxs::Target* target) const;
+
+    /**
      * @brief Check if this shard is newer than the other shard
      *
      * @param shard The other shard to check
@@ -118,6 +126,7 @@ public:
 
 private:
     std::shared_ptr<ServerMap> m_map;
+    std::shared_ptr<TargetSet> m_targets;
     StmtMap                    stmt_map;
     BinaryPSMap                m_binary_map;
     PSHandleMap                m_ps_handles;

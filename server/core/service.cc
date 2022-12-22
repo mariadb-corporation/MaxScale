@@ -1483,6 +1483,8 @@ bool ServiceEndpoint::connect()
         return false;
     }
 
+    m_router_session->setEndpoint(this);
+
     m_head = m_router_session;
     m_tail = &m_upstream;
 
@@ -1510,6 +1512,8 @@ bool ServiceEndpoint::connect()
             m_filters.clear();
             return false;
         }
+
+        f.session->setEndpoint(this);
     }
 
     // The head of the chain currently points at the router
