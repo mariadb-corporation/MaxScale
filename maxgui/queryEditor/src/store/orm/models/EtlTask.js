@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@queryEditorSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ETL_STATUS } from '@queryEditorSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ETL_STATUS, ETL_STAGE_INDEX } from '@queryEditorSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class EtlTask extends Extender {
@@ -25,7 +25,7 @@ export default class EtlTask extends Extender {
             name: this.string(''),
             status: this.string(ETL_STATUS.INITIALIZING),
             sql_script: this.string(''),
-            active_stage_index: this.number(0),
+            active_stage_index: this.number(ETL_STAGE_INDEX.PREREQ),
             meta: this.attr({}),
             created: this.number(Date.now()),
         }
