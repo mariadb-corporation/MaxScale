@@ -15,16 +15,22 @@ import { cancel } from '@queryEditorSrc/api/etl'
 
 export default {
     namespaced: true,
+    state: {
+        active_etl_task_id: null,
+    },
     actions: {
-        insertEtlTask(_, name) {
+        async insertEtlTask({ dispatch, rootState }, name) {
             const timestamp = Date.now()
             const date = this.vue.$helpers.dateFormat({ value: timestamp })
-            EtlTask.insert({
-                data: {
-                    name: name || `ETL - ${date}`,
-                    created: timestamp,
-                },
+            const entities = await EtlTask.insert({
+                data: { name: name || `ETL - ${date}`, created: timestamp },
             })
+            const {
+                ORM_PERSISTENT_ENTITIES: { ETL_TASKS },
+            } = rootState.queryEditorConfig.config
+
+            const task = entities[ETL_TASKS].at(-1)
+            dispatch('viewEtlTask', task)
         },
         /**
          * @param {String} id - etl task id
@@ -60,6 +66,10 @@ export default {
                     data: { status: etlStatus },
                 })
             }
+        },
+        viewEtlTask(_, task) {
+            EtlTask.commit(state => (state.active_etl_task_id = task.id))
+            //TODO: Detect ETL task form mode (view or edit, depends on the status of the task)
         },
     },
     getters: {

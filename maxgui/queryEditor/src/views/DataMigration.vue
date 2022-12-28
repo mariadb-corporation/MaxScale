@@ -32,7 +32,7 @@
                 :headers="tableHeaders"
                 :data="tableRows"
                 :search="search_keyword"
-                sortBy="id"
+                sortBy="created"
                 showAll
             >
                 <template v-slot:menu="{ data: { item } }">
@@ -195,8 +195,7 @@ export default {
                     await EtlTask.dispatch('cancelEtlTask', task.id)
                     break
                 case CREATE:
-                    //TODO: Open ETL task form (mode creation)
-                    EtlTask.dispatch('insertEtlTask')
+                    await EtlTask.dispatch('insertEtlTask')
                     break
                 case DELETE:
                     EtlTask.delete(task.id)
@@ -206,7 +205,7 @@ export default {
                     await this.disconnectConnsFromTask(task)
                     break
                 case VIEW:
-                    //TODO: Open ETL task form (mode view or edit, depends on the status of the task)
+                    EtlTask.dispatch('viewEtlTask', task)
                     break
             }
         },
