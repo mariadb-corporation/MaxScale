@@ -17,16 +17,17 @@ import {
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
 } from '@queryEditorSrc/store/config'
-import { lodash } from '@share/utils/helpers'
-import { t } from 'typy'
+import { lodash, to } from '@share/utils/helpers'
+import { t as typy } from 'typy'
 import { getObjectRows } from '@queryEditorSrc/utils/helpers'
+import { query } from '@queryEditorSrc/api/query'
 
 /**
  * @private
  * @param {Object} node - schema node
  * @returns {String} database name
  */
-const getDbName = node => node.qualified_name.split('.')[0]
+const getSchemaName = node => node.qualified_name.split('.')[0]
 
 /**
  * @private
@@ -42,13 +43,13 @@ const getTblName = node => node.qualified_name.split('.')[1]
 const genNodeKey = () => lodash.uniqueId('node_key_')
 
 /**
- * @public
+ * @private
  * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
 function getNodeGroupSQL(nodeGroup) {
     const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
-    const dbName = getDbName(nodeGroup)
+    const schemaName = getSchemaName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
     let colNameKey = NODE_NAME_KEYS[childNodeType],
@@ -67,38 +68,38 @@ function getNodeGroupSQL(nodeGroup) {
         case TBL_G:
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
-            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE = 'BASE TABLE'`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE = 'BASE TABLE'`
             break
         case VIEW_G:
             cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
-            cond = `WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_TYPE != 'BASE TABLE'`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE != 'BASE TABLE'`
             break
         case FN_G:
             cols = `${colNameKey}, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
-            cond = `WHERE ROUTINE_TYPE = 'FUNCTION' AND ROUTINE_SCHEMA = '${dbName}'`
+            cond = `WHERE ROUTINE_TYPE = 'FUNCTION' AND ROUTINE_SCHEMA = '${schemaName}'`
             break
         case SP_G:
             cols = `${colNameKey}, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
-            cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}'`
+            cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${schemaName}'`
             break
         case TRIGGER_G:
             cols = `${colNameKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
             from = 'FROM information_schema.TRIGGERS'
-            cond = `WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
+            cond = `WHERE TRIGGER_SCHEMA='${schemaName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
             cols = `${colNameKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
-            cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
+            cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
             break
         case IDX_G:
             // eslint-disable-next-line vue/max-len
             cols = `${colNameKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
             from = 'FROM information_schema.STATISTICS'
-            cond = `WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}"`
+            cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
             break
     }
     return `SELECT ${cols} ${from} ${cond} ORDER BY ${colNameKey};`
@@ -115,7 +116,7 @@ function getNodeGroupSQL(nodeGroup) {
 function genNode({ nodeGroup, data, type, name }) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
-    const dbName = nodeGroup ? getDbName(nodeGroup) : name
+    const schemaName = nodeGroup ? getSchemaName(nodeGroup) : name
     let node = {
         id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
         qualified_name: '',
@@ -124,7 +125,7 @@ function genNode({ nodeGroup, data, type, name }) {
         name,
         draggable: true,
         data,
-        isSys: SYS_SCHEMAS.includes(dbName.toLowerCase()),
+        isSys: SYS_SCHEMAS.includes(schemaName.toLowerCase()),
     }
     /**
      * index name can be duplicated. e.g.composite indexes.
@@ -139,7 +140,7 @@ function genNode({ nodeGroup, data, type, name }) {
         case VIEW:
         case SP:
         case FN:
-            node.qualified_name = `${dbName}.${node.name}`
+            node.qualified_name = `${schemaName}.${node.name}`
             break
         case TRIGGER:
         case COL:
@@ -164,7 +165,7 @@ function genNode({ nodeGroup, data, type, name }) {
                 else
                     arr.push({
                         id: `${node.id}.${t}`,
-                        qualified_name: `${dbName}.${node.name}.${t}`,
+                        qualified_name: `${schemaName}.${node.name}.${t}`,
                         key: genNodeKey(),
                         type: t,
                         name: t,
@@ -178,7 +179,7 @@ function genNode({ nodeGroup, data, type, name }) {
         case SCHEMA:
             node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
                 id: `${node.id}.${t}`,
-                qualified_name: `${dbName}.${t}`,
+                qualified_name: `${schemaName}.${t}`,
                 key: genNodeKey(),
                 type: t,
                 name: t,
@@ -193,6 +194,19 @@ function genNode({ nodeGroup, data, type, name }) {
 }
 
 /**
+ * @private
+ * @param {Array} param.treeData - Array of tree nodes to be updated
+ * @param {Object} param.nodeId - id of the node to be updated
+ * @param {Array} param.children -  Array of children nodes
+ * @returns {Array} new tree data
+ */
+function deepReplaceNode({ treeData, nodeId, children }) {
+    return lodash.cloneDeepWith(treeData, value => {
+        return value && value.id === nodeId ? { ...value, children } : undefined
+    })
+}
+
+/**
  * This function returns nodes data for schema sidebar and its completion list for the editor
  * @public
  * @param {Object} param.queryResult - query result data.
@@ -202,7 +216,9 @@ function genNode({ nodeGroup, data, type, name }) {
 function genNodeData({ queryResult = {}, nodeGroup = null }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
-    const rows = getObjectRows({ columns: fields, rows: data })
+    // fields return could be in lowercase if connection is via ODBC.
+    const standardizedFields = fields.map(f => f.toUpperCase())
+    const rows = getObjectRows({ columns: standardizedFields, rows: data })
     const nameKey = NODE_NAME_KEYS[type]
     return rows.reduce(
         (acc, row) => {
@@ -227,16 +243,30 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
 }
 
 /**
- * @public
- * @param {Array} param.treeData - Array of tree nodes to be updated
- * @param {Object} param.nodeId - id of the node to be updated
- * @param {Array} param.children -  Array of children nodes
- * @returns {Array} new tree data
+ * @param {String} payload.connId - SQL connection ID
+ * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Array} payload.data - Array of tree node to be updated
+ * @param {Array} [payload.completionList] - Array of completion list for editor
+ * @returns {Promise<Array>} { data: {}, completionList: [] }
  */
-function deepReplaceNode({ treeData, nodeId, children }) {
-    return lodash.cloneDeepWith(treeData, value => {
-        return value && value.id === nodeId ? { ...value, children } : undefined
-    })
+async function getNewTreeData({ connId, nodeGroup, data, completionList = [] }) {
+    const sql = getNodeGroupSQL(nodeGroup)
+    const [e, res] = await to(query({ id: connId, body: { sql } }))
+    if (e) return { data: {}, completionList: [] }
+    else {
+        const { nodes: children, cmpList: partCmpList } = genNodeData({
+            queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
+            nodeGroup,
+        })
+        return {
+            data: deepReplaceNode({
+                treeData: data,
+                nodeId: nodeGroup.id,
+                children,
+            }),
+            completionList: [...completionList, ...partCmpList],
+        }
+    }
 }
 
 /**
@@ -245,7 +275,7 @@ function deepReplaceNode({ treeData, nodeId, children }) {
  * @returns {String} - SQL
  */
 function getAlterTblOptsSQL(node) {
-    const db = getDbName(node)
+    const schema = getSchemaName(node)
     const tblName = getTblName(node)
     return `SELECT
                 table_name,
@@ -257,7 +287,7 @@ function getAlterTblOptsSQL(node) {
                 information_schema.tables t
                 JOIN information_schema.collations c ON t.table_collation = c.collation_name
             WHERE
-                table_schema = "${db}"
+                table_schema = "${schema}"
                 AND table_name = "${tblName}";`
 }
 
@@ -267,7 +297,7 @@ function getAlterTblOptsSQL(node) {
  * @returns {String} - SQL
  */
 function getAlterColsOptsSQL(node) {
-    const db = getDbName(node)
+    const schema = getSchemaName(node)
     const tblName = getTblName(node)
     /**
      * Exception for UQ column
@@ -319,7 +349,7 @@ function getAlterColsOptsSQL(node) {
                    AND b.index_name = c.constraint_name
                 )
             WHERE
-                a.table_schema = '${db}'
+                a.table_schema = '${schema}'
                 AND a.table_name = '${tblName}'
             GROUP BY
                 a.column_name
@@ -356,7 +386,7 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
         const connId = conn.id
         if (apiConnMap[connId]) {
             // if this has value, it is a cloned connection from the wke connection
-            const wkeConnId = t(conn, 'clone_of_conn_id').safeString
+            const wkeConnId = typy(conn, 'clone_of_conn_id').safeString
             if (wkeConnId && !apiConnMap[wkeConnId]) orphaned_conn_ids.push(conn.id)
             else
                 alive_conns.push({
@@ -385,9 +415,8 @@ function genConnStr({ driver, server, port, user, password, db }) {
 }
 
 export default {
-    getNodeGroupSQL,
     genNodeData,
-    deepReplaceNode,
+    getNewTreeData,
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
     filterEntity,

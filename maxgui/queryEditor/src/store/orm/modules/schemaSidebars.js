@@ -27,37 +27,13 @@ export default {
             await QueryConn.dispatch('updateActiveDb')
         },
         /**
-         * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
-         * @param {Array} payload.data - Array of tree node to be updated
-         * @param {Array} payload.completionList - Array of completion list for editor
-         * @returns {Array} { data: {}, completionList: [] }
-         */
-        async getNewTreeData(_, { nodeGroup, data, completionList }) {
-            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const sql = queryHelper.getNodeGroupSQL(nodeGroup)
-            const [e, res] = await this.vue.$helpers.to(query({ id: connId, body: { sql } }))
-            if (e) return { data: {}, completionList: [] }
-            else {
-                const { nodes: children, cmpList: partCmpList } = queryHelper.genNodeData({
-                    queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
-                    nodeGroup,
-                })
-                return {
-                    data: queryHelper.deepReplaceNode({
-                        treeData: data,
-                        nodeId: nodeGroup.id,
-                        children,
-                    }),
-                    completionList: [...completionList, ...partCmpList],
-                }
-            }
-        },
-        /**
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
-        async loadChildNodes({ dispatch, getters }, nodeGroup) {
+        async loadChildNodes({ getters }, nodeGroup) {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
-            const { data, completionList } = await dispatch('getNewTreeData', {
+            const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
+            const { data, completionList } = await queryHelper.getNewTreeData({
+                connId,
                 nodeGroup,
                 data: getters.getDbTreeData,
                 completionList: getters.getDbCmplList,
@@ -70,17 +46,17 @@ export default {
                 },
             })
         },
-        async fetchSchemas({ dispatch, getters, rootState }) {
+        async fetchSchemas({ getters, rootState }) {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
-
+            const connId = activeQueryTabConn.id
             WorksheetTmp.update({
                 where: activeWkeId,
                 data: { loading_db_tree: true },
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                query({ id: activeQueryTabConn.id, body: { sql: getters.getDbSql } })
+                query({ id: connId, body: { sql: getters.getDbSql } })
             )
             if (e)
                 WorksheetTmp.update({
@@ -101,14 +77,15 @@ export default {
                     // fetch expanded_nodes
                     for (const nodeGroup of getters.getExpandedNodes) {
                         if (groupNodes.includes(nodeGroup.type)) {
-                            const { data: newData, completionList } = await dispatch(
-                                'getNewTreeData',
-                                {
-                                    nodeGroup,
-                                    data,
-                                    completionList: completion_list,
-                                }
-                            )
+                            const {
+                                data: newData,
+                                completionList,
+                            } = await queryHelper.getNewTreeData({
+                                connId,
+                                nodeGroup,
+                                data,
+                                completionList: completion_list,
+                            })
                             data = newData
                             completion_list = completionList
                         }
@@ -129,11 +106,12 @@ export default {
     getters: {
         // sidebar getters
         getDbSql: (state, getters, rootState) => {
-            const { SYS_SCHEMAS: SYS_S } = rootState.queryEditorConfig.config
+            const { SYS_SCHEMAS, NODE_NAME_KEYS, NODE_TYPES } = rootState.queryEditorConfig.config
+            const schema = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             let sql = 'SELECT * FROM information_schema.SCHEMATA'
             if (!rootState.queryPersisted.query_show_sys_schemas_flag)
-                sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
-            sql += ' ORDER BY SCHEMA_NAME;'
+                sql += ` WHERE ${schema} NOT IN(${SYS_SCHEMAS.map(db => `'${db}'`).join(',')})`
+            sql += ` ORDER BY ${schema};`
             return sql
         },
         getSchemaSidebar: () => SchemaSidebar.find(Worksheet.getters('getActiveWkeId')) || {},
