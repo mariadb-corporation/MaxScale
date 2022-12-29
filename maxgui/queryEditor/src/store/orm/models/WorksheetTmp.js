@@ -23,7 +23,7 @@ export default class WorksheetTmp extends Extender {
         return {
             // fields for SchemaSidebar
             loading_db_tree: this.boolean(false),
-            completion_list: this.attr([]),
+            completion_items: this.attr([]),
             db_tree_of_conn: this.string(''), // Name of the connection using to fetch data
             db_tree: this.attr([]), // Contains schemas array
             // Fields for worksheet

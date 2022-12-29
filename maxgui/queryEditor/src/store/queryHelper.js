@@ -211,7 +211,7 @@ function deepReplaceNode({ treeData, nodeId, children }) {
  * @public
  * @param {Object} param.queryResult - query result data.
  * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
- * @returns {Object} - return {nodes, cmpList}.
+ * @returns {Object} - return { nodes, completionItems}.
  */
 function genNodeData({ queryResult = {}, nodeGroup = null }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
@@ -230,7 +230,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
                     name: row[nameKey],
                 })
             )
-            acc.cmpList.push({
+            acc.completionItems.push({
                 label: row[nameKey],
                 detail: type.toUpperCase(),
                 insertText: row[nameKey],
@@ -238,34 +238,45 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
             })
             return acc
         },
-        { nodes: [], cmpList: [] }
+        { nodes: [], completionItems: [] }
     )
 }
 
 /**
+ * @public
  * @param {String} payload.connId - SQL connection ID
  * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
- * @param {Array} payload.data - Array of tree node to be updated
- * @param {Array} [payload.completionList] - Array of completion list for editor
- * @returns {Promise<Array>} { data: {}, completionList: [] }
+ * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
  */
-async function getNewTreeData({ connId, nodeGroup, data, completionList = [] }) {
+async function getChildNodeData({ connId, nodeGroup }) {
     const sql = getNodeGroupSQL(nodeGroup)
     const [e, res] = await to(query({ id: connId, body: { sql } }))
-    if (e) return { data: {}, completionList: [] }
+    if (e) return { nodes: {}, completionItems: [] }
     else {
-        const { nodes: children, cmpList: partCmpList } = genNodeData({
+        return genNodeData({
             queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
             nodeGroup,
         })
-        return {
-            data: deepReplaceNode({
-                treeData: data,
-                nodeId: nodeGroup.id,
-                children,
-            }),
-            completionList: [...completionList, ...partCmpList],
-        }
+    }
+}
+
+/**
+ * @public
+ * @param {String} payload.connId - SQL connection ID
+ * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Array} payload.data - Array of tree node to be updated
+ * @param {Array} [payload.completionItems] - Array of completion items for editor
+ * @returns {Promise<Array>} { data: {}, completionItems: [] }
+ */
+async function getNewTreeData({ connId, nodeGroup, data, completionItems = [] }) {
+    const { nodes, completionItems: childCmplItems } = await getChildNodeData({ connId, nodeGroup })
+    return {
+        data: deepReplaceNode({
+            treeData: data,
+            nodeId: nodeGroup.id,
+            children: nodes,
+        }),
+        completionItems: [...completionItems, ...childCmplItems],
     }
 }
 
@@ -416,6 +427,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
 
 export default {
     genNodeData,
+    getChildNodeData,
     getNewTreeData,
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,

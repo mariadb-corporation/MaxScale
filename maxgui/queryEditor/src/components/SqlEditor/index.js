@@ -17,7 +17,7 @@ export default {
     name: 'sql-editor',
     props: {
         value: { type: String, required: true },
-        cmplList: { type: Array, default: () => [] },
+        completionItems: { type: Array, default: () => [] },
         readOnly: { type: Boolean, default: false },
         options: { type: Object, default: () => {} },
         isKeptAlive: { type: Boolean, default: false },
@@ -66,8 +66,8 @@ export default {
             }))
             return [...keywordCmplItems, ...builtinFunctionCmplItems]
         },
-        custCmplList() {
-            const dist = this.$helpers.lodash.cloneDeep(this.cmplList)
+        additionalCmplItems() {
+            const dist = this.$helpers.lodash.cloneDeep(this.completionItems)
             const nodeTypes = Object.values(this.NODE_TYPES)
             for (const item of dist) {
                 if (nodeTypes.includes(item.type))
@@ -77,11 +77,11 @@ export default {
             }
             return dist
         },
-        completionItems() {
-            return [...this.custCmplList, ...this.builtInCmplItems]
+        allCompletionItems() {
+            return [...this.additionalCmplItems, ...this.builtInCmplItems]
         },
         completionItemLabels() {
-            return this.completionItems.map(item => item.label)
+            return this.allCompletionItems.map(item => item.label)
         },
     },
     beforeCreate() {
@@ -228,7 +228,7 @@ export default {
                         )
 
                         const suggestions = match
-                            ? scope.completionItems.map(item => ({ ...item, range }))
+                            ? scope.allCompletionItems.map(item => ({ ...item, range }))
                             : []
                         return { suggestions }
                     },

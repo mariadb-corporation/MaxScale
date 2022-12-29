@@ -32,17 +32,17 @@ export default {
         async loadChildNodes({ getters }, nodeGroup) {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const { id: connId } = QueryConn.getters('getActiveQueryTabConn')
-            const { data, completionList } = await queryHelper.getNewTreeData({
+            const { data, completionItems } = await queryHelper.getNewTreeData({
                 connId,
                 nodeGroup,
                 data: getters.getDbTreeData,
-                completionList: getters.getDbCmplList,
+                completionItems: getters.getSchemaCompletionItems,
             })
             WorksheetTmp.update({
                 where: activeWkeId,
                 data(obj) {
                     obj.db_tree = data
-                    obj.completion_list = completionList
+                    obj.completion_items = completionItems
                 },
             })
         },
@@ -64,12 +64,12 @@ export default {
                     data: { loading_db_tree: false },
                 })
             else {
-                const { nodes, cmpList } = queryHelper.genNodeData({
+                const { nodes, completionItems } = queryHelper.genNodeData({
                     queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
                 })
                 if (nodes.length) {
                     let data = nodes
-                    let completion_list = cmpList
+                    let completion_items = completionItems
 
                     const groupNodes = Object.values(
                         rootState.queryEditorConfig.config.NODE_GROUP_TYPES
@@ -79,22 +79,22 @@ export default {
                         if (groupNodes.includes(nodeGroup.type)) {
                             const {
                                 data: newData,
-                                completionList,
+                                completionItems: newCompletionItems,
                             } = await queryHelper.getNewTreeData({
                                 connId,
                                 nodeGroup,
                                 data,
-                                completionList: completion_list,
+                                completionItems: completion_items,
                             })
                             data = newData
-                            completion_list = completionList
+                            completion_items = newCompletionItems
                         }
                     }
                     WorksheetTmp.update({
                         where: activeWkeId,
                         data(obj) {
                             obj.loading_db_tree = false
-                            obj.completion_list = completion_list
+                            obj.completion_items = completion_items
                             obj.db_tree_of_conn = activeQueryTabConn.name
                             obj.db_tree = data
                         },
@@ -119,8 +119,8 @@ export default {
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
         getLoadingDbTree: () => Worksheet.getters('getWorksheetMem').loading_db_tree || false,
-        getDbCmplList: () =>
-            lodash.uniqBy(Worksheet.getters('getWorksheetMem').completion_list || [], 'label'),
+        getSchemaCompletionItems: () =>
+            lodash.uniqBy(Worksheet.getters('getWorksheetMem').completion_items || [], 'label'),
         getDbTreeOfConn: () => Worksheet.getters('getWorksheetMem').db_tree_of_conn || '',
         getDbTreeData: () => Worksheet.getters('getWorksheetMem').db_tree || {},
         getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabMem').active_prvw_node || {},

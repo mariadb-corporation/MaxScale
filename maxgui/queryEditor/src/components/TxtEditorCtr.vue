@@ -47,7 +47,7 @@
                                     ref="sqlEditor"
                                     v-model="allQueryTxt"
                                     class="editor pt-2 pl-2"
-                                    :cmplList="cmplList"
+                                    :completionItems="completionItems"
                                     isKeptAlive
                                     :isTabMoveFocus.sync="isTabMoveFocus"
                                     @on-selection="SET_SELECTED_QUERY_TXT($event)"
@@ -227,8 +227,8 @@ export default {
                 type: this.CMPL_SNIPPET_KIND,
             }))
         },
-        cmplList() {
-            return [...SchemaSidebar.getters('getDbCmplList'), ...this.snippetList]
+        completionItems() {
+            return [...SchemaSidebar.getters('getSchemaCompletionItems'), ...this.snippetList]
         },
         showVisChart() {
             const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray

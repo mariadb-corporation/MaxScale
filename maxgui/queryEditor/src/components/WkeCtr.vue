@@ -62,7 +62,7 @@
             :errMsgObj="stmtErrMsgObj"
             :sqlTobeExecuted.sync="execSqlDlg.sql"
             :editorHeight="execSqlDlg.editorHeight"
-            :dbCmplList="dbCmplList"
+            :completionItems="completionItems"
             :skipRegCompleters="isTxtEditor"
             :onSave="$typy(execSqlDlg, 'onExec').safeFunction"
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
@@ -140,8 +140,8 @@ export default {
         activeQueryTabId() {
             return Worksheet.getters('getActiveQueryTabId')
         },
-        dbCmplList() {
-            return SchemaSidebar.getters('getDbCmplList')
+        completionItems() {
+            return SchemaSidebar.getters('getSchemaCompletionItems')
         },
         exeStmtResult() {
             return Worksheet.getters('getExeStmtResult')

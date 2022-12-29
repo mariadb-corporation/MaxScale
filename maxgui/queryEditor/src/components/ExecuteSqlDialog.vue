@@ -39,7 +39,7 @@
                     v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
-                    :cmplList="dbCmplList"
+                    :completionItems="completionItems"
                     :options="{
                         fontSize: 10,
                         contextmenu: false,
@@ -82,7 +82,7 @@ export default {
         errMsgObj: { type: Object, required: true },
         sqlTobeExecuted: { type: String, required: true },
         editorHeight: { type: Number, default: 250 },
-        dbCmplList: { type: Array, required: true },
+        completionItems: { type: Array, required: true },
         skipRegCompleters: { type: Boolean, required: true },
         onSave: { type: Function, required: true },
     },
