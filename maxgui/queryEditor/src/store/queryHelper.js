@@ -45,15 +45,15 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
 /**
  * @private
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
- * @param {Boolean} [param.onlyName] - If it's true, it queries only the name of the node
+ * @param {Boolean} [param.nodeAttrs.onlyName] - If it's true, it queries only the name of the node
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
-function getNodeGroupSQL({ nodeGroup, onlyName = false }) {
+function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
     const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
     const schemaName = getSchemaName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
 
-    let colNameKey = NODE_NAME_KEYS[childNodeType],
+    let colKey = NODE_NAME_KEYS[childNodeType],
         tblName = '',
         cols = '',
         from = '',
@@ -67,43 +67,43 @@ function getNodeGroupSQL({ nodeGroup, onlyName = false }) {
     }
     switch (nodeGroup.type) {
         case TBL_G:
-            cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
+            cols = `${colKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
             cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE = 'BASE TABLE'`
             break
         case VIEW_G:
-            cols = `${colNameKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
+            cols = `${colKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
             cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE != 'BASE TABLE'`
             break
         case FN_G:
-            cols = `${colNameKey}, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
+            cols = `${colKey}, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'FUNCTION' AND ROUTINE_SCHEMA = '${schemaName}'`
             break
         case SP_G:
-            cols = `${colNameKey}, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
+            cols = `${colKey}, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
             from = 'FROM information_schema.ROUTINES'
             cond = `WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${schemaName}'`
             break
         case TRIGGER_G:
-            cols = `${colNameKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
+            cols = `${colKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
             from = 'FROM information_schema.TRIGGERS'
             cond = `WHERE TRIGGER_SCHEMA='${schemaName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
-            cols = `${colNameKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
+            cols = `${colKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
             cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
             break
         case IDX_G:
             // eslint-disable-next-line vue/max-len
-            cols = `${colNameKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
+            cols = `${colKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
             from = 'FROM information_schema.STATISTICS'
             cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
             break
     }
-    return `SELECT ${onlyName ? colNameKey : cols} ${from} ${cond} ORDER BY ${colNameKey};`
+    return `SELECT ${nodeAttrs.onlyName ? colKey : cols} ${from} ${cond} ORDER BY ${colKey};`
 }
 
 /**
@@ -112,10 +112,17 @@ function getNodeGroupSQL({ nodeGroup, onlyName = false }) {
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
  * @param {String} param.name - name of the node
- * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
+ * @param {Boolean} [param.nodeAttrs.isLeaf] -If it's true, child nodes are leaf nodes
+ * @param {Boolean} [param.nodeAttrs.activatable] - Override the activatable value of the node
  * @returns {Object}  A node in schema sidebar
  */
-function genNode({ nodeGroup, data, type, name, isLeaf = false }) {
+function genNode({
+    nodeGroup,
+    data,
+    type,
+    name,
+    nodeAttrs = { isLeaf: false, activatable: undefined },
+}) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
     const schemaName = nodeGroup ? getSchemaName(nodeGroup) : name
@@ -158,11 +165,13 @@ function genNode({ nodeGroup, data, type, name, isLeaf = false }) {
         case VIEW:
         case TBL:
             /**
-             * VIEW and TBL nodes canBeHighlighted and has children props
+             * VIEW and TBL nodes are activatable and has children props
              * but only TBL node has TRIGGER_G and IDX_G
              */
-            node.canBeHighlighted = true
-            if (!isLeaf)
+            node.activatable = typy(nodeAttrs.activatable).isUndefined
+                ? true
+                : nodeAttrs.activatable
+            if (!nodeAttrs.isLeaf)
                 node.children = [COL_G, IDX_G, TRIGGER_G].reduce((arr, t) => {
                     if (type === VIEW && (t === TRIGGER_G || t === IDX_G)) return arr
                     else
@@ -180,7 +189,7 @@ function genNode({ nodeGroup, data, type, name, isLeaf = false }) {
                 }, [])
             break
         case SCHEMA:
-            if (!isLeaf)
+            if (!nodeAttrs.isLeaf)
                 node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
                     id: `${node.id}.${t}`,
                     qualified_name: `${schemaName}.${t}`,
@@ -215,10 +224,10 @@ function deepReplaceNode({ treeData, nodeId, children }) {
  * @public
  * @param {Object} param.queryResult - query result data.
  * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
- * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
+ * @param {Object} [param.nodeAttrs] - node attributes
  * @returns {Object} - return { nodes, completionItems}.
  */
-function genNodeData({ queryResult = {}, nodeGroup = null, isLeaf = false }) {
+function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
     // fields return could be in lowercase if connection is via ODBC.
@@ -233,7 +242,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null, isLeaf = false }) {
                     data: row,
                     type,
                     name: row[nameKey],
-                    isLeaf,
+                    nodeAttrs,
                 })
             )
             acc.completionItems.push({
@@ -252,19 +261,18 @@ function genNodeData({ queryResult = {}, nodeGroup = null, isLeaf = false }) {
  * @public
  * @param {String} param.connId - SQL connection ID
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
- * @param {Boolean} [param.onlyName] - If it's true, it queries only the name of the node
- * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
+ * @param {Object} [param.nodeAttrs] - node attributes
  * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
  */
-async function getChildNodeData({ connId, nodeGroup, onlyName = false, isLeaf = false }) {
-    const sql = getNodeGroupSQL({ onlyName, nodeGroup })
+async function getChildNodeData({ connId, nodeGroup, nodeAttrs }) {
+    const sql = getNodeGroupSQL({ nodeAttrs, nodeGroup })
     const [e, res] = await to(query({ id: connId, body: { sql } }))
     if (e) return { nodes: {}, completionItems: [] }
     else {
         return genNodeData({
             queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
             nodeGroup,
-            isLeaf,
+            nodeAttrs,
         })
     }
 }

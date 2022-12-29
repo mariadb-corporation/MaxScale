@@ -73,8 +73,8 @@ VTreeviewNode.mixin({
                                         this.treeview.updateActive(this.key, this.isActive)
                                         this.treeview.emitActive()
                                     }
-                                    // canBeHighlighted
-                                    if (this.item.canBeHighlighted) {
+                                    // item activatable
+                                    if (this.item.activatable) {
                                         //persist highlighting active node when toggle node
                                         this.isActive = true
                                         this.treeview.updateActive(this.key, this.isActive)

@@ -66,8 +66,11 @@ export default {
                     const { nodes } = await queryHelper.getChildNodeData({
                         connId,
                         nodeGroup,
-                        onlyName: true,
-                        isLeaf: true,
+                        nodeAttrs: {
+                            onlyName: true,
+                            isLeaf: true,
+                            activatable: false,
+                        },
                     })
                     const tree = queryHelper.deepReplaceNode({
                         treeData: state.src_schema_tree,

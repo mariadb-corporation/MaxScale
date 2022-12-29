@@ -115,7 +115,7 @@ const dummy_tbl_node = {
     type: 'TABLE',
     name: 't1',
     draggable: true,
-    canBeHighlighted: true,
+    activatable: true,
     children: [],
 }
 

@@ -408,7 +408,7 @@ export default {
             }
         },
         onNodeClick(node) {
-            if (node.canBeHighlighted)
+            if (node.activatable)
                 this.$emit('get-node-data', {
                     query_mode: this.QUERY_MODES.PRVW_DATA,
                     qualified_name: node.qualified_name,
