@@ -44,10 +44,11 @@ const genNodeKey = () => lodash.uniqueId('node_key_')
 
 /**
  * @private
- * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Boolean} [param.onlyName] - If it's true, it queries only the name of the node
  * @returns {String} SQL of the node group using for fetching its children nodes
  */
-function getNodeGroupSQL(nodeGroup) {
+function getNodeGroupSQL({ nodeGroup, onlyName = false }) {
     const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
     const schemaName = getSchemaName(nodeGroup)
     const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
@@ -102,7 +103,7 @@ function getNodeGroupSQL(nodeGroup) {
             cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
             break
     }
-    return `SELECT ${cols} ${from} ${cond} ORDER BY ${colNameKey};`
+    return `SELECT ${onlyName ? colNameKey : cols} ${from} ${cond} ORDER BY ${colNameKey};`
 }
 
 /**
@@ -111,9 +112,10 @@ function getNodeGroupSQL(nodeGroup) {
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
  * @param {String} param.name - name of the node
+ * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
  * @returns {Object}  A node in schema sidebar
  */
-function genNode({ nodeGroup, data, type, name }) {
+function genNode({ nodeGroup, data, type, name, isLeaf = false }) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
     const schemaName = nodeGroup ? getSchemaName(nodeGroup) : name
@@ -160,33 +162,35 @@ function genNode({ nodeGroup, data, type, name }) {
              * but only TBL node has TRIGGER_G and IDX_G
              */
             node.canBeHighlighted = true
-            node.children = [COL_G, IDX_G, TRIGGER_G].reduce((arr, t) => {
-                if (type === VIEW && (t === TRIGGER_G || t === IDX_G)) return arr
-                else
-                    arr.push({
-                        id: `${node.id}.${t}`,
-                        qualified_name: `${schemaName}.${node.name}.${t}`,
-                        key: genNodeKey(),
-                        type: t,
-                        name: t,
-                        draggable: false,
-                        level: node.level + 1,
-                        children: [],
-                    })
-                return arr
-            }, [])
+            if (!isLeaf)
+                node.children = [COL_G, IDX_G, TRIGGER_G].reduce((arr, t) => {
+                    if (type === VIEW && (t === TRIGGER_G || t === IDX_G)) return arr
+                    else
+                        arr.push({
+                            id: `${node.id}.${t}`,
+                            qualified_name: `${schemaName}.${node.name}.${t}`,
+                            key: genNodeKey(),
+                            type: t,
+                            name: t,
+                            draggable: false,
+                            level: node.level + 1,
+                            children: [],
+                        })
+                    return arr
+                }, [])
             break
         case SCHEMA:
-            node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
-                id: `${node.id}.${t}`,
-                qualified_name: `${schemaName}.${t}`,
-                key: genNodeKey(),
-                type: t,
-                name: t,
-                draggable: false,
-                level: node.level + 1,
-                children: [],
-            }))
+            if (!isLeaf)
+                node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
+                    id: `${node.id}.${t}`,
+                    qualified_name: `${schemaName}.${t}`,
+                    key: genNodeKey(),
+                    type: t,
+                    name: t,
+                    draggable: false,
+                    level: node.level + 1,
+                    children: [],
+                }))
             break
     }
 
@@ -194,7 +198,7 @@ function genNode({ nodeGroup, data, type, name }) {
 }
 
 /**
- * @private
+ * @public
  * @param {Array} param.treeData - Array of tree nodes to be updated
  * @param {Object} param.nodeId - id of the node to be updated
  * @param {Array} param.children -  Array of children nodes
@@ -211,9 +215,10 @@ function deepReplaceNode({ treeData, nodeId, children }) {
  * @public
  * @param {Object} param.queryResult - query result data.
  * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
+ * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
  * @returns {Object} - return { nodes, completionItems}.
  */
-function genNodeData({ queryResult = {}, nodeGroup = null }) {
+function genNodeData({ queryResult = {}, nodeGroup = null, isLeaf = false }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
     // fields return could be in lowercase if connection is via ODBC.
@@ -228,6 +233,7 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
                     data: row,
                     type,
                     name: row[nameKey],
+                    isLeaf,
                 })
             )
             acc.completionItems.push({
@@ -244,18 +250,21 @@ function genNodeData({ queryResult = {}, nodeGroup = null }) {
 
 /**
  * @public
- * @param {String} payload.connId - SQL connection ID
- * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {String} param.connId - SQL connection ID
+ * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Boolean} [param.onlyName] - If it's true, it queries only the name of the node
+ * @param {Boolean} [param.isLeaf] - If it's true, child nodes are leaf nodes.
  * @returns {Promise<Array>} { nodes: {}, completionItems: [] }
  */
-async function getChildNodeData({ connId, nodeGroup }) {
-    const sql = getNodeGroupSQL(nodeGroup)
+async function getChildNodeData({ connId, nodeGroup, onlyName = false, isLeaf = false }) {
+    const sql = getNodeGroupSQL({ onlyName, nodeGroup })
     const [e, res] = await to(query({ id: connId, body: { sql } }))
     if (e) return { nodes: {}, completionItems: [] }
     else {
         return genNodeData({
             queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
             nodeGroup,
+            isLeaf,
         })
     }
 }
@@ -429,6 +438,7 @@ export default {
     genNodeData,
     getChildNodeData,
     getNewTreeData,
+    deepReplaceNode,
     getAlterTblOptsSQL,
     getAlterColsOptsSQL,
     filterEntity,
