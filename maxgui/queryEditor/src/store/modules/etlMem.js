@@ -25,7 +25,7 @@ export default {
         },
     },
     actions: {
-        async fetchSrcSchemas({ getters, commit, rootState }) {
+        async fetchSrcSchemas({ getters, commit }) {
             const { id: connId } = EtlTask.getters('getActiveSrcConn')
             if (connId) {
                 const [e, res] = await this.vue.$helpers.to(
@@ -35,16 +35,11 @@ export default {
                     const { nodes } = queryHelper.genNodeData({
                         queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]')
                             .safeObject,
+                        nodeAttrs: {
+                            isEmptyChildren: true,
+                        },
                     })
-                    const {
-                        NODE_GROUP_TYPES: { TBL_G },
-                    } = rootState.queryEditorConfig.config
-                    const tree = nodes.map(n => ({
-                        ...n,
-                        // Keep only Tables node (For now, only Tables can be migrated)
-                        children: n.children.filter(c => c.type === TBL_G),
-                    }))
-                    commit('SET_SRC_SCHEMA_TREE', tree)
+                    commit('SET_SRC_SCHEMA_TREE', nodes)
                 }
             }
             /**
@@ -53,7 +48,7 @@ export default {
              */
         },
         /**
-         * For now, only Tables can be migrated, so the nodeGroup must be a TBL_G node
+         * For now, only TBL nodes can be migrated, so the nodeGroup must be a TBL_G node
          * @param {Object} nodeGroup - TBL_G node
          */
         async loadChildNodes({ state, rootState, commit }, nodeGroup) {
@@ -74,8 +69,7 @@ export default {
                     })
                     const tree = queryHelper.deepReplaceNode({
                         treeData: state.src_schema_tree,
-                        nodeId: nodeGroup.id,
-                        children: nodes,
+                        node: { ...nodeGroup, children: nodes },
                     })
                     commit('SET_SRC_SCHEMA_TREE', tree)
                     break

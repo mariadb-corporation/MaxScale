@@ -89,18 +89,18 @@ function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
         case TRIGGER_G:
             cols = `${colKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
             from = 'FROM information_schema.TRIGGERS'
-            cond = `WHERE TRIGGER_SCHEMA='${schemaName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
+            cond = `WHERE TRIGGER_SCHEMA = '${schemaName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
             cols = `${colKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
-            cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_NAME = '${tblName}'`
             break
         case IDX_G:
             // eslint-disable-next-line vue/max-len
             cols = `${colKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
             from = 'FROM information_schema.STATISTICS'
-            cond = `WHERE TABLE_SCHEMA = "${schemaName}" AND TABLE_NAME = "${tblName}"`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_NAME = '${tblName}'`
             break
     }
     return `SELECT ${nodeAttrs.onlyName ? colKey : cols} ${from} ${cond} ORDER BY ${colKey};`
@@ -114,6 +114,7 @@ function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
  * @param {String} param.name - name of the node
  * @param {Boolean} [param.nodeAttrs.isLeaf] -If it's true, child nodes are leaf nodes
  * @param {Boolean} [param.nodeAttrs.activatable] - Override the activatable value of the node
+ * @param {Boolean} [param.nodeAttrs.isEmptyChildren] - generate node with empty children. i.e. node.children = []
  * @returns {Object}  A node in schema sidebar
  */
 function genNode({
@@ -121,7 +122,7 @@ function genNode({
     data,
     type,
     name,
-    nodeAttrs = { isLeaf: false, activatable: undefined },
+    nodeAttrs = { isLeaf: false, activatable: undefined, isEmptyChildren: false },
 }) {
     const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
     const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
@@ -160,47 +161,26 @@ function genNode({
             node.qualified_name = node.name
             break
     }
-    // Assign child node groups
+    // Auto assign child node groups unless nodeAttrs is provided with values other than the default ones
     switch (type) {
         case VIEW:
         case TBL:
-            /**
-             * VIEW and TBL nodes are activatable and has children props
-             * but only TBL node has TRIGGER_G and IDX_G
-             */
-            node.activatable = typy(nodeAttrs.activatable).isUndefined
-                ? true
-                : nodeAttrs.activatable
+        case SCHEMA: {
+            let childTypes = []
+            if (type === VIEW || type === TBL) {
+                // Only VIEW and TBL nodes are activatable
+                node.activatable = typy(nodeAttrs.activatable).isUndefined
+                    ? true
+                    : nodeAttrs.activatable
+                // only TBL node has IDX_G and TRIGGER_G
+                childTypes = type === VIEW ? [COL_G] : [COL_G, IDX_G, TRIGGER_G]
+            } else childTypes = [TBL_G, VIEW_G, SP_G, FN_G]
+
             if (!nodeAttrs.isLeaf)
-                node.children = [COL_G, IDX_G, TRIGGER_G].reduce((arr, t) => {
-                    if (type === VIEW && (t === TRIGGER_G || t === IDX_G)) return arr
-                    else
-                        arr.push({
-                            id: `${node.id}.${t}`,
-                            qualified_name: `${schemaName}.${node.name}.${t}`,
-                            key: genNodeKey(),
-                            type: t,
-                            name: t,
-                            draggable: false,
-                            level: node.level + 1,
-                            children: [],
-                        })
-                    return arr
-                }, [])
+                node.children = childTypes.map(t => genNodeGroup({ parentNode: node, type: t }))
+            if (nodeAttrs.isEmptyChildren) node.children = []
             break
-        case SCHEMA:
-            if (!nodeAttrs.isLeaf)
-                node.children = [TBL_G, VIEW_G, SP_G, FN_G].map(t => ({
-                    id: `${node.id}.${t}`,
-                    qualified_name: `${schemaName}.${t}`,
-                    key: genNodeKey(),
-                    type: t,
-                    name: t,
-                    draggable: false,
-                    level: node.level + 1,
-                    children: [],
-                }))
-            break
+        }
     }
 
     return node
@@ -208,14 +188,33 @@ function genNode({
 
 /**
  * @public
+ * @param {Object} param.parentNode - parent node of the node group being generated
+ * @param {String} param.type - type in NODE_GROUP_TYPES
+ * @returns
+ */
+function genNodeGroup({ parentNode, type }) {
+    return {
+        id: `${parentNode.id}.${type}`,
+        qualified_name: `${parentNode.qualified_name}.${type}`,
+        key: genNodeKey(),
+        type,
+        name: type,
+        draggable: false,
+        level: parentNode.level + 1,
+        children: [],
+    }
+}
+
+/**
+ * @public
  * @param {Array} param.treeData - Array of tree nodes to be updated
- * @param {Object} param.nodeId - id of the node to be updated
- * @param {Array} param.children -  Array of children nodes
+ * @param {Object} param.node - node with new value
  * @returns {Array} new tree data
  */
-function deepReplaceNode({ treeData, nodeId, children }) {
+function deepReplaceNode({ treeData, node }) {
+    const nodeId = typy(node, 'id').safeString
     return lodash.cloneDeepWith(treeData, value => {
-        return value && value.id === nodeId ? { ...value, children } : undefined
+        if (value && value.id === nodeId) return node
     })
 }
 
@@ -290,8 +289,7 @@ async function getNewTreeData({ connId, nodeGroup, data, completionItems = [] })
     return {
         data: deepReplaceNode({
             treeData: data,
-            nodeId: nodeGroup.id,
-            children: nodes,
+            node: { ...nodeGroup, children: nodes },
         }),
         completionItems: [...completionItems, ...childCmplItems],
     }
@@ -443,6 +441,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
 }
 
 export default {
+    genNodeGroup,
     genNodeData,
     getChildNodeData,
     getNewTreeData,
