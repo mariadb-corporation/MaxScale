@@ -109,12 +109,12 @@ int test_user()
                 ++errors;
             }
 
-            if (strcmp(pRule->value, test_case.expect.value) != 0)
+            if (strcmp(pRule->value.c_str(), test_case.expect.value) != 0)
             {
                 printf("%s\nExpected: %s,\nGot     : %s\n",
                        test_case.json,
                        test_case.expect.value,
-                       pRule->value);
+                       pRule->value.c_str());
                 ++errors;
             }
 
