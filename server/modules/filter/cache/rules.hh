@@ -42,23 +42,36 @@ enum cache_rule_op_t
 class CacheRule
 {
 public:
+    CacheRule(cache_rule_attribute_t attribute, // What attribute is evalued.
+              cache_rule_op_t op,               // What operator is used.
+              std::string value,                // The value from the rule file.
+              uint32_t debug)                   // Debug bits
+        : m_attribute(attribute)
+        , m_op(op)
+        , m_value(std::move(value))
+        , m_debug(debug)
+    {
+    }
+
     ~CacheRule();
 
-    cache_rule_attribute_t attribute;   // What attribute is evalued.
-    cache_rule_op_t        op;          // What operator is used.
-    std::string            value;       // The value from the rule file.
+    cache_rule_attribute_t m_attribute;   // What attribute is evalued.
+    cache_rule_op_t        m_op;          // What operator is used.
+    std::string            m_value;       // The value from the rule file.
+    uint32_t               m_debug;       // The debug bits.
+
     struct
     {
         std::string database;
         std::string table;
         std::string column;
-    } simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
+    } m_simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
     struct
     {
         pcre2_code* code;
-    }          regexp;                  // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-    uint32_t   debug;                   // The debug level.
-    CacheRule* next { nullptr };
+    } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+
+    CacheRule* m_pNext { nullptr };
 };
 
 struct CACHE_RULES
