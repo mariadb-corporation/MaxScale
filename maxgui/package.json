@@ -65,7 +65,7 @@
     },
     "optionalDependencies": {
         "@vue/cli-plugin-eslint": "^4.5.19",
-        "@vue/cli-plugin-unit-mocha": "^4.5.19",
+        "@vue/cli-plugin-unit-mocha": "^5.0.8",
         "@vue/test-utils": "^1.3.0",
         "canvas": "^2.9.3",
         "chai": "^4.3.6",
