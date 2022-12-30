@@ -61,13 +61,13 @@ static struct cache_attribute_mapping cache_store_attributes[] =
     {VALUE_ATTRIBUTE_DATABASE, CACHE_ATTRIBUTE_DATABASE              },
     {VALUE_ATTRIBUTE_QUERY,    CACHE_ATTRIBUTE_QUERY                 },
     {VALUE_ATTRIBUTE_TABLE,    CACHE_ATTRIBUTE_TABLE                 },
-    {NULL,                     static_cast<cache_rule_attribute_t>(0)}
+    {nullptr,                  static_cast<cache_rule_attribute_t>(0)}
 };
 
 static struct cache_attribute_mapping cache_use_attributes[] =
 {
     {VALUE_ATTRIBUTE_USER, CACHE_ATTRIBUTE_USER                  },
-    {NULL,                 static_cast<cache_rule_attribute_t>(0)}
+    {nullptr,              static_cast<cache_rule_attribute_t>(0)}
 };
 
 static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
@@ -76,65 +76,65 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
 
 static bool cache_rule_op_get(const char* s, cache_rule_op_t* op);
 
-static bool        cache_rule_compare(CACHE_RULE* rule, const std::string_view& value);
-static bool        cache_rule_compare_n(CACHE_RULE* rule, const char* value, size_t length);
-static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
-                                            cache_rule_op_t op,
-                                            const char* value,
-                                            uint32_t debug);
-static CACHE_RULE* cache_rule_create_simple(cache_rule_attribute_t attribute,
-                                            cache_rule_op_t op,
-                                            const char* value,
-                                            uint32_t debug);
-static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute,
+static bool       cache_rule_compare(CacheRule* rule, const std::string_view& value);
+static bool       cache_rule_compare_n(CacheRule* rule, const char* value, size_t length);
+static CacheRule* cache_rule_create_regexp(cache_rule_attribute_t attribute,
+                                           cache_rule_op_t op,
+                                           const char* value,
+                                           uint32_t debug);
+static CacheRule* cache_rule_create_simple(cache_rule_attribute_t attribute,
+                                           cache_rule_op_t op,
+                                           const char* value,
+                                           uint32_t debug);
+static CacheRule* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute,
+                                               cache_rule_op_t op,
+                                               const char* cvalue,
+                                               uint32_t debug);
+static CacheRule* cache_rule_create_simple_user(cache_rule_attribute_t attribute,
                                                 cache_rule_op_t op,
                                                 const char* cvalue,
                                                 uint32_t debug);
-static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribute,
+static CacheRule* cache_rule_create_simple_query(cache_rule_attribute_t attribute,
                                                  cache_rule_op_t op,
                                                  const char* cvalue,
                                                  uint32_t debug);
-static CACHE_RULE* cache_rule_create_simple_query(cache_rule_attribute_t attribute,
-                                                  cache_rule_op_t op,
-                                                  const char* cvalue,
-                                                  uint32_t debug);
-static CACHE_RULE* cache_rule_create(cache_rule_attribute_t attribute,
-                                     cache_rule_op_t op,
-                                     const char* value,
-                                     uint32_t debug);
-static bool cache_rule_matches_column_regexp(CACHE_RULE* rule,
+static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
+                                    cache_rule_op_t op,
+                                    const char* value,
+                                    uint32_t debug);
+static bool cache_rule_matches_column_regexp(CacheRule* rule,
                                              const char* default_db,
                                              const GWBUF* query);
-static bool cache_rule_matches_column_simple(CACHE_RULE* rule,
+static bool cache_rule_matches_column_simple(CacheRule* rule,
                                              const char* default_db,
                                              const GWBUF* query);
-static bool cache_rule_matches_column(CACHE_RULE* rule,
+static bool cache_rule_matches_column(CacheRule* rule,
                                       const char* default_db,
                                       const GWBUF* query);
-static bool cache_rule_matches_database(CACHE_RULE* rule,
+static bool cache_rule_matches_database(CacheRule* rule,
                                         const char* default_db,
                                         const GWBUF* query);
-static bool cache_rule_matches_query(CACHE_RULE* rule,
+static bool cache_rule_matches_query(CacheRule* rule,
                                      const char* default_db,
                                      const GWBUF* query);
-static bool cache_rule_matches_table(CACHE_RULE* rule,
+static bool cache_rule_matches_table(CacheRule* rule,
                                      const char* default_db,
                                      const GWBUF* query);
-static bool cache_rule_matches_table_regexp(CACHE_RULE* rule,
+static bool cache_rule_matches_table_regexp(CacheRule* rule,
                                             const char* default_db,
                                             const GWBUF* query);
-static bool cache_rule_matches_table_simple(CACHE_RULE* rule,
+static bool cache_rule_matches_table_simple(CacheRule* rule,
                                             const char* default_db,
                                             const GWBUF* query);
-static bool cache_rule_matches_user(CACHE_RULE* rule, const char* user);
-static bool cache_rule_matches(CACHE_RULE* rule,
+static bool cache_rule_matches_user(CacheRule* rule, const char* user);
+static bool cache_rule_matches(CacheRule* rule,
                                const char* default_db,
                                const GWBUF* query);
 
-static void cache_rule_free(CACHE_RULE* rule);
+static void cache_rule_free(CacheRule* rule);
 
-static void         cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule);
-static void         cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule);
+static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule);
+static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRule* rule);
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug);
 static bool         cache_rules_create_from_json(json_t* root,
                                                  uint32_t debug,
@@ -219,7 +219,7 @@ bool cache_rules_load(const char* zPath,
 {
     bool rv = false;
 
-    *pppRules = NULL;
+    *pppRules = nullptr;
     *pnRules = 0;
 
     FILE* pF = fopen(zPath, "r");
@@ -266,7 +266,7 @@ bool cache_rules_parse(const char* zJson,
 {
     bool rv = false;
 
-    *pppRules = NULL;
+    *pppRules = nullptr;
     *pnRules = 0;
 
     json_error_t error;
@@ -321,7 +321,7 @@ bool cache_rules_should_store(CACHE_RULES* self, const char* default_db, const G
 {
     bool should_store = false;
 
-    CACHE_RULE* rule = self->store_rules;
+    CacheRule* rule = self->store_rules;
 
     if (rule)
     {
@@ -343,7 +343,7 @@ bool cache_rules_should_use(CACHE_RULES* self, const MXS_SESSION* session)
 {
     bool should_use = false;
 
-    CACHE_RULE* rule = self->use_rules;
+    CacheRule* rule = self->use_rules;
     const char* user = session->user().c_str();
     const char* host = session->client_remote().c_str();
 
@@ -551,23 +551,23 @@ static bool cache_rule_op_get(const char* s, cache_rule_op_t* op)
 }
 
 /**
- * Creates a CACHE_RULE object doing regexp matching.
+ * Creates a CacheRule object doing regexp matching.
  *
  * @param attribute What attribute this rule applies to.
  * @param op        An operator, CACHE_OP_LIKE or CACHE_OP_UNLIKE.
  * @param value     A regular expression.
  * @param debug     The debug level.
  *
- * @return A new rule object or NULL in case of failure.
+ * @return A new rule object or nullptr in case of failure.
  */
-static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
-                                            cache_rule_op_t op,
-                                            const char* cvalue,
-                                            uint32_t debug)
+static CacheRule* cache_rule_create_regexp(cache_rule_attribute_t attribute,
+                                           cache_rule_op_t op,
+                                           const char* cvalue,
+                                           uint32_t debug)
 {
     mxb_assert((op == CACHE_OP_LIKE) || (op == CACHE_OP_UNLIKE));
 
-    CACHE_RULE* rule = NULL;
+    CacheRule* rule = nullptr;
 
     int errcode;
     PCRE2_SIZE erroffset;
@@ -576,7 +576,7 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                      0,
                                      &errcode,
                                      &erroffset,
-                                     NULL);
+                                     nullptr);
 
     if (code)
     {
@@ -584,7 +584,7 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
         // complained about it already.
         pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
 
-        rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+        rule = (CacheRule*)MXB_CALLOC(1, sizeof(CacheRule));
         char* value = MXB_STRDUP(cvalue);
 
         if (rule && value)
@@ -616,21 +616,21 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
 }
 
 /**
- * Creates a CACHE_RULE object matching users.
+ * Creates a CacheRule object matching users.
  *
  * @param attribute CACHE_ATTRIBUTE_USER
  * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
  * @param cvalue    A string in the MySQL user format.
  * @param debug     The debug level.
  *
- * @return A new rule object or NULL in case of failure.
+ * @return A new rule object or nullptr in case of failure.
  */
-static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribute,
-                                                 cache_rule_op_t op,
-                                                 const char* cvalue,
-                                                 uint32_t debug)
+static CacheRule* cache_rule_create_simple_user(cache_rule_attribute_t attribute,
+                                                cache_rule_op_t op,
+                                                const char* cvalue,
+                                                uint32_t debug)
 {
-    CACHE_RULE* rule = NULL;
+    CacheRule* rule = nullptr;
 
     mxb_assert(attribute == CACHE_ATTRIBUTE_USER);
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
@@ -690,7 +690,7 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
             {
                 // No wildcard, no need to use regexp.
 
-                rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+                rule = (CacheRule*)MXB_CALLOC(1, sizeof(CacheRule));
                 char* value = (char*)MXB_MALLOC(strlen(user) + 1 + strlen(host) + 1);
 
                 if (rule && value)
@@ -706,7 +706,7 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
                 {
                     MXB_FREE(rule);
                     MXB_FREE(value);
-                    rule = NULL;
+                    rule = nullptr;
                 }
             }
         }
@@ -724,26 +724,26 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
 }
 
 /**
- * Creates a CACHE_RULE object matching column/table/database.
+ * Creates a CacheRule object matching column/table/database.
  *
  * @param attribute CACHE_ATTRIBUTE_[COLUMN|TABLE|DATABASE]
  * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
  * @param cvalue    A name, with 0, 1 or 2 dots.
  * @param debug     The debug level.
  *
- * @return A new rule object or NULL in case of failure.
+ * @return A new rule object or nullptr in case of failure.
  */
-static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute,
-                                                cache_rule_op_t op,
-                                                const char* cvalue,
-                                                uint32_t debug)
+static CacheRule* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute,
+                                               cache_rule_op_t op,
+                                               const char* cvalue,
+                                               uint32_t debug)
 {
     mxb_assert((attribute == CACHE_ATTRIBUTE_COLUMN)
                || (attribute == CACHE_ATTRIBUTE_TABLE)
                || (attribute == CACHE_ATTRIBUTE_DATABASE));
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE* rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+    CacheRule* rule = (CacheRule*)MXB_CALLOC(1, sizeof(CacheRule));
     char* value = MXB_STRDUP(cvalue);
 
     if (rule && value)
@@ -758,11 +758,11 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
         char buffer[strlen(value) + 1];
         strcpy(buffer, value);
 
-        const char* first = NULL;
-        const char* second = NULL;
-        const char* third = NULL;
+        const char* first = nullptr;
+        const char* second = nullptr;
+        const char* third = nullptr;
         char* dot1 = strchr(buffer, '.');
-        char* dot2 = dot1 ? strchr(dot1 + 1, '.') : NULL;
+        char* dot2 = dot1 ? strchr(dot1 + 1, '.') : nullptr;
 
         if (dot1 && dot2)
         {
@@ -877,38 +877,38 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
             MXB_FREE(rule->simple.database);
             MXB_FREE(value);
             MXB_FREE(rule);
-            rule = NULL;
+            rule = nullptr;
         }
     }
     else
     {
         MXB_FREE(value);
         MXB_FREE(rule);
-        rule = NULL;
+        rule = nullptr;
     }
 
     return rule;
 }
 
 /**
- * Creates a CACHE_RULE object matching an entire query.
+ * Creates a CacheRule object matching an entire query.
  *
  * @param attribute CACHE_ATTRIBUTE_QUERY.
  * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
  * @param cvalue    A string.
  * @param debug     The debug level.
  *
- * @return A new rule object or NULL in case of failure.
+ * @return A new rule object or nullptr in case of failure.
  */
-static CACHE_RULE* cache_rule_create_simple_query(cache_rule_attribute_t attribute,
-                                                  cache_rule_op_t op,
-                                                  const char* cvalue,
-                                                  uint32_t debug)
+static CacheRule* cache_rule_create_simple_query(cache_rule_attribute_t attribute,
+                                                 cache_rule_op_t op,
+                                                 const char* cvalue,
+                                                 uint32_t debug)
 {
     mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE* rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+    CacheRule* rule = (CacheRule*)MXB_CALLOC(1, sizeof(CacheRule));
     char* value = MXB_STRDUP(cvalue);
 
     if (rule && value)
@@ -922,30 +922,30 @@ static CACHE_RULE* cache_rule_create_simple_query(cache_rule_attribute_t attribu
     {
         MXB_FREE(value);
         MXB_FREE(rule);
-        rule = NULL;
+        rule = nullptr;
     }
 
     return rule;
 }
 
 /**
- * Creates a CACHE_RULE object doing simple matching.
+ * Creates a CacheRule object doing simple matching.
  *
  * @param attribute What attribute this rule applies to.
  * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
  * @param value     A string.
  * @param debug     The debug level.
  *
- * @return A new rule object or NULL in case of failure.
+ * @return A new rule object or nullptr in case of failure.
  */
-static CACHE_RULE* cache_rule_create_simple(cache_rule_attribute_t attribute,
-                                            cache_rule_op_t op,
-                                            const char* cvalue,
-                                            uint32_t debug)
+static CacheRule* cache_rule_create_simple(cache_rule_attribute_t attribute,
+                                           cache_rule_op_t op,
+                                           const char* cvalue,
+                                           uint32_t debug)
 {
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE* rule = NULL;
+    CacheRule* rule = nullptr;
 
     switch (attribute)
     {
@@ -972,7 +972,7 @@ static CACHE_RULE* cache_rule_create_simple(cache_rule_attribute_t attribute,
 }
 
 /**
- * Creates a CACHE_RULE object.
+ * Creates a CacheRule object.
  *
  * @param attribute What attribute this rule applies to.
  * @param op        What operator is used.
@@ -981,12 +981,12 @@ static CACHE_RULE* cache_rule_create_simple(cache_rule_attribute_t attribute,
  *
  * @param rule The rule to be freed.
  */
-static CACHE_RULE* cache_rule_create(cache_rule_attribute_t attribute,
-                                     cache_rule_op_t op,
-                                     const char* value,
-                                     uint32_t debug)
+static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
+                                    cache_rule_op_t op,
+                                    const char* value,
+                                    uint32_t debug)
 {
-    CACHE_RULE* rule = NULL;
+    CacheRule* rule = nullptr;
 
     switch (op)
     {
@@ -1010,11 +1010,11 @@ static CACHE_RULE* cache_rule_create(cache_rule_attribute_t attribute,
 }
 
 /**
- * Frees a CACHE_RULE object (and the one it points to).
+ * Frees a CacheRule object (and the one it points to).
  *
  * @param rule The rule to be freed.
  */
-static void cache_rule_free(CACHE_RULE* rule)
+static void cache_rule_free(CacheRule* rule)
 {
     if (rule)
     {
@@ -1048,7 +1048,7 @@ static void cache_rule_free(CACHE_RULE* rule)
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare(CACHE_RULE* self, const std::string_view& value)
+static bool cache_rule_compare(CacheRule* self, const std::string_view& value)
 {
     bool rv;
 
@@ -1080,7 +1080,7 @@ static bool cache_rule_compare(CACHE_RULE* self, const std::string_view& value)
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare_n(CACHE_RULE* self, const char* value, size_t length)
+static bool cache_rule_compare_n(CacheRule* self, const char* value, size_t length)
 {
     bool compares = false;
 
@@ -1094,14 +1094,14 @@ static bool cache_rule_compare_n(CACHE_RULE* self, const char* value, size_t len
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
         {
-            pcre2_match_data* data = pcre2_match_data_create_from_pattern(self->regexp.code, NULL);
+            pcre2_match_data* data = pcre2_match_data_create_from_pattern(self->regexp.code, nullptr);
             compares = (pcre2_match(self->regexp.code,
                                     (PCRE2_SPTR)value,
                                     length,
                                     0,
                                     0,
                                     data,
-                                    NULL) >= 0);
+                                    nullptr) >= 0);
             pcre2_match_data_free(data);
         }
         break;
@@ -1121,13 +1121,13 @@ static bool cache_rule_compare_n(CACHE_RULE* self, const char* value, size_t len
 /**
  * Returns boolean indicating whether the column rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
+static bool cache_rule_matches_column_regexp(CacheRule* self,
                                              const char* default_db,
                                              const GWBUF* query)
 {
@@ -1149,7 +1149,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
             default_database = default_db;
         }
     }
-    else if ((default_db == NULL) && (databases.size() == 1))
+    else if ((default_db == nullptr) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
@@ -1240,13 +1240,13 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the column rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* default_db, const GWBUF* query)
+static bool cache_rule_matches_column_simple(CacheRule* self, const char* default_db, const GWBUF* query)
 {
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
     mxb_assert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
@@ -1269,7 +1269,7 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
             default_database = default_db;
         }
     }
-    else if ((default_db == NULL) && (databases.size() == 1))
+    else if ((default_db == nullptr) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
@@ -1380,13 +1380,13 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
 /**
  * Returns boolean indicating whether the column rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_column(CACHE_RULE* self,
+static bool cache_rule_matches_column(CacheRule* self,
                                       const char* default_db,
                                       const GWBUF* query)
 {
@@ -1416,13 +1416,13 @@ static bool cache_rule_matches_column(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the database rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_database(CACHE_RULE* self,
+static bool cache_rule_matches_database(CacheRule* self,
                                         const char* default_db,
                                         const GWBUF* query)
 {
@@ -1455,13 +1455,13 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the query rule matches the query or not.
  *
- * @param self        The CACHE_RULE object.
+ * @param self        The CacheRule object.
  * @param default_db  The current default db.
  * @param query       The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_query(CACHE_RULE* self,
+static bool cache_rule_matches_query(CacheRule* self,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1479,13 +1479,13 @@ static bool cache_rule_matches_query(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the table regexp rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
+static bool cache_rule_matches_table_regexp(CacheRule* self,
                                             const char* default_db,
                                             const GWBUF* query)
 {
@@ -1541,13 +1541,13 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the table simple rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* default_db, const GWBUF* query)
+static bool cache_rule_matches_table_simple(CacheRule* self, const char* default_db, const GWBUF* query)
 {
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_TABLE);
     mxb_assert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
@@ -1600,13 +1600,13 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
 /**
  * Returns boolean indicating whether the table rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_table(CACHE_RULE* self,
+static bool cache_rule_matches_table(CacheRule* self,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1636,12 +1636,12 @@ static bool cache_rule_matches_table(CACHE_RULE* self,
 /**
  * Returns boolean indicating whether the user rule matches the account or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param account    The account.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_user(CACHE_RULE* self, const char* account)
+static bool cache_rule_matches_user(CacheRule* self, const char* account)
 {
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_USER);
 
@@ -1674,13 +1674,13 @@ static bool cache_rule_matches_user(CACHE_RULE* self, const char* account)
 /**
  * Returns boolean indicating whether the rule matches the query or not.
  *
- * @param self       The CACHE_RULE object.
+ * @param self       The CacheRule object.
  * @param default_db The current default db.
  * @param query      The query.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches(CACHE_RULE* self, const char* default_db, const GWBUF* query)
+static bool cache_rule_matches(CacheRule* self, const char* default_db, const GWBUF* query)
 {
     bool matches = false;
 
@@ -1742,12 +1742,12 @@ static bool cache_rule_matches(CACHE_RULE* self, const char* default_db, const G
 /**
  * Append a rule to the tail of a chain or rules.
  *
- * @param head The head of the chain, can be NULL.
+ * @param head The head of the chain, can be nullptr.
  * @param tail The tail to be added to the chain.
  *
  * @return The head.
  */
-static CACHE_RULE* cache_rule_append(CACHE_RULE* head, CACHE_RULE* tail)
+static CacheRule* cache_rule_append(CacheRule* head, CacheRule* tail)
 {
     mxb_assert(tail);
 
@@ -1757,7 +1757,7 @@ static CACHE_RULE* cache_rule_append(CACHE_RULE* head, CACHE_RULE* tail)
     }
     else
     {
-        CACHE_RULE* rule = head;
+        CacheRule* rule = head;
 
         while (rule->next)
         {
@@ -1776,7 +1776,7 @@ static CACHE_RULE* cache_rule_append(CACHE_RULE* head, CACHE_RULE* tail)
  * @param self Pointer to the CACHE_RULES object that is being built.
  * @param rule The rule to be added.
  */
-static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule)
+static void cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule)
 {
     self->store_rules = cache_rule_append(self->store_rules, rule);
 }
@@ -1787,7 +1787,7 @@ static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule)
  * @param self Pointer to the CACHE_RULES object that is being built.
  * @param rule The rule to be added.
  */
-static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
+static void cache_rules_add_use_rule(CACHE_RULES* self, CacheRule* rule)
 {
     self->use_rules = cache_rule_append(self->use_rules, rule);
 }
@@ -1798,7 +1798,7 @@ static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
  * @param root  The root JSON rule object.
  * @param debug The debug level.
  *
- * @return A rules object if the json object could be parsed, NULL otherwise.
+ * @return A rules object if the json object could be parsed, nullptr otherwise.
  */
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
 {
@@ -1815,7 +1815,7 @@ static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
         else
         {
             cache_rules_free(rules);
-            rules = NULL;
+            rules = nullptr;
         }
     }
 
@@ -1842,7 +1842,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
 {
     bool rv = false;
 
-    *pppRules = NULL;
+    *pppRules = nullptr;
     *pnRules = 0;
 
     if (json_is_array(pRoot))
@@ -2027,15 +2027,15 @@ static bool cache_rules_parse_array(CACHE_RULES* self,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-static CACHE_RULE* cache_rules_parse_element(CACHE_RULES* self,
-                                             json_t* object,
-                                             const char* array_name,
-                                             size_t index,
-                                             struct cache_attribute_mapping* mapping)
+static CacheRule* cache_rules_parse_element(CACHE_RULES* self,
+                                            json_t* object,
+                                            const char* array_name,
+                                            size_t index,
+                                            struct cache_attribute_mapping* mapping)
 {
     mxb_assert(json_is_object(object));
 
-    CACHE_RULE* rule = NULL;
+    CacheRule* rule = nullptr;
 
     json_t* a = json_object_get(object, KEY_ATTRIBUTE);
     json_t* o = json_object_get(object, KEY_OP);
@@ -2095,14 +2095,14 @@ static CACHE_RULE* cache_rules_parse_element(CACHE_RULES* self,
  */
 static bool cache_rules_parse_store_element(CACHE_RULES* self, json_t* object, size_t index)
 {
-    CACHE_RULE* rule = cache_rules_parse_element(self, object, KEY_STORE, index, cache_store_attributes);
+    CacheRule* rule = cache_rules_parse_element(self, object, KEY_STORE, index, cache_store_attributes);
 
     if (rule)
     {
         cache_rules_add_store_rule(self, rule);
     }
 
-    return rule != NULL;
+    return rule != nullptr;
 }
 
 /**
@@ -2116,12 +2116,12 @@ static bool cache_rules_parse_store_element(CACHE_RULES* self, json_t* object, s
  */
 static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, size_t index)
 {
-    CACHE_RULE* rule = cache_rules_parse_element(self, object, KEY_USE, index, cache_use_attributes);
+    CacheRule* rule = cache_rules_parse_element(self, object, KEY_USE, index, cache_use_attributes);
 
     if (rule)
     {
         cache_rules_add_use_rule(self, rule);
     }
 
-    return rule != NULL;
+    return rule != nullptr;
 }

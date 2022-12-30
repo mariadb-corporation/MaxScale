@@ -39,8 +39,9 @@ enum cache_rule_op_t
 };
 
 
-struct CACHE_RULE
+class CacheRule
 {
+public:
     cache_rule_attribute_t attribute;   // What attribute is evalued.
     cache_rule_op_t        op;          // What operator is used.
     char*                  value;       // The value from the rule file.
@@ -53,17 +54,17 @@ struct CACHE_RULE
     struct
     {
         pcre2_code* code;
-    }           regexp;                 // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-    uint32_t    debug;                  // The debug level.
-    CACHE_RULE* next;
+    }          regexp;                  // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+    uint32_t   debug;                   // The debug level.
+    CacheRule* next;
 };
 
 struct CACHE_RULES
 {
-    json_t*     root;           // The JSON root object.
-    uint32_t    debug;          // The debug level.
-    CACHE_RULE* store_rules;    // The rules for when to store data to the cache.
-    CACHE_RULE* use_rules;      // The rules for when to use data from the cache.
+    json_t*    root;           // The JSON root object.
+    uint32_t   debug;          // The debug level.
+    CacheRule* store_rules;    // The rules for when to store data to the cache.
+    CacheRule* use_rules;      // The rules for when to use data from the cache.
 };
 
 /**
