@@ -70,6 +70,12 @@ export default {
             NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
         }),
+        etlPrepareTables() {
+            return this.selectedObjs.map(o => ({
+                schema: queryHelper.getSchemaName(o),
+                table: o.name,
+            }))
+        },
     },
     methods: {
         ...mapActions({ loadChildNodes: 'etlMem/loadChildNodes' }),

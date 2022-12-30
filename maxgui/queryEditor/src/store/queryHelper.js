@@ -23,7 +23,7 @@ import { getObjectRows } from '@queryEditorSrc/utils/helpers'
 import { query } from '@queryEditorSrc/api/query'
 
 /**
- * @private
+ * @public
  * @param {Object} node - schema node
  * @returns {String} database name
  */
@@ -441,6 +441,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
 }
 
 export default {
+    getSchemaName,
     genNodeGroup,
     genNodeData,
     getChildNodeData,
