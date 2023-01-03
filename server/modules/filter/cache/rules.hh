@@ -41,6 +41,19 @@ enum cache_rule_op_t
 
 class CacheRule
 {
+public:
+    virtual ~CacheRule();
+
+    bool compare(const std::string_view& value) const;
+    virtual bool compare_n(const char* value, size_t length) const = 0;
+
+    cache_rule_attribute_t m_attribute;   // What attribute is evalued.
+    cache_rule_op_t        m_op;          // What operator is used.
+    std::string            m_value;       // The value from the rule file.
+    uint32_t               m_debug;       // The debug bits.
+
+    CacheRule* m_pNext;
+
 protected:
     CacheRule(cache_rule_attribute_t attribute, // What attribute is evalued.
               cache_rule_op_t op,               // What operator is used.
@@ -50,31 +63,9 @@ protected:
         , m_op(op)
         , m_value(std::move(value))
         , m_debug(debug)
+        , m_pNext(nullptr)
     {
     }
-
-public:
-    ~CacheRule();
-
-    bool compare(const std::string_view& value) const;
-
-    cache_rule_attribute_t m_attribute;   // What attribute is evalued.
-    cache_rule_op_t        m_op;          // What operator is used.
-    std::string            m_value;       // The value from the rule file.
-    uint32_t               m_debug;       // The debug bits.
-
-    struct
-    {
-        std::string database;
-        std::string table;
-        std::string column;
-    } m_simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
-    struct
-    {
-        pcre2_code* code;
-    } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-
-    CacheRule* m_pNext { nullptr };
 };
 
 class CacheRuleSimple : public CacheRule
@@ -86,19 +77,101 @@ public:
                     uint32_t debug)                   // Debug bits
         : CacheRule(attribute, op, value, debug)
     {
+        mxb_assert(op == CACHE_OP_EQ || op == CACHE_OP_NEQ);
+    }
+
+    bool compare_n(const char* value, size_t length) const override final;
+};
+
+class CacheRuleCTD : public CacheRuleSimple
+{
+public:
+    static CacheRuleCTD* create(cache_rule_attribute_t attribute, // What attribute is evalued.
+                                cache_rule_op_t op,               // What operator is used.
+                                const char* zValue,               // The value from the rule file.
+                                uint32_t debug);                  // Debug bits
+
+    struct
+    {
+        std::string database;
+        std::string table;
+        std::string column;
+    } m_simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
+
+private:
+    CacheRuleCTD(cache_rule_attribute_t attribute, // What attribute is evalued.
+                 cache_rule_op_t op,               // What operator is used.
+                 std::string value,                // The value from the rule file.
+                 uint32_t debug)                   // Debug bits
+        : CacheRuleSimple(attribute, op, value, debug)
+    {
+    }
+};
+
+class CacheRuleQuery : public CacheRuleSimple
+{
+public:
+    static CacheRuleQuery* create(cache_rule_attribute_t attribute, // What attribute is evalued.
+                                  cache_rule_op_t op,               // What operator is used.
+                                  const char* zValue,               // The value from the rule file.
+                                  uint32_t debug);                  // Debug bits
+
+private:
+    CacheRuleQuery(cache_rule_attribute_t attribute, // What attribute is evalued.
+                   cache_rule_op_t op,               // What operator is used.
+                   std::string value,                // The value from the rule file.
+                   uint32_t debug)                   // Debug bits
+        : CacheRuleSimple(attribute, op, value, debug)
+    {
     }
 };
 
 class CacheRuleRegex : public CacheRule
 {
 public:
+    ~CacheRuleRegex();
+
+    bool compare_n(const char* value, size_t length) const override final;
+
+    static CacheRuleRegex* create(cache_rule_attribute_t attribute, // What attribute is evalued.
+                                  cache_rule_op_t op,               // What operator is used.
+                                  const char* zValue,               // The value from the rule file.
+                                  uint32_t debug);                  // Debug bits
+
+    struct
+    {
+        pcre2_code* code;
+    } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+
+private:
     CacheRuleRegex(cache_rule_attribute_t attribute, // What attribute is evalued.
                    cache_rule_op_t op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
         : CacheRule(attribute, op, value, debug)
     {
+        mxb_assert(op == CACHE_OP_LIKE || op == CACHE_OP_UNLIKE);
     }
+};
+
+class CacheRuleUser : public CacheRule
+{
+public:
+    static CacheRuleUser* create(cache_rule_attribute_t attribute, // What attribute is evalued.
+                                 cache_rule_op_t op,               // What operator is used.
+                                 const char* zValue,               // The value from the rule file.
+                                 uint32_t debug);                  // Debug bits
+
+    bool compare_n(const char* value, size_t length) const override;
+
+private:
+    CacheRuleUser(std::unique_ptr<CacheRule> sDelegate)
+        : CacheRule(sDelegate->m_attribute, sDelegate->m_op, sDelegate->m_value, sDelegate->m_debug)
+        , m_sDelegate(std::move(sDelegate))
+    {
+    }
+
+    std::unique_ptr<CacheRule> m_sDelegate;
 };
 
 struct CACHE_RULES
