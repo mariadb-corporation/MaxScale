@@ -583,7 +583,7 @@ static CacheRule* cache_rule_create_regexp(cache_rule_attribute_t attribute,
         // complained about it already.
         pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
 
-        pRule = new CacheRule(attribute, op, zValue, debug);
+        pRule = new CacheRuleRegex(attribute, op, zValue, debug);
         pRule->m_regexp.code = pCode;
     }
     else
@@ -678,7 +678,7 @@ static CacheRule* cache_rule_create_simple_user(cache_rule_attribute_t attribute
                 value += "@";
                 value += host;
 
-                pRule = new CacheRule(attribute, op, std::move(value), debug);
+                pRule = new CacheRuleSimple(attribute, op, std::move(value), debug);
             }
         }
         else
@@ -714,7 +714,7 @@ static CacheRule* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute,
                || (attribute == CACHE_ATTRIBUTE_DATABASE));
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CacheRule* pRule = new CacheRule(attribute, op, zValue, debug);
+    CacheRule* pRule = new CacheRuleSimple(attribute, op, zValue, debug);
 
     bool error = false;
 
@@ -833,7 +833,7 @@ static CacheRule* cache_rule_create_simple_query(cache_rule_attribute_t attribut
     mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CacheRule* pRule = new CacheRule(attribute, op, zValue, debug);
+    CacheRule* pRule = new CacheRuleSimple(attribute, op, zValue, debug);
 
     return pRule;
 }

@@ -41,7 +41,7 @@ enum cache_rule_op_t
 
 class CacheRule
 {
-public:
+protected:
     CacheRule(cache_rule_attribute_t attribute, // What attribute is evalued.
               cache_rule_op_t op,               // What operator is used.
               std::string value,                // The value from the rule file.
@@ -53,6 +53,7 @@ public:
     {
     }
 
+public:
     ~CacheRule();
 
     bool compare(const std::string_view& value) const;
@@ -74,6 +75,30 @@ public:
     } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
 
     CacheRule* m_pNext { nullptr };
+};
+
+class CacheRuleSimple : public CacheRule
+{
+public:
+    CacheRuleSimple(cache_rule_attribute_t attribute, // What attribute is evalued.
+                    cache_rule_op_t op,               // What operator is used.
+                    std::string value,                // The value from the rule file.
+                    uint32_t debug)                   // Debug bits
+        : CacheRule(attribute, op, value, debug)
+    {
+    }
+};
+
+class CacheRuleRegex : public CacheRule
+{
+public:
+    CacheRuleRegex(cache_rule_attribute_t attribute, // What attribute is evalued.
+                   cache_rule_op_t op,               // What operator is used.
+                   std::string value,                // The value from the rule file.
+                   uint32_t debug)                   // Debug bits
+        : CacheRule(attribute, op, value, debug)
+    {
+    }
 };
 
 struct CACHE_RULES
