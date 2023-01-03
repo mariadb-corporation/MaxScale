@@ -260,17 +260,26 @@ following fields.
 
 ## Limitations
 
-1. Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column
+* Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column
 FROM database2.table`) are not properly supported. Such queries are routed either to the
 first explicit database in the query, the current database in use or to the first
 available database, depending on which succeeds.
 
-* Without a default database, queries without explicit databases that do not modify the
-session state will be routed to the first available server. This includes queries such as
-`CREATE DATABASE db1`. Such queries should be done directly on the node or the router
-should be equipped with the hint filter and a routing hint should be used. Queries that
-modify the session state (e.g. `SET autocommit=1`) will be routed to all servers
-regardless of the default database.
+* Without a default database, queries that do not use fully qualified table
+names and which do not modify the session state (e.g. `SELECT * FROM t1`) will
+be routed to the first available server. This includes queries such as explicit
+transaction commands (`BEGIN`, `COMMIT`, `ROLLBACK`), all non-table `CREATE`
+commands (`CREATE DATABASE`, `CREATE SEQUENCE`) as well as any `SELECT`
+statements that do not directly refer to a table. `CREATE` commands should be
+done directly on the node or the router should be equipped with the hint filter
+and a routing hint should be used. Queries that modify the session state
+(e.g. `SET autocommit=1`) will be routed to all servers regardless of the
+default database. For explicit transactions, the recommended way is to use `SET
+autocommit=0` to start a transaction and `SET autocommit=1` to commit it,
+otherwise routing hints are required to correctly route the transaction control
+commands. [MXS-4467](https://jira.mariadb.org/browse/MXS-4467) changed the
+routing of transaction control commands to route them to all servers used by the
+schemarouter.
 
 * SELECT queries that modify session variables are not supported because uniform results
 can not be guaranteed. If such a query is executed, the behavior of the router is
