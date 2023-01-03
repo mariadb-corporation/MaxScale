@@ -55,6 +55,8 @@ public:
 
     ~CacheRule();
 
+    bool compare(const std::string_view& value) const;
+
     cache_rule_attribute_t m_attribute;   // What attribute is evalued.
     cache_rule_op_t        m_op;          // What operator is used.
     std::string            m_value;       // The value from the rule file.

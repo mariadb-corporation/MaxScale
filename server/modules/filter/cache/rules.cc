@@ -76,7 +76,6 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
 
 static bool cache_rule_op_get(const char* s, cache_rule_op_t* op);
 
-static bool       cache_rule_compare(CacheRule* rule, const std::string_view& value);
 static bool       cache_rule_compare_n(CacheRule* rule, const char* value, size_t length);
 static CacheRule* cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                            cache_rule_op_t op,
@@ -947,17 +946,17 @@ CacheRule::~CacheRule()
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare(CacheRule* self, const std::string_view& value)
+bool CacheRule::compare(const std::string_view& value) const
 {
     bool rv;
 
     if (!value.empty())
     {
-        rv = cache_rule_compare_n(self, value.data(), value.length());
+        rv = cache_rule_compare_n(const_cast<CacheRule*>(this), value.data(), value.length());
     }
     else
     {
-        if ((self->m_op == CACHE_OP_EQ) || (self->m_op == CACHE_OP_LIKE))
+        if ((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_LIKE))
         {
             rv = false;
         }
@@ -1128,7 +1127,7 @@ static bool cache_rule_matches_column_regexp(CacheRule* self,
 
         strncat(buffer, info->column.data(), info->column.length());
 
-        matches = cache_rule_compare(self, buffer);
+        matches = self->compare(buffer);
 
         ++i;
     }
@@ -1337,11 +1336,11 @@ static bool cache_rule_matches_database(CacheRule* self,
     {
         if (!name.db.empty())
         {
-            matches = cache_rule_compare(self, name.db);
+            matches = self->compare(name.db);
         }
         else
         {
-            matches = cache_rule_compare(self, default_db ? default_db : "");
+            matches = self->compare(default_db ? default_db : "");
         }
 
         if (matches)
@@ -1409,11 +1408,11 @@ static bool cache_rule_matches_table_regexp(CacheRule* self,
 
                 if (default_db)
                 {
-                    matches = cache_rule_compare(self, db + '.' + std::string(name.table));
+                    matches = self->compare(db + '.' + std::string(name.table));
                 }
                 else
                 {
-                    matches = cache_rule_compare(self, name.table);
+                    matches = self->compare(name.table);
                 }
             }
             else
@@ -1422,7 +1421,7 @@ static bool cache_rule_matches_table_regexp(CacheRule* self,
                 std::string qname(name.db);
                 qname += '.';
                 qname += name.table;
-                matches = cache_rule_compare(self, qname);
+                matches = self->compare(qname);
             }
 
             if (matches)
@@ -1546,7 +1545,7 @@ static bool cache_rule_matches_user(CacheRule* self, const char* account)
 {
     mxb_assert(self->m_attribute == CACHE_ATTRIBUTE_USER);
 
-    bool matches = cache_rule_compare(self, account);
+    bool matches = self->compare(account);
 
     if ((matches && (self->m_debug & CACHE_DEBUG_MATCHING))
         || (!matches && (self->m_debug & CACHE_DEBUG_NON_MATCHING)))
