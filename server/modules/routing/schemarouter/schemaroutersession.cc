@@ -447,6 +447,11 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 m_load_target = bref->target();
             }
 
+            // Store the target we're routing the query to. This can be used later if a situation is
+            // encountered where a query has no "natural" target (e.g. CREATE DATABASE with no default
+            // database).
+            m_prev_target = bref;
+
             MXS_INFO("Route query to \t%s <", bref->name());
 
             auto responds = mxs_mysql_command_will_respond(cmd) ?
@@ -734,6 +739,12 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
 
 SRBackend* SchemaRouterSession::get_any_backend()
 {
+    if (m_prev_target && m_prev_target->in_use())
+    {
+        MXS_INFO("Using previous target: %s", m_prev_target->name());
+        return m_prev_target;
+    }
+
     for (const auto& b : m_backends)
     {
         if (b->in_use() && m_shard.uses_target(b->target()))

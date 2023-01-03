@@ -143,5 +143,6 @@ private:
     SRBackend*             m_sescmd_replier {nullptr};
     int                    m_num_init_db = 0;
     mxb::Worker::DCId      m_dcid {0};
+    SRBackend*             m_prev_target {nullptr};
 };
 }
