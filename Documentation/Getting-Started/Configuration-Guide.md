@@ -1996,6 +1996,10 @@ service. If the parameter is zero or is omitted, there is no limit. Any attempt
 to make more connections after the limit is reached will result in a "Too many
 connections" error being returned.
 
+**Warning**: In MaxScale 2.5, it is possible that the number of concurrent
+  connections temporarily exceeds the value of `max_connections`. This has been
+  fixed in MaxScale 6.
+
 Example:
 
 ```
