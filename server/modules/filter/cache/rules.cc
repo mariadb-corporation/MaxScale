@@ -114,7 +114,7 @@ static bool cache_rule_matches(CacheRule* rule,
                                const GWBUF* query);
 
 static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule);
-static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRule* rule);
+static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRuleUser* rule);
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug);
 static bool         cache_rules_create_from_json(json_t* root,
                                                  uint32_t debug,
@@ -182,7 +182,7 @@ const char* cache_rule_op_to_string(cache_rule_op_t op)
 
 CACHE_RULES* cache_rules_create(uint32_t debug)
 {
-    CACHE_RULES* rules = (CACHE_RULES*)MXB_CALLOC(1, sizeof(CACHE_RULES));
+    CACHE_RULES* rules = new CACHE_RULES;
 
     if (rules)
     {
@@ -272,21 +272,17 @@ bool cache_rules_parse(const char* zJson,
     return rv;
 }
 
+CACHE_RULES::~CACHE_RULES()
+{
+    if (this->root)
+    {
+        json_decref(this->root);
+    }
+}
+
 void cache_rules_free(CACHE_RULES* rules)
 {
-    if (rules)
-    {
-        if (rules->root)
-        {
-            json_decref(rules->root);
-        }
-
-        delete rules->store_rules;
-        rules->store_rules = nullptr;
-        delete rules->use_rules;
-        rules->use_rules = nullptr;
-        MXB_FREE(rules);
-    }
+    delete rules;
 }
 
 void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules)
@@ -303,14 +299,16 @@ bool cache_rules_should_store(CACHE_RULES* self, const char* default_db, const G
 {
     bool should_store = false;
 
-    CacheRule* rule = self->store_rules;
-
-    if (rule)
+    if (!self->store_rules.empty())
     {
-        while (rule && !should_store)
+        for (const auto& sRule : self->store_rules)
         {
-            should_store = cache_rule_matches(rule, default_db, query);
-            rule = rule->m_pNext;
+            should_store = cache_rule_matches(sRule.get(), default_db, query);
+
+            if (should_store)
+            {
+                break;
+            }
         }
     }
     else
@@ -325,19 +323,22 @@ bool cache_rules_should_use(CACHE_RULES* self, const MXS_SESSION* session)
 {
     bool should_use = false;
 
-    CacheRule* rule = self->use_rules;
-    const char* user = session->user().c_str();
-    const char* host = session->client_remote().c_str();
-
-    if (rule)
+    if (!self->use_rules.empty())
     {
+        const char* user = session->user().c_str();
+        const char* host = session->client_remote().c_str();
+
         char account[strlen(user) + 1 + strlen(host) + 1];
         sprintf(account, "%s@%s", user, host);
 
-        while (rule && !should_use)
+        for (const auto& sRule : self->use_rules)
         {
-            should_use = cache_rule_matches_user(rule, account);
-            rule = rule->m_pNext;
+            should_use = cache_rule_matches_user(sRule.get(), account);
+
+            if (should_use)
+            {
+                break;
+            }
         }
     }
     else
@@ -927,12 +928,6 @@ static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
  */
 CacheRule::~CacheRule()
 {
-    if (this->m_pNext)
-    {
-        delete this->m_pNext;
-        this->m_pNext = nullptr;
-    }
-
 }
 
 CacheRuleRegex::~CacheRuleRegex()
@@ -1642,37 +1637,6 @@ static bool cache_rule_matches(CacheRule* self, const char* default_db, const GW
 }
 
 /**
- * Append a rule to the tail of a chain or rules.
- *
- * @param head The head of the chain, can be nullptr.
- * @param tail The tail to be added to the chain.
- *
- * @return The head.
- */
-static CacheRule* cache_rule_append(CacheRule* head, CacheRule* tail)
-{
-    mxb_assert(tail);
-
-    if (!head)
-    {
-        head = tail;
-    }
-    else
-    {
-        CacheRule* rule = head;
-
-        while (rule->m_pNext)
-        {
-            rule = rule->m_pNext;
-        }
-
-        rule->m_pNext = tail;
-    }
-
-    return head;
-}
-
-/**
  * Adds a "store" rule to the rules object
  *
  * @param self Pointer to the CACHE_RULES object that is being built.
@@ -1680,7 +1644,7 @@ static CacheRule* cache_rule_append(CacheRule* head, CacheRule* tail)
  */
 static void cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule)
 {
-    self->store_rules = cache_rule_append(self->store_rules, rule);
+    self->store_rules.emplace_back(rule);
 }
 
 /**
@@ -1689,9 +1653,9 @@ static void cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule)
  * @param self Pointer to the CACHE_RULES object that is being built.
  * @param rule The rule to be added.
  */
-static void cache_rules_add_use_rule(CACHE_RULES* self, CacheRule* rule)
+static void cache_rules_add_use_rule(CACHE_RULES* self, CacheRuleUser* rule)
 {
-    self->use_rules = cache_rule_append(self->use_rules, rule);
+    self->use_rules.emplace_back(rule);
 }
 
 /**
@@ -2022,7 +1986,7 @@ static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, siz
 
     if (rule)
     {
-        cache_rules_add_use_rule(self, rule);
+        cache_rules_add_use_rule(self, static_cast<CacheRuleUser*>(rule));
     }
 
     return rule != nullptr;

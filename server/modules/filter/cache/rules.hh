@@ -52,8 +52,6 @@ public:
     std::string            m_value;       // The value from the rule file.
     uint32_t               m_debug;       // The debug bits.
 
-    CacheRule* m_pNext;
-
 protected:
     CacheRule(cache_rule_attribute_t attribute, // What attribute is evalued.
               cache_rule_op_t op,               // What operator is used.
@@ -63,7 +61,6 @@ protected:
         , m_op(op)
         , m_value(std::move(value))
         , m_debug(debug)
-        , m_pNext(nullptr)
     {
     }
 };
@@ -174,12 +171,21 @@ private:
     std::unique_ptr<CacheRule> m_sDelegate;
 };
 
-struct CACHE_RULES
+class CACHE_RULES
 {
-    json_t*    root;           // The JSON root object.
-    uint32_t   debug;          // The debug level.
-    CacheRule* store_rules;    // The rules for when to store data to the cache.
-    CacheRule* use_rules;      // The rules for when to use data from the cache.
+public:
+    ~CACHE_RULES();
+
+    using SCacheRule = std::unique_ptr<CacheRule>;
+    using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;
+
+    using SCacheRuleVector = std::vector<SCacheRule>;
+    using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
+
+    json_t*              root { nullptr }; // The JSON root object.
+    uint32_t             debug { 0 };      // The debug level.
+    SCacheRuleVector     store_rules;      // The rules for when to store data to the cache.
+    SCacheRuleUserVector use_rules;        // The rules for when to use data from the cache.
 };
 
 /**

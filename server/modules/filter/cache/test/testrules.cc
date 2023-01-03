@@ -97,8 +97,9 @@ int test_user()
         {
             CACHE_RULES* pRules = ppRules[i];
 
-            CacheRule* pRule = pRules->use_rules;
-            mxb_assert(pRule);
+            mxb_assert(!pRules->use_rules.empty());
+
+            CacheRule* pRule = pRules->use_rules.front().get();
 
             if (pRule->m_op != test_case.expect.op)
             {
@@ -386,8 +387,8 @@ int test_store()
         {
             CACHE_RULES* pRules = ppRules[i];
 
-            CacheRule* pRule = pRules->store_rules;
-            mxb_assert(pRule);
+            mxb_assert(!pRules->store_rules.empty());
+            CacheRule* pRule = pRules->store_rules.front().get();
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 
