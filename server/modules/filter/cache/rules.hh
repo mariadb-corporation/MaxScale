@@ -226,6 +226,8 @@ public:
         return m_sDelegate->debug();
     }
 
+    bool matches_user(const char* account) const;
+
     bool compare(const std::string_view& value) const override;
     bool compare_n(const char* value, size_t length) const override;
 

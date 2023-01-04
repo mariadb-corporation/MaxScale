@@ -84,7 +84,6 @@ static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
                                     cache_rule_op_t op,
                                     const char* value,
                                     uint32_t debug);
-static bool cache_rule_matches_user(CacheRuleUser* rule, const char* user);
 
 static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRuleValue* rule);
 static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRuleUser* rule);
@@ -306,7 +305,7 @@ bool cache_rules_should_use(CACHE_RULES* self, const MXS_SESSION* session)
 
         for (const auto& sRule : self->use_rules)
         {
-            should_use = cache_rule_matches_user(sRule.get(), account);
+            should_use = sRule->matches_user(account);
 
             if (should_use)
             {
@@ -1472,14 +1471,15 @@ bool CacheRuleValue::matches_table(const char* default_db, const GWBUF* query) c
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_user(CacheRuleUser* self, const char* account)
+bool CacheRuleUser::matches_user(const char* account) const
 {
-    mxb_assert(self->attribute() == CACHE_ATTRIBUTE_USER);
+    mxb_assert(attribute() == CACHE_ATTRIBUTE_USER);
 
-    bool matches = self->compare(account);
+    bool matches = compare(account);
+    auto d = debug();
 
-    if ((matches && (self->debug() & CACHE_DEBUG_MATCHING))
-        || (!matches && (self->debug() & CACHE_DEBUG_NON_MATCHING)))
+    if ((matches && (d & CACHE_DEBUG_MATCHING))
+        || (!matches && (d & CACHE_DEBUG_NON_MATCHING)))
     {
         const char* text;
         if (matches)
@@ -1492,9 +1492,9 @@ static bool cache_rule_matches_user(CacheRuleUser* self, const char* account)
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
-                   cache_rule_attribute_to_string(self->attribute()),
-                   cache_rule_op_to_string(self->op()),
-                   self->value().c_str(),
+                   cache_rule_attribute_to_string(attribute()),
+                   cache_rule_op_to_string(op()),
+                   value().c_str(),
                    text,
                    account);
     }
