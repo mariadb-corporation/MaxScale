@@ -390,10 +390,29 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
             return ret;
         }
 
-        /** The default database changes must be routed to a specific server */
+        route_target = get_shard_route_target(type);
+
+        // Route all transaction control commands to all backends. This will keep the transaction state
+        // consistent even if no default database is used or if the default database being used is located
+        // on more than one node.
+        if (!pPacket->hint && (type & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)))
+        {
+            MXB_INFO("Routing trx control statement to all nodes.");
+            route_target = TARGET_ALL;
+        }
+
+        /**
+         * Find a suitable server that matches the requirements of @c route_target
+         */
         if (command == MXS_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
         {
-            if (!change_current_db(pPacket))
+            /** The default database changes must be routed to a specific server */
+            if (change_current_db(pPacket, command))
+            {
+                gwbuf_free(pPacket);
+                return 1;
+            }
+            else
             {
                 if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
                 {
@@ -402,54 +421,12 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                     return 1;
                 }
 
-                char db[MYSQL_DATABASE_MAXLEN + 1];
-                extract_database(pPacket, db);
-                gwbuf_free(pPacket);
-
-                char errbuf[128 + MYSQL_DATABASE_MAXLEN];
-                snprintf(errbuf, sizeof(errbuf), "Unknown database: %s", db);
-
-                if (m_config.debug)
-                {
-                    sprintf(errbuf + strlen(errbuf), " ([%" PRIu64 "]: DB change failed)", m_pSession->id());
-                }
-
-                write_error_to_client(m_client, SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errbuf);
-                return 1;
-            }
-
-            route_target = TARGET_UNDEFINED;
-            target = get_location(m_current_db);
-
-            if (target)
-            {
-                MXS_INFO("INIT_DB for database '%s' on server '%s'",
-                         m_current_db.c_str(),
-                         target->name());
-                route_target = TARGET_NAMED_SERVER;
-            }
-            else
-            {
-                MXS_INFO("INIT_DB with unknown database");
+                // If we don't end up refreshing the databases, we'll just route it as a normal query to a
+                // random backend.
+                route_target = TARGET_ANY;
+                MXB_INFO("Client is trying to use an unknown database.");
             }
         }
-        else
-        {
-            route_target = get_shard_route_target(type);
-
-            // Route all transaction control commands to all backends. This will keep the transaction state
-            // consistent even if no default database is used or if the default database being used is located
-            // on more than one node.
-            if (!pPacket->hint && (type & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)))
-            {
-                MXB_INFO("Routing trx control statement to all nodes.");
-                route_target = TARGET_ALL;
-            }
-        }
-
-        /**
-         * Find a suitable server that matches the requirements of @c route_target
-         */
 
         if (TARGET_IS_ALL(route_target))
         {
@@ -1137,44 +1114,47 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
 
 /**
  * Read new database name from COM_INIT_DB packet or a literal USE ... COM_QUERY
- * packet, check that it exists in the hashtable and copy its name to MYSQL_session.
+ * packet and change the default database on the relevant backends.
  *
- * @param dest Destination where the database name will be written
- * @param dbhash Hashtable containing valid databases
- * @param buf   Buffer containing the database change query
+ * @param buf Buffer containing the database change query
+ * @param cmd The command being executed
  *
- * @return true if new database is set, false if non-existent database was tried
- * to be set
+ * @return True if new database was set and a query was executed, false if non-existent database was tried
+ *         to be used and it wasn't found on any of the backends.
  */
-bool SchemaRouterSession::change_current_db(GWBUF* buf)
+bool SchemaRouterSession::change_current_db(GWBUF* buf, uint8_t cmd)
 {
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
 
-    if (gwbuf_link_length(buf) <= MYSQL_DATABASE_MAXLEN - 5)
+    if (extract_database(buf, db))
     {
-        /** Copy database name from MySQL packet to session */
-        if (extract_database(buf, db))
+        mxs::Buffer buffer(gwbuf_clone(buf));
+        auto targets = m_shard.get_all_locations(db);
+        m_sescmd_replier = nullptr;
+
+        for (const auto& b : m_backends)
         {
-            MXS_INFO("change_current_db: INIT_DB with database '%s'", db);
-            /**
-             * Update the session's active database only if it's in the hashtable.
-             * If it isn't found, send a custom error packet to the client.
-             */
-
-            mxs::Target* target = get_location(db);
-
-            if (target)
+            if (b->in_use() && targets.count(b->target()))
             {
-                m_current_db = db;
-                MXS_INFO("change_current_db: database is on server: '%s'.", target->name());
-                succp = true;
+                // This must be set before the call to write_session_command is made as the replier is
+                // used in it to determine whether the response should be discarded or not.
+                if (!m_sescmd_replier)
+                {
+                    m_sescmd_replier = b.get();
+                }
+
+                if (write_session_command(b.get(), buffer, cmd))
+                {
+                    succp = true;
+                }
             }
         }
-    }
-    else
-    {
-        MXS_ERROR("change_current_db: failed to change database: Query buffer too large");
+
+        if (succp)
+        {
+            m_current_db = db;
+        }
     }
 
     return succp;
