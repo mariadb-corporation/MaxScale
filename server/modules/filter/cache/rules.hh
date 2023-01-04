@@ -88,6 +88,8 @@ public:
 protected:
     virtual bool matches_column(const char* default_db, const GWBUF* query) const;
     virtual bool matches_table(const char* default_db, const GWBUF* query) const;
+    bool matches_database(const char* default_db, const GWBUF* query) const;
+    bool matches_query(const char* default_db, const GWBUF* query) const;
 
 protected:
     CacheRuleValue(cache_rule_attribute_t attribute, // What attribute is evalued.

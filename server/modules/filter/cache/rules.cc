@@ -84,12 +84,6 @@ static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
                                     cache_rule_op_t op,
                                     const char* value,
                                     uint32_t debug);
-static bool cache_rule_matches_database(CacheRuleValue* rule,
-                                        const char* default_db,
-                                        const GWBUF* query);
-static bool cache_rule_matches_query(CacheRuleValue* rule,
-                                     const char* default_db,
-                                     const GWBUF* query);
 static bool cache_rule_matches_user(CacheRuleUser* rule, const char* user);
 
 static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRuleValue* rule);
@@ -1276,11 +1270,14 @@ bool CacheRuleValue::matches_column(const char* default_db, const GWBUF* query) 
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_database(CacheRuleValue* self,
-                                        const char* default_db,
-                                        const GWBUF* query)
+bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query) const
 {
-    mxb_assert(self->m_attribute == CACHE_ATTRIBUTE_DATABASE);
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_DATABASE);
+
+    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
+    // needs to be matched against. In the former case, this class will be a CacheRuleCTD
+    // and in the latter a CacheRuleRegex, which means that compare() below will do the
+    // right thing.
 
     bool matches = false;
     bool fullnames = true;
@@ -1290,11 +1287,11 @@ static bool cache_rule_matches_database(CacheRuleValue* self,
     {
         if (!name.db.empty())
         {
-            matches = self->compare(name.db);
+            matches = compare(name.db);
         }
         else
         {
-            matches = self->compare(default_db ? default_db : "");
+            matches = compare(default_db ? default_db : "");
         }
 
         if (matches)
@@ -1315,11 +1312,14 @@ static bool cache_rule_matches_database(CacheRuleValue* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_query(CacheRuleValue* self,
-                                     const char* default_db,
-                                     const GWBUF* query)
+bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) const
 {
-    mxb_assert(self->m_attribute == CACHE_ATTRIBUTE_QUERY);
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_QUERY);
+
+    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
+    // needs to be matched against. In the former case, this class will be a CacheRuleQuery
+    // and in the latter a CacheRuleRegex, which means that compare() below will do the
+    // right thing.
 
     const char* sql;
     int len;
@@ -1327,7 +1327,7 @@ static bool cache_rule_matches_query(CacheRuleValue* self,
     // Will succeed, query contains a contiguous COM_QUERY.
     modutil_extract_SQL(*query, &sql, &len);
 
-    return self->compare_n(sql, len);
+    return compare_n(sql, len);
 }
 
 /**
@@ -1522,7 +1522,7 @@ bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
         break;
 
     case CACHE_ATTRIBUTE_DATABASE:
-        matches = cache_rule_matches_database(const_cast<CacheRuleValue*>(this), default_db, query);
+        matches = matches_database(default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_TABLE:
@@ -1530,7 +1530,7 @@ bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
         break;
 
     case CACHE_ATTRIBUTE_QUERY:
-        matches = cache_rule_matches_query(const_cast<CacheRuleValue*>(this), default_db, query);
+        matches = matches_query(default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_USER:
