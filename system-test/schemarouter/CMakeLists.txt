@@ -60,3 +60,8 @@ add_test_executable_ex(NAME mxs4460_failed_auth SOURCE mxs4460_failed_auth.cc
 # https://jira.mariadb.org/browse/MXS-4467
 add_test_executable_ex(NAME mxs4467_trx_routing SOURCE mxs4467_trx_routing.cc
         CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4471: Target selection can choose a server that is down
+# https://jira.mariadb.org/browse/MXS-4471
+add_test_executable_ex(NAME mxs4471_bad_target SOURCE mxs4471_bad_target.cc
+        CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
