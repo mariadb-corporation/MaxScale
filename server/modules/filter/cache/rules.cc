@@ -109,9 +109,6 @@ static bool cache_rule_matches_table_simple(const CacheRuleCTD* rule,
                                             const char* default_db,
                                             const GWBUF* query);
 static bool cache_rule_matches_user(CacheRuleUser* rule, const char* user);
-static bool cache_rule_matches(CacheRuleValue* rule,
-                               const char* default_db,
-                               const GWBUF* query);
 
 static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRuleValue* rule);
 static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRuleUser* rule);
@@ -303,7 +300,7 @@ bool cache_rules_should_store(CACHE_RULES* self, const char* default_db, const G
     {
         for (const auto& sRule : self->store_rules)
         {
-            should_store = cache_rule_matches(sRule.get(), default_db, query);
+            should_store = sRule->matches(default_db, query);
 
             if (should_store)
             {
@@ -1582,26 +1579,26 @@ static bool cache_rule_matches_user(CacheRuleUser* self, const char* account)
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches(CacheRuleValue* self, const char* default_db, const GWBUF* query)
+bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
 {
     bool matches = false;
 
-    switch (self->m_attribute)
+    switch (m_attribute)
     {
     case CACHE_ATTRIBUTE_COLUMN:
-        matches = cache_rule_matches_column(self, default_db, query);
+        matches = cache_rule_matches_column(const_cast<CacheRuleValue*>(this), default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_DATABASE:
-        matches = cache_rule_matches_database(self, default_db, query);
+        matches = cache_rule_matches_database(const_cast<CacheRuleValue*>(this), default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_TABLE:
-        matches = cache_rule_matches_table(self, default_db, query);
+        matches = cache_rule_matches_table(const_cast<CacheRuleValue*>(this), default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_QUERY:
-        matches = cache_rule_matches_query(self, default_db, query);
+        matches = cache_rule_matches_query(const_cast<CacheRuleValue*>(this), default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_USER:
@@ -1612,8 +1609,8 @@ static bool cache_rule_matches(CacheRuleValue* self, const char* default_db, con
         mxb_assert(!true);
     }
 
-    if ((matches && (self->m_debug & CACHE_DEBUG_MATCHING))
-        || (!matches && (self->m_debug & CACHE_DEBUG_NON_MATCHING)))
+    if ((matches && (m_debug & CACHE_DEBUG_MATCHING))
+        || (!matches && (m_debug & CACHE_DEBUG_NON_MATCHING)))
     {
         const char* sql;
         int sql_len;
@@ -1630,9 +1627,9 @@ static bool cache_rule_matches(CacheRuleValue* self, const char* default_db, con
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
-                   cache_rule_attribute_to_string(self->m_attribute),
-                   cache_rule_op_to_string(self->m_op),
-                   self->m_value.c_str(),
+                   cache_rule_attribute_to_string(m_attribute),
+                   cache_rule_op_to_string(m_op),
+                   m_value.c_str(),
                    text,
                    sql_len,
                    sql);
