@@ -86,6 +86,10 @@ public:
     uint32_t               m_debug;       // The debug bits.
 
 protected:
+    virtual bool matches_column(const char* default_db, const GWBUF* query) const;
+    virtual bool matches_table(const char* default_db, const GWBUF* query) const;
+
+protected:
     CacheRuleValue(cache_rule_attribute_t attribute, // What attribute is evalued.
                    cache_rule_op_t op,               // What operator is used.
                    std::string value,                // The value from the rule file.
@@ -127,6 +131,10 @@ public:
         std::string table;
         std::string column;
     } m_simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
+
+protected:
+    bool matches_column(const char* default_db, const GWBUF* query) const override;
+    bool matches_table(const char* default_db, const GWBUF* query) const override;
 
 private:
     CacheRuleCTD(cache_rule_attribute_t attribute, // What attribute is evalued.
@@ -172,6 +180,10 @@ public:
     {
         pcre2_code* code;
     } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+
+protected:
+    bool matches_column(const char* default_db, const GWBUF* query) const override;
+    bool matches_table(const char* default_db, const GWBUF* query) const override;
 
 private:
     CacheRuleRegex(cache_rule_attribute_t attribute, // What attribute is evalued.
