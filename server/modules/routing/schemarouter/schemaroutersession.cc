@@ -34,7 +34,6 @@ namespace schemarouter
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool              change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
 bool              extract_database(GWBUF* buf, char* str);
 bool              detect_show_shards(GWBUF* query);
 void              write_error_to_client(MariaDBClientConnection* conn, int errnum,
@@ -261,6 +260,29 @@ static bool is_empty_packet(GWBUF* pPacket)
     return rval;
 }
 
+mxs::Target* SchemaRouterSession::get_location(const std::vector<std::string>& dbs)
+{
+    return get_valid_target(m_shard.get_all_locations(dbs));
+}
+
+mxs::Target* SchemaRouterSession::get_location(const std::string& db)
+{
+    return get_valid_target(m_shard.get_all_locations(db));
+}
+
+mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>& candidates)
+{
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use() && candidates.count(b->target()))
+        {
+            return b->target();
+        }
+    }
+
+    return nullptr;
+}
+
 bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 {
     if (m_closed)
@@ -371,7 +393,7 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
         /** The default database changes must be routed to a specific server */
         if (command == MXS_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
         {
-            if (!change_current_db(m_current_db, m_shard, pPacket))
+            if (!change_current_db(pPacket))
             {
                 if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
                 {
@@ -397,7 +419,7 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
             }
 
             route_target = TARGET_UNDEFINED;
-            target = m_shard.get_location(m_current_db);
+            target = get_location(m_current_db);
 
             if (target)
             {
@@ -1124,7 +1146,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
  * @return true if new database is set, false if non-existent database was tried
  * to be set
  */
-bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
+bool SchemaRouterSession::change_current_db(GWBUF* buf)
 {
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
@@ -1140,11 +1162,11 @@ bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
              * If it isn't found, send a custom error packet to the client.
              */
 
-            mxs::Target* target = shard.get_location(db);
+            mxs::Target* target = get_location(db);
 
             if (target)
             {
-                dest = db;
+                m_current_db = db;
                 MXS_INFO("change_current_db: database is on server: '%s'.", target->name());
                 succp = true;
             }
@@ -1438,7 +1460,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
          * If the target name has not been found and the session has an
          * active database, set is as the target
          */
-        rval = m_shard.get_location(m_current_db);
+        rval = get_location(m_current_db);
 
         if (rval)
         {
@@ -1559,11 +1581,11 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
         }
     }
 
-    if ((rval = m_shard.get_location(tables)))
+    if ((rval = get_location(tables)))
     {
         MXS_INFO("Query targets table on server '%s'", rval->name());
     }
-    else if ((rval = m_shard.get_location(qc_get_database_names(buffer))))
+    else if ((rval = get_location(qc_get_database_names(buffer))))
     {
         MXS_INFO("Query targets database on server '%s'", rval->name());
     }
@@ -1585,7 +1607,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         {
             char* stmt = qc_get_prepare_name(buffer);
 
-            if ((rval = m_shard.get_location(qc_get_table_names(pStmt, true))))
+            if ((rval = get_location(qc_get_table_names(pStmt, true))))
             {
                 MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1616,7 +1638,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        rval = m_shard.get_location(qc_get_table_names(buffer, true));
+        rval = get_location(qc_get_table_names(buffer, true));
 
         if (rval)
         {

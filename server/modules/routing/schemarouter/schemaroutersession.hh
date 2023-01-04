@@ -123,6 +123,10 @@ private:
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
     std::string          get_cache_key() const;
+    bool                 change_current_db(GWBUF* buf);
+    mxs::Target*         get_location(const std::vector<std::string>& dbs);
+    mxs::Target*         get_location(const std::string& db);
+    mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
 
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */

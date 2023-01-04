@@ -101,18 +101,6 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string table)
     return rval;
 }
 
-mxs::Target* Shard::get_location(const std::vector<std::string>& tables)
-{
-    auto targets = get_all_locations(tables);
-    return targets.empty() ? nullptr : *targets.begin();
-}
-
-mxs::Target* Shard::get_location(std::string table)
-{
-    auto targets = get_all_locations(table);
-    return targets.empty() ? nullptr : *targets.begin();
-}
-
 mxs::Target* Shard::get_statement(std::string stmt)
 {
     mxs::Target* rval = NULL;
