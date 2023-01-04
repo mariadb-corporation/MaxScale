@@ -44,8 +44,39 @@ class CacheRule
 public:
     virtual ~CacheRule();
 
-    bool compare(const std::string_view& value) const;
+    virtual cache_rule_attribute_t attribute() const = 0;
+    virtual cache_rule_op_t op() const = 0;
+    virtual std::string value() const = 0;
+    virtual uint32_t debug() const = 0;
+
+    virtual bool compare(const std::string_view& value) const = 0;
     virtual bool compare_n(const char* value, size_t length) const = 0;
+};
+
+class CacheRuleValue : public CacheRule
+{
+public:
+    bool compare(const std::string_view& value) const override final;
+
+    cache_rule_attribute_t attribute() const override final
+    {
+        return m_attribute;
+    }
+
+    cache_rule_op_t op() const override final
+    {
+        return m_op;
+    }
+
+    std::string value() const override final
+    {
+        return m_value;
+    }
+
+    uint32_t debug() const override final
+    {
+        return m_debug;
+    }
 
     cache_rule_attribute_t m_attribute;   // What attribute is evalued.
     cache_rule_op_t        m_op;          // What operator is used.
@@ -53,10 +84,10 @@ public:
     uint32_t               m_debug;       // The debug bits.
 
 protected:
-    CacheRule(cache_rule_attribute_t attribute, // What attribute is evalued.
-              cache_rule_op_t op,               // What operator is used.
-              std::string value,                // The value from the rule file.
-              uint32_t debug)                   // Debug bits
+    CacheRuleValue(cache_rule_attribute_t attribute, // What attribute is evalued.
+                   cache_rule_op_t op,               // What operator is used.
+                   std::string value,                // The value from the rule file.
+                   uint32_t debug)                   // Debug bits
         : m_attribute(attribute)
         , m_op(op)
         , m_value(std::move(value))
@@ -65,14 +96,14 @@ protected:
     }
 };
 
-class CacheRuleSimple : public CacheRule
+class CacheRuleSimple : public CacheRuleValue
 {
 public:
     CacheRuleSimple(cache_rule_attribute_t attribute, // What attribute is evalued.
                     cache_rule_op_t op,               // What operator is used.
                     std::string value,                // The value from the rule file.
                     uint32_t debug)                   // Debug bits
-        : CacheRule(attribute, op, value, debug)
+        : CacheRuleValue(attribute, op, value, debug)
     {
         mxb_assert(op == CACHE_OP_EQ || op == CACHE_OP_NEQ);
     }
@@ -123,7 +154,7 @@ private:
     }
 };
 
-class CacheRuleRegex : public CacheRule
+class CacheRuleRegex : public CacheRuleValue
 {
 public:
     ~CacheRuleRegex();
@@ -145,7 +176,7 @@ private:
                    cache_rule_op_t op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
-        : CacheRule(attribute, op, value, debug)
+        : CacheRuleValue(attribute, op, value, debug)
     {
         mxb_assert(op == CACHE_OP_LIKE || op == CACHE_OP_UNLIKE);
     }
@@ -159,12 +190,32 @@ public:
                                  const char* zValue,               // The value from the rule file.
                                  uint32_t debug);                  // Debug bits
 
+    cache_rule_attribute_t attribute() const override
+    {
+        return m_sDelegate->attribute();
+    }
+
+    cache_rule_op_t op() const override
+    {
+        return m_sDelegate->op();
+    }
+
+    std::string value() const override
+    {
+        return m_sDelegate->value();
+    }
+
+    uint32_t debug() const override
+    {
+        return m_sDelegate->debug();
+    }
+
+    bool compare(const std::string_view& value) const override;
     bool compare_n(const char* value, size_t length) const override;
 
 private:
     CacheRuleUser(std::unique_ptr<CacheRule> sDelegate)
-        : CacheRule(sDelegate->m_attribute, sDelegate->m_op, sDelegate->m_value, sDelegate->m_debug)
-        , m_sDelegate(std::move(sDelegate))
+        : m_sDelegate(std::move(sDelegate))
     {
     }
 
@@ -176,16 +227,16 @@ class CACHE_RULES
 public:
     ~CACHE_RULES();
 
-    using SCacheRule = std::unique_ptr<CacheRule>;
+    using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
     using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;
 
-    using SCacheRuleVector = std::vector<SCacheRule>;
+    using SCacheRuleValueVector = std::vector<SCacheRuleValue>;
     using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
 
-    json_t*              root { nullptr }; // The JSON root object.
-    uint32_t             debug { 0 };      // The debug level.
-    SCacheRuleVector     store_rules;      // The rules for when to store data to the cache.
-    SCacheRuleUserVector use_rules;        // The rules for when to use data from the cache.
+    json_t*               root { nullptr }; // The JSON root object.
+    uint32_t              debug { 0 };      // The debug level.
+    SCacheRuleValueVector store_rules;      // The rules for when to store data to the cache.
+    SCacheRuleUserVector  use_rules;        // The rules for when to use data from the cache.
 };
 
 /**

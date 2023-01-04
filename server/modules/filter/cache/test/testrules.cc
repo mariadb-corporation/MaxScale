@@ -101,21 +101,21 @@ int test_user()
 
             CacheRule* pRule = pRules->use_rules.front().get();
 
-            if (pRule->m_op != test_case.expect.op)
+            if (pRule->op() != test_case.expect.op)
             {
                 printf("%s\nExpected: %s,\nGot     : %s\n",
                        test_case.json,
                        cache_rule_op_to_string(test_case.expect.op),
-                       cache_rule_op_to_string(pRule->m_op));
+                       cache_rule_op_to_string(pRule->op()));
                 ++errors;
             }
 
-            if (strcmp(pRule->m_value.c_str(), test_case.expect.value) != 0)
+            if (strcmp(pRule->value().c_str(), test_case.expect.value) != 0)
             {
                 printf("%s\nExpected: %s,\nGot     : %s\n",
                        test_case.json,
                        test_case.expect.value,
-                       pRule->m_value.c_str());
+                       pRule->value().c_str());
                 ++errors;
             }
 

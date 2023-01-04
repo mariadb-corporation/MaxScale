@@ -90,16 +90,16 @@ static bool cache_rule_matches_column_regexp(const CacheRuleRegex* rule,
 static bool cache_rule_matches_column_simple(const CacheRuleCTD* rule,
                                              const char* default_db,
                                              const GWBUF* query);
-static bool cache_rule_matches_column(CacheRule* rule,
+static bool cache_rule_matches_column(CacheRuleValue* rule,
                                       const char* default_db,
                                       const GWBUF* query);
-static bool cache_rule_matches_database(CacheRule* rule,
+static bool cache_rule_matches_database(CacheRuleValue* rule,
                                         const char* default_db,
                                         const GWBUF* query);
-static bool cache_rule_matches_query(CacheRule* rule,
+static bool cache_rule_matches_query(CacheRuleValue* rule,
                                      const char* default_db,
                                      const GWBUF* query);
-static bool cache_rule_matches_table(CacheRule* rule,
+static bool cache_rule_matches_table(CacheRuleValue* rule,
                                      const char* default_db,
                                      const GWBUF* query);
 static bool cache_rule_matches_table_regexp(const CacheRuleRegex* rule,
@@ -108,12 +108,12 @@ static bool cache_rule_matches_table_regexp(const CacheRuleRegex* rule,
 static bool cache_rule_matches_table_simple(const CacheRuleCTD* rule,
                                             const char* default_db,
                                             const GWBUF* query);
-static bool cache_rule_matches_user(CacheRule* rule, const char* user);
-static bool cache_rule_matches(CacheRule* rule,
+static bool cache_rule_matches_user(CacheRuleUser* rule, const char* user);
+static bool cache_rule_matches(CacheRuleValue* rule,
                                const char* default_db,
                                const GWBUF* query);
 
-static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule);
+static void         cache_rules_add_store_rule(CACHE_RULES* self, CacheRuleValue* rule);
 static void         cache_rules_add_use_rule(CACHE_RULES* self, CacheRuleUser* rule);
 static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug);
 static bool         cache_rules_create_from_json(json_t* root,
@@ -689,6 +689,11 @@ CacheRuleUser* CacheRuleUser::create(cache_rule_attribute_t attribute,
     return pRule;
 }
 
+bool CacheRuleUser::compare(const std::string_view& value) const
+{
+    return m_sDelegate->compare(value);
+}
+
 bool CacheRuleUser::compare_n(const char* value, size_t length) const
 {
     return m_sDelegate->compare_n(value, length);
@@ -944,7 +949,7 @@ CacheRuleRegex::~CacheRuleRegex()
  *
  * @return True if the value matches, false otherwise.
  */
-bool CacheRule::compare(const std::string_view& value) const
+bool CacheRuleValue::compare(const std::string_view& value) const
 {
     bool rv;
 
@@ -1281,7 +1286,7 @@ static bool cache_rule_matches_column_simple(const CacheRuleCTD* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_column(CacheRule* self,
+static bool cache_rule_matches_column(CacheRuleValue* self,
                                       const char* default_db,
                                       const GWBUF* query)
 {
@@ -1317,7 +1322,7 @@ static bool cache_rule_matches_column(CacheRule* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_database(CacheRule* self,
+static bool cache_rule_matches_database(CacheRuleValue* self,
                                         const char* default_db,
                                         const GWBUF* query)
 {
@@ -1356,7 +1361,7 @@ static bool cache_rule_matches_database(CacheRule* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_query(CacheRule* self,
+static bool cache_rule_matches_query(CacheRuleValue* self,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1503,7 +1508,7 @@ static bool cache_rule_matches_table_simple(const CacheRuleCTD* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_table(CacheRule* self,
+static bool cache_rule_matches_table(CacheRuleValue* self,
                                      const char* default_db,
                                      const GWBUF* query)
 {
@@ -1538,14 +1543,14 @@ static bool cache_rule_matches_table(CacheRule* self,
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_user(CacheRule* self, const char* account)
+static bool cache_rule_matches_user(CacheRuleUser* self, const char* account)
 {
-    mxb_assert(self->m_attribute == CACHE_ATTRIBUTE_USER);
+    mxb_assert(self->attribute() == CACHE_ATTRIBUTE_USER);
 
     bool matches = self->compare(account);
 
-    if ((matches && (self->m_debug & CACHE_DEBUG_MATCHING))
-        || (!matches && (self->m_debug & CACHE_DEBUG_NON_MATCHING)))
+    if ((matches && (self->debug() & CACHE_DEBUG_MATCHING))
+        || (!matches && (self->debug() & CACHE_DEBUG_NON_MATCHING)))
     {
         const char* text;
         if (matches)
@@ -1558,9 +1563,9 @@ static bool cache_rule_matches_user(CacheRule* self, const char* account)
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
-                   cache_rule_attribute_to_string(self->m_attribute),
-                   cache_rule_op_to_string(self->m_op),
-                   self->m_value.c_str(),
+                   cache_rule_attribute_to_string(self->attribute()),
+                   cache_rule_op_to_string(self->op()),
+                   self->value().c_str(),
                    text,
                    account);
     }
@@ -1577,7 +1582,7 @@ static bool cache_rule_matches_user(CacheRule* self, const char* account)
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches(CacheRule* self, const char* default_db, const GWBUF* query)
+static bool cache_rule_matches(CacheRuleValue* self, const char* default_db, const GWBUF* query)
 {
     bool matches = false;
 
@@ -1642,7 +1647,7 @@ static bool cache_rule_matches(CacheRule* self, const char* default_db, const GW
  * @param self Pointer to the CACHE_RULES object that is being built.
  * @param rule The rule to be added.
  */
-static void cache_rules_add_store_rule(CACHE_RULES* self, CacheRule* rule)
+static void cache_rules_add_store_rule(CACHE_RULES* self, CacheRuleValue* rule)
 {
     self->store_rules.emplace_back(rule);
 }
@@ -1965,7 +1970,7 @@ static bool cache_rules_parse_store_element(CACHE_RULES* self, json_t* object, s
 
     if (rule)
     {
-        cache_rules_add_store_rule(self, rule);
+        cache_rules_add_store_rule(self, static_cast<CacheRuleValue*>(rule));
     }
 
     return rule != nullptr;
