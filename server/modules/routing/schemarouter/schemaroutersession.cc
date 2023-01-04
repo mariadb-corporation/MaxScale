@@ -414,6 +414,15 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
         else
         {
             route_target = get_shard_route_target(type);
+
+            // Route all transaction control commands to all backends. This will keep the transaction state
+            // consistent even if no default database is used or if the default database being used is located
+            // on more than one node.
+            if (!pPacket->hint && (type & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)))
+            {
+                MXB_INFO("Routing trx control statement to all nodes.");
+                route_target = TARGET_ALL;
+            }
         }
 
         /**
