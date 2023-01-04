@@ -688,7 +688,54 @@ bool MariaDBBackendConnection::handle_auth_change_response(const GWBUF& reply, D
  */
 void MariaDBBackendConnection::normal_read()
 {
-    auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, 0);
+    /** Ask what type of output the router/filter chain expects */
+    MXS_SESSION* session = m_dcb->session();
+    uint64_t capabilities = session->capabilities();
+    capabilities |= mysql_session()->client_protocol_capabilities();
+    bool need_complete_packets = rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT)
+        || rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT)
+        || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
+        || m_collect_result;
+
+    // Limit the amount of data read so that client dcb writeq won't heavily exceed writeq_high_water.
+    auto high_water_limit = config_writeq_high_water();
+
+    size_t bytes_to_read = 0;
+    if (high_water_limit > 0)
+    {
+        bytes_to_read = high_water_limit + 1;
+        auto client_writeq_len = m_session->client_dcb->writeq_len();
+        if (client_writeq_len < bytes_to_read)
+        {
+            bytes_to_read -= client_writeq_len;
+        }
+        else
+        {
+            // Should not really read anything. But logic may not handle that right now so read
+            // at least a little.
+            bytes_to_read = MYSQL_HEADER_LEN;
+        }
+
+        if (need_complete_packets)
+        {
+            uint8_t header_data[MYSQL_HEADER_LEN];
+            // Existing packet can override the limit. This ensures that complete packets can be read even if
+            // those packets are larger than writeq_high_water.
+            if (m_dcb->readq_peek(MYSQL_HEADER_LEN, header_data) == MYSQL_HEADER_LEN)
+            {
+                auto curr_packet_len = mariadb::get_packet_length(header_data);
+                if (curr_packet_len > bytes_to_read)
+                {
+                    bytes_to_read = curr_packet_len;
+                }
+            }
+        }
+
+        // In case user has configured a tiny writeq_high_water. This should be disallowed, though.
+        bytes_to_read = std::max(bytes_to_read, (size_t)MYSQL_HEADER_LEN);
+    }
+
+    auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, bytes_to_read);
 
     if (buffer.empty())
     {
@@ -703,10 +750,6 @@ void MariaDBBackendConnection::normal_read()
         }
     }
 
-    /** Ask what type of output the router/filter chain expects */
-    MXS_SESSION* session = m_dcb->session();
-    uint64_t capabilities = session->capabilities();
-    capabilities |= mysql_session()->client_protocol_capabilities();
     bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)

@@ -811,11 +811,11 @@ void DCB::writeq_drain()
 
         // TODO: Add smarter way to estimate required readq capacity. E.g. average packet size.
         auto writeq_cap = m_writeq.capacity();
-        if (m_writeq.is_unique() && writeq_cap > 0 && writeq_cap < 1048576
+        if (m_writeq.is_unique() && writeq_cap > 0 && writeq_cap <= BASE_READ_BUFFER_SIZE
             && m_readq.empty() && m_readq.capacity() < writeq_cap)
         {
             m_writeq.reset();
-            m_readq = move(m_writeq);
+            m_readq = std::move(m_writeq);
         }
         else
         {
