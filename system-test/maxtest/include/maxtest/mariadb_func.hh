@@ -439,6 +439,8 @@ public:
         return mysql_stmt_init(m_conn);
     }
 
+    bool change_db(const std::string& db);
+
 private:
     std::string m_host;
     int         m_port;

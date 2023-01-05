@@ -639,3 +639,8 @@ bool Connection::connect()
                               NULL, m_options)
            && mysql_errno(m_conn) == 0;
 }
+
+bool Connection::change_db(const std::string& db)
+{
+    return mysql_select_db(m_conn, db.c_str()) == 0;
+}
