@@ -388,7 +388,9 @@ bool cache_rules_should_use(CACHE_RULES* rules, const MXS_SESSION* session);
 class CacheRules
 {
 public:
-    typedef std::shared_ptr<CacheRules> SCacheRules;
+    using SCacheRules = std::shared_ptr<CacheRules>;
+    using S = SCacheRules;
+    using Vector = std::vector<S>;
 
     CacheRules(const CacheRules&) = delete;
     CacheRules& operator=(const CacheRules&) = delete;
@@ -466,6 +468,6 @@ private:
                                    int32_t nRules,
                                    std::vector<SCacheRules>* pRules);
 
-private:
+public: // TODO: Temporarily
     CACHE_RULES* m_pRules;
 };

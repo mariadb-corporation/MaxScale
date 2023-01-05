@@ -88,14 +88,16 @@ int test_user()
     {
         const struct user_test_case& test_case = user_test_cases[i];
 
-        CACHE_RULES** ppRules;
-        int32_t nRules;
-        bool rv = cache_rules_parse(test_case.json, 0, &ppRules, &nRules);
+        CacheRules::Vector rules;
+
+        bool rv = CacheRules::parse(test_case.json, 0, &rules);
         mxb_assert(rv);
 
-        for (int i = 0; i < nRules; ++i)
+        for (size_t i = 0; i < rules.size(); ++i)
         {
-            CACHE_RULES* pRules = ppRules[i];
+            CacheRules::S sRules = rules[i];
+
+            CACHE_RULES* pRules = sRules->m_pRules;
 
             mxb_assert(!pRules->use_rules.empty());
 
@@ -118,11 +120,7 @@ int test_user()
                        pRule->value().c_str());
                 ++errors;
             }
-
-            cache_rules_free(pRules);
         }
-
-        MXB_FREE(ppRules);
     }
 
     return errors;
