@@ -152,6 +152,904 @@ const char* cache_rule_op_to_string(cache_rule_op_t op)
     }
 }
 
+//
+// CacheRule hierarchy
+//
+
+//
+// CacheRule
+//
+
+CacheRule::~CacheRule()
+{
+}
+
+//
+// CacheRuleConcrete
+//
+
+bool CacheRuleConcrete::compare(const std::string_view& value) const
+{
+    bool rv;
+
+    if (!value.empty())
+    {
+        rv = compare_n(value.data(), value.length());
+    }
+    else
+    {
+        if ((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_LIKE))
+        {
+            rv = false;
+        }
+        else
+        {
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
+//
+// CacheRuleValue
+//
+
+bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
+{
+    bool matches = false;
+
+    switch (m_attribute)
+    {
+    case CACHE_ATTRIBUTE_COLUMN:
+        matches = matches_column(default_db, query);
+        break;
+
+    case CACHE_ATTRIBUTE_DATABASE:
+        matches = matches_database(default_db, query);
+        break;
+
+    case CACHE_ATTRIBUTE_TABLE:
+        matches = matches_table(default_db, query);
+        break;
+
+    case CACHE_ATTRIBUTE_QUERY:
+        matches = matches_query(default_db, query);
+        break;
+
+    case CACHE_ATTRIBUTE_USER:
+        mxb_assert(!true);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    if ((matches && (m_debug & CACHE_DEBUG_MATCHING))
+        || (!matches && (m_debug & CACHE_DEBUG_NON_MATCHING)))
+    {
+        const char* sql;
+        int sql_len;
+        modutil_extract_SQL(*query, &sql, &sql_len);
+        const char* text;
+
+        if (matches)
+        {
+            text = "MATCHES";
+        }
+        else
+        {
+            text = "does NOT match";
+        }
+
+        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
+                   cache_rule_attribute_to_string(m_attribute),
+                   cache_rule_op_to_string(m_op),
+                   m_value.c_str(),
+                   text,
+                   sql_len,
+                   sql);
+    }
+
+    return matches;
+}
+
+bool CacheRuleValue::matches_column(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(!true);
+    return false;
+}
+
+bool CacheRuleValue::matches_table(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(!true);
+    return false;
+}
+
+bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_DATABASE);
+
+    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
+    // needs to be matched against. In the former case, this class will be a CacheRuleCTD
+    // and in the latter a CacheRuleRegex, which means that compare() below will do the
+    // right thing.
+
+    bool matches = false;
+    bool fullnames = true;
+
+    // TODO: Make qc const-correct.
+    for (const auto& name : qc_get_table_names((GWBUF*)query))
+    {
+        if (!name.db.empty())
+        {
+            matches = compare(name.db);
+        }
+        else
+        {
+            matches = compare(default_db ? default_db : "");
+        }
+
+        if (matches)
+        {
+            break;
+        }
+    }
+
+    return matches;
+}
+
+bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_QUERY);
+
+    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
+    // needs to be matched against. In the former case, this class will be a CacheRuleQuery
+    // and in the latter a CacheRuleRegex, which means that compare() below will do the
+    // right thing.
+
+    const char* sql;
+    int len;
+
+    // Will succeed, query contains a contiguous COM_QUERY.
+    modutil_extract_SQL(*query, &sql, &len);
+
+    return compare_n(sql, len);
+}
+
+//
+// CacheRuleSimple
+//
+
+bool CacheRuleSimple::compare_n(const char* zValue, size_t length) const
+{
+    return compare_n(m_value, m_op, zValue, length);
+}
+
+//static
+bool CacheRuleSimple::compare_n(const std::string& lhs,
+                                cache_rule_op_t op,
+                                const char* zValue, size_t length)
+{
+    bool compares = (strncmp(lhs.c_str(), zValue, length) == 0);
+
+    if (op == CACHE_OP_NEQ)
+    {
+        compares = !compares;
+    }
+
+    return compares;
+}
+
+//
+// CacheRuleCTD
+//
+
+//static
+CacheRuleCTD* CacheRuleCTD::create(cache_rule_attribute_t attribute,
+                                   cache_rule_op_t op,
+                                   const char* zValue,
+                                   uint32_t debug)
+{
+    mxb_assert((attribute == CACHE_ATTRIBUTE_COLUMN)
+               || (attribute == CACHE_ATTRIBUTE_TABLE)
+               || (attribute == CACHE_ATTRIBUTE_DATABASE));
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+
+    CacheRuleCTD* pRule = new CacheRuleCTD(attribute, op, zValue, debug);
+
+    bool error = false;
+
+    char buffer[strlen(zValue) + 1];
+    strcpy(buffer, zValue);
+
+    const char* zFirst = nullptr;
+    const char* zSecond = nullptr;
+    const char* zThird = nullptr;
+    char* zDot1 = strchr(buffer, '.');
+    char* zDot2 = zDot1 ? strchr(zDot1 + 1, '.') : nullptr;
+
+    if (zDot1 && zDot2)
+    {
+        zFirst = buffer;
+        *zDot1 = 0;
+        zSecond = zDot1 + 1;
+        *zDot2 = 0;
+        zThird = zDot2 + 1;
+    }
+    else if (zDot1)
+    {
+        zFirst = buffer;
+        *zDot1 = 0;
+        zSecond = zDot1 + 1;
+    }
+    else
+    {
+        zFirst = buffer;
+    }
+
+    switch (attribute)
+    {
+    case CACHE_ATTRIBUTE_COLUMN:
+        {
+            if (zThird)      // implies also 'first' and 'second'
+            {
+                pRule->m_ctd.column = zThird;
+                pRule->m_ctd.table = zSecond;
+                pRule->m_ctd.database = zFirst;
+            }
+            else if (zSecond)    // implies also 'first'
+            {
+                pRule->m_ctd.column = zSecond;
+                pRule->m_ctd.table = zFirst;
+            }
+            else    // only 'zFirst'
+            {
+                pRule->m_ctd.column = zFirst;
+            }
+        }
+        break;
+
+    case CACHE_ATTRIBUTE_TABLE:
+        if (zThird)
+        {
+            MXB_ERROR("A cache rule value for matching a table name, cannot contain two dots: '%s'",
+                      zValue);
+            error = true;
+        }
+        else
+        {
+            if (zSecond)     // implies also 'zFirst'
+            {
+                pRule->m_ctd.database = zFirst;
+                pRule->m_ctd.table = zSecond;
+            }
+            else    // only 'zFirst'
+            {
+                pRule->m_ctd.table = zFirst;
+            }
+        }
+        break;
+
+    case CACHE_ATTRIBUTE_DATABASE:
+        if (zSecond)
+        {
+            MXB_ERROR("A cache rule value for matching a database, cannot contain a dot: '%s'",
+                      zValue);
+            error = true;
+        }
+        else
+        {
+            pRule->m_ctd.database = zFirst;
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    if (error)
+    {
+        delete pRule;
+        pRule = nullptr;
+    }
+
+    return pRule;
+}
+
+bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_COLUMN);
+    mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
+    mxb_assert(!m_ctd.column.empty());
+
+    const char* zRule_column = m_ctd.column.c_str();
+    const char* zRule_table = m_ctd.table.empty() ? nullptr : m_ctd.table.c_str();
+    const char* zRule_database = m_ctd.database.empty() ? nullptr : m_ctd.database.c_str();
+
+    std::string_view default_database;
+
+    auto databases = qc_get_database_names((GWBUF*)query);
+
+    if (databases.empty())
+    {
+        // If no databases have been mentioned, then we can assume that all
+        // tables and columns that are not explcitly qualified refer to the
+        // default database.
+        if (default_db)
+        {
+            default_database = default_db;
+        }
+    }
+    else if ((default_db == nullptr) && (databases.size() == 1))
+    {
+        // If there is no default database and exactly one database has been
+        // explicitly mentioned, then we can assume all tables and columns that
+        // are not explicitly qualified refer to that database.
+        default_database = databases[0];
+    }
+
+    auto tables = qc_get_table_names((GWBUF*)query);
+
+    std::string_view default_table;
+
+    if (tables.size() == 1)
+    {
+        // Only if we have exactly one table can we assume anything
+        // about a table that has not been mentioned explicitly.
+        default_table = tables[0].table;
+    }
+
+    const QC_FIELD_INFO* infos;
+    size_t n_infos;
+
+    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
+
+    bool matches = false;
+
+    size_t i = 0;
+    while (!matches && (i < n_infos))
+    {
+        const QC_FIELD_INFO* info = (infos + i);
+
+        if (sv_case_eq(info->column, zRule_column) || strcmp(zRule_column, "*") == 0)
+        {
+            if (zRule_table)
+            {
+                std::string_view check_table = !info->table.empty() ? info->table : default_table;
+
+                if (!check_table.empty())
+                {
+                    if (sv_case_eq(check_table, zRule_table))
+                    {
+                        if (zRule_database)
+                        {
+                            std::string_view check_database =
+                                !info->database.empty() ? info->database : default_database;
+
+                            if (!check_database.empty())
+                            {
+                                if (sv_case_eq(check_database, zRule_database))
+                                {
+                                    // The column, table and database matched.
+                                    matches = true;
+                                }
+                                else
+                                {
+                                    // The column, table matched but the database did not.
+                                    matches = false;
+                                }
+                            }
+                            else
+                            {
+                                // If the rules specify a database but we do not know the database,
+                                // we consider the databases not to match.
+                                matches = false;
+                            }
+                        }
+                        else
+                        {
+                            // If the rule specifies no database, then if the column and the table
+                            // matches, the rule matches.
+                            matches = true;
+                        }
+                    }
+                    else
+                    {
+                        // The column matched, but the table did not.
+                        matches = false;
+                    }
+                }
+                else
+                {
+                    // If the rules specify a table but we do not know the table, we
+                    // consider the tables not to match.
+                    matches = false;
+                }
+            }
+            else
+            {
+                // The column matched and there is no table rule.
+                matches = true;
+            }
+        }
+        else
+        {
+            // The column did not match.
+            matches = false;
+        }
+
+        if (m_op == CACHE_OP_NEQ)
+        {
+            matches = !matches;
+        }
+
+        ++i;
+    }
+
+    return matches;
+}
+
+bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_TABLE);
+    mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
+
+    bool matches = false;
+    bool fullnames = !m_ctd.database.empty();
+
+    for (const auto& name : qc_get_table_names((GWBUF*)query))
+    {
+        std::string_view database;
+        std::string_view table;
+
+        if (fullnames)
+        {
+            if (!name.db.empty())
+            {
+                database = name.db;
+                table = name.table;
+            }
+            else
+            {
+                database = default_db;
+                table = name.table;
+            }
+
+            if (!database.empty())
+            {
+                matches = sv_case_eq(m_ctd.database, database) && sv_case_eq(m_ctd.table, table);
+            }
+        }
+        else
+        {
+            matches = sv_case_eq(m_ctd.table, name.table);
+        }
+
+        if (m_op == CACHE_OP_NEQ)
+        {
+            matches = !matches;
+        }
+
+        if (matches)
+        {
+            break;
+        }
+    }
+
+    return matches;
+}
+
+//
+// CacheRuleQuery
+//
+
+//static
+CacheRuleQuery* CacheRuleQuery::create(cache_rule_attribute_t attribute,
+                                       cache_rule_op_t op,
+                                       const char* zValue,
+                                       uint32_t debug)
+{
+    mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+
+    CacheRuleQuery* pRule = new CacheRuleQuery(attribute, op, zValue, debug);
+
+    return pRule;
+}
+
+//
+// CacheRuleRegex
+//
+
+//static
+CacheRuleRegex* CacheRuleRegex::create(cache_rule_attribute_t attribute,
+                                       cache_rule_op_t op,
+                                       const char* zValue,
+                                       uint32_t debug)
+{
+    mxb_assert((op == CACHE_OP_LIKE) || (op == CACHE_OP_UNLIKE));
+
+    CacheRuleRegex* pRule = nullptr;
+
+    int errcode;
+    PCRE2_SIZE erroffset;
+    pcre2_code* pCode = pcre2_compile((PCRE2_SPTR)zValue,
+                                      PCRE2_ZERO_TERMINATED,
+                                      0,
+                                      &errcode,
+                                      &erroffset,
+                                      nullptr);
+
+    if (pCode)
+    {
+        // We do not care about the result. If JIT is not present, we have
+        // complained about it already.
+        pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
+
+        pRule = new CacheRuleRegex(attribute, op, zValue, debug);
+        pRule->m_regexp.code = pCode;
+    }
+    else
+    {
+        PCRE2_UCHAR errbuf[512];
+        pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+        MXB_ERROR("Regex compilation failed at %d for regex '%s': %s",
+                  (int)erroffset,
+                  zValue,
+                  errbuf);
+    }
+
+    return pRule;
+}
+
+CacheRuleRegex::~CacheRuleRegex()
+{
+    pcre2_code_free(m_regexp.code);
+    m_regexp.code = nullptr;
+}
+
+bool CacheRuleRegex::compare_n(const char* zValue, size_t length) const
+{
+    pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_regexp.code, nullptr);
+
+    bool compares = (pcre2_match(m_regexp.code,
+                                 (PCRE2_SPTR)zValue,
+                                 length,
+                                 0,
+                                 0,
+                                 pData,
+                                 nullptr) >= 0);
+    pcre2_match_data_free(pData);
+
+    if (m_op == CACHE_OP_UNLIKE)
+    {
+        compares = !compares;
+    }
+
+    return compares;
+}
+
+bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_COLUMN);
+    mxb_assert((m_op == CACHE_OP_LIKE) || (m_op == CACHE_OP_UNLIKE));
+
+    std::string_view default_database;
+
+    int n_databases;
+    auto databases = qc_get_database_names((GWBUF*)query);
+
+    if (databases.empty())
+    {
+        // If no databases have been mentioned, then we can assume that all
+        // tables and columns that are not explcitly qualified refer to the
+        // default database.
+        if (default_db)
+        {
+            default_database = default_db;
+        }
+    }
+    else if ((default_db == nullptr) && (databases.size() == 1))
+    {
+        // If there is no default database and exactly one database has been
+        // explicitly mentioned, then we can assume all tables and columns that
+        // are not explicitly qualified refer to that database.
+        default_database = databases[0];
+    }
+
+    size_t default_database_len = default_database.length();
+
+    auto tables = qc_get_table_names((GWBUF*)query);
+
+    std::string_view default_table;
+
+    if (tables.size() == 1)
+    {
+        // Only if we have exactly one table can we assume anything
+        // about a table that has not been mentioned explicitly.
+        default_table = tables[0].table;
+    }
+
+    size_t default_table_len = default_table.length();
+
+    const QC_FIELD_INFO* infos;
+    size_t n_infos;
+
+    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
+
+    bool matches = false;
+
+    size_t i = 0;
+    while (!matches && (i < n_infos))
+    {
+        const QC_FIELD_INFO* info = (infos + i);
+
+        std::string_view database;
+        size_t database_len;
+
+        if (!info->database.empty())
+        {
+            database = info->database;
+            database_len = database.length();
+        }
+        else
+        {
+            database = default_database;
+            database_len = default_database_len;
+        }
+
+        size_t table_len;
+        std::string_view table;
+
+        if (!info->table.empty())
+        {
+            table = info->table;
+            table_len = table.length();
+        }
+        else
+        {
+            table = default_table;
+            table_len = default_table_len;
+        }
+
+        char buffer[database_len + 1 + table_len + 1 + info->column.length() + 1];
+        buffer[0] = 0;
+
+        if (!database.empty())
+        {
+            strncat(buffer, database.data(), database.length());
+            strcat(buffer, ".");
+        }
+
+        if (!table.empty())
+        {
+            strncat(buffer, table.data(), table.length());
+            strcat(buffer, ".");
+        }
+
+        strncat(buffer, info->column.data(), info->column.length());
+
+        matches = compare(buffer);
+
+        ++i;
+    }
+
+    return matches;
+}
+
+bool CacheRuleRegex::matches_table(const char* default_db, const GWBUF* query) const
+{
+    mxb_assert(m_attribute == CACHE_ATTRIBUTE_TABLE);
+    mxb_assert((m_op == CACHE_OP_LIKE) || (m_op == CACHE_OP_UNLIKE));
+
+    bool matches = false;
+
+    auto names = qc_get_table_names((GWBUF*)query);
+
+    if (!names.empty())
+    {
+        std::string db = default_db ? default_db : "";
+
+        for (const auto& name : names)
+        {
+            if (name.db.empty())
+            {
+                // Only "tbl"
+
+                if (default_db)
+                {
+                    matches = compare(db + '.' + std::string(name.table));
+                }
+                else
+                {
+                    matches = compare(name.table);
+                }
+            }
+            else
+            {
+                // A qualified name "db.tbl".
+                std::string qname(name.db);
+                qname += '.';
+                qname += name.table;
+                matches = compare(qname);
+            }
+
+            if (matches)
+            {
+                break;
+            }
+        }
+    }
+    else if (m_op == CACHE_OP_UNLIKE)
+    {
+        matches = true;
+    }
+
+    return matches;
+}
+
+//
+// CacheRuleUser
+//
+
+//static
+CacheRuleUser* CacheRuleUser::create(cache_rule_attribute_t attribute,
+                                     cache_rule_op_t op,
+                                     const char* cvalue,
+                                     uint32_t debug)
+{
+    CacheRule* pDelegate = nullptr;
+
+    mxb_assert(attribute == CACHE_ATTRIBUTE_USER);
+    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+
+    bool error = false;
+    size_t len = strlen(cvalue);
+
+    char value[strlen(cvalue) + 1];
+    strcpy(value, cvalue);
+
+    char* at = strchr(value, '@');
+    char* user = value;
+    char* host;
+    char any[2];    // sizeof("%")
+
+    if (at)
+    {
+        *at = 0;
+        host = at + 1;
+    }
+    else
+    {
+        strcpy(any, "%");
+        host = any;
+    }
+
+    if (mxs_mysql_trim_quotes(user))
+    {
+        char pcre_user[2 * len + 1];    // Surely enough
+
+        if (*user == 0)
+        {
+            strcpy(pcre_user, ".*");
+        }
+        else
+        {
+            mxs_mysql_name_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
+        }
+
+        if (mxs_mysql_trim_quotes(host))
+        {
+            char pcre_host[2 * len + 1];    // Surely enough
+
+            mxs_mysql_name_kind_t rv = mxs_mysql_name_to_pcre(pcre_host, host, MXS_PCRE_QUOTE_WILDCARD);
+
+            if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
+            {
+                op = (op == CACHE_OP_EQ ? CACHE_OP_LIKE : CACHE_OP_UNLIKE);
+
+                char regexp[strlen(pcre_user) + 1 + strlen(pcre_host) + 1];
+
+                sprintf(regexp, "%s@%s", pcre_user, pcre_host);
+
+                pDelegate = CacheRuleRegex::create(attribute, op, regexp, debug);
+            }
+            else
+            {
+                // No wildcard, no need to use regexp.
+
+                std::string value = user;
+                value += "@";
+                value += host;
+
+                class RuleSimpleUser : public CacheRuleConcrete
+                {
+                public:
+                    RuleSimpleUser(cache_rule_attribute_t attribute,
+                                   cache_rule_op_t op,
+                                   std::string value,
+                                   uint32_t debug)
+                        : CacheRuleConcrete(attribute, op, value, debug)
+                    {
+                    }
+
+                protected:
+                    bool compare_n(const char* zValue, size_t length) const override
+                    {
+                        return CacheRuleSimple::compare_n(m_value, m_op, zValue, length);
+                    }
+                };
+
+                pDelegate = new RuleSimpleUser(attribute, op, std::move(value), debug);
+            }
+        }
+        else
+        {
+            MXB_ERROR("Could not trim quotes from host %s.", cvalue);
+        }
+    }
+    else
+    {
+        MXB_ERROR("Could not trim quotes from user %s.", cvalue);
+    }
+
+    CacheRuleUser* pRule = nullptr;
+
+    if (pDelegate)
+    {
+        std::unique_ptr<CacheRule> sDelegate(pDelegate);
+
+        pRule = new CacheRuleUser(std::move(sDelegate));
+    }
+
+    return pRule;
+}
+
+bool CacheRuleUser::compare(const std::string_view& value) const
+{
+    return m_sDelegate->compare(value);
+}
+
+bool CacheRuleUser::compare_n(const char* value, size_t length) const
+{
+    return m_sDelegate->compare_n(value, length);
+}
+
+bool CacheRuleUser::matches_user(const char* account) const
+{
+    mxb_assert(attribute() == CACHE_ATTRIBUTE_USER);
+
+    bool matches = compare(account);
+    auto d = debug();
+
+    if ((matches && (d & CACHE_DEBUG_MATCHING))
+        || (!matches && (d & CACHE_DEBUG_NON_MATCHING)))
+    {
+        const char* text;
+        if (matches)
+        {
+            text = "MATCHES";
+        }
+        else
+        {
+            text = "does NOT match";
+        }
+
+        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
+                   cache_rule_attribute_to_string(attribute()),
+                   cache_rule_op_to_string(op()),
+                   value().c_str(),
+                   text,
+                   account);
+    }
+
+    return matches;
+}
+
+//
+// CACHE_RULES
+//
 CACHE_RULES* cache_rules_create(uint32_t debug)
 {
     CACHE_RULES* rules = new CACHE_RULES;
@@ -506,336 +1404,6 @@ static bool cache_rule_op_get(const char* s, cache_rule_op_t* op)
 }
 
 /**
- * Creates a CacheRule object doing regexp matching.
- *
- * @param attribute What attribute this rule applies to.
- * @param op        An operator, CACHE_OP_LIKE or CACHE_OP_UNLIKE.
- * @param value     A regular expression.
- * @param debug     The debug level.
- *
- * @return A new rule object or nullptr in case of failure.
- */
-//static
-CacheRuleRegex* CacheRuleRegex::create(cache_rule_attribute_t attribute,
-                                       cache_rule_op_t op,
-                                       const char* zValue,
-                                       uint32_t debug)
-{
-    mxb_assert((op == CACHE_OP_LIKE) || (op == CACHE_OP_UNLIKE));
-
-    CacheRuleRegex* pRule = nullptr;
-
-    int errcode;
-    PCRE2_SIZE erroffset;
-    pcre2_code* pCode = pcre2_compile((PCRE2_SPTR)zValue,
-                                      PCRE2_ZERO_TERMINATED,
-                                      0,
-                                      &errcode,
-                                      &erroffset,
-                                      nullptr);
-
-    if (pCode)
-    {
-        // We do not care about the result. If JIT is not present, we have
-        // complained about it already.
-        pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
-
-        pRule = new CacheRuleRegex(attribute, op, zValue, debug);
-        pRule->m_regexp.code = pCode;
-    }
-    else
-    {
-        PCRE2_UCHAR errbuf[512];
-        pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-        MXB_ERROR("Regex compilation failed at %d for regex '%s': %s",
-                  (int)erroffset,
-                  zValue,
-                  errbuf);
-    }
-
-    return pRule;
-}
-
-/**
- * Creates a CacheRule object matching users.
- *
- * @param attribute CACHE_ATTRIBUTE_USER
- * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
- * @param cvalue    A string in the MySQL user format.
- * @param debug     The debug level.
- *
- * @return A new rule object or nullptr in case of failure.
- */
-//static
-CacheRuleUser* CacheRuleUser::create(cache_rule_attribute_t attribute,
-                                     cache_rule_op_t op,
-                                     const char* cvalue,
-                                     uint32_t debug)
-{
-    CacheRule* pDelegate = nullptr;
-
-    mxb_assert(attribute == CACHE_ATTRIBUTE_USER);
-    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
-
-    bool error = false;
-    size_t len = strlen(cvalue);
-
-    char value[strlen(cvalue) + 1];
-    strcpy(value, cvalue);
-
-    char* at = strchr(value, '@');
-    char* user = value;
-    char* host;
-    char any[2];    // sizeof("%")
-
-    if (at)
-    {
-        *at = 0;
-        host = at + 1;
-    }
-    else
-    {
-        strcpy(any, "%");
-        host = any;
-    }
-
-    if (mxs_mysql_trim_quotes(user))
-    {
-        char pcre_user[2 * len + 1];    // Surely enough
-
-        if (*user == 0)
-        {
-            strcpy(pcre_user, ".*");
-        }
-        else
-        {
-            mxs_mysql_name_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
-        }
-
-        if (mxs_mysql_trim_quotes(host))
-        {
-            char pcre_host[2 * len + 1];    // Surely enough
-
-            mxs_mysql_name_kind_t rv = mxs_mysql_name_to_pcre(pcre_host, host, MXS_PCRE_QUOTE_WILDCARD);
-
-            if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
-            {
-                op = (op == CACHE_OP_EQ ? CACHE_OP_LIKE : CACHE_OP_UNLIKE);
-
-                char regexp[strlen(pcre_user) + 1 + strlen(pcre_host) + 1];
-
-                sprintf(regexp, "%s@%s", pcre_user, pcre_host);
-
-                pDelegate = CacheRuleRegex::create(attribute, op, regexp, debug);
-            }
-            else
-            {
-                // No wildcard, no need to use regexp.
-
-                std::string value = user;
-                value += "@";
-                value += host;
-
-                class RuleSimpleUser : public CacheRuleConcrete
-                {
-                public:
-                    RuleSimpleUser(cache_rule_attribute_t attribute,
-                                   cache_rule_op_t op,
-                                   std::string value,
-                                   uint32_t debug)
-                        : CacheRuleConcrete(attribute, op, value, debug)
-                    {
-                    }
-
-                protected:
-                    bool compare_n(const char* zValue, size_t length) const override
-                    {
-                        return CacheRuleSimple::compare_n(m_value, m_op, zValue, length);
-                    }
-                };
-
-                pDelegate = new RuleSimpleUser(attribute, op, std::move(value), debug);
-            }
-        }
-        else
-        {
-            MXB_ERROR("Could not trim quotes from host %s.", cvalue);
-        }
-    }
-    else
-    {
-        MXB_ERROR("Could not trim quotes from user %s.", cvalue);
-    }
-
-    CacheRuleUser* pRule = nullptr;
-
-    if (pDelegate)
-    {
-        std::unique_ptr<CacheRule> sDelegate(pDelegate);
-
-        pRule = new CacheRuleUser(std::move(sDelegate));
-    }
-
-    return pRule;
-}
-
-bool CacheRuleUser::compare(const std::string_view& value) const
-{
-    return m_sDelegate->compare(value);
-}
-
-bool CacheRuleUser::compare_n(const char* value, size_t length) const
-{
-    return m_sDelegate->compare_n(value, length);
-}
-
-/**
- * Creates a CacheRule object matching column/table/database.
- *
- * @param attribute CACHE_ATTRIBUTE_[COLUMN|TABLE|DATABASE]
- * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
- * @param cvalue    A name, with 0, 1 or 2 dots.
- * @param debug     The debug level.
- *
- * @return A new rule object or nullptr in case of failure.
- */
-//static
-CacheRuleCTD* CacheRuleCTD::create(cache_rule_attribute_t attribute,
-                                   cache_rule_op_t op,
-                                   const char* zValue,
-                                   uint32_t debug)
-{
-    mxb_assert((attribute == CACHE_ATTRIBUTE_COLUMN)
-               || (attribute == CACHE_ATTRIBUTE_TABLE)
-               || (attribute == CACHE_ATTRIBUTE_DATABASE));
-    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
-
-    CacheRuleCTD* pRule = new CacheRuleCTD(attribute, op, zValue, debug);
-
-    bool error = false;
-
-    char buffer[strlen(zValue) + 1];
-    strcpy(buffer, zValue);
-
-    const char* zFirst = nullptr;
-    const char* zSecond = nullptr;
-    const char* zThird = nullptr;
-    char* zDot1 = strchr(buffer, '.');
-    char* zDot2 = zDot1 ? strchr(zDot1 + 1, '.') : nullptr;
-
-    if (zDot1 && zDot2)
-    {
-        zFirst = buffer;
-        *zDot1 = 0;
-        zSecond = zDot1 + 1;
-        *zDot2 = 0;
-        zThird = zDot2 + 1;
-    }
-    else if (zDot1)
-    {
-        zFirst = buffer;
-        *zDot1 = 0;
-        zSecond = zDot1 + 1;
-    }
-    else
-    {
-        zFirst = buffer;
-    }
-
-    switch (attribute)
-    {
-    case CACHE_ATTRIBUTE_COLUMN:
-        {
-            if (zThird)      // implies also 'first' and 'second'
-            {
-                pRule->m_ctd.column = zThird;
-                pRule->m_ctd.table = zSecond;
-                pRule->m_ctd.database = zFirst;
-            }
-            else if (zSecond)    // implies also 'first'
-            {
-                pRule->m_ctd.column = zSecond;
-                pRule->m_ctd.table = zFirst;
-            }
-            else    // only 'zFirst'
-            {
-                pRule->m_ctd.column = zFirst;
-            }
-        }
-        break;
-
-    case CACHE_ATTRIBUTE_TABLE:
-        if (zThird)
-        {
-            MXB_ERROR("A cache rule value for matching a table name, cannot contain two dots: '%s'",
-                      zValue);
-            error = true;
-        }
-        else
-        {
-            if (zSecond)     // implies also 'zFirst'
-            {
-                pRule->m_ctd.database = zFirst;
-                pRule->m_ctd.table = zSecond;
-            }
-            else    // only 'zFirst'
-            {
-                pRule->m_ctd.table = zFirst;
-            }
-        }
-        break;
-
-    case CACHE_ATTRIBUTE_DATABASE:
-        if (zSecond)
-        {
-            MXB_ERROR("A cache rule value for matching a database, cannot contain a dot: '%s'",
-                      zValue);
-            error = true;
-        }
-        else
-        {
-            pRule->m_ctd.database = zFirst;
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    if (error)
-    {
-        delete pRule;
-        pRule = nullptr;
-    }
-
-    return pRule;
-}
-
-/**
- * Creates a CacheRule object matching an entire query.
- *
- * @param attribute CACHE_ATTRIBUTE_QUERY.
- * @param op        An operator, CACHE_OP_EQ or CACHE_OP_NEQ.
- * @param cvalue    A string.
- * @param debug     The debug level.
- *
- * @return A new rule object or nullptr in case of failure.
- */
-//static
-CacheRuleQuery* CacheRuleQuery::create(cache_rule_attribute_t attribute,
-                                       cache_rule_op_t op,
-                                       const char* zValue,
-                                       uint32_t debug)
-{
-    mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
-    mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
-
-    CacheRuleQuery* pRule = new CacheRuleQuery(attribute, op, zValue, debug);
-
-    return pRule;
-}
-
-/**
  * Creates a CacheRule object doing simple matching.
  *
  * @param attribute What attribute this rule applies to.
@@ -916,685 +1484,6 @@ static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
     return rule;
 }
 
-/**
- * Frees a CacheRule object (and the one it points to).
- *
- * @param rule The rule to be freed.
- */
-CacheRule::~CacheRule()
-{
-}
-
-CacheRuleRegex::~CacheRuleRegex()
-{
-    pcre2_code_free(m_regexp.code);
-    m_regexp.code = nullptr;
-}
-
-/**
- * Check whether a value matches a rule.
- *
- * @param self       The rule object.
- * @param value      The value to check.
- *
- * @return True if the value matches, false otherwise.
- */
-bool CacheRuleConcrete::compare(const std::string_view& value) const
-{
-    bool rv;
-
-    if (!value.empty())
-    {
-        rv = compare_n(value.data(), value.length());
-    }
-    else
-    {
-        if ((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_LIKE))
-        {
-            rv = false;
-        }
-        else
-        {
-            rv = true;
-        }
-    }
-
-    return rv;
-}
-
-/**
- * Check whether a value matches a rule.
- *
- * @param self       The rule object.
- * @param value      The value to check.
- * @param len        The length of value.
- *
- * @return True if the value matches, false otherwise.
- */
-bool CacheRuleSimple::compare_n(const char* zValue, size_t length) const
-{
-    return compare_n(m_value, m_op, zValue, length);
-}
-
-//static
-bool CacheRuleSimple::compare_n(const std::string& lhs,
-                                cache_rule_op_t op,
-                                const char* zValue, size_t length)
-{
-    bool compares = (strncmp(lhs.c_str(), zValue, length) == 0);
-
-    if (op == CACHE_OP_NEQ)
-    {
-        compares = !compares;
-    }
-
-    return compares;
-}
-
-bool CacheRuleRegex::compare_n(const char* zValue, size_t length) const
-{
-    pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_regexp.code, nullptr);
-
-    bool compares = (pcre2_match(m_regexp.code,
-                                 (PCRE2_SPTR)zValue,
-                                 length,
-                                 0,
-                                 0,
-                                 pData,
-                                 nullptr) >= 0);
-    pcre2_match_data_free(pData);
-
-    if (m_op == CACHE_OP_UNLIKE)
-    {
-        compares = !compares;
-    }
-
-    return compares;
-}
-
-/**
- * Returns boolean indicating whether the column rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_COLUMN);
-    mxb_assert((m_op == CACHE_OP_LIKE) || (m_op == CACHE_OP_UNLIKE));
-
-    std::string_view default_database;
-
-    int n_databases;
-    auto databases = qc_get_database_names((GWBUF*)query);
-
-    if (databases.empty())
-    {
-        // If no databases have been mentioned, then we can assume that all
-        // tables and columns that are not explcitly qualified refer to the
-        // default database.
-        if (default_db)
-        {
-            default_database = default_db;
-        }
-    }
-    else if ((default_db == nullptr) && (databases.size() == 1))
-    {
-        // If there is no default database and exactly one database has been
-        // explicitly mentioned, then we can assume all tables and columns that
-        // are not explicitly qualified refer to that database.
-        default_database = databases[0];
-    }
-
-    size_t default_database_len = default_database.length();
-
-    auto tables = qc_get_table_names((GWBUF*)query);
-
-    std::string_view default_table;
-
-    if (tables.size() == 1)
-    {
-        // Only if we have exactly one table can we assume anything
-        // about a table that has not been mentioned explicitly.
-        default_table = tables[0].table;
-    }
-
-    size_t default_table_len = default_table.length();
-
-    const QC_FIELD_INFO* infos;
-    size_t n_infos;
-
-    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
-
-    bool matches = false;
-
-    size_t i = 0;
-    while (!matches && (i < n_infos))
-    {
-        const QC_FIELD_INFO* info = (infos + i);
-
-        std::string_view database;
-        size_t database_len;
-
-        if (!info->database.empty())
-        {
-            database = info->database;
-            database_len = database.length();
-        }
-        else
-        {
-            database = default_database;
-            database_len = default_database_len;
-        }
-
-        size_t table_len;
-        std::string_view table;
-
-        if (!info->table.empty())
-        {
-            table = info->table;
-            table_len = table.length();
-        }
-        else
-        {
-            table = default_table;
-            table_len = default_table_len;
-        }
-
-        char buffer[database_len + 1 + table_len + 1 + info->column.length() + 1];
-        buffer[0] = 0;
-
-        if (!database.empty())
-        {
-            strncat(buffer, database.data(), database.length());
-            strcat(buffer, ".");
-        }
-
-        if (!table.empty())
-        {
-            strncat(buffer, table.data(), table.length());
-            strcat(buffer, ".");
-        }
-
-        strncat(buffer, info->column.data(), info->column.length());
-
-        matches = compare(buffer);
-
-        ++i;
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the column rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_COLUMN);
-    mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
-    mxb_assert(!m_ctd.column.empty());
-
-    const char* zRule_column = m_ctd.column.c_str();
-    const char* zRule_table = m_ctd.table.empty() ? nullptr : m_ctd.table.c_str();
-    const char* zRule_database = m_ctd.database.empty() ? nullptr : m_ctd.database.c_str();
-
-    std::string_view default_database;
-
-    auto databases = qc_get_database_names((GWBUF*)query);
-
-    if (databases.empty())
-    {
-        // If no databases have been mentioned, then we can assume that all
-        // tables and columns that are not explcitly qualified refer to the
-        // default database.
-        if (default_db)
-        {
-            default_database = default_db;
-        }
-    }
-    else if ((default_db == nullptr) && (databases.size() == 1))
-    {
-        // If there is no default database and exactly one database has been
-        // explicitly mentioned, then we can assume all tables and columns that
-        // are not explicitly qualified refer to that database.
-        default_database = databases[0];
-    }
-
-    auto tables = qc_get_table_names((GWBUF*)query);
-
-    std::string_view default_table;
-
-    if (tables.size() == 1)
-    {
-        // Only if we have exactly one table can we assume anything
-        // about a table that has not been mentioned explicitly.
-        default_table = tables[0].table;
-    }
-
-    const QC_FIELD_INFO* infos;
-    size_t n_infos;
-
-    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
-
-    bool matches = false;
-
-    size_t i = 0;
-    while (!matches && (i < n_infos))
-    {
-        const QC_FIELD_INFO* info = (infos + i);
-
-        if (sv_case_eq(info->column, zRule_column) || strcmp(zRule_column, "*") == 0)
-        {
-            if (zRule_table)
-            {
-                std::string_view check_table = !info->table.empty() ? info->table : default_table;
-
-                if (!check_table.empty())
-                {
-                    if (sv_case_eq(check_table, zRule_table))
-                    {
-                        if (zRule_database)
-                        {
-                            std::string_view check_database =
-                                !info->database.empty() ? info->database : default_database;
-
-                            if (!check_database.empty())
-                            {
-                                if (sv_case_eq(check_database, zRule_database))
-                                {
-                                    // The column, table and database matched.
-                                    matches = true;
-                                }
-                                else
-                                {
-                                    // The column, table matched but the database did not.
-                                    matches = false;
-                                }
-                            }
-                            else
-                            {
-                                // If the rules specify a database but we do not know the database,
-                                // we consider the databases not to match.
-                                matches = false;
-                            }
-                        }
-                        else
-                        {
-                            // If the rule specifies no database, then if the column and the table
-                            // matches, the rule matches.
-                            matches = true;
-                        }
-                    }
-                    else
-                    {
-                        // The column matched, but the table did not.
-                        matches = false;
-                    }
-                }
-                else
-                {
-                    // If the rules specify a table but we do not know the table, we
-                    // consider the tables not to match.
-                    matches = false;
-                }
-            }
-            else
-            {
-                // The column matched and there is no table rule.
-                matches = true;
-            }
-        }
-        else
-        {
-            // The column did not match.
-            matches = false;
-        }
-
-        if (m_op == CACHE_OP_NEQ)
-        {
-            matches = !matches;
-        }
-
-        ++i;
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the column rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleValue::matches_column(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(!true);
-    return false;
-}
-
-/**
- * Returns boolean indicating whether the database rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_DATABASE);
-
-    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
-    // needs to be matched against. In the former case, this class will be a CacheRuleCTD
-    // and in the latter a CacheRuleRegex, which means that compare() below will do the
-    // right thing.
-
-    bool matches = false;
-    bool fullnames = true;
-
-    // TODO: Make qc const-correct.
-    for (const auto& name : qc_get_table_names((GWBUF*)query))
-    {
-        if (!name.db.empty())
-        {
-            matches = compare(name.db);
-        }
-        else
-        {
-            matches = compare(default_db ? default_db : "");
-        }
-
-        if (matches)
-        {
-            break;
-        }
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the query rule matches the query or not.
- *
- * @param self        The CacheRule object.
- * @param default_db  The current default db.
- * @param query       The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_QUERY);
-
-    // This works both for OP_[EQ|NEQ] and OP_[LIKE|UNLIKE], as m_value will contain what
-    // needs to be matched against. In the former case, this class will be a CacheRuleQuery
-    // and in the latter a CacheRuleRegex, which means that compare() below will do the
-    // right thing.
-
-    const char* sql;
-    int len;
-
-    // Will succeed, query contains a contiguous COM_QUERY.
-    modutil_extract_SQL(*query, &sql, &len);
-
-    return compare_n(sql, len);
-}
-
-/**
- * Returns boolean indicating whether the table regexp rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleRegex::matches_table(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_TABLE);
-    mxb_assert((m_op == CACHE_OP_LIKE) || (m_op == CACHE_OP_UNLIKE));
-
-    bool matches = false;
-
-    auto names = qc_get_table_names((GWBUF*)query);
-
-    if (!names.empty())
-    {
-        std::string db = default_db ? default_db : "";
-
-        for (const auto& name : names)
-        {
-            if (name.db.empty())
-            {
-                // Only "tbl"
-
-                if (default_db)
-                {
-                    matches = compare(db + '.' + std::string(name.table));
-                }
-                else
-                {
-                    matches = compare(name.table);
-                }
-            }
-            else
-            {
-                // A qualified name "db.tbl".
-                std::string qname(name.db);
-                qname += '.';
-                qname += name.table;
-                matches = compare(qname);
-            }
-
-            if (matches)
-            {
-                break;
-            }
-        }
-    }
-    else if (m_op == CACHE_OP_UNLIKE)
-    {
-        matches = true;
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the table simple rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(m_attribute == CACHE_ATTRIBUTE_TABLE);
-    mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
-
-    bool matches = false;
-    bool fullnames = !m_ctd.database.empty();
-
-    for (const auto& name : qc_get_table_names((GWBUF*)query))
-    {
-        std::string_view database;
-        std::string_view table;
-
-        if (fullnames)
-        {
-            if (!name.db.empty())
-            {
-                database = name.db;
-                table = name.table;
-            }
-            else
-            {
-                database = default_db;
-                table = name.table;
-            }
-
-            if (!database.empty())
-            {
-                matches = sv_case_eq(m_ctd.database, database) && sv_case_eq(m_ctd.table, table);
-            }
-        }
-        else
-        {
-            matches = sv_case_eq(m_ctd.table, name.table);
-        }
-
-        if (m_op == CACHE_OP_NEQ)
-        {
-            matches = !matches;
-        }
-
-        if (matches)
-        {
-            break;
-        }
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the table rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleValue::matches_table(const char* default_db, const GWBUF* query) const
-{
-    mxb_assert(!true);
-    return false;
-}
-
-/**
- * Returns boolean indicating whether the user rule matches the account or not.
- *
- * @param self       The CacheRule object.
- * @param account    The account.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleUser::matches_user(const char* account) const
-{
-    mxb_assert(attribute() == CACHE_ATTRIBUTE_USER);
-
-    bool matches = compare(account);
-    auto d = debug();
-
-    if ((matches && (d & CACHE_DEBUG_MATCHING))
-        || (!matches && (d & CACHE_DEBUG_NON_MATCHING)))
-    {
-        const char* text;
-        if (matches)
-        {
-            text = "MATCHES";
-        }
-        else
-        {
-            text = "does NOT match";
-        }
-
-        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
-                   cache_rule_attribute_to_string(attribute()),
-                   cache_rule_op_to_string(op()),
-                   value().c_str(),
-                   text,
-                   account);
-    }
-
-    return matches;
-}
-
-/**
- * Returns boolean indicating whether the rule matches the query or not.
- *
- * @param self       The CacheRule object.
- * @param default_db The current default db.
- * @param query      The query.
- *
- * @return True, if the rule matches, false otherwise.
- */
-bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
-{
-    bool matches = false;
-
-    switch (m_attribute)
-    {
-    case CACHE_ATTRIBUTE_COLUMN:
-        matches = matches_column(default_db, query);
-        break;
-
-    case CACHE_ATTRIBUTE_DATABASE:
-        matches = matches_database(default_db, query);
-        break;
-
-    case CACHE_ATTRIBUTE_TABLE:
-        matches = matches_table(default_db, query);
-        break;
-
-    case CACHE_ATTRIBUTE_QUERY:
-        matches = matches_query(default_db, query);
-        break;
-
-    case CACHE_ATTRIBUTE_USER:
-        mxb_assert(!true);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    if ((matches && (m_debug & CACHE_DEBUG_MATCHING))
-        || (!matches && (m_debug & CACHE_DEBUG_NON_MATCHING)))
-    {
-        const char* sql;
-        int sql_len;
-        modutil_extract_SQL(*query, &sql, &sql_len);
-        const char* text;
-
-        if (matches)
-        {
-            text = "MATCHES";
-        }
-        else
-        {
-            text = "does NOT match";
-        }
-
-        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
-                   cache_rule_attribute_to_string(m_attribute),
-                   cache_rule_op_to_string(m_op),
-                   m_value.c_str(),
-                   text,
-                   sql_len,
-                   sql);
-    }
-
-    return matches;
-}
 
 /**
  * Adds a "store" rule to the rules object
