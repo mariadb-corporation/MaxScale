@@ -53,11 +53,9 @@ public:
     virtual bool compare_n(const char* value, size_t length) const = 0;
 };
 
-class CacheRuleValue : public CacheRule
+class CacheRuleConcrete : public CacheRule
 {
 public:
-    bool compare(const std::string_view& value) const override final;
-
     cache_rule_attribute_t attribute() const override final
     {
         return m_attribute;
@@ -78,12 +76,31 @@ public:
         return m_debug;
     }
 
-    bool matches(const char* default_db, const GWBUF* query) const;
+    bool compare(const std::string_view& value) const override final;
+
+protected:
+    CacheRuleConcrete(cache_rule_attribute_t attribute, // What attribute is evalued.
+                      cache_rule_op_t op,               // What operator is used.
+                      std::string value,                // The value from the rule file.
+                      uint32_t debug)                   // Debug bits
+        : m_attribute(attribute)
+        , m_op(op)
+        , m_value(std::move(value))
+        , m_debug(debug)
+    {
+    }
 
     cache_rule_attribute_t m_attribute;   // What attribute is evalued.
     cache_rule_op_t        m_op;          // What operator is used.
     std::string            m_value;       // The value from the rule file.
     uint32_t               m_debug;       // The debug bits.
+
+};
+
+class CacheRuleValue : public CacheRuleConcrete
+{
+public:
+    bool matches(const char* default_db, const GWBUF* query) const;
 
 protected:
     virtual bool matches_column(const char* default_db, const GWBUF* query) const;
@@ -96,10 +113,7 @@ protected:
                    cache_rule_op_t op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
-        : m_attribute(attribute)
-        , m_op(op)
-        , m_value(std::move(value))
-        , m_debug(debug)
+        : CacheRuleConcrete(attribute, op, value, debug)
     {
     }
 };
@@ -107,6 +121,11 @@ protected:
 class CacheRuleSimple : public CacheRuleValue
 {
 public:
+    static bool compare_n(const std::string& lhs,
+                          cache_rule_op_t op,
+                          const char* value, size_t length);
+
+protected:
     CacheRuleSimple(cache_rule_attribute_t attribute, // What attribute is evalued.
                     cache_rule_op_t op,               // What operator is used.
                     std::string value,                // The value from the rule file.
@@ -119,7 +138,7 @@ public:
     bool compare_n(const char* value, size_t length) const override final;
 };
 
-class CacheRuleCTD : public CacheRuleSimple
+class CacheRuleCTD final : public CacheRuleSimple
 {
 public:
     static CacheRuleCTD* create(cache_rule_attribute_t attribute, // What attribute is evalued.
@@ -127,16 +146,16 @@ public:
                                 const char* zValue,               // The value from the rule file.
                                 uint32_t debug);                  // Debug bits
 
-    struct
-    {
-        std::string database;
-        std::string table;
-        std::string column;
-    } m_simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
-
 protected:
     bool matches_column(const char* default_db, const GWBUF* query) const override;
     bool matches_table(const char* default_db, const GWBUF* query) const override;
+
+    struct
+    {
+        std::string column;
+        std::string table;
+        std::string database;
+    } m_ctd;
 
 private:
     CacheRuleCTD(cache_rule_attribute_t attribute, // What attribute is evalued.
@@ -148,7 +167,7 @@ private:
     }
 };
 
-class CacheRuleQuery : public CacheRuleSimple
+class CacheRuleQuery final : public CacheRuleSimple
 {
 public:
     static CacheRuleQuery* create(cache_rule_attribute_t attribute, // What attribute is evalued.
@@ -166,7 +185,7 @@ private:
     }
 };
 
-class CacheRuleRegex : public CacheRuleValue
+class CacheRuleRegex final : public CacheRuleValue
 {
 public:
     ~CacheRuleRegex();
@@ -177,11 +196,6 @@ public:
                                   cache_rule_op_t op,               // What operator is used.
                                   const char* zValue,               // The value from the rule file.
                                   uint32_t debug);                  // Debug bits
-
-    struct
-    {
-        pcre2_code* code;
-    } m_regexp;                           // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
 
 protected:
     bool matches_column(const char* default_db, const GWBUF* query) const override;
@@ -196,9 +210,14 @@ private:
     {
         mxb_assert(op == CACHE_OP_LIKE || op == CACHE_OP_UNLIKE);
     }
+
+    struct
+    {
+        pcre2_code* code;
+    } m_regexp;
 };
 
-class CacheRuleUser : public CacheRule
+class CacheRuleUser final : public CacheRule
 {
 public:
     static CacheRuleUser* create(cache_rule_attribute_t attribute, // What attribute is evalued.

@@ -636,7 +636,25 @@ CacheRuleUser* CacheRuleUser::create(cache_rule_attribute_t attribute,
                 value += "@";
                 value += host;
 
-                pDelegate = new CacheRuleSimple(attribute, op, std::move(value), debug);
+                class RuleSimpleUser : public CacheRuleConcrete
+                {
+                public:
+                    RuleSimpleUser(cache_rule_attribute_t attribute,
+                                   cache_rule_op_t op,
+                                   std::string value,
+                                   uint32_t debug)
+                        : CacheRuleConcrete(attribute, op, value, debug)
+                    {
+                    }
+
+                protected:
+                    bool compare_n(const char* zValue, size_t length) const override
+                    {
+                        return CacheRuleSimple::compare_n(m_value, m_op, zValue, length);
+                    }
+                };
+
+                pDelegate = new RuleSimpleUser(attribute, op, std::move(value), debug);
             }
         }
         else
@@ -730,18 +748,18 @@ CacheRuleCTD* CacheRuleCTD::create(cache_rule_attribute_t attribute,
         {
             if (zThird)      // implies also 'first' and 'second'
             {
-                pRule->m_simple.column = zThird;
-                pRule->m_simple.table = zSecond;
-                pRule->m_simple.database = zFirst;
+                pRule->m_ctd.column = zThird;
+                pRule->m_ctd.table = zSecond;
+                pRule->m_ctd.database = zFirst;
             }
             else if (zSecond)    // implies also 'first'
             {
-                pRule->m_simple.column = zSecond;
-                pRule->m_simple.table = zFirst;
+                pRule->m_ctd.column = zSecond;
+                pRule->m_ctd.table = zFirst;
             }
             else    // only 'zFirst'
             {
-                pRule->m_simple.column = zFirst;
+                pRule->m_ctd.column = zFirst;
             }
         }
         break;
@@ -757,12 +775,12 @@ CacheRuleCTD* CacheRuleCTD::create(cache_rule_attribute_t attribute,
         {
             if (zSecond)     // implies also 'zFirst'
             {
-                pRule->m_simple.database = zFirst;
-                pRule->m_simple.table = zSecond;
+                pRule->m_ctd.database = zFirst;
+                pRule->m_ctd.table = zSecond;
             }
             else    // only 'zFirst'
             {
-                pRule->m_simple.table = zFirst;
+                pRule->m_ctd.table = zFirst;
             }
         }
         break;
@@ -776,7 +794,7 @@ CacheRuleCTD* CacheRuleCTD::create(cache_rule_attribute_t attribute,
         }
         else
         {
-            pRule->m_simple.database = zFirst;
+            pRule->m_ctd.database = zFirst;
         }
         break;
 
@@ -921,7 +939,7 @@ CacheRuleRegex::~CacheRuleRegex()
  *
  * @return True if the value matches, false otherwise.
  */
-bool CacheRuleValue::compare(const std::string_view& value) const
+bool CacheRuleConcrete::compare(const std::string_view& value) const
 {
     bool rv;
 
@@ -955,9 +973,17 @@ bool CacheRuleValue::compare(const std::string_view& value) const
  */
 bool CacheRuleSimple::compare_n(const char* zValue, size_t length) const
 {
-    bool compares = (strncmp(m_value.c_str(), zValue, length) == 0);
+    return compare_n(m_value, m_op, zValue, length);
+}
 
-    if (m_op == CACHE_OP_NEQ)
+//static
+bool CacheRuleSimple::compare_n(const std::string& lhs,
+                                cache_rule_op_t op,
+                                const char* zValue, size_t length)
+{
+    bool compares = (strncmp(lhs.c_str(), zValue, length) == 0);
+
+    if (op == CACHE_OP_NEQ)
     {
         compares = !compares;
     }
@@ -1116,11 +1142,11 @@ bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) co
 {
     mxb_assert(m_attribute == CACHE_ATTRIBUTE_COLUMN);
     mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
-    mxb_assert(!m_simple.column.empty());
+    mxb_assert(!m_ctd.column.empty());
 
-    const char* zRule_column = m_simple.column.c_str();
-    const char* zRule_table = m_simple.table.empty() ? nullptr : m_simple.table.c_str();
-    const char* zRule_database = m_simple.database.empty() ? nullptr : m_simple.database.c_str();
+    const char* zRule_column = m_ctd.column.c_str();
+    const char* zRule_table = m_ctd.table.empty() ? nullptr : m_ctd.table.c_str();
+    const char* zRule_database = m_ctd.database.empty() ? nullptr : m_ctd.database.c_str();
 
     std::string_view default_database;
 
@@ -1404,7 +1430,7 @@ bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) con
     mxb_assert((m_op == CACHE_OP_EQ) || (m_op == CACHE_OP_NEQ));
 
     bool matches = false;
-    bool fullnames = !m_simple.database.empty();
+    bool fullnames = !m_ctd.database.empty();
 
     for (const auto& name : qc_get_table_names((GWBUF*)query))
     {
@@ -1426,12 +1452,12 @@ bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) con
 
             if (!database.empty())
             {
-                matches = sv_case_eq(m_simple.database, database) && sv_case_eq(m_simple.table, table);
+                matches = sv_case_eq(m_ctd.database, database) && sv_case_eq(m_ctd.table, table);
             }
         }
         else
         {
-            matches = sv_case_eq(m_simple.table, name.table);
+            matches = sv_case_eq(m_ctd.table, name.table);
         }
 
         if (m_op == CACHE_OP_NEQ)
