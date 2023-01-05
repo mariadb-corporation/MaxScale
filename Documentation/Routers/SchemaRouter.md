@@ -41,24 +41,47 @@ From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
 
 ## Routing Logic
 
-If a command line client is used, i.e. `mysql`, and a direct connection to
-the database is initialized without a default database, the router starts
-with no default server where the queries are routed. This means that each
-query that doesn't specify a database is routed to the first available
-server.
+* If a command modifies the session state by modifying any session or user
+  variables, the query is routed to all nodes. These statements include `SET`
+  statements as well as any other statements that modify the behavior of the
+  client.
 
-If a `USE <database>` query is executed or a default database is defined
-when connecting to MariaDB MaxScale, all queries without explicitly stated
-databases will be routed to the server which has this database. If multiple
-servers have the same database and the user connecting to MariaDB MaxScale
-has rights to all of them, the database is associated to the first server
-that responds when the databases are mapped. In practice this means that
-query results will always come from a single server but the data might not
-always be from the same node.
+* If a client changes the default database after connecting, either with a `USE
+  <db>` query or a `COM_INIT_DB` command, the query is routed to all servers
+  that contain the database. This same logic applies when a client connects with
+  a default database: the default database is set only on servers that actually
+  contain it.
 
-In almost all the cases these can be avoided by proper server configuration
-and the databases are always mapped to the same servers. More on
-configuration in the next chapter.
+* If a query targets one or more tables that the schemarouter has discovered
+  during the database mapping phase, the query is only routed if a server is
+  found that contains all of the tables that the query uses. If no such server
+  is found, the query is routed to the server that was previously used or to the
+  first available backend if none have been used. If a query uses a table but
+  doesn't define the database it is in, it is assumed to be located on the
+  default database of the connection.
+
+* If a query uses a table that is unknown to the schemarouter or executes a
+  command that doesn't target a table, the query is routed to a server contains
+  the current active default database. If the connection does not have a default
+  database, the query is routed to the backend that was last used or to the
+  first available backend if none have been used. If the query contains a
+  routing hint that directs it to a server, the query is routed there.
+
+  This means that all administrative commands, replication related command as
+  well as certain transaction control statements (XA transaction) are routed to
+  the first available server in certain cases. To avoid problems, use routing
+  hints to direct where these statements should go.
+
+* Starting with MaxScale 6.4.5, transaction control commands (`BEGIN`, `COMMIT`
+  and `ROLLBACK`) are routed to all nodes. Older versions of MaxScale routed the
+  queries to the first available backend. This means that cross-shard
+  transactions are technically possible but, without external synchronization,
+  the transactions are not guaranteed to be globally consistent.
+
+* `LOAD DATA LOCAL INFILE` commands are routed to the first available server
+  that contains the tables listed in the query.
+
+### Custom SQL Commands
 
 To check how databases and tables map to servers, execute the special query
 `SHOW SHARDS`. The query does not support any modifiers such as `LIKE`.
@@ -72,6 +95,11 @@ db1.t1   |MyServer1    |
 db1.t2   |MyServer1    |
 db2.t1   |MyServer2    |
 ```
+
+The schemarouter will also intercept the `SHOW DATABASES` command and generate
+it based on its internal data. This means that newly created databases will not
+show up immediately and will only be visible when the cached data has been
+updated.
 
 ### Database Mapping
 
