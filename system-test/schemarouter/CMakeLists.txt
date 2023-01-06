@@ -55,3 +55,13 @@ add_test_executable_ex(NAME mxs4092_distinct_tables SOURCE mxs4092_distinct_tabl
 # https://jira.mariadb.org/browse/MXS-4460
 add_test_executable_ex(NAME mxs4460_failed_auth SOURCE mxs4460_failed_auth.cc
         CONFIG mxs4460_failed_auth.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4467: Explicit transactions without a default database do not work as expected
+# https://jira.mariadb.org/browse/MXS-4467
+add_test_executable_ex(NAME mxs4467_trx_routing SOURCE mxs4467_trx_routing.cc
+        CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4471: Target selection can choose a server that is down
+# https://jira.mariadb.org/browse/MXS-4471
+add_test_executable_ex(NAME mxs4471_bad_target SOURCE mxs4471_bad_target.cc
+        CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
