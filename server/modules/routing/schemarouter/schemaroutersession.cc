@@ -33,7 +33,6 @@ namespace schemarouter
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool              change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
 bool              extract_database(GWBUF* buf, char* str);
 bool              detect_show_shards(GWBUF* query);
 
@@ -255,6 +254,19 @@ static bool is_empty_packet(GWBUF* pPacket)
     return rval;
 }
 
+mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>& candidates)
+{
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use() && candidates.count(b->target()))
+        {
+            return b->target();
+        }
+    }
+
+    return nullptr;
+}
+
 bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 {
     if (m_closed)
@@ -362,10 +374,30 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
             return ret;
         }
 
-        /** The default database changes must be routed to a specific server */
+        route_target = get_shard_route_target(type);
+
+        // Route all transaction control commands to all backends. This will keep the transaction state
+        // consistent even if no default database is used or if the default database being used is located
+        // on more than one node.
+        if (pPacket->hints.empty()
+            && (type & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)))
+        {
+            MXB_INFO("Routing trx control statement to all nodes.");
+            route_target = TARGET_ALL;
+        }
+
+        /**
+         * Find a suitable server that matches the requirements of @c route_target
+         */
         if (command == MXS_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
         {
-            if (!change_current_db(m_current_db, m_shard, pPacket))
+            /** The default database changes must be routed to a specific server */
+            if (change_current_db(pPacket, command))
+            {
+                gwbuf_free(pPacket);
+                return 1;
+            }
+            else
             {
                 if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
                 {
@@ -374,45 +406,12 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                     return 1;
                 }
 
-                char db[MYSQL_DATABASE_MAXLEN + 1];
-                extract_database(pPacket, db);
-                gwbuf_free(pPacket);
-
-                char errbuf[128 + MYSQL_DATABASE_MAXLEN];
-                snprintf(errbuf, sizeof(errbuf), "Unknown database: %s", db);
-
-                if (m_config.debug)
-                {
-                    sprintf(errbuf + strlen(errbuf), " ([%" PRIu64 "]: DB change failed)", m_pSession->id());
-                }
-
-                write_error_to_client(SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errbuf);
-                return 1;
-            }
-
-            route_target = TARGET_UNDEFINED;
-            target = m_shard.get_location(m_current_db);
-
-            if (target)
-            {
-                MXB_INFO("INIT_DB for database '%s' on server '%s'",
-                         m_current_db.c_str(),
-                         target->name());
-                route_target = TARGET_NAMED_SERVER;
-            }
-            else
-            {
-                MXB_INFO("INIT_DB with unknown database");
+                // If we don't end up refreshing the databases, we'll just route it as a normal query to a
+                // random backend.
+                route_target = TARGET_ANY;
+                MXB_INFO("Client is trying to use an unknown database.");
             }
         }
-        else
-        {
-            route_target = get_shard_route_target(type);
-        }
-
-        /**
-         * Find a suitable server that matches the requirements of @c route_target
-         */
 
         if (TARGET_IS_ALL(route_target))
         {
@@ -440,6 +439,11 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
             {
                 m_load_target = bref->target();
             }
+
+            // Store the target we're routing the query to. This can be used later if a situation is
+            // encountered where a query has no "natural" target (e.g. CREATE DATABASE with no default
+            // database).
+            m_prev_target = bref;
 
             MXB_INFO("Route query to \t%s <", bref->name());
 
@@ -733,6 +737,12 @@ bool SchemaRouterSession::write_session_command(SRBackend* backend, mxs::Buffer 
 
 SRBackend* SchemaRouterSession::get_any_backend()
 {
+    if (m_prev_target && m_prev_target->in_use())
+    {
+        MXB_INFO("Using previous target: %s", m_prev_target->name());
+        return m_prev_target;
+    }
+
     for (const auto& b : m_backends)
     {
         if (b->in_use() && m_shard.uses_target(b->target()))
@@ -1077,44 +1087,47 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
 
 /**
  * Read new database name from COM_INIT_DB packet or a literal USE ... COM_QUERY
- * packet, check that it exists in the hashtable and copy its name to MYSQL_session.
+ * packet and change the default database on the relevant backends.
  *
- * @param dest Destination where the database name will be written
- * @param dbhash Hashtable containing valid databases
- * @param buf   Buffer containing the database change query
+ * @param buf Buffer containing the database change query
+ * @param cmd The command being executed
  *
- * @return true if new database is set, false if non-existent database was tried
- * to be set
+ * @return True if new database was set and a query was executed, false if non-existent database was tried
+ *         to be used and it wasn't found on any of the backends.
  */
-bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
+bool SchemaRouterSession::change_current_db(GWBUF* buf, uint8_t cmd)
 {
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
 
-    if (gwbuf_link_length(buf) <= MYSQL_DATABASE_MAXLEN - 5)
+    if (extract_database(buf, db))
     {
-        /** Copy database name from MySQL packet to session */
-        if (extract_database(buf, db))
+        mxs::Buffer buffer(gwbuf_clone_shallow(buf));
+        auto targets = m_shard.get_all_locations(db);
+        m_sescmd_replier = nullptr;
+
+        for (const auto& b : m_backends)
         {
-            MXB_INFO("change_current_db: INIT_DB with database '%s'", db);
-            /**
-             * Update the session's active database only if it's in the hashtable.
-             * If it isn't found, send a custom error packet to the client.
-             */
-
-            mxs::Target* target = shard.get_location(db);
-
-            if (target)
+            if (b->in_use() && targets.count(b->target()))
             {
-                dest = db;
-                MXB_INFO("change_current_db: database is on server: '%s'.", target->name());
-                succp = true;
+                // This must be set before the call to write_session_command is made as the replier is
+                // used in it to determine whether the response should be discarded or not.
+                if (!m_sescmd_replier)
+                {
+                    m_sescmd_replier = b.get();
+                }
+
+                if (write_session_command(b.get(), buffer, cmd))
+                {
+                    succp = true;
+                }
             }
         }
-    }
-    else
-    {
-        MXB_ERROR("change_current_db: failed to change database: Query buffer too large");
+
+        if (succp)
+        {
+            m_current_db = db;
+        }
     }
 
     return succp;
@@ -1342,7 +1355,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
          * If the target name has not been found and the session has an
          * active database, set is as the target
          */
-        rval = m_shard.get_location(m_current_db);
+        rval = get_location(m_current_db);
 
         if (rval)
         {
@@ -1477,11 +1490,11 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
         table_views.emplace_back(std::string_view(t));
     }
 
-    if ((rval = m_shard.get_location(table_views)))
+    if ((rval = get_location(table_views)))
     {
         MXB_INFO("Query targets table on server '%s'", rval->name());
     }
-    else if ((rval = m_shard.get_location(qc_get_database_names(buffer))))
+    else if ((rval = get_location(qc_get_database_names(buffer))))
     {
         MXB_INFO("Query targets database on server '%s'", rval->name());
     }
@@ -1503,7 +1516,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         {
             std::string_view stmt = qc_get_prepare_name(buffer);
 
-            if ((rval = m_shard.get_location(qc_get_table_names(pStmt))))
+            if ((rval = get_location(qc_get_table_names(pStmt))))
             {
                 MXB_INFO("PREPARING NAMED %.*s ON SERVER %s", (int)stmt.length(), stmt.data(), rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1533,7 +1546,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        rval = m_shard.get_location(qc_get_table_names(buffer));
+        rval = get_location(qc_get_table_names(buffer));
 
         if (rval)
         {

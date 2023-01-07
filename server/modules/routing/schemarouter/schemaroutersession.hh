@@ -124,6 +124,21 @@ private:
     void                 handle_mapping_reply(SRBackend* bref, const mxs::Reply& reply);
     std::string          get_cache_key() const;
     void                 write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg);
+    bool                 change_current_db(GWBUF* buf, uint8_t cmd);
+    mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
+
+    template<class T>
+    mxs::Target* get_location(const std::vector<T>& dbs)
+    {
+        return get_valid_target(m_shard.get_all_locations(dbs));
+    }
+
+    template<class T>
+    mxs::Target* get_location(const T& db)
+    {
+        return get_valid_target(m_shard.get_all_locations(db));
+    }
+
 
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */
@@ -144,5 +159,6 @@ private:
     SRBackend*             m_sescmd_replier {nullptr};
     int                    m_num_init_db = 0;
     mxb::Worker::DCId      m_dcid {0};
+    SRBackend*             m_prev_target {nullptr};
 };
 }

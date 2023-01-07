@@ -48,18 +48,6 @@ public:
     void add_location(std::string db, std::string table, mxs::Target* target);
 
     /**
-     * @brief Retrieve the location of a database
-     *
-     * @param db Database to locate
-     *
-     * @return The database or NULL if no server contains the database
-     */
-    mxs::Target* get_location(std::string_view db);
-    mxs::Target* get_location(QcTableName name);
-    mxs::Target* get_location(const std::vector<std::string_view>& db);
-    mxs::Target* get_location(const std::vector<QcTableName>& names);
-
-    /**
      * Same as get_location except returns all servers that have it
      */
     std::set<mxs::Target*> get_all_locations(std::string_view table_view);
