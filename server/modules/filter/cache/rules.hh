@@ -259,23 +259,6 @@ private:
     std::unique_ptr<CacheRule> m_sDelegate;
 };
 
-class CACHE_RULES
-{
-public:
-    ~CACHE_RULES();
-
-    using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
-    using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;
-
-    using SCacheRuleValueVector = std::vector<SCacheRuleValue>;
-    using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
-
-    json_t*               root { nullptr }; // The JSON root object.
-    uint32_t              debug { 0 };      // The debug level.
-    SCacheRuleValueVector store_rules;      // The rules for when to store data to the cache.
-    SCacheRuleUserVector  use_rules;        // The rules for when to use data from the cache.
-};
-
 /**
  * Returns a string representation of a attribute.
  *
@@ -295,37 +278,11 @@ const char* cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
 const char* cache_rule_op_to_string(cache_rule_op_t op);
 
 /**
- * Create a default cache rules object.
- *
- * @param debug The debug level.
- *
- * @return The rules object or NULL is allocation fails.
- */
-CACHE_RULES* cache_rules_create(uint32_t debug);
-
-/**
- * Frees the rules object.
- *
- * @param path The path of the file containing the rules.
- *
- * @return The corresponding rules object, or NULL in case of error.
- */
-void cache_rules_free(CACHE_RULES* rules);
-
-/**
- * Frees all rules in an array of rules *and* the array itself.
- *
- * @param ppRules Pointer to array of pointers to rules.
- * @param nRules  The number of items in the array.
- */
-void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules);
-
-/**
  * Loads the caching rules from a file and returns corresponding object.
  *
  * @param path     The path of the file containing the rules.
  * @param debug    The debug level.
- * @param pppRules [out] Pointer to array of pointers to CACHE_RULES objects.
+ * @param pppRules [out] Pointer to array of pointers to CacheRules objects.
  * @param pnRules  [out] Pointer to number of items in @c *ppRules.
  *
  * @note The caller must free the array @c *pppRules and each rules
@@ -333,17 +290,18 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules);
  *
  * @return bool True, if the rules could be loaded, false otherwise.
  */
+class CacheRules;
+using SCacheRules = std::shared_ptr<CacheRules>;
 bool cache_rules_load(const char* zPath,
                       uint32_t debug,
-                      CACHE_RULES*** pppRules,
-                      int32_t* pnRules);
+                      std::vector<SCacheRules>* pRules);
 
 /**
  * Parses the caching rules from a string and returns corresponding object.
  *
  * @param json     String containing json.
  * @param debug    The debug level.
- * @param pppRules [out] Pointer to array of pointers to CACHE_RULES objects.
+ * @param pppRules [out] Pointer to array of pointers to CacheRules objects.
  * @param pnRules  [out] Pointer to number of items in *ppRules.
  *
  * @note The caller must free the array @c *ppRules and each rules
@@ -353,8 +311,7 @@ bool cache_rules_load(const char* zPath,
  */
 bool cache_rules_parse(const char* json,
                        uint32_t debug,
-                       CACHE_RULES*** pppRules,
-                       int32_t* pnRules);
+                       std::vector<SCacheRules>* pRules);
 
 /**
  * Prints the rules.
@@ -362,28 +319,28 @@ bool cache_rules_parse(const char* json,
  * @param pdcb    The DCB where the rules should be printed.
  * @param indent  By how many spaces to indent the output.
  */
-void cache_rules_print(const CACHE_RULES* rules, DCB* dcb, size_t indent);
+void cache_rules_print(const CacheRules* rules, DCB* dcb, size_t indent);
 
 /**
  * Returns boolean indicating whether the result of the query should be stored.
  *
- * @param rules      The CACHE_RULES object.
+ * @param rules      The CacheRules object.
  * @param default_db The current default database, NULL if there is none.
  * @param query      The query, expected to contain a COM_QUERY.
  *
  * @return True, if the results should be stored.
  */
-bool cache_rules_should_store(CACHE_RULES* rules, const char* default_db, const GWBUF* query);
+bool cache_rules_should_store(const CacheRules* rules, const char* default_db, const GWBUF* query);
 
 /**
  * Returns boolean indicating whether the cache should be used, that is consulted.
  *
- * @param rules      The CACHE_RULES object.
+ * @param rules      The CacheRules object.
  * @param session    The current session.
  *
  * @return True, if the cache should be used.
  */
-bool cache_rules_should_use(CACHE_RULES* rules, const MXS_SESSION* session);
+bool cache_rules_should_use(const CacheRules* rules, const MXS_SESSION* session);
 
 class CacheRules
 {
@@ -461,13 +418,17 @@ public:
      */
     bool should_use(const MXS_SESSION* pSession) const;
 
-private:
-    CacheRules(CACHE_RULES* pRules);
+public: // Temporarily
+    CacheRules(uint32_t debug);
 
-    static bool create_cache_rules(CACHE_RULES** ppRules,
-                                   int32_t nRules,
-                                   std::vector<SCacheRules>* pRules);
+    using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
+    using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;
 
-public: // TODO: Temporarily
-    CACHE_RULES* m_pRules;
+    using SCacheRuleValueVector = std::vector<SCacheRuleValue>;
+    using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
+
+    json_t*               root { nullptr }; // The JSON root object.
+    uint32_t              debug { 0 };      // The debug level.
+    SCacheRuleValueVector store_rules;      // The rules for when to store data to the cache.
+    SCacheRuleUserVector  use_rules;        // The rules for when to use data from the cache.
 };

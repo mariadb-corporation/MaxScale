@@ -97,11 +97,9 @@ int test_user()
         {
             CacheRules::S sRules = rules[i];
 
-            CACHE_RULES* pRules = sRules->m_pRules;
+            mxb_assert(!sRules->use_rules.empty());
 
-            mxb_assert(!pRules->use_rules.empty());
-
-            CacheRule* pRule = pRules->use_rules.front().get();
+            CacheRule* pRule = sRules->use_rules.front().get();
 
             if (pRule->op() != test_case.expect.op)
             {
@@ -375,15 +373,14 @@ int test_store()
         printf("TC      : %d\n", (int)(i + 1));
         const struct store_test_case& test_case = store_test_cases[i];
 
-        CACHE_RULES** ppRules;
-        int32_t nRules;
+        std::vector<std::shared_ptr<CacheRules>> rules;
 
-        bool rv = cache_rules_parse(test_case.rule, 0, &ppRules, &nRules);
+        bool rv = cache_rules_parse(test_case.rule, 0, &rules);
         mxb_assert(rv);
 
-        for (int i = 0; i < nRules; ++i)
+        for (size_t i = 0; i < rules.size(); ++i)
         {
-            CACHE_RULES* pRules = ppRules[i];
+            CacheRules* pRules = rules[i].get();
 
             mxb_assert(!pRules->store_rules.empty());
             CacheRule* pRule = pRules->store_rules.front().get();
@@ -407,11 +404,7 @@ int test_store()
             }
 
             gwbuf_free(pPacket);
-
-            cache_rules_free(pRules);
         }
-
-        MXB_FREE(ppRules);
     }
 
     return errors;
