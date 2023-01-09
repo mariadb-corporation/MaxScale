@@ -35,6 +35,26 @@
                 sortBy="created"
                 showAll
             >
+                <template v-slot:name="{ data: { item } }">
+                    <span
+                        class="mxs-color-helper pointer text-anchor"
+                        @click="actionHandler({ type: ETL_ACTIONS.VIEW, task: item })"
+                    >
+                        {{ item.name }}
+                    </span>
+                </template>
+                <template v-slot:meta="{ data: { item: { meta } } }">
+                    <div class="d-flex">
+                        {{ parseMeta(meta).from }}
+                        <span class="mx-1 dashed-arrow d-inline-flex align-center">
+                            <span class="line"></span>
+                            <v-icon color="primary" size="12" class="arrow rotate-right">
+                                $vuetify.icons.mxs_arrowHead
+                            </v-icon>
+                        </span>
+                        {{ parseMeta(meta).to }}
+                    </div>
+                </template>
                 <template v-slot:menu="{ data: { item } }">
                     <v-menu
                         transition="slide-y-transition"
@@ -71,18 +91,6 @@
                         </v-list>
                     </v-menu>
                 </template>
-                <template v-slot:meta="{ data: { item: { meta } } }">
-                    <div class="d-flex">
-                        {{ parseMeta(meta).from }}
-                        <span class="mx-1 dashed-arrow d-inline-flex align-center">
-                            <span class="line"></span>
-                            <v-icon color="primary" size="12" class="arrow rotate-right">
-                                $vuetify.icons.mxs_arrowHead
-                            </v-icon>
-                        </span>
-                        {{ parseMeta(meta).to }}
-                    </div>
-                </template>
             </data-table>
         </v-sheet>
     </page-wrapper>
@@ -106,7 +114,7 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
-    name: 'etl-tasks',
+    name: 'data-migration-list',
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
