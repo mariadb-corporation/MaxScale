@@ -143,6 +143,7 @@
         "data": "Data",
         "database": "Database",
         "dataMigration": "Data Migration",
+        "dataMigrationWizard": "Data migration wizard",
         "dataPrvw": "Data Preview",
         "default": "Default",
         "default_value": "default value",

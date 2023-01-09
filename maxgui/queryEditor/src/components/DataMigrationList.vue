@@ -1,13 +1,5 @@
 <template>
-    <page-wrapper>
-        <portal to="page-header">
-            <h4
-                style="line-height: normal;"
-                class="mb-0 mxs-color-helper text-navigation text-h4 text-capitalize"
-            >
-                {{ $mxs_t('dataMigration') }}
-            </h4>
-        </portal>
+    <v-sheet class="d-flex flex-column fill-height mt-12">
         <portal to="page-header--right">
             <div class="d-flex align-center">
                 <global-search />
@@ -26,74 +18,70 @@
                 </v-btn>
             </div>
         </portal>
-        <v-sheet class="d-flex flex-column fill-height mt-12">
-            <data-table
-                class="fill-height"
-                :headers="tableHeaders"
-                :data="tableRows"
-                :search="search_keyword"
-                sortBy="created"
-                showAll
-            >
-                <template v-slot:name="{ data: { item } }">
-                    <span
-                        class="mxs-color-helper pointer text-anchor"
-                        @click="actionHandler({ type: ETL_ACTIONS.VIEW, task: item })"
-                    >
-                        {{ item.name }}
+        <data-table
+            class="fill-height"
+            :headers="tableHeaders"
+            :data="tableRows"
+            :search="search_keyword"
+            sortBy="created"
+            showAll
+        >
+            <template v-slot:name="{ data: { item } }">
+                <span
+                    class="mxs-color-helper pointer text-anchor"
+                    @click="actionHandler({ type: ETL_ACTIONS.VIEW, task: item })"
+                >
+                    {{ item.name }}
+                </span>
+            </template>
+            <template v-slot:meta="{ data: { item: { meta } } }">
+                <div class="d-flex">
+                    {{ parseMeta(meta).from }}
+                    <span class="mx-1 dashed-arrow d-inline-flex align-center">
+                        <span class="line"></span>
+                        <v-icon color="primary" size="12" class="arrow rotate-right">
+                            $vuetify.icons.mxs_arrowHead
+                        </v-icon>
                     </span>
-                </template>
-                <template v-slot:meta="{ data: { item: { meta } } }">
-                    <div class="d-flex">
-                        {{ parseMeta(meta).from }}
-                        <span class="mx-1 dashed-arrow d-inline-flex align-center">
-                            <span class="line"></span>
-                            <v-icon color="primary" size="12" class="arrow rotate-right">
-                                $vuetify.icons.mxs_arrowHead
+                    {{ parseMeta(meta).to }}
+                </div>
+            </template>
+            <template v-slot:menu="{ data: { item } }">
+                <v-menu
+                    transition="slide-y-transition"
+                    offset-y
+                    left
+                    content-class="v-menu--mariadb v-menu--mariadb-full-border"
+                >
+                    <template v-slot:activator="{ on, attrs }">
+                        <v-btn icon v-bind="attrs" v-on="on">
+                            <v-icon size="18" color="deep-ocean">
+                                mdi-dots-horizontal
                             </v-icon>
-                        </span>
-                        {{ parseMeta(meta).to }}
-                    </div>
-                </template>
-                <template v-slot:menu="{ data: { item } }">
-                    <v-menu
-                        transition="slide-y-transition"
-                        offset-y
-                        left
-                        content-class="v-menu--mariadb v-menu--mariadb-full-border"
-                    >
-                        <template v-slot:activator="{ on, attrs }">
-                            <v-btn icon v-bind="attrs" v-on="on">
-                                <v-icon size="18" color="deep-ocean">
-                                    mdi-dots-horizontal
-                                </v-icon>
-                            </v-btn>
-                        </template>
+                        </v-btn>
+                    </template>
 
-                        <v-list>
-                            <v-list-item
-                                v-for="action in item.menu"
-                                :key="action.text"
-                                :disabled="action.disabled"
-                                @click="actionHandler({ type: action.type, task: item })"
+                    <v-list>
+                        <v-list-item
+                            v-for="action in item.menu"
+                            :key="action.text"
+                            :disabled="action.disabled"
+                            @click="actionHandler({ type: action.type, task: item })"
+                        >
+                            <v-list-item-title
+                                class="mxs-color-helper"
+                                :class="[
+                                    action.type === ETL_ACTIONS.DELETE ? 'text-error' : 'text-text',
+                                ]"
                             >
-                                <v-list-item-title
-                                    class="mxs-color-helper"
-                                    :class="[
-                                        action.type === ETL_ACTIONS.DELETE
-                                            ? 'text-error'
-                                            : 'text-text',
-                                    ]"
-                                >
-                                    {{ action.text }}
-                                </v-list-item-title>
-                            </v-list-item>
-                        </v-list>
-                    </v-menu>
-                </template>
-            </data-table>
-        </v-sheet>
-    </page-wrapper>
+                                {{ action.text }}
+                            </v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+            </template>
+        </data-table>
+    </v-sheet>
 </template>
 
 <script>

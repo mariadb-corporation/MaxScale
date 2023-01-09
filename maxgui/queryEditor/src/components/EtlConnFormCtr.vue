@@ -5,7 +5,7 @@
         class="fill-height d-flex flex-column"
         v-on="$listeners"
     >
-        <v-container class="fill-height pa-0">
+        <v-container class="fill-height pa-0" fluid>
             <v-row class="fill-height">
                 <etl-src-conn v-model="src" :drivers="odbc_drivers" />
                 <etl-dest-conn
