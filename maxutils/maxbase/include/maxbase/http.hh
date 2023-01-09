@@ -58,18 +58,18 @@ public:
 };
 
 // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT { 10 };
+static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT {10};
 
 // @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
-static const std::chrono::seconds DEFAULT_TIMEOUT { 10 };
+static const std::chrono::seconds DEFAULT_TIMEOUT {10};
 
 struct Config
 {
-    bool                               ssl_verifypeer  = true;
-    bool                               ssl_verifyhost  = true;
+    bool                               ssl_verifypeer = true;
+    bool                               ssl_verifyhost = true;
     std::map<std::string, std::string> headers;
     std::chrono::seconds               connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    std::chrono::seconds               timeout         = DEFAULT_TIMEOUT;
+    std::chrono::seconds               timeout = DEFAULT_TIMEOUT;
 };
 
 struct Response
@@ -77,10 +77,10 @@ struct Response
     enum Category
     {
         INFORMATIONAL = 100,
-        SUCCESS = 200,
-        REDIRECTION = 300,
-        CLIENT_ERROR = 400,
-        SERVER_ERROR = 500
+        SUCCESS       = 200,
+        REDIRECTION   = 300,
+        CLIENT_ERROR  = 400,
+        SERVER_ERROR  = 500
     };
 
     enum Error

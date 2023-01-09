@@ -193,8 +193,8 @@ CURL* get_easy_curl(CurlOp op,
         }
 
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
-        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count());// Conn. phase
-        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());               // Data trs phase
+        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count()); // Conn. phase
+        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());                // Data trs phase
         checked_curl_setopt(pCurl, CURLOPT_ERRORBUFFER, pErrbuf);
         checked_curl_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_callback);
         checked_curl_setopt(pCurl, CURLOPT_WRITEDATA, &pRes->body);
@@ -453,7 +453,7 @@ public:
                     int rv = 0;
                     if (maxfd != -1)
                     {
-                        struct timeval timeout = { timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+                        struct timeval timeout = {timeout_ms / 1000, (timeout_ms % 1000) * 1000};
                         rv = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
                     }
 
@@ -563,7 +563,7 @@ private:
     }
 
 private:
-    CURLM*                                   m_pCurlm { nullptr };
+    CURLM*                                   m_pCurlm {nullptr};
     Async::status_t                          m_status;
     vector<Response>                         m_responses;
     vector<array<char, CURL_ERROR_SIZE + 1>> m_errbufs;
@@ -572,7 +572,7 @@ private:
     long                                     m_wait_no_more_than;
     vector<string>                           m_urls;
     string                                   m_body;
-    curl_slist*                              m_pHeaders { nullptr };
+    curl_slist*                              m_pHeaders {nullptr};
     vector<ReadCallbackData>                 m_rcds;
 };
 }
@@ -616,7 +616,7 @@ void finish()
     }
 }
 
-//static
+// static
 const char* Response::to_string(int code)
 {
     if (code < 0)
@@ -706,7 +706,6 @@ Async create_async(CurlOp op,
 
     return Async(sImp);
 }
-
 }
 
 Async get_async(const std::vector<std::string>& urls,
@@ -795,7 +794,6 @@ vector<Response> execute(CurlOp op,
 
     return responses;
 }
-
 }
 
 Response get(const std::string& url,
