@@ -87,12 +87,6 @@ static CacheRule* cache_rule_create(cache_rule_attribute_t attribute,
 
 static void        cache_rules_add_store_rule(CacheRules* self, CacheRuleValue* rule);
 static void        cache_rules_add_use_rule(CacheRules* self, CacheRuleUser* rule);
-static CacheRules* cache_rules_create_from_json(json_t* root, uint32_t debug);
-static bool        cache_rules_create_from_json(json_t* root,
-                                                uint32_t debug,
-                                                std::vector<SCacheRules>* pRules);
-static bool cache_rules_parse_json(CacheRules* self, json_t* root);
-
 typedef bool (* cache_rules_parse_element_t)(CacheRules* self, json_t* object, size_t index);
 
 static bool cache_rules_parse_array(CacheRules * self, json_t* store, const char* name,
@@ -1049,7 +1043,9 @@ bool CacheRuleUser::matches_user(const char* account) const
 //
 // CacheRules
 //
-bool cache_rules_load(const char* zPath,
+
+// static
+bool CacheRules::load(const char* zPath,
                       uint32_t debug,
                       std::vector<SCacheRules>* pRules)
 {
@@ -1064,9 +1060,14 @@ bool cache_rules_load(const char* zPath,
 
         if (pRoot)
         {
-            rv = cache_rules_create_from_json(pRoot, debug, pRules);
+            std::vector<SCacheRules> rules;
+            rv = create_from_json(pRoot, debug, &rules);
 
-            if (!rv)
+            if (rv)
+            {
+                pRules->swap(rules);
+            }
+            else
             {
                 json_decref(pRoot);
             }
@@ -1092,7 +1093,8 @@ bool cache_rules_load(const char* zPath,
     return rv;
 }
 
-bool cache_rules_parse(const char* zJson,
+//static
+bool CacheRules::parse(const char* zJson,
                        uint32_t debug,
                        std::vector<SCacheRules>* pRules)
 {
@@ -1103,9 +1105,14 @@ bool cache_rules_parse(const char* zJson,
 
     if (pRoot)
     {
-        rv = cache_rules_create_from_json(pRoot, debug, pRules);
+        std::vector<SCacheRules> rules;
+        rv = create_from_json(pRoot, debug, &rules);
 
-        if (!rv)
+        if (rv)
+        {
+            pRules->swap(rules);
+        }
+        else
         {
             json_decref(pRoot);
         }
@@ -1121,13 +1128,13 @@ bool cache_rules_parse(const char* zJson,
     return rv;
 }
 
-bool cache_rules_should_store(const CacheRules* self, const char* default_db, const GWBUF* query)
+bool CacheRules::should_store(const char* default_db, const GWBUF* query) const
 {
     bool should_store = false;
 
-    if (!self->store_rules.empty())
+    if (!this->store_rules.empty())
     {
-        for (const auto& sRule : self->store_rules)
+        for (const auto& sRule : this->store_rules)
         {
             should_store = sRule->matches(default_db, query);
 
@@ -1145,11 +1152,11 @@ bool cache_rules_should_store(const CacheRules* self, const char* default_db, co
     return should_store;
 }
 
-bool cache_rules_should_use(const CacheRules* self, const MXS_SESSION* session)
+bool CacheRules::should_use(const MXS_SESSION* session) const
 {
     bool should_use = false;
 
-    if (!self->use_rules.empty())
+    if (!this->use_rules.empty())
     {
         const char* user = session->user().c_str();
         const char* host = session->client_remote().c_str();
@@ -1157,7 +1164,7 @@ bool cache_rules_should_use(const CacheRules* self, const MXS_SESSION* session)
         char account[strlen(user) + 1 + strlen(host) + 1];
         sprintf(account, "%s@%s", user, host);
 
-        for (const auto& sRule : self->use_rules)
+        for (const auto& sRule : this->use_rules)
         {
             should_use = sRule->matches_user(account);
 
@@ -1199,35 +1206,9 @@ std::unique_ptr<CacheRules> CacheRules::create(uint32_t debug)
     return sThis;
 }
 
-// static
-bool CacheRules::parse(const char* zJson, uint32_t debug, std::vector<SCacheRules>* pRules)
-{
-    pRules->clear();
-
-    return cache_rules_parse(zJson, debug, pRules);
-}
-
-// static
-bool CacheRules::load(const char* zPath, uint32_t debug, std::vector<SCacheRules>* pRules)
-{
-    pRules->clear();
-
-    return cache_rules_load(zPath, debug, pRules);
-}
-
 const json_t* CacheRules::json() const
 {
     return this->root;
-}
-
-bool CacheRules::should_store(const char* zDefault_db, const GWBUF* pQuery) const
-{
-    return cache_rules_should_store(this, zDefault_db, pQuery);
-}
-
-bool CacheRules::should_use(const MXS_SESSION* pSession) const
-{
-    return cache_rules_should_use(this, pSession);
 }
 
 /*
@@ -1411,13 +1392,14 @@ static void cache_rules_add_use_rule(CacheRules* self, CacheRuleUser* rule)
  *
  * @return A rules object if the json object could be parsed, nullptr otherwise.
  */
-static CacheRules* cache_rules_create_from_json(json_t* root, uint32_t debug)
+//static
+CacheRules* CacheRules::create_from_json(json_t* root, uint32_t debug)
 {
     mxb_assert(root);
 
     CacheRules* rules = new CacheRules(debug);
 
-    if (cache_rules_parse_json(rules, root))
+    if (rules->parse_json(root))
     {
         rules->root = root;
     }
@@ -1443,9 +1425,10 @@ static CacheRules* cache_rules_create_from_json(json_t* root, uint32_t debug)
  *
  * @return bool True, if the rules could be parsed, false otherwise.
  */
-static bool cache_rules_create_from_json(json_t* pRoot,
-                                         uint32_t debug,
-                                         std::vector<SCacheRules>* pRules_vector)
+//static
+bool CacheRules::create_from_json(json_t* pRoot,
+                                  uint32_t debug,
+                                  std::vector<SCacheRules>* pRules_vector)
 {
     bool rv = false;
 
@@ -1459,7 +1442,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
             json_t* pObject = json_array_get(pRoot, i);
             mxb_assert(pObject);
 
-            CacheRules* pRules = cache_rules_create_from_json(pObject, debug);
+            CacheRules* pRules = create_from_json(pObject, debug);
 
             if (pRules)
             {
@@ -1492,7 +1475,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
     }
     else
     {
-        CacheRules* pRules = cache_rules_create_from_json(pRoot, debug);
+        CacheRules* pRules = create_from_json(pRoot, debug);
 
         if (pRules)
         {
@@ -1512,7 +1495,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-static bool cache_rules_parse_json(CacheRules* self, json_t* root)
+bool CacheRules::parse_json(json_t* root)
 {
     bool parsed = false;
     json_t* store = json_object_get(root, KEY_STORE);
@@ -1521,7 +1504,7 @@ static bool cache_rules_parse_json(CacheRules* self, json_t* root)
     {
         if (json_is_array(store))
         {
-            parsed = cache_rules_parse_array(self, store, KEY_STORE, cache_rules_parse_store_element);
+            parsed = cache_rules_parse_array(this, store, KEY_STORE, cache_rules_parse_store_element);
         }
         else
         {
@@ -1537,7 +1520,7 @@ static bool cache_rules_parse_json(CacheRules* self, json_t* root)
         {
             if (json_is_array(use))
             {
-                parsed = cache_rules_parse_array(self, use, KEY_USE, cache_rules_parse_use_element);
+                parsed = cache_rules_parse_array(this, use, KEY_USE, cache_rules_parse_use_element);
             }
             else
             {

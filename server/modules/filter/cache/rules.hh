@@ -297,50 +297,12 @@ bool cache_rules_load(const char* zPath,
                       std::vector<SCacheRules>* pRules);
 
 /**
- * Parses the caching rules from a string and returns corresponding object.
- *
- * @param json     String containing json.
- * @param debug    The debug level.
- * @param pppRules [out] Pointer to array of pointers to CacheRules objects.
- * @param pnRules  [out] Pointer to number of items in *ppRules.
- *
- * @note The caller must free the array @c *ppRules and each rules
- *       object in the array.
- *
- * @return bool True, if the rules could be parsed, false otherwise.
- */
-bool cache_rules_parse(const char* json,
-                       uint32_t debug,
-                       std::vector<SCacheRules>* pRules);
-
-/**
  * Prints the rules.
  *
  * @param pdcb    The DCB where the rules should be printed.
  * @param indent  By how many spaces to indent the output.
  */
 void cache_rules_print(const CacheRules* rules, DCB* dcb, size_t indent);
-
-/**
- * Returns boolean indicating whether the result of the query should be stored.
- *
- * @param rules      The CacheRules object.
- * @param default_db The current default database, NULL if there is none.
- * @param query      The query, expected to contain a COM_QUERY.
- *
- * @return True, if the results should be stored.
- */
-bool cache_rules_should_store(const CacheRules* rules, const char* default_db, const GWBUF* query);
-
-/**
- * Returns boolean indicating whether the cache should be used, that is consulted.
- *
- * @param rules      The CacheRules object.
- * @param session    The current session.
- *
- * @return True, if the cache should be used.
- */
-bool cache_rules_should_use(const CacheRules* rules, const MXS_SESSION* session);
 
 class CacheRules
 {
@@ -420,6 +382,11 @@ public:
 
 public: // Temporarily
     CacheRules(uint32_t debug);
+
+    static bool create_from_json(json_t* root, uint32_t debug, std::vector<SCacheRules>* pRules);
+    static CacheRules* create_from_json(json_t* root, uint32_t debug);
+
+    bool parse_json(json_t* root);
 
     using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
     using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;

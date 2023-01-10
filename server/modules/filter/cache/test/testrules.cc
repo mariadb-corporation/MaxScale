@@ -375,7 +375,7 @@ int test_store()
 
         std::vector<std::shared_ptr<CacheRules>> rules;
 
-        bool rv = cache_rules_parse(test_case.rule, 0, &rules);
+        bool rv = CacheRules::parse(test_case.rule, 0, &rules);
         mxb_assert(rv);
 
         for (size_t i = 0; i < rules.size(); ++i)
@@ -387,7 +387,7 @@ int test_store()
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 
-            bool matches = cache_rules_should_store(pRules, test_case.default_db, pPacket);
+            bool matches = pRules->should_store(test_case.default_db, pPacket);
 
             if (matches != test_case.matches)
             {
