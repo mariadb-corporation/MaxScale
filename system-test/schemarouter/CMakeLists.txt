@@ -61,6 +61,11 @@ add_test_executable_ex(NAME mxs4460_failed_auth SOURCE mxs4460_failed_auth.cc
 add_test_executable_ex(NAME mxs4467_trx_routing SOURCE mxs4467_trx_routing.cc
         CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
 
+# MXS-4470: USE commands are not routed to all nodes
+# https://jira.mariadb.org/browse/MXS-4470
+add_test_executable_ex(NAME mxs4470_use_db SOURCE mxs4470_use_db.cc
+        CONFIG sharding.cnf VMS repl_backend LABELS schemarouter)
+
 # MXS-4471: Target selection can choose a server that is down
 # https://jira.mariadb.org/browse/MXS-4471
 add_test_executable_ex(NAME mxs4471_bad_target SOURCE mxs4471_bad_target.cc

@@ -2036,8 +2036,8 @@ void BackendDCB::hangup_cb(const SERVER* server)
 void BackendDCB::hangup(const SERVER* server)
 {
     auto hangup_server = [server]() {
-            hangup_cb(server);
-        };
+        hangup_cb(server);
+    };
     mxs::RoutingWorker::broadcast(hangup_server, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 

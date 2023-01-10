@@ -1912,7 +1912,11 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
         }, mxs::RoutingWorker::EXECUTE_AUTO);
     };
 
-    mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
+    if (!mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED))
+    {
+        session_put_ref(ref);
+        m_session->kill();
+    }
 }
 
 std::string kill_query_prefix(MariaDBClientConnection::kill_type_t type)
