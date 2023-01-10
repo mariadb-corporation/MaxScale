@@ -1,8 +1,8 @@
 <template>
-    <page-wrapper>
+    <page-wrapper class="fill-height">
         <portal to="page-header">
             <div class="d-flex align-center">
-                <v-btn v-if="hasActiveEtlTask" class="ml-n9" icon @click="goBack">
+                <v-btn v-if="hasActiveEtlTask" class="ml-n4" icon @click="goBack">
                     <v-icon
                         class="mr-1"
                         style="transform:rotate(90deg)"
@@ -20,7 +20,7 @@
                 </h4>
             </div>
         </portal>
-        <v-sheet class="d-flex flex-column fill-height">
+        <v-sheet class="d-flex flex-column fill-height" :class="{ 'pl-6': hasActiveEtlTask }">
             <data-migration-stage-ctr v-if="hasActiveEtlTask" />
             <data-migration-list v-else />
         </v-sheet>

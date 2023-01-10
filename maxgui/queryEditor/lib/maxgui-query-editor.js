@@ -11,6 +11,7 @@
  * Public License.
  */
 import QueryEditor from '@queryEditorSrc/views/QueryEditor.vue'
+import DataMigration from '@queryEditorSrc/views/DataMigration.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
 
@@ -26,8 +27,9 @@ export default {
      */
     install: (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
-        // Register query-editor component
+        // Register components globally
         Vue.component('query-editor', QueryEditor)
+        Vue.component('data-migration', DataMigration)
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {
             // mxsApp exists in maxgui already

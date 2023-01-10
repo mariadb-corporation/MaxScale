@@ -26,8 +26,10 @@ const Visualization = () => import(/* webpackChunkName: "vis" */ 'pages/Visualiz
 const Conf = () => import(/* webpackChunkName: "vis-conf" */ 'pages/Visualization/Configuration')
 const Clusters = () => import(/* webpackChunkName: "vis-clusters" */ 'pages/Visualization/Clusters')
 
-//Query editor view
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
+const DataMigration = () =>
+    import(/* webpackChunkName: "data-migration-page" */ 'pages/DataMigration')
+
 // Other views
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
 const Logs = () => import(/* webpackChunkName: "logs" */ 'pages/Logs')
@@ -175,6 +177,19 @@ export const sideBarRoutes = [
         },
         name: 'queryEditor',
         label: 'queryEditor',
+    },
+    {
+        path: '/data-migration',
+        component: DataMigration,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            //TODO: Replace with a data migration icon
+            icon: '$vuetify.icons.mxs_queryEditor',
+        },
+        name: 'dataMigration',
+        label: 'dataMigration',
     },
     {
         path: '/users',

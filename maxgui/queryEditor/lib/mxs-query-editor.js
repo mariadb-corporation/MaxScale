@@ -11,6 +11,7 @@
  * Public License.
  */
 import MxsQueryEditor from './MxsQueryEditor.vue'
+import DataMigration from '@queryEditorSrc/views/DataMigration.vue'
 import queryEditorModules from '@queryEditorSrc/store/modules'
 import commonComponents from '@queryEditorSrc/components/common'
 import queryHttp from '@queryEditorSrc/plugins/queryHttp'
@@ -43,9 +44,9 @@ export default /*#__PURE__*/ (() => {
 
         //Register common components
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
-        // Register mxs-query-editor component
+        // Register components globally
         Vue.component('mxs-query-editor', MxsQueryEditor)
-
+        Vue.component('data-migration', DataMigration)
         // Register query editor vuex modules
         Object.keys(queryEditorModules).forEach(key => {
             store.registerModule(key, queryEditorModules[key])
