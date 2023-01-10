@@ -34,6 +34,7 @@ public:
     };
 
     static const char* to_string(Attribute attribute);
+    static bool from_string(const char* z, Attribute* pAttribute);
 
     enum class Op
     {
@@ -359,22 +360,19 @@ private:
     bool parse_store_element(json_t* object, size_t index);
     bool parse_use_element(json_t* object, size_t index);
 
-public: // TEMPORARY
-    struct AttributeMapping
-    {
-        const char*          name;
-        CacheRule::Attribute value;
-    };
-
-private:
-
-    static AttributeMapping s_store_attributes[];
-    static AttributeMapping s_use_attributes[];
+    using Attributes = std::set<CacheRule::Attribute>;
 
     CacheRule* parse_element(json_t* object,
                              const char* name,
                              size_t index,
-                             const AttributeMapping* pAttributes);
+                             const Attributes& valid_attributes);
+
+    static bool get_attribute(const Attributes& valid_attributes,
+                              const char* z,
+                              CacheRule::Attribute* pAttribute);
+
+    static Attributes s_store_attributes;
+    static Attributes s_use_attributes;
 
     using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
     using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;

@@ -50,25 +50,19 @@ static const char VALUE_OP_LIKE[] = "like";
 static const char VALUE_OP_UNLIKE[] = "unlike";
 
 //static
-CacheRules::AttributeMapping CacheRules::s_store_attributes[] =
+CacheRules::Attributes CacheRules::s_store_attributes =
 {
-    {VALUE_ATTRIBUTE_COLUMN,   CacheRule::Attribute::COLUMN                },
-    {VALUE_ATTRIBUTE_DATABASE, CacheRule::Attribute::DATABASE              },
-    {VALUE_ATTRIBUTE_QUERY,    CacheRule::Attribute::QUERY                 },
-    {VALUE_ATTRIBUTE_TABLE,    CacheRule::Attribute::TABLE                 },
-    {nullptr,                  static_cast<CacheRule::Attribute>(0)}
+    CacheRule::Attribute::COLUMN,
+    CacheRule::Attribute::DATABASE,
+    CacheRule::Attribute::QUERY,
+    CacheRule::Attribute::TABLE
 };
 
 //static
-CacheRules::AttributeMapping CacheRules::s_use_attributes[] =
+CacheRules::Attributes CacheRules::s_use_attributes =
 {
-    {VALUE_ATTRIBUTE_USER, CacheRule::Attribute::USER                  },
-    {nullptr,              static_cast<CacheRule::Attribute>(0)}
+    CacheRule::Attribute::USER
 };
-
-static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping,
-                                     const char* s,
-                                     CacheRule::Attribute* attribute);
 
 static CacheRule* cache_rule_create_simple(CacheRule::Attribute attribute,
                                            CacheRule::Op op,
@@ -1200,29 +1194,37 @@ const json_t* CacheRules::json() const
  * API end
  */
 
-/**
- * Converts a string to an attribute
- *
- * @param           Name/value mapping.
- * @param s         A string
- * @param attribute On successful return contains the corresponding attribute type.
- *
- * @return True if the string could be converted, false otherwise.
- */
-static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping,
-                                     const char* s,
-                                     CacheRule::Attribute* attribute)
+//static
+bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
 {
-    mxb_assert(attribute);
-
-    while (mapping->name)
+    if (strcmp(z, VALUE_ATTRIBUTE_COLUMN) == 0)
     {
-        if (strcmp(s, mapping->name) == 0)
-        {
-            *attribute = mapping->value;
-            return true;
-        }
-        ++mapping;
+        *pAttribute = CacheRule::Attribute::COLUMN;
+        return true;
+    }
+
+    if (strcmp(z, VALUE_ATTRIBUTE_DATABASE) == 0)
+    {
+        *pAttribute = CacheRule::Attribute::DATABASE;
+        return true;
+    }
+
+    if (strcmp(z, VALUE_ATTRIBUTE_QUERY) == 0)
+    {
+        *pAttribute = CacheRule::Attribute::QUERY;
+        return true;
+    }
+
+    if (strcmp(z, VALUE_ATTRIBUTE_TABLE) == 0)
+    {
+        *pAttribute = CacheRule::Attribute::TABLE;
+        return true;
+    }
+
+    if (strcmp(z, VALUE_ATTRIBUTE_USER) == 0)
+    {
+        *pAttribute = CacheRule::Attribute::USER;
+        return true;
     }
 
     return false;
@@ -1554,7 +1556,7 @@ bool CacheRules::parse_array(json_t* store,
 CacheRule* CacheRules::parse_element(json_t* object,
                                      const char* array_name,
                                      size_t index,
-                                     const AttributeMapping* mapping)
+                                     const Attributes& valid_attributes)
 {
     mxb_assert(json_is_object(object));
 
@@ -1568,7 +1570,7 @@ CacheRule* CacheRules::parse_element(json_t* object,
     {
         CacheRule::Attribute attribute;
 
-        if (cache_rule_attribute_get(mapping, json_string_value(a), &attribute))
+        if (get_attribute(valid_attributes, json_string_value(a), &attribute))
         {
             CacheRule::Op op;
 
@@ -1604,6 +1606,30 @@ CacheRule* CacheRules::parse_element(json_t* object,
     }
 
     return rule;
+}
+
+//static
+bool CacheRules::get_attribute(const Attributes& valid_attributes,
+                               const char* z,
+                               CacheRule::Attribute* pAttribute)
+{
+    CacheRule::Attribute attribute;
+
+    bool rv = CacheRule::from_string(z, &attribute);
+
+    if (rv)
+    {
+        if (valid_attributes.count(attribute) != 0)
+        {
+            *pAttribute = attribute;
+        }
+        else
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
 }
 
 
