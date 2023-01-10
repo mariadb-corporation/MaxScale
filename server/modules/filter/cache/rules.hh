@@ -44,6 +44,7 @@ public:
     };
 
     static const char* to_string(Op op);
+    static bool from_string(const char* z, Op* pOp);
 
     virtual ~CacheRule();
 
@@ -266,6 +267,8 @@ private:
 class CacheRules
 {
 public:
+    class Tester;
+
     using SCacheRules = std::shared_ptr<CacheRules>;
     using S = SCacheRules;
     using Vector = std::vector<S>;
@@ -339,7 +342,9 @@ public:
      */
     bool should_use(const MXS_SESSION* pSession) const;
 
-public: // Temporarily
+private:
+    friend class Tester;
+
     CacheRules(uint32_t debug);
 
     static bool create_from_json(json_t* root, uint32_t debug, std::vector<SCacheRules>* pRules);
@@ -354,11 +359,14 @@ public: // Temporarily
     bool parse_store_element(json_t* object, size_t index);
     bool parse_use_element(json_t* object, size_t index);
 
+public: // TEMPORARY
     struct AttributeMapping
     {
         const char*          name;
         CacheRule::Attribute value;
     };
+
+private:
 
     static AttributeMapping s_store_attributes[];
     static AttributeMapping s_use_attributes[];
@@ -374,8 +382,8 @@ public: // Temporarily
     using SCacheRuleValueVector = std::vector<SCacheRuleValue>;
     using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
 
-    json_t*               root { nullptr }; // The JSON root object.
-    uint32_t              debug { 0 };      // The debug level.
-    SCacheRuleValueVector store_rules;      // The rules for when to store data to the cache.
-    SCacheRuleUserVector  use_rules;        // The rules for when to use data from the cache.
+    json_t*               m_pRoot { nullptr }; // The JSON root object.
+    uint32_t              m_debug { 0 };      // The debug level.
+    SCacheRuleValueVector m_store_rules;      // The rules for when to store data to the cache.
+    SCacheRuleUserVector  m_use_rules;        // The rules for when to use data from the cache.
 };

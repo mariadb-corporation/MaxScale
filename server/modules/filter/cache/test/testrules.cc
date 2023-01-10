@@ -46,6 +46,16 @@ GWBUF* create_gwbuf(const char* s)
     return gwbuf;
 }
 
+class CacheRules::Tester
+{
+public:
+    static int test_all();
+
+    static int test_user();
+    static int test_store();
+    static int test_array_store();
+};
+
 //
 // Test user rules. Basically tests that a user specification is translated
 // into the correct pcre2 regex.
@@ -80,7 +90,7 @@ const struct user_test_case user_test_cases[] =
 
 const size_t n_user_test_cases = sizeof(user_test_cases) / sizeof(user_test_cases[0]);
 
-int test_user()
+int CacheRules::Tester::test_user()
 {
     int errors = 0;
 
@@ -97,9 +107,9 @@ int test_user()
         {
             CacheRules::S sRules = rules[i];
 
-            mxb_assert(!sRules->use_rules.empty());
+            mxb_assert(!sRules->m_use_rules.empty());
 
-            CacheRule* pRule = sRules->use_rules.front().get();
+            CacheRule* pRule = sRules->m_use_rules.front().get();
 
             if (pRule->op() != test_case.expect.op)
             {
@@ -364,7 +374,7 @@ const struct store_test_case store_test_cases[] =
 
 const int n_store_test_cases = sizeof(store_test_cases) / sizeof(store_test_cases[0]);
 
-int test_store()
+int CacheRules::Tester::test_store()
 {
     int errors = 0;
 
@@ -382,8 +392,8 @@ int test_store()
         {
             CacheRules* pRules = rules[i].get();
 
-            mxb_assert(!pRules->store_rules.empty());
-            CacheRule* pRule = pRules->store_rules.front().get();
+            mxb_assert(!pRules->m_store_rules.empty());
+            CacheRule* pRule = pRules->m_store_rules.front().get();
 
             GWBUF* pPacket = create_gwbuf(test_case.query);
 
@@ -489,7 +499,7 @@ struct ShouldStore
     GWBUF* pStmt;
 };
 
-int test_array_store()
+int CacheRules::Tester::test_array_store()
 {
     int errors = 0;
 
@@ -543,7 +553,7 @@ int test_array_store()
 }
 
 
-int test()
+int CacheRules::Tester::test_all()
 {
     int errors = 0;
 
@@ -568,7 +578,7 @@ int main(int argc, char** argv)
         if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", ""))
         {
             mxs::set_libdir("../");
-            rc = test();
+            rc = CacheRules::Tester::test_all();
 
             qc_end();
         }

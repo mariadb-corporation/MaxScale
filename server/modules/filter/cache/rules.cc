@@ -70,8 +70,6 @@ static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping
                                      const char* s,
                                      CacheRule::Attribute* attribute);
 
-static bool cache_rule_op_get(const char* s, CacheRule::Op* op);
-
 static CacheRule* cache_rule_create_simple(CacheRule::Attribute attribute,
                                            CacheRule::Op op,
                                            const char* value,
@@ -1119,9 +1117,9 @@ bool CacheRules::should_store(const char* default_db, const GWBUF* query) const
 {
     bool should_store = false;
 
-    if (!this->store_rules.empty())
+    if (!m_store_rules.empty())
     {
-        for (const auto& sRule : this->store_rules)
+        for (const auto& sRule : m_store_rules)
         {
             should_store = sRule->matches(default_db, query);
 
@@ -1143,7 +1141,7 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
 {
     bool should_use = false;
 
-    if (!this->use_rules.empty())
+    if (!m_use_rules.empty())
     {
         const char* user = session->user().c_str();
         const char* host = session->client_remote().c_str();
@@ -1151,7 +1149,7 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
         char account[strlen(user) + 1 + strlen(host) + 1];
         sprintf(account, "%s@%s", user, host);
 
-        for (const auto& sRule : this->use_rules)
+        for (const auto& sRule : m_use_rules)
         {
             should_use = sRule->matches_user(account);
 
@@ -1171,15 +1169,15 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
 
 
 CacheRules::CacheRules(uint32_t debug)
-    : debug(debug)
+    : m_debug(debug)
 {
 }
 
 CacheRules::~CacheRules()
 {
-    if (this->root)
+    if (m_pRoot)
     {
-        json_decref(this->root);
+        json_decref(m_pRoot);
     }
 }
 
@@ -1195,7 +1193,7 @@ std::unique_ptr<CacheRules> CacheRules::create(uint32_t debug)
 
 const json_t* CacheRules::json() const
 {
-    return this->root;
+    return m_pRoot;
 }
 
 /*
@@ -1238,7 +1236,8 @@ static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping
  *
  * @return True if the string could be converted, false otherwise.
  */
-static bool cache_rule_op_get(const char* s, CacheRule::Op* op)
+//static
+bool CacheRule::from_string(const char* s, CacheRule::Op* op)
 {
     if (strcmp(s, VALUE_OP_EQ) == 0)
     {
@@ -1366,7 +1365,7 @@ CacheRules* CacheRules::create_from_json(json_t* root, uint32_t debug)
 
     if (rules->parse_json(root))
     {
-        rules->root = root;
+        rules->m_pRoot = root;
     }
     else
     {
@@ -1573,9 +1572,9 @@ CacheRule* CacheRules::parse_element(json_t* object,
         {
             CacheRule::Op op;
 
-            if (cache_rule_op_get(json_string_value(o), &op))
+            if (CacheRule::from_string(json_string_value(o), &op))
             {
-                rule = cache_rule_create(attribute, op, json_string_value(v), this->debug);
+                rule = cache_rule_create(attribute, op, json_string_value(v), m_debug);
             }
             else
             {
@@ -1623,7 +1622,7 @@ bool CacheRules::parse_store_element(json_t* object, size_t index)
 
     if (rule)
     {
-        this->store_rules.emplace_back(static_cast<CacheRuleValue*>(rule));
+        m_store_rules.emplace_back(static_cast<CacheRuleValue*>(rule));
     }
 
     return rule != nullptr;
@@ -1644,7 +1643,7 @@ bool CacheRules::parse_use_element(json_t* object, size_t index)
 
     if (rule)
     {
-        this->use_rules.emplace_back(static_cast<CacheRuleUser*>(rule));
+        m_use_rules.emplace_back(static_cast<CacheRuleUser*>(rule));
     }
 
     return rule != nullptr;
