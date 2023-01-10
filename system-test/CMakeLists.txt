@@ -915,6 +915,9 @@ add_test_executable(mxs4194_qc_cache_size.cc mxs4194_qc_cache_size mxs4194_qc_ca
 # MXS-4440: connection_keepalive doesn't work with long queries
 add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive mxs4440_long_query_keepalive LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4474: MaxScale hangs when worker writes messages to itself
+add_test_executable(mxs4474_worker_messages.cc mxs4474_worker_messages replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
