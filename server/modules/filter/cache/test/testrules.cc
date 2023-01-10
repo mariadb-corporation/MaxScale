@@ -55,8 +55,8 @@ struct user_test_case
     const char* json;
     struct
     {
-        cache_rule_op_t op;
-        const char*     value;
+        CacheRule::Op op;
+        const char*   value;
     } expect;
 };
 
@@ -68,14 +68,14 @@ struct user_test_case
 
 const struct user_test_case user_test_cases[] =
 {
-    USER_TEST_CASE("=", "bob",           CACHE_OP_LIKE, "bob@.*"),
-    USER_TEST_CASE("=", "'bob'",         CACHE_OP_LIKE, "bob@.*"),
-    USER_TEST_CASE("=", "bob@%",         CACHE_OP_LIKE, "bob@.*"),
-    USER_TEST_CASE("=", "'bob'@'%.52'",  CACHE_OP_LIKE, "bob@.*\\.52"),
-    USER_TEST_CASE("=", "bob@127.0.0.1", CACHE_OP_EQ,   "bob@127.0.0.1"),
-    USER_TEST_CASE("=", "b*b@127.0.0.1", CACHE_OP_EQ,   "b*b@127.0.0.1"),
-    USER_TEST_CASE("=", "b*b@%.0.0.1",   CACHE_OP_LIKE, "b\\*b@.*\\.0\\.0\\.1"),
-    USER_TEST_CASE("=", "b*b@%.0.%.1",   CACHE_OP_LIKE, "b\\*b@.*\\.0\\..*\\.1"),
+    USER_TEST_CASE("=", "bob",           CacheRule::Op::LIKE, "bob@.*"),
+    USER_TEST_CASE("=", "'bob'",         CacheRule::Op::LIKE, "bob@.*"),
+    USER_TEST_CASE("=", "bob@%",         CacheRule::Op::LIKE, "bob@.*"),
+    USER_TEST_CASE("=", "'bob'@'%.52'",  CacheRule::Op::LIKE, "bob@.*\\.52"),
+    USER_TEST_CASE("=", "bob@127.0.0.1", CacheRule::Op::EQ,   "bob@127.0.0.1"),
+    USER_TEST_CASE("=", "b*b@127.0.0.1", CacheRule::Op::EQ,   "b*b@127.0.0.1"),
+    USER_TEST_CASE("=", "b*b@%.0.0.1",   CacheRule::Op::LIKE, "b\\*b@.*\\.0\\.0\\.1"),
+    USER_TEST_CASE("=", "b*b@%.0.%.1",   CacheRule::Op::LIKE, "b\\*b@.*\\.0\\..*\\.1"),
 };
 
 const size_t n_user_test_cases = sizeof(user_test_cases) / sizeof(user_test_cases[0]);

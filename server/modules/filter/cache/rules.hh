@@ -21,31 +21,30 @@
 #include <maxscale/session.hh>
 #include <maxscale/pcre2.hh>
 
-enum cache_rule_attribute_t
-{
-    CACHE_ATTRIBUTE_COLUMN,
-    CACHE_ATTRIBUTE_DATABASE,
-    CACHE_ATTRIBUTE_QUERY,
-    CACHE_ATTRIBUTE_TABLE,
-    CACHE_ATTRIBUTE_USER,
-};
-
-enum cache_rule_op_t
-{
-    CACHE_OP_EQ,
-    CACHE_OP_NEQ,
-    CACHE_OP_LIKE,
-    CACHE_OP_UNLIKE
-};
-
-
 class CacheRule
 {
 public:
+    enum class Attribute
+    {
+        COLUMN,
+        DATABASE,
+        QUERY,
+        TABLE,
+        USER,
+    };
+
+    enum class Op
+    {
+        EQ,
+        NEQ,
+        LIKE,
+        UNLIKE
+    };
+
     virtual ~CacheRule();
 
-    virtual cache_rule_attribute_t attribute() const = 0;
-    virtual cache_rule_op_t op() const = 0;
+    virtual Attribute attribute() const = 0;
+    virtual Op op() const = 0;
     virtual std::string value() const = 0;
     virtual uint32_t debug() const = 0;
 
@@ -56,12 +55,12 @@ public:
 class CacheRuleConcrete : public CacheRule
 {
 public:
-    cache_rule_attribute_t attribute() const override final
+    Attribute attribute() const override final
     {
         return m_attribute;
     }
 
-    cache_rule_op_t op() const override final
+    Op op() const override final
     {
         return m_op;
     }
@@ -79,8 +78,8 @@ public:
     bool compare(const std::string_view& value) const override final;
 
 protected:
-    CacheRuleConcrete(cache_rule_attribute_t attribute, // What attribute is evalued.
-                      cache_rule_op_t op,               // What operator is used.
+    CacheRuleConcrete(Attribute attribute, // What attribute is evalued.
+                      Op op,               // What operator is used.
                       std::string value,                // The value from the rule file.
                       uint32_t debug)                   // Debug bits
         : m_attribute(attribute)
@@ -90,8 +89,8 @@ protected:
     {
     }
 
-    cache_rule_attribute_t m_attribute;   // What attribute is evalued.
-    cache_rule_op_t        m_op;          // What operator is used.
+    Attribute m_attribute;   // What attribute is evalued.
+    Op        m_op;          // What operator is used.
     std::string            m_value;       // The value from the rule file.
     uint32_t               m_debug;       // The debug bits.
 
@@ -109,8 +108,8 @@ protected:
     bool matches_query(const char* default_db, const GWBUF* query) const;
 
 protected:
-    CacheRuleValue(cache_rule_attribute_t attribute, // What attribute is evalued.
-                   cache_rule_op_t op,               // What operator is used.
+    CacheRuleValue(Attribute attribute, // What attribute is evalued.
+                   Op op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
         : CacheRuleConcrete(attribute, op, value, debug)
@@ -122,17 +121,17 @@ class CacheRuleSimple : public CacheRuleValue
 {
 public:
     static bool compare_n(const std::string& lhs,
-                          cache_rule_op_t op,
+                          Op op,
                           const char* value, size_t length);
 
 protected:
-    CacheRuleSimple(cache_rule_attribute_t attribute, // What attribute is evalued.
-                    cache_rule_op_t op,               // What operator is used.
+    CacheRuleSimple(Attribute attribute, // What attribute is evalued.
+                    Op op,               // What operator is used.
                     std::string value,                // The value from the rule file.
                     uint32_t debug)                   // Debug bits
         : CacheRuleValue(attribute, op, value, debug)
     {
-        mxb_assert(op == CACHE_OP_EQ || op == CACHE_OP_NEQ);
+        mxb_assert(op == Op::EQ || op == Op::NEQ);
     }
 
     bool compare_n(const char* value, size_t length) const override final;
@@ -141,8 +140,8 @@ protected:
 class CacheRuleCTD final : public CacheRuleSimple
 {
 public:
-    static CacheRuleCTD* create(cache_rule_attribute_t attribute, // What attribute is evalued.
-                                cache_rule_op_t op,               // What operator is used.
+    static CacheRuleCTD* create(Attribute attribute, // What attribute is evalued.
+                                Op op,               // What operator is used.
                                 const char* zValue,               // The value from the rule file.
                                 uint32_t debug);                  // Debug bits
 
@@ -158,8 +157,8 @@ protected:
     } m_ctd;
 
 private:
-    CacheRuleCTD(cache_rule_attribute_t attribute, // What attribute is evalued.
-                 cache_rule_op_t op,               // What operator is used.
+    CacheRuleCTD(Attribute attribute, // What attribute is evalued.
+                 Op op,               // What operator is used.
                  std::string value,                // The value from the rule file.
                  uint32_t debug)                   // Debug bits
         : CacheRuleSimple(attribute, op, value, debug)
@@ -170,14 +169,14 @@ private:
 class CacheRuleQuery final : public CacheRuleSimple
 {
 public:
-    static CacheRuleQuery* create(cache_rule_attribute_t attribute, // What attribute is evalued.
-                                  cache_rule_op_t op,               // What operator is used.
+    static CacheRuleQuery* create(Attribute attribute, // What attribute is evalued.
+                                  Op op,               // What operator is used.
                                   const char* zValue,               // The value from the rule file.
                                   uint32_t debug);                  // Debug bits
 
 private:
-    CacheRuleQuery(cache_rule_attribute_t attribute, // What attribute is evalued.
-                   cache_rule_op_t op,               // What operator is used.
+    CacheRuleQuery(Attribute attribute, // What attribute is evalued.
+                   Op op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
         : CacheRuleSimple(attribute, op, value, debug)
@@ -192,8 +191,8 @@ public:
 
     bool compare_n(const char* value, size_t length) const override final;
 
-    static CacheRuleRegex* create(cache_rule_attribute_t attribute, // What attribute is evalued.
-                                  cache_rule_op_t op,               // What operator is used.
+    static CacheRuleRegex* create(Attribute attribute, // What attribute is evalued.
+                                  Op op,               // What operator is used.
                                   const char* zValue,               // The value from the rule file.
                                   uint32_t debug);                  // Debug bits
 
@@ -202,13 +201,13 @@ protected:
     bool matches_table(const char* default_db, const GWBUF* query) const override;
 
 private:
-    CacheRuleRegex(cache_rule_attribute_t attribute, // What attribute is evalued.
-                   cache_rule_op_t op,               // What operator is used.
+    CacheRuleRegex(Attribute attribute, // What attribute is evalued.
+                   Op op,               // What operator is used.
                    std::string value,                // The value from the rule file.
                    uint32_t debug)                   // Debug bits
         : CacheRuleValue(attribute, op, value, debug)
     {
-        mxb_assert(op == CACHE_OP_LIKE || op == CACHE_OP_UNLIKE);
+        mxb_assert(op == Op::LIKE || op == Op::UNLIKE);
     }
 
     struct
@@ -220,17 +219,17 @@ private:
 class CacheRuleUser final : public CacheRule
 {
 public:
-    static CacheRuleUser* create(cache_rule_attribute_t attribute, // What attribute is evalued.
-                                 cache_rule_op_t op,               // What operator is used.
+    static CacheRuleUser* create(Attribute attribute, // What attribute is evalued.
+                                 Op op,               // What operator is used.
                                  const char* zValue,               // The value from the rule file.
                                  uint32_t debug);                  // Debug bits
 
-    cache_rule_attribute_t attribute() const override
+    Attribute attribute() const override
     {
         return m_sDelegate->attribute();
     }
 
-    cache_rule_op_t op() const override
+    Op op() const override
     {
         return m_sDelegate->op();
     }
@@ -266,7 +265,7 @@ private:
  *
  * @return Corresponding string, not to be freed.
  */
-const char* cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
+const char* cache_rule_attribute_to_string(CacheRule::Attribute attribute);
 
 /**
  * Returns a string representation of an operator.
@@ -275,7 +274,7 @@ const char* cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
  *
  * @return Corresponding string, not to be freed.
  */
-const char* cache_rule_op_to_string(cache_rule_op_t op);
+const char* cache_rule_op_to_string(CacheRule::Op op);
 
 /**
  * Loads the caching rules from a file and returns corresponding object.
