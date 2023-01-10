@@ -1456,17 +1456,22 @@ void DCB::add_event(uint32_t ev)
     else
     {
         // ... otherwise we post the fake event using the messaging mechanism.
+        auto task = std::make_unique<FakeEventTask>(this, ev);
+        RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
 
-        FakeEventTask* task = new(std::nothrow) FakeEventTask(this, ev);
-
-        if (task)
+        if (worker == RoutingWorker::get_current())
         {
-            RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
-            worker->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
+            // If the event is for a DCB on the same worker but it's not the one being processed, we have to
+            // use a lcall to execute it. Otherwise the worker writes to its own message queue and it fills up
+            // with nobody reading from it. As events are not abandoned, this would end up in a deadlock.
+            std::shared_ptr<FakeEventTask> shared_task = std::move(task);
+            worker->lcall([worker, shared_task](){
+                shared_task->execute(*worker);
+            });
         }
         else
         {
-            MXS_OOM();
+            worker->execute(std::move(task), Worker::EXECUTE_QUEUED);
         }
     }
 }
