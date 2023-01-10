@@ -33,6 +33,8 @@ public:
         USER,
     };
 
+    static const char* to_string(Attribute attribute);
+
     enum class Op
     {
         EQ,
@@ -40,6 +42,8 @@ public:
         LIKE,
         UNLIKE
     };
+
+    static const char* to_string(Op op);
 
     virtual ~CacheRule();
 
@@ -258,50 +262,6 @@ private:
     std::unique_ptr<CacheRule> m_sDelegate;
 };
 
-/**
- * Returns a string representation of a attribute.
- *
- * @param attribute An attribute type.
- *
- * @return Corresponding string, not to be freed.
- */
-const char* cache_rule_attribute_to_string(CacheRule::Attribute attribute);
-
-/**
- * Returns a string representation of an operator.
- *
- * @param op An operator.
- *
- * @return Corresponding string, not to be freed.
- */
-const char* cache_rule_op_to_string(CacheRule::Op op);
-
-/**
- * Loads the caching rules from a file and returns corresponding object.
- *
- * @param path     The path of the file containing the rules.
- * @param debug    The debug level.
- * @param pppRules [out] Pointer to array of pointers to CacheRules objects.
- * @param pnRules  [out] Pointer to number of items in @c *ppRules.
- *
- * @note The caller must free the array @c *pppRules and each rules
- *       object in the array.
- *
- * @return bool True, if the rules could be loaded, false otherwise.
- */
-class CacheRules;
-using SCacheRules = std::shared_ptr<CacheRules>;
-bool cache_rules_load(const char* zPath,
-                      uint32_t debug,
-                      std::vector<SCacheRules>* pRules);
-
-/**
- * Prints the rules.
- *
- * @param pdcb    The DCB where the rules should be printed.
- * @param indent  By how many spaces to indent the output.
- */
-void cache_rules_print(const CacheRules* rules, DCB* dcb, size_t indent);
 
 class CacheRules
 {
@@ -386,6 +346,27 @@ public: // Temporarily
     static CacheRules* create_from_json(json_t* root, uint32_t debug);
 
     bool parse_json(json_t* root);
+
+    using ElementParser = bool (CacheRules::*)(json_t* object, size_t index);
+
+    bool parse_array(json_t* root, const char* name, ElementParser);
+
+    bool parse_store_element(json_t* object, size_t index);
+    bool parse_use_element(json_t* object, size_t index);
+
+    struct AttributeMapping
+    {
+        const char*          name;
+        CacheRule::Attribute value;
+    };
+
+    static AttributeMapping s_store_attributes[];
+    static AttributeMapping s_use_attributes[];
+
+    CacheRule* parse_element(json_t* object,
+                             const char* name,
+                             size_t index,
+                             const AttributeMapping* pAttributes);
 
     using SCacheRuleValue = std::unique_ptr<CacheRuleValue>;
     using SCacheRuleUser = std::unique_ptr<CacheRuleUser>;

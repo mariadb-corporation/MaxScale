@@ -105,8 +105,8 @@ int test_user()
             {
                 printf("%s\nExpected: %s,\nGot     : %s\n",
                        test_case.json,
-                       cache_rule_op_to_string(test_case.expect.op),
-                       cache_rule_op_to_string(pRule->op()));
+                       CacheRule::to_string(test_case.expect.op),
+                       CacheRule::to_string(pRule->op()));
                 ++errors;
             }
 

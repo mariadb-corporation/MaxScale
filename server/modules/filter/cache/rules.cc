@@ -49,13 +49,8 @@ static const char VALUE_OP_NEQ[] = "!=";
 static const char VALUE_OP_LIKE[] = "like";
 static const char VALUE_OP_UNLIKE[] = "unlike";
 
-struct cache_attribute_mapping
-{
-    const char*            name;
-    CacheRule::Attribute value;
-};
-
-static struct cache_attribute_mapping cache_store_attributes[] =
+//static
+CacheRules::AttributeMapping CacheRules::s_store_attributes[] =
 {
     {VALUE_ATTRIBUTE_COLUMN,   CacheRule::Attribute::COLUMN                },
     {VALUE_ATTRIBUTE_DATABASE, CacheRule::Attribute::DATABASE              },
@@ -64,13 +59,14 @@ static struct cache_attribute_mapping cache_store_attributes[] =
     {nullptr,                  static_cast<CacheRule::Attribute>(0)}
 };
 
-static struct cache_attribute_mapping cache_use_attributes[] =
+//static
+CacheRules::AttributeMapping CacheRules::s_use_attributes[] =
 {
     {VALUE_ATTRIBUTE_USER, CacheRule::Attribute::USER                  },
     {nullptr,              static_cast<CacheRule::Attribute>(0)}
 };
 
-static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
+static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping,
                                      const char* s,
                                      CacheRule::Attribute* attribute);
 
@@ -85,20 +81,11 @@ static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
                                     const char* value,
                                     uint32_t debug);
 
-static void        cache_rules_add_store_rule(CacheRules* self, CacheRuleValue* rule);
-static void        cache_rules_add_use_rule(CacheRules* self, CacheRuleUser* rule);
-typedef bool (* cache_rules_parse_element_t)(CacheRules* self, json_t* object, size_t index);
-
-static bool cache_rules_parse_array(CacheRules * self, json_t* store, const char* name,
-                                    cache_rules_parse_element_t);
-static bool cache_rules_parse_store_element(CacheRules* self, json_t* object, size_t index);
-static bool cache_rules_parse_use_element(CacheRules* self, json_t* object, size_t index);
-
 /*
  * API begin
  */
 
-const char* cache_rule_attribute_to_string(CacheRule::Attribute attribute)
+const char* CacheRule::to_string(CacheRule::Attribute attribute)
 {
     switch (attribute)
     {
@@ -123,7 +110,7 @@ const char* cache_rule_attribute_to_string(CacheRule::Attribute attribute)
     }
 }
 
-const char* cache_rule_op_to_string(CacheRule::Op op)
+const char* CacheRule::to_string(CacheRule::Op op)
 {
     switch (op)
     {
@@ -236,8 +223,8 @@ bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
-                   cache_rule_attribute_to_string(m_attribute),
-                   cache_rule_op_to_string(m_op),
+                   to_string(m_attribute),
+                   to_string(m_op),
                    m_value.c_str(),
                    text,
                    sql_len,
@@ -1030,8 +1017,8 @@ bool CacheRuleUser::matches_user(const char* account) const
         }
 
         MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
-                   cache_rule_attribute_to_string(attribute()),
-                   cache_rule_op_to_string(op()),
+                   to_string(attribute()),
+                   to_string(op()),
                    value().c_str(),
                    text,
                    account);
@@ -1224,7 +1211,7 @@ const json_t* CacheRules::json() const
  *
  * @return True if the string could be converted, false otherwise.
  */
-static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
+static bool cache_rule_attribute_get(const CacheRules::AttributeMapping* mapping,
                                      const char* s,
                                      CacheRule::Attribute* attribute)
 {
@@ -1363,28 +1350,6 @@ static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
 
 
 /**
- * Adds a "store" rule to the rules object
- *
- * @param self Pointer to the CacheRules object that is being built.
- * @param rule The rule to be added.
- */
-static void cache_rules_add_store_rule(CacheRules* self, CacheRuleValue* rule)
-{
-    self->store_rules.emplace_back(rule);
-}
-
-/**
- * Adds a "store" rule to the rules object
- *
- * @param self Pointer to the CacheRules object that is being built.
- * @param rule The rule to be added.
- */
-static void cache_rules_add_use_rule(CacheRules* self, CacheRuleUser* rule)
-{
-    self->use_rules.emplace_back(rule);
-}
-
-/**
  * Creates a rules object from a JSON object.
  *
  * @param root  The root JSON rule object.
@@ -1504,7 +1469,7 @@ bool CacheRules::parse_json(json_t* root)
     {
         if (json_is_array(store))
         {
-            parsed = cache_rules_parse_array(this, store, KEY_STORE, cache_rules_parse_store_element);
+            parsed = parse_array(store, KEY_STORE, &CacheRules::parse_store_element);
         }
         else
         {
@@ -1520,7 +1485,7 @@ bool CacheRules::parse_json(json_t* root)
         {
             if (json_is_array(use))
             {
-                parsed = cache_rules_parse_array(this, use, KEY_USE, cache_rules_parse_use_element);
+                parsed = parse_array(use, KEY_USE, &CacheRules::parse_use_element);
             }
             else
             {
@@ -1546,10 +1511,9 @@ bool CacheRules::parse_json(json_t* root)
  *
  * @return True, if the array could be parsed, false otherwise.
  */
-static bool cache_rules_parse_array(CacheRules* self,
-                                    json_t* store,
-                                    const char* name,
-                                    cache_rules_parse_element_t parse_element)
+bool CacheRules::parse_array(json_t* store,
+                             const char* name,
+                             CacheRules::ElementParser parse_element)
 {
     mxb_assert(json_is_array(store));
 
@@ -1565,7 +1529,7 @@ static bool cache_rules_parse_array(CacheRules* self,
 
         if (json_is_object(element))
         {
-            parsed = parse_element(self, element, i);
+            parsed = (this->*parse_element)(element, i);
         }
         else
         {
@@ -1588,11 +1552,10 @@ static bool cache_rules_parse_array(CacheRules* self,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-static CacheRule* cache_rules_parse_element(CacheRules* self,
-                                            json_t* object,
-                                            const char* array_name,
-                                            size_t index,
-                                            struct cache_attribute_mapping* mapping)
+CacheRule* CacheRules::parse_element(json_t* object,
+                                     const char* array_name,
+                                     size_t index,
+                                     const AttributeMapping* mapping)
 {
     mxb_assert(json_is_object(object));
 
@@ -1612,7 +1575,7 @@ static CacheRule* cache_rules_parse_element(CacheRules* self,
 
             if (cache_rule_op_get(json_string_value(o), &op))
             {
-                rule = cache_rule_create(attribute, op, json_string_value(v), self->debug);
+                rule = cache_rule_create(attribute, op, json_string_value(v), this->debug);
             }
             else
             {
@@ -1654,13 +1617,13 @@ static CacheRule* cache_rules_parse_element(CacheRules* self,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-static bool cache_rules_parse_store_element(CacheRules* self, json_t* object, size_t index)
+bool CacheRules::parse_store_element(json_t* object, size_t index)
 {
-    CacheRule* rule = cache_rules_parse_element(self, object, KEY_STORE, index, cache_store_attributes);
+    CacheRule* rule = parse_element(object, KEY_STORE, index, s_store_attributes);
 
     if (rule)
     {
-        cache_rules_add_store_rule(self, static_cast<CacheRuleValue*>(rule));
+        this->store_rules.emplace_back(static_cast<CacheRuleValue*>(rule));
     }
 
     return rule != nullptr;
@@ -1675,13 +1638,13 @@ static bool cache_rules_parse_store_element(CacheRules* self, json_t* object, si
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-static bool cache_rules_parse_use_element(CacheRules* self, json_t* object, size_t index)
+bool CacheRules::parse_use_element(json_t* object, size_t index)
 {
-    CacheRule* rule = cache_rules_parse_element(self, object, KEY_USE, index, cache_use_attributes);
+    CacheRule* rule = parse_element(object, KEY_USE, index, s_use_attributes);
 
     if (rule)
     {
-        cache_rules_add_use_rule(self, static_cast<CacheRuleUser*>(rule));
+        this->use_rules.emplace_back(static_cast<CacheRuleUser*>(rule));
     }
 
     return rule != nullptr;
