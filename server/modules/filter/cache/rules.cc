@@ -64,15 +64,6 @@ CacheRules::Attributes CacheRules::s_use_attributes =
     CacheRule::Attribute::USER
 };
 
-static CacheRule* cache_rule_create_simple(CacheRule::Attribute attribute,
-                                           CacheRule::Op op,
-                                           const char* value,
-                                           uint32_t debug);
-static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
-                                    CacheRule::Op op,
-                                    const char* value,
-                                    uint32_t debug);
-
 /*
  * API begin
  */
@@ -167,26 +158,26 @@ bool CacheRuleConcrete::compare(const std::string_view& value) const
 // CacheRuleValue
 //
 
-bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
+bool CacheRuleValue::matches(const char* zDefault_db, const GWBUF* pQuery) const
 {
     bool matches = false;
 
     switch (m_attribute)
     {
     case CacheRule::Attribute::COLUMN:
-        matches = matches_column(default_db, query);
+        matches = matches_column(zDefault_db, pQuery);
         break;
 
     case CacheRule::Attribute::DATABASE:
-        matches = matches_database(default_db, query);
+        matches = matches_database(zDefault_db, pQuery);
         break;
 
     case CacheRule::Attribute::TABLE:
-        matches = matches_table(default_db, query);
+        matches = matches_table(zDefault_db, pQuery);
         break;
 
     case CacheRule::Attribute::QUERY:
-        matches = matches_query(default_db, query);
+        matches = matches_query(zDefault_db, pQuery);
         break;
 
     case CacheRule::Attribute::USER:
@@ -202,7 +193,7 @@ bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
     {
         const char* sql;
         int sql_len;
-        modutil_extract_SQL(*query, &sql, &sql_len);
+        modutil_extract_SQL(*pQuery, &sql, &sql_len);
         const char* text;
 
         if (matches)
@@ -226,19 +217,19 @@ bool CacheRuleValue::matches(const char* default_db, const GWBUF* query) const
     return matches;
 }
 
-bool CacheRuleValue::matches_column(const char* default_db, const GWBUF* query) const
+bool CacheRuleValue::matches_column(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(!true);
     return false;
 }
 
-bool CacheRuleValue::matches_table(const char* default_db, const GWBUF* query) const
+bool CacheRuleValue::matches_table(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(!true);
     return false;
 }
 
-bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query) const
+bool CacheRuleValue::matches_database(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::DATABASE);
 
@@ -251,7 +242,7 @@ bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query
     bool fullnames = true;
 
     // TODO: Make qc const-correct.
-    for (const auto& name : qc_get_table_names((GWBUF*)query))
+    for (const auto& name : qc_get_table_names((GWBUF*)pQuery))
     {
         if (!name.db.empty())
         {
@@ -259,7 +250,7 @@ bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query
         }
         else
         {
-            matches = compare(default_db ? default_db : "");
+            matches = compare(zDefault_db ? zDefault_db : "");
         }
 
         if (matches)
@@ -271,7 +262,7 @@ bool CacheRuleValue::matches_database(const char* default_db, const GWBUF* query
     return matches;
 }
 
-bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) const
+bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::QUERY);
 
@@ -284,7 +275,7 @@ bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) c
     int len;
 
     // Will succeed, query contains a contiguous COM_QUERY.
-    modutil_extract_SQL(*query, &sql, &len);
+    modutil_extract_SQL(*pQuery, &sql, &len);
 
     return compare_n(sql, len);
 }
@@ -293,17 +284,17 @@ bool CacheRuleValue::matches_query(const char* default_db, const GWBUF* query) c
 // CacheRuleSimple
 //
 
-bool CacheRuleSimple::compare_n(const char* zValue, size_t length) const
+bool CacheRuleSimple::compare_n(const char* pValue, size_t length) const
 {
-    return compare_n(m_value, m_op, zValue, length);
+    return compare_n(m_value, m_op, pValue, length);
 }
 
 //static
 bool CacheRuleSimple::compare_n(const std::string& lhs,
                                 Op op,
-                                const char* zValue, size_t length)
+                                const char* pValue, size_t length)
 {
-    bool compares = (strncmp(lhs.c_str(), zValue, length) == 0);
+    bool compares = (strncmp(lhs.c_str(), pValue, length) == 0);
 
     if (op == Op::NEQ)
     {
@@ -366,18 +357,18 @@ CacheRuleCTD* CacheRuleCTD::create(Attribute attribute,
         {
             if (zThird)      // implies also 'first' and 'second'
             {
-                pRule->m_ctd.column = zThird;
-                pRule->m_ctd.table = zSecond;
-                pRule->m_ctd.database = zFirst;
+                pRule->m_column = zThird;
+                pRule->m_table = zSecond;
+                pRule->m_database = zFirst;
             }
             else if (zSecond)    // implies also 'first'
             {
-                pRule->m_ctd.column = zSecond;
-                pRule->m_ctd.table = zFirst;
+                pRule->m_column = zSecond;
+                pRule->m_table = zFirst;
             }
             else    // only 'zFirst'
             {
-                pRule->m_ctd.column = zFirst;
+                pRule->m_column = zFirst;
             }
         }
         break;
@@ -393,12 +384,12 @@ CacheRuleCTD* CacheRuleCTD::create(Attribute attribute,
         {
             if (zSecond)     // implies also 'zFirst'
             {
-                pRule->m_ctd.database = zFirst;
-                pRule->m_ctd.table = zSecond;
+                pRule->m_database = zFirst;
+                pRule->m_table = zSecond;
             }
             else    // only 'zFirst'
             {
-                pRule->m_ctd.table = zFirst;
+                pRule->m_table = zFirst;
             }
         }
         break;
@@ -412,7 +403,7 @@ CacheRuleCTD* CacheRuleCTD::create(Attribute attribute,
         }
         else
         {
-            pRule->m_ctd.database = zFirst;
+            pRule->m_database = zFirst;
         }
         break;
 
@@ -429,31 +420,31 @@ CacheRuleCTD* CacheRuleCTD::create(Attribute attribute,
     return pRule;
 }
 
-bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) const
+bool CacheRuleCTD::matches_column(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::COLUMN);
     mxb_assert((m_op == Op::EQ) || (m_op == Op::NEQ));
-    mxb_assert(!m_ctd.column.empty());
+    mxb_assert(!m_column.empty());
 
-    const char* zRule_column = m_ctd.column.c_str();
-    const char* zRule_table = m_ctd.table.empty() ? nullptr : m_ctd.table.c_str();
-    const char* zRule_database = m_ctd.database.empty() ? nullptr : m_ctd.database.c_str();
+    const char* zRule_column = m_column.c_str();
+    const char* zRule_table = m_table.empty() ? nullptr : m_table.c_str();
+    const char* zRule_database = m_database.empty() ? nullptr : m_database.c_str();
 
     std::string_view default_database;
 
-    auto databases = qc_get_database_names((GWBUF*)query);
+    auto databases = qc_get_database_names((GWBUF*)pQuery);
 
     if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
-        if (default_db)
+        if (zDefault_db)
         {
-            default_database = default_db;
+            default_database = zDefault_db;
         }
     }
-    else if ((default_db == nullptr) && (databases.size() == 1))
+    else if ((zDefault_db == nullptr) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
@@ -461,7 +452,7 @@ bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) co
         default_database = databases[0];
     }
 
-    auto tables = qc_get_table_names((GWBUF*)query);
+    auto tables = qc_get_table_names((GWBUF*)pQuery);
 
     std::string_view default_table;
 
@@ -475,7 +466,7 @@ bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) co
     const QC_FIELD_INFO* infos;
     size_t n_infos;
 
-    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
+    qc_get_field_info((GWBUF*)pQuery, &infos, &n_infos);
 
     bool matches = false;
 
@@ -562,15 +553,15 @@ bool CacheRuleCTD::matches_column(const char* default_db, const GWBUF* query) co
     return matches;
 }
 
-bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) const
+bool CacheRuleCTD::matches_table(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::TABLE);
     mxb_assert((m_op == Op::EQ) || (m_op == Op::NEQ));
 
     bool matches = false;
-    bool fullnames = !m_ctd.database.empty();
+    bool fullnames = !m_database.empty();
 
-    for (const auto& name : qc_get_table_names((GWBUF*)query))
+    for (const auto& name : qc_get_table_names((GWBUF*)pQuery))
     {
         std::string_view database;
         std::string_view table;
@@ -584,18 +575,18 @@ bool CacheRuleCTD::matches_table(const char* default_db, const GWBUF* query) con
             }
             else
             {
-                database = default_db;
+                database = zDefault_db;
                 table = name.table;
             }
 
             if (!database.empty())
             {
-                matches = sv_case_eq(m_ctd.database, database) && sv_case_eq(m_ctd.table, table);
+                matches = sv_case_eq(m_database, database) && sv_case_eq(m_table, table);
             }
         }
         else
         {
-            matches = sv_case_eq(m_ctd.table, name.table);
+            matches = sv_case_eq(m_table, name.table);
         }
 
         if (m_op == Op::NEQ)
@@ -660,7 +651,7 @@ CacheRuleRegex* CacheRuleRegex::create(Attribute attribute,
         pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
 
         pRule = new CacheRuleRegex(attribute, op, zValue, debug);
-        pRule->m_regexp.code = pCode;
+        pRule->m_pCode = pCode;
     }
     else
     {
@@ -677,15 +668,15 @@ CacheRuleRegex* CacheRuleRegex::create(Attribute attribute,
 
 CacheRuleRegex::~CacheRuleRegex()
 {
-    pcre2_code_free(m_regexp.code);
-    m_regexp.code = nullptr;
+    pcre2_code_free(m_pCode);
+    m_pCode = nullptr;
 }
 
 bool CacheRuleRegex::compare_n(const char* zValue, size_t length) const
 {
-    pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_regexp.code, nullptr);
+    pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_pCode, nullptr);
 
-    bool compares = (pcre2_match(m_regexp.code,
+    bool compares = (pcre2_match(m_pCode,
                                  (PCRE2_SPTR)zValue,
                                  length,
                                  0,
@@ -702,7 +693,7 @@ bool CacheRuleRegex::compare_n(const char* zValue, size_t length) const
     return compares;
 }
 
-bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) const
+bool CacheRuleRegex::matches_column(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::COLUMN);
     mxb_assert((m_op == Op::LIKE) || (m_op == Op::UNLIKE));
@@ -710,19 +701,19 @@ bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) 
     std::string_view default_database;
 
     int n_databases;
-    auto databases = qc_get_database_names((GWBUF*)query);
+    auto databases = qc_get_database_names((GWBUF*)pQuery);
 
     if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
-        if (default_db)
+        if (zDefault_db)
         {
-            default_database = default_db;
+            default_database = zDefault_db;
         }
     }
-    else if ((default_db == nullptr) && (databases.size() == 1))
+    else if ((zDefault_db == nullptr) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
@@ -732,7 +723,7 @@ bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) 
 
     size_t default_database_len = default_database.length();
 
-    auto tables = qc_get_table_names((GWBUF*)query);
+    auto tables = qc_get_table_names((GWBUF*)pQuery);
 
     std::string_view default_table;
 
@@ -748,7 +739,7 @@ bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) 
     const QC_FIELD_INFO* infos;
     size_t n_infos;
 
-    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
+    qc_get_field_info((GWBUF*)pQuery, &infos, &n_infos);
 
     bool matches = false;
 
@@ -810,18 +801,18 @@ bool CacheRuleRegex::matches_column(const char* default_db, const GWBUF* query) 
     return matches;
 }
 
-bool CacheRuleRegex::matches_table(const char* default_db, const GWBUF* query) const
+bool CacheRuleRegex::matches_table(const char* zDefault_db, const GWBUF* pQuery) const
 {
     mxb_assert(m_attribute == Attribute::TABLE);
     mxb_assert((m_op == Op::LIKE) || (m_op == Op::UNLIKE));
 
     bool matches = false;
 
-    auto names = qc_get_table_names((GWBUF*)query);
+    auto names = qc_get_table_names((GWBUF*)pQuery);
 
     if (!names.empty())
     {
-        std::string db = default_db ? default_db : "";
+        std::string db = zDefault_db ? zDefault_db : "";
 
         for (const auto& name : names)
         {
@@ -829,7 +820,7 @@ bool CacheRuleRegex::matches_table(const char* default_db, const GWBUF* query) c
             {
                 // Only "tbl"
 
-                if (default_db)
+                if (zDefault_db)
                 {
                     matches = compare(db + '.' + std::string(name.table));
                 }
@@ -868,7 +859,7 @@ bool CacheRuleRegex::matches_table(const char* default_db, const GWBUF* query) c
 //static
 CacheRuleUser* CacheRuleUser::create(Attribute attribute,
                                      Op op,
-                                     const char* cvalue,
+                                     const char* zValue,
                                      uint32_t debug)
 {
     CacheRule* pDelegate = nullptr;
@@ -877,10 +868,10 @@ CacheRuleUser* CacheRuleUser::create(Attribute attribute,
     mxb_assert((op == Op::EQ) || (op == Op::NEQ));
 
     bool error = false;
-    size_t len = strlen(cvalue);
+    size_t len = strlen(zValue);
 
-    char value[strlen(cvalue) + 1];
-    strcpy(value, cvalue);
+    char value[strlen(zValue) + 1];
+    strcpy(value, zValue);
 
     char* at = strchr(value, '@');
     char* user = value;
@@ -958,12 +949,12 @@ CacheRuleUser* CacheRuleUser::create(Attribute attribute,
         }
         else
         {
-            MXB_ERROR("Could not trim quotes from host %s.", cvalue);
+            MXB_ERROR("Could not trim quotes from host %s.", zValue);
         }
     }
     else
     {
-        MXB_ERROR("Could not trim quotes from user %s.", cvalue);
+        MXB_ERROR("Could not trim quotes from user %s.", zValue);
     }
 
     CacheRuleUser* pRule = nullptr;
@@ -1107,7 +1098,7 @@ bool CacheRules::parse(const char* zJson,
     return rv;
 }
 
-bool CacheRules::should_store(const char* default_db, const GWBUF* query) const
+bool CacheRules::should_store(const char* zDefault_db, const GWBUF* pQuery) const
 {
     bool should_store = false;
 
@@ -1115,7 +1106,7 @@ bool CacheRules::should_store(const char* default_db, const GWBUF* query) const
     {
         for (const auto& sRule : m_store_rules)
         {
-            should_store = sRule->matches(default_db, query);
+            should_store = sRule->matches(zDefault_db, pQuery);
 
             if (should_store)
             {
@@ -1137,11 +1128,11 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
 
     if (!m_use_rules.empty())
     {
-        const char* user = session->user().c_str();
-        const char* host = session->client_remote().c_str();
+        const auto& user = session->user();
+        const auto& host = session->client_remote();
 
-        char account[strlen(user) + 1 + strlen(host) + 1];
-        sprintf(account, "%s@%s", user, host);
+        char account[user.length() + 1 + host.length() + 1];
+        sprintf(account, "%s@%s", user.c_str(), host.c_str());
 
         for (const auto& sRule : m_use_rules)
         {
@@ -1239,68 +1230,59 @@ bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
  * @return True if the string could be converted, false otherwise.
  */
 //static
-bool CacheRule::from_string(const char* s, CacheRule::Op* op)
+bool CacheRule::from_string(const char* z, CacheRule::Op* pOp)
 {
-    if (strcmp(s, VALUE_OP_EQ) == 0)
+    if (strcmp(z, VALUE_OP_EQ) == 0)
     {
-        *op = CacheRule::Op::EQ;
+        *pOp = CacheRule::Op::EQ;
         return true;
     }
 
-    if (strcmp(s, VALUE_OP_NEQ) == 0)
+    if (strcmp(z, VALUE_OP_NEQ) == 0)
     {
-        *op = CacheRule::Op::NEQ;
+        *pOp = CacheRule::Op::NEQ;
         return true;
     }
 
-    if (strcmp(s, VALUE_OP_LIKE) == 0)
+    if (strcmp(z, VALUE_OP_LIKE) == 0)
     {
-        *op = CacheRule::Op::LIKE;
+        *pOp = CacheRule::Op::LIKE;
         return true;
     }
 
-    if (strcmp(s, VALUE_OP_UNLIKE) == 0)
+    if (strcmp(z, VALUE_OP_UNLIKE) == 0)
     {
-        *op = CacheRule::Op::UNLIKE;
+        *pOp = CacheRule::Op::UNLIKE;
         return true;
     }
 
     return false;
 }
 
-/**
- * Creates a CacheRule object doing simple matching.
- *
- * @param attribute What attribute this rule applies to.
- * @param op        An operator, CacheRule::Op::EQ or CacheRule::Op::NEQ.
- * @param value     A string.
- * @param debug     The debug level.
- *
- * @return A new rule object or nullptr in case of failure.
- */
-static CacheRule* cache_rule_create_simple(CacheRule::Attribute attribute,
-                                           CacheRule::Op op,
-                                           const char* cvalue,
-                                           uint32_t debug)
+//static
+CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
+                                          CacheRule::Op op,
+                                          const char* zValue,
+                                          uint32_t debug)
 {
     mxb_assert((op == CacheRule::Op::EQ) || (op == CacheRule::Op::NEQ));
 
-    CacheRule* rule = nullptr;
+    CacheRule* pRule = nullptr;
 
     switch (attribute)
     {
     case CacheRule::Attribute::COLUMN:
     case CacheRule::Attribute::TABLE:
     case CacheRule::Attribute::DATABASE:
-        rule = CacheRuleCTD::create(attribute, op, cvalue, debug);
+        pRule = CacheRuleCTD::create(attribute, op, zValue, debug);
         break;
 
     case CacheRule::Attribute::USER:
-        rule = CacheRuleUser::create(attribute, op, cvalue, debug);
+        pRule = CacheRuleUser::create(attribute, op, zValue, debug);
         break;
 
     case CacheRule::Attribute::QUERY:
-        rule = CacheRuleQuery::create(attribute, op, cvalue, debug);
+        pRule = CacheRuleQuery::create(attribute, op, zValue, debug);
         break;
 
     default:
@@ -1308,36 +1290,27 @@ static CacheRule* cache_rule_create_simple(CacheRule::Attribute attribute,
         mxb_assert(!true);
     }
 
-    return rule;
+    return pRule;
 }
 
-/**
- * Creates a CacheRule object.
- *
- * @param attribute What attribute this rule applies to.
- * @param op        What operator is used.
- * @param value     The value.
- * @param debug     The debug level.
- *
- * @param rule The rule to be freed.
- */
-static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
-                                    CacheRule::Op op,
-                                    const char* value,
-                                    uint32_t debug)
+//
+CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
+                                   CacheRule::Op op,
+                                   const char* zValue,
+                                   uint32_t debug)
 {
-    CacheRule* rule = nullptr;
+    CacheRule* pRule = nullptr;
 
     switch (op)
     {
     case CacheRule::Op::EQ:
     case CacheRule::Op::NEQ:
-        rule = cache_rule_create_simple(attribute, op, value, debug);
+        pRule = create_simple_rule(attribute, op, zValue, debug);
         break;
 
     case CacheRule::Op::LIKE:
     case CacheRule::Op::UNLIKE:
-        rule = CacheRuleRegex::create(attribute, op, value, debug);
+        pRule = CacheRuleRegex::create(attribute, op, zValue, debug);
         break;
 
     default:
@@ -1346,9 +1319,8 @@ static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
         break;
     }
 
-    return rule;
+    return pRule;
 }
-
 
 /**
  * Creates a rules object from a JSON object.
@@ -1359,23 +1331,23 @@ static CacheRule* cache_rule_create(CacheRule::Attribute attribute,
  * @return A rules object if the json object could be parsed, nullptr otherwise.
  */
 //static
-CacheRules* CacheRules::create_from_json(json_t* root, uint32_t debug)
+CacheRules* CacheRules::create_from_json(json_t* pRoot, uint32_t debug)
 {
-    mxb_assert(root);
+    mxb_assert(pRoot);
 
-    CacheRules* rules = new CacheRules(debug);
+    CacheRules* pRules = new CacheRules(debug);
 
-    if (rules->parse_json(root))
+    if (pRules->parse_json(pRoot))
     {
-        rules->m_pRoot = root;
+        pRules->m_pRoot = pRoot;
     }
     else
     {
-        delete rules;
-        rules = nullptr;
+        delete pRules;
+        pRules = nullptr;
     }
 
-    return rules;
+    return pRules;
 }
 
 /**
@@ -1461,16 +1433,16 @@ bool CacheRules::create_from_json(json_t* pRoot,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-bool CacheRules::parse_json(json_t* root)
+bool CacheRules::parse_json(json_t* pRoot)
 {
     bool parsed = false;
-    json_t* store = json_object_get(root, KEY_STORE);
+    json_t* pStore = json_object_get(pRoot, KEY_STORE);
 
-    if (store)
+    if (pStore)
     {
-        if (json_is_array(store))
+        if (json_is_array(pStore))
         {
-            parsed = parse_array(store, KEY_STORE, &CacheRules::parse_store_element);
+            parsed = parse_array(pStore, KEY_STORE, &CacheRules::parse_store_element);
         }
         else
         {
@@ -1478,15 +1450,15 @@ bool CacheRules::parse_json(json_t* root)
         }
     }
 
-    if (!store || parsed)
+    if (!pStore || parsed)
     {
-        json_t* use = json_object_get(root, KEY_USE);
+        json_t* pUse = json_object_get(pRoot, KEY_USE);
 
-        if (use)
+        if (pUse)
         {
-            if (json_is_array(use))
+            if (json_is_array(pUse))
             {
-                parsed = parse_array(use, KEY_USE, &CacheRules::parse_use_element);
+                parsed = parse_array(pUse, KEY_USE, &CacheRules::parse_use_element);
             }
             else
             {
@@ -1512,29 +1484,29 @@ bool CacheRules::parse_json(json_t* root)
  *
  * @return True, if the array could be parsed, false otherwise.
  */
-bool CacheRules::parse_array(json_t* store,
-                             const char* name,
+bool CacheRules::parse_array(json_t* pStore,
+                             const char* zName,
                              CacheRules::ElementParser parse_element)
 {
-    mxb_assert(json_is_array(store));
+    mxb_assert(json_is_array(pStore));
 
     bool parsed = true;
 
-    size_t n = json_array_size(store);
+    size_t n = json_array_size(pStore);
     size_t i = 0;
 
     while (parsed && (i < n))
     {
-        json_t* element = json_array_get(store, i);
-        mxb_assert(element);
+        json_t* pElement = json_array_get(pStore, i);
+        mxb_assert(pElement);
 
-        if (json_is_object(element))
+        if (json_is_object(pElement))
         {
-            parsed = (this->*parse_element)(element, i);
+            parsed = (this->*parse_element)(pElement, i);
         }
         else
         {
-            MXB_ERROR("Element %lu of the '%s' array is not an object.", i, name);
+            MXB_ERROR("Element %lu of the '%s' array is not an object.", i, zName);
             parsed = false;
         }
 
@@ -1553,38 +1525,38 @@ bool CacheRules::parse_array(json_t* store,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-CacheRule* CacheRules::parse_element(json_t* object,
-                                     const char* array_name,
+CacheRule* CacheRules::parse_element(json_t* pObject,
+                                     const char* zArray_name,
                                      size_t index,
                                      const Attributes& valid_attributes)
 {
-    mxb_assert(json_is_object(object));
+    mxb_assert(json_is_object(pObject));
 
-    CacheRule* rule = nullptr;
+    CacheRule* pRule = nullptr;
 
-    json_t* a = json_object_get(object, KEY_ATTRIBUTE);
-    json_t* o = json_object_get(object, KEY_OP);
-    json_t* v = json_object_get(object, KEY_VALUE);
+    json_t* pA = json_object_get(pObject, KEY_ATTRIBUTE);
+    json_t* pO = json_object_get(pObject, KEY_OP);
+    json_t* pV = json_object_get(pObject, KEY_VALUE);
 
-    if (a && o && v && json_is_string(a) && json_is_string(o) && json_is_string(v))
+    if (pA && pO && pV && json_is_string(pA) && json_is_string(pO) && json_is_string(pV))
     {
         CacheRule::Attribute attribute;
 
-        if (get_attribute(valid_attributes, json_string_value(a), &attribute))
+        if (get_attribute(valid_attributes, json_string_value(pA), &attribute))
         {
             CacheRule::Op op;
 
-            if (CacheRule::from_string(json_string_value(o), &op))
+            if (CacheRule::from_string(json_string_value(pO), &op))
             {
-                rule = cache_rule_create(attribute, op, json_string_value(v), m_debug);
+                pRule = create_rule(attribute, op, json_string_value(pV), m_debug);
             }
             else
             {
                 MXB_ERROR("Element %lu in the `%s` array has an invalid value "
                           "\"%s\" for 'op'.",
                           index,
-                          array_name,
-                          json_string_value(o));
+                          zArray_name,
+                          json_string_value(pO));
             }
         }
         else
@@ -1592,8 +1564,8 @@ CacheRule* CacheRules::parse_element(json_t* object,
             MXB_ERROR("Element %lu in the `%s` array has an invalid value "
                       "\"%s\" for 'attribute'.",
                       index,
-                      array_name,
-                      json_string_value(a));
+                      zArray_name,
+                      json_string_value(pA));
         }
     }
     else
@@ -1602,10 +1574,10 @@ CacheRule* CacheRules::parse_element(json_t* object,
                   "'attribute', 'op' and/or 'value', or one or all of them "
                   "is not a string.",
                   index,
-                  array_name);
+                  zArray_name);
     }
 
-    return rule;
+    return pRule;
 }
 
 //static
@@ -1642,16 +1614,16 @@ bool CacheRules::get_attribute(const Attributes& valid_attributes,
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-bool CacheRules::parse_store_element(json_t* object, size_t index)
+bool CacheRules::parse_store_element(json_t* pObject, size_t index)
 {
-    CacheRule* rule = parse_element(object, KEY_STORE, index, s_store_attributes);
+    CacheRule* pRule = parse_element(pObject, KEY_STORE, index, s_store_attributes);
 
-    if (rule)
+    if (pRule)
     {
-        m_store_rules.emplace_back(static_cast<CacheRuleValue*>(rule));
+        m_store_rules.emplace_back(static_cast<CacheRuleValue*>(pRule));
     }
 
-    return rule != nullptr;
+    return pRule != nullptr;
 }
 
 /**
@@ -1663,14 +1635,14 @@ bool CacheRules::parse_store_element(json_t* object, size_t index)
  *
  * @return True, if the object could be parsed, false otherwise.
  */
-bool CacheRules::parse_use_element(json_t* object, size_t index)
+bool CacheRules::parse_use_element(json_t* pObject, size_t index)
 {
-    CacheRule* rule = parse_element(object, KEY_USE, index, s_use_attributes);
+    CacheRule* pRule = parse_element(pObject, KEY_USE, index, s_use_attributes);
 
-    if (rule)
+    if (pRule)
     {
-        m_use_rules.emplace_back(static_cast<CacheRuleUser*>(rule));
+        m_use_rules.emplace_back(static_cast<CacheRuleUser*>(pRule));
     }
 
-    return rule != nullptr;
+    return pRule != nullptr;
 }
