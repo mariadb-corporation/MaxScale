@@ -1790,7 +1790,11 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
         }, mxs::RoutingWorker::EXECUTE_AUTO);
     };
 
-    mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
+    if (!mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED))
+    {
+        session_put_ref(ref);
+        m_session->kill();
+    }
 }
 
 std::string kill_query_prefix(kill_type_t type)
@@ -2575,7 +2579,11 @@ void MariaDBClientConnection::kill_complete(const std::function<void()>& cb, Loc
         session_put_ref(ref);
     };
 
-    m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED);
+    if (!m_session->worker()->execute(fn, mxb::Worker::EXECUTE_QUEUED))
+    {
+        session_put_ref(ref);
+        m_session->kill();
+    }
 }
 
 void MariaDBClientConnection::maybe_send_kill_response(const std::function<void()>& cb)

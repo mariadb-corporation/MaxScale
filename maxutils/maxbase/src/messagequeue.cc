@@ -236,11 +236,12 @@ bool MessageQueue::post(const Message& message) const
                             std::to_string(source_worker->id()) : "<no worker>";
 
                         MXB_WARNING("Worker %s attempted to send a message to worker %d but it has been "
-                                    "busy for over %d seconds.%s",
+                                    "busy for over %d milliseconds.%s",
                                     source_id.c_str(), m_pWorker->id(), slow_limit, msg);
+                        break;
                     }
 
-                    std::this_thread::sleep_for(1s);
+                    std::this_thread::sleep_for(1ms);
                 }
                 else
                 {
