@@ -11,13 +11,21 @@
  * Public License.
  */
 // Override vuetify component style by adding these class to the component
-.v-checkbox--mariadb {
+.v-checkbox--mariadb,
+.v-switch--mariadb {
     label {
         color: $small-text;
         font-size: 0.75rem;
     }
     .v-input--selection-controls__input {
         margin-right: 4px !important;
+    }
+}
+
+.v-textarea--mariadb {
+    font-size: 0.875rem;
+    textarea {
+        color: $navigation !important;
     }
 }
 

@@ -1,7 +1,7 @@
 <template>
     <v-container fluid>
         <v-row>
-            <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+            <etl-src-conn v-model="srcConnStr" :drivers="odbc_drivers" />
             <etl-dest-conn
                 v-model="dest"
                 :allServers="allServers"
@@ -33,7 +33,7 @@ export default {
     components: { EtlSrcConn, EtlDestConn },
     data() {
         return {
-            src: { driver: '', server: '', port: '', user: '', password: '', db: '' },
+            srcConnStr: '',
             dest: { user: '', password: '', db: '', target: '' },
         }
     },

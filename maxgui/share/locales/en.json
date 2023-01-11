@@ -139,6 +139,7 @@
         "csStatus": "ColumnStore status",
         "currentConnections": "Current Connection | Current Connections",
         "currentSessions": "current session | current sessions",
+        "connStr": "Connection String",
         "dashboards": "dashboard | dashboards",
         "data": "Data",
         "database": "Database",

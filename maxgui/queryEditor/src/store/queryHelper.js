@@ -428,7 +428,7 @@ function categorizeSqlConns({ apiConnMap, persistentConns }) {
 /**
  * @param {String} param.driver
  * @param {String} param.server
- * @param {Number} param.port
+ * @param {String} param.port
  * @param {String} param.user
  * @param {String} param.password
  * @param {String} [param.db] - required if driver is PostgreSQL
