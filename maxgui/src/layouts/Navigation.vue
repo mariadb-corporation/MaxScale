@@ -1,9 +1,9 @@
 <template>
     <v-navigation-drawer
         :mini-variant.sync="isMini"
-        color="navigation"
-        class="main-nav mxs-color-helper bg-navigation"
-        width="250"
+        color="white"
+        class="main-nav"
+        width="210"
         mini-variant-width="50"
         fixed
         left
@@ -14,29 +14,37 @@
         @mouseout.native="isMini = true"
     >
         <v-list>
-            <v-list-item-group v-for="item in items" :key="item.label">
-                <v-list-item
+            <v-list-item
+                v-for="item in items"
+                :key="item.label"
+                class="my-2"
+                @click="navigate(item)"
+            >
+                <div
+                    class="nav-item d-flex align-center justify-center pa-2"
                     :class="{
-                        navitem: true,
-                        active: currentPath.includes(item.path),
+                        'nav-item--active': currentPath.includes(item.path),
                     }"
-                    @click="navigate(item)"
                 >
-                    <v-list-item-icon class="mx-0">
-                        <v-icon :size="item.meta.size" color="white">{{ item.meta.icon }}</v-icon>
-                    </v-list-item-icon>
-                    <v-list-item-content>
-                        <v-list-item-title class="text-capitalize">
-                            {{
-                                item.label === 'dashboards'
-                                    ? $mxs_tc(`${item.label}`, 1)
-                                    : $mxs_tc(`${item.label}`, 2)
-                            }}
-                        </v-list-item-title>
-                    </v-list-item-content>
-                </v-list-item>
-                <v-divider :key="`divider-${item.label}`"></v-divider>
-            </v-list-item-group>
+                    <v-icon
+                        class="nav-item__icon"
+                        :size="item.meta.size"
+                        :color="currentPath.includes(item.path) ? 'blue-azure' : 'navigation'"
+                    >
+                        {{ item.meta.icon }}
+                    </v-icon>
+                    <span
+                        v-show="!isMini"
+                        class="nav-item__label ml-4 text-capitalize text-no-wrap"
+                    >
+                        {{
+                            item.label === 'dashboards'
+                                ? $mxs_tc(`${item.label}`, 1)
+                                : $mxs_tc(`${item.label}`, 2)
+                        }}
+                    </span>
+                </div>
+            </v-list-item>
         </v-list>
     </v-navigation-drawer>
 </template>
@@ -87,49 +95,38 @@ export default {
 <style lang="scss" scoped>
 .main-nav {
     z-index: 7;
-    padding-top: 23px;
-    .v-navigation-drawer__border {
-        background-color: transparent !important;
+    ::v-deep.v-navigation-drawer__border {
+        background-color: $separator !important;
     }
     .v-list {
         padding: 0;
         background: transparent;
-
-        .navitem {
+        .v-list-item {
             height: 52px;
-            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; // same easing as the nav drawer open/close animation
-            position: relative;
             &:hover {
-                background: rgba(0, 0, 0, 0.14) !important;
+                background: #eefafd !important;
             }
-            &::before {
-                content: '';
-                position: absolute;
-                bottom: 10%;
-                top: auto;
-                width: 3px;
-                height: 80%;
-                max-height: 42px;
-            }
-            &.active::before {
-                opacity: 1;
-                background-color: #2c9cdb;
+            .nav-item {
+                height: 40px;
+                &__icon {
+                    height: 100%;
+                    margin: 0;
+                    align-items: center;
+                    justify-content: center;
+                }
+                &__label {
+                    color: $navigation;
+                    font-size: 1rem;
+                }
+                &--active {
+                    background-color: $separator;
+                    border-radius: 8px;
+                    .nav-item__label {
+                        color: $blue-azure;
+                    }
+                }
             }
         }
-        .v-list-item__icon {
-            min-width: 50px;
-            height: 100%;
-            margin: 0;
-            align-items: center;
-            justify-content: center;
-        }
-        .v-list-item__title {
-            color: white;
-            font-size: 0.875rem;
-        }
-    }
-    hr.v-divider {
-        border-color: #556072;
     }
 }
 </style>

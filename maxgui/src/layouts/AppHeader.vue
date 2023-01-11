@@ -1,13 +1,5 @@
 <template>
-    <v-app-bar
-        height="50px"
-        class="header pl-12 pr-2"
-        fixed
-        clipped-left
-        app
-        flat
-        color="deep-ocean"
-    >
+    <v-app-bar height="64px" class="pl-8" fixed clipped-left app flat color="blue-azure">
         <v-toolbar-title class="app-headline text-h5">
             <router-link to="/dashboard/servers">
                 <img src="@share/assets/logo.svg" alt="MariaDB Logo" />
@@ -24,21 +16,20 @@
             allow-overflow
             transition="slide-y-transition"
             offset-y
-            content-class="v-menu--mariadb v-menu--mariadb-no-border"
+            content-class="v-menu--mariadb "
         >
             <template v-slot:activator="{ on }">
-                <v-btn dark class="mr-0 arrow-toggle" text tile v-on="on">
+                <v-btn dark class="arrow-toggle" text tile v-on="on">
                     <v-icon class="mr-1 " size="30">
                         $vuetify.icons.mxs_user
                     </v-icon>
                     <span class="user-name tk-adrianna text-capitalize font-weight-regular">
                         {{ logged_in_user ? logged_in_user.name : '' }}
                     </span>
-
                     <v-icon
                         :class="[isProfileOpened ? 'rotate-up' : 'rotate-down']"
                         size="14"
-                        class="mr-0 ml-1 "
+                        class="mr-0 ml-1"
                         left
                     >
                         $vuetify.icons.mxs_arrowDown
@@ -46,7 +37,7 @@
                 </v-btn>
             </template>
 
-            <v-list dark class="mxs-color-helper bg-navigation">
+            <v-list>
                 <v-list-item @click="logout">
                     <v-list-item-title>{{ $mxs_t('logout') }}</v-list-item-title>
                 </v-list-item>
@@ -71,7 +62,6 @@
 import { mapActions, mapState } from 'vuex'
 export default {
     name: 'app-header',
-
     data() {
         return {
             items: [],
@@ -89,13 +79,6 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.header {
-    background: linear-gradient(to right, #013545 0%, #064251 100%);
-    ::v-deep .v-toolbar__content {
-        padding: 4px 10px;
-    }
-}
-
 .app-headline {
     a {
         text-decoration: none;

@@ -8,7 +8,7 @@
             class="text-capitalize px-8 font-weight-medium"
             depressed
             small
-            color="accent-dark"
+            color="primary"
             @click.native="onCreate"
         >
             + {{ $mxs_t('createNew') }}
