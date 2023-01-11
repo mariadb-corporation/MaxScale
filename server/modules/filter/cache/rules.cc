@@ -32,22 +32,97 @@
 
 using mxb::sv_case_eq;
 
-static const char KEY_ATTRIBUTE[] = "attribute";
-static const char KEY_OP[] = "op";
-static const char KEY_STORE[] = "store";
-static const char KEY_USE[] = "use";
-static const char KEY_VALUE[] = "value";
+namespace
+{
 
-static const char VALUE_ATTRIBUTE_COLUMN[] = "column";
-static const char VALUE_ATTRIBUTE_DATABASE[] = "database";
-static const char VALUE_ATTRIBUTE_QUERY[] = "query";
-static const char VALUE_ATTRIBUTE_TABLE[] = "table";
-static const char VALUE_ATTRIBUTE_USER[] = "user";
+const char KEY_ATTRIBUTE[] = "attribute";
+const char KEY_OP[] = "op";
+const char KEY_STORE[] = "store";
+const char KEY_USE[] = "use";
+const char KEY_VALUE[] = "value";
 
-static const char VALUE_OP_EQ[] = "=";
-static const char VALUE_OP_NEQ[] = "!=";
-static const char VALUE_OP_LIKE[] = "like";
-static const char VALUE_OP_UNLIKE[] = "unlike";
+const char VALUE_ATTRIBUTE_COLUMN[] = "column";
+const char VALUE_ATTRIBUTE_DATABASE[] = "database";
+const char VALUE_ATTRIBUTE_QUERY[] = "query";
+const char VALUE_ATTRIBUTE_TABLE[] = "table";
+const char VALUE_ATTRIBUTE_USER[] = "user";
+
+const char VALUE_OP_EQ[] = "=";
+const char VALUE_OP_NEQ[] = "!=";
+const char VALUE_OP_LIKE[] = "like";
+const char VALUE_OP_UNLIKE[] = "unlike";
+
+template<class K, class V>
+std::map<V, K> invert_map(const std::map<K, V>& from)
+{
+    std::map<V, K> to;
+    for (const auto& kv : from)
+    {
+        to.emplace(kv.second, kv.first);
+    }
+
+    return to;
+}
+
+struct ThisUnit
+{
+    ThisUnit()
+        : attributes_by_name({
+                {VALUE_ATTRIBUTE_COLUMN,   CacheRule::Attribute::COLUMN},
+                {VALUE_ATTRIBUTE_DATABASE, CacheRule::Attribute::DATABASE},
+                {VALUE_ATTRIBUTE_QUERY,    CacheRule::Attribute::QUERY},
+                {VALUE_ATTRIBUTE_TABLE,    CacheRule::Attribute::TABLE},
+                {VALUE_ATTRIBUTE_USER,     CacheRule::Attribute::USER}
+            })
+        , attributes_by_id(invert_map(attributes_by_name))
+        , ops_by_name({
+                {VALUE_OP_EQ,     CacheRule::Op::EQ},
+                {VALUE_OP_NEQ,    CacheRule::Op::NEQ},
+                {VALUE_OP_LIKE,   CacheRule::Op::LIKE},
+                {VALUE_OP_UNLIKE, CacheRule::Op::UNLIKE}
+            })
+        , ops_by_id(invert_map(ops_by_name))
+    {
+    }
+
+    const std::map<std::string_view, CacheRule::Attribute> attributes_by_name;
+    const std::map<CacheRule::Attribute, std::string_view> attributes_by_id;
+
+    const std::map<std::string_view, CacheRule::Op> ops_by_name;
+    const std::map<CacheRule::Op, std::string_view> ops_by_id;
+} this_unit;
+
+template<class V>
+const char* value_to_string(const std::map<V, std::string_view>& values_by_id, V value)
+{
+    auto it = values_by_id.find(value);
+
+    if (it != values_by_id.end())
+    {
+        return it->second.data();
+    }
+    else
+    {
+        mxb_assert(!true);
+        return "<invalid>";
+    }
+}
+
+template<class V>
+bool value_from_string(const std::map<std::string_view, V>& values_by_name, const char* z, V* pValue)
+{
+    auto it = values_by_name.find(z);
+    auto end = values_by_name.end();
+
+    if (it != end)
+    {
+        *pValue = it->second;
+    }
+
+    return it != end;
+}
+
+}
 
 //static
 CacheRules::Attributes CacheRules::s_store_attributes =
@@ -70,49 +145,12 @@ CacheRules::Attributes CacheRules::s_use_attributes =
 
 const char* CacheRule::to_string(CacheRule::Attribute attribute)
 {
-    switch (attribute)
-    {
-    case CacheRule::Attribute::COLUMN:
-        return "column";
-
-    case CacheRule::Attribute::DATABASE:
-        return "database";
-
-    case CacheRule::Attribute::QUERY:
-        return "query";
-
-    case CacheRule::Attribute::TABLE:
-        return "table";
-
-    case CacheRule::Attribute::USER:
-        return "user";
-
-    default:
-        mxb_assert(!true);
-        return "<invalid>";
-    }
+    return value_to_string(this_unit.attributes_by_id, attribute);
 }
 
 const char* CacheRule::to_string(CacheRule::Op op)
 {
-    switch (op)
-    {
-    case CacheRule::Op::EQ:
-        return "=";
-
-    case CacheRule::Op::NEQ:
-        return "!=";
-
-    case CacheRule::Op::LIKE:
-        return "like";
-
-    case CacheRule::Op::UNLIKE:
-        return "unlike";
-
-    default:
-        mxb_assert(!true);
-        return "<invalid>";
-    }
+    return value_to_string(this_unit.ops_by_id, op);
 }
 
 //
@@ -1188,37 +1226,7 @@ const json_t* CacheRules::json() const
 //static
 bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
 {
-    if (strcmp(z, VALUE_ATTRIBUTE_COLUMN) == 0)
-    {
-        *pAttribute = CacheRule::Attribute::COLUMN;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_ATTRIBUTE_DATABASE) == 0)
-    {
-        *pAttribute = CacheRule::Attribute::DATABASE;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_ATTRIBUTE_QUERY) == 0)
-    {
-        *pAttribute = CacheRule::Attribute::QUERY;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_ATTRIBUTE_TABLE) == 0)
-    {
-        *pAttribute = CacheRule::Attribute::TABLE;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_ATTRIBUTE_USER) == 0)
-    {
-        *pAttribute = CacheRule::Attribute::USER;
-        return true;
-    }
-
-    return false;
+    return value_from_string(this_unit.attributes_by_name, z, pAttribute);
 }
 
 /**
@@ -1232,31 +1240,7 @@ bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
 //static
 bool CacheRule::from_string(const char* z, CacheRule::Op* pOp)
 {
-    if (strcmp(z, VALUE_OP_EQ) == 0)
-    {
-        *pOp = CacheRule::Op::EQ;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_OP_NEQ) == 0)
-    {
-        *pOp = CacheRule::Op::NEQ;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_OP_LIKE) == 0)
-    {
-        *pOp = CacheRule::Op::LIKE;
-        return true;
-    }
-
-    if (strcmp(z, VALUE_OP_UNLIKE) == 0)
-    {
-        *pOp = CacheRule::Op::UNLIKE;
-        return true;
-    }
-
-    return false;
+    return value_from_string(this_unit.ops_by_name, z, pOp);
 }
 
 //static
