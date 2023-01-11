@@ -15,7 +15,9 @@
             outlined
             :rules="$attrs.required ? rules : []"
             v-on="$listeners"
-        />
+        >
+            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+        </v-text-field>
     </div>
 </template>
 

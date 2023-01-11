@@ -6,7 +6,11 @@
         autocomplete="new-password"
         :label="$mxs_t('password')"
         v-on="$listeners"
-    />
+    >
+        <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
+            {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
+        </v-icon>
+    </mxs-txt-field-with-label>
 </template>
 
 <script>
