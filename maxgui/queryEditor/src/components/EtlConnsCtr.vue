@@ -1,21 +1,14 @@
 <template>
-    <v-form
-        v-bind="{ ...$attrs }"
-        lazy-validation
-        class="fill-height d-flex flex-column"
-        v-on="$listeners"
-    >
-        <v-container class="fill-height pa-0" fluid>
-            <v-row class="fill-height">
-                <etl-src-conn v-model="src" :drivers="odbc_drivers" />
-                <etl-dest-conn
-                    v-model="dest"
-                    :allServers="allServers"
-                    :destTargetType="destTargetType"
-                />
-            </v-row>
-        </v-container>
-    </v-form>
+    <v-container fluid>
+        <v-row>
+            <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+            <etl-dest-conn
+                v-model="dest"
+                :allServers="allServers"
+                :destTargetType="destTargetType"
+            />
+        </v-row>
+    </v-container>
 </template>
 
 <script>
@@ -36,9 +29,8 @@ import EtlDestConn from './EtlDestConn.vue'
 import { mapActions, mapState } from 'vuex'
 
 export default {
-    name: 'etl-conn-form-ctr',
+    name: 'etl-conns-ctr',
     components: { EtlSrcConn, EtlDestConn },
-    inheritAttrs: false,
     data() {
         return {
             src: { driver: '', server: '', port: '', user: '', password: '', db: '' },

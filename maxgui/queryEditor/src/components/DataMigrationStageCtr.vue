@@ -2,7 +2,7 @@
     <v-sheet class="d-flex flex-column fill-height mt-12">
         <!-- TODO: Utilize v-stepper and its related components to navigate between etl stages -->
         <!-- TODO: Add the "Prerequisites" stage -->
-        <etl-conn-form-ctr />
+        <etl-conns-ctr />
         <etl-src-tree />
     </v-sheet>
 </template>
@@ -21,13 +21,13 @@
  * Public License.
  */
 import EtlSrcTree from '@queryEditorSrc/components/EtlSrcTree.vue'
-import EtlConnFormCtr from '@queryEditorSrc/components/EtlConnFormCtr.vue'
+import EtlConnsCtr from '@queryEditorSrc/components/EtlConnsCtr.vue'
 
 export default {
     name: 'data-migration-stage-ctr',
     components: {
         EtlSrcTree,
-        EtlConnFormCtr,
+        EtlConnsCtr,
     },
 }
 </script>

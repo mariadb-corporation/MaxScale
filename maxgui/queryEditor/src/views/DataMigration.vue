@@ -20,10 +20,8 @@
                 </h4>
             </div>
         </portal>
-        <v-sheet class="d-flex flex-column fill-height" :class="{ 'pl-6': hasActiveEtlTask }">
-            <data-migration-stage-ctr v-if="hasActiveEtlTask" />
-            <data-migration-list v-else />
-        </v-sheet>
+        <data-migration-stage-ctr v-if="hasActiveEtlTask" class="fill-height ml-6" />
+        <data-migration-list v-else class="fill-height" />
     </page-wrapper>
 </template>
 

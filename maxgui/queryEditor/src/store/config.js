@@ -162,9 +162,8 @@ export const ETL_STATUS = Object.freeze({
 })
 
 export const ETL_STAGE_INDEX = Object.freeze({
-    PREREQ: 0,
-    CONN: 1,
-    SRC_OBJ: 2,
-    OBJ_MIGR: 3,
-    DATA_MIGR: 4,
+    CONN: 0,
+    SRC_OBJ: 1,
+    OBJ_MIGR: 2,
+    DATA_MIGR: 3,
 })

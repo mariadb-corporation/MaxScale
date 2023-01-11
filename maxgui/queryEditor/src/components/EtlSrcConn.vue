@@ -1,5 +1,5 @@
 <template>
-    <v-col cols="12" md="6" class="mxs-color-helper border-right-separator">
+    <v-col cols="12" md="6">
         <b>{{ $mxs_t('source') }}</b>
         <p v-if="!drivers.length" class="mxs-color-helper text-error mt-2">
             {{ $mxs_t('errors.noDriversFound') }}
