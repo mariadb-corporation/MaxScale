@@ -174,10 +174,9 @@ void Writer::run()
                     break;
                 }
 
-                file.add_event(rpl_event);
-
                 m_inventory.set_master_id(rpl_event.server_id());
                 m_inventory.set_is_writer_connected(true);
+                bool do_save_gtid_list = false;
 
                 switch (rpl_event.event_type())
                 {
@@ -197,21 +196,27 @@ void Writer::run()
                 case QUERY_EVENT:
                     if (m_commit_on_query)
                     {
-                        save_gtid_list(file);
+                        do_save_gtid_list = true;
                         m_commit_on_query = false;
                     }
                     else if (rpl_event.is_commit())
                     {
-                        save_gtid_list(file);
+                        do_save_gtid_list = true;
                     }
                     break;
 
                 case XID_EVENT:
-                    save_gtid_list(file);
+                    do_save_gtid_list = true;
                     break;
 
                 default:
                     break;
+                }
+
+                file.add_event(rpl_event);
+                if (do_save_gtid_list)
+                {
+                    save_gtid_list(file);
                 }
             }
         }
