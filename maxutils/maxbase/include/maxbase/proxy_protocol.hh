@@ -29,5 +29,9 @@ struct HeaderV1Res
 };
 HeaderV1Res
 generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_storage* server_addr);
+
+bool packet_hdr_maybe_proxy(const uint8_t* header);
+
+bool is_proxy_protocol_allowed(const sockaddr_storage* addr);
 }
 }

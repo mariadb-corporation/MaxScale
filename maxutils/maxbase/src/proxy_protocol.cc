@@ -25,6 +25,9 @@ struct AddressResult
     std::string error_msg;
 };
 AddressResult get_ip_string_and_port(const sockaddr_storage* sa);
+
+const uint8_t PROXY_TEXT_SIG[] = "PROXY";
+const uint8_t PROXY_BIN_SIG[] = "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A";
 }
 
 namespace maxbase
@@ -97,6 +100,17 @@ HeaderV1Res generate_proxy_header_v1(const sockaddr_storage* client_addr, const 
                                          "%s", server_res.error_msg.c_str());
     }
     return rval;
+}
+
+bool packet_hdr_maybe_proxy(const uint8_t* header)
+{
+    return memcmp(header, PROXY_TEXT_SIG, 4) == 0 || memcmp(header, PROXY_BIN_SIG, 4) == 0;
+}
+
+bool is_proxy_protocol_allowed(const sockaddr_storage* addr)
+{
+    // TODO
+    return false;
 }
 }
 }

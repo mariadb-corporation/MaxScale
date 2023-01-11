@@ -290,8 +290,6 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     if (maxbytes > 0 && m_readq.length() >= maxbytes)
     {
         // Already have enough data. May have more (either in readq or in socket), so read again later.
-        // Should not happen on first read (strict limit).
-        mxb_assert(limit_type == ReadLimit::RES_LEN);
         read_success = true;
         trigger_again = true;
     }

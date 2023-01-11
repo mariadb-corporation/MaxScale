@@ -143,8 +143,10 @@ private:
         CHANGE_USER,
     };
 
-    std::tuple<bool, GWBUF> read_first_client_packet();
-    std::tuple<bool, GWBUF> read_protocol_packet();
+    StateMachineRes                    read_proxy_header(bool ssl_on);
+    std::tuple<StateMachineRes, GWBUF> read_ssl_request();
+    std::tuple<StateMachineRes, GWBUF> read_handshake_response(int expected_seq);
+    std::tuple<bool, GWBUF>            read_protocol_packet();
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
@@ -244,12 +246,13 @@ private:
     // Handshake state
     enum class HSState
     {
-        INIT,           /**< Initial handshake state */
-        EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
-        SSL_NEG,        /**< Negotiate SSL*/
-        EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
-        COMPLETE,       /**< Handshake succeeded */
-        FAIL,           /**< Handshake failed */
+        INIT,               /**< Initial handshake state */
+        EXPECT_PROXY_HDR,   /**< Expecting proxy protocol header */
+        EXPECT_SSL_REQ,     /**< Expecting client to send SSLRequest */
+        SSL_NEG,            /**< Negotiate SSL*/
+        EXPECT_HS_RESP,     /**< Expecting client to send standard handshake response */
+        COMPLETE,           /**< Handshake succeeded */
+        FAIL,               /**< Handshake failed */
     };
 
     // Authentication state

@@ -28,7 +28,7 @@
 #include <pwd.h>
 #include <utility>
 
-#include <maxsql/mariadb.hh>
+#include <maxbase/proxy_protocol.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -66,7 +66,19 @@ const mxs::ListenerData::UserCreds default_mapped_creds = {"", base_plugin};
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
+const int NORMAL_HS_RESP_MAX_SIZE = NORMAL_HS_RESP_MIN_SIZE + 100000;
 const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+
+const int ER_OUT_OF_ORDER = 1156;
+const char PACKETS_OOO_MSG[] = "Got packets out of order";      // Matches server message
+const char WRONG_SEQ_FMT[] = "Client (%s) sent packet with unexpected sequence number. Expected %i, got %i.";
+const int ER_BAD_HANDSHAKE = 1043;
+const char BAD_HANDSHAKE_MSG[] = "Bad handshake";   // Matches server message
+const char BAD_HANDSHAKE_FMT[] = "Client (%s) sent an invalid HandshakeResponse.";
+// MaxScale-specific message. Possibly useful for clarifying that MaxScale is expecting SSL connection.
+const char BAD_SSL_HANDSHAKE_MSG[] = "Bad SSL handshake";
+const char BAD_SSL_HANDSHAKE_FMT[] = "Client (%s) sent an invalid SSLRequest.";
+const char HANDSHAKE_ERRSTATE[] = "08S01";
 
 // The past-the-end value for the session command IDs we generate (includes prepared statements). When this ID
 // value is reached, the counter is reset back to 1. This makes sure we reserve the values 0 and 0xffffffff as
@@ -144,24 +156,6 @@ std::tuple<CapTypes, uint64_t, uint64_t> get_supported_cap_types(SERVICE* servic
     }
 
     return {type, version, caps};
-}
-
-mariadb::HeaderData parse_header(GWBUF* buffer)
-{
-    mariadb::HeaderData rval;
-    if (gwbuf_link_length(buffer) >= MYSQL_HEADER_LEN)
-    {
-        // Header in first chunk.
-        rval = mariadb::get_header(gwbuf_link_data(buffer));
-    }
-    else
-    {
-        // The header is split between multiple chunks.
-        uint8_t header[MYSQL_HEADER_LEN];
-        gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
-        rval = mariadb::get_header(header);
-    }
-    return rval;
 }
 
 bool call_getpwnam_r(const char* user, gid_t& group_id_out)
@@ -2073,66 +2067,137 @@ bool MariaDBClientConnection::require_ssl() const
     return m_session->listener_data()->m_ssl.valid();
 }
 
-std::tuple<bool, GWBUF> MariaDBClientConnection::read_first_client_packet()
+std::tuple<MariaDBClientConnection::StateMachineRes, GWBUF> MariaDBClientConnection::read_ssl_request()
 {
-    /**
-     * Client may send two different kinds of handshakes with different lengths: SSLRequest 36 bytes,
-     * or the normal reply >= 38 bytes. If sending the SSLRequest, the client may have added
-     * SSL-specific data after the protocol packet. This data should not be read out of the socket,
-     * as SSL_accept() will expect to read it.
-     *
-     * To maintain compatibility with both, read in two steps. This adds one extra read during
-     * authentication for non-ssl-connections.
-     */
-
-    bool rval_ok = false;
+    auto rval_res = StateMachineRes::ERROR;
     GWBUF rval_buf;
-
-    auto [ssl_req_ok, ssl_req_buf] = m_dcb->read_strict(SSL_REQUEST_PACKET_SIZE, SSL_REQUEST_PACKET_SIZE);
-    if (ssl_req_buf.empty())
+    const int expected_seq = 1;
+    /**
+     * Client should have sent an SSLRequest (36 bytes). Client may also have already sent SSL-specific data
+     * after the protocol packet. This data should not be read out of the socket, as SSL_accept() will
+     * expect to read it.
+     */
+    auto [read_ok, buffer] = m_dcb->read_strict(MYSQL_HEADER_LEN, SSL_REQUEST_PACKET_SIZE);
+    if (!buffer.empty())
     {
-        // Not enough data.
-        rval_ok = ssl_req_ok;
-    }
-    else
-    {
-        auto header = mariadb::get_header(ssl_req_buf.data());
+        auto header = mariadb::get_header(buffer.data());
+        m_next_sequence = header.seq + 1;
         int prot_packet_len = MYSQL_HEADER_LEN + header.pl_length;
         if (prot_packet_len == SSL_REQUEST_PACKET_SIZE)
         {
-            // SSLRequest packet.
-            rval_ok = true;
-            rval_buf = move(ssl_req_buf);
-        }
-        else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
-        {
-            // Normal response. Need to read again. Likely the entire packet is available at the socket.
-            m_dcb->unread(move(ssl_req_buf));
-            auto [resp_packet_ok, resp_packet_buf] = m_dcb->read(prot_packet_len, prot_packet_len);
-            if (resp_packet_buf.empty())
+            if (header.seq == expected_seq)
             {
-                // Not enough data.
-                rval_ok = resp_packet_ok;
+                if (buffer.length() == SSL_REQUEST_PACKET_SIZE)
+                {
+                    // Entire packet was available, return it.
+                    rval_res = StateMachineRes::DONE;
+                    rval_buf = std::move(buffer);
+                }
+                else
+                {
+                    // Not enough, unread and wait for more.
+                    m_dcb->unread(std::move(buffer));
+                    rval_res = StateMachineRes::IN_PROGRESS;
+                }
             }
             else
             {
-                rval_ok = true;
-                rval_buf = move(resp_packet_buf);
+                send_mysql_err_packet(ER_OUT_OF_ORDER, HANDSHAKE_ERRSTATE, PACKETS_OOO_MSG);
+                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->remote.c_str(), expected_seq, header.seq);
+            }
+        }
+        else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
+        {
+            // Looks like client is trying to authenticate without ssl. To match server behavior, read the
+            // normal handshake and return it. Caller will then send the authentication error to client.
+            m_dcb->unread(std::move(buffer));
+            auto [hs_res, hs_buffer] = read_handshake_response(expected_seq);
+            rval_res = hs_res;
+            if (hs_res == StateMachineRes::DONE)
+            {
+                rval_buf = std::move(hs_buffer);
             }
         }
         else
         {
-            // Unexpected packet size.
-        }
-
-        if (!rval_buf.empty())
-        {
-            m_sequence = header.seq;
-            m_next_sequence = header.seq + 1;
+            send_mysql_err_packet(ER_BAD_HANDSHAKE, HANDSHAKE_ERRSTATE, BAD_SSL_HANDSHAKE_MSG);
+            MXB_ERROR(BAD_SSL_HANDSHAKE_FMT, m_dcb->remote().c_str());
         }
     }
+    else if (read_ok)
+    {
+        // Not even the header was available, read again.
+        rval_res = StateMachineRes::IN_PROGRESS;
+    }
+    return {rval_res, std::move(rval_buf)};
+}
 
-    return {rval_ok, move(rval_buf)};
+std::tuple<MariaDBClientConnection::StateMachineRes, GWBUF>
+MariaDBClientConnection::read_handshake_response(int expected_seq)
+{
+    auto rval_res = StateMachineRes::ERROR;
+    GWBUF rval_buf;
+
+    // Expecting a normal HandshakeResponse.
+    auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, NORMAL_HS_RESP_MAX_SIZE);
+    if (!buffer.empty())
+    {
+        auto header = mariadb::get_header(buffer.data());
+        size_t prot_packet_len = MYSQL_HEADER_LEN + header.pl_length;
+        m_next_sequence = header.seq + 1;
+        if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE && prot_packet_len <= NORMAL_HS_RESP_MAX_SIZE)
+        {
+            if (header.seq == expected_seq)
+            {
+                if (buffer.length() >= prot_packet_len)
+                {
+                    // Entire packet was available, return it.
+                    rval_buf = buffer.split(prot_packet_len);
+                    rval_res = StateMachineRes::DONE;
+
+                    if (!buffer.empty())
+                    {
+                        // More than the packet was available. Unexpected but allowed.
+                        m_dcb->unread(std::move(buffer));
+                        m_dcb->trigger_read_event();
+                    }
+                }
+                else
+                {
+                    // Not enough, unread and wait for more.
+                    m_dcb->unread(std::move(buffer));
+                    rval_res = StateMachineRes::IN_PROGRESS;
+                }
+            }
+            else
+            {
+                send_mysql_err_packet(ER_OUT_OF_ORDER, HANDSHAKE_ERRSTATE, PACKETS_OOO_MSG);
+                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->remote.c_str(), expected_seq, header.seq);
+            }
+        }
+        else
+        {
+            send_mysql_err_packet(ER_BAD_HANDSHAKE, HANDSHAKE_ERRSTATE, BAD_HANDSHAKE_MSG);
+            if (prot_packet_len > NORMAL_HS_RESP_MAX_SIZE)
+            {
+                // Unexpected. The HandshakeResponse should not be needlessly large. The limit may need to be
+                // changed in case some connector sends large responses. Still, limiting the amount is useful
+                // as the client is not yet authenticated and can be malicious.
+                MXB_ERROR("Client (%s) tried to send a large HandshakeResponse (%zu bytes).",
+                          m_session_data->remote.c_str(), prot_packet_len);
+            }
+            else
+            {
+                MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->remote.c_str());
+            }
+        }
+    }
+    else if (read_ok)
+    {
+        // Not even the header was available, read again.
+        rval_res = StateMachineRes::IN_PROGRESS;
+    }
+    return {rval_res, std::move(rval_buf)};
 }
 
 void MariaDBClientConnection::wakeup()
@@ -2282,21 +2347,6 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
 
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
-    // The first response from client requires special handling.
-    auto [read_ok, buffer] = (m_handshake_state == HSState::INIT) ? read_first_client_packet() :
-        read_protocol_packet();
-    if (buffer.empty())
-    {
-        return read_ok ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
-    }
-
-    const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
-                                  "Expected %i, got %i.";
-    const char packets_ooo[] = "Got packets out of order";
-    const char sql_errstate[] = "08S01";
-    const int er_bad_handshake = 1043;
-    const int er_out_of_order = 1156;
-
     auto rval = StateMachineRes::IN_PROGRESS;   // Returned to upper level SM
     bool state_machine_continue = true;
 
@@ -2305,36 +2355,72 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
         switch (m_handshake_state)
         {
         case HSState::INIT:
-            m_handshake_state = require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP;
-            m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
+            {
+                m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
+                m_next_sequence = 1;    // Handshake had seq 0 so any errors will have 1.
+                // If proxy protocol is not enabled at all (typical case), skip the proxy header read phase.
+                // This may save an io-op.
+                bool proxyproto_on = false;     // TODO: add settings
+                m_handshake_state = proxyproto_on ? HSState::EXPECT_PROXY_HDR :
+                    (require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP);
+            }
+            break;
+
+        case HSState::EXPECT_PROXY_HDR:
+            {
+                // Even if proxy protocol is not allowed for this specific client, try to read the header.
+                // Allows more descriptive error messages for clients trying to proxy.
+                bool ssl_on = require_ssl();
+                auto proxy_read_res = read_proxy_header(ssl_on);
+                if (proxy_read_res == StateMachineRes::DONE)
+                {
+                    m_handshake_state = ssl_on ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP;
+                }
+                else if (proxy_read_res == StateMachineRes::IN_PROGRESS)
+                {
+                    // The total proxy header was not available, check again later.
+                    state_machine_continue = false;
+                }
+                else
+                {
+                    m_handshake_state = HSState::FAIL;
+                }
+            }
             break;
 
         case HSState::EXPECT_SSL_REQ:
             {
-                // Expecting SSLRequest
-                if (m_sequence == 1)
+                auto [res, buffer] = read_ssl_request();
+                if (res == StateMachineRes::DONE)
                 {
+                    // Sequence has already been checked.
                     if (parse_ssl_request_packet(buffer))
                     {
                         m_handshake_state = HSState::SSL_NEG;
                     }
                     else if (parse_handshake_response_packet(buffer))
                     {
+                        // Trying to log in without ssl. Server sends this error when a user account requires
+                        // ssl but client is not using it.
                         send_authentication_error(AuthErrorType::ACCESS_DENIED);
+                        MXB_INFO("Client %s tried to log in without SSL when listener '%s' is configured to "
+                                 "require it.", m_session->user_and_host().c_str(),
+                                 m_session->listener_data()->m_listener_name.c_str());
                         m_handshake_state = HSState::FAIL;
                     }
                     else
                     {
-                        send_mysql_err_packet(er_bad_handshake, sql_errstate,
-                                              "Bad SSL handshake");
-                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_dcb->remote().c_str());
+                        send_mysql_err_packet(ER_BAD_HANDSHAKE, HANDSHAKE_ERRSTATE, BAD_SSL_HANDSHAKE_MSG);
+                        MXB_ERROR(BAD_SSL_HANDSHAKE_FMT, m_dcb->remote().c_str());
                         m_handshake_state = HSState::FAIL;
                     }
                 }
+                else if (res == StateMachineRes::IN_PROGRESS)
+                {
+                    state_machine_continue = false;
+                }
                 else
                 {
-                    send_mysql_err_packet(er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, m_sequence);
                     m_handshake_state = HSState::FAIL;
                 }
             }
@@ -2366,28 +2452,30 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
 
         case HSState::EXPECT_HS_RESP:
             {
-                // Expecting normal Handshake response
+                // Expecting normal Handshake response.
                 // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
                 int expected_seq = require_ssl() ? 2 : 1;
-                if (m_sequence == expected_seq)
+                auto [res, buffer] = read_handshake_response(expected_seq);
+                if (res == StateMachineRes::DONE)
                 {
+                    // Packet length and sequence already checked.
                     if (parse_handshake_response_packet(buffer))
                     {
                         m_handshake_state = HSState::COMPLETE;
                     }
                     else
                     {
-                        send_mysql_err_packet(er_bad_handshake, sql_errstate,
-                                              "Bad handshake");
-                        MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
-                                  m_session_data->remote.c_str());
+                        send_mysql_err_packet(ER_BAD_HANDSHAKE, HANDSHAKE_ERRSTATE, BAD_HANDSHAKE_MSG);
+                        MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->remote.c_str());
                         m_handshake_state = HSState::FAIL;
                     }
                 }
+                else if (res == StateMachineRes::IN_PROGRESS)
+                {
+                    state_machine_continue = false;
+                }
                 else
                 {
-                    send_mysql_err_packet(er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, m_sequence);
                     m_handshake_state = HSState::FAIL;
                 }
             }
@@ -3262,4 +3350,52 @@ std::tuple<bool, GWBUF> MariaDBClientConnection::read_protocol_packet()
 mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthType type)
 {
     return (type == AuthType::NORMAL_AUTH) ? *m_session_data->auth_data : *m_change_user.auth_data;
+}
+
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_header(bool ssl_on)
+{
+    bool read_ok;
+    GWBUF buffer;
+    if (ssl_on)
+    {
+        // Must be compatible with SSLRequest packet. See read_ssl_request() for more.
+        std::tie(read_ok, buffer) = m_dcb->read_strict(MYSQL_HEADER_LEN, SSL_REQUEST_PACKET_SIZE);
+    }
+    else
+    {
+        std::tie(read_ok, buffer) = m_dcb->read(MYSQL_HEADER_LEN, NORMAL_HS_RESP_MAX_SIZE);
+    }
+
+    auto rval = StateMachineRes::ERROR;
+    if (!buffer.empty())
+    {
+        // Have at least 4 bytes. This is enough to check if the packet looks like a proxy protocol header.
+        if (mxb::proxy_protocol::packet_hdr_maybe_proxy(buffer.data()))
+        {
+            if (mxb::proxy_protocol::is_proxy_protocol_allowed(&m_dcb->ip()))
+            {
+                // TODO: Read & parse entire proxy header.
+            }
+            else
+            {
+                // Server sends the following error.
+                string msg = mxb::string_printf("Proxy header is not accepted from %s",
+                                                m_dcb->remote().c_str());
+                send_mysql_err_packet(1130, "HY000", msg.c_str());
+            }
+        }
+        else
+        {
+            // Normal client response. Put it back to the dcb.
+            m_dcb->unread(std::move(buffer));
+            rval = StateMachineRes::DONE;
+        }
+    }
+    else if (read_ok)
+    {
+        // Not enough was read to figure out anything. Wait for more data.
+        rval = StateMachineRes::IN_PROGRESS;
+    }
+
+    return rval;
 }
