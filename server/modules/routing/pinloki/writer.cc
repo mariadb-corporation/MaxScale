@@ -16,6 +16,7 @@
 #include "file_writer.hh"
 #include "inventory.hh"
 #include "pinloki.hh"
+#include "find_gtid.hh"
 #include <maxbase/hexdump.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
@@ -40,10 +41,12 @@ namespace pinloki
 
 Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWriter* inv)
     : m_inventory(*inv)
-    , m_current_gtid_list(m_inventory.rpl_state())
     , m_details(details)
 {
     m_inventory.set_is_writer_connected(false);
+
+    m_current_gtid_list = find_last_gtid_list(m_inventory);
+    m_inventory.save_rpl_state(m_current_gtid_list);
 
     std::vector<maxsql::Gtid> gtids;
     auto req_state = m_inventory.requested_rpl_state();
