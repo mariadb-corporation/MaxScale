@@ -173,12 +173,16 @@
     "labels" : [
       "MAXSCALE"
     ],
-    "product" : {
-      "name" : "${maxscale_product}",
-      "version" : "${target}",
-      "force_version": ${force_maxscale_version}
-    }
-
+    "products" : [
+      {
+        "name" : "${maxscale_product}",
+        "version" : "${target}",
+        "force_version": ${force_maxscale_version}
+      },
+      {
+        "name" : "connector_odbc"
+      }
+    ]
   },
 
   "maxscale_001" :
