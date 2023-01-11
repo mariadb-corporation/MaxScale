@@ -3372,7 +3372,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
         // Have at least 4 bytes. This is enough to check if the packet looks like a proxy protocol header.
         if (mxb::proxy_protocol::packet_hdr_maybe_proxy(buffer.data()))
         {
-            if (mxb::proxy_protocol::is_proxy_protocol_allowed(&m_dcb->ip()))
+            mxb::proxy_protocol::SubnetArray dummy;
+            if (mxb::proxy_protocol::is_proxy_protocol_allowed(m_dcb->ip(), dummy))
             {
                 // TODO: Read & parse entire proxy header.
             }

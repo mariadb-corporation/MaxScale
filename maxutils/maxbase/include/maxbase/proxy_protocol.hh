@@ -32,6 +32,16 @@ generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_sto
 
 bool packet_hdr_maybe_proxy(const uint8_t* header);
 
-bool is_proxy_protocol_allowed(const sockaddr_storage* addr);
+// Proxy protocol parsing and subnetwork matching code adapted from MariaDB Server.
+
+// Subnetwork address in CIDR format, e.g. 192.168.1.0/24 or 2001:db8::/32.
+struct Subnet
+{
+    char           addr[16] {}; /**< Binary representation of the address, big endian */
+    unsigned short family {0};  /**< Address family, AF_INET or AF_INET6 */
+    unsigned short bits {0};    /**< subnetwork size */
+};
+using SubnetArray = std::vector<Subnet>;
+bool is_proxy_protocol_allowed(const sockaddr_storage& addr, const SubnetArray& allowed_subnets);
 }
 }

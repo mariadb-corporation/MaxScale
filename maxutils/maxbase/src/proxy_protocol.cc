@@ -26,6 +26,10 @@ struct AddressResult
 };
 AddressResult get_ip_string_and_port(const sockaddr_storage* sa);
 
+void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst);
+bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet);
+int  compare_bits(const void* s1, const void* s2, size_t n_bits);
+
 const uint8_t PROXY_TEXT_SIG[] = "PROXY";
 const uint8_t PROXY_BIN_SIG[] = "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A";
 }
@@ -107,10 +111,43 @@ bool packet_hdr_maybe_proxy(const uint8_t* header)
     return memcmp(header, PROXY_TEXT_SIG, 4) == 0 || memcmp(header, PROXY_BIN_SIG, 4) == 0;
 }
 
-bool is_proxy_protocol_allowed(const sockaddr_storage* addr)
+bool is_proxy_protocol_allowed(const sockaddr_storage& addr, const SubnetArray& allowed_subnets)
 {
-    // TODO
-    return false;
+    if (allowed_subnets.empty())
+    {
+        return false;
+    }
+
+    sockaddr_storage normalized_addr;
+
+    // Non-TCP addresses (unix domain socket) are treated as the localhost address.
+    switch (addr.ss_family)
+    {
+    case AF_UNSPEC:
+    case AF_UNIX:
+        normalized_addr.ss_family = AF_UNIX;
+        break;
+
+    case AF_INET:
+    case AF_INET6:
+        get_normalized_ip(addr, &normalized_addr);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    bool rval = false;
+    for (const auto& subnet : allowed_subnets)
+    {
+        if (addr_matches_subnet(normalized_addr, subnet))
+        {
+            rval = true;
+            break;
+        }
+    }
+
+    return rval;
 }
 }
 }
@@ -169,5 +206,98 @@ AddressResult get_ip_string_and_port(const sockaddr_storage* sa)
     }
 
     return rval;
+}
+
+void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst)
+{
+    switch (src.ss_family)
+    {
+    case AF_INET:
+        memcpy(dst, &src, sizeof(sockaddr_in));
+        break;
+
+    case AF_INET6:
+        {
+            auto* src_addr6 = (const sockaddr_in6*)&src;
+            const in6_addr* src_ip6 = &(src_addr6->sin6_addr);
+            const uint32_t* src_ip6_int32 = (uint32_t*)src_ip6->s6_addr;
+
+            if (IN6_IS_ADDR_V4MAPPED(src_ip6) || IN6_IS_ADDR_V4COMPAT(src_ip6))
+            {
+                /*
+                 * This is an IPv4-mapped or IPv4-compatible IPv6 address. It should be converted to the IPv4
+                 * form.
+                 */
+                auto* dst_ip4 = (sockaddr_in*)dst;
+                memset(dst_ip4, 0, sizeof(sockaddr_in));
+                dst_ip4->sin_family = AF_INET;
+                dst_ip4->sin_port = src_addr6->sin6_port;
+
+                /*
+                 * In an IPv4 mapped or compatible address, the last 32 bits represent the IPv4 address. The
+                 * byte orders for IPv6 and IPv4 addresses are the same, so a simple copy is possible.
+                 */
+                dst_ip4->sin_addr.s_addr = src_ip6_int32[3];
+            }
+            else
+            {
+                /* This is a "native" IPv6 address. */
+                memcpy(dst, &src, sizeof(sockaddr_in6));
+            }
+
+            break;
+        }
+    }
+}
+
+bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet)
+{
+    mxb_assert(subnet.family == AF_UNIX || subnet.family == AF_INET || subnet.family == AF_INET6);
+
+    bool rval = false;
+    if (addr.ss_family == subnet.family)
+    {
+        if (subnet.family == AF_UNIX)
+        {
+            rval = true;    // Localhost pipe
+        }
+        else
+        {
+            // Get a pointer to the address area.
+            void* addr_ptr = (subnet.family == AF_INET) ? (void*)&((sockaddr_in*)&addr)->sin_addr :
+                (void*)&((sockaddr_in6*)&addr)->sin6_addr;
+
+            return compare_bits(addr_ptr, subnet.addr, subnet.bits) == 0;
+        }
+    }
+    return rval;
+}
+
+/**
+ *  Compare memory areas, similar to memcmp(). The size parameter is the bit count, not byte count.
+ */
+int compare_bits(const void* s1, const void* s2, size_t n_bits)
+{
+    size_t n_bytes = n_bits / 8;
+    if (n_bytes > 0)
+    {
+        int res = memcmp(s1, s2, n_bytes);
+        if (res != 0)
+        {
+            return res;
+        }
+    }
+
+    int res = 0;
+    size_t bits_remaining = n_bits % 8;
+    if (bits_remaining > 0)
+    {
+        // Compare remaining bits of the last partial byte.
+        size_t shift = 8 - bits_remaining;
+        uint8_t s1_bits = (((uint8_t*)s1)[n_bytes]) >> shift;
+        uint8_t s2_bits = (((uint8_t*)s2)[n_bytes]) >> shift;
+        res = (s1_bits > s2_bits) ? 1 : (s1_bits < s2_bits ? -1 : 0);
+    }
+    return res;
 }
 }
