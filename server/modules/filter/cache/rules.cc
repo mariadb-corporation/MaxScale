@@ -124,38 +124,6 @@ bool value_from_string(const std::map<std::string_view, V>& values_by_name, cons
 
 }
 
-//static
-CacheRules::Attributes CacheRules::s_store_attributes =
-{
-    CacheRule::Attribute::COLUMN,
-    CacheRule::Attribute::DATABASE,
-    CacheRule::Attribute::QUERY,
-    CacheRule::Attribute::TABLE
-};
-
-//static
-CacheRules::Attributes CacheRules::s_use_attributes =
-{
-    CacheRule::Attribute::USER
-};
-
-/*
- * API begin
- */
-
-const char* CacheRule::to_string(CacheRule::Attribute attribute)
-{
-    return value_to_string(this_unit.attributes_by_id, attribute);
-}
-
-const char* CacheRule::to_string(CacheRule::Op op)
-{
-    return value_to_string(this_unit.ops_by_id, op);
-}
-
-//
-// CacheRule hierarchy
-//
 
 //
 // CacheRule
@@ -164,6 +132,31 @@ const char* CacheRule::to_string(CacheRule::Op op)
 CacheRule::~CacheRule()
 {
 }
+
+//static
+const char* CacheRule::to_string(CacheRule::Attribute attribute)
+{
+    return value_to_string(this_unit.attributes_by_id, attribute);
+}
+
+//static
+bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
+{
+    return value_from_string(this_unit.attributes_by_name, z, pAttribute);
+}
+
+//static
+const char* CacheRule::to_string(CacheRule::Op op)
+{
+    return value_to_string(this_unit.ops_by_id, op);
+}
+
+//static
+bool CacheRule::from_string(const char* z, CacheRule::Op* pOp)
+{
+    return value_from_string(this_unit.ops_by_name, z, pOp);
+}
+
 
 //
 // CacheRuleConcrete
@@ -191,6 +184,7 @@ bool CacheRuleConcrete::compare(const std::string_view& value) const
 
     return rv;
 }
+
 
 //
 // CacheRuleValue
@@ -318,6 +312,7 @@ bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF* pQuery)
     return compare_n(sql, len);
 }
 
+
 //
 // CacheRuleSimple
 //
@@ -341,6 +336,7 @@ bool CacheRuleSimple::compare_n(const std::string& lhs,
 
     return compares;
 }
+
 
 //
 // CacheRuleCTD
@@ -641,6 +637,7 @@ bool CacheRuleCTD::matches_table(const char* zDefault_db, const GWBUF* pQuery) c
     return matches;
 }
 
+
 //
 // CacheRuleQuery
 //
@@ -658,6 +655,7 @@ CacheRuleQuery* CacheRuleQuery::create(Attribute attribute,
 
     return pRule;
 }
+
 
 //
 // CacheRuleRegex
@@ -890,6 +888,7 @@ bool CacheRuleRegex::matches_table(const char* zDefault_db, const GWBUF* pQuery)
     return matches;
 }
 
+
 //
 // CacheRuleUser
 //
@@ -1048,9 +1047,25 @@ bool CacheRuleUser::matches_user(const char* account) const
     return matches;
 }
 
+
 //
 // CacheRules
 //
+
+//static
+CacheRules::Attributes CacheRules::s_store_attributes =
+{
+    CacheRule::Attribute::COLUMN,
+    CacheRule::Attribute::DATABASE,
+    CacheRule::Attribute::QUERY,
+    CacheRule::Attribute::TABLE
+};
+
+//static
+CacheRules::Attributes CacheRules::s_use_attributes =
+{
+    CacheRule::Attribute::USER
+};
 
 // static
 bool CacheRules::load(const char* zPath,
@@ -1219,30 +1234,6 @@ const json_t* CacheRules::json() const
     return m_pRoot;
 }
 
-/*
- * API end
- */
-
-//static
-bool CacheRule::from_string(const char* z, CacheRule::Attribute* pAttribute)
-{
-    return value_from_string(this_unit.attributes_by_name, z, pAttribute);
-}
-
-/**
- * Converts a string to an operator
- *
- * @param s A string
- * @param op On successful return contains the corresponding operator.
- *
- * @return True if the string could be converted, false otherwise.
- */
-//static
-bool CacheRule::from_string(const char* z, CacheRule::Op* pOp)
-{
-    return value_from_string(this_unit.ops_by_name, z, pOp);
-}
-
 //static
 CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
                                           CacheRule::Op op,
@@ -1277,7 +1268,7 @@ CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
     return pRule;
 }
 
-//
+//static
 CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
                                    CacheRule::Op op,
                                    const char* zValue,
@@ -1306,14 +1297,6 @@ CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
     return pRule;
 }
 
-/**
- * Creates a rules object from a JSON object.
- *
- * @param root  The root JSON rule object.
- * @param debug The debug level.
- *
- * @return A rules object if the json object could be parsed, nullptr otherwise.
- */
 //static
 CacheRules* CacheRules::create_from_json(json_t* pRoot, uint32_t debug)
 {
@@ -1334,19 +1317,6 @@ CacheRules* CacheRules::create_from_json(json_t* pRoot, uint32_t debug)
     return pRules;
 }
 
-/**
- * Parses the caching rules from a json object and returns corresponding object(s).
- *
- * @param pRoot    The root JSON object in the rules file.
- * @param debug    The debug level.
- * @param pppRules [out] Pointer to array of pointers to CacheRules objects.
- * @param pnRules  [out] Pointer to number of items in *ppRules.
- *
- * @note The caller must free the array @c *ppRules and each rules
- *       object in the array.
- *
- * @return bool True, if the rules could be parsed, false otherwise.
- */
 //static
 bool CacheRules::create_from_json(json_t* pRoot,
                                   uint32_t debug,
@@ -1409,14 +1379,6 @@ bool CacheRules::create_from_json(json_t* pRoot,
     return rv;
 }
 
-/**
- * Parses the JSON object used for configuring the rules.
- *
- * @param self  Pointer to the CacheRules object that is being built.
- * @param root  The root JSON object in the rules file.
- *
- * @return True, if the object could be parsed, false otherwise.
- */
 bool CacheRules::parse_json(json_t* pRoot)
 {
     bool parsed = false;
@@ -1458,16 +1420,6 @@ bool CacheRules::parse_json(json_t* pRoot)
     return parsed;
 }
 
-/**
- * Parses a array.
- *
- * @param self          Pointer to the CacheRules object that is being built.
- * @param array         An array.
- * @param name          The name of the array.
- * @param parse_element Function for parsing an element.
- *
- * @return True, if the array could be parsed, false otherwise.
- */
 bool CacheRules::parse_array(json_t* pStore,
                              const char* zName,
                              CacheRules::ElementParser parse_element)
@@ -1500,15 +1452,6 @@ bool CacheRules::parse_array(json_t* pStore,
     return parsed;
 }
 
-/**
- * Parses an object in an array.
- *
- * @param self   Pointer to the CacheRules object that is being built.
- * @param object An object from the "store" array.
- * @param index  Index of the object in the array.
- *
- * @return True, if the object could be parsed, false otherwise.
- */
 CacheRule* CacheRules::parse_element(json_t* pObject,
                                      const char* zArray_name,
                                      size_t index,
@@ -1588,16 +1531,6 @@ bool CacheRules::get_attribute(const Attributes& valid_attributes,
     return rv;
 }
 
-
-/**
- * Parses an object in the "store" array.
- *
- * @param self   Pointer to the CacheRules object that is being built.
- * @param object An object from the "store" array.
- * @param index  Index of the object in the array.
- *
- * @return True, if the object could be parsed, false otherwise.
- */
 bool CacheRules::parse_store_element(json_t* pObject, size_t index)
 {
     CacheRule* pRule = parse_element(pObject, KEY_STORE, index, s_store_attributes);
@@ -1610,15 +1543,6 @@ bool CacheRules::parse_store_element(json_t* pObject, size_t index)
     return pRule != nullptr;
 }
 
-/**
- * Parses an object in the "use" array.
- *
- * @param self   Pointer to the CacheRules object that is being built.
- * @param object An object from the "store" array.
- * @param index  Index of the object in the array.
- *
- * @return True, if the object could be parsed, false otherwise.
- */
 bool CacheRules::parse_use_element(json_t* pObject, size_t index)
 {
     CacheRule* pRule = parse_element(pObject, KEY_USE, index, s_use_attributes);
