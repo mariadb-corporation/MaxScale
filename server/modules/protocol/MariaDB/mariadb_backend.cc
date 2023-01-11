@@ -18,7 +18,7 @@
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/format.hh>
-#include <maxsql/mariadb.hh>
+#include <maxbase/proxy_protocol.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
@@ -120,14 +120,14 @@ void skip_encoded_str(Iter& it)
     it += len;
 }
 
-struct AddressInfo
+struct AddressResult
 {
     bool        success {false};
     char        addr[INET6_ADDRSTRLEN] {};
     in_port_t   port {0};
     std::string error_msg;
 };
-AddressInfo get_ip_string_and_port(const sockaddr_storage* sa);
+AddressResult get_ip_string_and_port(const sockaddr_storage* sa);
 }
 
 /**
@@ -1544,73 +1544,24 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
         return false;
     }
 
-    auto client_res = get_ip_string_and_port(client_addr);
-    auto server_res = get_ip_string_and_port(&server_addr);
-
     bool success = false;
-    if (client_res.success && server_res.success)
+    auto proxyhdr_res = mxb::proxy_protocol::generate_proxy_header_v1(client_addr, &server_addr);
+    if (proxyhdr_res.errmsg.empty())
     {
-        const auto cli_addr_fam = client_addr->ss_family;
-        const auto srv_addr_fam = server_addr.ss_family;
-        // The proxy header must contain the client address & port + server address & port. Both should have
-        // the same address family. Since the two are separate connections, it's possible one is IPv4 and
-        // the other IPv6. In this case, convert any IPv4-addresses to IPv6-format.
-        int ret = -1;
-        char proxy_header[108] {};      // 108 is the worst-case length
-        if ((cli_addr_fam == AF_INET || cli_addr_fam == AF_INET6)
-            && (srv_addr_fam == AF_INET || srv_addr_fam == AF_INET6))
+        auto ptr = reinterpret_cast<uint8_t*>(proxyhdr_res.header);
+        auto len = proxyhdr_res.len;
+        MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
+                 (int)len - 2, proxyhdr_res.header, m_server.name());
+        if (m_dcb->writeq_append(GWBUF(ptr, len)))
         {
-            if (cli_addr_fam == srv_addr_fam)
-            {
-                auto family_str = (cli_addr_fam == AF_INET) ? "TCP4" : "TCP6";
-                ret = snprintf(proxy_header, sizeof(proxy_header), "PROXY %s %s %s %d %d\r\n",
-                               family_str, client_res.addr, server_res.addr, client_res.port,
-                               server_res.port);
-            }
-            else if (cli_addr_fam == AF_INET)
-            {
-                // server conn is already ipv6
-                ret = snprintf(proxy_header, sizeof(proxy_header), "PROXY TCP6 ::ffff:%s %s %d %d\r\n",
-                               client_res.addr, server_res.addr, client_res.port, server_res.port);
-            }
-            else
-            {
-                // client conn is already ipv6
-                ret = snprintf(proxy_header, sizeof(proxy_header), "PROXY TCP6 %s ::ffff:%s %d %d\r\n",
-                               client_res.addr, server_res.addr, client_res.port, server_res.port);
-            }
+            success = true;
         }
-        else
-        {
-            ret = snprintf(proxy_header, sizeof(proxy_header), "PROXY UNKNOWN\r\n");
-        }
-
-        if (ret < 0 || ret >= (int)sizeof(proxy_header))
-        {
-            MXB_ERROR("Proxy header printing error, produced '%s'.", proxy_header);
-        }
-        else
-        {
-            auto ptr = reinterpret_cast<uint8_t*>(proxy_header);
-            auto len = strlen(proxy_header);
-            MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
-                     (int)len - 2, proxy_header, m_server.name());
-            if (m_dcb->writeq_append(GWBUF(ptr, len)))
-            {
-                success = true;
-            }
-        }
-    }
-    else if (!client_res.success)
-    {
-        MXB_ERROR("Could not convert network address of %s to string form. %s",
-                  m_session->user_and_host().c_str(), client_res.error_msg.c_str());
     }
     else
     {
-        MXB_ERROR("Could not convert network address of server '%s' to string form. %s",
-                  m_server.name(), server_res.error_msg.c_str());
+        MXB_ERROR("%s", proxyhdr_res.errmsg.c_str());
     }
+
     return success;
 }
 
@@ -1622,9 +1573,9 @@ namespace
  * @param sa A sockaddr_storage containing either an IPv4 or v6 address
  * @return Result structure
  */
-AddressInfo get_ip_string_and_port(const sockaddr_storage* sa)
+AddressResult get_ip_string_and_port(const sockaddr_storage* sa)
 {
-    AddressInfo rval;
+    AddressResult rval;
 
     const char errmsg_fmt[] = "'inet_ntop' failed. Error: '";
     switch (sa->ss_family)

@@ -20,6 +20,7 @@ add_library(maxbase STATIC
   messagequeue.cc
   pam_utils.cc
   pretty_print.cc
+  proxy_protocol.cc
   random.cc
   regex.cc
   secrets.cc
