@@ -311,29 +311,17 @@ PipeMessageQueue* PipeMessageQueue::create(Handler* pHandler)
      * ----
      *
      * As O_NONBLOCK is set and the messages are less than 4096 bytes,
-     * O_DIRECT should not be needed and we should be safe without it.
-     *
-     * However, to be in the safe side, we first try whether it is supported,
-     * and if not, we create the pipe without O_DIRECT.
+     * O_DIRECT is not be needed and we are safe without it. Enabling
+     * it appears to cause each write to take up the maximum of 4096
+     * bytes which would dramatically reduce the amount of messages
+     * that could be sent.
      */
 
     PipeMessageQueue* pThis = NULL;
 
     int fds[2];
 
-    int rv = pipe2(fds, O_NONBLOCK | O_CLOEXEC | O_DIRECT);
-
-    if ((rv != 0) && (errno == EINVAL))
-    {
-        // Ok, apparently the kernel does not support O_DIRECT. Let's try without.
-        rv = pipe2(fds, O_NONBLOCK | O_CLOEXEC);
-
-        if (rv == 0)
-        {
-            // Succeeded, so apparently it was the missing support for O_DIRECT.
-            MXB_NOTICE("Platform does not support O_DIRECT in conjunction with pipes, using without.");
-        }
-    }
+    int rv = pipe2(fds, O_NONBLOCK | O_CLOEXEC);
 
     if (rv == 0)
     {
@@ -430,11 +418,12 @@ bool PipeMessageQueue::post(const Message& message)
                             std::to_string(source_worker->id()) : "<no worker>";
 
                         MXB_WARNING("Worker %s attempted to send a message to worker %d but it has been "
-                                    "busy for over %d seconds.%s",
+                                    "busy for over %d milliseconds.%s",
                                     source_id.c_str(), m_pWorker->id(), slow_limit, msg);
+                        break;
                     }
 
-                    std::this_thread::sleep_for(1s);
+                    std::this_thread::sleep_for(1ms);
                 }
                 else
                 {
