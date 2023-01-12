@@ -91,7 +91,7 @@ export default {
             abortRequests() // abort all previous requests before logging out
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const { ORM_PERSISTENT_ENTITIES, ORM_NAMESPACE } = rootState.queryEditorConfig.config
+            const { ORM_PERSISTENT_ENTITIES, ORM_NAMESPACE } = rootState.mxsWorkspace.config
 
             const { mxsApp, queryPersisted, persisted, [ORM_NAMESPACE]: orm } = rootState
             // hide snackbar snackbar_message if it is on

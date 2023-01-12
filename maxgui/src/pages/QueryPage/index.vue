@@ -70,7 +70,7 @@ export default {
         }
     },
     async beforeCreate() {
-        await this.$store.dispatch('queryEditorConfig/initQueryEditor')
+        await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
         await QueryConn.dispatch('validateConns', { persistentConns: this.allConns })

@@ -163,7 +163,7 @@ export default {
     },
     computed: {
         ...mapState({
-            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
         }),
         queryTxt() {
             return this.$typy(this.data, 'data.attributes.sql').safeObject

@@ -69,7 +69,7 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            config = lodash.merge(config, store.state.queryEditorConfig.axios_opts)
+            config = lodash.merge(config, store.state.mxsWorkspace.axios_opts)
             updateConnBusyStatus({ value: true, sql_conn_id: getSqlConnId(config.url) })
             return { ...config }
         },

@@ -106,10 +106,9 @@ export default {
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
-            QUERY_CONN_BINDING_TYPES: state =>
-                state.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES,
-            ETL_ACTIONS: state => state.queryEditorConfig.config.ETL_ACTIONS,
-            ETL_STATUS: state => state.queryEditorConfig.config.ETL_STATUS,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {

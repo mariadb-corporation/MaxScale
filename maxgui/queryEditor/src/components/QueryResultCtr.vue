@@ -113,7 +113,7 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
         }),
         isConnBusy() {
             return QueryConn.getters('getIsConnBusyByActiveQueryTab')

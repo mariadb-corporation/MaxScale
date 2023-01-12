@@ -33,7 +33,7 @@ export default {
     inheritAttrs: false,
     computed: {
         ...mapState({
-            DEF_ROW_LIMIT_OPTS: state => state.queryEditorConfig.config.DEF_ROW_LIMIT_OPTS,
+            DEF_ROW_LIMIT_OPTS: state => state.mxsWorkspace.config.DEF_ROW_LIMIT_OPTS,
             query_row_limit: state => state.queryPersisted.query_row_limit,
         }),
         value: {

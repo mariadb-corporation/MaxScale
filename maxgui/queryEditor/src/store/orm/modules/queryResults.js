@@ -30,12 +30,12 @@ export default {
             let field, sql, queryName
             const escapedQN = this.vue.$helpers.escapeIdentifiers(qualified_name)
             switch (query_mode) {
-                case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA:
+                case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA:
                     sql = `SELECT * FROM ${escapedQN} LIMIT 1000;`
                     queryName = `Preview ${escapedQN} data`
                     field = 'prvw_data'
                     break
-                case rootState.queryEditorConfig.config.QUERY_MODES.PRVW_DATA_DETAILS:
+                case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA_DETAILS:
                     sql = `DESCRIBE ${escapedQN};`
                     queryName = `View ${escapedQN} details`
                     field = 'prvw_data_details'
@@ -81,7 +81,7 @@ export default {
                         sql,
                         res,
                         connection_name: activeQueryTabConn.name,
-                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -95,7 +95,7 @@ export default {
             const request_sent_time = new Date().valueOf()
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const abort_controller = new AbortController()
-            const config = rootState.queryEditorConfig.config
+            const config = rootState.mxsWorkspace.config
 
             QueryTabTmp.update({
                 where: activeQueryTabId,
@@ -170,7 +170,7 @@ export default {
                         sql,
                         res,
                         connection_name: activeQueryTabConn.name,
-                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.USER_LOGS,
+                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.USER_LOGS,
                     },
                     { root: true }
                 )
@@ -240,7 +240,7 @@ export default {
         getQueryTabMem: () => QueryTabTmp.find(Worksheet.getters('getActiveQueryTabId')) || {},
         getUserQueryRes: (state, getters) => getters.getQueryTabMem.query_results || {},
         getPrvwData: (state, getters, rootState) => mode => {
-            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.queryEditorConfig.config.QUERY_MODES
+            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.mxsWorkspace.config.QUERY_MODES
             switch (mode) {
                 case PRVW_DATA:
                     return getters.getQueryTabMem.prvw_data || {}

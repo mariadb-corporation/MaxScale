@@ -74,7 +74,7 @@ export default {
     computed: {
         ...mapState({
             file_dlg_data: state => state.editorsMem.file_dlg_data,
-            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
+            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
         }),
         ...mapGetters({
             hasFileSystemReadOnlyAccess: 'fileSysAccess/hasFileSystemReadOnlyAccess',

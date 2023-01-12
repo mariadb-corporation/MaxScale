@@ -55,7 +55,7 @@ export default {
             const { id: connId } = EtlTask.getters('getActiveSrcConn')
             const {
                 NODE_GROUP_TYPES: { TBL_G },
-            } = rootState.queryEditorConfig.config
+            } = rootState.mxsWorkspace.config
             switch (nodeGroup.type) {
                 case TBL_G: {
                     const { nodes } = await queryHelper.getChildNodeData({
@@ -79,7 +79,7 @@ export default {
     },
     getters: {
         getSchemaSql: (state, getters, rootState) => {
-            const { NODE_NAME_KEYS, NODE_TYPES } = rootState.queryEditorConfig.config
+            const { NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
             const col = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             return `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
         },

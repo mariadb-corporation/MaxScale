@@ -69,8 +69,8 @@ export default {
         ...mapState({
             is_fullscreen: state => state.queryPersisted.is_fullscreen,
             is_validating_conn: state => state.queryConnsMem.is_validating_conn,
-            QUERY_SHORTCUT_KEYS: state => state.queryEditorConfig.config.QUERY_SHORTCUT_KEYS,
-            hidden_comp: state => state.queryEditorConfig.hidden_comp,
+            QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
+            hidden_comp: state => state.mxsWorkspace.hidden_comp,
         }),
         allWorksheets() {
             return Worksheet.all()

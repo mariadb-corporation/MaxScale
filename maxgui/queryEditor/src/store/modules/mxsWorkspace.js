@@ -30,7 +30,7 @@ export default {
         },
     },
     actions: {
-        async initQueryEditor({ dispatch }) {
+        async initWorkspace({ dispatch }) {
             initEntities()
             await dispatch('fileSysAccess/initStorage', {}, { root: true })
         },

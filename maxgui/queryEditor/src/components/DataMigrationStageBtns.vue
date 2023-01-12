@@ -53,7 +53,7 @@ export default {
     },
     computed: {
         ...mapState({
-            ETL_STAGE_INDEX: state => state.queryEditorConfig.config.ETL_STAGE_INDEX,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
     },
 }

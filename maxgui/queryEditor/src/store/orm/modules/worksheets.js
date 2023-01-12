@@ -150,7 +150,7 @@ export default {
                         sql,
                         res,
                         connection_name: activeQueryTabConn.name,
-                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )

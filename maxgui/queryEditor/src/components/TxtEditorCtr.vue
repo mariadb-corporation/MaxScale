@@ -156,10 +156,10 @@ export default {
         ...mapState({
             query_snippets: state => state.queryPersisted.query_snippets,
             query_pane_pct_height: state => state.queryPersisted.query_pane_pct_height,
-            CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
-            SQL_CHART_TYPES: state => state.queryEditorConfig.config.SQL_CHART_TYPES,
-            CHART_AXIS_TYPES: state => state.queryEditorConfig.config.CHART_AXIS_TYPES,
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
+            CMPL_SNIPPET_KIND: state => state.mxsWorkspace.config.CMPL_SNIPPET_KIND,
+            SQL_CHART_TYPES: state => state.mxsWorkspace.config.SQL_CHART_TYPES,
+            CHART_AXIS_TYPES: state => state.mxsWorkspace.config.CHART_AXIS_TYPES,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             tab_moves_focus: state => state.queryPersisted.tab_moves_focus,
         }),
         eventBus() {

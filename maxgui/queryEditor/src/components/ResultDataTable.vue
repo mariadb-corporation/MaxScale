@@ -190,7 +190,7 @@ export default {
     },
     computed: {
         ...mapState({
-            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
+            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
         }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8

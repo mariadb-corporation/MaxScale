@@ -67,8 +67,8 @@ export default {
     computed: {
         ...mapState({
             src_schema_tree: state => state.etlMem.src_schema_tree,
-            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
-            NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
         }),
         etlPrepareTables() {
             return this.selectedObjs.map(o => ({

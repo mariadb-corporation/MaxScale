@@ -115,10 +115,10 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
-            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
-            DDL_ALTER_SPECS: state => state.queryEditorConfig.config.DDL_ALTER_SPECS,
-            EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            DDL_ALTER_SPECS: state => state.mxsWorkspace.config.DDL_ALTER_SPECS,
+            EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
             is_sidebar_collapsed: state => state.queryPersisted.is_sidebar_collapsed,
         }),
         activeWkeId() {

@@ -143,7 +143,7 @@ export default {
             const { $helpers, $mxs_t } = this.vue
             const {
                 QUERY_CONN_BINDING_TYPES: { WORKSHEET },
-            } = rootState.queryEditorConfig.config
+            } = rootState.mxsWorkspace.config
 
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
             const queryTabIdsOfActiveWke = QueryTab.query()
@@ -202,7 +202,7 @@ export default {
         async openQueryTabConn({ rootState }, { wkeConn, query_tab_id }) {
             const {
                 QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
-            } = rootState.queryEditorConfig.config
+            } = rootState.mxsWorkspace.config
 
             const [e, res] = await this.vue.$helpers.to(cloneConn(wkeConn.id))
 
@@ -396,7 +396,7 @@ export default {
                         sql,
                         res,
                         connection_name: connName,
-                        queryType: rootState.queryEditorConfig.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -424,7 +424,7 @@ export default {
             QueryConn.query()
                 .where(
                     'binding_type',
-                    rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.WORKSHEET
                 )
                 .get(),
         getClonedConnsOfWkeConn: () => wkeConnId =>
@@ -432,10 +432,7 @@ export default {
                 .where('clone_of_conn_id', wkeConnId)
                 .get() || [],
         getEtlConns: (state, getters, rootState) => {
-            const {
-                ETL_SRC,
-                ETL_DEST,
-            } = rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES
+            const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             return QueryConn.query()
                 .where('binding_type', v => v === ETL_SRC || v === ETL_DEST)
                 .get()

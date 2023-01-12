@@ -134,11 +134,11 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
-            EDITOR_MODES: state => state.queryEditorConfig.config.EDITOR_MODES,
-            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
-            NODE_GROUP_TYPES: state => state.queryEditorConfig.config.NODE_GROUP_TYPES,
-            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
+            EDITOR_MODES: state => state.mxsWorkspace.config.EDITOR_MODES,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
+            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
         }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')

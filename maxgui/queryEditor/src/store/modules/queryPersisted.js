@@ -84,8 +84,7 @@ export default {
                 let resCount = 0
                 for (const res of results) {
                     const { data, message = '', errno } = res
-                    const isQueryCanceled =
-                        message === rootState.queryEditorConfig.config.QUERY_CANCELED
+                    const isQueryCanceled = message === rootState.mxsWorkspace.config.QUERY_CANCELED
 
                     if (isQueryCanceled) {
                         resultData[`INTERRUPT`] = message

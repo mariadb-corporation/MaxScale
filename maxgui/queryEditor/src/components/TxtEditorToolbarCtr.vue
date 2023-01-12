@@ -212,8 +212,8 @@ export default {
     },
     computed: {
         ...mapState({
-            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
+            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             query_confirm_flag: state => state.queryPersisted.query_confirm_flag,
             query_snippets: state => state.queryPersisted.query_snippets,
             is_max_rows_valid: state => state.editorsMem.is_max_rows_valid,

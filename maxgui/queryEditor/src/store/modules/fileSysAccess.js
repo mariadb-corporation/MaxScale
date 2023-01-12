@@ -49,11 +49,11 @@ export default {
     actions: {
         async initStorage({ commit, state, rootState }) {
             const storage = await localForage.getItem(
-                rootState.queryEditorConfig.config.FILE_SYS_ACCESS_NAMESPACE
+                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE
             )
             commit('SET_FILE_HANDLE_DATA_MAP', storage || {})
             await localForage.setItem(
-                rootState.queryEditorConfig.config.FILE_SYS_ACCESS_NAMESPACE,
+                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
                 state.file_handle_data_map
             )
         },
@@ -62,14 +62,14 @@ export default {
             // Workaround, update editor query_txt so getIsQueryTabUnsaved getter can recompute
             Editor.update({ where: payload.id, data: { query_txt: payload.data.txt } })
             await localForage.setItem(
-                rootState.queryEditorConfig.config.FILE_SYS_ACCESS_NAMESPACE,
+                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
                 state.file_handle_data_map
             )
         },
         async deleteFileHandleData({ commit, state, rootState }, id) {
             commit('DELETE_FILE_HANDLE_DATA', id)
             await localForage.setItem(
-                rootState.queryEditorConfig.config.FILE_SYS_ACCESS_NAMESPACE,
+                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
                 state.file_handle_data_map
             )
         },

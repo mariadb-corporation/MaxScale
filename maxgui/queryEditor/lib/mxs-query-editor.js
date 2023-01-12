@@ -51,7 +51,7 @@ export default /*#__PURE__*/ (() => {
         Object.keys(queryEditorModules).forEach(key => {
             store.registerModule(key, queryEditorModules[key])
         })
-        if (hidden_comp.length) store.commit('queryEditorConfig/SET_HIDDEN_COMP', hidden_comp)
+        if (hidden_comp.length) store.commit('mxsWorkspace/SET_HIDDEN_COMP', hidden_comp)
 
         // Register utilities .i.e. Add instance properties to Vue.prototype
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp

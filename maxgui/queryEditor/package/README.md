@@ -271,7 +271,7 @@ export default {
         }
     },
     async beforeCreate() {
-        await this.$store.dispatch('queryEditorConfig/initQueryEditor')
+        await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
         await models.QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
@@ -332,7 +332,7 @@ import { models } from 'mxs-query-editor'
  */
 for (const { id = '' } of connections_of_a_maxscale) {
     commit(
-        'queryEditorConfig/SET_AXIOS_OPTS',
+        'mxsWorkspace/SET_AXIOS_OPTS',
         {
             baseURL: maxscale_API_URL,
         },
@@ -365,7 +365,7 @@ Axios request config options can be changed at run time by committing the follow
 mutation:
 
 ```js
-store.commit('queryEditorConfig/SET_AXIOS_OPTS', options)
+store.commit('mxsWorkspace/SET_AXIOS_OPTS', options)
 ```
 
 The provided config options will be merged with the current one which has the following default options:
@@ -397,7 +397,7 @@ Certain keywords are reserved in order to make the query editor work properly.
 | fileSysAccess      |                    Vuex module                     |
 | mxsApp             |                    Vuex module                     |
 | queryConnsMem      |                    Vuex module                     |
-| queryEditorConfig  |                    Vuex module                     |
+| mxsWorkspace       |                    Vuex module                     |
 | queryPersisted     |                    Vuex module                     |
 | ORM                |                    Vuex module                     |
 | store.vue          |                     Vuex store                     |

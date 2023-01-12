@@ -89,10 +89,10 @@ export default {
         //editor mode getter
         getIsTxtEditor: (state, getters, rootState) =>
             getters.getEditor.curr_editor_mode ===
-            rootState.queryEditorConfig.config.EDITOR_MODES.TXT_EDITOR,
+            rootState.mxsWorkspace.config.EDITOR_MODES.TXT_EDITOR,
         getIsDDLEditor: (state, getters, rootState) =>
             getters.getEditor.curr_editor_mode ===
-            rootState.queryEditorConfig.config.EDITOR_MODES.DDL_EDITOR,
+            rootState.mxsWorkspace.config.EDITOR_MODES.DDL_EDITOR,
         // tbl_creation_info getters
         getTblCreationInfo: (state, getters) => getters.getEditor.tbl_creation_info || {},
         getLoadingTblCreationInfo: (state, getters) =>

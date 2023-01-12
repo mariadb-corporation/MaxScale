@@ -71,9 +71,7 @@ export default {
                     let data = nodes
                     let completion_items = completionItems
 
-                    const groupNodes = Object.values(
-                        rootState.queryEditorConfig.config.NODE_GROUP_TYPES
-                    )
+                    const groupNodes = Object.values(rootState.mxsWorkspace.config.NODE_GROUP_TYPES)
                     // fetch expanded_nodes
                     for (const nodeGroup of getters.getExpandedNodes) {
                         if (groupNodes.includes(nodeGroup.type)) {
@@ -106,7 +104,7 @@ export default {
     getters: {
         // sidebar getters
         getDbSql: (state, getters, rootState) => {
-            const { SYS_SCHEMAS, NODE_NAME_KEYS, NODE_TYPES } = rootState.queryEditorConfig.config
+            const { SYS_SCHEMAS, NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
             const schema = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             let sql = 'SELECT * FROM information_schema.SCHEMATA'
             if (!rootState.queryPersisted.query_show_sys_schemas_flag)

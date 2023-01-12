@@ -27,7 +27,7 @@ export default {
             })
             const {
                 ORM_PERSISTENT_ENTITIES: { ETL_TASKS },
-            } = rootState.queryEditorConfig.config
+            } = rootState.mxsWorkspace.config
 
             const task = entities[ETL_TASKS].at(-1)
             dispatch('viewEtlTask', task)
@@ -39,7 +39,7 @@ export default {
             const { id: srcConnId } = getters.getSrcConnByEtlTaskId(id)
             if (srcConnId) {
                 const [e, res] = await this.vue.$helpers.to(cancel(srcConnId))
-                const { CANCELED, ERROR } = rootState.queryEditorConfig.config.ETL_STATUS
+                const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
                 let etlStatus = CANCELED
                 if (e) {
                     etlStatus = ERROR
@@ -84,7 +84,7 @@ export default {
             getters.getActiveEtlConns.find(
                 c =>
                     c.binding_type ===
-                    rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
+                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
             ) || {},
 
         getEtlTaskWithRelationById: () => etl_task_id =>
@@ -100,7 +100,7 @@ export default {
                 .find(
                     c =>
                         c.binding_type ===
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
+                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
                 ) || {},
         getDestConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
             getters
@@ -108,7 +108,7 @@ export default {
                 .find(
                     c =>
                         c.binding_type ===
-                        rootState.queryEditorConfig.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
+                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
                 ) || {},
     },
 }

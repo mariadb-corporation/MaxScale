@@ -45,8 +45,8 @@ export default {
     },
     computed: {
         ...mapState({
-            NODE_TYPES: state => state.queryEditorConfig.config.NODE_TYPES,
-            CMPL_SNIPPET_KIND: state => state.queryEditorConfig.config.CMPL_SNIPPET_KIND,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
+            CMPL_SNIPPET_KIND: state => state.mxsWorkspace.config.CMPL_SNIPPET_KIND,
         }),
         editorTabFocusModeKey() {
             return this.monaco.editor.EditorOption.tabFocusMode

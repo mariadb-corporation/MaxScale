@@ -230,10 +230,10 @@ export default {
     },
     computed: {
         ...mapState({
-            OS_KEY: state => state.queryEditorConfig.config.OS_KEY,
-            QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
-            QUERY_LOG_TYPES: state => state.queryEditorConfig.config.QUERY_LOG_TYPES,
-            NODE_CTX_TYPES: state => state.queryEditorConfig.config.NODE_CTX_TYPES,
+            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
+            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
+            QUERY_LOG_TYPES: state => state.mxsWorkspace.config.QUERY_LOG_TYPES,
+            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
             query_history: state => state.queryPersisted.query_history,
             query_snippets: state => state.queryPersisted.query_snippets,
         }),
