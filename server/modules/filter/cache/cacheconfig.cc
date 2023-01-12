@@ -151,7 +151,8 @@ config::ParamBitMask debug(
     "can be controlled.",
     0,
     CACHE_DEBUG_MIN,
-    CACHE_DEBUG_MAX
+    CACHE_DEBUG_MAX,
+    config::Param::Modifiable::AT_RUNTIME
     );
 
 config::ParamEnum<cache_thread_model_t> thread_model(

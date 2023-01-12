@@ -59,6 +59,7 @@ public:
 
     using milliseconds = std::chrono::milliseconds;
 
+    // Startup configured
     std::string           storage;
     std::string           storage_options;
     milliseconds          hard_ttl;
@@ -68,7 +69,6 @@ public:
     int64_t               max_count;
     int64_t               max_size;
     std::string           rules;
-    int64_t               debug; // bitmask
     cache_thread_model_t  thread_model;
     cache_selects_t       selects;
     cache_in_trxs_t       cache_in_trxs;
@@ -78,6 +78,10 @@ public:
     cache_users_t         users;
     milliseconds          timeout;
     mxs::ConfigParameters storage_params;
+
+    // Runtime modifiable
+    int64_t               debug; // bitmask
+
 
     static const config::Specification* specification();
 

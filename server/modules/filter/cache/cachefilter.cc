@@ -129,46 +129,49 @@ CacheFilter* CacheFilter::create(const char* zName)
 
 bool CacheFilter::post_configure()
 {
-    Cache* pCache = nullptr;
+    Cache* pCache = m_sCache.get();
 
-    switch (m_config.thread_model)
+    if (!pCache)
     {
-    case CACHE_THREAD_MODEL_MT:
-        MXB_NOTICE("Creating shared cache.");
-        MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), &m_config));
-        break;
-
-    case CACHE_THREAD_MODEL_ST:
-        MXB_NOTICE("Creating thread specific cache.");
-        MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), &m_config));
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    if (pCache)
-    {
-        Storage::Limits limits;
-        pCache->get_limits(&limits);
-
-        uint32_t max_resultset_size = m_config.max_resultset_size;
-
-        if (max_resultset_size == 0)
+        switch (m_config.thread_model)
         {
-            max_resultset_size = std::numeric_limits<uint32_t>::max();
+        case CACHE_THREAD_MODEL_MT:
+            MXB_NOTICE("Creating shared cache.");
+            MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), &m_config));
+            break;
+
+        case CACHE_THREAD_MODEL_ST:
+            MXB_NOTICE("Creating thread specific cache.");
+            MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), &m_config));
+            break;
+
+        default:
+            mxb_assert(!true);
         }
 
-        if (max_resultset_size > limits.max_value_size)
+        if (pCache)
         {
-            MXB_WARNING("The used cache storage limits the maximum size of a value to "
-                        "%u bytes, but either no value has been specified for "
-                        "max_resultset_size or the value is larger. Setting "
-                        "max_resultset_size to the maximum size.", limits.max_value_size);
-            m_config.max_resultset_size = limits.max_value_size;
-        }
+            Storage::Limits limits;
+            pCache->get_limits(&limits);
 
-        m_sCache.reset(pCache);
+            uint32_t max_resultset_size = m_config.max_resultset_size;
+
+            if (max_resultset_size == 0)
+            {
+                max_resultset_size = std::numeric_limits<uint32_t>::max();
+            }
+
+            if (max_resultset_size > limits.max_value_size)
+            {
+                MXB_WARNING("The used cache storage limits the maximum size of a value to "
+                            "%u bytes, but either no value has been specified for "
+                            "max_resultset_size or the value is larger. Setting "
+                            "max_resultset_size to the maximum size.", limits.max_value_size);
+                m_config.max_resultset_size = limits.max_value_size;
+            }
+
+            m_sCache.reset(pCache);
+        }
     }
 
     return pCache != nullptr;
