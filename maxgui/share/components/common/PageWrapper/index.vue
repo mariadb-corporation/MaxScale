@@ -6,7 +6,9 @@
         >
             <div class="d-flex flex-wrap">
                 <portal-target name="page-header" />
+                <slot name="page-header" />
                 <v-spacer :style="spacerStyle" />
+                <slot name="page-header--right" />
                 <portal-target name="page-header--right" />
             </div>
             <slot></slot>
