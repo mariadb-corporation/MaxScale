@@ -441,10 +441,11 @@ export default {
                 .get()
         },
 
-        getIsConnBusy: () => QueryTab.getters('getActiveQueryTabMem').is_conn_busy || false,
-        getIsConnBusyByQueryTabId: () => query_tab_id =>
-            QueryTab.getters('getQueryTabMemById')(query_tab_id).is_conn_busy || false,
-        getLostCnnErrMsgObj: () =>
-            QueryTab.getters('getActiveQueryTabMem').lost_cnn_err_msg_obj || {},
+        getIsConnBusyByActiveQueryTab: (state, getters) =>
+            getters.getActiveQueryTabConn.is_busy || false,
+        getIsConnBusyByQueryTabId: (state, getters) => query_tab_id =>
+            getters.getQueryTabConnByQueryTabId(query_tab_id).is_busy || false,
+        getLostCnnErrByActiveQueryTab: (state, getters) =>
+            getters.getActiveQueryTabConn.lost_cnn_err || {},
     },
 }

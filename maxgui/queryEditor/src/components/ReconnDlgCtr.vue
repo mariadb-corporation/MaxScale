@@ -35,8 +35,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
@@ -46,7 +44,7 @@ export default {
     },
     computed: {
         lostCnnErrMsgObj() {
-            return QueryConn.getters('getLostCnnErrMsgObj')
+            return QueryConn.getters('getLostCnnErrByActiveQueryTab')
         },
         queryErrMsg() {
             return this.$typy(this.lostCnnErrMsgObj, 'message').safeString
@@ -56,9 +54,9 @@ export default {
                 return Boolean(this.queryErrMsg)
             },
             set() {
-                QueryTabTmp.update({
-                    where: Worksheet.getters('getActiveQueryTabId'),
-                    data: { lost_cnn_err_msg_obj: {} },
+                QueryConn.update({
+                    where: QueryConn.getters('getActiveQueryTabConn'),
+                    data: { lost_cnn_err: {} },
                 })
             },
         },

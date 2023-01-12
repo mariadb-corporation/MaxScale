@@ -133,7 +133,7 @@ export default {
             return QueryConn.getters('getActiveWkeConn')
         },
         isConnBusy() {
-            return QueryConn.getters('getIsConnBusy')
+            return QueryConn.getters('getIsConnBusyByActiveQueryTab')
         },
         wkeConns() {
             return QueryConn.getters('getWkeConns')

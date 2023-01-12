@@ -131,12 +131,15 @@ export default {
                         where: activeQueryTabId,
                         data(obj) {
                             obj.has_kill_flag = false
-                            /**
-                             * This is done automatically in queryHttp.interceptors.response.
-                             * However, because the request is aborted, is_conn_busy needs to be set manually.
-                             */
-                            obj.is_conn_busy = false
                         },
+                    })
+                    QueryConn.update({
+                        where: activeQueryTabConn.id,
+                        /**
+                         * This is done automatically in queryHttp.interceptors.response.
+                         * However, because the request is aborted, is_busy needs to be set manually.
+                         */
+                        data: { is_busy: false },
                     })
                     res = {
                         data: {

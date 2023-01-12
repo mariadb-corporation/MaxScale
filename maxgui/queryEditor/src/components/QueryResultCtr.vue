@@ -116,7 +116,7 @@ export default {
             QUERY_MODES: state => state.queryEditorConfig.config.QUERY_MODES,
         }),
         isConnBusy() {
-            return QueryConn.getters('getIsConnBusy')
+            return QueryConn.getters('getIsConnBusyByActiveQueryTab')
         },
         componentDynDim() {
             /*

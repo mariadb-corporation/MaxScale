@@ -28,6 +28,8 @@ export default class QueryConn extends Extender {
             name: this.string(''),
             meta: this.attr({}),
             clone_of_conn_id: this.attr(null).nullable(),
+            is_busy: this.boolean(false),
+            lost_cnn_err: this.attr({}),
         }
     }
 

@@ -16,19 +16,16 @@ import { lodash, getErrorsArr } from '@share/utils/helpers'
 import { MARIADB_NET_ERRNO } from '@queryEditorSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import QueryTabTmp from '@queryEditorSrc/store/orm/models/QueryTabTmp'
 /**
  *
  * @param {Boolean} param.value - is connection busy
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
 function updateConnBusyStatus({ value, sql_conn_id }) {
-    const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
-    if (query_tab_id)
-        QueryTabTmp.update({
-            where: query_tab_id,
-            data: { is_conn_busy: value },
-        })
+    QueryConn.update({
+        where: sql_conn_id,
+        data: { is_busy: value },
+    })
 }
 /**
  * This function helps to check if there is a lost connection error that has either
@@ -44,12 +41,10 @@ function analyzeRes({ res, sql_conn_id }) {
     })
 
     if (lostCnnErrMsgs.length) {
-        const { query_tab_id } = QueryConn.find(sql_conn_id) || {}
-        if (query_tab_id)
-            QueryTabTmp.update({
-                where: query_tab_id,
-                data: { lost_cnn_err_msg_obj: lostCnnErrMsgs[0] },
-            })
+        QueryConn.update({
+            where: sql_conn_id,
+            data: { lost_cnn_err: lostCnnErrMsgs[0] },
+        })
     }
 }
 function getSqlConnId(url) {

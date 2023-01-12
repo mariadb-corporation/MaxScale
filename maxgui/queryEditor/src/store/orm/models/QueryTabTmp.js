@@ -21,9 +21,6 @@ export default class QueryTabTmp extends Extender {
      */
     static getNonKeyFields() {
         return {
-            // fields for QueryConn
-            is_conn_busy: this.boolean(false),
-            lost_cnn_err_msg_obj: this.attr({}),
             // fields for QueryResult
             has_kill_flag: this.boolean(false),
             /**
