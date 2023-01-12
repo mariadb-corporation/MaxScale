@@ -89,10 +89,10 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <uid-input v-model.trim="body.user" />
+                        <uid-input v-model.trim="body.user" name="db-user" />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <pwd-input v-model.trim="body.password" />
+                        <pwd-input v-model.trim="body.password" name="db-password" />
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">

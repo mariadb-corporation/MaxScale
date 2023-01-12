@@ -63,10 +63,10 @@
                     />
                 </v-col>
                 <v-col cols="12" md="6" class="pa-1">
-                    <uid-input v-model.trim="user" :disabled="isAdvanced" />
+                    <uid-input v-model.trim="user" :disabled="isAdvanced" name="etl-src-uid" />
                 </v-col>
                 <v-col cols="12" md="6" class="pa-1">
-                    <pwd-input v-model.trim="password" :disabled="isAdvanced" />
+                    <pwd-input v-model.trim="password" :disabled="isAdvanced" name="etl-src-pwd" />
                 </v-col>
             </v-row>
             <v-switch v-model="isAdvanced" label="Advanced" class="v-switch--mariadb" />

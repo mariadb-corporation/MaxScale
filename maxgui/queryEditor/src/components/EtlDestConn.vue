@@ -41,10 +41,10 @@
                 <db-input v-model.trim="dest.db" />
             </v-col>
             <v-col cols="12" md="6" class="pa-1">
-                <uid-input v-model.trim="dest.user" />
+                <uid-input v-model.trim="dest.user" name="db-user" />
             </v-col>
             <v-col cols="12" md="6" class="pa-1">
-                <pwd-input v-model.trim="dest.password" />
+                <pwd-input v-model.trim="dest.password" name="db-password" />
             </v-col>
         </v-row>
     </v-col>
