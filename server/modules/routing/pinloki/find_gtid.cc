@@ -225,4 +225,56 @@ bool search_file(const std::string& file_name,
 
     return success;
 }
+
+
+maxsql::GtidList find_last_gtid_list(const InventoryWriter &inv)
+{
+    maxsql::GtidList ret;
+    if (inv.file_names().empty())
+    {
+        return ret;
+    }
+
+    auto file_name = inv.file_names().back();
+    std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
+    long file_pos = PINLOKI_MAGIC.size();
+
+    while(true)
+    {
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
+
+        if (rpl.is_empty())
+        {
+            break;
+        }
+
+        if (rpl.event_type() != GTID_LIST_EVENT && rpl.event_type() != GTID_EVENT)
+        {
+            file_pos = rpl.next_event_pos();
+            continue;
+        }
+
+        rpl.read_body(file, &file_pos);
+        if (rpl.is_empty())
+        {
+            break;
+        }
+
+        if (rpl.event_type() == GTID_LIST_EVENT)
+        {
+            auto event = rpl.gtid_list();
+            for (const auto& gtid : event.gtid_list.gtids())
+            {
+                ret.replace(gtid);
+            }
+        }
+        else
+        {
+            auto event = rpl.gtid_event();
+            ret.replace(event.gtid);
+        }
+    }
+
+    return ret;
+}
 }

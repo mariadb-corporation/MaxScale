@@ -31,4 +31,8 @@ struct GtidPosition
 // file_name is empty, and empty positions sort first.
 std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtid_list,
                                              const InventoryReader& inv);
+
+// Find the last known gtid list. This is used to seed the file rpl_state when the
+// writer starts.
+maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv);
 }

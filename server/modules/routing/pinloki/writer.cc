@@ -16,6 +16,7 @@
 #include "file_writer.hh"
 #include "inventory.hh"
 #include "pinloki.hh"
+#include "find_gtid.hh"
 #include <maxbase/hexdump.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
@@ -40,10 +41,12 @@ namespace pinloki
 
 Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWriter* inv)
     : m_inventory(*inv)
-    , m_current_gtid_list(m_inventory.rpl_state())
     , m_details(details)
 {
     m_inventory.set_is_writer_connected(false);
+
+    m_current_gtid_list = find_last_gtid_list(m_inventory);
+    m_inventory.save_rpl_state(m_current_gtid_list);
 
     std::vector<maxsql::Gtid> gtids;
     auto req_state = m_inventory.requested_rpl_state();
@@ -176,6 +179,7 @@ void Writer::run()
 
                 m_inventory.set_master_id(rpl_event.server_id());
                 m_inventory.set_is_writer_connected(true);
+                bool do_save_gtid_list = false;
 
                 switch (rpl_event.event_type())
                 {
@@ -183,7 +187,6 @@ void Writer::run()
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
                         file.begin_txn();
-                        file.add_event(rpl_event);
                         update_gtid_list(gtid_event.gtid);
 
                         if (gtid_event.flags & mxq::F_STANDALONE)
@@ -194,26 +197,29 @@ void Writer::run()
                     break;
 
                 case QUERY_EVENT:
-                    file.add_event(rpl_event);
                     if (m_commit_on_query)
                     {
-                        save_gtid_list(file);
+                        do_save_gtid_list = true;
                         m_commit_on_query = false;
                     }
                     else if (rpl_event.is_commit())
                     {
-                        save_gtid_list(file);
+                        do_save_gtid_list = true;
                     }
                     break;
 
                 case XID_EVENT:
-                    file.add_event(rpl_event);
-                    save_gtid_list(file);
+                    do_save_gtid_list = true;
                     break;
 
                 default:
-                    file.add_event(rpl_event);
                     break;
+                }
+
+                file.add_event(rpl_event);
+                if (do_save_gtid_list)
+                {
+                    save_gtid_list(file);
                 }
             }
         }
