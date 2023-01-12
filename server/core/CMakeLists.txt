@@ -82,12 +82,6 @@ target_link_libraries(maxscale-common
   mariadbauth
 )
 
-if(WITH_ASAN AND ASAN_FOUND)
-  target_link_libraries(maxscale-common ${ASAN_LIBRARIES})
-elseif(WITH_UBSAN AND UBSAN_FOUND)
-  target_link_libraries(maxscale-common ${UBSAN_LIBRARIES})
-endif()
-
 find_library(HAVE_LIBDL NAMES dl)
 if (HAVE_LIBDL)
   # libdl just exposes libc functionality on most systems.  This means that if

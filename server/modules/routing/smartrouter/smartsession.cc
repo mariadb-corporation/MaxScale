@@ -34,6 +34,7 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
 
 SmartRouterSession::~SmartRouterSession()
 {
+    gwbuf_free(m_pDelayed_packet);
 }
 
 // static
