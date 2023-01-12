@@ -154,7 +154,8 @@ enum class CurlOp
 {
     GET,
     PUT,
-    DELETE
+    DELETE,
+    POST,
 };
 
 CURL* get_easy_curl(CurlOp op,
@@ -180,6 +181,10 @@ CURL* get_easy_curl(CurlOp op,
         else if (op == CurlOp::DELETE)
         {
             checked_curl_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        }
+        else if (op == CurlOp::POST)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "POST");
         }
 
         if (!config.ssl_verifypeer)
@@ -835,6 +840,15 @@ Response del(const std::string& url,
              const Config& config)
 {
     return execute(CurlOp::DELETE, url, body, user, password, config);
+}
+
+Response post(const std::string& url,
+              const std::string& body,
+              const std::string& user,
+              const std::string& password,
+              const Config& config)
+{
+    return execute(CurlOp::POST, url, body, user, password, config);
 }
 
 const char* to_string(Async::status_t status)

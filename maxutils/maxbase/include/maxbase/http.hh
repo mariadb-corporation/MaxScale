@@ -280,6 +280,21 @@ inline Response del(const std::string& url, const std::string& body, const Confi
 }
 
 /**
+ * Do a HTTP POST.
+ *
+ * @param url       The URL to POST.
+ * @param body      The request body
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use (optional).
+ *
+ * @return The response to the request
+ */
+Response post(const std::string& url, const std::string& body,
+              const std::string& user, const std::string& password,
+              const Config& config = Config());
+
+/**
  * @class mxb::http::Async
  *
  * Class for performing multiple HTTP GETs concurrently and asynchronously.
