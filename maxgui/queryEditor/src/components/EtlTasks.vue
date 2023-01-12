@@ -102,7 +102,7 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
-    name: 'data-migration-list',
+    name: 'etl-tasks',
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',

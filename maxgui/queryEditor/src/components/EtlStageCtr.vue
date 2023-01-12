@@ -29,7 +29,7 @@
                     <v-form ref="form" v-model="isFormValid" lazy-validation>
                         <component :is="stage.component" ref="stageComponent" />
                     </v-form>
-                    <data-migration-stage-btns
+                    <etl-stage-btns
                         class="mt-4"
                         :step="stageIdx"
                         :isPrevDisabled="isPrevDisabled"
@@ -60,15 +60,15 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import EtlSrcTree from '@queryEditorSrc/components/EtlSrcTree.vue'
 import EtlConnsCtr from '@queryEditorSrc/components/EtlConnsCtr.vue'
-import DataMigrationStageBtns from '@queryEditorSrc/components/DataMigrationStageBtns.vue'
+import EtlStageBtns from '@queryEditorSrc/components/EtlStageBtns.vue'
 import { mapState } from 'vuex'
 
 export default {
-    name: 'data-migration-stage-ctr',
+    name: 'etl-stage-ctr',
     components: {
         EtlSrcTree,
         EtlConnsCtr,
-        DataMigrationStageBtns,
+        EtlStageBtns,
     },
     data() {
         return {

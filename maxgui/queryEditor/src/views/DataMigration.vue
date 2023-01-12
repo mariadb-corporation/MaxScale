@@ -53,8 +53,8 @@
                 </h4>
             </div>
         </template>
-        <data-migration-stage-ctr v-if="hasActiveEtlTask" class="fill-height ml-6" />
-        <data-migration-list v-else class="fill-height" />
+        <etl-stage-ctr v-if="hasActiveEtlTask" class="fill-height ml-6" />
+        <etl-tasks v-else class="fill-height" />
     </page-wrapper>
 </template>
 
@@ -72,14 +72,14 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
-import DataMigrationList from '@queryEditorSrc/components/DataMigrationList.vue'
-import DataMigrationStageCtr from '@queryEditorSrc/components/DataMigrationStageCtr.vue'
+import EtlTasks from '@queryEditorSrc/components/EtlTasks.vue'
+import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 
 export default {
     name: 'data-migration',
     components: {
-        DataMigrationList,
-        DataMigrationStageCtr,
+        EtlTasks,
+        EtlStageCtr,
     },
     data() {
         return {

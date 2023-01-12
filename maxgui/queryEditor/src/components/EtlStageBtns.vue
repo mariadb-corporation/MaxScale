@@ -47,7 +47,7 @@
 import { mapState } from 'vuex'
 
 export default {
-    name: 'data-migration-stage-btns',
+    name: 'etl-stage-btns',
     props: {
         step: { type: Number, required: true },
         isNextDisabled: { type: Boolean, required: true },
