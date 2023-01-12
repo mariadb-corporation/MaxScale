@@ -43,5 +43,12 @@ struct Subnet
 };
 using SubnetArray = std::vector<Subnet>;
 bool is_proxy_protocol_allowed(const sockaddr_storage& addr, const SubnetArray& allowed_subnets);
+
+struct SubnetParseResult
+{
+    SubnetArray subnets;
+    std::string errmsg;
+};
+SubnetParseResult parse_networks_from_string(const std::string& networks_str);
 }
 }
