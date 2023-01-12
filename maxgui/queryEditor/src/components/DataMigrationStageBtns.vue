@@ -9,6 +9,7 @@
             rounded
             outlined
             depressed
+            :disabled="isPrevDisabled"
             @click="$emit('prev', step)"
         >
             {{ $mxs_t('prev') }}
@@ -50,6 +51,7 @@ export default {
     props: {
         step: { type: Number, required: true },
         isNextDisabled: { type: Boolean, required: true },
+        isPrevDisabled: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({

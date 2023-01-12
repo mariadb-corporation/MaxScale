@@ -32,6 +32,7 @@
                     <data-migration-stage-btns
                         class="mt-4"
                         :step="stageIdx"
+                        :isPrevDisabled="isPrevDisabled"
                         :isNextDisabled="isNextDisabled"
                         @prev="prev"
                         @next="next"
@@ -56,6 +57,7 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import EtlSrcTree from '@queryEditorSrc/components/EtlSrcTree.vue'
 import EtlConnsCtr from '@queryEditorSrc/components/EtlConnsCtr.vue'
 import DataMigrationStageBtns from '@queryEditorSrc/components/DataMigrationStageBtns.vue'
@@ -76,6 +78,7 @@ export default {
     computed: {
         ...mapState({
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
@@ -117,6 +120,16 @@ export default {
                 })
             },
         },
+        isPrevDisabled() {
+            const { SRC_OBJ } = this.ETL_STAGE_INDEX
+            switch (this.activeStageIdx) {
+                case SRC_OBJ:
+                    //Disable "previous" button if ETl already has source and destination connections
+                    return this.$typy(this.activeEtlTask, 'connections').safeArray.length === 2
+                default:
+                    return false
+            }
+        },
         isNextDisabled() {
             return !this.isFormValid
         },
@@ -133,13 +146,34 @@ export default {
         },
         async next(currentStage) {
             await this.$refs.form[currentStage].validate()
+            let isStageComplete = false
             if (this.isFormValid) {
                 const { CONN } = this.ETL_STAGE_INDEX
                 switch (currentStage) {
-                    case CONN:
-                    // TODO: open etl connections by getting form data via this.$refs.stageComponent[currentStage].$data
+                    case CONN: {
+                        /* TODO: handle shown connections open error.
+                         * Right now it's shown automatically in app snackbar because the requests
+                         * are called via $queryHttp axios
+                         */
+                        const { srcConnStr, dest } = this.$refs.stageComponent[currentStage].$data
+                        await QueryConn.dispatch('openEtlConn', {
+                            body: {
+                                target: 'odbc',
+                                connection_string: srcConnStr,
+                            },
+                            binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                            etl_task_id: this.activeEtlTask.id,
+                        })
+                        await QueryConn.dispatch('openEtlConn', {
+                            body: dest,
+                            binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                            etl_task_id: this.activeEtlTask.id,
+                        })
+                        isStageComplete = true
+                        break
+                    }
                 }
-                this.activeStageIdx++
+                if (isStageComplete) this.activeStageIdx++
             }
         },
     },
