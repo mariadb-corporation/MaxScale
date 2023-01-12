@@ -27,6 +27,7 @@ export default class EtlTask extends Extender {
             sql_script: this.string(''),
             active_stage_index: this.number(ETL_STAGE_INDEX.CONN),
             meta: this.attr({}),
+            logs: this.attr([]),
             created: this.number(Date.now()),
         }
     }

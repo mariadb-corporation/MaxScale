@@ -15,6 +15,7 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import QueryTab from '@queryEditorSrc/store/orm/models/QueryTab'
 import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
 import SchemaSidebar from '@queryEditorSrc/store/orm/models/SchemaSidebar'
+import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import {
     getAliveConns,
     openConn,
@@ -227,10 +228,12 @@ export default {
          * @param {Boolean} [param.showMsg] - show message related to connection in a snackbar
          */
         async openEtlConn(
-            { commit },
+            { commit, rootState },
             { body, binding_type, etl_task_id, meta = {}, showMsg = false }
         ) {
-            const [e, res] = await this.vue.$helpers.to(openConn(body))
+            const { $mxs_t, $helpers } = this.vue
+            const { ETL_SRC } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 QueryConn.insert({
@@ -247,13 +250,21 @@ export default {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: e
-                            ? this.vue.$helpers.getErrorsArr(e)
-                            : [this.vue.$mxs_t('info.connSuccessfully')],
+                        text: e ? $helpers.getErrorsArr(e) : [$mxs_t('info.connSuccessfully')],
                         type: e ? 'error' : 'success',
                     },
                     { root: true }
                 )
+            const target = binding_type === ETL_SRC ? $mxs_t('source') : $mxs_t('destination')
+            EtlTask.dispatch('pushLog', {
+                id: etl_task_id,
+                log: {
+                    timestamp: new Date().valueOf(),
+                    name: $mxs_t(e ? 'errors.failedToConnectTo' : 'info.connToSuccessfully', [
+                        target,
+                    ]),
+                },
+            })
         },
         /**
          * Disconnect a connection and its persisted data

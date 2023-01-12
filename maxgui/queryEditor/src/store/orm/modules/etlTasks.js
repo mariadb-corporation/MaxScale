@@ -71,6 +71,14 @@ export default {
             EtlTask.commit(state => (state.active_etl_task_id = task.id))
             //TODO: Detect ETL task form mode (view or edit, depends on the status of the task)
         },
+        pushLog(_, { id, log }) {
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.logs.push(log)
+                },
+            })
+        },
     },
     getters: {
         getActiveEtlTaskWithRelation: state =>
