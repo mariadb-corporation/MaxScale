@@ -20,6 +20,8 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/pcre2.hh>
+#include "cacheconfig.hh"
+
 
 class CacheRule
 {
@@ -49,6 +51,7 @@ public:
 
     virtual ~CacheRule();
 
+    virtual const CacheConfig& config() const = 0;
     virtual Attribute attribute() const = 0;
     virtual Op op() const = 0;
     virtual std::string value() const = 0;
@@ -61,6 +64,11 @@ public:
 class CacheRuleConcrete : public CacheRule
 {
 public:
+    const CacheConfig& config() const override final
+    {
+        return m_config;
+    }
+
     Attribute attribute() const override final
     {
         return m_attribute;
@@ -78,28 +86,27 @@ public:
 
     uint32_t debug() const override final
     {
-        return m_debug;
+        return m_config.debug;
     }
 
     bool compare(const std::string_view& value) const override final;
 
 protected:
-    CacheRuleConcrete(Attribute attribute,
+    CacheRuleConcrete(const CacheConfig* pConfig,
+                      Attribute attribute,
                       Op op,
-                      std::string value,
-                      uint32_t debug)
-        : m_attribute(attribute)
+                      std::string value)
+        : m_config(*pConfig)
+        , m_attribute(attribute)
         , m_op(op)
         , m_value(std::move(value))
-        , m_debug(debug)
     {
     }
 
-    Attribute   m_attribute; // What attribute is evalued.
-    Op          m_op;        // What operator is used.
-    std::string m_value;     // The value from the rule file.
-    uint32_t    m_debug;     // The debug bits.
-
+    const CacheConfig& m_config;    // The cache config.
+    Attribute          m_attribute; // What attribute is evalued.
+    Op                 m_op;        // What operator is used.
+    std::string        m_value;     // The value from the rule file.
 };
 
 class CacheRuleValue : public CacheRuleConcrete
@@ -114,11 +121,11 @@ protected:
     bool matches_query(const char* zDefault_db, const GWBUF* pQuery) const;
 
 protected:
-    CacheRuleValue(Attribute attribute,
+    CacheRuleValue(const CacheConfig* pConfig,
+                   Attribute attribute,
                    Op op,
-                   std::string value,
-                   uint32_t debug)
-        : CacheRuleConcrete(attribute, op, value, debug)
+                   std::string value)
+        : CacheRuleConcrete(pConfig, attribute, op, value)
     {
     }
 };
@@ -131,11 +138,11 @@ public:
                           const char* pValue, size_t length);
 
 protected:
-    CacheRuleSimple(Attribute attribute,
+    CacheRuleSimple(const CacheConfig* pConfig,
+                    Attribute attribute,
                     Op op,
-                    std::string value,
-                    uint32_t debug)
-        : CacheRuleValue(attribute, op, value, debug)
+                    std::string value)
+        : CacheRuleValue(pConfig, attribute, op, value)
     {
         mxb_assert(op == Op::EQ || op == Op::NEQ);
     }
@@ -146,10 +153,10 @@ protected:
 class CacheRuleCTD final : public CacheRuleSimple
 {
 public:
-    static CacheRuleCTD* create(Attribute attribute,
+    static CacheRuleCTD* create(const CacheConfig* pConfig,
+                                Attribute attribute,
                                 Op op,
-                                const char* zValue,
-                                uint32_t debug);
+                                const char* zValue);
 
 protected:
     bool matches_column(const char* zDefault_db, const GWBUF* pQuery) const override;
@@ -160,11 +167,11 @@ protected:
     std::string m_database;
 
 private:
-    CacheRuleCTD(Attribute attribute,
+    CacheRuleCTD(const CacheConfig* pConfig,
+                 Attribute attribute,
                  Op op,
-                 std::string value,
-                 uint32_t debug)
-        : CacheRuleSimple(attribute, op, value, debug)
+                 std::string value)
+        : CacheRuleSimple(pConfig, attribute, op, value)
     {
     }
 };
@@ -172,17 +179,17 @@ private:
 class CacheRuleQuery final : public CacheRuleSimple
 {
 public:
-    static CacheRuleQuery* create(Attribute attribute, // What attribute is evalued.
-                                  Op op,               // What operator is used.
-                                  const char* zValue,  // The value from the rule file.
-                                  uint32_t debug);     // Debug bits
+    static CacheRuleQuery* create(const CacheConfig* pConfig, // The cache config.
+                                  Attribute attribute,        // What attribute is evalued.
+                                  Op op,                      // What operator is used.
+                                  const char* zValue);        // The value from the rule file.
 
 private:
-    CacheRuleQuery(Attribute attribute,
+    CacheRuleQuery(const CacheConfig* pConfig,
+                   Attribute attribute,
                    Op op,
-                   std::string value,
-                   uint32_t debug)
-        : CacheRuleSimple(attribute, op, value, debug)
+                   std::string value)
+        : CacheRuleSimple(pConfig, attribute, op, value)
     {
     }
 };
@@ -194,21 +201,21 @@ public:
 
     bool compare_n(const char* pValue, size_t length) const override final;
 
-    static CacheRuleRegex* create(Attribute attribute, // What attribute is evalued.
-                                  Op op,               // What operator is used.
-                                  const char* zValue,  // The value from the rule file.
-                                  uint32_t debug);     // Debug bits
+    static CacheRuleRegex* create(const CacheConfig* pConfig, // The cache config.
+                                  Attribute attribute,        // What attribute is evalued.
+                                  Op op,                      // What operator is used.
+                                  const char* zValue);        // The value from the rule file.
 
 protected:
     bool matches_column(const char* zDefault_db, const GWBUF* pQuery) const override;
     bool matches_table(const char* zDefault_db, const GWBUF* pQuery) const override;
 
 private:
-    CacheRuleRegex(Attribute attribute,
+    CacheRuleRegex(const CacheConfig* pConfig,
+                   Attribute attribute,
                    Op op,
-                   std::string value,
-                   uint32_t debug)
-        : CacheRuleValue(attribute, op, value, debug)
+                   std::string value)
+        : CacheRuleValue(pConfig, attribute, op, value)
     {
         mxb_assert(op == Op::LIKE || op == Op::UNLIKE);
     }
@@ -219,10 +226,15 @@ private:
 class CacheRuleUser final : public CacheRule
 {
 public:
-    static CacheRuleUser* create(Attribute attribute, // What attribute is evalued.
-                                 Op op,               // What operator is used.
-                                 const char* zValue,  // The value from the rule file.
-                                 uint32_t debug);     // Debug bits
+    static CacheRuleUser* create(const CacheConfig* pConfig, // The cache config.
+                                 Attribute attribute,        // What attribute is evalued.
+                                 Op op,                      // What operator is used.
+                                 const char* zValue);        // The value from the rule file.
+
+    const CacheConfig& config() const override
+    {
+        return m_sDelegate->config();
+    }
 
     Attribute attribute() const override
     {
@@ -276,36 +288,42 @@ public:
     /**
      * Creates an empty rules object.
      *
-     * @param debug The debug level.
+     * @param pConfig The cache config.
      *
      * @return An empty rules object, or NULL in case of error.
      */
-    static std::unique_ptr<CacheRules> create(uint32_t debug);
+    static std::unique_ptr<CacheRules> create(const CacheConfig* pConfig);
 
     /**
      * Parses the caching rules from a string.
      *
-     * @param zJson  Null-terminate string containing JSON.
-     * @param debug  The debug level.
-     * @param pRules [out] The loaded rules.
+     * @param pConfig The cache config.
+     * @param zJson   Null-terminate string containing JSON.
+     * @param pRules  [out] The loaded rules.
      *
      * @return True, if the rules could be parsed, false otherwise.
      */
-    static bool parse(const char* zJson, uint32_t debug, std::vector<SCacheRules>* pRules);
+    static bool parse(const CacheConfig* pConfig,
+                      const char* zJson,
+                      std::vector<SCacheRules>* pRules);
 
     /**
      * Loads the caching rules from a file.
      *
-     * @param path   The path of the file containing the rules.
-     * @param debug  The debug level.
-     * @param pRules [out] The loaded rules.
+     * @param pConfig The cache config.
+     * @param path    The path of the file containing the rules.
+     * @param pRules  [out] The loaded rules.
      *
      * @return True, if the rules could be loaded, false otherwise.
      */
-    static bool load(const char* zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
-    static bool load(const std::string& path, uint32_t debug, std::vector<SCacheRules>* pRules)
+    static bool load(const CacheConfig* pConfig,
+                     const char* zPath,
+                     std::vector<SCacheRules>* pRules);
+    static bool load(const CacheConfig* pConfig,
+                     const std::string& path,
+                     std::vector<SCacheRules>* pRules)
     {
-        return load(path.c_str(), debug, pRules);
+        return load(pConfig, path.c_str(), pRules);
     }
 
     /**
@@ -340,10 +358,10 @@ public:
 private:
     friend class Tester;
 
-    CacheRules(uint32_t debug);
+    CacheRules(const CacheConfig* pConfig);
 
-    static bool create_from_json(json_t* pRoot, uint32_t debug, std::vector<SCacheRules>* pRules);
-    static CacheRules* create_from_json(json_t* pRoot, uint32_t debug);
+    static bool create_from_json(const CacheConfig* pConfig, json_t* pRoot, std::vector<SCacheRules>* pRules);
+    static CacheRules* create_from_json(const CacheConfig* pConfig, json_t* pRoot);
 
     bool parse_json(json_t* pRoot);
 
@@ -365,15 +383,15 @@ private:
                               const char* z,
                               CacheRule::Attribute* pAttribute);
 
-    static CacheRule* create_simple_rule(CacheRule::Attribute attribute,
+    static CacheRule* create_simple_rule(const CacheConfig* pConfig,
+                                         CacheRule::Attribute attribute,
                                          CacheRule::Op op,
-                                         const char* zValue,
-                                         uint32_t debug);
+                                         const char* zValue);
 
-    static CacheRule* create_rule(CacheRule::Attribute attribute,
+    static CacheRule* create_rule(const CacheConfig* pConfig,
+                                  CacheRule::Attribute attribute,
                                   CacheRule::Op op,
-                                  const char* zValue,
-                                  uint32_t debug);
+                                  const char* zValue);
 
     static Attributes s_store_attributes;
     static Attributes s_use_attributes;
@@ -384,8 +402,8 @@ private:
     using SCacheRuleValueVector = std::vector<SCacheRuleValue>;
     using SCacheRuleUserVector = std::vector<SCacheRuleUser>;
 
+    const CacheConfig&    m_config;            // The cache config.
     json_t*               m_pRoot { nullptr }; // The JSON root object.
-    uint32_t              m_debug { 0 };      // The debug level.
-    SCacheRuleValueVector m_store_rules;      // The rules for when to store data to the cache.
-    SCacheRuleUserVector  m_use_rules;        // The rules for when to use data from the cache.
+    SCacheRuleValueVector m_store_rules;       // The rules for when to store data to the cache.
+    SCacheRuleUserVector  m_use_rules;         // The rules for when to use data from the cache.
 };

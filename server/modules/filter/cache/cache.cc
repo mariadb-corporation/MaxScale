@@ -42,7 +42,7 @@ Cache::~Cache()
 }
 
 // static
-bool Cache::get_storage_factory(const CacheConfig& config,
+bool Cache::get_storage_factory(const CacheConfig* pConfig,
                                 std::vector<SCacheRules>* pRules,
                                 StorageFactory** ppFactory)
 {
@@ -51,13 +51,13 @@ bool Cache::get_storage_factory(const CacheConfig& config,
 
     bool rv = false;
 
-    if (!config.rules.empty())
+    if (!pConfig->rules.empty())
     {
-        rv = CacheRules::load(config.rules, config.debug, &rules);
+        rv = CacheRules::load(pConfig, pConfig->rules, &rules);
     }
     else
     {
-        unique_ptr<CacheRules> sRules(CacheRules::create(config.debug));
+        unique_ptr<CacheRules> sRules(CacheRules::create(pConfig));
 
         if (sRules.get())
         {
@@ -68,7 +68,7 @@ bool Cache::get_storage_factory(const CacheConfig& config,
 
     if (rv)
     {
-        pFactory = StorageFactory::open(config.storage);
+        pFactory = StorageFactory::open(pConfig->storage);
 
         if (pFactory)
         {
@@ -77,7 +77,7 @@ bool Cache::get_storage_factory(const CacheConfig& config,
         }
         else
         {
-            MXB_ERROR("Could not open storage factory '%s'.", config.storage.c_str());
+            MXB_ERROR("Could not open storage factory '%s'.", pConfig->storage.c_str());
         }
     }
     else

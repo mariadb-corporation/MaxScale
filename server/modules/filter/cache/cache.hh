@@ -214,7 +214,7 @@ protected:
           const std::vector<SCacheRules>& rules,
           SStorageFactory sFactory);
 
-    static bool get_storage_factory(const CacheConfig& config,
+    static bool get_storage_factory(const CacheConfig* pConfig,
                                     std::vector<SCacheRules>* pRules,
                                     StorageFactory** ppFactory);
 

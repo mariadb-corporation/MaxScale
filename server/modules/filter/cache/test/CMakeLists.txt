@@ -13,8 +13,8 @@ add_library(cachetester
 # Depends on C/C
 add_dependencies(cachetester connector-c)
 
-add_executable(testrules testrules.cc ../rules.cc)
-target_link_libraries(testrules maxscale-common ${JANSSON_LIBRARIES})
+add_executable(testrules testrules.cc)
+target_link_libraries(testrules cache maxscale-common ${JANSSON_LIBRARIES})
 
 add_executable(testkeygeneration
   testkeygeneration.cc

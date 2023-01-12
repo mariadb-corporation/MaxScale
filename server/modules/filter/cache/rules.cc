@@ -220,8 +220,9 @@ bool CacheRuleValue::matches(const char* zDefault_db, const GWBUF* pQuery) const
         mxb_assert(!true);
     }
 
-    if ((matches && (m_debug & CACHE_DEBUG_MATCHING))
-        || (!matches && (m_debug & CACHE_DEBUG_NON_MATCHING)))
+    auto debug = m_config.debug;
+    if ((matches && (debug & CACHE_DEBUG_MATCHING))
+        || (!matches && (debug & CACHE_DEBUG_NON_MATCHING)))
     {
         const char* sql;
         int sql_len;
@@ -343,17 +344,17 @@ bool CacheRuleSimple::compare_n(const std::string& lhs,
 //
 
 //static
-CacheRuleCTD* CacheRuleCTD::create(Attribute attribute,
+CacheRuleCTD* CacheRuleCTD::create(const CacheConfig* pConfig,
+                                   Attribute attribute,
                                    Op op,
-                                   const char* zValue,
-                                   uint32_t debug)
+                                   const char* zValue)
 {
     mxb_assert((attribute == Attribute::COLUMN)
                || (attribute == Attribute::TABLE)
                || (attribute == Attribute::DATABASE));
     mxb_assert((op == Op::EQ) || (op == Op::NEQ));
 
-    CacheRuleCTD* pRule = new CacheRuleCTD(attribute, op, zValue, debug);
+    CacheRuleCTD* pRule = new CacheRuleCTD(pConfig, attribute, op, zValue);
 
     bool error = false;
 
@@ -643,15 +644,15 @@ bool CacheRuleCTD::matches_table(const char* zDefault_db, const GWBUF* pQuery) c
 //
 
 //static
-CacheRuleQuery* CacheRuleQuery::create(Attribute attribute,
+CacheRuleQuery* CacheRuleQuery::create(const CacheConfig* pConfig,
+                                       Attribute attribute,
                                        Op op,
-                                       const char* zValue,
-                                       uint32_t debug)
+                                       const char* zValue)
 {
     mxb_assert(attribute == Attribute::QUERY);
     mxb_assert((op == Op::EQ) || (op == Op::NEQ));
 
-    CacheRuleQuery* pRule = new CacheRuleQuery(attribute, op, zValue, debug);
+    CacheRuleQuery* pRule = new CacheRuleQuery(pConfig, attribute, op, zValue);
 
     return pRule;
 }
@@ -662,10 +663,10 @@ CacheRuleQuery* CacheRuleQuery::create(Attribute attribute,
 //
 
 //static
-CacheRuleRegex* CacheRuleRegex::create(Attribute attribute,
+CacheRuleRegex* CacheRuleRegex::create(const CacheConfig* pConfig,
+                                       Attribute attribute,
                                        Op op,
-                                       const char* zValue,
-                                       uint32_t debug)
+                                       const char* zValue)
 {
     mxb_assert((op == Op::LIKE) || (op == Op::UNLIKE));
 
@@ -686,7 +687,7 @@ CacheRuleRegex* CacheRuleRegex::create(Attribute attribute,
         // complained about it already.
         pcre2_jit_compile(pCode, PCRE2_JIT_COMPLETE);
 
-        pRule = new CacheRuleRegex(attribute, op, zValue, debug);
+        pRule = new CacheRuleRegex(pConfig, attribute, op, zValue);
         pRule->m_pCode = pCode;
     }
     else
@@ -894,10 +895,10 @@ bool CacheRuleRegex::matches_table(const char* zDefault_db, const GWBUF* pQuery)
 //
 
 //static
-CacheRuleUser* CacheRuleUser::create(Attribute attribute,
+CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
+                                     Attribute attribute,
                                      Op op,
-                                     const char* zValue,
-                                     uint32_t debug)
+                                     const char* zValue)
 {
     CacheRule* pDelegate = nullptr;
 
@@ -953,7 +954,7 @@ CacheRuleUser* CacheRuleUser::create(Attribute attribute,
 
                 sprintf(regexp, "%s@%s", pcre_user, pcre_host);
 
-                pDelegate = CacheRuleRegex::create(attribute, op, regexp, debug);
+                pDelegate = CacheRuleRegex::create(pConfig, attribute, op, regexp);
             }
             else
             {
@@ -966,11 +967,11 @@ CacheRuleUser* CacheRuleUser::create(Attribute attribute,
                 class RuleSimpleUser : public CacheRuleConcrete
                 {
                 public:
-                    RuleSimpleUser(Attribute attribute,
+                    RuleSimpleUser(const CacheConfig* pConfig,
+                                   Attribute attribute,
                                    Op op,
-                                   std::string value,
-                                   uint32_t debug)
-                        : CacheRuleConcrete(attribute, op, value, debug)
+                                   std::string value)
+                        : CacheRuleConcrete(pConfig, attribute, op, value)
                     {
                     }
 
@@ -981,7 +982,7 @@ CacheRuleUser* CacheRuleUser::create(Attribute attribute,
                     }
                 };
 
-                pDelegate = new RuleSimpleUser(attribute, op, std::move(value), debug);
+                pDelegate = new RuleSimpleUser(pConfig, attribute, op, std::move(value));
             }
         }
         else
@@ -1068,8 +1069,8 @@ CacheRules::Attributes CacheRules::s_use_attributes =
 };
 
 // static
-bool CacheRules::load(const char* zPath,
-                      uint32_t debug,
+bool CacheRules::load(const CacheConfig* pConfig,
+                      const char* zPath,
                       std::vector<SCacheRules>* pRules)
 {
     bool rv = false;
@@ -1084,7 +1085,7 @@ bool CacheRules::load(const char* zPath,
         if (pRoot)
         {
             std::vector<SCacheRules> rules;
-            rv = create_from_json(pRoot, debug, &rules);
+            rv = create_from_json(pConfig, pRoot, &rules);
 
             if (rv)
             {
@@ -1117,8 +1118,8 @@ bool CacheRules::load(const char* zPath,
 }
 
 //static
-bool CacheRules::parse(const char* zJson,
-                       uint32_t debug,
+bool CacheRules::parse(const CacheConfig* pConfig,
+                       const char* zJson,
                        std::vector<SCacheRules>* pRules)
 {
     bool rv = false;
@@ -1129,7 +1130,7 @@ bool CacheRules::parse(const char* zJson,
     if (pRoot)
     {
         std::vector<SCacheRules> rules;
-        rv = create_from_json(pRoot, debug, &rules);
+        rv = create_from_json(pConfig, pRoot, &rules);
 
         if (rv)
         {
@@ -1206,8 +1207,8 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
 }
 
 
-CacheRules::CacheRules(uint32_t debug)
-    : m_debug(debug)
+CacheRules::CacheRules(const CacheConfig* pConfig)
+    : m_config(*pConfig)
 {
 }
 
@@ -1220,11 +1221,11 @@ CacheRules::~CacheRules()
 }
 
 // static
-std::unique_ptr<CacheRules> CacheRules::create(uint32_t debug)
+std::unique_ptr<CacheRules> CacheRules::create(const CacheConfig* pConfig)
 {
     std::unique_ptr<CacheRules> sThis;
 
-    sThis = std::unique_ptr<CacheRules>(new(std::nothrow) CacheRules(debug));
+    sThis = std::unique_ptr<CacheRules>(new(std::nothrow) CacheRules(pConfig));
 
     return sThis;
 }
@@ -1235,10 +1236,10 @@ const json_t* CacheRules::json() const
 }
 
 //static
-CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
+CacheRule* CacheRules::create_simple_rule(const CacheConfig* pConfig,
+                                          CacheRule::Attribute attribute,
                                           CacheRule::Op op,
-                                          const char* zValue,
-                                          uint32_t debug)
+                                          const char* zValue)
 {
     mxb_assert((op == CacheRule::Op::EQ) || (op == CacheRule::Op::NEQ));
 
@@ -1249,15 +1250,15 @@ CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
     case CacheRule::Attribute::COLUMN:
     case CacheRule::Attribute::TABLE:
     case CacheRule::Attribute::DATABASE:
-        pRule = CacheRuleCTD::create(attribute, op, zValue, debug);
+        pRule = CacheRuleCTD::create(pConfig, attribute, op, zValue);
         break;
 
     case CacheRule::Attribute::USER:
-        pRule = CacheRuleUser::create(attribute, op, zValue, debug);
+        pRule = CacheRuleUser::create(pConfig, attribute, op, zValue);
         break;
 
     case CacheRule::Attribute::QUERY:
-        pRule = CacheRuleQuery::create(attribute, op, zValue, debug);
+        pRule = CacheRuleQuery::create(pConfig, attribute, op, zValue);
         break;
 
     default:
@@ -1269,10 +1270,10 @@ CacheRule* CacheRules::create_simple_rule(CacheRule::Attribute attribute,
 }
 
 //static
-CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
+CacheRule* CacheRules::create_rule(const CacheConfig* pConfig,
+                                   CacheRule::Attribute attribute,
                                    CacheRule::Op op,
-                                   const char* zValue,
-                                   uint32_t debug)
+                                   const char* zValue)
 {
     CacheRule* pRule = nullptr;
 
@@ -1280,12 +1281,12 @@ CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
     {
     case CacheRule::Op::EQ:
     case CacheRule::Op::NEQ:
-        pRule = create_simple_rule(attribute, op, zValue, debug);
+        pRule = create_simple_rule(pConfig, attribute, op, zValue);
         break;
 
     case CacheRule::Op::LIKE:
     case CacheRule::Op::UNLIKE:
-        pRule = CacheRuleRegex::create(attribute, op, zValue, debug);
+        pRule = CacheRuleRegex::create(pConfig, attribute, op, zValue);
         break;
 
     default:
@@ -1298,11 +1299,11 @@ CacheRule* CacheRules::create_rule(CacheRule::Attribute attribute,
 }
 
 //static
-CacheRules* CacheRules::create_from_json(json_t* pRoot, uint32_t debug)
+CacheRules* CacheRules::create_from_json(const CacheConfig* pConfig, json_t* pRoot)
 {
     mxb_assert(pRoot);
 
-    CacheRules* pRules = new CacheRules(debug);
+    CacheRules* pRules = new CacheRules(pConfig);
 
     if (pRules->parse_json(pRoot))
     {
@@ -1318,8 +1319,8 @@ CacheRules* CacheRules::create_from_json(json_t* pRoot, uint32_t debug)
 }
 
 //static
-bool CacheRules::create_from_json(json_t* pRoot,
-                                  uint32_t debug,
+bool CacheRules::create_from_json(const CacheConfig* pConfig,
+                                  json_t* pRoot,
                                   std::vector<SCacheRules>* pRules_vector)
 {
     bool rv = false;
@@ -1334,7 +1335,7 @@ bool CacheRules::create_from_json(json_t* pRoot,
             json_t* pObject = json_array_get(pRoot, i);
             mxb_assert(pObject);
 
-            CacheRules* pRules = create_from_json(pObject, debug);
+            CacheRules* pRules = create_from_json(pConfig, pObject);
 
             if (pRules)
             {
@@ -1367,7 +1368,7 @@ bool CacheRules::create_from_json(json_t* pRoot,
     }
     else
     {
-        CacheRules* pRules = create_from_json(pRoot, debug);
+        CacheRules* pRules = create_from_json(pConfig, pRoot);
 
         if (pRules)
         {
@@ -1475,7 +1476,7 @@ CacheRule* CacheRules::parse_element(json_t* pObject,
 
             if (CacheRule::from_string(json_string_value(pO), &op))
             {
-                pRule = create_rule(attribute, op, json_string_value(pV), m_debug);
+                pRule = create_rule(&m_config, attribute, op, json_string_value(pV));
             }
             else
             {

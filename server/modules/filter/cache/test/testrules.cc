@@ -100,7 +100,8 @@ int CacheRules::Tester::test_user()
 
         CacheRules::Vector rules;
 
-        bool rv = CacheRules::parse(test_case.json, 0, &rules);
+        CacheConfig config("noconfig", nullptr);
+        bool rv = CacheRules::parse(&config, test_case.json, &rules);
         mxb_assert(rv);
 
         for (size_t i = 0; i < rules.size(); ++i)
@@ -385,7 +386,8 @@ int CacheRules::Tester::test_store()
 
         std::vector<std::shared_ptr<CacheRules>> rules;
 
-        bool rv = CacheRules::parse(test_case.rule, 0, &rules);
+        CacheConfig config("noconfig", nullptr);
+        bool rv = CacheRules::parse(&config, test_case.rule, &rules);
         mxb_assert(rv);
 
         for (size_t i = 0; i < rules.size(); ++i)
@@ -505,7 +507,8 @@ int CacheRules::Tester::test_array_store()
 
     std::vector<SCacheRules> rules;
 
-    if (CacheRules::parse(ARRAY_RULES, 0, &rules))
+    CacheConfig config("noconfig", nullptr);
+    if (CacheRules::parse(&config, ARRAY_RULES, &rules))
     {
         for (int i = 0; i < n_array_test_cases; ++i)
         {
