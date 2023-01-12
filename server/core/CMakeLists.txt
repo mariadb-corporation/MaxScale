@@ -84,12 +84,6 @@ target_link_libraries(maxscale-common
   uuid
 )
 
-if(WITH_ASAN AND ASAN_FOUND)
-  target_link_libraries(maxscale-common ${ASAN_LIBRARIES})
-elseif(WITH_UBSAN AND UBSAN_FOUND)
-  target_link_libraries(maxscale-common ${UBSAN_LIBRARIES})
-endif()
-
 if (BUILD_KMIP_KEY_MANAGER)
   include(${CMAKE_SOURCE_DIR}/cmake/BuildLibKMIP.cmake)
   add_dependencies(maxscale-common libkmip)
