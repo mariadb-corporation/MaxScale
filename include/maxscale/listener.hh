@@ -497,9 +497,8 @@ private:
 
     uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context context) override;
 
-    static bool read_connection_init_sql(const std::string& filepath,
-                                         mxs::ListenerData::ConnectionInitSql* output);
-    bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output);
+    bool           read_connection_init_sql(ListenerData::ConnectionInitSql& output) const;
+    bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output) const;
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config() const;
     void           set_type();

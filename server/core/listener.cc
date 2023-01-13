@@ -1348,8 +1348,7 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
         ListenerData::ConnectionInitSql init_sql;
         ListenerData::SMappingInfo mapping_info;
 
-        if (ssl.configure(create_ssl_config())
-            && read_connection_init_sql(m_config.connection_init_sql_file, &init_sql)
+        if (ssl.configure(create_ssl_config()) && read_connection_init_sql(init_sql)
             && read_user_mapping(mapping_info))
         {
             bool auth_modules_ok = true;
@@ -1443,17 +1442,16 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
 /**
  * Read in connection init sql file.
  *
- * @param filepath Path to text file
  * @param output Output object
  * @return True on success, or if setting was not set.
  */
-bool
-Listener::read_connection_init_sql(const string& filepath, ListenerData::ConnectionInitSql* output)
+bool Listener::read_connection_init_sql(ListenerData::ConnectionInitSql& output) const
 {
+    const string& filepath = m_config.connection_init_sql_file;
     bool file_ok = true;
     if (!filepath.empty())
     {
-        auto& queries = output->queries;
+        auto& queries = output.queries;
 
         std::ifstream inputfile(filepath);
         if (inputfile.is_open())
@@ -1483,7 +1481,7 @@ Listener::read_connection_init_sql(const string& filepath, ListenerData::Connect
             {
                 total_buf.append(mariadb::create_query(query));
             }
-            output->buffer_contents = move(total_buf);
+            output.buffer_contents = std::move(total_buf);
         }
     }
     return file_ok;
@@ -1497,7 +1495,7 @@ Listener::SData Listener::create_test_data(const mxs::ConfigParameters& params)
     return listener->create_shared_data(protocol_params);
 }
 
-bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output)
+bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output) const
 {
     using mxb::Json;
     auto& filepath = m_config.user_mapping_file;
