@@ -53,3 +53,7 @@ add_test(test_encryption test_encryption)
 add_executable(test_latch test_latch.cc)
 target_link_libraries(test_latch maxbase)
 add_test(test_latch test_latch)
+
+add_executable(test_proxy_protocol test_proxy_protocol.cc)
+target_link_libraries(test_proxy_protocol maxbase)
+add_test(test_proxy_protocol test_proxy_protocol)
