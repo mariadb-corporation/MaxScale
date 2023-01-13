@@ -158,6 +158,7 @@ protected:
 
     MariaDBMonitor&      m_mon;
     std::chrono::seconds m_ssh_timeout {0};
+    std::chrono::seconds m_port_open_delay {0};
     bool                 m_source_slaves_stopped {false};
     Result               m_result;
 
