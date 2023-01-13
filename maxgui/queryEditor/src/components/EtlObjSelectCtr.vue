@@ -57,7 +57,7 @@ import { mapActions, mapMutations, mapState } from 'vuex'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default {
-    name: 'etl-src-tree',
+    name: 'etl-obj-select-ctr',
     data() {
         return {
             filterTxt: '',
@@ -66,6 +66,7 @@ export default {
     },
     computed: {
         ...mapState({
+            are_conns_alive: state => state.etlMem.are_conns_alive,
             src_schema_tree: state => state.etlMem.src_schema_tree,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
@@ -77,8 +78,16 @@ export default {
             }))
         },
     },
+    async created() {
+        this.validateEtlTaskConns()
+        if (this.are_conns_alive) await this.fetchSrcSchemas()
+    },
     methods: {
-        ...mapActions({ loadChildNodes: 'etlMem/loadChildNodes' }),
+        ...mapActions({
+            validateEtlTaskConns: 'etlMem/validateEtlTaskConns',
+            loadChildNodes: 'etlMem/loadChildNodes',
+            fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
+        }),
         ...mapMutations({ SET_SRC_SCHEMA_TREE: 'etlMem/SET_SRC_SCHEMA_TREE' }),
         filter(node, search, textKey) {
             return this.$helpers.ciStrIncludes(node[textKey], search)

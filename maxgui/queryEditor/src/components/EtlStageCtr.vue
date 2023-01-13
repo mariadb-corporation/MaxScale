@@ -24,6 +24,7 @@
                 class="fill-height"
             >
                 <div
+                    v-if="stageIdx === activeStageIdx"
                     class="stage-container pa-6 fill-height d-flex flex-column justify-space-between"
                 >
                     <v-form ref="form" v-model="isFormValid" lazy-validation>
@@ -58,7 +59,7 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import EtlSrcTree from '@queryEditorSrc/components/EtlSrcTree.vue'
+import EtlObjSelectCtr from '@queryEditorSrc/components/EtlObjSelectCtr.vue'
 import EtlConnsCtr from '@queryEditorSrc/components/EtlConnsCtr.vue'
 import EtlStageBtns from '@queryEditorSrc/components/EtlStageBtns.vue'
 import { mapState } from 'vuex'
@@ -66,7 +67,7 @@ import { mapState } from 'vuex'
 export default {
     name: 'etl-stage-ctr',
     components: {
-        EtlSrcTree,
+        EtlObjSelectCtr,
         EtlConnsCtr,
         EtlStageBtns,
     },
@@ -94,7 +95,7 @@ export default {
                 },
                 {
                     name: this.$mxs_t('objSelection'),
-                    component: 'etl-src-tree',
+                    component: 'etl-obj-select-ctr',
                     isComplete: this.activeStageIdx > SRC_OBJ,
                 },
                 {
@@ -135,42 +136,47 @@ export default {
         },
     },
     watch: {
-        async activeStageIdx(v) {
+        async activeStageIdx() {
             // Reset validation after changing the stage
-            await this.$refs.form[v].resetValidation()
+            await this.$refs.form[0].resetValidation()
         },
     },
     methods: {
         prev() {
             this.activeStageIdx--
         },
+        /**
+         * TODO: handle shown connections open error.
+         * Right now it's shown automatically in app snackbar because the requests
+         * are called via $queryHttp axios
+         */
+        async handleOpenConns(currentStage) {
+            const etl_task_id = this.activeEtlTask.id
+            const { src, dest } = this.$refs.stageComponent[currentStage].$data
+            await QueryConn.dispatch('openEtlConn', {
+                body: {
+                    target: 'odbc',
+                    connection_string: src.connection_string,
+                },
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                etl_task_id,
+                meta: { src_type: src.type },
+            })
+            await QueryConn.dispatch('openEtlConn', {
+                body: dest,
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                etl_task_id,
+                meta: { dest_name: dest.target },
+            })
+        },
         async next(currentStage) {
-            await this.$refs.form[currentStage].validate()
+            await this.$refs.form[0].validate()
             let isStageComplete = false
             if (this.isFormValid) {
                 const { CONN } = this.ETL_STAGE_INDEX
                 switch (currentStage) {
                     case CONN: {
-                        /* TODO: handle shown connections open error.
-                         * Right now it's shown automatically in app snackbar because the requests
-                         * are called via $queryHttp axios
-                         */
-                        const { src, dest } = this.$refs.stageComponent[currentStage].$data
-                        await QueryConn.dispatch('openEtlConn', {
-                            body: {
-                                target: 'odbc',
-                                connection_string: src.connection_string,
-                            },
-                            binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
-                            etl_task_id: this.activeEtlTask.id,
-                            meta: { src_type: src.type },
-                        })
-                        await QueryConn.dispatch('openEtlConn', {
-                            body: dest,
-                            binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
-                            etl_task_id: this.activeEtlTask.id,
-                            meta: { dest_name: dest.target },
-                        })
+                        await this.handleOpenConns(currentStage)
                         isStageComplete = true
                         break
                     }

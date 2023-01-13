@@ -18,34 +18,58 @@ export default {
     namespaced: true,
     state: {
         src_schema_tree: [],
+        are_conns_alive: false,
     },
     mutations: {
         SET_SRC_SCHEMA_TREE(state, payload) {
             state.src_schema_tree = payload
         },
+        SET_ARE_CONNS_ALIVE(state, payload) {
+            state.are_conns_alive = payload
+        },
     },
     actions: {
-        async fetchSrcSchemas({ getters, commit }) {
-            const { id: connId } = EtlTask.getters('getActiveSrcConn')
-            if (connId) {
-                const [e, res] = await this.vue.$helpers.to(
-                    query({ id: connId, body: { sql: getters.getSchemaSql } })
+        validateEtlTaskConns({ commit }) {
+            const { id } = EtlTask.getters('getActiveEtlTaskWithRelation')
+            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
+            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
+            const areConnsAlive = Boolean(srcConn.id && destConn.id)
+            commit('SET_ARE_CONNS_ALIVE', areConnsAlive)
+            if (!areConnsAlive)
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [this.vue.$mxs_t('errors.connsExpired')],
+                        type: 'error',
+                    },
+                    { root: true }
                 )
-                if (!e) {
-                    const { nodes } = queryHelper.genNodeData({
-                        queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]')
-                            .safeObject,
-                        nodeAttrs: {
-                            isEmptyChildren: true,
-                        },
-                    })
-                    commit('SET_SRC_SCHEMA_TREE', nodes)
-                }
+        },
+        async fetchSrcSchemas({ getters, commit }) {
+            const { $mxs_t, $helpers, $typy } = this.vue
+
+            const [e, res] = await $helpers.to(
+                query({
+                    id: EtlTask.getters('getActiveSrcConn').id,
+                    body: { sql: getters.getSchemaSql },
+                })
+            )
+            let logName = ''
+            if (e) logName = $mxs_t('errors.retrieveSchemaObj')
+            else {
+                const { nodes } = queryHelper.genNodeData({
+                    queryResult: $typy(res, 'data.data.attributes.results[0]').safeObject,
+                    nodeAttrs: {
+                        isEmptyChildren: true,
+                    },
+                })
+                commit('SET_SRC_SCHEMA_TREE', nodes)
+                logName = $mxs_t('info.retrieveSchemaObj')
             }
-            /**
-             * TODO: Show an error message in a snackbar to tell the users to reconnect
-             * as the connection may have been expired
-             */
+            EtlTask.dispatch('pushLog', {
+                id: EtlTask.getters('getActiveEtlTaskWithRelation').id,
+                log: { timestamp: new Date().valueOf(), name: logName },
+            })
         },
         /**
          * For now, only TBL nodes can be migrated, so the nodeGroup must be a TBL_G node

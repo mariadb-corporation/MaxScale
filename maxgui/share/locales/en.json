@@ -178,6 +178,7 @@
         "errors": {
             "addressRequired": "address is required when using port",
             "addressRequiredEmpty": "address should be defined only when using port",
+            "connsExpired": "Connections are expired, please reconnect.",
             "duplicatedValue": "{inputValue} already exists",
             "etlCanceledFailed": "Failed to cancel ETL operation. Please check the logs for more information.",
             "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones",
@@ -194,6 +195,7 @@
             "refreshLater": "Please refresh in a few moments",
             "requiredDb": "Database is a required field for the chosen driver.",
             "requiredInput": "{inputName} is required",
+            "retrieveSchemaObj": "Failed to retrieve schema objects from source.",
             "serviceUnavailable": "MaxScale is temporarily unavailable",
             "wrongCredentials": "Incorrect password or username"
         },
@@ -252,6 +254,7 @@
             "queryIncomplete": "Return fewer rows or increase query row limit",
             "reconnSuccessfully": "Reconnected successfully",
             "refreshRate": "Click to change refresh rate",
+            "retrieveSchemaObj": "Retrieve schema objects from source successfully.",
             "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
             "showTrendline": "The trend line can only be computed for numerical data on both axes",
             "switchover": "Swap the running master with a designated slave",
