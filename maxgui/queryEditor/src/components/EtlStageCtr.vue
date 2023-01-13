@@ -155,19 +155,21 @@ export default {
                          * Right now it's shown automatically in app snackbar because the requests
                          * are called via $queryHttp axios
                          */
-                        const { srcConnStr, dest } = this.$refs.stageComponent[currentStage].$data
+                        const { src, dest } = this.$refs.stageComponent[currentStage].$data
                         await QueryConn.dispatch('openEtlConn', {
                             body: {
                                 target: 'odbc',
-                                connection_string: srcConnStr,
+                                connection_string: src.connection_string,
                             },
                             binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
                             etl_task_id: this.activeEtlTask.id,
+                            meta: { src_type: src.type },
                         })
                         await QueryConn.dispatch('openEtlConn', {
                             body: dest,
                             binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
                             etl_task_id: this.activeEtlTask.id,
+                            meta: { dest_name: dest.target },
                         })
                         isStageComplete = true
                         break

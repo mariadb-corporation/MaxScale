@@ -6,6 +6,30 @@
         </p>
         <template v-else>
             <v-row class="my-0 mx-n1">
+                <v-col cols="12" class="pa-1">
+                    <label class="field__label mxs-color-helper text-small-text label-required">
+                        {{ $mxs_t('databaseType') }}
+                    </label>
+                    <v-select
+                        v-model="src.type"
+                        :items="ETL_SUPPORT_DB_TYPES"
+                        item-text="text"
+                        item-value="id"
+                        name="databaseType"
+                        outlined
+                        class="vuetify-input--override v-select--mariadb error--text__bottom"
+                        :menu-props="{
+                            contentClass: 'v-select--menu-mariadb',
+                            bottom: true,
+                            offsetY: true,
+                        }"
+                        dense
+                        :height="36"
+                        :placeholder="$mxs_t('selectDbType')"
+                        :rules="requiredRule($mxs_t('databaseType'))"
+                        hide-details="auto"
+                    />
+                </v-col>
                 <v-col cols="12" md="6" class="pa-1">
                     <label class="field__label mxs-color-helper text-small-text label-required">
                         {{ $mxs_t('driver') }}
@@ -26,13 +50,7 @@
                         dense
                         :height="36"
                         :placeholder="$mxs_t('selectOdbcDriver')"
-                        :rules="[
-                            v =>
-                                !!v ||
-                                $mxs_t('errors.requiredInput', {
-                                    inputName: $mxs_t('driver'),
-                                }),
-                        ]"
+                        :rules="requiredRule($mxs_t('driver'))"
                         hide-details="auto"
                         :disabled="isAdvanced"
                     />
@@ -76,18 +94,14 @@
                         {{ $mxs_t('connStr') }}
                     </label>
                     <v-textarea
-                        v-model="connStr"
+                        v-model="src.connection_string"
                         class="v-textarea--mariadb vuetify-input--override error--text__bottom"
                         auto-grow
                         outlined
                         rows="1"
                         row-height="15"
                         :disabled="!isAdvanced"
-                        :rules="[
-                            val =>
-                                !!val ||
-                                $mxs_t('errors.requiredInput', { inputName: $mxs_t('connStr') }),
-                        ]"
+                        :rules="requiredRule($mxs_t('connStr'))"
                     />
                 </v-col>
             </v-row>
@@ -112,12 +126,17 @@ import UidInput from './UidInput.vue'
 import PwdInput from './PwdInput.vue'
 import DbInput from './DbInput.vue'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { mapState } from 'vuex'
 
 export default {
     name: 'etl-src-conn',
     components: { UidInput, PwdInput, DbInput },
     props: {
-        value: { type: String, required: true }, // connection_string
+        /**
+         * @property {string} type - database type
+         * @property {string} connection_string
+         */
+        value: { type: Object, required: true }, // connection_string
         drivers: { type: Array, required: true },
     },
     data() {
@@ -132,7 +151,10 @@ export default {
         }
     },
     computed: {
-        connStr: {
+        ...mapState({
+            ETL_SUPPORT_DB_TYPES: state => state.mxsWorkspace.config.ETL_SUPPORT_DB_TYPES,
+        }),
+        src: {
             get() {
                 return this.value
             },
@@ -140,18 +162,8 @@ export default {
                 this.$emit('input', v)
             },
         },
-        driverMap() {
-            return this.$helpers.lodash.keyBy(this.drivers, 'id')
-        },
         shouldRequireDb() {
-            const driver = this.driverMap[this.driver]
-            /**
-             * PostgreSQL requires defining a database when creating a connection
-             * There could be either an ANSI or Unicode version of PostgreSQL ODBC driver, so
-             * checking the `driver` path if it includes `psqlodbc` would probably be enough to
-             * know it's a PostgreSQL driver.
-             */
-            if (this.$typy(driver, 'attributes.driver').safeString.includes('psqlodbc')) return true
+            if (this.src.type === 'postgresql') return true
             return false
         },
         generatedConnStr() {
@@ -163,8 +175,20 @@ export default {
         generatedConnStr: {
             immediate: true,
             handler(v) {
-                this.connStr = v
+                this.src.connection_string = v
             },
+        },
+    },
+    created() {
+        this.setDefDbType()
+    },
+    methods: {
+        // use MariaDB as the default
+        setDefDbType() {
+            this.src.type = this.ETL_SUPPORT_DB_TYPES[0].id
+        },
+        requiredRule(inputName) {
+            return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
         },
     },
 }

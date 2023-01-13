@@ -231,7 +231,7 @@ export default {
             { commit, rootState },
             { body, binding_type, etl_task_id, meta = {}, showMsg = false }
         ) {
-            const { $mxs_t, $helpers } = this.vue
+            const { $mxs_t, $helpers, $typy } = this.vue
             const { ETL_SRC } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -245,6 +245,12 @@ export default {
                         etl_task_id,
                     },
                 })
+                EtlTask.update({
+                    where: etl_task_id,
+                    data(obj) {
+                        obj.meta = { ...obj.meta, ...meta }
+                    },
+                })
             }
             if (showMsg)
                 commit(
@@ -255,7 +261,10 @@ export default {
                     },
                     { root: true }
                 )
-            const target = binding_type === ETL_SRC ? $mxs_t('source') : $mxs_t('destination')
+            const target =
+                binding_type === ETL_SRC
+                    ? $typy(meta, 'src_type').safeString || $mxs_t('source')
+                    : $typy(meta, 'dest_name').safeString || $mxs_t('destination')
             EtlTask.dispatch('pushLog', {
                 id: etl_task_id,
                 log: {

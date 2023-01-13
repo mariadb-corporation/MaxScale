@@ -143,8 +143,10 @@ export default {
     },
     methods: {
         parseMeta(meta) {
-            const { ETL_DEST, ETL_SRC } = this.QUERY_CONN_BINDING_TYPES
-            return { from: meta[ETL_SRC] || 'Unknown', to: meta[ETL_DEST] || 'Unknown' }
+            return {
+                from: this.$typy(meta, 'src_type').safeString || 'Unknown',
+                to: this.$typy(meta, 'dest_name').safeString || 'Unknown',
+            }
         },
         /**
          * @param {Object} task
