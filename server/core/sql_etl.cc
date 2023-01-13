@@ -698,6 +698,16 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
             throw problem("Failed to prepare INSERT: ", dest.error());
         }
 
+        int source_params = source.num_columns();
+        int dest_params = dest.num_params();
+
+        if (source_params >= 0 && dest_params >= 0 && source_params != dest_params)
+        {
+            throw problem("Column count mismatch: ",
+                          "SELECT returns ", source_params, " columns but ",
+                          "INSERT takes ", dest_params, " parameters.");
+        }
+
         if (!source.execute(dest.as_output()))
         {
             const char* who = !source.error().empty() ? "Source: " : "Destination: ";

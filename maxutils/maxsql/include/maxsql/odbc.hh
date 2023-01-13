@@ -305,6 +305,20 @@ public:
     bool prepare(const std::string& sql);
 
     /**
+     * Return the number of columns returned by a prepared statement
+     *
+     * @return The number of columns or -1 if the information is not available
+     */
+    int num_columns();
+
+    /**
+     * Return the number of input parameters in a prepared statement
+     *
+     * @return The number of parameters or -1 if the information is not available
+     */
+    int num_params();
+
+    /**
      * Execute a prepared query
      *
      * @param output The output formatter class. By default the output is discarded.

@@ -66,6 +66,10 @@ public:
 
     bool execute(Output* output);
 
+    int num_columns();
+
+    int num_params();
+
     void set_row_limit(size_t limit);
 
     void set_query_timeout(std::chrono::seconds timeout);
@@ -826,6 +830,20 @@ bool ODBCImp::prepare(const std::string& query)
     return SQL_SUCCEEDED(ret);
 }
 
+int ODBCImp::num_columns()
+{
+    SQLSMALLINT params = -1;
+    SQLRETURN ret = SQLNumResultCols(m_stmt, &params);
+    return params;
+}
+
+int ODBCImp::num_params()
+{
+    SQLSMALLINT params = -1;
+    SQLRETURN ret = SQLNumParams(m_stmt, &params);
+    return params;
+}
+
 bool ODBCImp::execute(Output* output)
 {
     clear_errors();
@@ -1294,6 +1312,16 @@ bool ODBC::query(const std::string& sql, mxq::Output* output)
 bool ODBC::prepare(const std::string& sql)
 {
     return m_imp->prepare(sql);
+}
+
+int ODBC::num_columns()
+{
+    return m_imp->num_columns();
+}
+
+int ODBC::num_params()
+{
+    return m_imp->num_params();
 }
 
 bool ODBC::execute(mxq::Output* output)
