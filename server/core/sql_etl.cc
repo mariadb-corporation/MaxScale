@@ -641,7 +641,9 @@ void Table::read_sql(mxq::ODBC& source)
 
         if (m_create.empty())
         {
-            m_create = extractor.create_table(source, *this);
+            m_create = "CREATE DATABASE IF NOT EXISTS `" + m_schema + "`;\n";
+            m_create += "USE `" + m_schema + "`;\n";
+            m_create += extractor.create_table(source, *this);
         }
 
         if (m_select.empty())
@@ -666,16 +668,6 @@ void Table::create_objects(mxq::ODBC& source, mxq::ODBC& dest)
     try
     {
         mxb_assert(!m_create.empty());
-
-        if (!dest.query("CREATE DATABASE IF NOT EXISTS `" + m_schema + "`"))
-        {
-            throw problem("Failed to create database: ", dest.error());
-        }
-
-        if (!dest.query("USE `" + m_schema + "`"))
-        {
-            throw problem("Failed to use database: ", dest.error());
-        }
 
         if (!dest.query(m_create))
         {
