@@ -368,7 +368,7 @@ changing this setting to `shared` has.
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Values**: `assume_cacheable`, `verify_cacheable`
 - **Default**: `assume_cacheable`
 

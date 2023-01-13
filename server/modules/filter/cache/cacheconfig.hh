@@ -70,7 +70,6 @@ public:
     int64_t               max_size;
     std::string           rules;
     cache_thread_model_t  thread_model;
-    cache_selects_t       selects;
     cache_in_trxs_t       cache_in_trxs;
     bool                  enabled;
     cache_invalidate_t    invalidate;
@@ -80,8 +79,8 @@ public:
     mxs::ConfigParameters storage_params;
 
     // Runtime modifiable
-    int64_t               debug; // bitmask
-
+    int64_t               debug;   // Atomicity does not matter.
+    cache_selects_t       selects; // Atomicity does not matter.
 
     static const config::Specification* specification();
 

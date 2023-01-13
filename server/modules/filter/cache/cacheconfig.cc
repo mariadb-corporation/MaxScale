@@ -175,7 +175,8 @@ config::ParamEnum<cache_selects_t> selects(
     {CACHE_SELECTS_ASSUME_CACHEABLE, "assume_cacheable"},
     {CACHE_SELECTS_VERIFY_CACHEABLE, "verify_cacheable"}
 },
-    CACHE_SELECTS_ASSUME_CACHEABLE
+    CACHE_SELECTS_ASSUME_CACHEABLE,
+    config::Param::Modifiable::AT_RUNTIME
     );
 
 config::ParamEnum<cache_in_trxs_t> cache_in_trxs(
