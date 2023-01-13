@@ -195,8 +195,8 @@ export default {
                     await EtlTask.dispatch('insertEtlTask')
                     break
                 case DELETE:
-                    EtlTask.delete(task.id)
                     await this.disconnectConnsFromTask(task)
+                    EtlTask.delete(task.id)
                     break
                 case DISCONNECT:
                     await this.disconnectConnsFromTask(task)
