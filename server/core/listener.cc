@@ -54,6 +54,7 @@ namespace
 {
 
 const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
+const char CN_PROXY_PROTOCOL_NETWORKS[] = "proxy_protocol_networks";
 
 namespace cfg = mxs::config;
 
@@ -136,6 +137,10 @@ cfg::ParamPath s_user_mapping_file(
     &s_spec, "user_mapping_file", "Path to user and group mapping file", cfg::ParamPath::R, "",
     RUNTIME);
 
+cfg::ParamString s_proxy_networks(
+    &s_spec, CN_PROXY_PROTOCOL_NETWORKS, "Allowed (sub)networks for proxy protocol connections. Should be "
+                                         "a comma-separated list of IPv4 or IPv6 addresses.", "", RUNTIME);
+
 template<class Params>
 bool ListenerSpecification::do_post_validate(Params& params) const
 {
@@ -156,6 +161,12 @@ bool ListenerSpecification::do_post_validate(Params& params) const
         }
     }
 
+    auto pn_parse_res = mxb::proxy_protocol::parse_networks_from_string(s_proxy_networks.get(params));
+    if (!pn_parse_res.errmsg.empty())
+    {
+        MXB_ERROR("Failed to parse %s. %s", CN_PROXY_PROTOCOL_NETWORKS, pn_parse_res.errmsg.c_str());
+        ok = false;
+    }
     return ok;
 }
 
@@ -241,7 +252,8 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
                            std::unique_ptr<mxs::ProtocolModule> protocol_module,
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,
-                           ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping)
+                           ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping,
+                           mxb::proxy_protocol::SubnetArray&& proxy_networks)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
@@ -250,6 +262,7 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
     , m_authenticators(move(authenticators))
     , m_conn_init_sql(init_sql)
     , m_mapping_info(move(mapping))
+    , m_proxy_networks(std::move(proxy_networks))
 {
 }
 
@@ -465,6 +478,7 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::sql_mode, &s_sql_mode);
     add_native(&Listener::Config::connection_init_sql_file, &s_connection_init_sql_file);
     add_native(&Listener::Config::user_mapping_file, &s_user_mapping_file);
+    add_native(&Listener::Config::proxy_networks, &s_proxy_networks);
 }
 
 bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -1347,9 +1361,10 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
         ssl.set_usage(mxb::KeyUsage::SERVER);
         ListenerData::ConnectionInitSql init_sql;
         ListenerData::SMappingInfo mapping_info;
+        mxb::proxy_protocol::SubnetArray proxy_networks;
 
         if (ssl.configure(create_ssl_config()) && read_connection_init_sql(init_sql)
-            && read_user_mapping(mapping_info))
+            && read_user_mapping(mapping_info) && read_proxy_networks(proxy_networks))
         {
             bool auth_modules_ok = true;
             std::vector<mxs::SAuthenticatorModule> authenticators;
@@ -1369,7 +1384,8 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
             {
                 rval = std::make_shared<mxs::ListenerData>(
                     move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
-                    m_name, move(authenticators), move(init_sql), move(mapping_info));
+                    m_name, move(authenticators), move(init_sql), move(mapping_info),
+                    std::move(proxy_networks));
             }
         }
     }
@@ -1605,4 +1621,19 @@ bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output) const
     return rval;
 }
 
+bool Listener::read_proxy_networks(maxbase::proxy_protocol::SubnetArray& output)
+{
+    bool rval = false;
+    auto parse_res = mxb::proxy_protocol::parse_networks_from_string(m_config.proxy_networks);
+    if (parse_res.errmsg.empty())
+    {
+        output = std::move(parse_res.subnets);
+        rval = true;
+    }
+    else
+    {
+        mxb_assert(!true);      // Validation should catch faulty setting.
+    }
+    return rval;
+}
 }

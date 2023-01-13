@@ -2360,7 +2360,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 m_next_sequence = 1;    // Handshake had seq 0 so any errors will have 1.
                 // If proxy protocol is not enabled at all (typical case), skip the proxy header read phase.
                 // This may save an io-op.
-                bool proxyproto_on = false;     // TODO: add settings
+                bool proxyproto_on = !m_session->listener_data()->m_proxy_networks.empty();
                 m_handshake_state = proxyproto_on ? HSState::EXPECT_PROXY_HDR :
                     (require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP);
             }
@@ -3372,8 +3372,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
         // Have at least 4 bytes. This is enough to check if the packet looks like a proxy protocol header.
         if (mxb::proxy_protocol::packet_hdr_maybe_proxy(buffer.data()))
         {
-            mxb::proxy_protocol::SubnetArray dummy;
-            if (mxb::proxy_protocol::is_proxy_protocol_allowed(m_dcb->ip(), dummy))
+            if (mxb::proxy_protocol::is_proxy_protocol_allowed(
+                m_dcb->ip(), m_session->listener_data()->m_proxy_networks))
             {
                 // TODO: Read & parse entire proxy header.
             }

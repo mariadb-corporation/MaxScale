@@ -207,7 +207,7 @@ SubnetParseResult parse_networks_from_string(const std::string& networks_str)
         }
         else
         {
-            rval.errmsg = mxb::string_printf("Parse error near '%s'", token);
+            rval.errmsg = mxb::string_printf("Parse error near '%s'.", token);
             break;
         }
     }

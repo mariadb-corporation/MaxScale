@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <unordered_map>
+#include <maxbase/proxy_protocol.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
@@ -66,7 +67,7 @@ public:
     ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                  SProtocol protocol_module, const std::string& listener_name,
                  std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql,
-                 SMappingInfo mapping);
+                 SMappingInfo mapping, mxb::proxy_protocol::SubnetArray&& proxy_networks);
 
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;
@@ -87,6 +88,7 @@ public:
     const ConnectionInitSql m_conn_init_sql;
 
     const std::unique_ptr<const MappingInfo> m_mapping_info;    /**< Backend user mapping and passwords */
+    const mxb::proxy_protocol::SubnetArray   m_proxy_networks;  /**< Allowed proxy protocol (sub)networks */
 };
 
 /**
@@ -123,6 +125,7 @@ public:
         qc_sql_mode_t     sql_mode;
         std::string       connection_init_sql_file;
         std::string       user_mapping_file;
+        std::string       proxy_networks;
 
         // TLS configuration parameters
         bool        ssl;
@@ -499,6 +502,7 @@ private:
 
     bool           read_connection_init_sql(ListenerData::ConnectionInitSql& output) const;
     bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output) const;
+    bool           read_proxy_networks(mxb::proxy_protocol::SubnetArray& output);
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config() const;
     void           set_type();
