@@ -23,6 +23,7 @@
             rounded
             depressed
             :disabled="isNextDisabled"
+            :loading="isLoading"
             @click="$emit('next', step)"
         >
             {{ $mxs_t('next') }}
@@ -52,6 +53,7 @@ export default {
         step: { type: Number, required: true },
         isNextDisabled: { type: Boolean, required: true },
         isPrevDisabled: { type: Boolean, required: true },
+        isLoading: { type: Boolean, required: true },
     },
     computed: {
         ...mapState({

@@ -1,18 +1,21 @@
 <template>
-    <div>
-        <v-text-field
-            v-model="filterTxt"
-            name="searchSchema"
-            dense
-            outlined
-            height="28"
-            class="vuetify-input--override filter-objects"
-            :placeholder="$mxs_t('filterSchemaObjects')"
-        />
+    <div class="pa-3 fill-height d-flex flex-column">
+        <div class="toolbar mb-1">
+            <v-text-field
+                v-model="filterTxt"
+                name="searchSchema"
+                dense
+                outlined
+                height="28"
+                class="vuetify-input--override filter-objects"
+                :placeholder="$mxs_t('filterSchemaObjects')"
+            />
+            <!-- TODO: Add reload feat -->
+        </div>
         <mxs-treeview
             ref="tree"
             v-model="selectedObjs"
-            class="mxs-treeview--src-treeview"
+            class="mxs-treeview--src-treeview fill-height"
             :items="src_schema_tree"
             :search="filterTxt"
             :filter="filter"
@@ -43,7 +46,7 @@
         <p v-if="errMsg" class="my-2 v-messages__message error--text">
             {{ errMsg }}
         </p>
-        <p v-else-if="infoMsg" class="my-2 v-messages__message warning--text">{{ infoMsg }}</p>
+        <p v-else-if="infoMsg" class="my-2 v-messages__message warning--text" v-html="infoMsg" />
     </div>
 </template>
 <script>
@@ -168,6 +171,7 @@ export default {
 
 <style lang="scss">
 .mxs-treeview--src-treeview {
+    overflow-y: auto;
     .v-treeview-node__content {
         margin-left: 0px;
     }

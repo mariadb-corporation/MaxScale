@@ -251,7 +251,7 @@
             "etlCanceledSuccessfully": "ETL operation is canceled successfully.",
             "exeActionSuccessfully": "Successfully {action}",
             "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
-            "ignoreSchemas": "The following schemas are ignored as they are empty: {0}",
+            "ignoreSchemas": "The following schemas are ignored as they are empty: <b>{0}</b>",
             "killSessionSuccessfully": "Killed session successfully",
             "noBackslashEscapes": "Disables using the backslash character as an escape character within strings, making it equivalent to an ordinary character.",
             "queryIncomplete": "Return fewer rows or increase query row limit",

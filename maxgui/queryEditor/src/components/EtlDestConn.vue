@@ -1,53 +1,58 @@
 <template>
-    <v-col cols="12" md="6">
-        <b>{{ $mxs_t('destination') }}</b>
-        <p v-if="!allServers.length" class="mxs-color-helper text-error mt-2">
-            {{ $mxs_t('noEntityAvailable', { entityName: $mxs_tc(destTargetType, 2) }) }}
-        </p>
-        <v-row class="my-0 mx-n1">
-            <v-col cols="12" md="6" class="pa-1">
-                <label
-                    class="field__label mxs-color-helper text-small-text text-capitalize label-required"
-                >
-                    {{ $mxs_tc(destTargetType, 1) }}
-                </label>
-                <v-select
-                    v-model="dest.target"
-                    :items="allServers"
-                    item-text="id"
-                    item-value="id"
-                    name="driver"
-                    outlined
-                    class="vuetify-input--override v-select--mariadb error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'v-select--menu-mariadb',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="36"
-                    hide-details="auto"
-                    :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(destTargetType, 1) })"
-                    :rules="[
-                        v =>
-                            !!v ||
-                            $mxs_t('errors.requiredInput', {
-                                inputName: $mxs_tc(destTargetType, 1),
-                            }),
-                    ]"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <db-input v-model.trim="dest.db" />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <uid-input v-model.trim="dest.user" name="db-user" />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <pwd-input v-model.trim="dest.password" name="db-password" />
-            </v-col>
-        </v-row>
-    </v-col>
+    <v-row>
+        <v-col cols="12" class="pa-1">
+            <h3
+                class="mxs-color-helper text-navigation font-weight-light"
+                :style="{ lineHeight: '36px' }"
+            >
+                {{ $mxs_t('destination') }}
+            </h3>
+            <p v-if="!allServers.length" class="mxs-color-helper text-error mt-2">
+                {{ $mxs_t('noEntityAvailable', { entityName: $mxs_tc(destTargetType, 2) }) }}
+            </p>
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <label
+                class="field__label mxs-color-helper text-small-text text-capitalize label-required"
+            >
+                {{ $mxs_tc(destTargetType, 1) }}
+            </label>
+            <v-select
+                v-model="dest.target"
+                :items="allServers"
+                item-text="id"
+                item-value="id"
+                name="driver"
+                outlined
+                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                :menu-props="{
+                    contentClass: 'v-select--menu-mariadb',
+                    bottom: true,
+                    offsetY: true,
+                }"
+                dense
+                :height="36"
+                hide-details="auto"
+                :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(destTargetType, 1) })"
+                :rules="[
+                    v =>
+                        !!v ||
+                        $mxs_t('errors.requiredInput', {
+                            inputName: $mxs_tc(destTargetType, 1),
+                        }),
+                ]"
+            />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <db-input v-model.trim="dest.db" />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <uid-input v-model.trim="dest.user" name="db-user" />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <pwd-input v-model.trim="dest.password" name="db-password" />
+        </v-col>
+    </v-row>
 </template>
 
 <script>

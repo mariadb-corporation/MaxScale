@@ -1,47 +1,45 @@
 <template>
-    <v-stepper
-        v-model="activeStageIdx"
-        class="data-migration-stepper d-flex flex-column mt-4"
-        outlined
-    >
-        <div
-            class="d-flex flex-wrap align-stretch justify-space-between mxs-color-helper border-bottom-table-border"
+    <v-tabs v-model="activeStageIdx" vertical class="v-tabs--mariadb v-tabs--etl" hide-slider eager>
+        <v-tab
+            v-for="(stage, stageIdx) in stages"
+            :key="stageIdx"
+            class="my-1 justify-space-between align-center"
         >
-            <v-stepper-step
-                v-for="(stage, stageIdx) in stages"
-                :key="stageIdx"
-                :step="stageIdx"
-                :complete="stage.isComplete"
-            >
+            <div class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular">
                 {{ stage.name }}
-            </v-stepper-step>
-        </div>
-        <v-stepper-items class="fill-height">
-            <v-stepper-content
+            </div>
+        </v-tab>
+        <v-tabs-items v-model="activeStageIdx" class="fill-height">
+            <v-tab-item
                 v-for="(stage, stageIdx) in stages"
                 :key="stageIdx"
-                :step="stageIdx"
-                class="fill-height"
+                class="fill-height ml-8"
             >
                 <div
                     v-if="stageIdx === activeStageIdx"
-                    class="stage-container pa-6 fill-height d-flex flex-column justify-space-between"
+                    class="fill-height d-flex flex-column justify-space-between"
                 >
-                    <v-form ref="form" v-model="isFormValid" lazy-validation>
+                    <v-form
+                        ref="form"
+                        v-model="isFormValid"
+                        lazy-validation
+                        class="form-container fill-height"
+                    >
                         <component :is="stage.component" ref="stageComponent" />
                     </v-form>
                     <etl-stage-btns
-                        class="mt-4"
+                        class="px-6 py-3"
                         :step="stageIdx"
                         :isPrevDisabled="isPrevDisabled"
                         :isNextDisabled="isNextDisabled"
+                        :isLoading="isLoading"
                         @prev="prev"
                         @next="next"
                     />
                 </div>
-            </v-stepper-content>
-        </v-stepper-items>
-    </v-stepper>
+            </v-tab-item>
+        </v-tabs-items>
+    </v-tabs>
 </template>
 
 <script>
@@ -57,6 +55,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/* eslint-disable vue/no-unused-components */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import EtlObjSelectCtr from '@queryEditorSrc/components/EtlObjSelectCtr.vue'
@@ -74,6 +73,8 @@ export default {
     data() {
         return {
             isFormValid: true,
+            isStageComplete: false,
+            isLoading: false,
         }
     },
     computed: {
@@ -121,12 +122,15 @@ export default {
                 })
             },
         },
+        hasActiveConns() {
+            return this.$typy(this.activeEtlTask, 'connections').safeArray.length === 2
+        },
         isPrevDisabled() {
             const { SRC_OBJ } = this.ETL_STAGE_INDEX
             switch (this.activeStageIdx) {
                 case SRC_OBJ:
                     //Disable "previous" button if ETl already has source and destination connections
-                    return this.$typy(this.activeEtlTask, 'connections').safeArray.length === 2
+                    return this.hasActiveConns
                 default:
                     return false
             }
@@ -145,14 +149,17 @@ export default {
         prev() {
             this.activeStageIdx--
         },
+        async validateForm() {
+            await this.$refs.form[0].validate()
+        },
         /**
          * TODO: handle shown connections open error.
          * Right now it's shown automatically in app snackbar because the requests
          * are called via $queryHttp axios
          */
-        async handleOpenConns(currentStage) {
+        async handleOpenConns() {
             const etl_task_id = this.activeEtlTask.id
-            const { src, dest } = this.$refs.stageComponent[currentStage].$data
+            const { src, dest } = this.$refs.stageComponent[0].$data
             await QueryConn.dispatch('openEtlConn', {
                 body: {
                     target: 'odbc',
@@ -168,20 +175,22 @@ export default {
                 etl_task_id,
                 meta: { dest_name: dest.target },
             })
+            this.isLoading = false
+            this.isStageComplete = this.hasActiveConns
         },
         async next(currentStage) {
-            await this.$refs.form[0].validate()
-            let isStageComplete = false
+            this.isStageComplete = false
+            await this.validateForm()
             if (this.isFormValid) {
                 const { CONN } = this.ETL_STAGE_INDEX
+                this.isLoading = true
                 switch (currentStage) {
                     case CONN: {
-                        await this.handleOpenConns(currentStage)
-                        isStageComplete = true
+                        await this.handleOpenConns()
                         break
                     }
                 }
-                if (isStageComplete) this.activeStageIdx++
+                if (this.isStageComplete) this.activeStageIdx++
             }
         },
     },
@@ -189,13 +198,32 @@ export default {
 </script>
 
 <style lang="scss">
-.data-migration-stepper {
-    .v-stepper__content {
-        padding: 0px;
+.v-tabs--mariadb.v-tabs--etl {
+    .v-slide-group__wrapper {
+        border-bottom: none !important;
+        .v-slide-group__content {
+            align-items: flex-start !important;
+        }
     }
-    .v-stepper__wrapper {
-        height: 100%;
-        .stage-container {
+}
+.v-tabs--etl {
+    .v-tab {
+        height: 42px !important;
+        width: 100%;
+        .tab-name {
+            letter-spacing: normal;
+        }
+        &:hover {
+            background: #eefafd;
+        }
+        &--active {
+            .tab-name {
+                background-color: $separator;
+                color: $blue-azure !important;
+                border-radius: 8px;
+            }
+        }
+        .form-container {
             overflow-y: auto;
         }
     }

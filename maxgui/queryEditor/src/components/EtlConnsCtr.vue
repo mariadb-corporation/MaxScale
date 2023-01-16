@@ -1,13 +1,7 @@
 <template>
     <v-container fluid>
-        <v-row>
-            <etl-src-conn v-model="src" :drivers="odbc_drivers" />
-            <etl-dest-conn
-                v-model="dest"
-                :allServers="allServers"
-                :destTargetType="destTargetType"
-            />
-        </v-row>
+        <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+        <etl-dest-conn v-model="dest" :allServers="allServers" :destTargetType="destTargetType" />
     </v-container>
 </template>
 
