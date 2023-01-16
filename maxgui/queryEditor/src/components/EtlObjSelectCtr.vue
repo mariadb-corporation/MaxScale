@@ -38,6 +38,12 @@
                 </div>
             </template>
         </mxs-treeview>
+        <!-- Hidden input to put form into error state -->
+        <v-input type="hidden" :error="Boolean(errMsg)" />
+        <p v-if="errMsg" class="my-2 v-messages__message error--text">
+            {{ errMsg }}
+        </p>
+        <p v-else-if="infoMsg" class="my-2 v-messages__message warning--text">{{ infoMsg }}</p>
     </div>
 </template>
 <script>
@@ -62,6 +68,8 @@ export default {
         return {
             filterTxt: '',
             selectedObjs: [],
+            errMsg: '',
+            infoMsg: '',
         }
     },
     computed: {
@@ -71,11 +79,34 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
         }),
-        etlPrepareTables() {
-            return this.selectedObjs.map(o => ({
-                schema: queryHelper.getSchemaName(o),
-                table: o.name,
-            }))
+        parsedObjs() {
+            return this.selectedObjs.reduce(
+                (obj, o) => {
+                    const schema = queryHelper.getSchemaName(o)
+                    // TBL_G nodes will be included in selectedObjs if those have no tables
+                    if (o.type === this.NODE_GROUP_TYPES.TBL_G) obj.emptySchemas.push(schema)
+                    else obj.etlPrepareTables.push({ schema, table: o.name })
+                    return obj
+                },
+                { etlPrepareTables: [], emptySchemas: [] }
+            )
+        },
+    },
+    watch: {
+        selectedObjs: {
+            deep: true,
+            handler(v) {
+                if (v.length) {
+                    const { etlPrepareTables, emptySchemas } = this.parsedObjs
+                    if (etlPrepareTables.length) {
+                        this.errMsg = ''
+                        if (emptySchemas.length)
+                            this.infoMsg = this.$mxs_t('info.ignoreSchemas', [
+                                emptySchemas.join(', '),
+                            ])
+                    } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
+                } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
+            },
         },
     },
     async created() {
