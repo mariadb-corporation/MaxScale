@@ -247,7 +247,7 @@ void EventMessageQueue::add_message(const MessageQueue::Message& message)
 {
     Guard guard(m_messages_lock);
     m_messages.emplace_back(message);
-    mxb_assert(m_messages.size() < 1000);   // Should not see more in tests, adjust if needed.
+    mxb_assert(m_messages.size() < 40000);      // Should not see more in tests, adjust if needed.
 }
 
 //

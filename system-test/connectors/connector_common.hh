@@ -37,7 +37,7 @@ static inline int run_maven_test(TestConnections& test, int argc, char** argv,
             if (test.ok())
             {
                 test.run_shell_command(
-                    "cd "s + repo_dir + " && srv=maxscale mvn -Duser.timezone=UTC -B -q test",
+                    "cd "s + repo_dir + " && TEST_MAXSCALE_TLS_PORT=4007 srv=maxscale mvn -Duser.timezone=UTC -B -q test",
                     "Running test suite");
             }
         }
