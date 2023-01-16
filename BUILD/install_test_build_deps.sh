@@ -56,6 +56,8 @@ then
      fi
   fi
 
+  ${apt_cmd} install php-mysql
+
   # Installing maven installs the correct version of Java as a dependency
   ${apt_cmd} install maven
 else
