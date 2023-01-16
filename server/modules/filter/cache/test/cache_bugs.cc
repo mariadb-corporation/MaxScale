@@ -58,7 +58,9 @@ int mxs_2727()
     config.enabled = true;
 
     mxs::set_libdir("../storage/storage_inmemory");
-    Cache* pCache = CacheMT::create("MXS-2727", &config);
+    vector<shared_ptr<CacheRules>> rules;
+    rules.push_back(shared_ptr<CacheRules>(CacheRules::create(&config)));
+    Cache* pCache = CacheMT::create("MXS-2727", rules, &config);
     mxb_assert(pCache);
 
     shared_ptr<Cache::Token> sToken;

@@ -24,7 +24,9 @@ class CachePT : public Cache
 public:
     ~CachePT();
 
-    static CachePT* create(const std::string& name, const CacheConfig* pConfig);
+    static CachePT* create(const std::string& name,
+                           const std::vector<SCacheRules>& rules,
+                           const CacheConfig* pConfig);
 
     bool create_token(std::shared_ptr<Token>* psToken) override;
 

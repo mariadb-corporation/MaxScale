@@ -32,16 +32,17 @@ CacheMT::~CacheMT()
 {
 }
 
-CacheMT* CacheMT::create(const std::string& name, const CacheConfig* pConfig)
+CacheMT* CacheMT::create(const std::string& name,
+                         const std::vector<SCacheRules>& rules,
+                         const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
     CacheMT* pCache = NULL;
 
-    std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::get_storage_factory(pConfig, &rules, &pFactory))
+    if (CacheSimple::get_storage_factory(pConfig, &pFactory))
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 

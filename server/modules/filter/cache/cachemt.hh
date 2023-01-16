@@ -23,7 +23,9 @@ class CacheMT : public CacheSimple
 public:
     ~CacheMT();
 
-    static CacheMT* create(const std::string& name, const CacheConfig* pConfig);
+    static CacheMT* create(const std::string& name,
+                           const std::vector<SCacheRules>& rules,
+                           const CacheConfig* pConfig);
 
     json_t* get_info(uint32_t what) const override final;
 

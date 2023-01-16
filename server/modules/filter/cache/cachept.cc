@@ -38,16 +38,17 @@ CachePT::~CachePT()
 }
 
 // static
-CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
+CachePT* CachePT::create(const std::string& name,
+                         const std::vector<SCacheRules>& rules,
+                         const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
     CachePT* pCache = NULL;
 
-    std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (Cache::get_storage_factory(pConfig, &rules, &pFactory))
+    if (Cache::get_storage_factory(pConfig, &pFactory))
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 

@@ -215,7 +215,6 @@ protected:
           SStorageFactory sFactory);
 
     static bool get_storage_factory(const CacheConfig* pConfig,
-                                    std::vector<SCacheRules>* pRules,
                                     StorageFactory** ppFactory);
 
     json_t* do_get_info(uint32_t what) const;

@@ -43,46 +43,17 @@ Cache::~Cache()
 
 // static
 bool Cache::get_storage_factory(const CacheConfig* pConfig,
-                                std::vector<SCacheRules>* pRules,
                                 StorageFactory** ppFactory)
 {
-    std::vector<SCacheRules> rules;
-    StorageFactory* pFactory = NULL;
+    StorageFactory* pFactory = StorageFactory::open(pConfig->storage);
 
-    bool rv = false;
-
-    if (!pConfig->rules.empty())
+    if (pFactory)
     {
-        rv = CacheRules::load(pConfig, pConfig->rules, &rules);
+        *ppFactory = pFactory;
     }
     else
     {
-        unique_ptr<CacheRules> sRules(CacheRules::create(pConfig));
-
-        if (sRules.get())
-        {
-            rules.push_back(SCacheRules(sRules.release()));
-            rv = true;
-        }
-    }
-
-    if (rv)
-    {
-        pFactory = StorageFactory::open(pConfig->storage);
-
-        if (pFactory)
-        {
-            *ppFactory = pFactory;
-            pRules->swap(rules);
-        }
-        else
-        {
-            MXB_ERROR("Could not open storage factory '%s'.", pConfig->storage.c_str());
-        }
-    }
-    else
-    {
-        MXB_ERROR("Could not create rules.");
+        MXB_ERROR("Could not open storage factory '%s'.", pConfig->storage.c_str());
     }
 
     return pFactory != NULL;
