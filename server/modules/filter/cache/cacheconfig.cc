@@ -68,7 +68,31 @@ private:
     }
 };
 
-config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
+class Specification final : public config::Specification
+{
+public:
+    using config::Specification::Specification;
+
+private:
+    template<class Params>
+    bool do_post_validate(const CacheConfig* pConfig, Params& params) const;
+
+    bool post_validate(const config::Configuration* pConfig,
+                       const mxs::ConfigParameters& params,
+                       const std::map<std::string, mxs::ConfigParameters>& nested_params) const override
+    {
+        return do_post_validate(static_cast<const CacheConfig*>(pConfig), params);
+    }
+
+    bool post_validate(const config::Configuration* pConfig,
+                       json_t* json,
+                       const std::map<std::string, json_t*>& nested_params) const override
+    {
+        return do_post_validate(static_cast<const CacheConfig*>(pConfig), json);
+    }
+};
+
+Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 ParamStorage storage(
     &specification,
@@ -140,8 +164,9 @@ config::ParamPath rules(
     "rules",
     "Specifies the path of the file where the caching rules are stored. A relative "
     "path is interpreted relative to the data directory of MariaDB MaxScale.",
-    0,
-    ""
+    config::ParamPath::R,
+    "",
+    config::Param::Modifiable::AT_RUNTIME
     );
 
 config::ParamBitMask debug(
@@ -236,8 +261,31 @@ config::ParamDuration<std::chrono::milliseconds> timeout(
     CACHE_DEFAULT_TIMEOUT
     );
 
-}
+template<class Params>
+bool Specification::do_post_validate(const CacheConfig* pConfig, Params& params) const
+{
+    bool ok = true;
 
+    std::string rules_path = rules.get(params);
+
+    if (!rules_path.empty())
+    {
+        CacheRules::Vector rules;
+
+        if (pConfig)
+        {
+            ok = CacheRules::load(pConfig, rules_path, &rules);
+        }
+        else
+        {
+            CacheConfig config("dummy", nullptr);
+            ok = CacheRules::load(&config, rules_path, &rules);
+        }
+    }
+
+    return ok;
+}
+}
 }
 
 

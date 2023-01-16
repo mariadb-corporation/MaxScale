@@ -130,31 +130,52 @@ CacheFilter* CacheFilter::create(const char* zName)
     return new CacheFilter(zName);
 }
 
+namespace
+{
+
+bool create_rules(const CacheConfig* pConfig,
+                  const string& rules_path,
+                  vector<shared_ptr<CacheRules>>* pRules)
+{
+    bool rv;
+
+    vector<shared_ptr<CacheRules>> rules;
+
+    if (!rules_path.empty())
+    {
+        rv = CacheRules::load(pConfig, rules_path, &rules);
+    }
+    else
+    {
+        unique_ptr<CacheRules> sRules(CacheRules::create(pConfig));
+
+        if (sRules.get())
+        {
+            rules.push_back(shared_ptr<CacheRules>(sRules.release()));
+            rv = true;
+        }
+    }
+
+    if (rv)
+    {
+        pRules->swap(rules);
+    }
+
+    return rv;
+}
+
+}
+
 bool CacheFilter::post_configure()
 {
     Cache* pCache = m_sCache.get();
 
     if (!pCache)
     {
+        m_rules_path = m_config.rules;
+
         vector<shared_ptr<CacheRules>> rules;
-
-        bool rv;
-        if (!m_config.rules.empty())
-        {
-            rv = CacheRules::load(&m_config, m_config.rules, &rules);
-        }
-        else
-        {
-            unique_ptr<CacheRules> sRules(CacheRules::create(&m_config));
-
-            if (sRules.get())
-            {
-                rules.push_back(shared_ptr<CacheRules>(sRules.release()));
-                rv = true;
-            }
-        }
-
-        if (rv)
+        if (create_rules(&m_config, m_rules_path, &rules))
         {
             switch (m_config.thread_model)
             {
@@ -194,6 +215,30 @@ bool CacheFilter::post_configure()
                 }
 
                 m_sCache.reset(pCache);
+            }
+        }
+    }
+    else
+    {
+        if (m_rules_path != m_config.rules)
+        {
+
+            vector<shared_ptr<CacheRules>> rules;
+            if (create_rules(&m_config, m_config.rules, &rules))
+            {
+                MXB_NOTICE("The rules path has been changed from '%s' to '%s.",
+                           m_rules_path.c_str(), m_config.rules.c_str());
+
+                m_rules_path = m_config.rules;
+
+                //TODO: m_sCache->set_rules(rules);
+            }
+            else
+            {
+                MXB_ERROR("The rules could not be loaded from '%s'. The rules loaded "
+                          "from '%s' will remain in use.",
+                          m_config.rules.c_str(), m_rules_path.c_str());
+                m_config.rules = m_rules_path;
             }
         }
     }
