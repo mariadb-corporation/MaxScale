@@ -39,7 +39,7 @@ user=maxskysql
 password=skysql
 auth_all_servers=true
 ignore_tables_regex=.*
-refresh_interval=0
+refresh_interval=0s
 
 [Sharding-Listener]
 type=listener
