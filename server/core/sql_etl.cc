@@ -35,6 +35,10 @@ mxb::Json get(const mxb::Json& json, const std::string& path, mxb::Json::Type ty
     {
         throw problem("Value at '", path, "' is '", elem.type(), "', expected '", type, "'");
     }
+    else if (type == mxb::Json::Type::STRING && json_string_length(elem.get_json()) == 0)
+    {
+        throw problem("Value at '", path, "' is an empty string");
+    }
 
     return elem;
 }
