@@ -865,6 +865,8 @@ int Client::queue_response(const HttpResponse& reply)
     char* data = nullptr;
     size_t len = 0;
 
+    MXB_DEBUG("Response:\n%s", reply.to_string().c_str());
+
     if (json_t* js = reply.get_response())
     {
         int flags = JSON_SORT_KEYS;

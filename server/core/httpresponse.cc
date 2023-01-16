@@ -210,7 +210,9 @@ void HttpResponse::remove_cookie(const std::string& name)
     set_cookie(name, "", "; Path=/; Expires=" + http_to_date(0));
 }
 
-void HttpResponse::set_cookie(const std::string& name, const std::string& token, const std::string& cookie_opts)
+void HttpResponse::set_cookie(const std::string& name,
+                              const std::string& token,
+                              const std::string& cookie_opts)
 {
     const bool cors = mxs_admin_use_cors();
     std::string secure_opt = mxs_admin_https_enabled() || cors ? "; Secure" : "";
@@ -347,4 +349,22 @@ void HttpResponse::paginate(int64_t limit, int64_t offset)
             json_object_set_new(meta, "total", json_integer(total_size));
         }
     }
+}
+
+std::string HttpResponse::to_string() const
+{
+    std::ostringstream ss;
+    ss << "HTTP " << m_code << "\n";
+
+    for (const auto& [key, value] : m_headers)
+    {
+        ss << key << ": " << value << "\n";
+    }
+
+    if (m_body)
+    {
+        ss << mxb::json_dump(m_body, JSON_INDENT(2));
+    }
+
+    return ss.str();
 }

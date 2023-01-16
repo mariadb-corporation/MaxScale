@@ -39,7 +39,7 @@ class HttpResponse
 public:
     using Headers = std::unordered_map<std::string, std::string>;
     using Handler = WebSocket::Handler;
-    using Callback = std::function<HttpResponse()>;
+    using Callback = std::function<HttpResponse ()>;
 
     HttpResponse(const HttpResponse& response);
     HttpResponse& operator=(const HttpResponse& response);
@@ -198,6 +198,13 @@ public:
     {
         return m_cb;
     }
+
+    /**
+     * @brief Convert response to a string
+     *
+     * @return The request in string format
+     */
+    std::string to_string() const;
 
 private:
     json_t*  m_body;    /**< Message body */
