@@ -279,6 +279,7 @@ public:
     using SCacheRules = std::shared_ptr<CacheRules>;
     using S = SCacheRules;
     using Vector = std::vector<S>;
+    using SVector = std::shared_ptr<Vector>;
 
     CacheRules(const CacheRules&) = delete;
     CacheRules& operator=(const CacheRules&) = delete;
@@ -299,31 +300,23 @@ public:
      *
      * @param pConfig The cache config.
      * @param zJson   Null-terminate string containing JSON.
-     * @param pRules  [out] The loaded rules.
      *
-     * @return True, if the rules could be parsed, false otherwise.
+     * @return Rules vector if the rules could be parsed, null otherwise.
      */
-    static bool parse(const CacheConfig* pConfig,
-                      const char* zJson,
-                      std::vector<SCacheRules>* pRules);
+    static SVector parse(const CacheConfig* pConfig, const char* zJson);
 
     /**
      * Loads the caching rules from a file.
      *
      * @param pConfig The cache config.
      * @param path    The path of the file containing the rules.
-     * @param pRules  [out] The loaded rules.
      *
-     * @return True, if the rules could be loaded, false otherwise.
+     * @return Rules vector if the rules could be parsed, null otherwise.
      */
-    static bool load(const CacheConfig* pConfig,
-                     const char* zPath,
-                     std::vector<SCacheRules>* pRules);
-    static bool load(const CacheConfig* pConfig,
-                     const std::string& path,
-                     std::vector<SCacheRules>* pRules)
+    static SVector load(const CacheConfig* pConfig, const char* zPath);
+    static SVector load(const CacheConfig* pConfig, const std::string& path)
     {
-        return load(pConfig, path.c_str(), pRules);
+        return load(pConfig, path.c_str());
     }
 
     /**
@@ -360,8 +353,8 @@ private:
 
     CacheRules(const CacheConfig* pConfig);
 
-    static bool create_from_json(const CacheConfig* pConfig, json_t* pRoot, std::vector<SCacheRules>* pRules);
-    static CacheRules* create_from_json(const CacheConfig* pConfig, json_t* pRoot);
+    static SVector create_all_from_json(const CacheConfig* pConfig, json_t* pRoot);
+    static CacheRules* create_one_from_json(const CacheConfig* pConfig, json_t* pRoot);
 
     bool parse_json(json_t* pRoot);
 

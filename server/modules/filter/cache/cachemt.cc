@@ -20,10 +20,10 @@ using std::shared_ptr;
 
 CacheMT::CacheMT(const std::string& name,
                  const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
+                 const CacheRules::SVector& sRules,
                  SStorageFactory sFactory,
                  Storage* pStorage)
-    : CacheSimple(name, pConfig, rules, sFactory, pStorage)
+    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
     MXB_NOTICE("Created multi threaded cache.");
 }
@@ -33,7 +33,7 @@ CacheMT::~CacheMT()
 }
 
 CacheMT* CacheMT::create(const std::string& name,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
@@ -46,7 +46,7 @@ CacheMT* CacheMT::create(const std::string& name,
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = create(name, pConfig, rules, sFactory);
+        pCache = create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -76,7 +76,7 @@ void CacheMT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 // static
 CacheMT* CacheMT::create(const std::string& name,
                          const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          SStorageFactory sFactory)
 {
     CacheMT* pCache = NULL;
@@ -97,7 +97,7 @@ CacheMT* CacheMT::create(const std::string& name,
     {
         MXS_EXCEPTION_GUARD(pCache = new CacheMT(name,
                                                  pConfig,
-                                                 rules,
+                                                 sRules,
                                                  sFactory,
                                                  pStorage));
 

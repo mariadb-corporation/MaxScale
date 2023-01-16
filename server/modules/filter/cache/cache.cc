@@ -28,11 +28,11 @@ using namespace std;
 
 Cache::Cache(const std::string& name,
              const CacheConfig* pConfig,
-             const std::vector<SCacheRules>& rules,
+             const CacheRules::SVector& sRules,
              SStorageFactory sFactory)
     : m_name(name)
     , m_config(*pConfig)
-    , m_rules(rules)
+    , m_sRules(sRules)
     , m_sFactory(sFactory)
 {
 }
@@ -126,9 +126,11 @@ const CacheRules* Cache::should_store(const char* zDefaultDb, const GWBUF* pQuer
 {
     CacheRules* pRules = NULL;
 
-    auto i = m_rules.begin();
+    const auto& rules = *m_sRules.get();
 
-    while (!pRules && (i != m_rules.end()))
+    auto i = rules.begin();
+
+    while (!pRules && (i != rules.end()))
     {
         if ((*i)->should_store(zDefaultDb, pQuery))
         {
@@ -155,7 +157,8 @@ json_t* Cache::do_get_info(uint32_t what) const
 
             if (pArray)
             {
-                for (auto i = m_rules.begin(); i < m_rules.end(); ++i)
+                const auto& rules = *m_sRules.get();
+                for (auto i = rules.begin(); i < rules.end(); ++i)
                 {
                     json_t* pRules = const_cast<json_t*>((*i)->json());
                     json_array_append(pArray, pRules);      // Increases ref-count of pRules, we ignore

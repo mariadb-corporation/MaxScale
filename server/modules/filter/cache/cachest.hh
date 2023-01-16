@@ -21,10 +21,10 @@ public:
     ~CacheST();
 
     static CacheST* create(const std::string& name,
-                           const std::vector<SCacheRules>& rules,
+                           const CacheRules::SVector& sRules,
                            const CacheConfig* pConfig);
     static CacheST* create(const std::string& name,
-                           const std::vector<SCacheRules>& rules,
+                           const CacheRules::SVector& sRules,
                            SStorageFactory sFactory,
                            const CacheConfig* pConfig);
 
@@ -37,13 +37,13 @@ public:
 private:
     CacheST(const std::string& name,
             const CacheConfig* pConfig,
-            const std::vector<SCacheRules>& rules,
+            const CacheRules::SVector& sRules,
             SStorageFactory sFactory,
             Storage* pStorage);
 
     static CacheST* create(const std::string& name,
                            const CacheConfig* pConfig,
-                           const std::vector<SCacheRules>& rules,
+                           const CacheRules::SVector& sRules,
                            SStorageFactory sFactory);
 private:
     CacheST(const CacheST&);

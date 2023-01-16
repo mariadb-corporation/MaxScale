@@ -25,7 +25,7 @@ public:
     ~CachePT();
 
     static CachePT* create(const std::string& name,
-                           const std::vector<SCacheRules>& rules,
+                           const CacheRules::SVector& sRules,
                            const CacheConfig* pConfig);
 
     bool create_token(std::shared_ptr<Token>* psToken) override;
@@ -71,7 +71,7 @@ public:
 private:
     CachePT(const std::string& name,
             const CacheConfig* pConfig,
-            const std::vector<SCacheRules>& rules,
+            const CacheRules::SVector& sRules,
             SStorageFactory sFactory);
 
     Cache& worker_cache();

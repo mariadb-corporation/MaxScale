@@ -20,10 +20,10 @@ using std::shared_ptr;
 
 CacheST::CacheST(const std::string& name,
                  const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
+                 const CacheRules::SVector& sRules,
                  SStorageFactory sFactory,
                  Storage* pStorage)
-    : CacheSimple(name, pConfig, rules, sFactory, pStorage)
+    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
     MXB_NOTICE("Created single threaded cache.");
 }
@@ -33,7 +33,7 @@ CacheST::~CacheST()
 }
 
 CacheST* CacheST::create(const std::string& name,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
@@ -46,7 +46,7 @@ CacheST* CacheST::create(const std::string& name,
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = create(name, pConfig, rules, sFactory);
+        pCache = create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -54,14 +54,14 @@ CacheST* CacheST::create(const std::string& name,
 
 // static
 CacheST* CacheST::create(const std::string& name,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          SStorageFactory sFactory,
                          const CacheConfig* pConfig)
 {
     mxb_assert(sFactory.get());
     mxb_assert(pConfig);
 
-    return create(name, pConfig, rules, sFactory);
+    return create(name, pConfig, sRules, sFactory);
 }
 
 json_t* CacheST::get_info(uint32_t flags) const
@@ -82,7 +82,7 @@ void CacheST::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 // static
 CacheST* CacheST::create(const std::string& name,
                          const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          SStorageFactory sFactory)
 {
     CacheST* pCache = NULL;
@@ -103,7 +103,7 @@ CacheST* CacheST::create(const std::string& name,
     {
         MXS_EXCEPTION_GUARD(pCache = new CacheST(name,
                                                  pConfig,
-                                                 rules,
+                                                 sRules,
                                                  sFactory,
                                                  pStorage));
 

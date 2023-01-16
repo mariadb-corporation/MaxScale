@@ -26,9 +26,9 @@ using std::vector;
 
 CachePT::CachePT(const std::string& name,
                  const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
+                 const CacheRules::SVector& sRules,
                  SStorageFactory sFactory)
-    : Cache(name, pConfig, rules, sFactory)
+    : Cache(name, pConfig, sRules, sFactory)
 {
     MXB_NOTICE("Created cache per thread.");
 }
@@ -39,7 +39,7 @@ CachePT::~CachePT()
 
 // static
 CachePT* CachePT::create(const std::string& name,
-                         const std::vector<SCacheRules>& rules,
+                         const CacheRules::SVector& sRules,
                          const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
@@ -52,7 +52,7 @@ CachePT* CachePT::create(const std::string& name,
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = new (std::nothrow) CachePT(name, pConfig, rules, sFactory);
+        pCache = new (std::nothrow) CachePT(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -187,11 +187,11 @@ Cache& CachePT::worker_cache()
         string namest(m_name + "-" + std::to_string(mxs::RoutingWorker::get_current()->index()));
 
         m_mutex.lock();
-        auto rules = m_rules;
+        auto sRules = m_sRules;
         auto sFactory = m_sFactory;
         m_mutex.unlock();
 
-        MXS_EXCEPTION_GUARD(sCache.reset(CacheST::create(namest, rules, sFactory, &m_config)));
+        MXS_EXCEPTION_GUARD(sCache.reset(CacheST::create(namest, sRules, sFactory, &m_config)));
     }
 
     return *sCache;

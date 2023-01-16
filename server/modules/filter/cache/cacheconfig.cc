@@ -270,17 +270,19 @@ bool Specification::do_post_validate(const CacheConfig* pConfig, Params& params)
 
     if (!rules_path.empty())
     {
-        CacheRules::Vector rules;
+        CacheRules::SVector sRules;
 
         if (pConfig)
         {
-            ok = CacheRules::load(pConfig, rules_path, &rules);
+            sRules = CacheRules::load(pConfig, rules_path);
         }
         else
         {
             CacheConfig config("dummy", nullptr);
-            ok = CacheRules::load(&config, rules_path, &rules);
+            sRules = CacheRules::load(&config, rules_path);
         }
+
+        ok = (sRules.get() != nullptr);
     }
 
     return ok;

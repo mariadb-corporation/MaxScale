@@ -60,8 +60,7 @@ public:
         INFO_ALL     = (INFO_RULES | INFO_PENDING | INFO_STORAGE)
     };
 
-    typedef std::shared_ptr<CacheRules>     SCacheRules;
-    typedef std::shared_ptr<StorageFactory> SStorageFactory;
+    using SStorageFactory = std::shared_ptr<StorageFactory>;
 
     virtual ~Cache();
 
@@ -211,7 +210,7 @@ public:
 protected:
     Cache(const std::string& name,
           const CacheConfig* pConfig,
-          const std::vector<SCacheRules>& rules,
+          const CacheRules::SVector& sRules,
           SStorageFactory sFactory);
 
     static bool get_storage_factory(const CacheConfig* pConfig,
@@ -224,8 +223,8 @@ private:
     Cache& operator=(const Cache&);
 
 protected:
-    const std::string        m_name;    // The name of the instance; the section name in the config.
-    const CacheConfig&       m_config;  // The configuration of the cache instance.
-    std::vector<SCacheRules> m_rules;   // The rules of the cache instance.
-    SStorageFactory          m_sFactory;// The storage factory.
+    const std::string   m_name;    // The name of the instance; the section name in the config.
+    const CacheConfig&  m_config;  // The configuration of the cache instance.
+    CacheRules::SVector m_sRules;  // The rules of the cache instance.
+    SStorageFactory     m_sFactory;// The storage factory.
 };

@@ -133,35 +133,23 @@ CacheFilter* CacheFilter::create(const char* zName)
 namespace
 {
 
-bool create_rules(const CacheConfig* pConfig,
-                  const string& rules_path,
-                  vector<shared_ptr<CacheRules>>* pRules)
+CacheRules::SVector create_rules(const CacheConfig* pConfig, const string& rules_path)
 {
     bool rv;
 
-    vector<shared_ptr<CacheRules>> rules;
+    CacheRules::SVector sRules;
 
     if (!rules_path.empty())
     {
-        rv = CacheRules::load(pConfig, rules_path, &rules);
+        sRules = CacheRules::load(pConfig, rules_path);
     }
     else
     {
-        unique_ptr<CacheRules> sRules(CacheRules::create(pConfig));
-
-        if (sRules.get())
-        {
-            rules.push_back(shared_ptr<CacheRules>(sRules.release()));
-            rv = true;
-        }
+        sRules.reset(new CacheRules::Vector);
+        sRules->push_back(shared_ptr<CacheRules>(CacheRules::create(pConfig).release()));
     }
 
-    if (rv)
-    {
-        pRules->swap(rules);
-    }
-
-    return rv;
+    return sRules;
 }
 
 }
@@ -174,19 +162,18 @@ bool CacheFilter::post_configure()
     {
         m_rules_path = m_config.rules;
 
-        vector<shared_ptr<CacheRules>> rules;
-        if (create_rules(&m_config, m_rules_path, &rules))
+        if (CacheRules::SVector sRules = create_rules(&m_config, m_rules_path))
         {
             switch (m_config.thread_model)
             {
             case CACHE_THREAD_MODEL_MT:
                 MXB_NOTICE("Creating shared cache.");
-                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), rules, &m_config));
+                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), sRules, &m_config));
                 break;
 
             case CACHE_THREAD_MODEL_ST:
                 MXB_NOTICE("Creating thread specific cache.");
-                MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), rules, &m_config));
+                MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), sRules, &m_config));
                 break;
 
             default:
@@ -222,16 +209,14 @@ bool CacheFilter::post_configure()
     {
         if (m_rules_path != m_config.rules)
         {
-
-            vector<shared_ptr<CacheRules>> rules;
-            if (create_rules(&m_config, m_config.rules, &rules))
+            if (CacheRules::SVector sRules = create_rules(&m_config, m_config.rules))
             {
                 MXB_NOTICE("The rules path has been changed from '%s' to '%s.",
                            m_rules_path.c_str(), m_config.rules.c_str());
 
                 m_rules_path = m_config.rules;
 
-                //TODO: m_sCache->set_rules(rules);
+                //TODO: m_sCache->set_rules(sRules);
             }
             else
             {

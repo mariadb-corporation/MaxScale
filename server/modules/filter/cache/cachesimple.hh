@@ -55,7 +55,7 @@ public:
 protected:
     CacheSimple(const std::string& name,
                 const CacheConfig* pConfig,
-                const std::vector<SCacheRules>& Rules,
+                const CacheRules::SVector& sRules,
                 SStorageFactory sFactory,
                 Storage* pStorage);
 

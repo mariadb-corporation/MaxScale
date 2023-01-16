@@ -1069,11 +1069,9 @@ CacheRules::Attributes CacheRules::s_use_attributes =
 };
 
 // static
-bool CacheRules::load(const CacheConfig* pConfig,
-                      const char* zPath,
-                      std::vector<SCacheRules>* pRules)
+CacheRules::SVector CacheRules::load(const CacheConfig* pConfig, const char* zPath)
 {
-    bool rv = false;
+    CacheRules::SVector sRules;
 
     FILE* pF = fopen(zPath, "r");
 
@@ -1084,14 +1082,9 @@ bool CacheRules::load(const CacheConfig* pConfig,
 
         if (pRoot)
         {
-            std::vector<SCacheRules> rules;
-            rv = create_from_json(pConfig, pRoot, &rules);
+            sRules = create_all_from_json(pConfig, pRoot);
 
-            if (rv)
-            {
-                pRules->swap(rules);
-            }
-            else
+            if (!sRules)
             {
                 json_decref(pRoot);
             }
@@ -1114,29 +1107,22 @@ bool CacheRules::load(const CacheConfig* pConfig,
                   mxb_strerror(errno));
     }
 
-    return rv;
+    return sRules;
 }
 
 //static
-bool CacheRules::parse(const CacheConfig* pConfig,
-                       const char* zJson,
-                       std::vector<SCacheRules>* pRules)
+CacheRules::SVector CacheRules::parse(const CacheConfig* pConfig, const char* zJson)
 {
-    bool rv = false;
+    CacheRules::SVector sRules;
 
     json_error_t error;
     json_t* pRoot = json_loads(zJson, JSON_DISABLE_EOF_CHECK, &error);
 
     if (pRoot)
     {
-        std::vector<SCacheRules> rules;
-        rv = create_from_json(pConfig, pRoot, &rules);
+        sRules = create_all_from_json(pConfig, pRoot);
 
-        if (rv)
-        {
-            pRules->swap(rules);
-        }
-        else
+        if (!sRules)
         {
             json_decref(pRoot);
         }
@@ -1149,7 +1135,7 @@ bool CacheRules::parse(const CacheConfig* pConfig,
                   error.text);
     }
 
-    return rv;
+    return sRules;
 }
 
 bool CacheRules::should_store(const char* zDefault_db, const GWBUF* pQuery) const
@@ -1299,7 +1285,7 @@ CacheRule* CacheRules::create_rule(const CacheConfig* pConfig,
 }
 
 //static
-CacheRules* CacheRules::create_from_json(const CacheConfig* pConfig, json_t* pRoot)
+CacheRules* CacheRules::create_one_from_json(const CacheConfig* pConfig, json_t* pRoot)
 {
     mxb_assert(pRoot);
 
@@ -1319,11 +1305,9 @@ CacheRules* CacheRules::create_from_json(const CacheConfig* pConfig, json_t* pRo
 }
 
 //static
-bool CacheRules::create_from_json(const CacheConfig* pConfig,
-                                  json_t* pRoot,
-                                  std::vector<SCacheRules>* pRules_vector)
+CacheRules::SVector CacheRules::create_all_from_json(const CacheConfig* pConfig, json_t* pRoot)
 {
-    bool rv = false;
+    CacheRules::SVector sRules_vector(new CacheRules::Vector);
 
     if (json_is_array(pRoot))
     {
@@ -1335,11 +1319,11 @@ bool CacheRules::create_from_json(const CacheConfig* pConfig,
             json_t* pObject = json_array_get(pRoot, i);
             mxb_assert(pObject);
 
-            CacheRules* pRules = create_from_json(pConfig, pObject);
+            CacheRules* pRules = create_one_from_json(pConfig, pObject);
 
             if (pRules)
             {
-                pRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
+                sRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
                 // The array element reference was borrowed, so now that we
                 // know a rule could be created, we must increase the reference
                 // count. Otherwise bad things will happen when the reference of
@@ -1357,27 +1341,28 @@ bool CacheRules::create_from_json(const CacheConfig* pConfig,
             // We only store the objects in the array, so now we must get rid
             // of the array so that it does not leak.
             json_decref(pRoot);
-
-            rv = true;
         }
         else
         {
             // Ok, so something went astray.
-            pRules_vector->clear();
+            sRules_vector.reset();
         }
     }
     else
     {
-        CacheRules* pRules = create_from_json(pConfig, pRoot);
+        CacheRules* pRules = create_one_from_json(pConfig, pRoot);
 
         if (pRules)
         {
-            pRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
-            rv = true;
+            sRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
+        }
+        else
+        {
+            sRules_vector.reset();
         }
     }
 
-    return rv;
+    return sRules_vector;
 }
 
 bool CacheRules::parse_json(json_t* pRoot)
