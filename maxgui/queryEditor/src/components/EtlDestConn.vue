@@ -1,13 +1,8 @@
 <template>
-    <v-row>
-        <v-col cols="12" class="pa-1">
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                {{ $mxs_t('destination') }}
-            </h3>
-            <p v-if="!allServers.length" class="mxs-color-helper text-error mt-2">
-                {{ $mxs_t('noEntityAvailable', { entityName: $mxs_tc(destTargetType, 2) }) }}
-            </p>
-        </v-col>
+    <v-row class="ma-n1">
+        <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+            {{ $mxs_t('destination') }}
+        </h3>
         <v-col cols="12" md="6" class="pa-1">
             <label
                 class="field__label mxs-color-helper text-small-text text-capitalize label-required"
@@ -38,6 +33,11 @@
                             inputName: $mxs_tc(destTargetType, 1),
                         }),
                 ]"
+                :error-messages="
+                    allServers.length
+                        ? ''
+                        : $mxs_t('noEntityAvailable', { entityName: $mxs_tc(destTargetType, 2) })
+                "
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">

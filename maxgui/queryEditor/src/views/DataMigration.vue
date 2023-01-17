@@ -53,7 +53,7 @@
                 </h4>
             </div>
         </template>
-        <etl-stage-ctr v-if="hasActiveEtlTask" class="fill-height ml-6" />
+        <etl-stages v-if="hasActiveEtlTask" class="fill-height ml-6" />
         <etl-tasks v-else class="fill-height" />
     </page-wrapper>
 </template>
@@ -73,13 +73,13 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlTasks from '@queryEditorSrc/components/EtlTasks.vue'
-import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
+import EtlStages from '@queryEditorSrc/components/EtlStages.vue'
 
 export default {
     name: 'data-migration',
     components: {
         EtlTasks,
-        EtlStageCtr,
+        EtlStages,
     },
     data() {
         return {

@@ -1,36 +1,34 @@
 <template>
-    <div class="fill-height d-flex flex-column justify-space-between">
-        <v-form ref="form" v-model="isFormValid" lazy-validation class="form-container fill-height">
-            <v-container fluid>
-                <v-row>
-                    <v-col cols="12" md="6">
-                        <etl-src-conn v-model="src" :drivers="odbc_drivers" />
-                        <etl-dest-conn
-                            v-model="dest"
-                            :allServers="allServers"
-                            :destTargetType="destTargetType"
-                        />
-                    </v-col>
-                    <!-- TODO: Show logs component -->
-                </v-row>
-            </v-container>
-        </v-form>
-        <div class="d-flex justify-start mt-4">
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="font-weight-medium px-7 text-capitalize"
-                rounded
-                depressed
-                :disabled="!isFormValid"
-                :loading="isLoading"
-                @click="next"
-            >
-                {{ $mxs_t(isConnected ? 'selectObjsToMigrate' : 'connect') }}
-            </v-btn>
-        </div>
-    </div>
+    <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
+        <etl-stage-ctr>
+            <template v-slot:body>
+                <v-col cols="12" md="6" class="fill-height pt-0">
+                    <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+                    <etl-dest-conn
+                        v-model="dest"
+                        :allServers="allServers"
+                        :destTargetType="destTargetType"
+                    />
+                </v-col>
+                <!-- TODO: Show logs component -->
+            </template>
+            <template v-slot:footer>
+                <v-btn
+                    small
+                    height="36"
+                    color="primary"
+                    class="font-weight-medium px-7 text-capitalize"
+                    rounded
+                    depressed
+                    :disabled="!isFormValid"
+                    :loading="isLoading"
+                    @click="next"
+                >
+                    {{ $mxs_t(isConnected ? 'selectObjsToMigrate' : 'connect') }}
+                </v-btn>
+            </template>
+        </etl-stage-ctr>
+    </v-form>
 </template>
 
 <script>
@@ -48,13 +46,14 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import EtlSrcConn from './EtlSrcConn.vue'
-import EtlDestConn from './EtlDestConn.vue'
+import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
+import EtlSrcConn from '@queryEditorSrc/components/EtlSrcConn.vue'
+import EtlDestConn from '@queryEditorSrc/components/EtlDestConn.vue'
 import { mapActions, mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-conns-stage',
-    components: { EtlSrcConn, EtlDestConn },
+    components: { EtlStageCtr, EtlSrcConn, EtlDestConn },
     data() {
         return {
             isFormValid: false,

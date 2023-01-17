@@ -1,116 +1,112 @@
 <template>
-    <v-row>
+    <v-row class="ma-n1">
+        <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light mt-n3">
+            {{ $mxs_t('source') }}
+        </h3>
         <v-col cols="12" class="pa-1">
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                {{ $mxs_t('source') }}
-            </h3>
+            <label class="field__label mxs-color-helper text-small-text label-required">
+                {{ $mxs_t('databaseType') }}
+            </label>
+            <v-select
+                v-model="src.type"
+                :items="ETL_SUPPORT_DB_TYPES"
+                item-text="text"
+                item-value="id"
+                name="databaseType"
+                outlined
+                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                :menu-props="{
+                    contentClass: 'v-select--menu-mariadb',
+                    bottom: true,
+                    offsetY: true,
+                }"
+                dense
+                :height="36"
+                :placeholder="$mxs_t('selectDbType')"
+                :rules="requiredRule($mxs_t('databaseType'))"
+                hide-details="auto"
+            />
         </v-col>
-        <v-col v-if="!drivers.length" cols="12" class="mxs-color-helper text-error pa-1">
-            {{ $mxs_t('errors.noDriversFound') }}
+        <v-col cols="12" md="6" class="pa-1">
+            <label class="field__label mxs-color-helper text-small-text label-required">
+                {{ $mxs_t('driver') }}
+            </label>
+            <v-select
+                v-model="driver"
+                :items="drivers"
+                item-text="id"
+                item-value="id"
+                name="driver"
+                outlined
+                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                :menu-props="{
+                    contentClass: 'v-select--menu-mariadb',
+                    bottom: true,
+                    offsetY: true,
+                }"
+                dense
+                :height="36"
+                :placeholder="$mxs_t('selectOdbcDriver')"
+                :rules="requiredRule($mxs_t('driver'))"
+                hide-details="auto"
+                :disabled="isAdvanced"
+                :error-messages="drivers.length ? '' : $mxs_t('errors.noDriversFound')"
+            />
         </v-col>
-        <template v-else>
-            <v-col cols="12" class="pa-1">
-                <label class="field__label mxs-color-helper text-small-text label-required">
-                    {{ $mxs_t('databaseType') }}
-                </label>
-                <v-select
-                    v-model="src.type"
-                    :items="ETL_SUPPORT_DB_TYPES"
-                    item-text="text"
-                    item-value="id"
-                    name="databaseType"
-                    outlined
-                    class="vuetify-input--override v-select--mariadb error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'v-select--menu-mariadb',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="36"
-                    :placeholder="$mxs_t('selectDbType')"
-                    :rules="requiredRule($mxs_t('databaseType'))"
-                    hide-details="auto"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <label class="field__label mxs-color-helper text-small-text label-required">
-                    {{ $mxs_t('driver') }}
-                </label>
-                <v-select
-                    v-model="driver"
-                    :items="drivers"
-                    item-text="id"
-                    item-value="id"
-                    name="driver"
-                    outlined
-                    class="vuetify-input--override v-select--mariadb error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'v-select--menu-mariadb',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="36"
-                    :placeholder="$mxs_t('selectOdbcDriver')"
-                    :rules="requiredRule($mxs_t('driver'))"
-                    hide-details="auto"
-                    :disabled="isAdvanced"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <db-input
-                    v-model.trim="db"
-                    :required="shouldRequireDb"
-                    :customErrMsg="$mxs_t('errors.requiredDb')"
-                    :validate-on-blur="true"
-                    :disabled="isAdvanced"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <mxs-txt-field-with-label
-                    v-model.trim="server"
-                    :label="$mxs_t('hostname/IP')"
-                    :required="true"
-                    :disabled="isAdvanced"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <mxs-txt-field-with-label
-                    v-model.trim="port"
-                    :label="$mxs_t('port')"
-                    :required="true"
-                    :disabled="isAdvanced"
-                />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <uid-input v-model.trim="user" :disabled="isAdvanced" name="etl-src-uid" />
-            </v-col>
-            <v-col cols="12" md="6" class="pa-1">
-                <pwd-input v-model.trim="password" :disabled="isAdvanced" name="etl-src-pwd" />
-            </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <db-input
+                v-model.trim="db"
+                :required="shouldRequireDb"
+                :customErrMsg="$mxs_t('errors.requiredDb')"
+                :validate-on-blur="true"
+                :disabled="isAdvanced"
+            />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <mxs-txt-field-with-label
+                v-model.trim="server"
+                :label="$mxs_t('hostname/IP')"
+                :required="true"
+                :disabled="isAdvanced"
+            />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <mxs-txt-field-with-label
+                v-model.trim="port"
+                :label="$mxs_t('port')"
+                :required="true"
+                :disabled="isAdvanced"
+            />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <uid-input v-model.trim="user" :disabled="isAdvanced" name="etl-src-uid" />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
+            <pwd-input v-model.trim="password" :disabled="isAdvanced" name="etl-src-pwd" />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
             <v-switch
                 v-model="isAdvanced"
                 label="Advanced"
                 class="v-switch--mariadb ma-0 pt-3"
                 hide-details
             />
-            <v-col cols="12" class="pa-1">
-                <label class="field__label mxs-color-helper text-small-text label-required">
-                    {{ $mxs_t('connStr') }}
-                </label>
-                <v-textarea
-                    v-model="src.connection_string"
-                    class="v-textarea--mariadb vuetify-input--override error--text__bottom"
-                    auto-grow
-                    outlined
-                    rows="1"
-                    row-height="15"
-                    :disabled="!isAdvanced"
-                    :rules="requiredRule($mxs_t('connStr'))"
-                />
-            </v-col>
-        </template>
+        </v-col>
+        <v-col cols="12" class="pa-1">
+            <label class="field__label mxs-color-helper text-small-text label-required">
+                {{ $mxs_t('connStr') }}
+            </label>
+            <v-textarea
+                v-model="src.connection_string"
+                class="v-textarea--mariadb vuetify-input--override error--text__bottom"
+                auto-grow
+                outlined
+                rows="1"
+                row-height="15"
+                :disabled="!isAdvanced"
+                :rules="requiredRule($mxs_t('connStr'))"
+            />
+        </v-col>
     </v-row>
 </template>
 

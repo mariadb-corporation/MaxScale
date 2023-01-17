@@ -1,24 +1,19 @@
 <template>
-    <v-tabs v-model="activeStageIdx" vertical class="v-tabs--mariadb v-tabs--etl" hide-slider eager>
-        <v-tab
-            v-for="(stage, stageIdx) in stages"
-            :key="stageIdx"
-            class="my-1 justify-space-between align-center"
-        >
-            <div class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular">
-                {{ stage.name }}
-            </div>
-        </v-tab>
-        <v-tabs-items v-model="activeStageIdx" class="fill-height">
-            <v-tab-item
-                v-for="(stage, stageIdx) in stages"
-                :key="stageIdx"
-                class="fill-height ml-8"
-            >
-                <component :is="stage.component" v-if="stageIdx === activeStageIdx" />
-            </v-tab-item>
-        </v-tabs-items>
-    </v-tabs>
+    <div class="stage-wrapper d-flex flex-column fill-height">
+        <div v-if="$slots['header']" class="stage-wrapper__header d-flex align-center mx-3">
+            <slot name="header" />
+        </div>
+        <div v-if="$slots['body']" class="stage-wrapper__body">
+            <v-container fluid class="fill-height">
+                <v-row class="fill-height">
+                    <slot name="body" />
+                </v-row>
+            </v-container>
+        </div>
+        <div v-if="$slots['footer']" class="stage-wrapper__footer d-flex align-end mx-3">
+            <slot name="footer" />
+        </div>
+    </div>
 </template>
 
 <script>
@@ -34,94 +29,32 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
-import EtlConnsStage from '@queryEditorSrc/components/EtlConnsStage.vue'
-import EtlObjSelectCtr from '@queryEditorSrc/components/EtlObjSelectCtr.vue'
-import { mapState } from 'vuex'
-
 export default {
     name: 'etl-stage-ctr',
-    components: {
-        EtlObjSelectCtr,
-        EtlConnsStage,
-    },
-    computed: {
-        ...mapState({
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
-        }),
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
-        },
-        stages() {
-            const { CONN, SRC_OBJ, OBJ_MIGR, DATA_MIGR } = this.ETL_STAGE_INDEX
-            // TODO: Handle isComplete value
-            return [
-                {
-                    name: this.$mxs_tc('connections', 1),
-                    component: 'etl-conns-stage',
-                    isComplete: this.activeStageIdx > CONN,
-                },
-                {
-                    name: this.$mxs_t('objSelection'),
-                    component: 'etl-obj-select-ctr',
-                    isComplete: this.activeStageIdx > SRC_OBJ,
-                },
-                {
-                    name: this.$mxs_t('objMigration'),
-                    component: 'div', //  TODO: Replace with the objects migration component
-                    isComplete: this.activeStageIdx > OBJ_MIGR,
-                },
-                {
-                    name: this.$mxs_t('dataMigration'),
-                    component: 'div', //  TODO: Replace with the data migration report component
-                    isComplete: this.activeStageIdx > DATA_MIGR,
-                },
-            ]
-        },
-        activeStageIdx: {
-            get() {
-                return this.activeEtlTask.active_stage_index
-            },
-            set(v) {
-                EtlTask.update({
-                    where: this.activeEtlTask.id,
-                    data: { active_stage_index: v },
-                })
-            },
-        },
-    },
 }
 </script>
-
 <style lang="scss">
-.etl-stage-title {
-    line-height: 36px;
-}
-.v-tabs--mariadb.v-tabs--etl {
-    .v-slide-group__wrapper {
-        border-bottom: none !important;
-        .v-slide-group__content {
-            align-items: flex-start !important;
-        }
+.stage-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    &__header {
+        height: 50px;
     }
-}
-.v-tabs--etl {
-    .v-tab {
-        height: 42px !important;
+    &__body {
+        flex: 1;
+        overflow-y: auto;
+    }
+    &__footer {
+        height: 80px;
+    }
+    .etl-stage-title {
+        line-height: 36px;
         width: 100%;
-        .tab-name {
-            letter-spacing: normal;
-        }
-        &:hover {
-            background: #eefafd;
-        }
-        &--active {
-            .tab-name {
-                background-color: $separator;
-                color: $blue-azure !important;
-                border-radius: 8px;
-            }
-        }
+        height: 50px;
+        display: flex;
+        align-items: center;
     }
 }
 </style>

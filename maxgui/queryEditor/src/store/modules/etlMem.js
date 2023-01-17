@@ -11,7 +11,8 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
-import { query } from '@queryEditorSrc/api/query'
+import { query, getAsyncResult } from '@queryEditorSrc/api/query'
+import { prepare } from '@queryEditorSrc/api/etl'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 
 export default {
@@ -98,6 +99,61 @@ export default {
                     commit('SET_SRC_SCHEMA_TREE', tree)
                     break
                 }
+            }
+        },
+        /**
+         * @param {String} etl_task_id
+         */
+        async getPrepareEtlRes({ dispatch }, etl_task_id) {
+            const { meta: { async_query_id } = {} } = EtlTask.find(etl_task_id)
+            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(etl_task_id)
+
+            const [e, res] = await this.vue.$helpers.to(
+                getAsyncResult({ id: srcConn.id, queryId: async_query_id })
+            )
+            if (!e) {
+                const results = this.vue.$typy(res, 'data.data.attributes.results').safeObject
+                if (results)
+                    EtlTask.update({
+                        where: etl_task_id,
+                        data(obj) {
+                            obj.meta.sql_script = results.tables.reduce((str, obj) => {
+                                const { table, create, insert } = obj
+                                str += `#TABLE ${table}\n${create}\n${insert}\n\n`
+                                return str
+                            }, '')
+                            delete obj.meta.async_query_id
+                        },
+                    })
+                else await dispatch('getPrepareEtlRes', etl_task_id)
+            }
+        },
+
+        /**
+         * @param {String} param.etl_task_id
+         * @param {Array} param.tables
+         */
+        async prepareEtl(_, { etl_task_id, tables }) {
+            const { $helpers, $typy } = this.vue
+
+            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(etl_task_id)
+            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(etl_task_id)
+
+            const [e, res] = await $helpers.to(
+                prepare({
+                    id: srcConn.id,
+                    body: { target: destConn.id, type: srcConn.meta.src_type, tables },
+                })
+            )
+
+            if (!e) {
+                EtlTask.update({
+                    where: etl_task_id,
+                    data(obj) {
+                        // Persist query id
+                        obj.meta.async_query_id = $typy(res, 'data.data.id').safeString
+                    },
+                })
             }
         },
     },

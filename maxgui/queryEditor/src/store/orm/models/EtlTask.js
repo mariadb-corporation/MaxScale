@@ -29,8 +29,13 @@ export default class EtlTask extends Extender {
             /**
              * @property {string} src_type  - mariadb||postgresql||generic
              * @property {string} dest_name - server name in MaxScale
+             * @property {string} async_query_id - query_id of async query
              */
             meta: this.attr({}),
+            /**
+             * @property {number} timestamp
+             * @property {string} name
+             */
             logs: this.attr([]),
             created: this.number(Date.now()),
         }
