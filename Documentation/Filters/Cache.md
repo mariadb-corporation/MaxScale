@@ -328,7 +328,7 @@ max_size=100Mi
 
 - **Type**: path
 - **Mandatory**: No
-- **Dynamic**: No
+- **Dynamic**: Yes
 - **Default**: `""` (no rules)
 
 Specifies the path of the file where the caching rules are stored. A relative

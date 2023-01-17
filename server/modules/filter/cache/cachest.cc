@@ -84,6 +84,14 @@ CacheRules::SVector CacheST::all_rules() const
     return m_sRules;
 }
 
+void CacheST::set_all_rules(const CacheRules::SVector& sRules)
+{
+    // Can't mxb_assert(mxs::MainWorker::is_current()), as this will be called
+    // indirectly by CachePT in the routing worker of the CacheST.
+
+    m_sRules = sRules;
+}
+
 // static
 CacheST* CacheST::create(const std::string& name,
                          const CacheConfig* pConfig,

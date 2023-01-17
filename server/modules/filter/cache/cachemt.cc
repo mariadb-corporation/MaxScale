@@ -13,6 +13,7 @@
 
 #define MXB_MODULE_NAME "cache"
 #include "cachemt.hh"
+#include <maxscale/mainworker.hh>
 #include "storage.hh"
 #include "storagefactory.hh"
 
@@ -77,6 +78,14 @@ CacheRules::SVector CacheMT::all_rules() const
 {
     std::lock_guard<std::mutex> guard(m_lock_rules);
     return m_sRules;
+}
+
+void CacheMT::set_all_rules(const CacheRules::SVector& sRules)
+{
+    mxb_assert(mxs::MainWorker::is_current());
+
+    std::lock_guard<std::mutex> guard(m_lock_rules);
+    m_sRules = sRules;
 }
 
 // static

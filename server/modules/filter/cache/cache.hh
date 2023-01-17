@@ -47,7 +47,9 @@ class StorageFactory;
 #define UINT64_MAX (18446744073709551615UL)
 #endif
 
-class Cache
+// std::enable_shared_from_this<> is actually needed by CachePT, but since
+// the cache is stored in a shared_ptr<Cache>, it has to be specified here.
+class Cache : public std::enable_shared_from_this<Cache>
 {
 public:
     using Token = Storage::Token;
@@ -213,6 +215,13 @@ public:
      * @return Vector of rules.
      */
     virtual CacheRules::SVector all_rules() const = 0;
+
+    /**
+     * Change the rules of the cache.
+     *
+     * @param sRules  The new rules.
+     */
+    virtual void set_all_rules(const CacheRules::SVector& sRules) = 0;
 
 protected:
     Cache(const std::string& name,

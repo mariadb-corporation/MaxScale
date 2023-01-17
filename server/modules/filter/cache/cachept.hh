@@ -36,6 +36,8 @@ public:
 
     CacheRules::SVector all_rules() const override final;
 
+    void set_all_rules(const CacheRules::SVector& sRules) override final;
+
     void get_limits(Storage::Limits* pLimits) const override final;
 
     json_t* get_info(uint32_t what) const override final;

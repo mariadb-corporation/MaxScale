@@ -216,7 +216,7 @@ bool CacheFilter::post_configure()
 
                 m_rules_path = m_config.rules;
 
-                //TODO: m_sCache->set_rules(sRules);
+                m_sCache->set_all_rules(sRules);
             }
             else
             {

@@ -35,6 +35,8 @@ public:
 
     CacheRules::SVector all_rules() const override final;
 
+    void set_all_rules(const CacheRules::SVector& sRules) override final;
+
 private:
     CacheMT(const std::string& name,
             const CacheConfig* pConfig,

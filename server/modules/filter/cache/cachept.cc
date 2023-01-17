@@ -16,6 +16,8 @@
 
 #include <maxbase/atomic.hh>
 #include <maxscale/config.hh>
+#include <maxscale/mainworker.hh>
+#include <maxscale/routingworker.hh>
 
 #include "cachest.hh"
 #include "storagefactory.hh"
@@ -77,6 +79,19 @@ void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 CacheRules::SVector CachePT::all_rules() const
 {
     return worker_cache().all_rules();
+}
+
+void CachePT::set_all_rules(const CacheRules::SVector& sRules)
+{
+    mxb_assert(mxs::MainWorker::is_current());
+
+    m_sRules = sRules;
+
+    auto sThis = shared_from_this(); // To ensure that this stays alive during the broadcast.
+
+    mxs::RoutingWorker::broadcast([sThis, sRules](){
+            static_cast<CachePT*>(sThis.get())->worker_cache().set_all_rules(sRules);
+        }, mxb::Worker::EXECUTE_QUEUED);
 }
 
 void CachePT::get_limits(Storage::Limits* pLimits) const
