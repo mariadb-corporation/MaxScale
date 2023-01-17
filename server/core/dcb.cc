@@ -1566,7 +1566,8 @@ void DCB::trigger_write_event()
 
 bool DCB::enable_events()
 {
-    mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
+    mxb_assert_message(m_state == State::CREATED || m_state == State::NOPOLLING,
+                       "State is: %s", mxs::to_string(m_state));
 
     bool rv = false;
     mxb_assert(m_owner == RoutingWorker::get_current());
@@ -1585,7 +1586,8 @@ bool DCB::enable_events()
 
 bool DCB::disable_events()
 {
-    mxb_assert(m_state == State::POLLING);
+    mxb_assert_message(m_state == State::POLLING,
+                       "State is: %s", mxs::to_string(m_state));
     mxb_assert(m_fd != FD_CLOSED);
 
     bool rv = true;
@@ -1630,14 +1632,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     // The fd is removed manually here due to the fact that poll_add_dcb causes the DCB to be added to the
     // worker's list of DCBs but poll_remove_dcb doesn't remove it from it. This is due to the fact that the
     // DCBs are only removed from the list when they are closed.
-    if (reason == DCB::Reason::HIGH_WATER)
+    if (reason == DCB::Reason::HIGH_WATER && client_dcb->state() == DCB::State::POLLING)
     {
         MXB_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  session->user().c_str(), client_dcb->remote().c_str());
 
         client_dcb->disable_events();
     }
-    else if (reason == DCB::Reason::LOW_WATER)
+    else if (reason == DCB::Reason::LOW_WATER && client_dcb->state() == DCB::State::NOPOLLING)
     {
         MXB_INFO("Low water mark hit for '%s'@'%s', accepting new data",
                  session->user().c_str(), client_dcb->remote().c_str());
@@ -1658,7 +1660,8 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
+    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND
+        && dcb->state() == DCB::State::POLLING)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         MXB_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
@@ -1675,7 +1678,8 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
 {
     MXS_SESSION* session = (MXS_SESSION*)data;
 
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
+    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND
+        && dcb->state() == DCB::State::NOPOLLING)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         auto client_dcb = session->client_connection()->dcb();
