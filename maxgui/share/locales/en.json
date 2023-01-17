@@ -387,6 +387,7 @@
         "selectDbType": "Select database type (e.g., MariaDB, PostgreSQL, Generic)",
         "selected": "selected",
         "selectNodeOrEnterIp": "Select a node or enter the IP of the node",
+        "selectObjsToMigrate": "Select objects to migrate",
         "selectOdbcDriver": "Select an ODBC driver",
         "selectResultSet": "Select result set",
         "selectRoutingTargets": "Select routing targets",

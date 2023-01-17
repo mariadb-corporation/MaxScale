@@ -1,0 +1,152 @@
+<template>
+    <div class="fill-height d-flex flex-column justify-space-between">
+        <v-form ref="form" v-model="isFormValid" lazy-validation class="form-container fill-height">
+            <v-container fluid>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+                        <etl-dest-conn
+                            v-model="dest"
+                            :allServers="allServers"
+                            :destTargetType="destTargetType"
+                        />
+                    </v-col>
+                    <!-- TODO: Show logs component -->
+                </v-row>
+            </v-container>
+        </v-form>
+        <div class="d-flex justify-start mt-4">
+            <v-btn
+                small
+                height="36"
+                color="primary"
+                class="font-weight-medium px-7 text-capitalize"
+                rounded
+                depressed
+                :disabled="!isFormValid"
+                :loading="isLoading"
+                @click="next"
+            >
+                {{ $mxs_t(isConnected ? 'selectObjsToMigrate' : 'connect') }}
+            </v-btn>
+        </div>
+    </div>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-11-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import EtlSrcConn from './EtlSrcConn.vue'
+import EtlDestConn from './EtlDestConn.vue'
+import { mapActions, mapState, mapMutations } from 'vuex'
+
+export default {
+    name: 'etl-conns-stage',
+    components: { EtlSrcConn, EtlDestConn },
+    data() {
+        return {
+            isFormValid: false,
+            src: { connection_string: '', type: '' },
+            dest: { user: '', password: '', db: '', target: '' },
+            isLoading: false,
+            isConnected: false,
+        }
+    },
+    computed: {
+        ...mapState({
+            odbc_drivers: state => state.queryConnsMem.odbc_drivers,
+            rc_target_names_map: state => state.queryConnsMem.rc_target_names_map,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
+        }),
+        destTargetType() {
+            return 'servers'
+        },
+        allServers() {
+            return this.rc_target_names_map[this.destTargetType] || []
+        },
+        activeEtlTask() {
+            return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        hasActiveConns() {
+            return this.$typy(this.activeEtlTask, 'connections').safeArray.length >= 2
+        },
+    },
+    async created() {
+        await this.fetchOdbcDrivers()
+        await this.fetchRcTargetNames(this.destTargetType)
+    },
+    methods: {
+        ...mapActions({
+            fetchOdbcDrivers: 'queryConnsMem/fetchOdbcDrivers',
+            fetchRcTargetNames: 'queryConnsMem/fetchRcTargetNames',
+        }),
+        ...mapMutations({
+            SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
+        }),
+        /**
+         * TODO: handle shown connections open error.
+         * Right now it's shown automatically in app snackbar because the requests
+         * are called via $queryHttp axios
+         */
+        async handleOpenConns() {
+            const etl_task_id = this.activeEtlTask.id
+            this.isLoading = true
+            await QueryConn.dispatch('openEtlConn', {
+                body: {
+                    target: 'odbc',
+                    connection_string: this.src.connection_string,
+                },
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                etl_task_id,
+                meta: { src_type: this.src.type },
+            })
+            await QueryConn.dispatch('openEtlConn', {
+                body: this.dest,
+                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                etl_task_id,
+                meta: { dest_name: this.dest.target },
+            })
+            if (this.hasActiveConns)
+                this.SET_SNACK_BAR_MESSAGE({
+                    text: [this.$mxs_t('info.connSuccessfully')],
+                    type: 'success',
+                })
+
+            this.isConnected = this.hasActiveConns
+            await this.$helpers.delay(300) // UX loading animation
+            this.isLoading = false
+        },
+        async next() {
+            if (this.isConnected)
+                EtlTask.update({
+                    where: this.activeEtlTask.id,
+                    data(obj) {
+                        obj.active_stage_index = obj.active_stage_index + 1
+                    },
+                })
+            else {
+                await this.$refs.form.validate()
+                if (this.isFormValid) await this.handleOpenConns()
+            }
+        },
+    },
+}
+</script>
+
+<style lang="scss" scoped>
+.form-container {
+    overflow-y: auto;
+}
+</style>

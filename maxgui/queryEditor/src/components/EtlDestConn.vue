@@ -1,10 +1,7 @@
 <template>
     <v-row>
         <v-col cols="12" class="pa-1">
-            <h3
-                class="mxs-color-helper text-navigation font-weight-light"
-                :style="{ lineHeight: '36px' }"
-            >
+            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('destination') }}
             </h3>
             <p v-if="!allServers.length" class="mxs-color-helper text-error mt-2">

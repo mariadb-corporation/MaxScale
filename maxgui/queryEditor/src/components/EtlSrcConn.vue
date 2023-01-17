@@ -1,10 +1,7 @@
 <template>
     <v-row>
         <v-col cols="12" class="pa-1">
-            <h3
-                class="mxs-color-helper text-navigation font-weight-light"
-                :style="{ lineHeight: '36px' }"
-            >
+            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('source') }}
             </h3>
         </v-col>
@@ -187,14 +184,7 @@ export default {
             },
         },
     },
-    created() {
-        this.setDefDbType()
-    },
     methods: {
-        // use MariaDB as the default
-        setDefDbType() {
-            this.src.type = this.ETL_SUPPORT_DB_TYPES[0].id
-        },
         requiredRule(inputName) {
             return [val => !!val || this.$mxs_t('errors.requiredInput', { inputName })]
         },
