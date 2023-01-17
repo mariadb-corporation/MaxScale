@@ -511,7 +511,8 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
        << "PORT=" << dest_cc.port << ";"
        << "UID=" << dest_cc.user << ";"
        << "PWD={" << dest_cc.password << "};"
-       << "OPTION=67108864;";   // Enables multi-statment SQL.
+       << "OPTION=67108864;"    // Enables multi-statment SQL.
+       << "CONN_TIMEOUT=" << dest_cc.timeout << ";";
 
     ss << maybe_add("DATABASE", dest_cc.db);
 

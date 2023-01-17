@@ -162,10 +162,11 @@ bool is_zero_address(const std::string& ip)
 
 // Processes the given ODBC connection string into something more suitable for our use. More of a best-effort
 // attempt at providing a more usable environment for the query editor in the GUI.
-std::string process_connection_string(std::string str)
+std::string process_connection_string(std::string str, int64_t timeout)
 {
     bool is_maria = false;
     bool no_option = true;
+    bool no_timeout = true;
 
     for (auto tok : mxb::strtok(str, ";"))
     {
@@ -187,13 +188,28 @@ std::string process_connection_string(std::string str)
         {
             no_option = false;
         }
+
+        else if (mxb::sv_case_eq(key, "conn_timeout"))
+        {
+            no_timeout = false;
+        }
     }
 
-    if (is_maria && no_option)
+    if (is_maria)
     {
-        // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will
-        // just return syntax errors for otherwise valid SQL.
-        str += ";OPTION=67108864";
+        if (no_option)
+        {
+            // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will
+            // just return syntax errors for otherwise valid SQL.
+            str += ";OPTION=67108864";
+        }
+
+        if (no_timeout && timeout > 0)
+        {
+            // The MariaDB ODBC driver currently does not support timeouts set via the ODBC APIs. This means
+            // we'll have to inject it into the connection string.
+            str += ";CONN_TIMEOUT=" + std::to_string(timeout);
+        }
     }
 
     return str;
@@ -920,7 +936,8 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     }
     else
     {
-        mxq::ODBC odbc(process_connection_string(config.odbc_string), std::chrono::seconds{config.timeout});
+        mxq::ODBC odbc(process_connection_string(config.odbc_string, config.timeout),
+                       std::chrono::seconds{config.timeout});
 
         if (odbc.connect())
         {
