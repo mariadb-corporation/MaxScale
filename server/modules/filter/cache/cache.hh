@@ -97,7 +97,7 @@ public:
      *
      * @return A rules object, if the query should be stored, NULL otherwise.
      */
-    const CacheRules* should_store(const char* zDefaultDb, const GWBUF* pQuery);
+    std::shared_ptr<CacheRules> should_store(const char* zDefaultDb, const GWBUF* pQuery);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
@@ -207,10 +207,16 @@ public:
      */
     static uint64_t time_ms();
 
+    /**
+     * Returns all rules of the cache.
+     *
+     * @return Vector of rules.
+     */
+    virtual CacheRules::SVector all_rules() const = 0;
+
 protected:
     Cache(const std::string& name,
           const CacheConfig* pConfig,
-          const CacheRules::SVector& sRules,
           SStorageFactory sFactory);
 
     static bool get_storage_factory(const CacheConfig* pConfig,
@@ -225,6 +231,5 @@ private:
 protected:
     const std::string   m_name;    // The name of the instance; the section name in the config.
     const CacheConfig&  m_config;  // The configuration of the cache instance.
-    CacheRules::SVector m_sRules;  // The rules of the cache instance.
     SStorageFactory     m_sFactory;// The storage factory.
 };

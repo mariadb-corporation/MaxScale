@@ -34,6 +34,8 @@ public:
 
     void refreshed(const CacheKey& key, const CacheFilterSession* pSession) override final;
 
+    CacheRules::SVector all_rules() const override final;
+
 private:
     CacheST(const std::string& name,
             const CacheConfig* pConfig,

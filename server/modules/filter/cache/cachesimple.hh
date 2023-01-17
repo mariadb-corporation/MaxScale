@@ -72,6 +72,7 @@ private:
 protected:
     typedef std::unordered_map<CacheKey, const CacheFilterSession*> Pending;
 
-    Pending  m_pending; // Pending items; being fetched from the backend.
-    Storage* m_pStorage;// The storage instance to use.
+    Pending             m_pending; // Pending items; being fetched from the backend.
+    Storage*            m_pStorage;// The storage instance to use.
+    CacheRules::SVector m_sRules;
 };

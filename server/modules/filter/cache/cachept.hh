@@ -34,6 +34,8 @@ public:
 
     void refreshed(const CacheKey& key, const CacheFilterSession* pSession) override;
 
+    CacheRules::SVector all_rules() const override final;
+
     void get_limits(Storage::Limits* pLimits) const override final;
 
     json_t* get_info(uint32_t what) const override final;
@@ -89,6 +91,7 @@ private:
     using SCache = std::unique_ptr<Cache>;
     using WorkerCache = mxs::WorkerLocal<SCache, mxs::WLDefaultConstructor<SCache>>;
 
-    std::mutex  m_mutex;
-    WorkerCache m_spWorker_cache;
+    std::mutex          m_mutex;
+    WorkerCache         m_spWorker_cache;
+    CacheRules::SVector m_sRules;
 };

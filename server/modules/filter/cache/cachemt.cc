@@ -73,6 +73,12 @@ void CacheMT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
     do_refreshed(key, pSession);
 }
 
+CacheRules::SVector CacheMT::all_rules() const
+{
+    std::lock_guard<std::mutex> guard(m_lock_rules);
+    return m_sRules;
+}
+
 // static
 CacheMT* CacheMT::create(const std::string& name,
                          const CacheConfig* pConfig,

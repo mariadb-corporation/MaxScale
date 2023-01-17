@@ -33,6 +33,8 @@ public:
 
     void refreshed(const CacheKey& key, const CacheFilterSession* pSession) override final;
 
+    CacheRules::SVector all_rules() const override final;
+
 private:
     CacheMT(const std::string& name,
             const CacheConfig* pConfig,
@@ -51,4 +53,5 @@ private:
 
 private:
     mutable std::mutex m_lock_pending;      // Lock used for protecting 'pending'.
+    mutable std::mutex m_lock_rules;
 };

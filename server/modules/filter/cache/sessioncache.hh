@@ -42,7 +42,7 @@ public:
     /**
      * @see Cache::should_store
      */
-    const CacheRules* should_store(const char* zDefaultDb, const GWBUF* pQuery)
+    std::shared_ptr<CacheRules> should_store(const char* zDefaultDb, const GWBUF* pQuery)
     {
         return m_cache.should_store(zDefaultDb, pQuery);
     }

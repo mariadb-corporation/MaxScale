@@ -28,7 +28,8 @@ CachePT::CachePT(const std::string& name,
                  const CacheConfig* pConfig,
                  const CacheRules::SVector& sRules,
                  SStorageFactory sFactory)
-    : Cache(name, pConfig, sRules, sFactory)
+    : Cache(name, pConfig, sFactory)
+    , m_sRules(sRules)
 {
     MXB_NOTICE("Created cache per thread.");
 }
@@ -71,6 +72,11 @@ bool CachePT::must_refresh(const CacheKey& key, const CacheFilterSession* pSessi
 void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 {
     worker_cache().refreshed(key, pSession);
+}
+
+CacheRules::SVector CachePT::all_rules() const
+{
+    return worker_cache().all_rules();
 }
 
 void CachePT::get_limits(Storage::Limits* pLimits) const

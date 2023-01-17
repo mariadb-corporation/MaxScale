@@ -79,6 +79,11 @@ void CacheST::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
     CacheSimple::do_refreshed(key, pSession);
 }
 
+CacheRules::SVector CacheST::all_rules() const
+{
+    return m_sRules;
+}
+
 // static
 CacheST* CacheST::create(const std::string& name,
                          const CacheConfig* pConfig,

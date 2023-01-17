@@ -1128,9 +1128,9 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
     if (cache_action != CACHE_IGNORE)
     {
-        const CacheRules* pRules = m_sCache->should_store(m_zDefaultDb, pPacket);
+        std::shared_ptr<CacheRules> sRules = m_sCache->should_store(m_zDefaultDb, pPacket);
 
-        if (pRules)
+        if (sRules)
         {
             static const std::string empty;
 
@@ -1141,7 +1141,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
             if (CACHE_RESULT_IS_OK(result))
             {
-                routing_action = route_SELECT(cache_action, *pRules, pPacket);
+                routing_action = route_SELECT(cache_action, *sRules.get(), pPacket);
             }
             else
             {
