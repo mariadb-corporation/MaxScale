@@ -1,8 +1,10 @@
 <template>
     <v-row class="ma-n1">
-        <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light mt-n3">
-            {{ $mxs_t('source') }}
-        </h3>
+        <v-col cols="12" class="pa-1">
+            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                {{ $mxs_t('source') }}
+            </h3>
+        </v-col>
         <v-col cols="12" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $mxs_t('databaseType') }}

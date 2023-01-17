@@ -1,33 +1,72 @@
 <template>
     <etl-stage-ctr>
         <template v-slot:header>
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                {{ $mxs_t('migrationScript') }}
-            </h3>
+            <div class="etl-migration-script-header">
+                <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                    {{ $mxs_t('migrationScript') }}
+                </h3>
+                <p class="my-2 migration-method-info mxs-color-helper text-deep-ocean">
+                    {{ $mxs_t('info.migrationMethod') }}
+                </p>
+            </div>
         </template>
         <template v-slot:body>
             <v-col cols="12" class="fill-height">
-                <!--  TODO: Add info about tables script are being executed parallelly -->
                 <v-progress-linear v-if="isLoading" indeterminate color="primary" />
                 <sql-editor
                     v-else
                     v-model="migrationScript"
-                    class="script-container  pa-4 mxs-color-helper all-border-separator"
+                    class="script-container fill-height pa-4 mxs-color-helper all-border-separator"
                 />
             </v-col>
         </template>
         <template v-slot:footer>
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="mt-auto font-weight-medium px-7 text-capitalize"
-                rounded
-                depressed
-                @click="next"
-            >
-                {{ $mxs_t('startMigration') }}
-            </v-btn>
+            <div class="btn-ctr">
+                <v-checkbox
+                    v-model="isConfirmed"
+                    color="primary"
+                    class="mb-4 v-checkbox--mariadb"
+                    hide-details
+                >
+                    <template v-slot:label>
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <div class="d-flex align-center" v-on="on">
+                                    <label
+                                        class="v-label ml-1 mxs-color-helper text-deep-ocean confirm-label"
+                                    >
+                                        {{ $mxs_t('etlConfirmMigration') }}
+                                    </label>
+                                    <v-icon
+                                        class="ml-1 material-icons-outlined pointer"
+                                        size="16"
+                                        color="warning"
+                                    >
+                                        $vuetify.icons.mxs_statusWarning
+                                    </v-icon>
+                                </div>
+                            </template>
+                            <span>{{ $mxs_t('info.etlConfirm') }}</span>
+                        </v-tooltip>
+                    </template>
+                </v-checkbox>
+                <v-btn
+                    small
+                    height="36"
+                    color="primary"
+                    class="mt-auto font-weight-medium px-7 text-capitalize"
+                    rounded
+                    depressed
+                    :disabled="!isConfirmed"
+                    @click="next"
+                >
+                    {{ $mxs_t('startMigration') }}
+                </v-btn>
+            </div>
         </template>
     </etl-stage-ctr>
 </template>
@@ -59,6 +98,7 @@ export default {
     data() {
         return {
             isLoading: true,
+            isConfirmed: false,
         }
     },
     computed: {
@@ -122,6 +162,9 @@ export default {
 <style lang="scss" scoped>
 .script-container {
     border-radius: 4px;
-    height: 100%;
+}
+.confirm-label,
+.migration-method-info {
+    font-size: 14px;
 }
 </style>

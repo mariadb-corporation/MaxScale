@@ -2,7 +2,7 @@
     <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
         <etl-stage-ctr>
             <template v-slot:body>
-                <v-col cols="12" md="6" class="fill-height pt-0">
+                <v-col cols="12" md="6" class="fill-height pt-0 mt-n3">
                     <etl-src-conn v-model="src" :drivers="odbc_drivers" />
                     <etl-dest-conn
                         v-model="dest"

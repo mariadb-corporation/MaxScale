@@ -1,6 +1,10 @@
 <template>
-    <div class="stage-wrapper d-flex flex-column fill-height">
-        <div v-if="$slots['header']" class="stage-wrapper__header d-flex align-center mx-3">
+    <div class="stage-wrapper d-flex flex-column fill-height pl-8">
+        <div
+            v-if="$slots['header']"
+            class="stage-wrapper__header d-flex mx-3"
+            :style="{ height: `${headerHeight}px` }"
+        >
             <slot name="header" />
         </div>
         <div v-if="$slots['body']" class="stage-wrapper__body">
@@ -36,6 +40,7 @@
 export default {
     name: 'etl-stage-ctr',
     props: {
+        headerHeight: { type: Number, default: 50 },
         footerHeight: { type: Number, default: 80 },
     },
 }
@@ -46,9 +51,6 @@ export default {
     top: 0;
     left: 0;
     width: 100%;
-    &__header {
-        height: 50px;
-    }
     &__body {
         flex: 1;
         overflow-y: auto;
@@ -56,9 +58,6 @@ export default {
     .etl-stage-title {
         line-height: 36px;
         width: 100%;
-        height: 50px;
-        display: flex;
-        align-items: center;
     }
 }
 </style>

@@ -121,8 +121,11 @@ export default {
                             where: etl_task_id,
                             data(obj) {
                                 obj.meta.sql_script = results.tables.reduce((str, obj) => {
-                                    const { table, create, insert } = obj
-                                    str += `#TABLE ${table}\n${create}\n${insert}\n\n`
+                                    const { schema, table, create, insert, select } = obj
+                                    // eslint-disable-next-line vue/max-len
+                                    str += `-- RETRIEVING DATA FROM SOURCE: \`${schema}\`.\`${table}\`\n${select};\n`
+                                    str += `-- CREATE OBJECT IN DESTINATION\n${create};\n`
+                                    str += `-- INSERT DATA TO OBJECT\n${insert};\n\n`
                                     return str
                                 }, '')
                                 delete obj.meta.async_query_id
