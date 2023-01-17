@@ -10,7 +10,11 @@
                 </v-row>
             </v-container>
         </div>
-        <div v-if="$slots['footer']" class="stage-wrapper__footer d-flex align-end mx-3">
+        <div
+            v-if="$slots['footer']"
+            class="stage-wrapper__footer d-flex align-end mx-3"
+            :style="{ height: `${footerHeight}px` }"
+        >
             <slot name="footer" />
         </div>
     </div>
@@ -31,6 +35,9 @@
  */
 export default {
     name: 'etl-stage-ctr',
+    props: {
+        footerHeight: { type: Number, default: 80 },
+    },
 }
 </script>
 <style lang="scss">
@@ -45,9 +52,6 @@ export default {
     &__body {
         flex: 1;
         overflow-y: auto;
-    }
-    &__footer {
-        height: 80px;
     }
     .etl-stage-title {
         line-height: 36px;

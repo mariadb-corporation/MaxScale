@@ -104,28 +104,57 @@ export default {
         /**
          * @param {String} etl_task_id
          */
-        async getPrepareEtlRes({ dispatch }, etl_task_id) {
+        async getPrepareEtlRes({ dispatch, commit }, etl_task_id) {
+            const { $helpers, $typy, $mxs_t } = this.vue
             const { meta: { async_query_id } = {} } = EtlTask.find(etl_task_id)
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(etl_task_id)
 
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await $helpers.to(
                 getAsyncResult({ id: srcConn.id, queryId: async_query_id })
             )
             if (!e) {
-                const results = this.vue.$typy(res, 'data.data.attributes.results').safeObject
-                if (results)
-                    EtlTask.update({
-                        where: etl_task_id,
-                        data(obj) {
-                            obj.meta.sql_script = results.tables.reduce((str, obj) => {
-                                const { table, create, insert } = obj
-                                str += `#TABLE ${table}\n${create}\n${insert}\n\n`
-                                return str
-                            }, '')
-                            delete obj.meta.async_query_id
-                        },
-                    })
-                else await dispatch('getPrepareEtlRes', etl_task_id)
+                const results = $typy(res, 'data.data.attributes.results').safeObject
+                if (results) {
+                    const ok = $typy(results, 'ok').safeBoolean
+                    if (ok)
+                        EtlTask.update({
+                            where: etl_task_id,
+                            data(obj) {
+                                obj.meta.sql_script = results.tables.reduce((str, obj) => {
+                                    const { table, create, insert } = obj
+                                    str += `#TABLE ${table}\n${create}\n${insert}\n\n`
+                                    return str
+                                }, '')
+                                delete obj.meta.async_query_id
+                            },
+                        })
+                    else {
+                        const error = $typy(results, 'error').safeString
+                        EtlTask.update({
+                            where: etl_task_id,
+                            data(obj) {
+                                delete obj.meta.async_query_id
+                            },
+                        })
+                        EtlTask.dispatch('pushLog', {
+                            id: etl_task_id,
+                            log: {
+                                timestamp: new Date().valueOf(),
+                                name: `${$mxs_t(
+                                    'errors.failedToPrepareMigrationScript'
+                                )}. Stopped at the following error: \n${error}`,
+                            },
+                        })
+                        commit(
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [error],
+                                type: 'error',
+                            },
+                            { root: true }
+                        )
+                    }
+                } else await dispatch('getPrepareEtlRes', etl_task_id)
             }
         },
 
@@ -134,7 +163,7 @@ export default {
          * @param {Array} param.tables
          */
         async prepareEtl(_, { etl_task_id, tables }) {
-            const { $helpers, $typy } = this.vue
+            const { $helpers, $typy, $mxs_t } = this.vue
 
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(etl_task_id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(etl_task_id)
@@ -152,6 +181,13 @@ export default {
                     data(obj) {
                         // Persist query id
                         obj.meta.async_query_id = $typy(res, 'data.data.id').safeString
+                    },
+                })
+                EtlTask.dispatch('pushLog', {
+                    id: EtlTask.getters('getActiveEtlTaskWithRelation').id,
+                    log: {
+                        timestamp: new Date().valueOf(),
+                        name: $mxs_t('info.preparingMigrationScript'),
                     },
                 })
             }

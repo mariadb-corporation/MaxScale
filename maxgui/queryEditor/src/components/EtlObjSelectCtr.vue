@@ -1,5 +1,5 @@
 <template>
-    <etl-stage-ctr>
+    <etl-stage-ctr :footerHeight="36">
         <template v-slot:header>
             <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('selectObjsToMigrate') }}
@@ -58,11 +58,9 @@
                     <p v-if="errMsg" class="mt-4 v-messages__message error--text">
                         {{ errMsg }}
                     </p>
-                    <p
-                        v-else-if="infoMsg"
-                        class="mt-4 v-messages__message warning--text"
-                        v-html="infoMsg"
-                    />
+                    <p v-else-if="infoMsg" class="mt-4 v-messages__message warning--text">
+                        {{ infoMsg }}
+                    </p>
                 </div>
             </v-col>
             <!-- TODO: Show logs component -->
@@ -145,10 +143,7 @@ export default {
                     const { etlPrepareTables, emptySchemas } = this.parsedObjs
                     if (etlPrepareTables.length) {
                         this.errMsg = ''
-                        if (emptySchemas.length)
-                            this.infoMsg = this.$mxs_t('info.ignoreSchemas', [
-                                emptySchemas.join(', '),
-                            ])
+                        if (emptySchemas.length) this.infoMsg = this.$mxs_t('info.ignoreSchemas')
                     } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
             },
