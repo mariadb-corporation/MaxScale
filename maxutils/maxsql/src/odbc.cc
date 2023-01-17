@@ -72,7 +72,8 @@ public:
 
     void set_row_limit(size_t limit);
 
-    void set_query_timeout(std::chrono::seconds timeout);
+    void                 set_query_timeout(std::chrono::seconds timeout);
+    std::chrono::seconds query_timeout() const;
 
     std::string get_string_info(int type) const;
 
@@ -933,6 +934,11 @@ void ODBCImp::set_query_timeout(std::chrono::seconds timeout)
     }
 }
 
+std::chrono::seconds ODBCImp::query_timeout() const
+{
+    return m_timeout;
+}
+
 std::string ODBCImp::get_string_info(int type) const
 {
     char buf[512];
@@ -1342,6 +1348,11 @@ void ODBC::set_row_limit(size_t limit)
 void ODBC::set_query_timeout(std::chrono::seconds timeout)
 {
     m_imp->set_query_timeout(timeout);
+}
+
+std::chrono::seconds ODBC::query_timeout() const
+{
+    return m_imp->query_timeout();
 }
 
 std::string ODBC::driver_name() const

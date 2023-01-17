@@ -354,6 +354,13 @@ public:
     void set_query_timeout(std::chrono::seconds timeout);
 
     /**
+     * Get query timeout
+     *
+     * @return The timeout in seconds
+     */
+    std::chrono::seconds query_timeout() const;
+
+    /**
      * Get the name of the driver being used
      *
      * @return The name of the driver if it could be retrieved or an empty string if the connection is not

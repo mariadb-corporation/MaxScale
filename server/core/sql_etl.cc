@@ -88,7 +88,8 @@ public:
         ss << "LOCK TABLE "
            << mxb::transform_join(tables, [](const auto& t){
             return "`"s + t.schema() + "`.`" + t.table() + "` READ";
-        }, ",");
+        }, ",")
+           << " WAIT " << source.query_timeout().count();
 
         if (!source.query(ss.str()))
         {
