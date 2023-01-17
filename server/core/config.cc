@@ -431,7 +431,7 @@ config::ParamSize Config::s_writeq_high_water(
     &Config::s_specification,
     CN_WRITEQ_HIGH_WATER,
     "High water mark of dcb write queue.",
-    16777216,
+    64 * 1024,
     0, std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -439,7 +439,7 @@ config::ParamSize Config::s_writeq_low_water(
     &Config::s_specification,
     CN_WRITEQ_LOW_WATER,
     "Low water mark of dcb write queue.",
-    8192,
+    1024,
     0, std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
