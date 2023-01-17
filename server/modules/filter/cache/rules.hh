@@ -23,6 +23,9 @@
 #include "cacheconfig.hh"
 
 
+class CacheRuleConcrete;
+class CacheRuleUser;
+
 class CacheRule
 {
 public:
@@ -59,7 +62,17 @@ public:
 
     virtual bool compare(const std::string_view& value) const = 0;
     virtual bool compare_n(const char* pValue, size_t length) const = 0;
+
+    virtual bool eq(const CacheRule& other) const = 0;
+
+    virtual bool eq(const CacheRuleConcrete& other) const;
+    virtual bool eq(const CacheRuleUser& other) const;
 };
+
+inline bool operator == (const CacheRule& lhs, const CacheRule& rhs)
+{
+    return lhs.eq(rhs);
+}
 
 class CacheRuleConcrete : public CacheRule
 {
@@ -90,6 +103,9 @@ public:
     }
 
     bool compare(const std::string_view& value) const override final;
+
+    bool eq(const CacheRule& other) const override final;
+    bool eq(const CacheRuleConcrete& other) const override final;
 
 protected:
     CacheRuleConcrete(const CacheConfig* pConfig,
@@ -261,6 +277,9 @@ public:
     bool compare(const std::string_view& value) const override;
     bool compare_n(const char* pValue, size_t length) const override;
 
+    bool eq(const CacheRule& other) const override;
+    bool eq(const CacheRuleUser& other) const override;
+
 private:
     CacheRuleUser(std::unique_ptr<CacheRule> sDelegate)
         : m_sDelegate(std::move(sDelegate))
@@ -348,6 +367,15 @@ public:
      */
     bool should_use(const MXS_SESSION* pSession) const;
 
+    /**
+     * Compare rules for equality.
+     *
+     * @param other  The rules to compare to.
+     *
+     * @return True, if this and @c other are equivalent.
+     */
+    bool eq(const CacheRules& other) const;
+
 private:
     friend class Tester;
 
@@ -400,3 +428,8 @@ private:
     SCacheRuleValueVector m_store_rules;       // The rules for when to store data to the cache.
     SCacheRuleUserVector  m_use_rules;         // The rules for when to use data from the cache.
 };
+
+inline bool operator == (const CacheRules& lhs, const CacheRules& rhs)
+{
+    return lhs.eq(rhs);
+}

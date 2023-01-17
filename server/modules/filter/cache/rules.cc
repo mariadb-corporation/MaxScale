@@ -157,6 +157,15 @@ bool CacheRule::from_string(const char* z, CacheRule::Op* pOp)
     return value_from_string(this_unit.ops_by_name, z, pOp);
 }
 
+bool CacheRule::eq(const CacheRuleConcrete& other) const
+{
+    return false;
+}
+
+bool CacheRule::eq(const CacheRuleUser& other) const
+{
+    return false;
+}
 
 //
 // CacheRuleConcrete
@@ -185,6 +194,18 @@ bool CacheRuleConcrete::compare(const std::string_view& value) const
     return rv;
 }
 
+bool CacheRuleConcrete::eq(const CacheRule& other) const
+{
+    return other.eq(*this);
+}
+
+bool CacheRuleConcrete::eq(const CacheRuleConcrete& other) const
+{
+    return
+        m_attribute == other.m_attribute
+        && m_op == other.m_op
+        && m_value == other.m_value;
+}
 
 //
 // CacheRuleValue
@@ -1048,6 +1069,15 @@ bool CacheRuleUser::matches_user(const char* account) const
     return matches;
 }
 
+bool CacheRuleUser::eq(const CacheRule& other) const
+{
+    return other.eq(*this);
+}
+
+bool CacheRuleUser::eq(const CacheRuleUser& other) const
+{
+    return m_sDelegate->eq(*other.m_sDelegate.get());
+}
 
 //
 // CacheRules
@@ -1192,6 +1222,31 @@ bool CacheRules::should_use(const MXS_SESSION* session) const
     return should_use;
 }
 
+bool CacheRules::eq(const CacheRules& other) const
+{
+    bool rv = false;
+
+    if (m_store_rules.size() == other.m_store_rules.size()
+        && m_use_rules.size() == other.m_use_rules.size())
+    {
+        rv = std::equal(m_store_rules.begin(), m_store_rules.end(), other.m_store_rules.begin(),
+                        [](const std::unique_ptr<CacheRuleValue>& sLhs,
+                           const std::unique_ptr<CacheRuleValue>& sRhs) {
+                            return *sLhs == *sRhs;
+                        });
+
+        if (rv)
+        {
+            rv = std::equal(m_use_rules.begin(), m_use_rules.end(), other.m_use_rules.begin(),
+                            [](const std::unique_ptr<CacheRuleUser>& sLhs,
+                               const std::unique_ptr<CacheRuleUser>& sRhs) {
+                                return *sLhs == *sRhs;
+                            });
+        }
+    }
+
+    return rv;
+}
 
 CacheRules::CacheRules(const CacheConfig* pConfig)
     : m_config(*pConfig)
