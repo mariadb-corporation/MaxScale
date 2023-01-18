@@ -69,6 +69,7 @@ int cache_process_init()
 
     return 0;
 }
+
 }
 
 //
@@ -130,50 +131,28 @@ CacheFilter* CacheFilter::create(const char* zName)
     return new CacheFilter(zName);
 }
 
-namespace
-{
-
-CacheRules::SVector create_rules(const CacheConfig* pConfig, const string& rules_path)
-{
-    bool rv;
-
-    CacheRules::SVector sRules;
-
-    if (!rules_path.empty())
-    {
-        sRules = CacheRules::load(pConfig, rules_path);
-    }
-    else
-    {
-        sRules.reset(new CacheRules::Vector);
-        sRules->push_back(shared_ptr<CacheRules>(CacheRules::create(pConfig).release()));
-    }
-
-    return sRules;
-}
-
-}
-
 bool CacheFilter::post_configure()
 {
+    bool rv = false;
     Cache* pCache = m_sCache.get();
 
     if (!pCache)
     {
         m_rules_path = m_config.rules;
+        m_sRules = CacheRules::get(&m_config, m_rules_path);
 
-        if (CacheRules::SVector sRules = create_rules(&m_config, m_rules_path))
+        if (m_sRules)
         {
             switch (m_config.thread_model)
             {
             case CACHE_THREAD_MODEL_MT:
                 MXB_NOTICE("Creating shared cache.");
-                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), sRules, &m_config));
+                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), m_sRules, &m_config));
                 break;
 
             case CACHE_THREAD_MODEL_ST:
                 MXB_NOTICE("Creating thread specific cache.");
-                MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), sRules, &m_config));
+                MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), m_sRules, &m_config));
                 break;
 
             default:
@@ -202,33 +181,68 @@ bool CacheFilter::post_configure()
                 }
 
                 m_sCache.reset(pCache);
+                rv = true;
             }
         }
     }
     else
     {
-        if (m_rules_path != m_config.rules)
+        if (CacheRules::SVector sRules = CacheRules::get(&m_config, m_config.rules))
         {
-            if (CacheRules::SVector sRules = create_rules(&m_config, m_config.rules))
+            if (!CacheRules::eq(m_sRules, sRules))
             {
-                MXB_NOTICE("The rules path has been changed from '%s' to '%s.",
-                           m_rules_path.c_str(), m_config.rules.c_str());
-
-                m_rules_path = m_config.rules;
-
                 m_sCache->set_all_rules(sRules);
+                m_sRules = sRules;
+
+                if (m_rules_path == m_config.rules)
+                {
+                    MXB_NOTICE("The rules have been refreshed from '%s'.", m_rules_path.c_str());
+                }
+                else
+                {
+                    MXB_NOTICE("The rules have been loaded from '%s'.", m_config.rules.c_str());
+                }
+            }
+            else
+            {
+                if (m_rules_path == m_config.rules)
+                {
+                    MXB_NOTICE("The rules in '%s' have not changed.", m_rules_path.c_str());
+                }
+                else
+                {
+                    MXB_NOTICE("The rules in '%s' are identical with the current rules.",
+                               m_config.rules.c_str());
+                }
+            }
+
+            if (m_rules_path != m_config.rules)
+            {
+                MXB_NOTICE("The rules path has been changed from '%s' to '%s'.",
+                           m_rules_path.c_str(), m_config.rules.c_str());
+                m_rules_path = m_config.rules;
+            }
+
+            rv = true;
+        }
+        else
+        {
+            if (m_rules_path == m_config.rules)
+            {
+                MXB_NOTICE("The rules could not be refreshed from '%s'.", m_rules_path.c_str());
             }
             else
             {
                 MXB_ERROR("The rules could not be loaded from '%s'. The rules loaded "
                           "from '%s' will remain in use.",
                           m_config.rules.c_str(), m_rules_path.c_str());
+
                 m_config.rules = m_rules_path;
             }
         }
     }
 
-    return pCache != nullptr;
+    return rv;
 }
 
 CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)

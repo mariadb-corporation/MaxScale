@@ -338,6 +338,13 @@ path is interpreted relative to the _data directory_ of MariaDB MaxScale.
 rules=/path/to/rules-file
 ```
 
+Note that the rules will be reloaded, and applied if different, every time
+a dynamic configuration change is made. Thus, to cause a reloading of the
+rules, alter the rules parameter to the same value it has.
+```
+maxctrl alter filter MyCache rules='/path/to/rules-file'
+```
+
 #### `cached_data`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)

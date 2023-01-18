@@ -62,5 +62,6 @@ private:
 private:
     CacheConfig            m_config;
     std::string            m_rules_path;
-    std::unique_ptr<Cache> m_sCache;
+    CacheRules::SVector    m_sRules;
+    std::shared_ptr<Cache> m_sCache;
 };
