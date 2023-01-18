@@ -65,6 +65,16 @@ struct Config
 
     // Connection and query timeout
     std::chrono::seconds timeout = 30s;
+
+    // What to do if the table already exists
+    enum class CreateMode
+    {
+        NORMAL,     // CREATE TABLE: causes an error to be reported
+        REPLACE,    // CREATE OR REPLACE TABLE: drops the existing table
+        IGNORE,     // CREATE TABLE IF NOT EXISTS: ignores the error
+    };
+
+    CreateMode create_mode = CreateMode::NORMAL;
 };
 
 class Table;
@@ -185,6 +195,8 @@ public:
         return m_schema.c_str();
     }
 
+    Config::CreateMode create_mode() const;
+
 private:
     ETL&          m_etl;
     std::string   m_schema;
@@ -278,4 +290,13 @@ private:
 std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
                             const HttpSql::ConnectionConfig& src_cc,
                             const HttpSql::ConnectionConfig& dest_cc);
+
+/**
+ * Get the correct CREATE TABLE statement for the CreateMode
+ *
+ * @param mode The CreateMode to use
+ *
+ * @return The CREATE TABLE statement that corresponds to the mode
+ */
+std::string_view to_create_table(Config::CreateMode mode);
 }

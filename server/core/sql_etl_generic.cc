@@ -392,8 +392,9 @@ std::string GenericExtractor::create_table(mxq::ODBC& source, const Table& table
     }
 
     std::ostringstream ss;
+    std::string_view create_type = to_create_table(table.create_mode());
 
-    ss << "CREATE TABLE `" << table.schema() << "`.`" << table.table() << "` (\n"
+    ss << create_type << " `" << table.schema() << "`.`" << table.table() << "` (\n"
        << mxb::transform_join(parts, [](const auto& val){
         return "  " + val;
     }, ",\n") << "\n)";

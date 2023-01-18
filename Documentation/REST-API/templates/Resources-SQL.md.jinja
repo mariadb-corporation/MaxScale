@@ -713,6 +713,25 @@ The request body must be a JSON object consisting of the following fields:
   The connection and query timeout in seconds. By default a timeout of 30
   seconds is used.
 
+- `create_mode`
+
+  A string with either `normal`, `ignore` or `replace` which controls how tables
+  are handled that already exist on the destination server.
+
+  If left undefined or set to `normal`, the tables are created using a normal
+  `CREATE TABLE` statement. This will cause an error to be reported if the table
+  already exist and will prevent the ETL from proceeding past the object
+  creation stage.
+
+  If set to `ignore` the tables are created with `CREATE TABLE IF NOT EXISTS`
+  which will ignore any existing tables and assume that they are compatible with
+  the rest of the ETL operation. This mode can be used to continuously load data
+  from an external source into MariaDB.
+
+  If set to `replace`, the tables are created with `CREATE OR REPLACE TABLE`
+  which will cause existing tables to be dropped if they exist. This is not a
+  reversible process so caution should be taken when this mode is used.
+
 Here is an example payload that prepares the table `test.t1` for extraction from
 a MariaDB server.
 

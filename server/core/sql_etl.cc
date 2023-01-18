@@ -116,7 +116,23 @@ public:
     std::string create_table(mxq::ODBC& source, const Table& table) override
     {
         std::string sql = mxb::string_printf("SHOW CREATE TABLE `%s`.`%s`", table.schema(), table.table());
-        return field_from_result(source, sql, 1);
+        std::string result = field_from_result(source, sql, 1);
+        std::string_view original = "CREATE TABLE";
+        std::string_view replacement = to_create_table(table.create_mode());
+
+        if (replacement != original)
+        {
+            if (auto pos = result.find(original); pos != std::string::npos)
+            {
+                result.replace(pos, original.size(), replacement);
+            }
+            else
+            {
+                throw problem("Malformed response to `SHOW CREATE TABLE`: ", result);
+            }
+        }
+
+        return result;
     }
 
     std::string select(mxq::ODBC& source, const Table& table) override
@@ -399,8 +415,10 @@ WHERE
             }
         }
 
+        std::string_view create_table = to_create_table(table.create_mode());
+
         ss.str("");
-        ss << "CREATE TABLE `" << table.schema() << "`.`" << table.table() << "`(\n  ";
+        ss << create_table << " `" << table.schema() << "`.`" << table.table() << "`(\n  ";
         ss << mxb::join(values, ",\n  ");
         ss << "\n)";
         return ss.str();
@@ -575,6 +593,26 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
         cnf.timeout = std::chrono::seconds{timeout};
     }
 
+    if (auto mode = maybe_get(json, "create_mode", mxb::Json::Type::STRING).get_string(); !mode.empty())
+    {
+        if (mode == "normal")
+        {
+            cnf.create_mode = Config::CreateMode::NORMAL;
+        }
+        else if (mode == "ignore")
+        {
+            cnf.create_mode = Config::CreateMode::IGNORE;
+        }
+        else if (mode == "replace")
+        {
+            cnf.create_mode = Config::CreateMode::REPLACE;
+        }
+        else
+        {
+            throw problem("Unknown value for 'create_mode': ", mode);
+        }
+    }
+
     std::unique_ptr<ETL> etl = std::make_unique<ETL>(id, cnf, std::move(extractor));
 
     for (const auto& val : tables)
@@ -590,6 +628,23 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
     return etl;
 }
 
+std::string_view to_create_table(Config::CreateMode mode)
+{
+    switch (mode)
+    {
+    case Config::CreateMode::NORMAL:
+        return "CREATE TABLE";
+
+    case Config::CreateMode::REPLACE:
+        return "CREATE OR REPLACE TABLE";
+
+    case Config::CreateMode::IGNORE:
+        return "CREATE TABLE IF NOT EXISTS";
+    }
+
+    return "ERROR";
+}
+
 Table::Table(ETL& etl,
              std::string_view schema,
              std::string_view table,
@@ -603,6 +658,12 @@ Table::Table(ETL& etl,
     , m_select(select)
     , m_insert(insert)
 {
+}
+
+Config::CreateMode Table::create_mode() const
+{
+    // TODO: Allow the create mode to also be defined on the table level
+    return m_etl.config().create_mode;
 }
 
 mxb::Json Table::to_json() const
@@ -725,6 +786,7 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
     }
     catch (const Error& e)
     {
+        MXB_INFO("%s", e.what());
         m_error = e.what();
         m_etl.add_error();
     }
@@ -884,6 +946,7 @@ mxb::Json ETL::run_job()
     }
     catch (const Error& e)
     {
+        MXB_INFO("%s", e.what());
         error = e.what();
     }
 
