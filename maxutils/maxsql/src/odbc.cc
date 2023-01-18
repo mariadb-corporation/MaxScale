@@ -39,6 +39,20 @@ SQLCHAR* to_sql_ptr(std::string_view str)
 {
     return str.empty() ? nullptr : (SQLCHAR*)str.data();
 }
+
+int fix_sql_type(int data_type)
+{
+    // Temporal types appear to have problems when used with the MariaDB ODBC driver. The parsing for
+    // fractional TIME types as well as the use of the zero date (i.e. 0000-00-00 00:00:00) prevents the
+    // values from being inserted or causes them to be converted into NULLs. Changing the datatype into
+    // SQL_VARCHAR skips this part and delegates the string-to-time conversion to the database.
+    if (data_type == SQL_TYPE_TIME || data_type == SQL_TYPE_TIMESTAMP || data_type == SQL_TYPE_DATE)
+    {
+        data_type = SQL_VARCHAR;
+    }
+
+    return data_type;
+}
 }
 
 namespace maxsql
@@ -890,7 +904,7 @@ bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuff
     for (size_t i = 0; i < metadata.size(); i++)
     {
         SQLBindParameter(m_stmt, i + 1, SQL_PARAM_INPUT, res.columns[i].buffer_type,
-                         metadata[i].data_type, metadata[i].size, metadata[i].digits,
+                         fix_sql_type(metadata[i].data_type), metadata[i].size, metadata[i].digits,
                          (SQLPOINTER*)res.columns[i].buffers.data(), res.columns[i].buffer_size,
                          res.columns[i].indicators.data());
     }
