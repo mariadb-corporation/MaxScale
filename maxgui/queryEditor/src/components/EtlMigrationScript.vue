@@ -1,5 +1,5 @@
 <template>
-    <etl-stage-ctr v-resize="setTblMaxHeight" :headerHeight="60">
+    <etl-stage-ctr v-resize.quiet="setTblMaxHeight" :headerHeight="60">
         <template v-slot:header>
             <div class="etl-migration-script-header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
@@ -16,20 +16,26 @@
                     <v-col cols="12" md="6" class="fill-height">
                         <div ref="tableWrapper" class="table-wrapper fill-height">
                             <mxs-data-table
+                                v-model="selectItems"
                                 :loading="isLoading"
-                                :headers="migrationTableHeaders"
-                                :items="migrationTableRows"
+                                :headers="tableHeaders"
+                                :items="tableRows"
                                 fixed-header
                                 hide-default-footer
                                 :items-per-page="-1"
                                 :height="tableMaxHeight"
-                                @click:row="onRowClick"
+                                @click:row="selectItems = [$event]"
                             >
                             </mxs-data-table>
                         </div>
                     </v-col>
                     <v-col cols="12" md="6" class="fill-height">
-                        <!-- TODO: Add select, create, insert inputs -->
+                        <etl-transform-ctr
+                            v-if="activeRow && !isLoading"
+                            v-model="activeRow"
+                            :hasRowChanged="hasRowChanged"
+                            @on-discard="discard"
+                        />
                     </v-col>
                 </v-row>
             </v-col>
@@ -100,19 +106,24 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
+import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
 import { mapState, mapActions } from 'vuex'
 
 export default {
     name: 'etl-migration-script',
     components: {
         EtlStageCtr,
+        EtlTransformCtr,
     },
     data() {
         return {
             isLoading: true,
             isConfirmed: false,
+            activeItem: null,
+            tableMaxHeight: 450,
+            selectItems: [],
             activeRow: null,
-            tableMaxHeight: 0,
+            stagingScriptMap: null,
         }
     },
     computed: {
@@ -124,28 +135,34 @@ export default {
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
-
         asyncQueryId() {
             return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
         },
+        // Persisted data
         migrationScript() {
             return this.$typy(this.activeEtlTask, 'meta.migration_script').safeArray
         },
-        migrationTableHeaders() {
+        generatedScriptMap() {
+            return this.migrationScript.reduce((map, obj) => {
+                const id = this.$helpers.uuidv1()
+                map[id] = { ...obj, id }
+                return map
+            }, {})
+        },
+        // Table data
+        tableHeaders() {
             return [
                 { text: 'SCHEMA', value: 'schema' },
                 { text: 'TABLE', value: 'table' },
             ]
         },
-        migrationTableRows() {
-            return Object.values(this.migrationObjMap)
+        tableRows() {
+            if (this.stagingScriptMap) return Object.values(this.stagingScriptMap)
+            return []
         },
-        migrationObjMap() {
-            return this.migrationScript.reduce((map, obj) => {
-                const id = `${obj.schema}.${obj.table}`
-                map[id] = { ...obj, id }
-                return map
-            }, {})
+        hasRowChanged() {
+            const defRow = this.$typy(this.generatedScriptMap, `[${this.activeRow.id}]`).safeObject
+            return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
         },
     },
     watch: {
@@ -160,9 +177,40 @@ export default {
                         .then(async () => await this.getPrepareEtlRes(this.activeEtlTask.id))
             },
         },
+        tableRows: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                // Highlight the first row
+                if (v.length) this.selectItems = [v[0]]
+            },
+        },
+        selectItems: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                if (v.length) this.activeRow = v[0]
+            },
+        },
+        generatedScriptMap: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                this.stagingScriptMap = this.$helpers.lodash.cloneDeep(v)
+            },
+        },
+        activeRow: {
+            deep: true,
+            handler(v) {
+                if (v) this.stagingScriptMap[v.id] = v
+            },
+        },
     },
     created() {
         this.validateEtlTaskConns()
+    },
+    mounted() {
+        this.$helpers.doubleRAF(() => this.setTblMaxHeight())
     },
     methods: {
         ...mapActions({
@@ -173,14 +221,24 @@ export default {
             this.tableMaxHeight =
                 this.$typy(this.$refs, 'tableWrapper.clientHeight').safeNumber || 450
         },
-        onRowClick(row) {
-            this.activeRow = row
+        // Discard changes on the active row
+        discard() {
+            const rowId = this.activeRow.id
+            this.stagingScriptMap[rowId] = this.$helpers.lodash.cloneDeep(
+                this.generatedScriptMap[rowId]
+            )
         },
         next() {
+            // Remove id
+            const migration_script = this.tableRows.map(o => {
+                delete o.id
+                return o
+            })
             EtlTask.update({
                 where: this.activeEtlTask.id,
                 data(obj) {
                     obj.active_stage_index = obj.active_stage_index + 1
+                    obj.meta.migration_script = migration_script
                 },
             })
         },
