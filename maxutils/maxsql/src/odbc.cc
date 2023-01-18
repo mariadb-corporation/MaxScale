@@ -66,6 +66,8 @@ public:
 
     bool execute(Output* output);
 
+    bool commit(int mode);
+
     int num_columns();
 
     int num_params();
@@ -852,6 +854,19 @@ bool ODBCImp::execute(Output* output)
     return process_response(ret, output);
 }
 
+bool ODBCImp::commit(int mode)
+{
+    mxb_assert(mode == SQL_COMMIT || mode == SQL_ROLLBACK);
+    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, m_conn, mode);
+
+    if (ret == SQL_ERROR)
+    {
+        get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    return SQL_SUCCEEDED(ret);
+}
+
 bool ODBCImp::ok_result(int64_t rows_affected, int64_t warnings)
 {
     mxb_assert_message(!true, "SELECT should not generate an OK result.");
@@ -901,14 +916,7 @@ bool ODBCImp::resultset_end(bool ok, bool complete)
 {
     SQLFreeStmt(m_stmt, SQL_UNBIND);
     SQLFreeStmt(m_stmt, SQL_DROP);
-    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, m_conn, ok ? SQL_COMMIT : SQL_ROLLBACK);
-
-    if (ret == SQL_ERROR)
-    {
-        get_error(SQL_HANDLE_STMT, m_stmt);
-    }
-
-    return SQL_SUCCEEDED(ret);
+    return commit(ok ? SQL_COMMIT : SQL_ROLLBACK);
 }
 
 
@@ -1318,6 +1326,16 @@ bool ODBC::query(const std::string& sql, mxq::Output* output)
 bool ODBC::prepare(const std::string& sql)
 {
     return m_imp->prepare(sql);
+}
+
+bool ODBC::commit()
+{
+    return m_imp->commit(SQL_COMMIT);
+}
+
+bool ODBC::rollback()
+{
+    return m_imp->commit(SQL_ROLLBACK);
 }
 
 int ODBC::num_columns()

@@ -305,6 +305,20 @@ public:
     bool prepare(const std::string& sql);
 
     /**
+     * Commit a transaction
+     *
+     * @return True if the transaction was committed successfully
+     */
+    bool commit();
+
+    /**
+     * Rollback a transaction
+     *
+     * @return True if the transaction was rolled back successfully
+     */
+    bool rollback();
+
+    /**
      * Return the number of columns returned by a prepared statement
      *
      * @return The number of columns or -1 if the information is not available
