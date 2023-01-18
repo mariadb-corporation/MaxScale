@@ -21,6 +21,7 @@ import MonitorPageHeader from './MonitorPageHeader'
 import MxsCharts from './MxsCharts'
 import MxsCollapse from './MxsCollapse'
 import MxsFilterList from './MxsFilterList'
+import MxsDataTable from './MxsDataTable'
 import MxsSelect from './MxsSelect'
 import MxsSplitPane from './MxsSplitPane'
 import MxsSubMenu from './MxsSubMenu'
@@ -50,6 +51,7 @@ export default {
     ...MxsDlgs,
     'mxs-collapse': MxsCollapse,
     'mxs-filter-list': MxsFilterList,
+    'mxs-data-table': MxsDataTable,
     'mxs-select': MxsSelect,
     'mxs-split-pane': MxsSplitPane,
     'mxs-sub-menu': MxsSubMenu,

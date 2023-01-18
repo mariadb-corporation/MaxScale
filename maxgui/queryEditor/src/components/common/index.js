@@ -11,6 +11,7 @@
  * Public License.
  */
 import '@share/components/common/MxsCharts/config.js'
+import MxsDataTable from '@share/components/common/MxsDataTable'
 import MxsDlgs from '@share/components/common/MxsDlgs'
 import MxsLineChart from '@share/components/common/MxsCharts/MxsLineChart.vue'
 import MxsScatterChart from '@share/components/common/MxsCharts/MxsScatterChart.vue'
@@ -29,6 +30,7 @@ import MxsVirtualScrollTbl from '@share/components/common/MxsVirtualScrollTbl'
 import PageWrapper from '@share/components/common/PageWrapper'
 
 export default {
+    'mxs-data-table': MxsDataTable,
     ...MxsDlgs,
     'mxs-line-chart': MxsLineChart,
     'mxs-scatter-chart': MxsScatterChart,

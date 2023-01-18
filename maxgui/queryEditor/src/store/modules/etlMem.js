@@ -120,14 +120,7 @@ export default {
                         EtlTask.update({
                             where: etl_task_id,
                             data(obj) {
-                                obj.meta.sql_script = results.tables.reduce((str, obj) => {
-                                    const { schema, table, create, insert, select } = obj
-                                    // eslint-disable-next-line vue/max-len
-                                    str += `-- RETRIEVING DATA FROM SOURCE: \`${schema}\`.\`${table}\`\n${select};\n`
-                                    str += `-- CREATE OBJECT IN DESTINATION\n${create};\n`
-                                    str += `-- INSERT DATA TO OBJECT\n${insert};\n\n`
-                                    return str
-                                }, '')
+                                obj.meta.migration_script = results.tables
                                 delete obj.meta.async_query_id
                             },
                         })

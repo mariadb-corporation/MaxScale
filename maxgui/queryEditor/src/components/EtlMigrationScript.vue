@@ -1,23 +1,37 @@
 <template>
-    <etl-stage-ctr>
+    <etl-stage-ctr v-resize="setTblMaxHeight" :headerHeight="60">
         <template v-slot:header>
             <div class="etl-migration-script-header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                     {{ $mxs_t('migrationScript') }}
                 </h3>
-                <p class="my-2 migration-method-info mxs-color-helper text-deep-ocean">
-                    {{ $mxs_t('info.migrationMethod') }}
+                <p class="mt-4 migration-script-info mxs-color-helper text-deep-ocean">
+                    {{ $mxs_t('info.migrationScriptInfo') }}
                 </p>
             </div>
         </template>
         <template v-slot:body>
             <v-col cols="12" class="fill-height">
-                <v-progress-linear v-if="isLoading" indeterminate color="primary" />
-                <sql-editor
-                    v-else
-                    v-model="migrationScript"
-                    class="script-container fill-height pa-4 mxs-color-helper all-border-separator"
-                />
+                <v-row class="fill-height">
+                    <v-col cols="12" md="6" class="fill-height">
+                        <div ref="tableWrapper" class="table-wrapper fill-height">
+                            <mxs-data-table
+                                :loading="isLoading"
+                                :headers="migrationTableHeaders"
+                                :items="migrationTableRows"
+                                fixed-header
+                                hide-default-footer
+                                :items-per-page="-1"
+                                :height="tableMaxHeight"
+                                @click:row="onRowClick"
+                            >
+                            </mxs-data-table>
+                        </div>
+                    </v-col>
+                    <v-col cols="12" md="6" class="fill-height">
+                        <!-- TODO: Add select, create, insert inputs -->
+                    </v-col>
+                </v-row>
             </v-col>
         </template>
         <template v-slot:footer>
@@ -86,19 +100,19 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
-import SqlEditor from './SqlEditor'
 import { mapState, mapActions } from 'vuex'
 
 export default {
     name: 'etl-migration-script',
     components: {
         EtlStageCtr,
-        'sql-editor': SqlEditor,
     },
     data() {
         return {
             isLoading: true,
             isConfirmed: false,
+            activeRow: null,
+            tableMaxHeight: 0,
         }
     },
     computed: {
@@ -110,21 +124,28 @@ export default {
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
+
         asyncQueryId() {
             return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
         },
-        migrationScript: {
-            get() {
-                return this.$typy(this.activeEtlTask, 'meta.sql_script').safeString
-            },
-            set(v) {
-                EtlTask.update({
-                    where: this.activeEtlTask.id,
-                    data(obj) {
-                        obj.meta.sql_script = v
-                    },
-                })
-            },
+        migrationScript() {
+            return this.$typy(this.activeEtlTask, 'meta.migration_script').safeArray
+        },
+        migrationTableHeaders() {
+            return [
+                { text: 'SCHEMA', value: 'schema' },
+                { text: 'TABLE', value: 'table' },
+            ]
+        },
+        migrationTableRows() {
+            return Object.values(this.migrationObjMap)
+        },
+        migrationObjMap() {
+            return this.migrationScript.reduce((map, obj) => {
+                const id = `${obj.schema}.${obj.table}`
+                map[id] = { ...obj, id }
+                return map
+            }, {})
         },
     },
     watch: {
@@ -148,6 +169,13 @@ export default {
             validateEtlTaskConns: 'etlMem/validateEtlTaskConns',
             getPrepareEtlRes: 'etlMem/getPrepareEtlRes',
         }),
+        setTblMaxHeight() {
+            this.tableMaxHeight =
+                this.$typy(this.$refs, 'tableWrapper.clientHeight').safeNumber || 450
+        },
+        onRowClick(row) {
+            this.activeRow = row
+        },
         next() {
             EtlTask.update({
                 where: this.activeEtlTask.id,
@@ -160,11 +188,8 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.script-container {
-    border-radius: 4px;
-}
 .confirm-label,
-.migration-method-info {
+.migration-script-info {
     font-size: 14px;
 }
 </style>

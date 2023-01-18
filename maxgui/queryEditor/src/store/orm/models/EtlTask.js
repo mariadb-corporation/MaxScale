@@ -24,7 +24,7 @@ export default class EtlTask extends Extender {
         return {
             name: this.string(''),
             status: this.string(ETL_STATUS.INITIALIZING),
-            sql_script: this.string(''),
+            migration_script: this.attr([]),
             active_stage_index: this.number(ETL_STAGE_INDEX.CONN),
             /**
              * @property {string} src_type  - mariadb||postgresql||generic

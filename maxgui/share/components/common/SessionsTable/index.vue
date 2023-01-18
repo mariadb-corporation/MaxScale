@@ -12,8 +12,7 @@
                 : null
         "
     >
-        <v-data-table
-            class="session-table--std"
+        <mxs-data-table
             :loading="isLoading"
             :no-data-text="$mxs_t('noEntity', { entityName: $mxs_tc('sessions', 2) })"
             :options.sync="pagination"
@@ -49,7 +48,7 @@
                     </mxs-tooltip-btn>
                 </div>
             </template>
-        </v-data-table>
+        </mxs-data-table>
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="$mxs_t('killSession')"
@@ -177,56 +176,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.info-table {
-    td {
-        white-space: nowrap;
-        height: 24px;
-        line-height: 1.5;
-    }
-}
-::v-deep .session-table--std {
-    thead {
-        tr {
-            box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1);
-            th {
-                background-color: $table-border !important;
-                border-bottom: none !important;
-                padding: 0 24px !important;
-                color: $small-text !important;
-                text-transform: uppercase;
-                font-size: 11px;
-                white-space: nowrap;
-                &:first-child {
-                    border-radius: 5px 0 0 0;
-                }
-                &:last-child {
-                    border-radius: 0 5px 0 0;
-                }
-            }
-        }
-    }
-    tbody {
-        tr:hover {
-            background: #fafcfc !important;
-        }
-        tr:active {
-            background: #f2fcff !important;
-        }
-        td {
-            padding: 0 24px !important;
-            color: $navigation !important;
-            border-bottom: thin solid $table-border !important;
-            &:last-child:not(.hide) {
-                border-right: thin solid $table-border;
-            }
-            &:first-child:not(.hide) {
-                border-left: thin solid $table-border;
-            }
-        }
-    }
-    .v-data-footer {
-        border-top: thin solid $table-border !important;
-    }
-}
-</style>
