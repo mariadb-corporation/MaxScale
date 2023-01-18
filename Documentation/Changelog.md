@@ -24,6 +24,8 @@
 * Authentication can now be enabled when Redis is used as the cache storage.
 * SSL/TLS can now be used in the communication between MaxScale and Redis
   when Redis is used as the storage for the cache.
+* Some Cache configuration parameters, most notable the rules, can now be
+  changed at runtime.
 
 ## MariaDB MaxScale 22.08
 

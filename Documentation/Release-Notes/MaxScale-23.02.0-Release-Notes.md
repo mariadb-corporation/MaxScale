@@ -20,6 +20,12 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
+### [MXS-3708](https://jira.mariadb.org/browse/MXS-3708) Cache runtime modification
+
+Some configuration parameters, most notable the
+[rules](../Filters/Cache.md#rules),
+can now be changed at runtime.
+
 ### [MXS-4106](https://jira.mariadb.org/browse/MXS-4106) Redis authentication
 
 Authentication can be enabled when Redis is used as the cache storage. See
