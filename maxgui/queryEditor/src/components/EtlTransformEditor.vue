@@ -11,6 +11,7 @@
                 contextmenu: false,
                 wordWrap: 'on',
             }"
+            :colors="{ 'editor.background': '#fbfbfb' }"
             :skipRegCompleters="skipRegEditorCompleters"
         />
     </div>
@@ -62,6 +63,7 @@ export default {
     margin-bottom: 16px;
     .sql-editor {
         border: thin solid #e8eef1;
+        background-color: #fbfbfb;
     }
 }
 </style>

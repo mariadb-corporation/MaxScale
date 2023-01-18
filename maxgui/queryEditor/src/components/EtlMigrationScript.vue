@@ -14,7 +14,7 @@
             <v-col cols="12" class="fill-height">
                 <v-row class="fill-height">
                     <v-col cols="12" md="6" class="fill-height">
-                        <div ref="tableWrapper" class="table-wrapper fill-height">
+                        <div ref="tableWrapper" class="table-wrapper fill-height pt-4">
                             <mxs-data-table
                                 v-model="selectItems"
                                 :loading="isLoading"
