@@ -622,7 +622,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             uint16_t errcode = mxs_mysql_get_mysql_errno(pMessage);
             std::string errmsg = mxs::extract_error(pMessage);
             std::string sqlstate = "HY000";
-            tmp.set_error(errcode, errmsg.begin(), errmsg.end(), sqlstate.begin(), sqlstate.end());
+            tmp.set_error(errcode, sqlstate.begin(), sqlstate.end(), errmsg.begin(), errmsg.end());
             handle_mapping_reply(bref, tmp);
         }
         else if (!bref->should_ignore_response())
