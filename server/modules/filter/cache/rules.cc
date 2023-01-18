@@ -31,6 +31,8 @@
 #include "cachefilter.hh"
 
 using mxb::sv_case_eq;
+using std::shared_ptr;
+using std::unique_ptr;
 
 namespace
 {
@@ -1020,7 +1022,7 @@ CacheRuleUser* CacheRuleUser::create(const CacheConfig* pConfig,
 
     if (pDelegate)
     {
-        std::unique_ptr<CacheRule> sDelegate(pDelegate);
+        unique_ptr<CacheRule> sDelegate(pDelegate);
 
         pRule = new CacheRuleUser(std::move(sDelegate));
     }
@@ -1097,6 +1099,24 @@ CacheRules::Attributes CacheRules::s_use_attributes =
 {
     CacheRule::Attribute::USER
 };
+
+// static
+CacheRules::SVector CacheRules::get(const CacheConfig* pConfig, const std::string& path)
+{
+    CacheRules::SVector sRules;
+
+    if (!path.empty())
+    {
+        sRules = load(pConfig, path);
+    }
+    else
+    {
+        sRules.reset(new CacheRules::Vector);
+        sRules->push_back(shared_ptr<CacheRules>(CacheRules::create(pConfig).release()));
+    }
+
+    return sRules;
+}
 
 // static
 CacheRules::SVector CacheRules::load(const CacheConfig* pConfig, const char* zPath)
@@ -1230,16 +1250,16 @@ bool CacheRules::eq(const CacheRules& other) const
         && m_use_rules.size() == other.m_use_rules.size())
     {
         rv = std::equal(m_store_rules.begin(), m_store_rules.end(), other.m_store_rules.begin(),
-                        [](const std::unique_ptr<CacheRuleValue>& sLhs,
-                           const std::unique_ptr<CacheRuleValue>& sRhs) {
+                        [](const unique_ptr<CacheRuleValue>& sLhs,
+                           const unique_ptr<CacheRuleValue>& sRhs) {
                             return *sLhs == *sRhs;
                         });
 
         if (rv)
         {
             rv = std::equal(m_use_rules.begin(), m_use_rules.end(), other.m_use_rules.begin(),
-                            [](const std::unique_ptr<CacheRuleUser>& sLhs,
-                               const std::unique_ptr<CacheRuleUser>& sRhs) {
+                            [](const unique_ptr<CacheRuleUser>& sLhs,
+                               const unique_ptr<CacheRuleUser>& sRhs) {
                                 return *sLhs == *sRhs;
                             });
         }
@@ -1247,6 +1267,40 @@ bool CacheRules::eq(const CacheRules& other) const
 
     return rv;
 }
+
+// static
+bool CacheRules::eq(const CacheRules::Vector& lhs, const CacheRules::Vector& rhs)
+{
+    bool rv = (lhs.size() == rhs.size());
+
+    if (rv)
+    {
+        rv = std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                        [](const shared_ptr<CacheRules>& sLhs, const shared_ptr<CacheRules>& sRhs) {
+                            return *sLhs == *sRhs;
+                        });
+    }
+
+    return rv;
+}
+
+// static
+bool CacheRules::eq(const CacheRules::SVector& sLhs, const CacheRules::SVector& sRhs)
+{
+    bool rv = false;
+
+    if (sLhs && sRhs)
+    {
+        rv = eq(*sLhs.get(), *sRhs.get());
+    }
+    else if (!sLhs && !sRhs)
+    {
+        rv = true;
+    }
+
+    return rv;
+}
+
 
 CacheRules::CacheRules(const CacheConfig* pConfig)
     : m_config(*pConfig)
@@ -1262,11 +1316,11 @@ CacheRules::~CacheRules()
 }
 
 // static
-std::unique_ptr<CacheRules> CacheRules::create(const CacheConfig* pConfig)
+unique_ptr<CacheRules> CacheRules::create(const CacheConfig* pConfig)
 {
-    std::unique_ptr<CacheRules> sThis;
+    unique_ptr<CacheRules> sThis;
 
-    sThis = std::unique_ptr<CacheRules>(new(std::nothrow) CacheRules(pConfig));
+    sThis = unique_ptr<CacheRules>(new(std::nothrow) CacheRules(pConfig));
 
     return sThis;
 }
@@ -1378,7 +1432,7 @@ CacheRules::SVector CacheRules::create_all_from_json(const CacheConfig* pConfig,
 
             if (pRules)
             {
-                sRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
+                sRules_vector->push_back(shared_ptr<CacheRules>(pRules));
                 // The array element reference was borrowed, so now that we
                 // know a rule could be created, we must increase the reference
                 // count. Otherwise bad things will happen when the reference of
@@ -1409,7 +1463,7 @@ CacheRules::SVector CacheRules::create_all_from_json(const CacheConfig* pConfig,
 
         if (pRules)
         {
-            sRules_vector->push_back(std::shared_ptr<CacheRules>(pRules));
+            sRules_vector->push_back(shared_ptr<CacheRules>(pRules));
         }
         else
         {

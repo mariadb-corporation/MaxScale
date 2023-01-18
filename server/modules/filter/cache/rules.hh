@@ -306,6 +306,15 @@ public:
     ~CacheRules();
 
     /**
+     * Get rules.
+     *
+     * @param path  The path to the rules file. If empty, a default rule will be returned.
+     *
+     * @return The corresponding rules, or null if the rules file could not be opened or parsed.
+     */
+    static SVector get(const CacheConfig* pConfig, const std::string& path);
+
+    /**
      * Creates an empty rules object.
      *
      * @param pConfig The cache config.
@@ -375,6 +384,26 @@ public:
      * @return True, if this and @c other are equivalent.
      */
     bool eq(const CacheRules& other) const;
+
+    /**
+     * Compare vector of rules for equality.
+     *
+     * @param lhs One vector of rules.
+     * @param rhs Another vector of rules.
+     *
+     * @return True, if @c lhs and @c rhs are equal.
+     */
+    static bool eq(const Vector& lhs, const Vector& rhs);
+
+    /**
+     * Compare vector of rules for equality.
+     *
+     * @param sLhs Pointer to vector of rules.
+     * @param sRhs Pointer to another vector of rules.
+     *
+     * @return True, if the vectors of rules pointed to by @c sLhs and @c sRhs are equal.
+     */
+    static bool eq(const SVector& sLhs, const SVector& sRhs);
 
 private:
     friend class Tester;
