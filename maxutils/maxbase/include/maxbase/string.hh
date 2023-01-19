@@ -57,6 +57,21 @@ namespace maxbase
 {
 
 /**
+ * Concatenate string-like values into one std::string
+ *
+ * @param args Values to concatenate
+ *
+ * @return The concatenated value
+ */
+template<class ... Args>
+std::string cat(Args&& ... args)
+{
+    std::string rval;
+    (rval += ... += args);
+    return rval;
+}
+
+/**
  * Compare various std::string_view and some other string for case-sensitive equality.
  *
  * @return True, if equal, false otherwise.

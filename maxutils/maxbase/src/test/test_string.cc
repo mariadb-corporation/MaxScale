@@ -154,6 +154,55 @@ int test_split()
 
     return rc;
 }
+
+int test_cat()
+{
+    cout << "cat()" << endl;
+    int rc = 0;
+
+    auto expect = [&](std::string result, auto expected){
+        if (result != expected)
+        {
+            cout << "Expected '" << expected << "' got '" << result << "'";
+            rc++;
+        }
+    };
+
+    expect(mxb::cat("", ""), "");
+    expect(mxb::cat("1"), "1");
+    expect(mxb::cat("2", ""), "2");
+    expect(mxb::cat("", "3"), "3");
+    expect(mxb::cat("", "4", ""), "4");
+
+    expect(mxb::cat("hello", "world"), "helloworld");
+    expect(mxb::cat(std::string("hello"), "world"), "helloworld");
+    expect(mxb::cat(std::string_view("hello"), "world"), "helloworld");
+
+    expect(mxb::cat("hello", "world"), "helloworld");
+    expect(mxb::cat("hello", std::string("world")), "helloworld");
+    expect(mxb::cat("hello", std::string_view("world")), "helloworld");
+
+    expect(mxb::cat(std::string_view("hello"), "world"), "helloworld");
+    expect(mxb::cat(std::string_view("hello"), std::string("world")), "helloworld");
+    expect(mxb::cat(std::string_view("hello"), std::string_view("world")), "helloworld");
+
+    std::string str = "std::string";
+    std::string_view sv = "std::string_view";
+    const char* cchar = "const char*";
+
+    expect(mxb::cat(str), str);
+    expect(mxb::cat(sv), sv);
+    expect(mxb::cat(cchar), cchar);
+
+    expect(mxb::cat(str, sv), str + std::string {sv});
+    expect(mxb::cat(str, cchar), str + cchar);
+    expect(mxb::cat(sv, str), std::string {sv} + str);
+    expect(mxb::cat(sv, cchar), std::string {sv} + cchar);
+    expect(mxb::cat(cchar, str), cchar + str);
+    expect(mxb::cat(cchar, sv), cchar + std::string {sv});
+
+    return rc;
+}
 }
 
 int main(int argc, char* argv[])
@@ -164,6 +213,7 @@ int main(int argc, char* argv[])
     rv += test_ltrim();
     rv += test_rtrim();
     rv += test_split();
+    rv += test_cat();
 
     return rv;
 }
