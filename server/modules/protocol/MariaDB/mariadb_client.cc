@@ -3482,7 +3482,18 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                 }
                 else if (header_res.type == Type::BINARY)
                 {
-                    // Parse and handle binary header.
+                    auto parse_res = mxb::proxy_protocol::parse_binary_header(buffer.data());
+                    if (parse_res.success)
+                    {
+                        rval = StateMachineRes::DONE;
+                        buffer.consume(header_res.len);
+                        m_dcb->unread(std::move(buffer));
+
+                        if (parse_res.is_proxy)
+                        {
+                            set_client_info(std::move(parse_res));
+                        }
+                    }
                 }
                 else if (header_res.type == Type::NEED_MORE)
                 {

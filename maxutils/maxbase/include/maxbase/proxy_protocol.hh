@@ -56,6 +56,7 @@ struct HeaderResult
     std::string      peer_addr_str;     /**< Peer address in string form */
 };
 HeaderResult parse_text_header(const char* header, int header_len);
+HeaderResult parse_binary_header(const uint8_t* header);
 
 // Proxy protocol parsing and subnetwork matching code adapted from MariaDB Server.
 

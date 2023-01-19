@@ -31,6 +31,7 @@ bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol
 int  compare_bits(const void* s1, const void* s2, size_t n_bits);
 bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
 bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet);
+int  read_be_uint16(const uint8_t* ptr);
 
 const char PROXY_TEXT_SIG[] = "PROXY";
 const uint8_t PROXY_BIN_SIG[] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
@@ -264,10 +265,8 @@ PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
                 if (datalen >= len_offset + 2)
                 {
                     // The length is big-endian.
-                    uint16_t header_len_be = 0;
-                    memcpy(&header_len_be, data + len_offset, 2);
-                    uint16_t header_len_h = be16toh(header_len_be);
-                    size_t total_len = sizeof(PROXY_BIN_SIG) + 2 + 2 + header_len_h;
+                    int remaining_len = read_be_uint16(data + len_offset);
+                    size_t total_len = sizeof(PROXY_BIN_SIG) + 2 + 2 + remaining_len;
                     // Sanity check. Don't allow unreasonably long binary headers.
                     if (total_len < 10000)
                     {
@@ -361,6 +360,85 @@ HeaderResult parse_text_header(const char* header, int header_len)
                         rval.is_proxy = true;
                         rval.peer_addr_str = client_address;
                     }
+                }
+            }
+        }
+    }
+    return rval;
+}
+
+HeaderResult parse_binary_header(const uint8_t* header)
+{
+    // The header should be valid in the sense that it has the signature and length info, and the array
+    // is long enough.
+    HeaderResult rval;
+    size_t sig_len = 12;
+    if (memcmp(header, PROXY_BIN_SIG, sig_len) == 0)
+    {
+        // Next byte is protocol version and command.
+        uint8_t version = (header[sig_len] & 0xF0) >> 4;
+        if (version == 2)
+        {
+            uint8_t command = (header[sig_len] & 0xF);
+            if (command == 0)
+            {
+                // Connection created by the proxy itself. More bytes remain but they can be ignored.
+                rval.success = true;
+            }
+            else if (command == 1)
+            {
+                // Real proxied connection. Next byte is transport protocol and address family. We only
+                // expect a few combinations.
+                uint8_t family = header[13];
+                // Next two bytes are length.
+                int remaining_len = read_be_uint16(header + 14);
+                auto* src_ptr = header + 16;
+
+                if (family == 0x11)
+                {
+                    // IPv4. Should have at least 12 bytes left.
+                    if (remaining_len >= 12)
+                    {
+                        auto* addr = (sockaddr_in*)&rval.peer_addr;
+                        auto bytes = sizeof(addr->sin_addr);
+                        memcpy(&addr->sin_addr, src_ptr, bytes);
+                        src_ptr += bytes;
+                        memcpy(&addr->sin_port, src_ptr, 2);    // Written in big-endian.
+
+                        char text_addr[INET_ADDRSTRLEN];
+                        if (inet_ntop(AF_INET, &addr->sin_addr, text_addr, sizeof(text_addr)))
+                        {
+                            rval.success = true;
+                            rval.is_proxy = true;
+                            rval.peer_addr_str = text_addr;
+                        }
+                    }
+                }
+                else if (family == 0x21)
+                {
+                    // IPv6. Should have at least 36 bytes left.
+                    if (remaining_len >= 36)
+                    {
+                        auto* addr = (sockaddr_in6*)&rval.peer_addr;
+                        auto bytes = sizeof(addr->sin6_addr);
+                        memcpy(&addr->sin6_addr, src_ptr, bytes);
+                        src_ptr += bytes;
+                        memcpy(&addr->sin6_port, src_ptr, 2);
+
+                        char text_addr[INET6_ADDRSTRLEN];
+                        if (inet_ntop(AF_INET6, &addr->sin6_addr, text_addr, sizeof(text_addr)))
+                        {
+                            rval.success = true;
+                            rval.is_proxy = true;
+                            rval.peer_addr_str = text_addr;
+                        }
+                    }
+                }
+                else if (family == 0x31)
+                {
+                    // Unix socket.
+                    rval.success = true;
+                    rval.peer_addr.ss_family = AF_UNIX;
                 }
             }
         }
@@ -594,5 +672,12 @@ bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet)
         }
     }
     return true;
+}
+
+int read_be_uint16(const uint8_t* ptr)
+{
+    uint16_t value_be = 0;
+    memcpy(&value_be, ptr, 2);
+    return be16toh(value_be);
 }
 }
