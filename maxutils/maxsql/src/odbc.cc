@@ -929,7 +929,7 @@ bool ODBCImp::resultset_rows(const std::vector<ColumnInfo>& metadata, ResultBuff
 bool ODBCImp::resultset_end(bool ok, bool complete)
 {
     SQLFreeStmt(m_stmt, SQL_UNBIND);
-    SQLFreeStmt(m_stmt, SQL_DROP);
+    SQLFreeStmt(m_stmt, SQL_RESET_PARAMS);
     return commit(ok ? SQL_COMMIT : SQL_ROLLBACK);
 }
 
