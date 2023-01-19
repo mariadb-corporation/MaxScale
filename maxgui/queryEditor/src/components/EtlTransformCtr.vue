@@ -1,23 +1,22 @@
 <template>
-    <div class="fill-height d-flex flex-column mt-n1 relative">
+    <div class="fill-height d-flex flex-column relative">
         <div class="script-container d-flex flex-column fill-height">
             <etl-transform-editor
                 v-model="stagingRow.select"
-                class="select-script-ctr"
+                class="select-script-ctr flex-grow-1"
                 :label="$mxs_t('retrieveDataFromSrc')"
                 :editorClass="stagingRow.select ? '' : 'mxs-color-helper all-border-error'"
             />
-
             <etl-transform-editor
                 v-model="stagingRow.create"
-                class="flex-grow-1 flex-shrink-1"
+                class="create-script-ctr flex-grow-1"
                 :label="$mxs_t('createObjInDest')"
-                editorHeight="100%"
                 :editorClass="`${stagingRow.create ? '' : 'mxs-color-helper all-border-error'}`"
                 skipRegEditorCompleters
             />
             <etl-transform-editor
                 v-model="stagingRow.insert"
+                class="insert-script-ctr flex-grow-1"
                 :label="$mxs_t('insertDataInDest')"
                 :editorClass="stagingRow.insert ? '' : 'mxs-color-helper all-border-error'"
                 skipRegEditorCompleters
@@ -128,6 +127,15 @@ export default {
     top: 0;
     right: 0;
     width: 100%;
+    .create-script-ctr {
+        min-height: 150px;
+        max-height: 400px;
+    }
+    .select-script-ctr,
+    .insert-script-ctr {
+        min-height: 100px;
+        max-height: 200px;
+    }
     .btn-ctr {
         height: 36px;
     }

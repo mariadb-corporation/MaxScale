@@ -1,12 +1,11 @@
 <template>
-    <div class="d-flex flex-column transform-editor">
-        <label class="field__label mxs-color-helper text-small-text label-required">
-            {{ label }}
-        </label>
+    <div class="d-flex flex-column transform-editor rounded pa-2">
+        <code class="mariadb-code-style ml-8 mb-2 ">
+            <span class="editor-comment"> -- {{ label }} </span>
+        </code>
         <sql-editor
             v-model="sql"
-            :class="`sql-editor ${editorClass} rounded pa-2`"
-            :style="{ height: editorHeight }"
+            :class="`${editorClass} fill-height`"
             :options="{
                 contextmenu: false,
                 wordWrap: 'on',
@@ -41,7 +40,6 @@ export default {
         label: { type: String, required: true },
         skipRegEditorCompleters: { type: Boolean, default: false },
         editorClass: { type: String, default: '' },
-        editorHeight: { type: String, default: '60px' },
     },
     computed: {
         sql: {
@@ -61,9 +59,10 @@ export default {
 }
 .transform-editor {
     margin-bottom: 16px;
-    .sql-editor {
-        border: thin solid #e8eef1;
-        background-color: #fbfbfb;
+    border: thin solid #e8eef1;
+    background-color: #fbfbfb;
+    .editor-comment {
+        color: #60a0b0;
     }
 }
 </style>
