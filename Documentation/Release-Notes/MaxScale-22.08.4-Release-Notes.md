@@ -1,4 +1,4 @@
-# MariaDB MaxScale 22.08.4 Release Notes
+# MariaDB MaxScale 22.08.4 Release Notes -- 2023-01-19
 
 Release 22.08.4 is a GA release.
 
