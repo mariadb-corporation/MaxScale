@@ -2235,6 +2235,12 @@ int main(int argc, char** argv)
                                 main_worker.run();
                                 MXB_NOTICE("MaxScale is shutting down.");
 
+                                // Stop the threadpool before shutting down the REST-API. The pool might still
+                                // have queued responses in it that use it and thus they should be allowed to
+                                // finish before we shut down. New REST-API responses are not possible as they
+                                // are actively being refused by the thread that would otherwise accept them.
+                                mxs::thread_pool().stop(false);
+
                                 disable_normal_signals();
                                 mxs_admin_finish();
 
