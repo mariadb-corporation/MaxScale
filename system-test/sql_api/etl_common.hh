@@ -16,6 +16,7 @@
 #include <maxbase/http.hh>
 #include <maxbase/json.hh>
 #include <maxbase/string.hh>
+#include <maxbase/stopwatch.hh>
 
 /**
  * Concatenate strings
@@ -104,6 +105,7 @@ public:
                       std::string destination,
                       std::string type,
                       Op operation,
+                      std::chrono::seconds timeout,
                       std::vector<EtlTable> tables)
     {
         auto source = connect({
@@ -165,6 +167,7 @@ public:
         response.load_string(res.body);
         auto url = response.at("links/self").get_string();
         url += "?token=" + source_token;
+        auto start = mxb::Clock::now();
 
         while (res.code == 202)
         {
@@ -175,7 +178,14 @@ public:
 
             if (res.code == 202)
             {
-                sleep(1);
+                if (mxb::Clock::now() - start < timeout)
+                {
+                    std::this_thread::sleep_for(100ms);
+                }
+                else
+                {
+                    m_test.add_failure("ETL timed out");
+                }
             }
         }
 

@@ -13,8 +13,44 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/http.hh>
+#include <maxtest/generate_sql.hh>
 
 #include "etl_common.hh"
+
+void compare_results(TestConnections& test, Connection& source_conn, Connection& dest_conn,
+                     const std::string& sql, const sql_generation::SQLType& type)
+{
+    auto source = source_conn.rows(sql);
+    auto dest = dest_conn.rows(sql);
+
+    if (test.expect(!source.empty() && !dest.empty(),
+                    "Both should return a result: source reports %s, dest reports %s",
+                    source_conn.error(), dest_conn.error()))
+    {
+
+        if (test.expect(source.size() == dest.size(),
+                        "Result size mismatch: source has %lu rows whereas dest has %lu",
+                        source.size(), dest.size()))
+        {
+            for (size_t i = 0; i < source.size(); i++)
+            {
+                if (test.expect(source[i].size() == dest[i].size(),
+                                "Row at offset %lu has a column count mismatch: "
+                                "source has %lu columns whereas dest has %lu",
+                                i, source[i].size(), dest[i].size()))
+                {
+                    for (size_t c = 0; c < source[i].size(); c++)
+                    {
+                        test.expect(source[i][c] == dest[i][c],
+                                    "Column %lu for row at offset %lu does not match: "
+                                    "source has '%s' whereas dest has '%s'",
+                                    c, i, source[i][c].c_str(), dest[i][c].c_str());
+                    }
+                }
+            }
+        }
+    }
+}
 
 void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
@@ -27,10 +63,8 @@ void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
     const char* SELECT = "SELECT COUNT(*) FROM test.etl_sanity_check";
     auto expected = source.field(SELECT);
 
-    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START,
+    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
                            {EtlTable {"test", "etl_sanity_check"}});
-
-    std::cout << res.to_string() << std::endl;
 
     auto dest = test.repl->get_connection(3);
     dest.connect();
@@ -51,7 +85,7 @@ void invalid_sql(TestConnections& test, EtlTest& etl, const std::string& dsn)
                 && source.query("INSERT INTO test.bad_sql SELECT seq FROM seq_0_to_100"),
                 "Failed to create test data");
 
-    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START,
+    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
                        {EtlTable {"test", "bad_sql",
                                   "CREATE TABLE test.bad_sql(id INT, a int)",
                                   "SELECT id FROM test.bad_sql",
@@ -61,9 +95,73 @@ void invalid_sql(TestConnections& test, EtlTest& etl, const std::string& dsn)
     test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && !ok,
                 "Bad SQL should cause ETL to fail: %s", res.to_string().c_str());
 
-    std::cout << res.to_string() << std::endl;
-
     source.query("DROP TABLE test.bad_sql");
+}
+
+void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto source = test.repl->get_connection(0);
+    test.expect(source.connect(), "Failed to connect to node 0: %s", source.error());
+    auto dest = test.repl->get_connection(3);
+    dest.connect();
+
+    for (const auto& t : sql_generation::mariadb_types())
+    {
+        for (const auto& val : t.values)
+        {
+            test.expect(source.query(t.create_sql), "Failed to create table: %s", source.error());
+            test.expect(source.query(val.insert_sql), "Failed to insert into table: %s", source.error());
+            auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
+                                   {EtlTable {t.database_name, t.table_name}});
+
+            bool ok = false;
+            if (test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && ok,
+                            "ETL failed for %s %s: %s", t.type_name.c_str(), val.value.c_str(),
+                            res.to_string().c_str()))
+            {
+                compare_results(test, source, dest, "SELECT * FROM " + t.full_name, t);
+            }
+
+            source.query(t.drop_sql);
+            dest.query(t.drop_sql);
+        }
+    }
+}
+
+void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto source = test.repl->get_connection(0);
+    test.expect(source.connect(), "Failed to connect to node 0: %s", source.error());
+    auto dest = test.repl->get_connection(3);
+    dest.connect();
+
+    std::vector<EtlTable> tables;
+
+    for (const auto& t : sql_generation::mariadb_types())
+    {
+        test.expect(source.query(t.create_sql), "Failed to create table: %s", source.error());
+
+        for (const auto& val : t.values)
+        {
+            test.expect(source.query(val.insert_sql), "Failed to insert into table: %s", source.error());
+        }
+
+        tables.emplace_back(t.database_name, t.table_name);
+    }
+
+
+    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s, tables);
+
+    bool ok = false;
+    test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && ok,
+                "ETL failed: %s", res.to_string().c_str());
+
+    for (const auto& t : sql_generation::mariadb_types())
+    {
+        compare_results(test, source, dest, "SELECT * FROM " + t.full_name, t);
+        source.query(t.drop_sql);
+        dest.query(t.drop_sql);
+    }
 }
 
 int main(int argc, char** argv)
@@ -80,11 +178,29 @@ int main(int argc, char** argv)
        << "PORT=" << test.repl->port[0] << ";";
     std::string dsn = ss.str();
 
-    test.log_printf("sanity_check");
-    sanity_check(test, etl, dsn);
+    if (test.ok())
+    {
+        test.log_printf("sanity_check");
+        sanity_check(test, etl, dsn);
+    }
 
-    test.log_printf("invalid_sql");
-    invalid_sql(test, etl, dsn);
+    if (test.ok())
+    {
+        test.log_printf("invalid_sql");
+        invalid_sql(test, etl, dsn);
+    }
+
+    if (test.ok())
+    {
+        test.log_printf("test_datatypes");
+        test_datatypes(test, etl, dsn);
+    }
+
+    if (test.ok())
+    {
+        test.log_printf("test_parallel_datatypes");
+        test_parallel_datatypes(test, etl, dsn);
+    }
 
     return test.global_result;
 }
