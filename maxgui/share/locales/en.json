@@ -323,6 +323,7 @@
             }
         },
         "monitors": "monitor | monitors",
+        "msgLog": "Message log",
         "name": "Name",
         "nameQuoted": "Name (Quoted)",
         "nameYour": "Name your {resourceName}",

@@ -12,9 +12,9 @@
         </template>
         <template v-slot:body>
             <v-col cols="12" class="fill-height">
-                <v-row class="fill-height">
+                <v-row class="fill-height pt-4">
                     <v-col cols="12" md="6" class="fill-height">
-                        <div ref="tableWrapper" class="table-wrapper fill-height pt-4">
+                        <div ref="tableWrapper" class="table-wrapper fill-height">
                             <mxs-data-table
                                 v-model="selectItems"
                                 :loading="isLoading"
@@ -25,8 +25,7 @@
                                 :items-per-page="-1"
                                 :height="tableMaxHeight"
                                 @click:row="selectItems = [$event]"
-                            >
-                            </mxs-data-table>
+                            />
                         </div>
                     </v-col>
                     <v-col cols="12" md="6" class="fill-height">

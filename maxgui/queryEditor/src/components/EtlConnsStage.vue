@@ -2,15 +2,17 @@
     <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
         <etl-stage-ctr>
             <template v-slot:body>
-                <v-col cols="12" md="6" class="fill-height pt-0 mt-n3">
-                    <etl-src-conn v-model="src" :drivers="odbc_drivers" />
+                <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                    <etl-src-conn v-model="src" :drivers="odbc_drivers" class="pb-2" />
                     <etl-dest-conn
                         v-model="dest"
                         :allServers="allServers"
                         :destTargetType="destTargetType"
                     />
                 </v-col>
-                <!-- TODO: Show logs component -->
+                <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                    <etl-logs class="fill-height pt-4" />
+                </v-col>
             </template>
             <template v-slot:footer>
                 <v-btn
@@ -49,11 +51,12 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 import EtlSrcConn from '@queryEditorSrc/components/EtlSrcConn.vue'
 import EtlDestConn from '@queryEditorSrc/components/EtlDestConn.vue'
+import EtlLogs from '@queryEditorSrc/components/EtlLogs.vue'
 import { mapActions, mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-conns-stage',
-    components: { EtlStageCtr, EtlSrcConn, EtlDestConn },
+    components: { EtlStageCtr, EtlSrcConn, EtlDestConn, EtlLogs },
     data() {
         return {
             isFormValid: false,
@@ -85,11 +88,13 @@ export default {
     async created() {
         await this.fetchOdbcDrivers()
         await this.fetchRcTargetNames(this.destTargetType)
+        await this.validateActiveEtlTaskConns({ silentValidation: true })
     },
     methods: {
         ...mapActions({
             fetchOdbcDrivers: 'queryConnsMem/fetchOdbcDrivers',
             fetchRcTargetNames: 'queryConnsMem/fetchRcTargetNames',
+            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
         }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',

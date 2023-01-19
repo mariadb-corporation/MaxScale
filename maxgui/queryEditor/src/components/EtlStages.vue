@@ -34,7 +34,7 @@
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlOverviewStage from '@queryEditorSrc/components/EtlOverviewStage.vue'
 import EtlConnsStage from '@queryEditorSrc/components/EtlConnsStage.vue'
-import EtlObjSelectCtr from '@queryEditorSrc/components/EtlObjSelectCtr.vue'
+import EtlObjSelectStage from '@queryEditorSrc/components/EtlObjSelectStage.vue'
 import EtlMigrationScriptStage from '@queryEditorSrc/components/EtlMigrationScriptStage.vue'
 import { mapState } from 'vuex'
 
@@ -43,7 +43,7 @@ export default {
     components: {
         EtlOverviewStage,
         EtlConnsStage,
-        EtlObjSelectCtr,
+        EtlObjSelectStage,
         EtlMigrationScriptStage,
     },
     computed: {
@@ -71,7 +71,7 @@ export default {
                 },
                 {
                     name: this.$mxs_t('objSelection'),
-                    component: 'etl-obj-select-ctr',
+                    component: 'etl-obj-select-stage',
                     isDisabled:
                         !this.are_conns_alive ||
                         this.activeEtlTask.status !== this.ETL_STATUS.INITIALIZING,

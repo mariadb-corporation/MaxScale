@@ -63,7 +63,9 @@
                     </p>
                 </div>
             </v-col>
-            <!-- TODO: Show logs component -->
+            <v-col cols="12" md="6" class="fill-height">
+                <etl-logs class="fill-height" />
+            </v-col>
         </template>
         <template v-slot:footer>
             <v-btn
@@ -98,11 +100,13 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
+import EtlLogs from '@queryEditorSrc/components/EtlLogs.vue'
 
 export default {
-    name: 'etl-obj-select-ctr',
+    name: 'etl-obj-select-stage',
     components: {
         EtlStageCtr,
+        EtlLogs,
     },
     data() {
         return {
