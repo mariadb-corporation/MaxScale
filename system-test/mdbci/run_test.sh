@@ -114,7 +114,7 @@ if [ ! -z "${named_test}" ] ; then
 else
     eval "arguments=(${test_set})"
     ctest -N "${arguments[@]}"
-    ctest -VV "${arguments[@]} --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit maxscale.xml --verbose"
+    ctest -VV "${arguments[@]}" --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit LOGS/maxscale.xml --verbose
 fi
 
 if [[ "$name" =~ '-gcov' ]]
