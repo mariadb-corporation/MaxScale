@@ -1886,3 +1886,8 @@ bool MXS_SESSION::log_is_enabled(int level) const
 {
     return m_log_level & (1 << level) || service->log_is_enabled(level);
 }
+
+void MXS_SESSION::set_host(string&& host)
+{
+    m_host = std::move(host);
+}

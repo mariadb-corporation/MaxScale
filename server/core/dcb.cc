@@ -1924,6 +1924,12 @@ void ClientDCB::close(ClientDCB* dcb)
     DCB::close(dcb);
 }
 
+void ClientDCB::set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str)
+{
+    m_ip = ip;
+    set_remote(std::move(ip_str));
+}
+
 void DCB::close(DCB* dcb)
 {
 #if defined (SS_DEBUG)
@@ -1962,6 +1968,11 @@ void DCB::unread(GWBUF* buffer)
 void DCB::unread(GWBUF&& buffer)
 {
     m_readq.merge_front(move(buffer));
+}
+
+void DCB::set_remote(string&& remote)
+{
+    m_remote = std::move(remote);
 }
 
 /**

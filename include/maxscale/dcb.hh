@@ -600,6 +600,8 @@ protected:
 
     bool verify_peer_host();
 
+    void set_remote(std::string&& remote);
+
     /**
      * Release the instance from the associated session.
      *
@@ -629,7 +631,7 @@ protected:
     int            m_fd;    /**< The descriptor */
 
     const Role        m_role;           /**< The role of the DCB */
-    const std::string m_remote;         /**< The remote host */
+    std::string       m_remote;         /**< The remote host */
     const std::string m_client_remote;  /**< The host of the client that created this connection */
 
     MXS_SESSION*   m_session;               /**< The owning session */
@@ -711,6 +713,8 @@ public:
     {
         return m_ip;
     }
+
+    void set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str);
 
     /**
      * @brief Return the port number this DCB is connected to

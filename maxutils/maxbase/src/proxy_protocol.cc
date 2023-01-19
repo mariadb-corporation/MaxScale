@@ -291,6 +291,82 @@ PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
 
     return rval;
 }
+
+HeaderResult parse_text_header(const char* header, int header_len)
+{
+    HeaderResult rval;
+    char address_family[TEXT_HDR_MAX_LEN + 1];
+    char client_address[TEXT_HDR_MAX_LEN + 1];
+    char server_address[TEXT_HDR_MAX_LEN + 1];
+    int client_port {0};
+    int server_port {0};
+
+    // About to use sscanf. To prevent any possibility of reading past end, copy the string and add 0.
+    char header_copy[header_len + 1];
+    memcpy(header_copy, header, header_len);
+    header_copy[header_len] = '\0';
+
+    int ret = sscanf(header_copy, "PROXY %s %s %s %d %d",
+                     address_family, client_address, server_address,
+                     &client_port, &server_port);
+    if (ret >= 1 && ret < 5)
+    {
+        // At least something was parsed. Anything after "UNKNOWN" should be ignored.
+        if (strcmp(address_family, "UNKNOWN") == 0)
+        {
+            rval.success = true;
+        }
+    }
+    else if (ret == 5)
+    {
+        if (client_port >= 0 && client_port <= 0xffff && server_port >= 0 && server_port <= 0xffff)
+        {
+            // Check again for "UNKNOWN".
+            if (strcmp(address_family, "UNKNOWN") == 0)
+            {
+                rval.success = true;
+            }
+            else
+            {
+                bool client_addr_ok = false;
+
+                if (strcmp(address_family, "TCP4") == 0)
+                {
+                    auto* addr = reinterpret_cast<sockaddr_in*>(&rval.peer_addr);
+                    addr->sin_family = AF_INET;
+                    addr->sin_port = htons(client_port);
+                    if (inet_pton(AF_INET, client_address, &addr->sin_addr) == 1)
+                    {
+                        client_addr_ok = true;
+                    }
+                }
+                else if (strcmp(address_family, "TCP6") == 0)
+                {
+                    auto* addr = reinterpret_cast<sockaddr_in6*>(&rval.peer_addr);
+                    addr->sin6_family = AF_INET6;
+                    addr->sin6_port = htons(client_port);
+                    if (inet_pton(AF_INET6, client_address, &addr->sin6_addr) == 1)
+                    {
+                        client_addr_ok = true;
+                    }
+                }
+
+                if (client_addr_ok)
+                {
+                    // Looks good. Finally, check that the server address is valid.
+                    uint8_t dummy[16];
+                    if (inet_pton(rval.peer_addr.ss_family, server_address, dummy) == 1)
+                    {
+                        rval.success = true;
+                        rval.is_proxy = true;
+                        rval.peer_addr_str = client_address;
+                    }
+                }
+            }
+        }
+    }
+    return rval;
+}
 }
 }
 

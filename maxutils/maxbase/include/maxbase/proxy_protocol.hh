@@ -14,8 +14,8 @@
 
 #include <maxscale/ccdefs.hh>
 #include <string>
-
-struct sockaddr_storage;
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 namespace maxbase
 {
@@ -47,6 +47,15 @@ struct PreParseResult
  * @return Result structure. Type set to NEED_MORE if entire header was not available in the data.
  */
 PreParseResult pre_parse_header(const uint8_t* data, size_t datalen);
+
+struct HeaderResult
+{
+    bool             success {false};   /**< Was header successfully parsed? */
+    bool             is_proxy {false};  /**< True if the header contains a peer address */
+    sockaddr_storage peer_addr;         /**< Peer address and port */
+    std::string      peer_addr_str;     /**< Peer address in string form */
+};
+HeaderResult parse_text_header(const char* header, int header_len);
 
 // Proxy protocol parsing and subnetwork matching code adapted from MariaDB Server.
 

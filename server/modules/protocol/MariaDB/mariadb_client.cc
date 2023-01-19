@@ -3412,6 +3412,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                     return rval;
                 };
 
+                auto send_hdr_error = [this]() {
+                    send_mysql_err_packet(1105, "HY000", "Failed to parse proxy header");
+                };
+
                 using Type = mxb::proxy_protocol::PreParseResult::Type;
                 mxb::proxy_protocol::PreParseResult header_res;
 
@@ -3444,14 +3448,37 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                     else if (header_res.type == Type::ERROR)
                     {
                         // Header is ill-formed.
-                        send_mysql_err_packet(1105, "HY000", "Failed to parse proxy header");
+                        send_hdr_error();
                     }
                 }
                 while (header_res.type == Type::NEED_MORE);
 
+                auto set_client_info = [this](mxb::proxy_protocol::HeaderResult&& new_info) {
+                    string text_addr_copy = new_info.peer_addr_str;
+                    m_dcb->set_remote_ip_port(new_info.peer_addr,
+                                              std::move(new_info.peer_addr_str));
+                    m_session->set_host(std::move(text_addr_copy));
+                };
                 if (header_res.type == Type::TEXT)
                 {
-                    // Parse and handle text header.
+                    auto parse_res = mxb::proxy_protocol::parse_text_header((const char*)buffer.data(),
+                                                                            header_res.len);
+                    if (parse_res.success)
+                    {
+                        rval = StateMachineRes::DONE;
+                        buffer.consume(header_res.len);
+                        m_dcb->unread(std::move(buffer));
+
+                        // If client sent "PROXY UNKNOWN" then nothing needs to be done.
+                        if (parse_res.is_proxy)
+                        {
+                            set_client_info(std::move(parse_res));
+                        }
+                    }
+                    else
+                    {
+                        send_hdr_error();
+                    }
                 }
                 else if (header_res.type == Type::BINARY)
                 {
