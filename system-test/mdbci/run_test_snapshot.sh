@@ -79,8 +79,8 @@ fi
 
 
 ulimit -c unlimited
-ctest $test_set -VV --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit ${logs_publish_dir}/maxscale.xml --verbose
-ctest --rerun-failed -VV  --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit ${logs_publish_dir}/maxscale_rerun.xml --verbose
+ctest $test_set -VV --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit LOGS/maxscale.xml --verbose
+ctest --rerun-failed -VV  --test-output-size-passed 16777216 --test-output-size-failed 16777216  --output-junit LOGS/maxscale_rerun.xml --verbose
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
 
