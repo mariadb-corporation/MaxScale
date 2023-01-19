@@ -7,6 +7,7 @@ add_library(maxtest SHARED
         envv.cc
         execute_cmd.cc
         galera_cluster.cc
+        generate_sql.cc
         get_com_select_insert.cc
         log.cc
         mariadb_func.cc
