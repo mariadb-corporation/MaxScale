@@ -3375,7 +3375,92 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
             if (mxb::proxy_protocol::is_proxy_protocol_allowed(
                 m_dcb->ip(), m_session->listener_data()->m_proxy_networks))
             {
-                // TODO: Read & parse entire proxy header.
+                /*
+                 * Need to read the entire proxy header out of the socket for parsing. Problem is, we don't
+                 * know how long it is and also have to be careful not to read out any SSL data. May need to
+                 * read multiple times.
+                 */
+
+                // Helper function for reading more data. Returns -1 on error, 0 if nothing was read and 1 on
+                // success.
+                auto read_more = [this, &buffer, ssl_on](size_t readlen) {
+                    GWBUF temp;
+                    int rval = -1;
+                    bool read_ok = false;
+
+                    if (ssl_on)
+                    {
+                        // Cannot read more than 36 bytes, as the client may have sent SSLRequest and SSL
+                        // data after proxy header. Known binary header length overrides this limit.
+                        auto read_limit = std::max((size_t)SSL_REQUEST_PACKET_SIZE, readlen);
+                        std::tie(read_ok, temp) = m_dcb->read_strict(0, read_limit);
+                    }
+                    else
+                    {
+                        auto read_limit = std::max((size_t)NORMAL_HS_RESP_MAX_SIZE, readlen);
+                        std::tie(read_ok, temp) = m_dcb->read(0, NORMAL_HS_RESP_MAX_SIZE);
+                    }
+                    if (!temp.empty())
+                    {
+                        buffer.merge_back(std::move(temp));
+                        rval = 1;
+                    }
+                    else if (read_ok)
+                    {
+                        rval = 0;
+                    }
+                    return rval;
+                };
+
+                using Type = mxb::proxy_protocol::PreParseResult::Type;
+                mxb::proxy_protocol::PreParseResult header_res;
+
+                do
+                {
+                    header_res = mxb::proxy_protocol::pre_parse_header(buffer.data(), buffer.length());
+                    if (header_res.type == Type::NEED_MORE)
+                    {
+                        // Try to read some more data, then check again. Binary headers have length info.
+                        size_t read_limit = 0;
+                        if (header_res.len > 0)
+                        {
+                            mxb_assert(header_res.len > (int)buffer.length());
+                            read_limit = header_res.len - buffer.length();
+                        }
+
+                        int read_res = read_more(read_limit);
+                        if (read_res == 0)
+                        {
+                            // Inconclusive, try again later.
+                            break;
+                        }
+                        else if (read_res < 0)
+                        {
+                            // Read failed. Do not send error message.
+                            header_res.type = Type::ERROR;
+                            break;
+                        }
+                    }
+                    else if (header_res.type == Type::ERROR)
+                    {
+                        // Header is ill-formed.
+                        send_mysql_err_packet(1105, "HY000", "Failed to parse proxy header");
+                    }
+                }
+                while (header_res.type == Type::NEED_MORE);
+
+                if (header_res.type == Type::TEXT)
+                {
+                    // Parse and handle text header.
+                }
+                else if (header_res.type == Type::BINARY)
+                {
+                    // Parse and handle binary header.
+                }
+                else if (header_res.type == Type::NEED_MORE)
+                {
+                    rval = StateMachineRes::IN_PROGRESS;
+                }
             }
             else
             {

@@ -32,8 +32,9 @@ int  compare_bits(const void* s1, const void* s2, size_t n_bits);
 bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
 bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet);
 
-const uint8_t PROXY_TEXT_SIG[] = "PROXY";
-const uint8_t PROXY_BIN_SIG[] = "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A";
+const char PROXY_TEXT_SIG[] = "PROXY";
+const uint8_t PROXY_BIN_SIG[] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
+const int TEXT_HDR_MAX_LEN = 107;
 }
 
 namespace maxbase
@@ -54,7 +55,8 @@ HeaderV1Res generate_proxy_header_v1(const sockaddr_storage* client_addr, const 
         // the same address family. Since the two are separate connections, it's possible one is IPv4 and
         // the other IPv6. In this case, convert any IPv4-addresses to IPv6-format.
         int ret = -1;
-        const int maxlen = 108;     // 108 is the worst-case length defined in the protocol documentation.
+        // 107 is the worst-case length according to protocol documentation.
+        const int maxlen = TEXT_HDR_MAX_LEN + 1;
         char proxy_header[maxlen];
         if ((cli_addr_fam == AF_INET || cli_addr_fam == AF_INET6)
             && (srv_addr_fam == AF_INET || srv_addr_fam == AF_INET6))
@@ -216,6 +218,77 @@ SubnetParseResult parse_networks_from_string(const std::string& networks_str)
     {
         rval.subnets.clear();
     }
+    return rval;
+}
+
+PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
+{
+    PreParseResult rval;
+    size_t text_sig_len = sizeof(PROXY_TEXT_SIG) - 1;
+    if (datalen >= text_sig_len)
+    {
+        /**
+         * Text header starts with "PROXY" and ends in \n (cannot have \n in middle), max len 107
+         * characters.
+         */
+        if (memcmp(data, PROXY_TEXT_SIG, text_sig_len) == 0)
+        {
+            auto* end_pos = static_cast<const uint8_t*>(memchr(data, '\n', datalen));
+            if (end_pos)
+            {
+                auto header_len = end_pos + 1 - data;
+                if (header_len <= TEXT_HDR_MAX_LEN)
+                {
+                    // Looks like got the entire header.
+                    rval.type = PreParseResult::TEXT;
+                    rval.len = header_len;
+                }
+            }
+            else if (datalen < TEXT_HDR_MAX_LEN)
+            {
+                // Need more to determine length.
+                rval.type = PreParseResult::NEED_MORE;
+            }
+        }
+        else
+        {
+            /**
+             * Binary header starts with 12-byte signature, followed by two bytes of info and then a two
+             * byte number which tells the remaining length of the header.
+             */
+            size_t bin_sig_bytes = std::min(datalen, sizeof(PROXY_BIN_SIG));
+            if (memcmp(data, PROXY_BIN_SIG, bin_sig_bytes) == 0)
+            {
+                // Binary data.
+                size_t len_offset = 14;
+                if (datalen >= len_offset + 2)
+                {
+                    // The length is big-endian.
+                    uint16_t header_len_be = 0;
+                    memcpy(&header_len_be, data + len_offset, 2);
+                    uint16_t header_len_h = be16toh(header_len_be);
+                    size_t total_len = sizeof(PROXY_BIN_SIG) + 2 + 2 + header_len_h;
+                    // Sanity check. Don't allow unreasonably long binary headers.
+                    if (total_len < 10000)
+                    {
+                        // Even if we don't have the full header ready, return the length.
+                        rval.len = total_len;
+                        rval.type = (datalen >= total_len) ? PreParseResult::BINARY :
+                            PreParseResult::NEED_MORE;
+                    }
+                }
+                else
+                {
+                    rval.type = PreParseResult::NEED_MORE;
+                }
+            }
+        }
+    }
+    else
+    {
+        rval.type = PreParseResult::NEED_MORE;
+    }
+
     return rval;
 }
 }

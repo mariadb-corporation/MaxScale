@@ -14,7 +14,23 @@
 #include <maxbase/proxy_protocol.hh>
 #include <arpa/inet.h>
 
+#define BIN_SIG "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+
+namespace
+{
+int test_networks_parse_and_match();
+int test_header_preparse();
+}
 int main()
+{
+    int rval = test_networks_parse_and_match();
+    rval += test_header_preparse();
+    return rval;
+}
+
+namespace
+{
+int test_networks_parse_and_match()
 {
     struct Ip
     {
@@ -122,4 +138,49 @@ int main()
         }
     }
     return fails;
+}
+
+int test_header_preparse()
+{
+    using Type = mxb::proxy_protocol::PreParseResult::Type;
+    struct Test
+    {
+        uint8_t header_data[256];
+        int     datalen {0};
+        Type    result_type {Type::ERROR};
+        int     length {-1};
+    };
+
+    std::vector<Test> tests = {{"ABC", 3, Type::NEED_MORE,                -1},
+                               {"ABCDE", 5, Type::ERROR,                  -1},
+                               {"PROXY UNKNOWN", 13, Type::NEED_MORE,     -1},
+                               {"PROXY UNKNOWN\r\n BLAH", 20, Type::TEXT, 15},
+                               {BIN_SIG "\x11\x22\x00\x02\x01\x01", 18, Type::BINARY, 18},
+                               {BIN_SIG "\xFF\xFF\x00\x03", 16, Type::NEED_MORE, 12 + 4 + 3},
+                               {BIN_SIG "\xFF\xFF\x00\x03\0x00\0x00\0x00\0x01", 20, Type::BINARY, 12 + 4 + 3},
+                               {"\x0D\x0A\x0D\x0A\x00", 5, Type::NEED_MORE, -1}
+    };
+
+    int fails = 0;
+    for (const auto& test : tests)
+    {
+        auto parse_res = mxb::proxy_protocol::pre_parse_header(test.header_data, test.datalen);
+        if (parse_res.type == test.result_type)
+        {
+            if (parse_res.len != test.length)
+            {
+                fails++;
+                printf("Wrong pre-parse length result for '%s'. Got %i, expected %i.\n",
+                       test.header_data, parse_res.len, test.length);
+            }
+        }
+        else
+        {
+            fails++;
+            printf("Wrong pre-parse result for '%s'. Got %i, expected %i.\n",
+                   test.header_data, parse_res.type, test.result_type);
+        }
+    }
+    return fails;
+}
 }

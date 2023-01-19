@@ -32,6 +32,22 @@ generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_sto
 
 bool packet_hdr_maybe_proxy(const uint8_t* header);
 
+struct PreParseResult
+{
+    enum Type {ERROR, NEED_MORE, TEXT, BINARY};
+    Type type {Type::ERROR};
+    int  len {-1};
+};
+
+/**
+ * Detects the type and length of the proxy protocol header.
+ *
+ * @param data Header data
+ * @param datalen Data length. At least four bytes should be available to get some results.
+ * @return Result structure. Type set to NEED_MORE if entire header was not available in the data.
+ */
+PreParseResult pre_parse_header(const uint8_t* data, size_t datalen);
+
 // Proxy protocol parsing and subnetwork matching code adapted from MariaDB Server.
 
 // Subnetwork address in CIDR format, e.g. 192.168.1.0/24 or 2001:db8::/32.
