@@ -141,6 +141,11 @@ export default {
             }))
         },
     },
+    async created() {
+        await QueryConn.dispatch('validateConns', {
+            persistentConns: QueryConn.getters('getEtlConns'),
+        })
+    },
     methods: {
         parseMeta(meta) {
             return {

@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO: Remove this page once the workspace page is created -->
     <div class="data-migration-page fill-height">
         <data-migration />
     </div>
@@ -17,14 +18,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 
 export default {
     name: 'data-migration-page',
-    async created() {
-        await QueryConn.dispatch('validateConns', {
-            persistentConns: QueryConn.getters('getEtlConns'),
-        })
-    },
 }
 </script>

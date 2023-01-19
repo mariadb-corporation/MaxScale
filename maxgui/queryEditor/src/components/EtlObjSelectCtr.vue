@@ -150,12 +150,12 @@ export default {
         },
     },
     async created() {
-        this.validateEtlTaskConns()
+        await this.validateActiveEtlTaskConns()
         if (this.are_conns_alive) await this.fetchSrcSchemas()
     },
     methods: {
         ...mapActions({
-            validateEtlTaskConns: 'etlMem/validateEtlTaskConns',
+            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             loadChildNodes: 'etlMem/loadChildNodes',
             fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
             prepareEtl: 'etlMem/prepareEtl',
@@ -205,7 +205,7 @@ export default {
         },
 
         async next() {
-            this.validateEtlTaskConns()
+            await this.validateActiveEtlTaskConns()
             if (this.are_conns_alive) {
                 const { etlPrepareTables = {} } = this.parsedObjs
                 if (!etlPrepareTables.length) this.errMsg = this.$mxs_t('errors.emptyMigrationObj')

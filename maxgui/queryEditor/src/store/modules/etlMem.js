@@ -11,6 +11,7 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import { query, getAsyncResult } from '@queryEditorSrc/api/query'
 import { prepare } from '@queryEditorSrc/api/etl'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
@@ -30,13 +31,20 @@ export default {
         },
     },
     actions: {
-        validateEtlTaskConns({ commit }) {
+        /**
+         * Validate active ETL task connections
+         * @param {Boolean} silentValidation - silent validation (without showing snackbar message)
+         */
+        async validateActiveEtlTaskConns({ commit }, { silentValidation = false } = {}) {
+            await QueryConn.dispatch('validateConns', {
+                persistentConns: EtlTask.getters('getActiveEtlConns'),
+            })
             const { id } = EtlTask.getters('getActiveEtlTaskWithRelation')
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
             const areConnsAlive = Boolean(srcConn.id && destConn.id)
             commit('SET_ARE_CONNS_ALIVE', areConnsAlive)
-            if (!areConnsAlive)
+            if (!areConnsAlive && !silentValidation)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {

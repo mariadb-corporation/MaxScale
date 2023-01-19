@@ -3,6 +3,7 @@
         <v-tab
             v-for="(stage, stageIdx) in stages"
             :key="stageIdx"
+            :disabled="stage.isDisabled"
             class="my-1 justify-space-between align-center"
         >
             <div class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular">
@@ -31,48 +32,54 @@
  * Public License.
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
+import EtlOverviewStage from '@queryEditorSrc/components/EtlOverviewStage.vue'
 import EtlConnsStage from '@queryEditorSrc/components/EtlConnsStage.vue'
 import EtlObjSelectCtr from '@queryEditorSrc/components/EtlObjSelectCtr.vue'
-import EtlMigrationScript from '@queryEditorSrc/components/EtlMigrationScript.vue'
+import EtlMigrationScriptStage from '@queryEditorSrc/components/EtlMigrationScriptStage.vue'
 import { mapState } from 'vuex'
 
 export default {
     name: 'etl-stages',
     components: {
+        EtlOverviewStage,
         EtlConnsStage,
         EtlObjSelectCtr,
-        EtlMigrationScript,
+        EtlMigrationScriptStage,
     },
     computed: {
         ...mapState({
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+            are_conns_alive: state => state.etlMem.are_conns_alive,
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
+        hasMigrationScript() {
+            return this.$typy(this.activeEtlTask, 'meta.migration_script').isDefined
+        },
         stages() {
-            const { CONN, SRC_OBJ, OBJ_MIGR, DATA_MIGR } = this.ETL_STAGE_INDEX
-            // TODO: Handle isComplete value
             return [
+                {
+                    name: this.$mxs_t('overview'),
+                    component: 'etl-overview-stage',
+                    isDisabled: false,
+                },
                 {
                     name: this.$mxs_tc('connections', 1),
                     component: 'etl-conns-stage',
-                    isComplete: this.activeStageIdx > CONN,
+                    isDisabled: this.are_conns_alive,
                 },
                 {
                     name: this.$mxs_t('objSelection'),
                     component: 'etl-obj-select-ctr',
-                    isComplete: this.activeStageIdx > SRC_OBJ,
+                    isDisabled:
+                        !this.are_conns_alive ||
+                        this.activeEtlTask.status !== this.ETL_STATUS.INITIALIZING,
                 },
                 {
                     name: this.$mxs_t('migrationScript'),
-                    component: 'etl-migration-script',
-                    isComplete: this.activeStageIdx > OBJ_MIGR,
-                },
-                {
-                    name: this.$mxs_t('dataMigration'),
-                    component: 'div', //  TODO: Replace with the data migration report component
-                    isComplete: this.activeStageIdx > DATA_MIGR,
+                    component: 'etl-migration-script-stage',
+                    isDisabled: !this.are_conns_alive || !this.hasMigrationScript,
                 },
             ]
         },

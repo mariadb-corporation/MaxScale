@@ -1,7 +1,7 @@
 <template>
     <etl-stage-ctr v-resize.quiet="setTblMaxHeight" :headerHeight="60">
         <template v-slot:header>
-            <div class="etl-migration-script-header">
+            <div class="etl-migration-script-stage-header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                     {{ $mxs_t('migrationScript') }}
                 </h3>
@@ -110,7 +110,7 @@ import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
 import { mapState, mapActions } from 'vuex'
 
 export default {
-    name: 'etl-migration-script',
+    name: 'etl-migration-script-stage',
     components: {
         EtlStageCtr,
         EtlTransformCtr,
@@ -171,7 +171,7 @@ export default {
             immediate: true,
             async handler(v) {
                 this.isLoading = Boolean(v)
-                if (v)
+                if (v && this.are_conns_alive)
                     await this.$helpers
                         .delay(2000)
                         .then(async () => await this.getPrepareEtlRes(this.activeEtlTask.id))
@@ -206,16 +206,16 @@ export default {
             },
         },
     },
-    created() {
-        this.validateEtlTaskConns()
+    async created() {
+        await this.validateActiveEtlTaskConns()
     },
     mounted() {
         this.$helpers.doubleRAF(() => this.setTblMaxHeight())
     },
     methods: {
         ...mapActions({
-            validateEtlTaskConns: 'etlMem/validateEtlTaskConns',
             getPrepareEtlRes: 'etlMem/getPrepareEtlRes',
+            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
         }),
         setTblMaxHeight() {
             this.tableMaxHeight =

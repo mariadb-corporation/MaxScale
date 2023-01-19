@@ -178,6 +178,7 @@ export const sideBarRoutes = [
         name: 'queryEditor',
         label: 'queryEditor',
     },
+    // TODO: Remove this route once the workspace page is created
     {
         path: '/data-migration',
         component: DataMigration,
@@ -185,8 +186,7 @@ export const sideBarRoutes = [
             requiresAuth: true,
             layout: 'app-layout',
             size: 22,
-            //TODO: Replace with a data migration icon
-            icon: '$vuetify.icons.mxs_queryEditor',
+            icon: '$vuetify.icons.mxs_dataMigration',
         },
         name: 'dataMigration',
         label: 'dataMigration',
