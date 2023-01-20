@@ -1,25 +1,25 @@
 <template>
     <etl-stage-ctr>
         <template v-slot:header>
-            <div class="etl-overview-stage-header d-flex flex-row align-center">
-                <v-icon size="48" color="info" class="mr-5">
-                    $vuetify.icons.mxs_dataMigration
-                </v-icon>
-                <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                    {{ $mxs_t('dataMigration') }}
-                </h3>
-            </div>
+            <v-icon size="48" color="info" class="mr-5 mt-n1">
+                $vuetify.icons.mxs_dataMigration
+            </v-icon>
+            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                {{ $mxs_t('dataMigration') }}
+            </h3>
         </template>
         <template v-slot:body>
-            <v-col cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
-                <p>
-                    {{ $mxs_t('info.etlOverviewInfo') }}
-                </p>
-                <!-- TODO: Add link to the document -->
-                <a target="_blank" rel="noopener noreferrer" class="rsrc-link">
-                    {{ $mxs_t('info.etlDocLinkText') }}
-                </a>
-            </v-col>
+            <v-row class="fill-height">
+                <v-col cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
+                    <p>
+                        {{ $mxs_t('info.etlOverviewInfo') }}
+                    </p>
+                    <!-- TODO: Add link to the document -->
+                    <a target="_blank" rel="noopener noreferrer" class="rsrc-link">
+                        {{ $mxs_t('info.etlDocLinkText') }}
+                    </a>
+                </v-col>
+            </v-row>
         </template>
         <template v-slot:footer>
             <v-btn

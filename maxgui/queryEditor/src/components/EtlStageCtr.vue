@@ -1,24 +1,14 @@
 <template>
     <div class="stage-wrapper d-flex flex-column fill-height pl-8">
-        <div
-            v-if="$slots['header']"
-            class="stage-wrapper__header d-flex mx-3"
-            :style="{ height: `${headerHeight}px` }"
-        >
+        <div v-if="$slots['header']" class="stage-wrapper__header d-flex mx-3 pt-2">
             <slot name="header" />
         </div>
-        <div v-if="$slots['body']" class="stage-wrapper__body">
+        <div v-if="$slots['body']" class="stage-wrapper__body pb-2">
             <v-container fluid class="fill-height">
-                <v-row class="fill-height">
-                    <slot name="body" />
-                </v-row>
+                <slot name="body" />
             </v-container>
         </div>
-        <div
-            v-if="$slots['footer']"
-            class="stage-wrapper__footer d-flex align-end mx-3"
-            :style="{ height: `${footerHeight}px` }"
-        >
+        <div v-if="$slots['footer']" class="stage-wrapper__footer d-flex align-end mx-3">
             <slot name="footer" />
         </div>
     </div>
@@ -39,10 +29,6 @@
  */
 export default {
     name: 'etl-stage-ctr',
-    props: {
-        headerHeight: { type: Number, default: 50 },
-        footerHeight: { type: Number, default: 80 },
-    },
 }
 </script>
 <style lang="scss">

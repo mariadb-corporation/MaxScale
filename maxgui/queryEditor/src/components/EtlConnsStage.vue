@@ -2,17 +2,19 @@
     <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
         <etl-stage-ctr>
             <template v-slot:body>
-                <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                    <etl-src-conn v-model="src" :drivers="odbc_drivers" class="pb-2" />
-                    <etl-dest-conn
-                        v-model="dest"
-                        :allServers="allServers"
-                        :destTargetType="destTargetType"
-                    />
-                </v-col>
-                <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                    <etl-logs class="fill-height pt-4" />
-                </v-col>
+                <v-row class="fill-height">
+                    <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                        <etl-src-conn v-model="src" :drivers="odbc_drivers" class="pb-1" />
+                        <etl-dest-conn
+                            v-model="dest"
+                            :allServers="allServers"
+                            :destTargetType="destTargetType"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                        <etl-logs class="fill-height pt-4" />
+                    </v-col>
+                </v-row>
             </template>
             <template v-slot:footer>
                 <v-btn

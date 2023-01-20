@@ -1,71 +1,73 @@
 <template>
-    <etl-stage-ctr :footerHeight="36">
+    <etl-stage-ctr>
         <template v-slot:header>
             <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('selectObjsToMigrate') }}
             </h3>
         </template>
         <template v-slot:body>
-            <v-col cols="12" md="6" class="fill-height">
-                <div class="d-flex flex-column fill-height">
-                    <v-text-field
-                        v-model="filterTxt"
-                        name="searchSchema"
-                        dense
-                        outlined
-                        height="28"
-                        class="vuetify-input--override filter-objects mb-2"
-                        hide-details
-                        :placeholder="$mxs_t('filterSchemaObjects')"
-                    />
-                    <!--  TODO: Add reload feat -->
-                    <mxs-treeview
-                        ref="tree"
-                        v-model="selectedObjs"
-                        class="mxs-treeview--src-treeview fill-height mxs-color-helper all-border-separator pa-3"
-                        :items="src_schema_tree"
-                        :search="filterTxt"
-                        :filter="filter"
-                        hoverable
-                        dense
-                        open-on-click
-                        transition
-                        selectable
-                        :load-children="handleLoadChildren"
-                        return-object
-                    >
-                        <template v-slot:label="{ item: node }">
-                            <div class="d-flex align-center">
-                                <v-icon
-                                    size="18"
-                                    color="deep-ocean"
-                                    :class="{ 'ml-1': iconSheet(node) }"
-                                >
-                                    {{ iconSheet(node) }}
-                                </v-icon>
-                                <span
-                                    v-mxs-highlighter="{
-                                        keyword: filterTxt,
-                                        txt: node.name,
-                                    }"
-                                    class="ml-1 text-truncate d-inline-block node-name"
-                                >
-                                    {{ node.name }}
-                                </span>
-                            </div>
-                        </template>
-                    </mxs-treeview>
-                    <p v-if="errMsg" class="mt-4 v-messages__message error--text">
-                        {{ errMsg }}
-                    </p>
-                    <p v-else-if="infoMsg" class="mt-4 v-messages__message warning--text">
-                        {{ infoMsg }}
-                    </p>
-                </div>
-            </v-col>
-            <v-col cols="12" md="6" class="fill-height">
-                <etl-logs class="fill-height" />
-            </v-col>
+            <v-row class="fill-height">
+                <v-col cols="12" md="6" class="fill-height">
+                    <div class="d-flex flex-column fill-height">
+                        <v-text-field
+                            v-model="filterTxt"
+                            name="searchSchema"
+                            dense
+                            outlined
+                            height="28"
+                            class="vuetify-input--override filter-objects mb-2"
+                            hide-details
+                            :placeholder="$mxs_t('filterSchemaObjects')"
+                        />
+                        <!--  TODO: Add reload feat -->
+                        <mxs-treeview
+                            ref="tree"
+                            v-model="selectedObjs"
+                            class="mxs-treeview--src-treeview fill-height mxs-color-helper all-border-separator pa-3"
+                            :items="src_schema_tree"
+                            :search="filterTxt"
+                            :filter="filter"
+                            hoverable
+                            dense
+                            open-on-click
+                            transition
+                            selectable
+                            :load-children="handleLoadChildren"
+                            return-object
+                        >
+                            <template v-slot:label="{ item: node }">
+                                <div class="d-flex align-center">
+                                    <v-icon
+                                        size="18"
+                                        color="deep-ocean"
+                                        :class="{ 'ml-1': iconSheet(node) }"
+                                    >
+                                        {{ iconSheet(node) }}
+                                    </v-icon>
+                                    <span
+                                        v-mxs-highlighter="{
+                                            keyword: filterTxt,
+                                            txt: node.name,
+                                        }"
+                                        class="ml-1 text-truncate d-inline-block node-name"
+                                    >
+                                        {{ node.name }}
+                                    </span>
+                                </div>
+                            </template>
+                        </mxs-treeview>
+                        <p v-if="errMsg" class="mt-4 v-messages__message error--text">
+                            {{ errMsg }}
+                        </p>
+                        <p v-else-if="infoMsg" class="mt-4 v-messages__message warning--text">
+                            {{ infoMsg }}
+                        </p>
+                    </div>
+                </v-col>
+                <v-col cols="12" md="6" class="fill-height">
+                    <etl-logs class="fill-height" />
+                </v-col>
+            </v-row>
         </template>
         <template v-slot:footer>
             <v-btn

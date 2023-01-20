@@ -1,5 +1,5 @@
 <template>
-    <etl-stage-ctr v-resize.quiet="setTblMaxHeight" :headerHeight="60">
+    <etl-stage-ctr v-resize.quiet="setTblMaxHeight">
         <template v-slot:header>
             <div class="etl-migration-script-stage-header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
@@ -11,33 +11,29 @@
             </div>
         </template>
         <template v-slot:body>
-            <v-col cols="12" class="fill-height">
-                <v-row class="fill-height pt-4">
-                    <v-col cols="12" md="6" class="fill-height">
-                        <div ref="tableWrapper" class="table-wrapper fill-height">
-                            <mxs-data-table
-                                v-model="selectItems"
-                                :loading="isLoading"
-                                :headers="tableHeaders"
-                                :items="tableRows"
-                                fixed-header
-                                hide-default-footer
-                                :items-per-page="-1"
-                                :height="tableMaxHeight"
-                                @click:row="selectItems = [$event]"
-                            />
-                        </div>
-                    </v-col>
-                    <v-col cols="12" md="6" class="fill-height">
-                        <etl-transform-ctr
-                            v-if="activeRow && !isLoading"
-                            v-model="activeRow"
-                            :hasRowChanged="hasRowChanged"
-                            @on-discard="discard"
-                        />
-                    </v-col>
-                </v-row>
-            </v-col>
+            <v-row class="fill-height">
+                <v-col ref="tableWrapper" cols="12" md="6" class="fill-height">
+                    <mxs-data-table
+                        v-model="selectItems"
+                        :loading="isLoading"
+                        :headers="tableHeaders"
+                        :items="tableRows"
+                        fixed-header
+                        hide-default-footer
+                        :items-per-page="-1"
+                        :height="tableMaxHeight"
+                        @click:row="selectItems = [$event]"
+                    />
+                </v-col>
+                <v-col cols="12" md="6" class="fill-height">
+                    <etl-transform-ctr
+                        v-if="activeRow && !isLoading"
+                        v-model="activeRow"
+                        :hasRowChanged="hasRowChanged"
+                        @on-discard="discard"
+                    />
+                </v-col>
+            </v-row>
         </template>
         <template v-slot:footer>
             <div class="btn-ctr">
@@ -128,9 +124,6 @@ export default {
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
-        },
-        asyncQueryId() {
-            return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
         },
         generatedScriptMap() {
             return this.migration_objs.reduce((map, obj) => {
