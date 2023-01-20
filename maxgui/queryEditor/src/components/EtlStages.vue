@@ -50,12 +50,13 @@ export default {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             are_conns_alive: state => state.etlMem.are_conns_alive,
+            migration_objs: state => state.etlMem.migration_objs,
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
         hasMigrationScript() {
-            return this.$typy(this.activeEtlTask, 'meta.migration_script').isDefined
+            return Boolean(this.migration_objs.length)
         },
         stages() {
             return [

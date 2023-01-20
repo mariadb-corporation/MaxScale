@@ -122,6 +122,7 @@ export default {
             src_schema_tree: state => state.etlMem.src_schema_tree,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
         parsedObjs() {
             return this.selectedObjs.reduce(
@@ -158,11 +159,12 @@ export default {
         if (this.are_conns_alive) await this.fetchSrcSchemas()
     },
     methods: {
+        ...mapMutations({ SET_MIGRATION_OBJS: 'etlMem/SET_MIGRATION_OBJS' }),
         ...mapActions({
             validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             loadChildNodes: 'etlMem/loadChildNodes',
             fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
-            prepareEtl: 'etlMem/prepareEtl',
+            handleEtlCall: 'etlMem/handleEtlCall',
         }),
         ...mapMutations({ SET_SRC_SCHEMA_TREE: 'etlMem/SET_SRC_SCHEMA_TREE' }),
         filter(node, search, textKey) {
@@ -210,21 +212,22 @@ export default {
 
         async next() {
             await this.validateActiveEtlTaskConns()
+            const { etlPrepareTables = {} } = this.parsedObjs
+            if (!etlPrepareTables.length) this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
+            else this.SET_MIGRATION_OBJS(etlPrepareTables)
+
             if (this.are_conns_alive) {
-                const { etlPrepareTables = {} } = this.parsedObjs
-                if (!etlPrepareTables.length) this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
-                else
-                    await this.prepareEtl({
-                        etl_task_id: this.activeEtlTask.id,
-                        tables: etlPrepareTables,
-                    })
+                await this.handleEtlCall({
+                    id: this.activeEtlTask.id,
+                    stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
+                })
+                EtlTask.update({
+                    where: this.activeEtlTask.id,
+                    data(obj) {
+                        obj.active_stage_index = obj.active_stage_index + 1
+                    },
+                })
             }
-            EtlTask.update({
-                where: this.activeEtlTask.id,
-                data(obj) {
-                    obj.active_stage_index = obj.active_stage_index + 1
-                },
-            })
         },
     },
 }
