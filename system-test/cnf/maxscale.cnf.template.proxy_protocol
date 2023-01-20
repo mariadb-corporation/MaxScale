@@ -1,5 +1,5 @@
 [maxscale]
-threads=###threads###
+threads=1
 
 [MySQL-Monitor]
 type=monitor
