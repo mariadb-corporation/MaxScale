@@ -181,6 +181,9 @@
       },
       {
         "name" : "connector_odbc"
+      },
+      {
+        "name" : "docker"
       }
     ]
   },
