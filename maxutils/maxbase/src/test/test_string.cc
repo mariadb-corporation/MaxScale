@@ -16,6 +16,8 @@
 #include <string.h>
 #include <iostream>
 #include <tuple>
+#include <numeric>
+#include <random>
 
 using std::cout;
 using std::endl;
@@ -203,6 +205,103 @@ int test_cat()
 
     return rc;
 }
+
+// This is the old version of mxb::strtok. Here only as a safeguard against unexpected changes.
+inline std::vector<std::string> strtok_old(std::string str, const char* delim)
+{
+    std::vector<std::string> rval;
+    char* save_ptr;
+    char* tok = strtok_r(&str[0], delim, &save_ptr);
+
+    while (tok)
+    {
+        rval.emplace_back(tok);
+        tok = strtok_r(NULL, delim, &save_ptr);
+    }
+
+    return rval;
+}
+
+template<class Func>
+int test_strtok(Func func, const char* func_name)
+{
+    cout << func_name << "()" << endl;
+
+    std::vector<std::tuple<const char*, const char*,
+                           std::vector<std::string>>> test_cases
+    {
+        {"hello=world", "=", {"hello", "world"}},
+        {"=world", "=", {"world"}},
+        {"=world", "", {"=world"}},
+        {"helloworld!", "!", {"helloworld"}},
+        {"helloworld!", "=", {"helloworld!"}},
+        {"helloworld!", "\0", {"helloworld!"}},
+        {"hello world!", "  ", {"hello", "world!"}},
+        {"hello world!", " ", {"hello", "world!"}},
+        {"hello world!", "world", {"he", " ", "!"}},
+        {"!hello world!", "!", {"hello world"}},
+
+        {"server1, server2, server3, server4", ", ",
+         {"server1", "server2", "server3", "server4"}},
+
+        {"https://en.cppreference.com/w/cpp/string/basic_string/find", "/",
+         {"https:", "en.cppreference.com", "w", "cpp", "string", "basic_string", "find"}},
+    };
+
+    int rc = 0;
+
+    for (const auto& [input, delim, expected] : test_cases)
+    {
+        auto result = func(input, delim);
+
+        if (result != expected)
+        {
+            cout << "`" << input << "` with delimiter `" << delim << "` returned "
+                 << mxb::join(result, ", ", "`") << " instead of " << mxb::join(expected, ", ", "`") << endl;
+            rc = 1;
+        }
+    }
+    return rc;
+}
+
+int compare_old_strtok()
+{
+    cout << "comparing new strtok() to old strtok()" << endl;
+    int rc = 0;
+    std::string input;
+
+    for (uint8_t i = 0; i < std::numeric_limits<uint8_t>::max(); i++)
+    {
+        if (isprint(i) || isspace(i))
+        {
+            input.push_back(i);
+        }
+    }
+
+    // Using a static seed makes the test deterministic.
+    std::mt19937 engine(1234);
+
+    for (int i = 0; i < 100000; i++)
+    {
+        // Take the first five characters of the previous string as delimiters
+        // and then shuffle the string.
+        std::string delim = input.substr(0, 5);
+        std::shuffle(input.begin(), input.end(), engine);
+
+        auto result = mxb::strtok(input, delim);
+        auto expected = strtok_old(input, delim.c_str());
+
+        if (result != expected)
+        {
+            cout << "`" << input << "` with delimiter `" << delim << "` returned "
+                 << mxb::join(result, ", ", "`") << " instead of " << mxb::join(expected, ", ", "`") << endl;
+            rc = 1;
+            break;
+        }
+    }
+
+    return rc;
+}
 }
 
 int main(int argc, char* argv[])
@@ -214,6 +313,9 @@ int main(int argc, char* argv[])
     rv += test_rtrim();
     rv += test_split();
     rv += test_cat();
+    rv += test_strtok(strtok_old, "strtok_old");
+    rv += test_strtok(mxb::strtok, "strtok");
+    rv += compare_old_strtok();
 
     return rv;
 }
