@@ -117,3 +117,9 @@ EOL
     echo "please run 'scl enable devtoolset-7 bash' to enable new gcc!!"
   fi
 fi
+
+# The tests need a very new CMake in order to produce JUnit XML output. This
+# ends up installing CMake twice which isn't nice. The install_build_deps.sh
+# script could be modified to take the CMake version as an argument which could
+# then be passed down to install_cmake.sh.
+$src_dir/install_cmake.sh "3.25.1"

@@ -79,8 +79,8 @@ fi
 
 
 ulimit -c unlimited
-ctest $test_set -VV
-ctest --rerun-failed -VV
+ctest $test_set -VV --test-output-size-passed 16777216 --test-output-size-failed 16777216 --output-junit LOGS/maxscale.xml --verbose --overwrite BuildName=maxscale
+ctest --rerun-failed -VV --test-output-size-passed 16777216 --test-output-size-failed 16777216 --output-junit LOGS/maxscale_rerun.xml --verbose --overwrite BuildName=maxscale
 cp core.* ${logs_publish_dir}
 ${script_dir}/copy_logs.sh
 
