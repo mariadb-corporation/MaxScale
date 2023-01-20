@@ -1298,13 +1298,6 @@ bool set_dirs(const char* basedir)
     return rv;
 }
 
-static mxb::ThreadPool thread_pool;
-
-mxb::ThreadPool& mxs::thread_pool()
-{
-    return ::thread_pool;
-}
-
 /**
  * A RAII class that at construction time takes overship of pipe
  * handle and at destruction time notifies parent if there is
@@ -2119,6 +2112,12 @@ int main(int argc, char** argv)
                     // This call will block until MaxScale is shut down.
                     main_worker.run();
                     MXB_NOTICE("MaxScale is shutting down.");
+
+                    // Stop the threadpool before shutting down the REST-API. The pool might still
+                    // have queued responses in it that use it and thus they should be allowed to
+                    // finish before we shut down. New REST-API responses are not possible as they
+                    // are actively being refused by the thread that would otherwise accept them.
+                    mxs::thread_pool().stop(false);
 
                     disable_normal_signals();
                     mxs_admin_finish();

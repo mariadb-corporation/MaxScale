@@ -24,7 +24,7 @@ add_test(test_mxb_log test_mxb_log)
 
 add_executable(test_mxb_string test_string.cc)
 target_link_libraries(test_mxb_string maxbase pthread)
-add_test(test_semaphore test_semaphore)
+add_test(test_mxb_string test_mxb_string)
 
 add_executable(test_name_lookup test_name_lookup.cc)
 target_link_libraries(test_name_lookup maxbase)

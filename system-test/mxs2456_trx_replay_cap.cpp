@@ -7,32 +7,41 @@
 
 #define EXPECT(a) test.expect(a, "%s", "Assertion failed: " #a)
 
+void block_master(TestConnections& test)
+{
+    mxt::MariaDBServer* master;
+
+    while (!(master = test.get_repl_master()))
+    {
+        test.maxscale->sleep_and_wait_for_monitor(1, 1);
+    }
+
+    test.repl->block_node(master->ind());
+    test.maxscale->wait_for_monitor();
+    sleep(5);
+}
+
 void test_replay_ok(TestConnections& test)
 {
-    test.tprintf("Checking that transaction replay is attempted more than once");
-
+    test.log_printf("Do a partial transaction");
     Connection c = test.maxscale->rwsplit();
     EXPECT(c.connect());
     EXPECT(c.query("BEGIN"));
     EXPECT(c.query("SELECT 1"));
     EXPECT(c.query("SELECT SLEEP(15)"));
 
-    // Block the node where the transaction was started
-    test.repl->block_node(0);
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.log_printf("Block the node where the transaction was started");
+    block_master(test);
 
-    // Then block the node where the transaction replay is attempted before the last statement finishes
-    test.repl->block_node(1);
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.log_printf("Then block the node where the transaction replay is "
+                    "attempted before the last statement finishes");
+    block_master(test);
 
-    // The next query should succeed as we do two replay attempts
+    test.log_printf("The next query should succeed as we do two replay attempts");
     test.expect(c.query("SELECT 2"), "Two transaction replays should work");
 
-    // Reset the replication
-    test.repl->unblock_node(1);
-    test.repl->unblock_node(0);
+    test.log_printf("Reset the replication");
+    test.repl->unblock_all_nodes();
     test.maxscale->wait_for_monitor();
     test.check_maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
     test.maxscale->wait_for_monitor();
@@ -40,36 +49,27 @@ void test_replay_ok(TestConnections& test)
 
 void test_replay_failure(TestConnections& test)
 {
-    test.tprintf("Exceeding replay attempt limit should cause the transaction to fail");
-
+    test.log_printf("Do a partial transaction");
     Connection c = test.maxscale->rwsplit();
     c.connect();
     c.query("BEGIN");
     c.query("SELECT 1");
     c.query("SELECT SLEEP(15)");
 
-    // Block the node where the transaction was started
-    test.repl->block_node(0);
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.log_printf("Block the node where the transaction was started");
+    block_master(test);
 
-    // Then block the node where the first transaction replay is attempted
-    test.repl->block_node(1);
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.log_printf("Then block the node where the first transaction replay is attempted");
+    block_master(test);
 
-    // Block the final node before the replay completes
-    test.repl->block_node(2);
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.log_printf("Block the final node before the replay completes");
+    block_master(test);
 
-    // The next query should fail as we exceeded the cap of two replays
+    test.log_printf("The next query should fail as we exceeded the cap of two replays");
     test.expect(!c.query("SELECT 2"), "Three transaction replays should NOT work");
 
-    // Reset the replication
-    test.repl->unblock_node(2);
-    test.repl->unblock_node(1);
-    test.repl->unblock_node(0);
+    test.log_printf("Reset the replication");
+    test.repl->unblock_all_nodes();
     test.maxscale->wait_for_monitor();
     test.check_maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
     test.maxscale->wait_for_monitor();
@@ -132,7 +132,10 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
+    test.tprintf("test_replay_ok");
     test_replay_ok(test);
+
+    test.tprintf("test_replay_failure");
     test_replay_failure(test);
     test_replay_time_limit(test);
 
