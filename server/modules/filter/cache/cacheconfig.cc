@@ -376,9 +376,12 @@ bool CacheConfig::is_config_valid(const std::map<std::string, mxs::ConfigParamet
     }
     else
     {
-        MXB_WARNING("In section %s, providing storage parameters using 'storage_options' has "
-                    "been deprecated. Use nested parameters (e.g. '%s.server=...') instead.",
-                    name().c_str(), this->storage.c_str());
+        if (!this->storage_options.empty())
+        {
+            MXB_WARNING("In section %s, providing storage parameters using 'storage_options' has "
+                        "been deprecated. Use nested parameters (e.g. '%s.server=...') instead.",
+                        name().c_str(), this->storage.c_str());
+        }
 
         valid = Storage::parse_argument_string(this->storage_options, &this->storage_params);
     }
