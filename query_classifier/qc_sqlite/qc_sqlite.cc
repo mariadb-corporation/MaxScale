@@ -776,7 +776,17 @@ public:
         }
     }
 
-    void update_names(const char* zDatabase, const char* zTable, const char* zAlias, QcAliases* pAliases)
+    enum class Exclude
+    {
+        DUAL,
+        NONE
+    };
+
+    void update_names(const char* zDatabase,
+                      const char* zTable,
+                      const char* zAlias,
+                      QcAliases* pAliases,
+                      Exclude exclude = Exclude::DUAL)
     {
         bool should_collect_alias = pAliases && zAlias && should_collect(QC_COLLECT_FIELDS);
         bool should_collect_table = should_collect_alias || should_collect(QC_COLLECT_TABLES);
@@ -802,7 +812,7 @@ public:
 
             if (should_collect_table && zTable)
             {
-                if (strcasecmp(zTable, "DUAL") != 0)
+                if (strcasecmp(zTable, "DUAL") != 0 || exclude == Exclude::NONE)
                 {
                     strcpy(table, zTable);
                     exposed_sqlite3Dequote(table);
@@ -2143,11 +2153,11 @@ public:
             memcpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
-            update_names(database, name, NULL, NULL);
+            update_names(database, name, NULL, NULL, Exclude::NONE);
         }
         else
         {
-            update_names(NULL, name, NULL, NULL);
+            update_names(NULL, name, NULL, NULL, Exclude::NONE);
         }
 
         if (m_collect & QC_COLLECT_TABLES)
