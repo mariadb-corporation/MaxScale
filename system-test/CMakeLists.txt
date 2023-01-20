@@ -444,7 +444,7 @@ add_test_executable(mxs3778_cache.cpp mxs3778_cache mxs3778_cache LABELS cachefi
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
 
-# Proxy protocol test
+# Proxy protocol test. Also MXS-3003: Inbound proxy protocol.
 add_test_executable(proxy_protocol.cpp proxy_protocol proxy_protocol LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
 # MXS-3342: Crash with proxy protocol and persistent connections

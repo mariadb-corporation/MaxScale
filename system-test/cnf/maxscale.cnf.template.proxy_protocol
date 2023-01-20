@@ -1,5 +1,6 @@
 [maxscale]
 threads=1
+users_refresh_time=0s
 
 [MySQL-Monitor]
 type=monitor
@@ -22,6 +23,30 @@ type=listener
 service=RW-Split-Router
 protocol=MySQLClient
 port=4006
+
+[RWS-Listener-proxy-all]
+type=listener
+service=RW-Split-Router
+protocol=mariadb
+port=4007
+proxy_protocol_networks=*
+
+[RWS-Listener-proxy-all-ssl]
+type=listener
+service=RW-Split-Router
+protocol=mariadb
+port=4008
+proxy_protocol_networks=*
+ssl=true
+ssl_cert=###access_homedir###/certs/server-cert.pem
+ssl_key=###access_homedir###/certs/server-key.pem
+ssl_ca_cert=###access_homedir###/certs/ca.pem
+
+[RWS-Listener-proxy-multi]
+type=listener
+service=RW-Split-Router
+protocol=mariadb
+port=4009
 
 [server1]
 type=server

@@ -16,10 +16,14 @@
 #include <maxbase/format.hh>
 
 using std::string;
+using SslMode = mxt::MariaDBServer::SslMode;
 
 namespace
 {
 void test_main(TestConnections& test);
+void check_conn(TestConnections& test, mxt::MariaDB* conn, bool expect_conn_success,
+                const string& expected_ip);
+void check_port(TestConnections& test, mxt::MariaDB* conn, int expected_port);
 }
 
 int main(int argc, char* argv[])
@@ -109,8 +113,7 @@ void test_main(TestConnections& test)
                     {
                         test.tprintf("User created.");
                         // Test the user account by connecting directly to the server, it should work.
-                        testcon = be->try_open_connection(mxt::MariaDBServer::SslMode::OFF,
-                                                          proxy_user, proxy_pw);
+                        testcon = be->try_open_connection(SslMode::OFF, proxy_user, proxy_pw);
                         test.expect(testcon->is_open(), "Connection to server1 as %s failed when success "
                                                         "was expected.", proxy_user.c_str());
 
@@ -154,11 +157,264 @@ void test_main(TestConnections& test)
         test.tprintf("Direct: %s Readwritesplit: %s", d.c_str(), r.c_str());
         test.expect(d == r, "Both connections should return the same user: %s != %s", d.c_str(), r.c_str());
 
+        if (test.ok())
+        {
+            // Test MXS-3003: inbound proxy protocol
+
+            auto prepare_conn = [&test](const string& user, const string& pw, SslMode ssl,
+                                        const string& proxy_ip, int proxy_port) {
+                auto conn = std::make_unique<mxt::MariaDB>(test.logger());
+                auto& sett = conn->connection_settings();
+                sett.user = user;
+                sett.password = pw;
+                if (ssl == SslMode::ON)
+                {
+                    auto base_dir = mxt::SOURCE_DIR;
+                    sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
+                    sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", base_dir);
+                    sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
+                    sett.ssl.enabled = true;
+                }
+
+                string header;
+                if (proxy_ip.empty())
+                {
+                    header = "PROXY UNKNOWN\r\n";
+                }
+                else
+                {
+                    const char* protocol = (proxy_ip.find(':') == string::npos) ? "TCP4" : "TCP6";
+                    header = mxb::string_printf("PROXY %s %s %s %i %i\r\n", protocol,
+                                                proxy_ip.c_str(), test.maxscale->ip(), proxy_port,
+                                                test.maxscale->rwsplit_port);
+                }
+                auto ptr = reinterpret_cast<const uint8_t*>(header.data());
+                sett.proxy_header.assign(ptr, ptr + header.size());
+                return conn;
+            };
+
+            auto update_users = [&mxs]() {
+                mxs.try_open_rwsplit_connection("non-existing-user", "aabbcc");
+                mxs.wait_for_monitor();
+            };
+
+            const string anyhost_un = "anyhost_user";
+            const string anyhost_pw = "anyhost_pw";
+            test.tprintf("Creating user '%s'", anyhost_un.c_str());
+            repl.ping_or_open_admin_connections();
+            auto adminconn = repl.backend(0)->admin_connection();
+            auto anyhost_scopeuser = adminconn->create_user(anyhost_un, "%", anyhost_pw);
+            update_users();
+
+            string mxs_ip4 = mxs.ip4();
+            int rwsplit_no_proxy_port = 4006;
+
+            if (test.ok())
+            {
+                int rwsplit_all_proxy_port = 4007;
+                int fake_port = 1234;
+
+                test.tprintf("Check that the user works. Server should see client's real ip.");
+                // MaxScale is sending proxy header to server regardless, so server sees real client ip.
+                auto conn = mxs.try_open_connection(rwsplit_no_proxy_port, anyhost_un, anyhost_pw, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that sending a proxy header to a listener not configured for it fails.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, client_ip, fake_port);
+                conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
+                check_conn(test, conn.get(), false, "");
+
+                test.tprintf("Check that normal connection to a proxy enabled listener works.");
+                conn = mxs.try_open_connection(rwsplit_all_proxy_port, anyhost_un, anyhost_pw, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that proxy connection to a proxy enabled listener works.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, client_ip, fake_port);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that proxy connection from another ip to a proxy enabled "
+                             "listener works.");
+                const string fake_client_ip = "111.222.192.251";
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                // Check that server sees the fake port.
+                check_port(test, conn.get(), fake_port);
+            }
+
+            if (test.ok())
+            {
+                // Repeat previous tests with ssl.
+                int fake_port = 1337;
+                int ssl_proxy_port = 4008;
+
+                test.tprintf("Check that sending a proxy header + SSL to a listener not configured for it "
+                             "fails.");
+                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, client_ip, fake_port);
+                conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
+                check_conn(test, conn.get(), false, "");
+
+                test.tprintf("Check that normal SSL connection to a proxy enabled listener works.");
+                conn = mxs.try_open_connection(mxt::MaxScale::SslMode::ON, ssl_proxy_port,
+                                               anyhost_un, anyhost_pw, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that SSL proxy connection to a proxy enabled listener works.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, client_ip, fake_port);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that SSL proxy connection from another ip to a proxy enabled "
+                             "listener works.");
+                const string fake_client_ip = "121.202.191.222";
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, fake_client_ip, fake_port);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+            }
+
+            if (test.ok())
+            {
+                auto set_proxy_nws = [&test](const string& value) {
+                    string alter_cmd = mxb::string_printf("alter listener RWS-Listener-proxy-multi "
+                                                          "proxy_protocol_networks %s", value.c_str());
+                    auto res = test.maxscale->maxctrl(alter_cmd);
+                    test.expect(res.rc == 0 && res.output == "OK", "Alter command '%s' failed.",
+                                alter_cmd.c_str());
+                };
+
+                int alter_listener_port = 4009;
+                const string fake_client_ip = "123.101.202.123";
+                int fake_port = 1111;
+                test.tprintf("Check that sending a proxy header to a listener not configured for it fails.");
+                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), false, "");
+
+                test.tprintf("Check that listener works after configuring proxy networks.");
+                set_proxy_nws(client_ip);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Check that listener works after configuring proxy networks to ipv6.");
+                string new_proxy_nws = "::ffff:" + client_ip;
+                set_proxy_nws(new_proxy_nws);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Configure proxy network to imaginary ip. Check that proxy header is denied but "
+                             "normal login works.");
+                new_proxy_nws = fake_client_ip;
+                set_proxy_nws(new_proxy_nws);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), false, "");
+
+                conn = mxs.try_open_connection(mxt::MaxScale::SslMode::OFF, alter_listener_port,
+                                               anyhost_un, anyhost_pw, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Configuring proxy networks with mask...");
+                string altered_client_ip = client_ip;
+                auto dot_pos = altered_client_ip.find('.');
+                altered_client_ip.resize(dot_pos);
+                altered_client_ip.append(".111.222.111/8");
+                set_proxy_nws(altered_client_ip);
+                test.tprintf("Proxy networks configured to '%s'", altered_client_ip.c_str());
+                test.tprintf("Checking that logging in with proxy header works.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+            }
+        }
+
         // Restore server settings.
         test.tprintf("Removing proxy setting from server1.");
         be->stop_database();
         repl.restore_server_settings(0);
         be->start_database();
+    }
+}
+
+void check_conn(TestConnections& test, mxt::MariaDB* conn, bool expect_conn_success,
+                const string& expected_ip)
+{
+    bool conn_ok = false;
+    bool query_ok = false;
+    if (conn->is_open())
+    {
+        conn_ok = true;
+        const string q = "select user();";
+        auto userhost = conn->simple_query(q);
+        if (!userhost.empty())
+        {
+            query_ok = true;
+            if (auto [_, ip] = mxb::split(userhost, "@"); !ip.empty())
+            {
+                if (!expected_ip.empty())
+                {
+                    if (ip == expected_ip)
+                    {
+                        test.tprintf("Server sees host '%s', as expected.", expected_ip.c_str());
+                    }
+                    else
+                    {
+                        test.add_failure("Wrong result from '%s'. Expected '%s', got '%s'.",
+                                         q.c_str(), expected_ip.c_str(), ip.data());
+                    }
+                }
+            }
+            else
+            {
+                test.add_failure("Malformed result from '%s': '%s'", q.c_str(), userhost.c_str());
+            }
+        }
+    }
+    if (expect_conn_success)
+    {
+        test.expect(conn_ok && query_ok, "Connection and/or query failed when it should have "
+                                         "succeeded.");
+    }
+    else
+    {
+        test.expect(!conn_ok, "Connection succeeded when it should have failed.");
+    }
+}
+
+void check_port(TestConnections& test, mxt::MariaDB* conn, int expected_port)
+{
+    string host_query = "select host from information_schema.processlist "
+                        "WHERE ID = connection_id()";
+    auto host_str = conn->simple_query(host_query);
+    if (!host_str.empty())
+    {
+        if (auto [_, port_str] = mxb::split(host_str, ":"); !port_str.empty())
+        {
+            int found_port = atoi(port_str.data());
+            if (found_port == expected_port)
+            {
+                test.tprintf("Server sees port %i, as expected.", expected_port);
+            }
+            else
+            {
+                test.add_failure("Server sees port %i when %i was expected.",
+                                 found_port, expected_port);
+            }
+        }
+        else
+        {
+            test.add_failure("Unexpected host query result: '%s'", host_str.c_str());
+        }
+    }
+    else
+    {
+        test.add_failure("Query '%s' failed or returned nothing.", host_query.c_str());
     }
 }
 }
