@@ -114,7 +114,7 @@ EOL
 fi
 
 # Install a recent cmake in case the package manager installed an old version.
-$src_dir/install_cmake.sh
+$src_dir/install_cmake.sh "3.25.1"
 
 # Install NPM for MongoDB tests
 $src_dir/install_npm.sh
