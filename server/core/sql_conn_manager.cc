@@ -458,7 +458,10 @@ void ConnectionManager::MariaDBConnection::do_cancel()
     sett.password = config.password;
     sett.timeout = config.timeout;
     sett.ssl = config.ssl;
-    sett.proxy_protocol = config.proxy_protocol;
+    if (config.proxy_protocol)
+    {
+        other.set_local_proxy_header_v1();
+    }
 
     if (other.open(config.host, config.port, config.db))
     {

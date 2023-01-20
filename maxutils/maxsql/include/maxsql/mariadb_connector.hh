@@ -56,11 +56,10 @@ public:
         int  timeout {0};
         bool multiquery {true};
         bool auto_reconnect {false};
-        bool proxy_protocol {false};
+        bool clear_sql_mode {false};
 
-        bool        clear_sql_mode {false};
-        std::string charset;
-        // TODO: add more
+        std::string          charset;
+        std::vector<uint8_t> proxy_header;
     };
 
     struct VersionInfo
@@ -193,6 +192,12 @@ public:
      * @return Connection settings reference
      */
     ConnectionSettings& connection_settings();
+
+    /**
+     * Set proxy header to indicate a non-proxied connection. Useful when connecting to a server which
+     * demands a proxy header.
+     */
+    void set_local_proxy_header_v1();
 
     VersionInfo version_info() const;
     bool        is_open() const;

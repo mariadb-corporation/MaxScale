@@ -166,9 +166,13 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_SET_CHARSET_NAME, m_settings.charset.c_str());
     }
 
-    if (m_settings.proxy_protocol)
+    if (!m_settings.proxy_header.empty())
     {
-        mxq::set_proxy_header(newconn);
+        // Connector-C treats the proxy header as a static string. Luckily, the header data is only used
+        // when connecting. Just need to keep in mind not to modify the data until mysql_real_connect() is
+        // done.
+        mysql_optionsv(newconn, MARIADB_OPT_PROXY_HEADER, m_settings.proxy_header.data(),
+                       m_settings.proxy_header.size());
     }
 
     const char* userc = m_settings.user.c_str();
@@ -672,6 +676,12 @@ MariaDB::ResultType MariaDB::current_result_type()
 MariaDB::MariaDB(MariaDB&& conn) noexcept
 {
     *this = move(conn);
+}
+
+void MariaDB::set_local_proxy_header_v1()
+{
+    const uint8_t local_header[] = "PROXY UNKNOWN\r\n";
+    m_settings.proxy_header.assign(local_header, local_header + sizeof(local_header) - 1);
 }
 
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)

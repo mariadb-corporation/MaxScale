@@ -937,7 +937,10 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
         sett.password = config.password;
         sett.timeout = config.timeout;
         sett.ssl = config.ssl;
-        sett.proxy_protocol = config.proxy_protocol;
+        if (config.proxy_protocol)
+        {
+            conn.set_local_proxy_header_v1();
+        }
 
         if (conn.open(config.host, config.port, config.db))
         {
