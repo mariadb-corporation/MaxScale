@@ -110,11 +110,7 @@
                 >
                     <template v-slot:label>
                         <label class="v-label">{{ $mxs_t('showTrendline') }}</label>
-                        <v-tooltip
-                            top
-                            transition="slide-y-transition"
-                            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-                        >
+                        <v-tooltip top transition="slide-y-transition">
                             <template v-slot:activator="{ on }">
                                 <v-icon
                                     class="ml-1 material-icons-outlined pointer"

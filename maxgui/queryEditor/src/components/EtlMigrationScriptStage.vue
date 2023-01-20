@@ -48,11 +48,7 @@
                     hide-details
                 >
                     <template v-slot:label>
-                        <v-tooltip
-                            top
-                            transition="slide-y-transition"
-                            content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-                        >
+                        <v-tooltip top transition="slide-y-transition" max-width="340">
                             <template v-slot:activator="{ on }">
                                 <div class="d-flex align-center" v-on="on">
                                     <label

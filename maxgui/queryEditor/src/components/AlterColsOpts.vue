@@ -110,13 +110,7 @@
                 v-for="(value, key) in abbreviatedHeaders"
                 v-slot:[abbrHeaderSlotName(key)]="{ data: { header, maxWidth } }"
             >
-                <v-tooltip
-                    :key="key"
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
-                    :disabled="isVertTable"
-                >
+                <v-tooltip :key="key" top transition="slide-y-transition" :disabled="isVertTable">
                     <template v-slot:activator="{ on }">
                         <div
                             class="d-inline-block text-truncate"

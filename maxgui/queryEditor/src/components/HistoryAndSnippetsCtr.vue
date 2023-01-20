@@ -77,7 +77,6 @@
                             :key="cell.name"
                             top
                             transition="slide-y-transition"
-                            content-class="shadow-drop mxs-color-helper white text-navigation pa-2 pb-4"
                             :disabled="isDragging"
                         >
                             <template v-slot:activator="{ on }">
@@ -457,7 +456,6 @@ export default {
     border-spacing: 0;
     td {
         font-size: 0.875rem;
-        color: $navigation;
         height: 24px;
         vertical-align: middle;
         &:first-of-type {

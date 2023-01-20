@@ -1,10 +1,5 @@
 <template>
-    <v-tooltip
-        top
-        content-class="shadow-drop py-1 px-4 cluster-server-tooltip"
-        color="deep-ocean"
-        :open-delay="200"
-    >
+    <v-tooltip top color="deep-ocean" :open-delay="200">
         <template v-slot:activator="{ on }">
             <slot name="activator" :on="on" />
         </template>
@@ -20,7 +15,7 @@
             >
                 servers
             </icon-sprite-sheet>
-            <span>{{ server.id }}</span>
+            {{ server.id }}
             <span class="ml-1 mxs-color-helper text-text-subtle">
                 {{ $mxs_t('uptime') }}
                 {{

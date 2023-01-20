@@ -1,10 +1,5 @@
 <template>
-    <v-tooltip
-        :disabled="!$typy(wkeConn, 'name').safeString"
-        top
-        transition="slide-x-transition"
-        content-class="shadow-drop white"
-    >
+    <v-tooltip :disabled="!$typy(wkeConn, 'name').safeString" top transition="slide-x-transition">
         <template v-slot:activator="{ on }">
             <div
                 style="min-width:160px"
@@ -38,10 +33,8 @@
                 </v-btn>
             </div>
         </template>
-        <span class="mxs-color-helper text-text py-2 px-4">
-            {{ $mxs_t('connectedTo') }}
-            {{ $typy(wkeConn, 'name').safeString }}
-        </span>
+        {{ $mxs_t('connectedTo') }}
+        {{ $typy(wkeConn, 'name').safeString }}
     </v-tooltip>
 </template>
 <script>

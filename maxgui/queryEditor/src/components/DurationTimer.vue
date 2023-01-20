@@ -4,7 +4,8 @@
         :disabled="isGettingEndTime"
         top
         transition="slide-y-transition"
-        content-class="shadow-drop white pa-3"
+        min-width="250"
+        max-width="450"
     >
         <template v-slot:activator="{ on }">
             <span v-on="on">
@@ -15,31 +16,30 @@
                 }}
             </span>
         </template>
-        <v-sheet min-width="220" max-width="450" class="mxs-color-helper text-small-text">
-            <div class="d-flex align-center mxs-color-helper text-navigation font-weight-bold">
-                <span>{{ $mxs_t('totalDuration') }}:</span>
-                <v-spacer />
-                <span> {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
-            </div>
-            <div class="d-flex align-center">
-                <span>{{ $mxs_t('networkDelay') }} </span>
-                <v-spacer />
-                <span class="mxs-color-helper text-navigation">
+        <table class="duration-table">
+            <tr class="font-weight-bold">
+                <td>{{ $mxs_t('totalDuration') }}:</td>
+                <td>
+                    {{ $mxs_tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}
+                </td>
+            </tr>
+            <tr>
+                <td>{{ $mxs_t('networkDelay') }}:</td>
+                <td>
                     {{
                         $mxs_tc('seconds', networkDelay === 1 ? 1 : 2, {
                             value: networkDelay,
                         })
                     }}
-                </span>
-            </div>
-            <div class="d-flex align-center">
-                <span>{{ $mxs_t('exeTime') }}: </span>
-                <v-spacer />
-                <span class="mxs-color-helper text-navigation">
+                </td>
+            </tr>
+            <tr>
+                <td>{{ $mxs_t('exeTime') }}:</td>
+                <td>
                     {{ $mxs_tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
-                </span>
-            </div>
-        </v-sheet>
+                </td>
+            </tr>
+        </table>
     </v-tooltip>
 </template>
 
@@ -117,3 +117,11 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.duration-table {
+    td:first-child {
+        padding-right: 8px;
+    }
+}
+</style>

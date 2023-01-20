@@ -40,7 +40,7 @@
                                     :servers="[$typy(cluster, 'children[0]').safeObject]"
                                 >
                                     <template v-slot:activator="{ on }">
-                                        <span class="d-inline-block" v-on="on">
+                                        <div class="d-inline-flex" v-on="on">
                                             <icon-sprite-sheet
                                                 size="16"
                                                 class="server-state-icon mr-1"
@@ -63,7 +63,7 @@
                                                     ),
                                                 }"
                                             />
-                                        </span>
+                                        </div>
                                     </template>
                                 </cluster-server-tooltip>
                             </v-list-item-subtitle>

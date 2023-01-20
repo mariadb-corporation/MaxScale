@@ -138,7 +138,10 @@ $snackbar-multi-line-content-min-height: 50px;
 $text-field-filled-full-width-outlined-single-line-slot-min-height: 36px;
 // override v-tooltip
 $tooltip-border-radius: 10px;
-$tooltip-background-color: #fff;
+$tooltip-background-color: #303033;
+$tooltip-text-color: #d9dae0;
+$tooltip-padding: 8px 16px;
+$tooltip-border-radius: 2px;
 // v-data-table
 $data-table-regular-header-height: 40px;
 $data-table-regular-row-height: 45px;

@@ -55,7 +55,6 @@
                                 :key="copyState"
                                 transition="slide-y-reverse-transition"
                                 top
-                                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                             >
                                 <template v-slot:activator="{ on }">
                                     <div
@@ -67,9 +66,7 @@
                                         {{ value }}
                                     </div>
                                 </template>
-                                <span>
-                                    {{ copyState }}
-                                </span>
+                                {{ copyState }}
                             </v-tooltip>
                             <div
                                 v-else-if="

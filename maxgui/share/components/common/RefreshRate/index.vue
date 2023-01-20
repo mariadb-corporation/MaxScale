@@ -6,11 +6,7 @@
         :max-width="200"
     >
         <template v-slot:activator="{ on: menu, attrs }">
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
-            >
+            <v-tooltip top transition="slide-y-transition">
                 <template v-slot:activator="{ on: tooltip }">
                     <v-btn
                         class="text-none font-weight-regular refresh-rate-btn px-2"
@@ -36,7 +32,7 @@
                         </span>
                     </v-btn>
                 </template>
-                <span>{{ $mxs_t('info.refreshRate') }}</span>
+                {{ $mxs_t('info.refreshRate') }}
             </v-tooltip>
         </template>
         <v-list>

@@ -130,7 +130,7 @@
                                                 v-if="key === 'noBackslashEscapes'"
                                                 top
                                                 transition="slide-y-transition"
-                                                content-class="shadow-drop white mxs-color-helper text-navigation py-1 px-4"
+                                                max-width="400"
                                             >
                                                 <template v-slot:activator="{ on }">
                                                     <v-icon

@@ -68,7 +68,6 @@
                                     v-if="key === 'tabMovesFocus'"
                                     top
                                     transition="slide-y-transition"
-                                    content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
                                     max-width="400"
                                 >
                                     <template v-slot:activator="{ on }">

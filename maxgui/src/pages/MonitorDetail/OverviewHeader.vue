@@ -39,10 +39,9 @@
                     <v-tooltip
                         bottom
                         transition="slide-y-transition"
-                        content-class="shadow-drop mxs-color-helper text-navigation py-1 px-4"
                         activator=".switchover-edit-btn"
                     >
-                        <span>{{ switchoverOp.text }} </span>
+                        {{ switchoverOp.text }}
                     </v-tooltip>
                 </template>
 

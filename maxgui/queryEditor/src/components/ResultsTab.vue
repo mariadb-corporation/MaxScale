@@ -75,7 +75,6 @@
                 "
                 top
                 transition="slide-y-transition"
-                content-class="shadow-drop mxs-color-helper white text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
                     <div class="ml-4 d-flex align-center" v-on="on">
@@ -85,7 +84,7 @@
                         {{ $mxs_t('incomplete') }}
                     </div>
                 </template>
-                <span> {{ $mxs_t('info.queryIncomplete') }}</span>
+                {{ $mxs_t('info.queryIncomplete') }}
             </v-tooltip>
         </div>
         <v-skeleton-loader

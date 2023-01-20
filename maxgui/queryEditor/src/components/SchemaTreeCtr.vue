@@ -61,7 +61,6 @@
             right
             :nudge-right="45"
             transition="slide-x-transition"
-            content-class="shadow-drop mxs-color-helper white text-text py-2 px-4"
             :activator="`#node-tooltip-activator-${hoveredNode.key}`"
         >
             <table class="node-tooltip">

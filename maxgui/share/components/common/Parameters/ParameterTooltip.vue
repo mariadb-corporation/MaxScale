@@ -1,19 +1,11 @@
 <template>
-    <v-tooltip
-        right
-        transition="slide-x-transition"
-        content-class="shadow-drop mxs-color-helper text-navigation pa-4"
-        :activator="activator"
-        max-width="300"
-    >
-        <v-sheet>
-            <template v-for="(value, name) in parameterTooltip">
-                <span v-if="name !== 'id'" :key="name" class="d-block text-body-2">
-                    <span class="mr-1 font-weight-medium text-capitalize"> {{ name }}: </span>
-                    <span> {{ value }}</span>
-                </span>
-            </template>
-        </v-sheet>
+    <v-tooltip right transition="slide-x-transition" :activator="activator" max-width="300">
+        <template v-for="(value, name) in parameterTooltip">
+            <span v-if="name !== 'id'" :key="name" class="d-block text-body-2">
+                <span class="mr-1 font-weight-bold text-capitalize"> {{ name }}: </span>
+                <span> {{ value }}</span>
+            </span>
+        </template>
     </v-tooltip>
 </template>
 
