@@ -1,5 +1,5 @@
 <template>
-    <etl-stage-ctr v-resize.quiet="setTblMaxHeight">
+    <etl-stage-ctr>
         <template v-slot:header>
             <div class="etl-migration-script-stage-header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
@@ -11,29 +11,10 @@
             </div>
         </template>
         <template v-slot:body>
-            <v-row class="fill-height">
-                <v-col ref="tableWrapper" cols="12" md="6" class="fill-height">
-                    <mxs-data-table
-                        v-model="selectItems"
-                        :loading="isLoading"
-                        :headers="tableHeaders"
-                        :items="tableRows"
-                        fixed-header
-                        hide-default-footer
-                        :items-per-page="-1"
-                        :height="tableMaxHeight"
-                        @click:row="selectItems = [$event]"
-                    />
-                </v-col>
-                <v-col cols="12" md="6" class="fill-height">
-                    <etl-transform-ctr
-                        v-if="activeRow && !isLoading"
-                        v-model="activeRow"
-                        :hasRowChanged="hasRowChanged"
-                        @on-discard="discard"
-                    />
-                </v-col>
-            </v-row>
+            <etl-migration-tbl
+                :headers="tableHeaders"
+                :stagingMigrationObjs.sync="stagingMigrationObjs"
+            />
         </template>
         <template v-slot:footer>
             <div class="btn-ctr">
@@ -97,40 +78,28 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
-import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
+import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
 import { mapState, mapActions, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-migration-script-stage',
     components: {
         EtlStageCtr,
-        EtlTransformCtr,
+        EtlMigrationTbl,
     },
     data() {
         return {
             isConfirmed: false,
-            activeItem: null,
-            tableMaxHeight: 450,
-            selectItems: [],
-            activeRow: null,
-            stagingScriptMap: null,
+            stagingMigrationObjs: [],
         }
     },
     computed: {
         ...mapState({
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
-            migration_objs: state => state.etlMem.migration_objs,
             are_conns_alive: state => state.etlMem.are_conns_alive,
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
-        },
-        generatedScriptMap() {
-            return this.migration_objs.reduce((map, obj) => {
-                const id = this.$helpers.uuidv1()
-                map[id] = { ...obj, id }
-                return map
-            }, {})
         },
         // Table data
         tableHeaders() {
@@ -139,55 +108,12 @@ export default {
                 { text: 'TABLE', value: 'table' },
             ]
         },
-        tableRows() {
-            if (this.stagingScriptMap) return Object.values(this.stagingScriptMap)
-            return []
-        },
-        hasRowChanged() {
-            const defRow = this.$typy(this.generatedScriptMap, `[${this.activeRow.id}]`).safeObject
-            return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
-        },
-        isLoading() {
-            return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
-        },
-    },
-    watch: {
-        tableRows: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                // Highlight the first row
-                if (v.length) this.selectItems = [v[0]]
-            },
-        },
-        selectItems: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                if (v.length) this.activeRow = v[0]
-            },
-        },
-        generatedScriptMap: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                this.stagingScriptMap = this.$helpers.lodash.cloneDeep(v)
-            },
-        },
-        activeRow: {
-            deep: true,
-            handler(v) {
-                if (v) this.stagingScriptMap[v.id] = v
-            },
-        },
     },
     async created() {
         await this.validateActiveEtlTaskConns()
         await this.getEtlCallRes(this.activeEtlTask.id)
     },
-    mounted() {
-        this.$helpers.doubleRAF(() => this.setTblMaxHeight())
-    },
+
     methods: {
         ...mapMutations({ SET_MIGRATION_OBJS: 'etlMem/SET_MIGRATION_OBJS' }),
         ...mapActions({
@@ -195,25 +121,9 @@ export default {
             validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
-        setTblMaxHeight() {
-            this.tableMaxHeight =
-                this.$typy(this.$refs, 'tableWrapper.clientHeight').safeNumber || 450
-        },
-        // Discard changes on the active row
-        discard() {
-            const rowId = this.activeRow.id
-            this.stagingScriptMap[rowId] = this.$helpers.lodash.cloneDeep(
-                this.generatedScriptMap[rowId]
-            )
-        },
         async next() {
             await this.validateActiveEtlTaskConns()
-            // Remove id
-            const migration_objs = this.tableRows.map(o => {
-                delete o.id
-                return o
-            })
-            this.SET_MIGRATION_OBJS(migration_objs)
+            this.SET_MIGRATION_OBJS(this.stagingMigrationObjs)
             if (this.are_conns_alive) {
                 await this.handleEtlCall({
                     id: this.activeEtlTask.id,
