@@ -2127,7 +2127,15 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<void(T
     int test_errors = 0;
     if (init_rc == 0)
     {
-        testfunc(*this);
+        try
+        {
+            testfunc(*this);
+        }
+        catch (const std::exception& e)
+        {
+            add_failure("Caught exception: %s", e.what());
+        }
+
         test_errors = global_result;
     }
     int cleanup_rc = cleanup();
