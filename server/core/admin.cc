@@ -803,6 +803,11 @@ int Client::handle(const std::string& url, const std::string& method,
             // Authentication has failed, an error will be sent to the client
             rval = MHD_YES;
 
+            if (*upload_data_size != 0)
+            {
+                m_data = std::string(upload_data, *upload_data_size);
+            }
+
             if (*upload_data_size || (state == Client::INIT && request_data_length()))
             {
                 // The client is uploading data, discard it so we can send the error
