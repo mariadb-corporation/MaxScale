@@ -37,6 +37,7 @@ add_library(maxbase STATIC
   workertask.cc
   xml.cc
   cpuinfo.cc
+  csv_writer.cc
   )
 
 if(HAVE_SYSTEMD)
