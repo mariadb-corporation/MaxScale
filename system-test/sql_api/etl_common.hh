@@ -18,24 +18,6 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 
-/**
- * Concatenate strings
- *
- * The arguments must be appendable to a string.
- *
- * @param args Arguments to append
- *
- * @return The concatenated string
- */
-template<class ... Args>
-std::string concat(Args&& ... args)
-{
-    static_assert(sizeof...(args) > 0, "At least one value must be given");
-    std::string rval;
-    (rval += ... += args);
-    return rval;
-}
-
 struct EtlTable
 {
     EtlTable(std::string_view sch,
@@ -76,6 +58,11 @@ public:
     mxb::http::Response get(std::string_view endpoint)
     {
         return mxb::http::get(url(endpoint), "admin", "mariadb");
+    }
+
+    mxb::http::Response del(std::string_view endpoint)
+    {
+        return mxb::http::del(url(endpoint), "", "admin", "mariadb");
     }
 
     mxb::http::Response post(std::string_view endpoint, mxb::Json js)
@@ -157,22 +144,22 @@ public:
             js.add_array_elem("tables", std::move(elem));
         }
 
-        auto etl_url = concat("sql/", source_id, "/etl/",
-                              operation == Op::PREPARE ? "prepare" : "start",
-                              "?token=", source_token,
-                              "&target_token=", dest_token);
+        auto etl_url = mxb::cat("sql/", source_id, "/etl/",
+                                operation == Op::PREPARE ? "prepare" : "start",
+                                "?token=", source_token,
+                                "&target_token=", dest_token);
 
         auto res = post(etl_url, js);
         mxb::Json response;
         response.load_string(res.body);
-        auto url = response.at("links/self").get_string();
-        url += "?token=" + source_token;
+        auto self = response.at("links/self").get_string();
+        self += "?token=" + source_token;
         auto start = mxb::Clock::now();
 
         while (res.code == 202)
         {
-            // Use a raw mxb::http:get(), the `url` already includes the hostname and port.
-            res = mxb::http::get(url, "admin", "mariadb");
+            // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
+            res = mxb::http::get(self, "admin", "mariadb");
             response.reset();
             response.load_string(res.body);
 
@@ -195,6 +182,9 @@ public:
             response.reset();
         }
 
+        del(mxb::cat("sql/", source_id, "?token=", source_token));
+        del(mxb::cat("sql/", dest_id, "?token=", dest_token));
+
         return response;
     }
 
@@ -202,9 +192,7 @@ private:
 
     std::string url(std::string_view endpoint)
     {
-        std::ostringstream ss;
-        ss << "http://" << m_test.maxscale->ip() << ":8989/v1/" << endpoint;
-        return ss.str();
+        return mxb::cat("http://", m_test.maxscale->ip(), ":8989/v1/", endpoint);
     }
 
     TestConnections& m_test;
