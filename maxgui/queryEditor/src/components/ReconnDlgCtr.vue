@@ -55,7 +55,7 @@ export default {
             },
             set() {
                 QueryConn.update({
-                    where: QueryConn.getters('getActiveQueryTabConn'),
+                    where: QueryConn.getters('getActiveQueryTabConn').id,
                     data: { lost_cnn_err: {} },
                 })
             },
