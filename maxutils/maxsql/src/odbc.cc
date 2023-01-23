@@ -78,6 +78,8 @@ public:
 
     bool prepare(const std::string& sql);
 
+    bool unprepare();
+
     bool execute(Output* output);
 
     bool commit(int mode);
@@ -847,6 +849,19 @@ bool ODBCImp::prepare(const std::string& query)
     return SQL_SUCCEEDED(ret);
 }
 
+bool ODBCImp::unprepare()
+{
+    clear_errors();
+    SQLRETURN ret = SQLCloseCursor(m_stmt);
+
+    if (ret == SQL_ERROR)
+    {
+        get_error(SQL_HANDLE_STMT, m_stmt);
+    }
+
+    return SQL_SUCCEEDED(ret);
+}
+
 int ODBCImp::num_columns()
 {
     SQLSMALLINT params = -1;
@@ -1340,6 +1355,11 @@ bool ODBC::query(const std::string& sql, mxq::Output* output)
 bool ODBC::prepare(const std::string& sql)
 {
     return m_imp->prepare(sql);
+}
+
+bool ODBC::unprepare()
+{
+    return m_imp->unprepare();
 }
 
 bool ODBC::commit()

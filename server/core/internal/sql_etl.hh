@@ -198,6 +198,8 @@ public:
     Config::CreateMode create_mode() const;
 
 private:
+    void prepare_sql(mxq::ODBC& source, mxq::ODBC& dest);
+
     ETL&          m_etl;
     std::string   m_schema;
     std::string   m_table;

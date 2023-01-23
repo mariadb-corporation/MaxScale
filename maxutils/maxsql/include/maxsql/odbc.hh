@@ -305,6 +305,15 @@ public:
     bool prepare(const std::string& sql);
 
     /**
+     * Unprepare a query
+     *
+     * This releases a previously prepared statement.
+     *
+     * @return True if the prepared statement was released successfully
+     */
+    bool unprepare();
+
+    /**
      * Commit a transaction
      *
      * @return True if the transaction was committed successfully
