@@ -1,14 +1,14 @@
 <template>
     <etl-stage-ctr>
         <template v-slot:header>
-            <div class="etl-migration-script-stage-header">
+            <div class="etl-migration-script-stage__header">
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                     {{ $mxs_t('migrationProgress') }}
                 </h3>
                 <div class="mt-4 d-flex align-center" :style="{ height: '30px' }">
                     <etl-status-icon :status="activeEtlTask.status" :isRunning="isRunning" />
                     <span class="mxs-color-helper text-navigation">
-                        {{ $mxs_t(isRunning ? 'running' : 'complete') }}
+                        {{ $mxs_t(activeEtlTask.status.toLowerCase()) }}
                         <span v-if="isRunning">...</span>
                     </span>
                     <v-btn
@@ -32,6 +32,7 @@
                 :headers="tableHeaders"
                 :stagingMigrationObjs.sync="stagingMigrationObjs"
                 :custom-sort="customSort"
+                :activeItem.sync="activeItem"
             >
                 <template v-slot:[`item.obj`]="{ item }">
                     {{ customCol(item, 'obj') }}
@@ -43,7 +44,22 @@
             </etl-migration-tbl>
         </template>
         <template v-slot:footer>
-            <!-- TODO: Add output messages -->
+            <div class="etl-migration-report-stage__footer d-flex flex-column flex-grow-1">
+                <h6 class="mxs-color-helper text-navigation">
+                    {{ $mxs_t('outputMsgs') }}
+                </h6>
+                <code
+                    class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
+                >
+                    <template v-if="activeItem">
+                        {{
+                            activeItem.error
+                                ? activeItem.error
+                                : $mxs_t('info.scriptExecSuccessfully')
+                        }}
+                    </template>
+                </code>
+            </div>
         </template>
     </etl-stage-ctr>
 </template>
@@ -77,6 +93,7 @@ export default {
     data() {
         return {
             stagingMigrationObjs: [],
+            activeItem: null,
         }
     },
     computed: {
@@ -99,7 +116,6 @@ export default {
             return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
         },
     },
-
     async created() {
         await this.validateActiveEtlTaskConns()
         await this.getEtlCallRes(this.activeEtlTask.id)
@@ -140,3 +156,13 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.etl-migration-report-stage__footer {
+    min-height: 150px;
+    max-height: 200px;
+    .msg-log-ctr {
+        font-size: 0.75rem;
+        flex: 1 1 auto;
+    }
+}
+</style>

@@ -216,19 +216,20 @@ export default {
             await this.validateActiveEtlTaskConns()
             const { etlPrepareTables = {} } = this.parsedObjs
             if (!etlPrepareTables.length) this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
-            else this.SET_MIGRATION_OBJS(etlPrepareTables)
-
-            if (this.are_conns_alive) {
-                await this.handleEtlCall({
-                    id: this.activeEtlTask.id,
-                    stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
-                })
-                EtlTask.update({
-                    where: this.activeEtlTask.id,
-                    data(obj) {
-                        obj.active_stage_index = obj.active_stage_index + 1
-                    },
-                })
+            else {
+                this.SET_MIGRATION_OBJS(etlPrepareTables)
+                if (this.are_conns_alive) {
+                    await this.handleEtlCall({
+                        id: this.activeEtlTask.id,
+                        stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
+                    })
+                    EtlTask.update({
+                        where: this.activeEtlTask.id,
+                        data(obj) {
+                            obj.active_stage_index = obj.active_stage_index + 1
+                        },
+                    })
+                }
             }
         },
     },

@@ -3,7 +3,7 @@
         <v-progress-linear v-if="isLoading" indeterminate color="primary" />
         <template v-else>
             <v-col cols="12" md="6" class="fill-height pt-0">
-                <div ref="tableWrapper" class="fill-height">
+                <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
                     <mxs-data-table
                         v-model="selectItems"
                         :headers="headers"
@@ -65,19 +65,30 @@ export default {
     props: {
         headers: { type: Array, required: true },
         stagingMigrationObjs: { type: Array, required: true }, //sync
+        activeItem: { type: Object }, //sync
     },
     data() {
         return {
             tableMaxHeight: 450,
             selectItems: [],
-            activeRow: null,
             stagingScriptMap: null,
+            scopeActiveItem: null,
         }
     },
     computed: {
         ...mapState({
             migration_objs: state => state.etlMem.migration_objs,
         }),
+        activeRow: {
+            get() {
+                if (this.$typy(this.activeItem).isDefined) return this.activeItem
+                return this.scopeActiveItem
+            },
+            set(v) {
+                if (this.$typy(this.activeItem).isDefined) this.$emit('update:activeItem', v)
+                else this.scopeActiveItem = v
+            },
+        },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
@@ -93,8 +104,12 @@ export default {
             return []
         },
         hasRowChanged() {
-            const defRow = this.$typy(this.generatedScriptMap, `[${this.activeRow.id}]`).safeObject
-            return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
+            const activeRowId = this.$typy(this.activeRow, 'id').safeString
+            if (activeRowId) {
+                const defRow = this.$typy(this.generatedScriptMap, `[${activeRowId}]`).safeObject
+                return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
+            }
+            return false
         },
         isLoading() {
             return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
@@ -158,5 +173,22 @@ export default {
 .confirm-label,
 .migration-script-info {
     font-size: 14px;
+}
+.migration-tbl-wrapper {
+    tbody {
+        tr {
+            cursor: pointer;
+        }
+    }
+}
+</style>
+
+<style lang="scss">
+.migration-tbl-wrapper {
+    tbody {
+        tr {
+            cursor: pointer;
+        }
+    }
 }
 </style>
