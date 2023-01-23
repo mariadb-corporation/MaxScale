@@ -73,6 +73,7 @@ export default {
             selectItems: [],
             stagingScriptMap: null,
             scopeActiveItem: null,
+            tableRows: [],
         }
     },
     computed: {
@@ -99,10 +100,6 @@ export default {
                 return map
             }, {})
         },
-        tableRows() {
-            if (this.stagingScriptMap) return Object.values(this.stagingScriptMap)
-            return []
-        },
         hasRowChanged() {
             const activeRowId = this.$typy(this.activeRow, 'id').safeString
             if (activeRowId) {
@@ -116,17 +113,17 @@ export default {
         },
     },
     watch: {
-        tableRows: {
+        stagingScriptMap: {
             deep: true,
             immediate: true,
-            handler(v) {
-                // Highlight the first row
-                if (v.length) this.selectItems = [v[0]]
+            handler() {
                 // Remove id as id is generated for UI keying purpose
-                const stagingMigrationObjs = this.$helpers.lodash.cloneDeep(v).map(o => {
-                    delete o.id
-                    return o
-                })
+                const stagingMigrationObjs = this.$helpers.lodash
+                    .cloneDeep(this.tableRows)
+                    .map(o => {
+                        delete o.id
+                        return o
+                    })
                 this.$emit('update:stagingMigrationObjs', stagingMigrationObjs)
             },
         },
@@ -142,6 +139,11 @@ export default {
             immediate: true,
             handler(v) {
                 this.stagingScriptMap = this.$helpers.lodash.cloneDeep(v)
+                if (this.stagingScriptMap) {
+                    this.tableRows = Object.values(this.stagingScriptMap)
+                    // Select the first row as active whenever the generated script map has its value changed.
+                    this.selectItems = [this.tableRows[0]]
+                }
             },
         },
         activeRow: {
