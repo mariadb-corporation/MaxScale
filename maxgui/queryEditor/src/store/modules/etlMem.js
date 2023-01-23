@@ -116,7 +116,7 @@ export default {
         /**
          * @param {String} id - etl task id
          */
-        async getEtlCallRes({ dispatch, commit }, id) {
+        async getEtlCallRes({ dispatch, commit, rootState }, id) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
@@ -131,32 +131,51 @@ export default {
                 const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
                 if (!e) {
                     const results = $typy(res, 'data.data.attributes.results').safeObject
+                    const timestamp = new Date().valueOf()
                     if (results) {
                         const ok = $typy(results, 'ok').safeBoolean
                         commit('SET_MIGRATION_OBJS', results.tables)
-                        if (!ok) {
-                            const error = $typy(results, 'error').safeString
-                            if (error) {
-                                EtlTask.dispatch('pushLog', {
-                                    id,
-                                    log: {
-                                        timestamp: new Date().valueOf(),
-                                        name: `${$mxs_t(
-                                            'errors.failedToPrepareMigrationScript'
-                                        )}. Stopped at the following error: \n${error}`,
-                                    },
-                                })
-                                commit(
-                                    'mxsApp/SET_SNACK_BAR_MESSAGE',
-                                    { text: [error], type: 'error' },
-                                    { root: true }
+
+                        const {
+                            ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
+                            ETL_STATUS: { COMPLETE, ERROR },
+                        } = rootState.mxsWorkspace.config
+
+                        let status, logMsg
+                        switch (task.active_stage_index) {
+                            case MIGR_SCRIPT: {
+                                logMsg = $mxs_t(
+                                    ok
+                                        ? 'info.prepareMigrationScriptSuccessfully'
+                                        : 'errors.failedToPrepareMigrationScript'
                                 )
+
+                                break
+                            }
+                            case DATA_MIGR: {
+                                logMsg = $mxs_t(
+                                    ok ? 'info.migrateSuccessfully' : 'errors.migrateFailed'
+                                )
+                                status = ok ? COMPLETE : ERROR
+                                break
                             }
                         }
+
+                        const error = $typy(results, 'error').safeString
+                        if (error) logMsg += ` \n${error}`
+                        EtlTask.dispatch('pushLog', { id, log: { timestamp, name: `${logMsg}` } })
+
+                        commit(
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
+                            { text: [logMsg], type: ok ? 'success' : 'error' },
+                            { root: true }
+                        )
+
                         EtlTask.update({
                             where: id,
                             data(obj) {
                                 obj.meta.is_loading = false
+                                if (status) obj.status = status
                             },
                         })
                     } else

@@ -36,6 +36,7 @@ import EtlOverviewStage from '@queryEditorSrc/components/EtlOverviewStage.vue'
 import EtlConnsStage from '@queryEditorSrc/components/EtlConnsStage.vue'
 import EtlObjSelectStage from '@queryEditorSrc/components/EtlObjSelectStage.vue'
 import EtlMigrationScriptStage from '@queryEditorSrc/components/EtlMigrationScriptStage.vue'
+import EtlMigrationReportStage from '@queryEditorSrc/components/EtlMigrationReportStage.vue'
 import { mapState } from 'vuex'
 
 export default {
@@ -45,6 +46,7 @@ export default {
         EtlConnsStage,
         EtlObjSelectStage,
         EtlMigrationScriptStage,
+        EtlMigrationReportStage,
     },
     computed: {
         ...mapState({
@@ -81,6 +83,13 @@ export default {
                     name: this.$mxs_t('migrationScript'),
                     component: 'etl-migration-script-stage',
                     isDisabled: !this.are_conns_alive || !this.hasMigrationScript,
+                },
+                {
+                    name: this.$mxs_t('progress'),
+                    component: 'etl-migration-report-stage',
+                    isDisabled:
+                        !this.are_conns_alive ||
+                        this.activeEtlTask.status !== this.ETL_STATUS.RUNNING,
                 },
             ]
         },

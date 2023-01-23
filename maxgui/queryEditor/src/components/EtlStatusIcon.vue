@@ -1,0 +1,76 @@
+<template>
+    <v-icon
+        size="14"
+        :color="etlStatusIcon.color"
+        class="mr-1"
+        :class="{ 'etl-status-icon--running': isRunning }"
+    >
+        {{ etlStatusIcon.value }}
+    </v-icon>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-11-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import { mapState } from 'vuex'
+
+export default {
+    name: 'etl-status-icon',
+    props: {
+        status: { type: String, required: true },
+        isRunning: { type: Boolean, default: false },
+    },
+    computed: {
+        ...mapState({
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+        }),
+        etlStatusIcon() {
+            const { RUNNING, CANCELED, ERROR, COMPLETE } = this.ETL_STATUS
+            let value, color
+            switch (this.status) {
+                case RUNNING:
+                    value = '$vuetify.icons.mxs_loading'
+                    color = 'navigation'
+                    break
+                case CANCELED:
+                    value = '$vuetify.icons.mxs_critical'
+                    color = 'warning'
+                    break
+                case ERROR:
+                    value = '$vuetify.icons.mxs_alertError'
+                    color = 'error'
+                    break
+                case COMPLETE:
+                    value = '$vuetify.icons.mxs_good'
+                    color = 'success'
+                    break
+            }
+            return { value, color }
+        },
+    },
+}
+</script>
+
+<style lang="scss" scoped>
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+.etl-status-icon--running {
+    animation: rotating 1.5s linear infinite;
+}
+</style>

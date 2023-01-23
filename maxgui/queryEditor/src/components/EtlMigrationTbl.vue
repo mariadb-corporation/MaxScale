@@ -12,7 +12,9 @@
                         hide-default-footer
                         :items-per-page="-1"
                         :height="tableMaxHeight"
+                        v-bind="{ ...$attrs }"
                         @click:row="selectItems = [$event]"
+                        v-on="$listeners"
                     >
                         <template
                             v-for="slot in Object.keys($scopedSlots)"
@@ -59,6 +61,7 @@ import { mapState } from 'vuex'
 export default {
     name: 'etl-migration-tbl',
     components: { EtlTransformCtr },
+    inheritAttrs: false,
     props: {
         headers: { type: Array, required: true },
         stagingMigrationObjs: { type: Array, required: true }, //sync
