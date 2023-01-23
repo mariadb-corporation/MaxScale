@@ -70,7 +70,7 @@ public:
         return mxb::http::post(url(endpoint), js.to_string(mxb::Json::Format::COMPACT), "admin", "mariadb");
     }
 
-    mxb::Json connect(std::map<std::string, std::string> values)
+    mxb::Json connect(const std::map<std::string, std::string>& values)
     {
         mxb::Json js(mxb::Json::Type::OBJECT);
 
@@ -88,12 +88,66 @@ public:
         return js;
     }
 
-    mxb::Json run_etl(std::string source_dsn,
-                      std::string destination,
-                      std::string type,
-                      Op operation,
-                      std::chrono::seconds timeout,
-                      std::vector<EtlTable> tables)
+    mxb::Json query(const std::map<std::string, std::string>& params, const std::string& sql)
+    {
+        mxb::Json rval(mxb::Json::Type::UNDEFINED);
+
+        if (auto conn = connect(params))
+        {
+            auto id = conn.at("data/id").get_string();
+            auto token = conn.at("meta/token").get_string();
+
+            mxb::Json payload(mxb::Json::Type::OBJECT);
+            payload.set_string("sql", sql);
+            auto res = post(mxb::cat("sql/", id, "/queries/?token=", token), payload);
+            rval.load_string(res.body);
+
+            del("sql/" + id + "?token=" + token);
+        }
+
+        return rval;
+    }
+
+    mxb::Json query_odbc(const std::string& dsn, const std::string& sql)
+    {
+        return query({
+            {"target", "odbc"},
+            {"connection_string", dsn}
+        }, sql);
+    }
+
+    mxb::Json query_native(const std::string& server, const std::string& sql)
+    {
+        return query({
+            {"target", server},
+            {"user", m_test.maxscale->user_name()},
+            {"password", m_test.maxscale->password()}
+        }, sql);
+    }
+
+    bool compare_results(const std::string& dsn, int node, const std::string& sql)
+    {
+        std::ostringstream ss;
+        ss << "DRIVER=libmaodbc.so;"
+           << "SERVER=" << m_test.repl->ip(node) << ";"
+           << "PORT=" << m_test.repl->port[node] << ";"
+           << "UID=" << m_test.maxscale->user_name() << ";"
+           << "PWD={" << m_test.maxscale->password() << "}";
+
+        auto source = query_odbc(dsn, sql).at("data/attributes/results");
+        auto dest = query_odbc(ss.str(), sql).at("data/attributes/results");
+
+        return m_test.expect(source.valid() == dest.valid() && source == dest,
+                             "Result mismatch. Source %s\n Destination: %s",
+                             source.to_string().c_str(), dest.to_string().c_str());
+    }
+
+    std::pair<bool, mxb::Json> run_etl(std::string source_dsn,
+                                       std::string destination,
+                                       std::string type,
+                                       Op operation,
+                                       std::chrono::seconds timeout,
+                                       std::vector<EtlTable> tables)
     {
         auto source = connect({
             {"target", "odbc"},
@@ -150,6 +204,7 @@ public:
                                 "&target_token=", dest_token);
 
         auto res = post(etl_url, js);
+        bool ok = false;
         mxb::Json response;
         response.load_string(res.body);
         auto self = response.at("links/self").get_string();
@@ -176,7 +231,11 @@ public:
             }
         }
 
-        if (res.code != 201)
+        if (res.code == 201)
+        {
+            response.at("data/attributes/results").try_get_bool("ok", &ok);
+        }
+        else
         {
             m_test.tprintf("ETL failed:\n%s", res.body.c_str());
             response.reset();
@@ -185,7 +244,7 @@ public:
         del(mxb::cat("sql/", source_id, "?token=", source_token));
         del(mxb::cat("sql/", dest_id, "?token=", dest_token));
 
-        return response;
+        return {ok, response};
     }
 
 private:

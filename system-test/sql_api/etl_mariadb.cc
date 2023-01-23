@@ -63,8 +63,10 @@ void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
     const char* SELECT = "SELECT COUNT(*) FROM test.etl_sanity_check";
     auto expected = source.field(SELECT);
 
-    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
-                           {EtlTable {"test", "etl_sanity_check"}});
+    auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
+                                 {EtlTable {"test", "etl_sanity_check"}});
+
+    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
 
     auto dest = test.repl->get_connection(3);
     dest.connect();
@@ -85,15 +87,13 @@ void invalid_sql(TestConnections& test, EtlTest& etl, const std::string& dsn)
                 && source.query("INSERT INTO test.bad_sql SELECT seq FROM seq_0_to_100"),
                 "Failed to create test data");
 
-    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
-                       {EtlTable {"test", "bad_sql",
-                                  "CREATE TABLE test.bad_sql(id INT, a int)",
-                                  "SELECT id FROM test.bad_sql",
-                                  "INSERT INTO test.bad_sql(id, a) values (?, ?)"}});
+    auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
+                             {EtlTable {"test", "bad_sql",
+                                        "CREATE TABLE test.bad_sql(id INT, a int)",
+                                        "SELECT id FROM test.bad_sql",
+                                        "INSERT INTO test.bad_sql(id, a) values (?, ?)"}});
 
-    bool ok = true;
-    test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && !ok,
-                "Bad SQL should cause ETL to fail: %s", res.to_string().c_str());
+    test.expect(!ok, "Bad SQL should cause ETL to fail: %s", res.to_string().c_str());
 
     source.query("DROP TABLE test.bad_sql");
 }
@@ -111,15 +111,14 @@ void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
         {
             test.expect(source.query(t.create_sql), "Failed to create table: %s", source.error());
             test.expect(source.query(val.insert_sql), "Failed to insert into table: %s", source.error());
-            auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
-                                   {EtlTable {t.database_name, t.table_name}});
+            auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
+                                         {EtlTable {t.database_name, t.table_name}});
 
-            bool ok = false;
-            if (test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && ok,
-                            "ETL failed for %s %s: %s", t.type_name.c_str(), val.value.c_str(),
+            if (test.expect(ok, "ETL failed for %s %s: %s", t.type_name.c_str(), val.value.c_str(),
                             res.to_string().c_str()))
             {
                 compare_results(test, source, dest, "SELECT * FROM " + t.full_name, t);
+                etl.compare_results(dsn, 3, "SELECT * FROM " + t.full_name);
             }
 
             source.query(t.drop_sql);
@@ -150,15 +149,14 @@ void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::str
     }
 
 
-    auto res = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s, tables);
+    auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s, tables);
 
-    bool ok = false;
-    test.expect(res.at("data/attributes/results").try_get_bool("ok", &ok) && ok,
-                "ETL failed: %s", res.to_string().c_str());
+    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
 
     for (const auto& t : sql_generation::mariadb_types())
     {
         compare_results(test, source, dest, "SELECT * FROM " + t.full_name, t);
+        etl.compare_results(dsn, 3, "SELECT * FROM " + t.full_name);
         source.query(t.drop_sql);
         dest.query(t.drop_sql);
     }
