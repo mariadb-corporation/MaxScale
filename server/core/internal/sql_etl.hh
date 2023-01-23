@@ -210,14 +210,24 @@ private:
     mxb::Duration m_duration {0};
 };
 
-struct ETL
+class ETL
 {
+public:
+    enum class Stage
+    {
+        INIT,
+        PREPARE,
+        CREATE,
+        LOAD,
+    };
+
     ETL(std::string_view id, Config config, std::unique_ptr<Extractor> extractor)
         : m_id(id)
         , m_config(std::move(config))
         , m_extractor(std::move(extractor))
         , m_init_latch{(std::ptrdiff_t)m_config.threads}
         , m_create_latch{(std::ptrdiff_t)m_config.threads}
+        , m_load_latch{(std::ptrdiff_t)m_config.threads}
     {
     }
 
@@ -257,7 +267,7 @@ private:
     std::pair<mxq::ODBC, mxq::ODBC> connect_to_both();
     void                            interrupt_both(std::pair<mxq::ODBC, mxq::ODBC>& connections);
 
-    bool   checkpoint(int* current_checkpoint);
+    bool   checkpoint(int* current_checkpoint, Stage stage);
     Table* next_table();
 
     std::string                m_id;
@@ -273,7 +283,9 @@ private:
 
     mxb::latch          m_init_latch;
     mxb::latch          m_create_latch;
+    mxb::latch          m_load_latch;
     int                 m_next_checkpoint {0};
+    Stage               m_stage {Stage::INIT};
     std::atomic<size_t> m_counter{0};
 };
 

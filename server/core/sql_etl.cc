@@ -67,6 +67,27 @@ std::string field_from_result(mxq::ODBC& source, const std::string& sql, int fie
 
     return rval;
 }
+
+const char* stage_to_str(sql_etl::ETL::Stage stage)
+{
+    switch (stage)
+    {
+    case sql_etl::ETL::Stage::INIT:
+        return "init";
+
+    case sql_etl::ETL::Stage::PREPARE:
+        return "prepare";
+
+    case sql_etl::ETL::Stage::CREATE:
+        return "create";
+
+    case sql_etl::ETL::Stage::LOAD:
+        return "load";
+    }
+
+    mxb_assert(!true);
+    return "unknown";
+}
 }
 
 namespace sql_etl
@@ -863,7 +884,7 @@ Table* ETL::next_table()
     return rval;
 }
 
-bool ETL::checkpoint(int* current_checkpoint)
+bool ETL::checkpoint(int* current_checkpoint, Stage stage)
 {
     std::unique_lock guard(m_lock);
 
@@ -872,6 +893,7 @@ bool ETL::checkpoint(int* current_checkpoint)
         // This is the first thread to arrive at the latest checkpoint. Reset the table counter to start
         // iteration from the beginning.
         ++m_next_checkpoint;
+        m_stage = stage;
         m_counter.store(0, std::memory_order_relaxed);
     }
 
@@ -974,6 +996,7 @@ mxb::Json ETL::run_job()
     }
 
     rval.set_bool("ok", ok);
+    rval.set_string("stage", stage_to_str(m_stage));
     rval.set_object("tables", std::move(arr));
 
     return rval;
@@ -988,6 +1011,10 @@ void ETL::run_prepare_job(mxq::ODBC& source) noexcept
         MXB_INFO("Read SQL: %s.%s", t->schema(), t->table());
         t->read_sql(source);
     }
+
+    int my_checkpoint = 0;
+    m_init_latch.arrive_and_wait();
+    checkpoint(&my_checkpoint, Stage::PREPARE);
 }
 
 void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
@@ -1004,7 +1031,7 @@ void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
 
     m_init_latch.arrive_and_wait();
 
-    if (checkpoint(&my_checkpoint))
+    if (checkpoint(&my_checkpoint, Stage::PREPARE))
     {
         while (auto t = next_table())
         {
@@ -1014,13 +1041,16 @@ void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
 
         m_create_latch.arrive_and_wait();
 
-        if (checkpoint(&my_checkpoint))
+        if (checkpoint(&my_checkpoint, Stage::CREATE))
         {
             while (auto t = next_table())
             {
                 MXB_INFO("Load data: %s.%s", t->schema(), t->table());
                 t->load_data(source, dest);
             }
+
+            m_load_latch.arrive_and_wait();
+            checkpoint(&my_checkpoint, Stage::LOAD);
         }
     }
 }
