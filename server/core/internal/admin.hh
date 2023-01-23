@@ -108,7 +108,7 @@ private:
      *
      * @return True if a file was served and the processing should stop
      */
-    bool serve_file(const std::string& url) const;
+    bool serve_file(const std::string& url);
 
     MHD_Connection*        m_connection;/**< Connection handle */
     std::string            m_data;      /**< Uploaded data */
@@ -125,14 +125,15 @@ private:
     bool         authorize_user(const char* user, mxs::user_account_type type, const char* method,
                                 const char* url) const;
     bool        is_basic_endpoint() const;
+    int         wrap_MHD_queue_response(unsigned int status_code, struct MHD_Response* response);
     bool        send_cors_preflight_request(const std::string& verb);
     std::string get_header(const std::string& key) const;
     size_t      request_data_length() const;
-    void        send_shutting_down_error() const;
-    void        send_basic_auth_error() const;
-    void        send_token_auth_error() const;
-    void        send_write_access_error() const;
-    void        send_no_https_error() const;
+    void        send_shutting_down_error();
+    void        send_basic_auth_error();
+    void        send_token_auth_error();
+    void        send_write_access_error();
+    void        send_no_https_error();
     void        add_cors_headers(MHD_Response*) const;
     void        upgrade_to_ws();
     int         queue_response(const HttpResponse& response);

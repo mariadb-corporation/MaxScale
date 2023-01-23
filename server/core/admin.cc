@@ -557,18 +557,24 @@ size_t Client::request_data_length() const
     return atoi(get_header("Content-Length").c_str());
 }
 
-void Client::send_shutting_down_error() const
+int Client::wrap_MHD_queue_response(unsigned int status_code, MHD_Response* response)
+{
+    set_http_response_code(status_code);
+    return MHD_queue_response(m_connection, status_code, response);
+}
+
+void Client::send_shutting_down_error()
 {
     MHD_Response* resp =
         MHD_create_response_from_buffer(sizeof(shutting_down_response) - 1,
                                         shutting_down_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_response(m_connection, MHD_HTTP_SERVICE_UNAVAILABLE, resp);
+    wrap_MHD_queue_response(MHD_HTTP_SERVICE_UNAVAILABLE, resp);
     MHD_destroy_response(resp);
 }
 
-void Client::send_basic_auth_error() const
+void Client::send_basic_auth_error()
 {
     MHD_Response* resp =
         MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
@@ -578,46 +584,47 @@ void Client::send_basic_auth_error() const
     if (auto it = m_headers.find("x-requested-with");
         it != m_headers.end() && strcasecmp(it->second.c_str(), "XMLHttpRequest") == 0)
     {
-        MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, resp);
+        wrap_MHD_queue_response(MHD_HTTP_UNAUTHORIZED, resp);
     }
     else
     {
+        set_http_response_code(MHD_HTTP_UNAUTHORIZED);
         MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
     }
 
     MHD_destroy_response(resp);
 }
 
-void Client::send_token_auth_error() const
+void Client::send_token_auth_error()
 {
     MHD_Response* response =
         MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
                                         auth_failure_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
+    wrap_MHD_queue_response(MHD_HTTP_UNAUTHORIZED, response);
     MHD_destroy_response(response);
 }
 
-void Client::send_write_access_error() const
+void Client::send_write_access_error()
 {
     MHD_Response* response =
         MHD_create_response_from_buffer(sizeof(not_admin_response) - 1,
                                         not_admin_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_response(m_connection, MHD_HTTP_FORBIDDEN, response);
+    wrap_MHD_queue_response(MHD_HTTP_FORBIDDEN, response);
     MHD_destroy_response(response);
 }
 
-void Client::send_no_https_error() const
+void Client::send_no_https_error()
 {
     MHD_Response* response =
         MHD_create_response_from_buffer(sizeof(no_https_response) - 1,
                                         no_https_response,
                                         MHD_RESPMEM_PERSISTENT);
 
-    MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
+    wrap_MHD_queue_response(MHD_HTTP_UNAUTHORIZED, response);
     MHD_destroy_response(response);
 }
 
@@ -652,7 +659,7 @@ bool Client::send_cors_preflight_request(const std::string& verb)
 
         add_cors_headers(response);
 
-        MHD_queue_response(m_connection, MHD_HTTP_OK, response);
+        wrap_MHD_queue_response(MHD_HTTP_OK, response);
         MHD_destroy_response(response);
 
         rval = true;
@@ -661,7 +668,7 @@ bool Client::send_cors_preflight_request(const std::string& verb)
     return rval;
 }
 
-bool Client::serve_file(const std::string& url) const
+bool Client::serve_file(const std::string& url)
 {
     bool rval = false;
     std::string path = get_filename(m_request);
@@ -689,7 +696,7 @@ bool Client::serve_file(const std::string& url) const
             add_content_type_header(response, path);
             add_extra_headers(response);
 
-            if (MHD_queue_response(m_connection, MHD_HTTP_OK, response) == MHD_YES)
+            if (wrap_MHD_queue_response(MHD_HTTP_OK, response) == MHD_YES)
             {
                 rval = true;
             }
@@ -743,7 +750,7 @@ void Client::upgrade_to_ws()
     // This isn't exactly correct but it'll do for now
     MHD_add_response_header(resp, "Sec-WebSocket-Protocol", get_header("Sec-WebSocket-Protocol").c_str());
 
-    MHD_queue_response(m_connection, MHD_HTTP_SWITCHING_PROTOCOLS, resp);
+    wrap_MHD_queue_response(MHD_HTTP_SWITCHING_PROTOCOLS, resp);
     MHD_destroy_response(resp);
 }
 
@@ -833,7 +840,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         MHD_Response* response = MHD_create_response_from_buffer(msg.size(),
                                                                  &msg[0],
                                                                  MHD_RESPMEM_MUST_COPY);
-        MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
+        wrap_MHD_queue_response(MHD_HTTP_BAD_REQUEST, response);
         MHD_destroy_response(response);
         return MHD_YES;
     }
@@ -917,7 +924,7 @@ int Client::queue_response(const HttpResponse& reply)
         MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, c.c_str());
     }
 
-    int rval = MHD_queue_response(m_connection, reply.get_code(), response);
+    int rval = wrap_MHD_queue_response(reply.get_code(), response);
     MHD_destroy_response(response);
 
     MXB_DEBUG("Response: HTTP %d", reply.get_code());
