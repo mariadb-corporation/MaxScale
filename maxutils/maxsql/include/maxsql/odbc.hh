@@ -183,8 +183,9 @@ private:
 };
 
 // Discards the result
-struct NoResult : public Output
+class NoResult : public Output
 {
+public:
     virtual bool ok_result(int64_t rows_affected, int64_t warnings) override
     {
         return true;
@@ -203,13 +204,28 @@ struct NoResult : public Output
 
     bool resultset_end(bool ok, bool complete) override
     {
+        if (!ok)
+        {
+            m_ok = false;
+        }
+
         return true;
     }
 
     bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override
     {
+        m_ok = false;
         return true;
     }
+
+    bool ok() const
+    {
+        return m_ok;
+    }
+
+private:
+    // Set to true if the query contains an error
+    bool m_ok = true;
 };
 
 // The concrete implementation class is defined in the source file. We can't include the ODBC files in a

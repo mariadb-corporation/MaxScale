@@ -780,7 +780,9 @@ void Table::create_objects(mxq::ODBC& source, mxq::ODBC& dest)
     {
         mxb_assert(!m_create.empty());
 
-        if (!dest.query(m_create))
+        mxq::NoResult res;
+
+        if (!dest.query(m_create, &res) || !res.ok())
         {
             throw problem("Failed to create table: ", dest.error());
         }

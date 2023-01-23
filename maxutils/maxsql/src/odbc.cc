@@ -1045,10 +1045,20 @@ bool ODBCImp::process_response(SQLRETURN ret, Output* handler)
         }
         while (ok && !canceled() && SQL_SUCCEEDED(ret = SQLMoreResults(m_stmt)));
 
+        if (ret == SQL_ERROR)
+        {
+            get_error(SQL_HANDLE_STMT, m_stmt);
+
+            if (!handler->error_result(m_errnum, m_error, m_sqlstate))
+            {
+                MXB_DEBUG("Output failed to process error result");
+                ok = false;
+            }
+        }
+
         SQLCloseCursor(m_stmt);
     }
-
-    if (ret == SQL_ERROR)
+    else if (ret == SQL_ERROR)
     {
         get_error(SQL_HANDLE_STMT, m_stmt);
 
