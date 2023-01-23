@@ -117,8 +117,8 @@ private:
     mxs::user_account_type m_account {mxs::USER_ACCOUNT_UNKNOWN};
     Headers                m_headers;
     HttpRequest            m_request;
-
-    WebSocket::Handler m_ws_handler;
+    uint                   m_http_response_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+    WebSocket::Handler     m_ws_handler;
 
     HttpResponse generate_token(const HttpRequest& request);
     bool         auth_with_token(const std::string& token, const char* method, const char* url);
@@ -137,6 +137,8 @@ private:
     void        upgrade_to_ws();
     int         queue_response(const HttpResponse& response);
     int         queue_delayed_response(const HttpResponse::Callback& cb);
+    void        set_http_response_code(uint code);
+    uint        get_http_response_code() const;
 
     static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                   const char* extra_in, size_t extra_in_size,

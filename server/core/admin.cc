@@ -705,6 +705,16 @@ bool Client::serve_file(const std::string& url) const
     return rval;
 }
 
+void Client::set_http_response_code(uint code)
+{
+    m_http_response_code = code;
+}
+
+uint Client::get_http_response_code() const
+{
+    return m_http_response_code;
+}
+
 // static
 void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                const char* extra_in, size_t extra_in_size,
