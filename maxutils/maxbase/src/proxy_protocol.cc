@@ -13,6 +13,7 @@
 #include <maxbase/proxy_protocol.hh>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/un.h>
 #include <maxbase/format.hh>
 
 namespace
@@ -31,7 +32,9 @@ bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol
 int  compare_bits(const void* s1, const void* s2, size_t n_bits);
 bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
 bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet);
-int  read_be_uint16(const uint8_t* ptr);
+
+int      read_be_uint16(const uint8_t* ptr);
+uint8_t* write_be_uint16(uint8_t* ptr, uint16_t val_host);
 
 const char PROXY_TEXT_SIG[] = "PROXY";
 const uint8_t PROXY_BIN_SIG[] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
@@ -445,6 +448,133 @@ HeaderResult parse_binary_header(const uint8_t* header)
     }
     return rval;
 }
+
+BinHdrRes gen_binary_header(const sockaddr_storage& client_addr, const sockaddr_storage& server_addr)
+{
+    // Generate a binary header as described in http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+
+    BinHdrRes rval;
+    auto* ptr = rval.header;
+    memcpy(ptr, PROXY_BIN_SIG, sizeof(PROXY_BIN_SIG));
+    ptr += sizeof(PROXY_BIN_SIG);
+
+    *ptr++ = 0x21;      // Protocol version and command (1 = proxy).
+
+    // Only consider the client address family. MariaDB Server does not even read the server
+    // address from a binary header.
+    bool same_addr_families = (client_addr.ss_family == server_addr.ss_family);
+
+    switch (client_addr.ss_family)
+    {
+    case AF_INET:
+        {
+            *ptr++ = 0x11;
+            ptr = write_be_uint16(ptr, 12);
+            auto* cli_addr4 = reinterpret_cast<const sockaddr_in*>(&client_addr);
+            auto* srv_addr4 = reinterpret_cast<const sockaddr_in*>(&server_addr);
+
+            size_t addr_size = sizeof(cli_addr4->sin_addr);
+            memcpy(ptr, &cli_addr4->sin_addr, addr_size);
+            ptr += addr_size;
+
+            // Next is server address. If it's IP4, add it.
+            if (same_addr_families)
+            {
+                memcpy(ptr, &srv_addr4->sin_addr, addr_size);
+            }
+            else
+            {
+                memset(ptr, 0, addr_size);      // Hopefully the receiver doesn't care.
+            }
+            ptr += addr_size;
+
+            size_t port_size = sizeof(cli_addr4->sin_port);
+            memcpy(ptr, &cli_addr4->sin_port, port_size);   // Big-endian value in both source and dest.
+            ptr += port_size;
+
+            if (same_addr_families)
+            {
+                memcpy(ptr, &srv_addr4->sin_port, port_size);
+            }
+            else
+            {
+                memset(ptr, 0, port_size);
+            }
+            ptr += port_size;
+            mxb_assert(ptr - rval.header == 28);
+        }
+        break;
+
+    case AF_INET6:
+        {
+            *ptr++ = 0x21;
+            ptr = write_be_uint16(ptr, 36);
+            auto* cli_addr6 = reinterpret_cast<const sockaddr_in6*>(&client_addr);
+            auto* srv_addr6 = reinterpret_cast<const sockaddr_in6*>(&server_addr);
+
+            size_t addr_size = sizeof(cli_addr6->sin6_addr);
+            memcpy(ptr, &cli_addr6->sin6_addr, addr_size);
+            ptr += addr_size;
+
+            if (same_addr_families)
+            {
+                memcpy(ptr, &srv_addr6->sin6_addr, addr_size);
+            }
+            else
+            {
+                memset(ptr, 0, addr_size);
+            }
+            ptr += addr_size;
+
+            size_t port_size = sizeof(cli_addr6->sin6_port);
+            memcpy(ptr, &cli_addr6->sin6_port, port_size);
+            ptr += port_size;
+
+            if (same_addr_families)
+            {
+                memcpy(ptr, &srv_addr6->sin6_port, port_size);
+            }
+            else
+            {
+                memset(ptr, 0, port_size);
+            }
+            ptr += port_size;
+            mxb_assert(ptr - rval.header == 52);
+        }
+        break;
+
+    case AF_UNIX:
+        {
+            *ptr++ = 0x31;
+            ptr = write_be_uint16(ptr, 216);
+            auto* cli_addr_un = reinterpret_cast<const sockaddr_un*>(&client_addr);
+            auto* srv_addr_un = reinterpret_cast<const sockaddr_un*>(&server_addr);
+
+            size_t addr_size = sizeof(cli_addr_un->sun_path);
+            memcpy(ptr, &cli_addr_un->sun_path, addr_size);
+            ptr += addr_size;
+
+            if (same_addr_families)
+            {
+                memcpy(ptr, &srv_addr_un->sun_path, addr_size);
+            }
+            else
+            {
+                memset(ptr, 0, addr_size);
+            }
+            ptr += addr_size;
+            mxb_assert(ptr - rval.header == 232);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+        break;
+    }
+
+    rval.len = ptr - rval.header;
+    return rval;
+}
 }
 }
 
@@ -679,5 +809,12 @@ int read_be_uint16(const uint8_t* ptr)
     uint16_t value_be = 0;
     memcpy(&value_be, ptr, 2);
     return be16toh(value_be);
+}
+
+uint8_t* write_be_uint16(uint8_t* ptr, uint16_t val_host)
+{
+    uint16_t value_be = htobe16(val_host);
+    memcpy(ptr, &value_be, 2);
+    return ptr + 2;
 }
 }

@@ -30,6 +30,16 @@ struct HeaderV1Res
 HeaderV1Res
 generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_storage* server_addr);
 
+/*
+ * Binary header: 12 bytes sig, 2 bytes info, 2 bytes length, 216 max 2x address = 232 ~ 256
+ */
+struct BinHdrRes
+{
+    uint8_t header[256];
+    int     len {0};
+};
+BinHdrRes gen_binary_header(const sockaddr_storage& client_addr, const sockaddr_storage& server_addr);
+
 bool packet_hdr_maybe_proxy(const uint8_t* header);
 
 struct PreParseResult
