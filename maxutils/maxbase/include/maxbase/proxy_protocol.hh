@@ -22,14 +22,13 @@ namespace maxbase
 {
 namespace proxy_protocol
 {
-struct HeaderV1Res
+struct TextHdrRes
 {
-    char        header[108];
+    char        header[108];/**< 107 is the worst-case length according to protocol documentation. */
     int         len {0};
     std::string errmsg;
 };
-HeaderV1Res
-generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_storage* server_addr);
+TextHdrRes gen_text_header(const sockaddr_storage& client_addr, const sockaddr_storage& server_addr);
 
 /*
  * Binary header: 12 bytes sig, 2 bytes info, 2 bytes length, 216 max 2x address = 232 ~ 256
@@ -59,15 +58,15 @@ struct PreParseResult
  */
 PreParseResult pre_parse_header(const uint8_t* data, size_t datalen);
 
-struct HeaderResult
+struct HdrParseResult
 {
     bool             success {false};   /**< Was header successfully parsed? */
     bool             is_proxy {false};  /**< True if the header contains a peer address */
     sockaddr_storage peer_addr;         /**< Peer address and port */
     std::string      peer_addr_str;     /**< Peer address in string form */
 };
-HeaderResult parse_text_header(const char* header, int header_len);
-HeaderResult parse_binary_header(const uint8_t* header);
+HdrParseResult parse_text_header(const char* header, int header_len);
+HdrParseResult parse_binary_header(const uint8_t* header);
 
 // Proxy protocol parsing and subnetwork matching code adapted from MariaDB Server.
 

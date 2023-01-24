@@ -120,15 +120,6 @@ void skip_encoded_str(Iter& it)
     auto len = get_encoded_int(it);
     it += len;
 }
-
-struct AddressResult
-{
-    bool        success {false};
-    char        addr[INET6_ADDRSTRLEN] {};
-    in_port_t   port {0};
-    std::string error_msg;
-};
-AddressResult get_ip_string_and_port(const sockaddr_storage* sa);
 }
 
 /**
@@ -1569,12 +1560,10 @@ bool MariaDBBackendConnection::send_change_user_to_backend()
  */
 bool MariaDBBackendConnection::send_proxy_protocol_header()
 {
-    // TODO: Add support for chained proxies. Requires reading the client header.
-
     // The header contains the original client address and the backend server address.
     // Client dbc always exists, as it's only freed at session close.
     const ClientDCB* client_dcb = m_session->client_connection()->dcb();
-    const auto* client_addr = &client_dcb->ip();        // Client address was filled in by accept().
+    const auto& client_addr = client_dcb->ip();         // Client address was filled in by accept().
 
     // Fill in the target server's address.
     sockaddr_storage server_addr {};
@@ -1589,7 +1578,7 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     }
 
     bool success = false;
-    auto proxyhdr_res = mxb::proxy_protocol::generate_proxy_header_v1(client_addr, &server_addr);
+    auto proxyhdr_res = mxb::proxy_protocol::gen_text_header(client_addr, server_addr);
     if (proxyhdr_res.errmsg.empty())
     {
         auto ptr = reinterpret_cast<uint8_t*>(proxyhdr_res.header);
@@ -1607,63 +1596,6 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     }
 
     return success;
-}
-
-namespace
-{
-/* Read IP and port from socket address structure, return IP as string and port
- * as host byte order integer.
- *
- * @param sa A sockaddr_storage containing either an IPv4 or v6 address
- * @return Result structure
- */
-AddressResult get_ip_string_and_port(const sockaddr_storage* sa)
-{
-    AddressResult rval;
-
-    const char errmsg_fmt[] = "'inet_ntop' failed. Error: '";
-    switch (sa->ss_family)
-    {
-    case AF_INET:
-        {
-            const auto* sock_info = (const sockaddr_in*)sa;
-            const in_addr* addr = &(sock_info->sin_addr);
-            if (inet_ntop(AF_INET, addr, rval.addr, sizeof(rval.addr)))
-            {
-                rval.port = ntohs(sock_info->sin_port);
-                rval.success = true;
-            }
-            else
-            {
-                rval.error_msg = std::string(errmsg_fmt) + mxb_strerror(errno) + "'";
-            }
-        }
-        break;
-
-    case AF_INET6:
-        {
-            const auto* sock_info = (const sockaddr_in6*)sa;
-            const in6_addr* addr = &(sock_info->sin6_addr);
-            if (inet_ntop(AF_INET6, addr, rval.addr, sizeof(rval.addr)))
-            {
-                rval.port = ntohs(sock_info->sin6_port);
-                rval.success = true;
-            }
-            else
-            {
-                rval.error_msg = std::string(errmsg_fmt) + mxb_strerror(errno) + "'";
-            }
-        }
-        break;
-
-    default:
-        {
-            rval.error_msg = "Unrecognized socket address family " + std::to_string(sa->ss_family) + ".";
-        }
-    }
-
-    return rval;
-}
 }
 
 bool MariaDBBackendConnection::established()

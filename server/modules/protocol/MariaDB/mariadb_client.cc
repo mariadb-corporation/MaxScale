@@ -3454,7 +3454,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                 }
                 while (header_res.type == Type::NEED_MORE);
 
-                auto set_client_info = [this](mxb::proxy_protocol::HeaderResult&& new_info) {
+                auto set_client_info = [this](mxb::proxy_protocol::HdrParseResult&& new_info) {
                     string text_addr_copy = new_info.peer_addr_str;
                     m_dcb->set_remote_ip_port(new_info.peer_addr,
                                               std::move(new_info.peer_addr_str));

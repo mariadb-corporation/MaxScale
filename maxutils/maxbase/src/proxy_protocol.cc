@@ -19,14 +19,6 @@
 
 namespace
 {
-struct AddressResult
-{
-    bool        success {false};
-    char        addr[INET6_ADDRSTRLEN] {};
-    in_port_t   port {0};
-    std::string error_msg;
-};
-AddressResult get_ip_string_and_port(const sockaddr_storage* sa);
 
 void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst);
 bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet);
@@ -46,71 +38,126 @@ namespace maxbase
 {
 namespace proxy_protocol
 {
-HeaderV1Res generate_proxy_header_v1(const sockaddr_storage* client_addr, const sockaddr_storage* server_addr)
+TextHdrRes gen_text_header(const sockaddr_storage& client_addr, const sockaddr_storage& server_addr)
 {
-    auto client_res = get_ip_string_and_port(client_addr);
-    auto server_res = get_ip_string_and_port(server_addr);
+    TextHdrRes rval;
 
-    HeaderV1Res rval;
-    if (client_res.success && server_res.success)
-    {
-        const auto cli_addr_fam = client_addr->ss_family;
-        const auto srv_addr_fam = server_addr->ss_family;
-        // The proxy header must contain the client address & port + server address & port. Both should have
-        // the same address family. Since the two are separate connections, it's possible one is IPv4 and
-        // the other IPv6. In this case, convert any IPv4-addresses to IPv6-format.
-        int ret = -1;
-        // 107 is the worst-case length according to protocol documentation.
-        const int maxlen = TEXT_HDR_MAX_LEN + 1;
-        char proxy_header[maxlen];
-        if ((cli_addr_fam == AF_INET || cli_addr_fam == AF_INET6)
-            && (srv_addr_fam == AF_INET || srv_addr_fam == AF_INET6))
+    auto write_inet4_addr = [&rval](const sockaddr_storage& addr, char* addr_out, int* port_out) {
+        bool ntop_success = false;
+        const auto& addr4 = reinterpret_cast<const sockaddr_in&>(addr);
+        if (inet_ntop(AF_INET, &addr4.sin_addr, addr_out, INET6_ADDRSTRLEN))
         {
-            if (cli_addr_fam == srv_addr_fam)
+            *port_out = ntohs(addr4.sin_port);
+            ntop_success = true;
+        }
+        else
+        {
+            rval.errmsg = mxb::string_printf("inet_ntop(AF_INET, ...) failed. Error %i: %s",
+                                             errno, mxb_strerror(errno));
+        }
+        return ntop_success;
+    };
+
+    auto write_inet6_addr = [&rval](const sockaddr_storage& addr, char* addr_out, int* port_out) {
+        bool ntop_success = false;
+        const auto& addr6 = reinterpret_cast<const sockaddr_in6&>(addr);
+        if (inet_ntop(AF_INET6, &addr6.sin6_addr, addr_out, INET6_ADDRSTRLEN))
+        {
+            *port_out = ntohs(addr6.sin6_port);
+            ntop_success = true;
+        }
+        else
+        {
+            rval.errmsg = mxb::string_printf("inet_ntop(AF_INET6, ...) failed. Error %i: %s",
+                                             errno, mxb_strerror(errno));
+        }
+        return ntop_success;
+    };
+
+    char client_addr_str[INET6_ADDRSTRLEN];
+    int client_port {0};
+    char server_addr_str[INET6_ADDRSTRLEN];
+    int server_port {0};
+
+    /* Text-header generation gets tricky if server and client address families differ. In these cases,
+     * replace the real server address with the client address. The server address is not an important
+     * part of the proxy-header and e.g. MariaDB Server only cares that it looks like a valid address.
+     * Client address cannot be a unix socket, in such cases a binary header should be used. */
+    bool same_addr_families = (client_addr.ss_family == server_addr.ss_family);
+
+    const char* eff_server_addr_str = nullptr;
+    const char* family_str = nullptr;
+
+    switch (client_addr.ss_family)
+    {
+    case AF_INET:
+        family_str = "TCP4";
+        if (write_inet4_addr(client_addr, client_addr_str, &client_port))
+        {
+            if (same_addr_families)
             {
-                auto family_str = (cli_addr_fam == AF_INET) ? "TCP4" : "TCP6";
-                ret = snprintf(proxy_header, maxlen, "PROXY %s %s %s %d %d\r\n",
-                               family_str, client_res.addr, server_res.addr, client_res.port,
-                               server_res.port);
-            }
-            else if (cli_addr_fam == AF_INET)
-            {
-                // Connection to server is already IPv6.
-                ret = snprintf(proxy_header, maxlen, "PROXY TCP6 ::ffff:%s %s %d %d\r\n",
-                               client_res.addr, server_res.addr, client_res.port, server_res.port);
+                if (write_inet4_addr(server_addr, server_addr_str, &server_port))
+                {
+                    eff_server_addr_str = server_addr_str;
+                }
             }
             else
             {
-                // Connection to client is already IPv6.
-                ret = snprintf(proxy_header, maxlen, "PROXY TCP6 %s ::ffff:%s %d %d\r\n",
-                               client_res.addr, server_res.addr, client_res.port, server_res.port);
+                eff_server_addr_str = client_addr_str;
+                server_port = client_port;
             }
         }
-        else
-        {
-            ret = snprintf(proxy_header, maxlen, "PROXY UNKNOWN\r\n");
-        }
+        break;
 
-        if (ret < 0 || ret >= maxlen)
+    case AF_INET6:
+        family_str = "TCP6";
+        if (write_inet6_addr(client_addr, client_addr_str, &client_port))
+        {
+            if (same_addr_families)
+            {
+                if (write_inet6_addr(server_addr, server_addr_str, &server_port))
+                {
+                    eff_server_addr_str = server_addr_str;
+                }
+            }
+            else
+            {
+                eff_server_addr_str = client_addr_str;
+                server_port = client_port;
+            }
+        }
+        break;
+
+    case AF_UNIX:
+        {
+            const auto& addr_un = reinterpret_cast<const sockaddr_un&>(client_addr);
+            rval.errmsg = mxb::string_printf(
+                "Cannot send text-form proxy protocol header for client connected via unix socket '%s'.",
+                addr_un.sun_path);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+        rval.errmsg = mxb::string_printf("Unrecognized socket address family %i.",
+                                         (int)client_addr.ss_family);
+        break;
+    }
+
+    if (eff_server_addr_str)
+    {
+        const size_t maxlen = sizeof(rval.header);
+        int res = snprintf(rval.header, maxlen, "PROXY %s %s %s %d %d\r\n",
+                           family_str, client_addr_str, eff_server_addr_str, client_port, server_port);
+        if (res < 0 || res >= (int)maxlen)
         {
             rval.errmsg = mxb::string_printf("Could not form proxy protocol header, snprintf returned %i.",
-                                             ret);
+                                             res);
         }
         else
         {
-            memcpy(rval.header, proxy_header, ret + 1);
-            rval.len = ret;
+            rval.len = res;
         }
-    }
-    else if (!client_res.success)
-    {
-        rval.errmsg = mxb::string_printf("Could not convert network address of source to string form. %s",
-                                         client_res.error_msg.c_str());
-    }
-    else
-    {
-        rval.errmsg = mxb::string_printf("Could not convert network address of server to string form. "
-                                         "%s", server_res.error_msg.c_str());
     }
     return rval;
 }
@@ -295,9 +342,9 @@ PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
     return rval;
 }
 
-HeaderResult parse_text_header(const char* header, int header_len)
+HdrParseResult parse_text_header(const char* header, int header_len)
 {
-    HeaderResult rval;
+    HdrParseResult rval;
     char address_family[TEXT_HDR_MAX_LEN + 1];
     char client_address[TEXT_HDR_MAX_LEN + 1];
     char server_address[TEXT_HDR_MAX_LEN + 1];
@@ -371,11 +418,11 @@ HeaderResult parse_text_header(const char* header, int header_len)
     return rval;
 }
 
-HeaderResult parse_binary_header(const uint8_t* header)
+HdrParseResult parse_binary_header(const uint8_t* header)
 {
     // The header should be valid in the sense that it has the signature and length info, and the array
     // is long enough.
-    HeaderResult rval;
+    HdrParseResult rval;
     size_t sig_len = 12;
     if (memcmp(header, PROXY_BIN_SIG, sig_len) == 0)
     {
@@ -581,59 +628,6 @@ BinHdrRes gen_binary_header(const sockaddr_storage& client_addr, const sockaddr_
 
 namespace
 {
-/* Read IP and port from socket address structure, return IP as string and port
- * as host byte order integer.
- *
- * @param sa A sockaddr_storage containing either an IPv4 or v6 address
- * @return Result structure
- */
-AddressResult get_ip_string_and_port(const sockaddr_storage* sa)
-{
-    AddressResult rval;
-
-    const char errmsg_fmt[] = "inet_ntop() failed. Error %i: %s";
-    switch (sa->ss_family)
-    {
-    case AF_INET:
-        {
-            const auto* sock_info = (const sockaddr_in*)sa;
-            const in_addr* addr = &(sock_info->sin_addr);
-            if (inet_ntop(AF_INET, addr, rval.addr, sizeof(rval.addr)))
-            {
-                rval.port = ntohs(sock_info->sin_port);
-                rval.success = true;
-            }
-            else
-            {
-                rval.error_msg = mxb::string_printf(errmsg_fmt, errno, mxb_strerror(errno));
-            }
-        }
-        break;
-
-    case AF_INET6:
-        {
-            const auto* sock_info = (const sockaddr_in6*)sa;
-            const in6_addr* addr = &(sock_info->sin6_addr);
-            if (inet_ntop(AF_INET6, addr, rval.addr, sizeof(rval.addr)))
-            {
-                rval.port = ntohs(sock_info->sin6_port);
-                rval.success = true;
-            }
-            else
-            {
-                rval.error_msg = mxb::string_printf(errmsg_fmt, errno, mxb_strerror(errno));
-            }
-        }
-        break;
-
-    default:
-        {
-            rval.error_msg = mxb::string_printf("Unrecognized socket address family %i.", (int)sa->ss_family);
-        }
-    }
-
-    return rval;
-}
 
 void get_normalized_ip(const sockaddr_storage& src, sockaddr_storage* dst)
 {
