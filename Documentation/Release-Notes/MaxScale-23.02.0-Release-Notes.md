@@ -43,6 +43,11 @@ cache. See
 MariaDB Server ed25519 authentication plugin support added. See
 [here](../Authenticators/Ed25519-Authenticator.md) for more information.
 
+### [MXS-4320](https://jira.mariadb.org/browse/MXS-4320) Let maxctrl show datetime values using local client timezone
+
+The maxctrl `list` and `show` commands now display timestamps using the
+locale and timezone of the client computer.
+
 ### MaxGUI
 
 Numerous additions have been added and improvements made to MaxGUI.
