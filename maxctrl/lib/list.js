@@ -23,6 +23,7 @@ const {
   getCollection,
   getSubCollection,
   rDnsOption,
+  dateToLocaleString
 } = require("./common.js");
 
 const list_servers_fields = [
@@ -274,6 +275,7 @@ const list_users_fields = [
     name: "Last Login",
     path: "attributes.last_login",
     description: "The last time the user logged in",
+    formatter: dateToLocaleString
   },
 ];
 
