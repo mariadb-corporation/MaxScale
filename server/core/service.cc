@@ -1113,13 +1113,7 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
         }
     }
 
-    struct tm result;
-    char timebuf[30];
-
-    asctime_r(localtime_r(&service->started, &result), timebuf);
-    mxb::trim(timebuf);
-
-    json_object_set_new(attr, "started", json_string(timebuf));
+    json_object_set_new(attr, "started", json_string(http_to_date(service->started).c_str()));
     json_object_set_new(attr, "total_connections", json_integer(service->stats().n_total_conns()));
     json_object_set_new(attr, "connections", json_integer(service->stats().n_current_conns()));
 
@@ -1141,11 +1135,8 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
         if (json_t* users = manager->users_to_json())
         {
             json_object_set_new(attr, "users", users);
-
             time_t last_update = manager->last_update();
-            asctime_r(localtime_r(&last_update, &result), timebuf);
-            mxb::trim(timebuf);
-            json_object_set_new(attr, "users_last_update", json_string(timebuf));
+            json_object_set_new(attr, "users_last_update", json_string(http_to_date(last_update).c_str()));
         }
     }
 

@@ -158,6 +158,7 @@ const list_sessions_fields = [
     name: "Connected",
     path: "attributes.connected",
     description: "Time when the session started",
+    formatter: dateToLocaleString,
   },
   {
     name: "Idle",

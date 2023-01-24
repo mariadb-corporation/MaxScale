@@ -32,6 +32,7 @@
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
@@ -432,13 +433,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
     json_object_set_new(attr, "port", json_integer(client_dcb->port()));
 
-    struct tm result;
-    char buf[60];
-
-    asctime_r(localtime_r(&stats.connect, &result), buf);
-    mxb::trim(buf);
-
-    json_object_set_new(attr, "connected", json_string(buf));
+    json_object_set_new(attr, "connected", json_string(http_to_date(stats.connect).c_str()));
 
     if (client_dcb->state() == DCB::State::POLLING)
     {

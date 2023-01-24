@@ -308,6 +308,10 @@ function formatResource(fields, data) {
     var path = i.path;
     var v = _.getPath(data, path, "");
 
+    if (i.formatter) {
+      v = i.formatter(v);
+    }
+
     if (Array.isArray(v) && typeof v[0] != "object") {
       if (separator == "\n") {
         var s = "";

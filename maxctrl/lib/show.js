@@ -24,6 +24,7 @@ const {
   getSubCollection,
   getCollection,
   rawCollectionAsTable,
+  dateToLocaleString,
 } = require("./common.js");
 
 const server_fields = [
@@ -149,11 +150,13 @@ const service_fields = [
     name: "Started At",
     path: "attributes.started",
     description: "When the service was started",
+    formatter: dateToLocaleString,
   },
   {
     name: "Users Loaded At",
     path: "attributes.users_last_update",
     description: "When the users for the service were loaded",
+    formatter: dateToLocaleString,
   },
   {
     name: "Current Connections",
@@ -280,6 +283,7 @@ const session_fields = [
     name: "Connected",
     path: "attributes.connected",
     description: "Time when the session started",
+    formatter: dateToLocaleString,
   },
   {
     name: "Idle",
