@@ -215,7 +215,6 @@ class ETL
 public:
     enum class Stage
     {
-        INIT,
         PREPARE,
         CREATE,
         LOAD,
@@ -285,7 +284,7 @@ private:
     mxb::latch          m_create_latch;
     mxb::latch          m_load_latch;
     int                 m_next_checkpoint {0};
-    Stage               m_stage {Stage::INIT};
+    Stage               m_stage {Stage::PREPARE};
     std::atomic<size_t> m_counter{0};
 };
 

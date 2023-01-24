@@ -72,9 +72,6 @@ const char* stage_to_str(sql_etl::ETL::Stage stage)
 {
     switch (stage)
     {
-    case sql_etl::ETL::Stage::INIT:
-        return "init";
-
     case sql_etl::ETL::Stage::PREPARE:
         return "prepare";
 
@@ -1017,10 +1014,6 @@ void ETL::run_prepare_job(mxq::ODBC& source) noexcept
         MXB_INFO("Read SQL: %s.%s", t->schema(), t->table());
         t->read_sql(source);
     }
-
-    int my_checkpoint = 0;
-    m_init_latch.arrive_and_wait();
-    checkpoint(&my_checkpoint, Stage::PREPARE);
 }
 
 void ETL::run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept
