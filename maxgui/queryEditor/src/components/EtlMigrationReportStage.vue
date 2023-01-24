@@ -28,7 +28,7 @@
             </div>
         </template>
         <template v-slot:body>
-            <etl-migration-tbl
+            <etl-tbl-script
                 :data="getMigrationResTable"
                 :headers="tableHeaders"
                 :custom-sort="customSort"
@@ -42,7 +42,7 @@
                     <etl-status-icon :status="objStatus(item)" />
                     {{ customCol(item, 'result') }}
                 </template>
-            </etl-migration-tbl>
+            </etl-tbl-script>
         </template>
         <template v-slot:footer>
             <div class="etl-migration-report-stage__footer d-flex flex-column flex-grow-1">
@@ -80,7 +80,7 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
-import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
+import EtlTblScript from '@queryEditorSrc/components/EtlTblScript.vue'
 import EtlStatusIcon from '@queryEditorSrc/components/EtlStatusIcon.vue'
 import { mapActions, mapState, mapGetters } from 'vuex'
 
@@ -88,7 +88,7 @@ export default {
     name: 'etl-migration-report-stage',
     components: {
         EtlStageCtr,
-        EtlMigrationTbl,
+        EtlTblScript,
         EtlStatusIcon,
     },
     data() {

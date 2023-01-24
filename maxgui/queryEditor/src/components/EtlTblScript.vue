@@ -26,7 +26,7 @@
                 </div>
             </v-col>
             <v-col cols="12" md="6" class="fill-height pt-0">
-                <etl-transform-ctr
+                <etl-script-editors
                     v-if="activeRow && !isLoading"
                     v-model="activeRow"
                     :hasRowChanged="hasRowChanged"
@@ -56,11 +56,11 @@
  * @get-staging-data: array
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
-import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
+import EtlScriptEditors from '@queryEditorSrc/components/EtlScriptEditors.vue'
 
 export default {
-    name: 'etl-migration-tbl',
-    components: { EtlTransformCtr },
+    name: 'etl-tbl-script',
+    components: { EtlScriptEditors },
     inheritAttrs: false,
     props: {
         data: { type: Array, required: true },

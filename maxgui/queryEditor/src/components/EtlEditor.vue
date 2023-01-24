@@ -31,7 +31,7 @@
  */
 import SqlEditor from '@queryEditorSrc/components/SqlEditor'
 export default {
-    name: 'etl-transform-editor',
+    name: 'etl-editor',
     components: {
         'sql-editor': SqlEditor,
     },

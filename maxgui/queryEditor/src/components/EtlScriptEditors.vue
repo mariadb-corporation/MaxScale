@@ -1,20 +1,20 @@
 <template>
     <div class="fill-height d-flex flex-column relative">
         <div class="script-container d-flex flex-column fill-height">
-            <etl-transform-editor
+            <etl-editor
                 v-model="stagingRow.select"
                 class="select-script-ctr flex-grow-1"
                 :label="$mxs_t('retrieveDataFromSrc')"
                 :editorClass="stagingRow.select ? '' : 'mxs-color-helper all-border-error'"
             />
-            <etl-transform-editor
+            <etl-editor
                 v-model="stagingRow.create"
                 class="create-script-ctr flex-grow-1"
                 :label="$mxs_t('createObjInDest')"
                 :editorClass="`${stagingRow.create ? '' : 'mxs-color-helper all-border-error'}`"
                 skipRegEditorCompleters
             />
-            <etl-transform-editor
+            <etl-editor
                 v-model="stagingRow.insert"
                 class="insert-script-ctr flex-grow-1"
                 :label="$mxs_t('insertDataInDest')"
@@ -72,12 +72,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTransformEditor from '@queryEditorSrc/components/EtlTransformEditor.vue'
+import EtlEditor from '@queryEditorSrc/components/EtlEditor.vue'
 export default {
-    name: 'etl-transform-ctr',
-    components: {
-        EtlTransformEditor,
-    },
+    name: 'etl-script-editors',
+    components: { EtlEditor },
     props: {
         /**
          * @property {string} select

@@ -26,7 +26,7 @@
             />
             <template v-else>
                 <etl-logs v-if="scriptErr" class="fill-height" />
-                <etl-migration-tbl
+                <etl-tbl-script
                     v-else
                     :data="getMigrationPrepareScript"
                     :headers="tableHeaders"
@@ -96,7 +96,7 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
-import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
+import EtlTblScript from '@queryEditorSrc/components/EtlTblScript.vue'
 import EtlLogs from '@queryEditorSrc/components/EtlLogs.vue'
 import EtlStatusIcon from '@queryEditorSrc/components/EtlStatusIcon.vue'
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
@@ -105,7 +105,7 @@ export default {
     name: 'etl-migration-script-stage',
     components: {
         EtlStageCtr,
-        EtlMigrationTbl,
+        EtlTblScript,
         EtlLogs,
         EtlStatusIcon,
     },
