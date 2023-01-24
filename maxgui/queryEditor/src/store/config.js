@@ -150,6 +150,7 @@ export const ETL_ACTIONS = Object.freeze({
     CREATE: 'create',
     DELETE: 'delete',
     DISCONNECT: 'disconnect',
+    RESTART: 'restart',
     VIEW: 'view',
 })
 
@@ -174,3 +175,9 @@ export const ETL_SUPPORT_DB_TYPES = [
     { text: 'PostgreSQL', id: 'postgresql' },
     { text: 'Generic', id: 'generic' },
 ]
+
+export const ETL_API_STAGES = Object.freeze({
+    PREPARE: 'prepare',
+    CREATE: 'create',
+    LOAD: 'load',
+})

@@ -43,7 +43,6 @@ export default {
     }
     .etl-stage-title {
         line-height: 36px;
-        width: 100%;
     }
 }
 </style>

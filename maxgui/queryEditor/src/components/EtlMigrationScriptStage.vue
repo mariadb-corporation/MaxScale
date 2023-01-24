@@ -71,7 +71,7 @@
                     class="mt-auto font-weight-medium px-7 text-capitalize"
                     rounded
                     depressed
-                    :disabled="scriptErr || !isConfirmed"
+                    :disabled="Boolean(scriptErr) || !isConfirmed"
                     @click="next"
                 >
                     {{ $mxs_t('startMigration') }}
@@ -176,7 +176,7 @@ export default {
                 })
                 await this.handleEtlCall({
                     id: this.activeEtlTask.id,
-                    stageIdx: this.ETL_STAGE_INDEX.DATA_MIGR,
+                    tables: this.getMigrationPrepareScript,
                 })
             }
         },

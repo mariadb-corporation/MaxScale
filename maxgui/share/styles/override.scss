@@ -175,6 +175,12 @@
         border-radius: 0 !important;
         margin-top: 0px !important;
     }
+    &-with-shadow-no-border {
+        margin-top: 0px;
+        border: none !important;
+        box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
+        border-radius: 4px !important;
+    }
 
     .v-list {
         @extend .v-list--mariadb;

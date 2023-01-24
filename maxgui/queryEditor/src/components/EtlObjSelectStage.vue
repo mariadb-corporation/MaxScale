@@ -124,7 +124,7 @@ export default {
             src_schema_tree: state => state.etlMem.src_schema_tree,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            migration_objs: state => state.etlMem.migration_objs,
         }),
         parsedObjs() {
             return this.selectedObjs.reduce(
@@ -223,10 +223,7 @@ export default {
                     obj.active_stage_index = obj.active_stage_index + 1
                 },
             })
-            await this.handleEtlCall({
-                id: this.activeEtlTask.id,
-                stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
-            })
+            await this.handleEtlCall({ id: this.activeEtlTask.id, tables: this.migration_objs })
         },
     },
 }

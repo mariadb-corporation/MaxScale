@@ -2,28 +2,60 @@
     <etl-stage-ctr>
         <template v-slot:header>
             <div class="etl-migration-script-stage__header">
-                <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                    {{ $mxs_t('migrationProgress') }}
-                </h3>
+                <div class="d-flex align-center">
+                    <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                        {{ $mxs_t('migrationProgress') }}
+                    </h3>
+
+                    <etl-task-manage
+                        :id="activeEtlTask.id"
+                        v-model="isMenuOpened"
+                        :types="actionTypes"
+                        content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+                        @on-restart="onRestart"
+                    >
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn
+                                small
+                                height="30"
+                                color="primary"
+                                class="ml-4 font-weight-medium px-4 text-capitalize"
+                                rounded
+                                depressed
+                                outlined
+                                v-bind="attrs"
+                                v-on="on"
+                            >
+                                {{ $mxs_t('manage') }}
+
+                                <v-icon
+                                    :class="[isMenuOpened ? 'rotate-up' : 'rotate-down']"
+                                    size="14"
+                                    class="mr-0 ml-1"
+                                    left
+                                >
+                                    $vuetify.icons.mxs_arrowDown
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                    </etl-task-manage>
+                </div>
                 <div class="mt-4 d-flex align-center" :style="{ height: '30px' }">
                     <etl-status-icon :status="activeEtlTask.status" :isRunning="isRunning" />
-                    <span class="mxs-color-helper text-navigation">
+                    <span
+                        v-if="
+                            activeEtlTask.status === ETL_STATUS.ERROR &&
+                                getMigrationStage === ETL_API_STAGES.CREATE
+                        "
+                        class="ml-1 mxs-color-helper text-navigation"
+                    >
+                        {{ $mxs_t(`errors.etl_create_stage`) }}
+                    </span>
+
+                    <span v-else class="mxs-color-helper text-navigation">
                         {{ $mxs_t(activeEtlTask.status.toLowerCase()) }}
                         <span v-if="isRunning">...</span>
                     </span>
-                    <v-btn
-                        v-if="isRunning"
-                        small
-                        height="30"
-                        color="primary"
-                        class="ml-4 font-weight-medium px-4 text-capitalize"
-                        rounded
-                        depressed
-                        outlined
-                        @click="cancel"
-                    >
-                        {{ $mxs_t('cancel') }}
-                    </v-btn>
                 </div>
             </div>
         </template>
@@ -82,6 +114,7 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 import EtlTblScript from '@queryEditorSrc/components/EtlTblScript.vue'
 import EtlStatusIcon from '@queryEditorSrc/components/EtlStatusIcon.vue'
+import EtlTaskManage from '@queryEditorSrc/components/EtlTaskManage.vue'
 import { mapActions, mapState, mapGetters } from 'vuex'
 
 export default {
@@ -90,19 +123,27 @@ export default {
         EtlStageCtr,
         EtlTblScript,
         EtlStatusIcon,
+        EtlTaskManage,
     },
     data() {
         return {
             stagingMigrationScript: [],
             activeItem: null,
+            isMenuOpened: false,
         }
     },
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
+            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
+            are_conns_alive: state => state.etlMem.are_conns_alive,
         }),
-        ...mapGetters({ getMigrationResTable: 'etlMem/getMigrationResTable' }),
+        ...mapGetters({
+            getMigrationResTable: 'etlMem/getMigrationResTable',
+            getMigrationStage: 'etlMem/getMigrationStage',
+        }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
@@ -124,6 +165,10 @@ export default {
         isActive() {
             return this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
         },
+        actionTypes() {
+            const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
+            return [CANCEL, DELETE, DISCONNECT, RESTART]
+        },
     },
     watch: {
         queryId: {
@@ -140,6 +185,7 @@ export default {
         ...mapActions({
             getEtlCallRes: 'etlMem/getEtlCallRes',
             validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
+            handleEtlCall: 'etlMem/handleEtlCall',
         }),
         async cancel() {
             await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
@@ -168,6 +214,15 @@ export default {
                 if (isDesc) return colB < colA ? -1 : 1
                 return colA < colB ? -1 : 1
             })
+        },
+        async onRestart(id) {
+            /**
+             * TODO: Show a dialog with an option for preparing script again. e.g. The users
+             * can change `create_mode`
+             */
+            await this.validateActiveEtlTaskConns()
+            if (this.are_conns_alive)
+                await this.handleEtlCall({ id, tables: this.stagingMigrationScript })
         },
     },
 }

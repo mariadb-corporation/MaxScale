@@ -47,7 +47,7 @@
                 <etl-task-manage
                     :id="item.id"
                     :types="actionTypes"
-                    content-class="v-menu--mariadb v-menu--mariadb-full-border"
+                    content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
                 >
                     <template v-slot:activator="{ on, attrs }">
                         <v-btn icon v-bind="attrs" v-on="on">

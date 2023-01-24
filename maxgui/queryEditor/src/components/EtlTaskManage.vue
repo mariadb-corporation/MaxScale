@@ -34,9 +34,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+
+/**
+ * Emit:
+ * @on-restart: string : etl task id
+ */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-task-manage',
@@ -50,6 +55,7 @@ export default {
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
+        ...mapGetters({ hasErrAtCreation: 'etlMem/hasErrAtCreation' }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
                 const value = this.ETL_ACTIONS[key]
@@ -74,7 +80,7 @@ export default {
          */
         actions() {
             const types = Object.values(this.actionMap).filter(o => this.types.includes(o.type))
-            const { CANCEL, DELETE, DISCONNECT } = this.ETL_ACTIONS
+            const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
             const status = this.task.status
             const { RUNNING } = this.ETL_STATUS
             return types.map(o => {
@@ -87,7 +93,13 @@ export default {
                         if (status === RUNNING) disabled = true
                         break
                     case DISCONNECT:
-                        disabled = EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+                        disabled =
+                            status === RUNNING ||
+                            EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+                        break
+                    case RESTART:
+                        // hasErrAtCreation works for active etl task only
+                        disabled = status === RUNNING || !this.hasErrAtCreation
                         break
                 }
                 return { ...o, disabled }
@@ -109,7 +121,7 @@ export default {
          * @param {Object} param.task - task
          */
         async actionHandler(action) {
-            const { CANCEL, CREATE, DELETE, DISCONNECT, VIEW } = this.ETL_ACTIONS
+            const { CANCEL, CREATE, DELETE, DISCONNECT, VIEW, RESTART } = this.ETL_ACTIONS
             switch (action.type) {
                 case CANCEL:
                     await EtlTask.dispatch('cancelEtlTask', this.task.id)
@@ -126,6 +138,9 @@ export default {
                     break
                 case VIEW:
                     EtlTask.dispatch('viewEtlTask', this.task)
+                    break
+                case RESTART:
+                    this.$emit('on-restart', this.task.id)
                     break
             }
         },

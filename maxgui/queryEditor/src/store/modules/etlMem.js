@@ -197,18 +197,18 @@ export default {
         },
         /**
          * @param {String} param.id - etl task id
-         * @param {Number} param.stageIdx - Index of ETL stage. Either MIGR_SCRIPT or DATA_MIGR stage index
+         * @param {Array} param.tables - tables for preparing etl or start etl
          */
-        async handleEtlCall({ state, rootState, getters }, { id, stageIdx }) {
+        async handleEtlCall({ rootState }, { id, tables }) {
             const { $helpers, $typy, $mxs_t } = this.vue
 
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
+            const task = EtlTask.find(id)
 
             let logName,
                 apiAction,
                 status,
-                tables,
                 timestamp = new Date().valueOf()
 
             const {
@@ -216,19 +216,17 @@ export default {
                 ETL_STATUS: { RUNNING, INITIALIZING },
             } = rootState.mxsWorkspace.config
 
-            switch (stageIdx) {
+            switch (task.active_stage_index) {
                 case MIGR_SCRIPT: {
                     logName = $mxs_t('info.preparingMigrationScript')
                     apiAction = prepare
                     status = INITIALIZING
-                    tables = state.migration_objs
                     break
                 }
                 case DATA_MIGR: {
                     logName = $mxs_t('info.startingMigration')
                     apiAction = start
                     status = RUNNING
-                    tables = getters.getMigrationPrepareScript
                     break
                 }
             }
@@ -282,6 +280,15 @@ export default {
         getMigrationResTable: state => {
             const { tables = [] } = state.etl_res || {}
             return tables
+        },
+        getMigrationStage: state => {
+            const { stage = ' []' } = state.etl_res || {}
+            return stage
+        },
+        hasErrAtCreation: (state, getters, rootState) => {
+            const { CREATE } = rootState.mxsWorkspace.config.ETL_API_STAGES
+            const { stage = '' } = state.etl_res || {}
+            return stage === CREATE
         },
     },
 }
