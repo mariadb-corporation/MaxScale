@@ -31,9 +31,9 @@
             <etl-migration-tbl
                 :data="getMigrationResTable"
                 :headers="tableHeaders"
-                :stagingMigrationObjs.sync="stagingMigrationObjs"
                 :custom-sort="customSort"
                 @get-activeRow="activeItem = $event"
+                @get-staging-data="stagingMigrationScript = $event"
             >
                 <template v-slot:[`item.obj`]="{ item }">
                     {{ customCol(item, 'obj') }}
@@ -93,7 +93,7 @@ export default {
     },
     data() {
         return {
-            stagingMigrationObjs: [],
+            stagingMigrationScript: [],
             activeItem: null,
         }
     },

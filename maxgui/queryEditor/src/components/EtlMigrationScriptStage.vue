@@ -30,7 +30,7 @@
                     v-else
                     :data="getMigrationPrepareScript"
                     :headers="tableHeaders"
-                    :stagingMigrationObjs.sync="stagingMigrationObjs"
+                    @get-staging-data="stagingScript = $event"
                 />
             </template>
         </template>
@@ -112,7 +112,7 @@ export default {
     data() {
         return {
             isConfirmed: false,
-            stagingMigrationObjs: [],
+            stagingScript: [],
         }
     },
     computed: {
@@ -166,7 +166,7 @@ export default {
         }),
         async next() {
             await this.validateActiveEtlTaskConns()
-            this.SET_ETL_PREPARE_RES({ ...this.etl_prepare_res, tables: this.stagingMigrationObjs })
+            this.SET_ETL_PREPARE_RES({ ...this.etl_prepare_res, tables: this.stagingScript })
             if (this.are_conns_alive) {
                 EtlTask.update({
                     where: this.activeEtlTask.id,

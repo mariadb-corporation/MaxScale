@@ -53,6 +53,7 @@
 /**
  * Emit:
  * @get-activeRow: object
+ * @get-staging-data: array
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
@@ -64,22 +65,19 @@ export default {
     props: {
         data: { type: Array, required: true },
         headers: { type: Array, required: true },
-        stagingMigrationObjs: { type: Array, required: true }, //sync
     },
     data() {
         return {
             tableMaxHeight: 450,
             selectItems: [],
-            stagingScriptMap: null,
-            activeRow: null,
-            tableRows: [],
+            stagingDataMap: null,
         }
     },
     computed: {
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
-        generatedScriptMap() {
+        defDataMap() {
             return this.data.reduce((map, obj) => {
                 const id = this.$helpers.uuidv1()
                 map[id] = { ...obj, id }
@@ -87,9 +85,8 @@ export default {
             }, {})
         },
         hasRowChanged() {
-            const activeRowId = this.$typy(this.activeRow, 'id').safeString
-            if (activeRowId) {
-                const defRow = this.$typy(this.generatedScriptMap, `[${activeRowId}]`).safeObject
+            if (this.activeRowId) {
+                const defRow = this.$typy(this.defDataMap, `[${this.activeRowId}]`).safeObject
                 return !this.$helpers.lodash.isEqual(defRow, this.activeRow)
             }
             return false
@@ -97,47 +94,59 @@ export default {
         isLoading() {
             return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
         },
+        activeRowId() {
+            return this.$typy(this.activeRow, 'id').safeString
+        },
+        activeRow: {
+            get() {
+                return this.$typy(this.selectItems, '[0]').safeObject
+            },
+            set(v) {
+                if (v) this.selectItems = [v]
+            },
+        },
+        tableRows() {
+            if (this.stagingDataMap) return Object.values(this.stagingDataMap)
+            return []
+        },
+        stagingData() {
+            return this.$helpers.lodash.cloneDeep(this.tableRows).map(o => {
+                // Remove id as it is generated for UI keying purpose
+                delete o.id
+                return o
+            })
+        },
+        firstErrObj() {
+            return this.tableRows.find(o => o.error)
+        },
     },
     watch: {
-        stagingScriptMap: {
+        stagingDataMap: {
             deep: true,
             immediate: true,
             handler() {
-                // Remove id as id is generated for UI keying purpose
-                const stagingMigrationObjs = this.$helpers.lodash
-                    .cloneDeep(this.tableRows)
-                    .map(o => {
-                        delete o.id
-                        return o
-                    })
-                this.$emit('update:stagingMigrationObjs', stagingMigrationObjs)
+                this.$emit('get-staging-data', this.stagingData)
             },
         },
-        selectItems: {
+        // Should be triggered once unless the default data has changed.
+        defDataMap: {
             deep: true,
             immediate: true,
             handler(v) {
-                if (v.length) this.activeRow = v[0]
-            },
-        },
-        generatedScriptMap: {
-            deep: true,
-            immediate: true,
-            handler(v) {
-                this.stagingScriptMap = this.$helpers.lodash.cloneDeep(v)
-                if (this.stagingScriptMap) {
-                    this.tableRows = Object.values(this.stagingScriptMap)
-                    // Select the first row as active whenever the generated script map has its value changed.
-                    this.selectItems = [this.tableRows[0]]
-                }
+                this.stagingDataMap = this.$helpers.lodash.cloneDeep(v)
+                // Select the first row as active or the first object has error field
+                if (this.tableRows.length)
+                    this.selectItems = [this.firstErrObj || this.tableRows[0]]
             },
         },
         activeRow: {
             deep: true,
             immediate: true,
             handler(v) {
-                this.$emit('get-activeRow', v)
-                if (v) this.stagingScriptMap[v.id] = v
+                if (v) {
+                    this.stagingDataMap[v.id] = v
+                    this.$emit('get-activeRow', v)
+                }
             },
         },
     },
@@ -151,10 +160,7 @@ export default {
         },
         // Discard changes on the active row
         discard() {
-            const rowId = this.activeRow.id
-            this.stagingScriptMap[rowId] = this.$helpers.lodash.cloneDeep(
-                this.generatedScriptMap[rowId]
-            )
+            this.activeRow = this.$helpers.lodash.cloneDeep(this.defDataMap[this.activeRowId])
         },
     },
 }
