@@ -185,6 +185,47 @@ std::array time2_values
     "NULL",
 };
 
+std::array serial_types
+{
+    "SERIAL",   // This is just an alias for a BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
+};
+
+std::array serial_values
+{
+    "1",
+    "2",
+    "3",
+    "4",
+};
+
+std::array json_types
+{
+    "JSON",
+};
+
+std::array json_values
+{
+    "'{\"hello\": \"world\"}'",
+    "'{\"one\": 1}'",
+    "'{\"array\": []}'",
+    "NULL",
+};
+
+std::array inet6_types
+{
+    "INET6",
+};
+
+std::array inet6_values
+{
+    "'2001:db8::ff00:42:8329'",
+    "'2001:0db8:0000:0000:0000:ff00:0042:8329'",
+    "'::ffff:192.0.2.128'",
+    "'::'",
+    "'::1'",
+    "NULL",
+};
+
 const std::string_view DATABASE_NAME = "test";
 const std::string_view FIELD_NAME = "a";
 
@@ -263,6 +304,9 @@ std::vector<sql_generation::SQLType> init()
     add_test(time_types, time_values);
     add_test(datetime2_types, datetime2_values);
     add_test(timestamp2_types, timestamp2_values);
+    add_test(serial_types, serial_values);
+    add_test(json_types, json_values);
+    add_test(inet6_types, inet6_values);
 
     return rval;
 }

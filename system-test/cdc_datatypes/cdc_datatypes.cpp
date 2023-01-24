@@ -28,7 +28,16 @@ bool run_test(TestConnections& test)
     test.repl->close_connections();
     test.maxscale->start();
 
-    const auto& test_set = sql_generation::mariadb_types();
+    std::set<std::string> excluded = {"JSON", "INET6"};
+    std::vector<sql_generation::SQLType> test_set;
+
+    for (const auto& t : sql_generation::mariadb_types())
+    {
+        if (excluded.count(t.type_name) == 0)
+        {
+            test_set.push_back(t);
+        }
+    }
 
     test.tprintf("Inserting data");
     for (const auto& t : test_set)
