@@ -241,6 +241,14 @@ public:
     ODBC(ODBC&&);
     ODBC& operator=(ODBC&&);
 
+    // Some constants for the MariaDB ODBC driver, needed for the OPTION value
+    enum MariaDBOpts : uint64_t
+    {
+        NO_CACHE    = 1048576,
+        FORWARDONLY = 2097152,
+        MULTI_STMT  = 67108864
+    };
+
     /**
      * Get available ODBC drivers
      *

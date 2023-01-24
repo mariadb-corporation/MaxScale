@@ -167,6 +167,16 @@ std::string process_connection_string(std::string str, int64_t timeout)
     bool is_maria = false;
     bool no_option = true;
     bool no_timeout = true;
+    uint64_t option = 0;
+
+    // The MariaDB ODBC connector reads the whole resultset into memory by default. This is obviously very
+    // bad if we read a large result. This was added into C/ODBC 3.1.17 which means we still risk running
+    // out of memory if an old version is used.
+    uint64_t extra_flags = mxq::ODBC::FORWARDONLY | mxq::ODBC::NO_CACHE;
+
+    // The MariaDB ODBC connector also requires this value to make multi-statment SQL work. Otherwise the
+    // server will just return syntax errors for otherwise valid SQL.
+    extra_flags |= mxq::ODBC::MULTI_STMT;
 
     for (auto tok : mxb::strtok(str, ";"))
     {
@@ -186,7 +196,13 @@ std::string process_connection_string(std::string str, int64_t timeout)
         }
         else if (mxb::sv_case_eq(key, "option"))
         {
-            no_option = false;
+            option = strtoul(std::string(value).c_str(), nullptr, 10);
+
+            if ((option & extra_flags) == extra_flags)
+            {
+                // All the required flags are in the OPTIONS value
+                no_option = false;
+            }
         }
 
         else if (mxb::sv_case_eq(key, "conn_timeout"))
@@ -199,9 +215,7 @@ std::string process_connection_string(std::string str, int64_t timeout)
     {
         if (no_option)
         {
-            // MariaDB requires this value to make multi-statment SQL work. Otherwise the server will
-            // just return syntax errors for otherwise valid SQL.
-            str += ";OPTION=67108864";
+            str += ";OPTION=" + std::to_string(option | extra_flags);
         }
 
         if (no_timeout && timeout > 0)
@@ -936,12 +950,17 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     }
     else
     {
-        mxq::ODBC odbc(process_connection_string(config.odbc_string, config.timeout),
-                       std::chrono::seconds{config.timeout});
+        std::string dsn = process_connection_string(config.odbc_string, config.timeout);
+        mxq::ODBC odbc(dsn, std::chrono::seconds{config.timeout});
 
         if (odbc.connect())
         {
             elem = std::make_unique<HttpSql::ConnectionManager::ODBCConnection>(move(odbc), config);
+
+            // The return value from process_connection_string() can be different from the original connection
+            // string. The options must propagate to any cloned connections which means the configuration must
+            // be updated to contain the resulting connection string, not the original one.
+            elem->config.odbc_string = dsn;
         }
         else
         {

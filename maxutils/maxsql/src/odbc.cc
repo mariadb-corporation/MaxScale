@@ -660,6 +660,8 @@ bool ODBCImp::connect()
         else
         {
             SQLSetStmtAttr(m_stmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)m_timeout.count(), 0);
+            SQLSetStmtAttr(m_stmt, SQL_ATTR_CURSOR_TYPE, (SQLPOINTER)SQL_CURSOR_FORWARD_ONLY, 0);
+            SQLSetStmtAttr(m_stmt, SQL_ATTR_CONCURRENCY, (SQLPOINTER)SQL_CONCUR_READ_ONLY, 0);
         }
     }
 

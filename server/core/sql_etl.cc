@@ -546,11 +546,15 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
         ss << extra;
     }
 
+    uint64_t option = mxq::ODBC::MULTI_STMT // Enables multi-statment SQL.
+        | mxq::ODBC::FORWARDONLY            // Forces a forward-only cursor (fixes some legacy problems)
+        | mxq::ODBC::NO_CACHE;              // Streams the resultset instead of reading it into memory
+
     ss << "SERVER=" << dest_cc.host << ";"
        << "PORT=" << dest_cc.port << ";"
        << "UID=" << dest_cc.user << ";"
        << "PWD={" << dest_cc.password << "};"
-       << "OPTION=67108864;"    // Enables multi-statment SQL.
+       << "OPTION=" << option << ";"
        << "CONN_TIMEOUT=" << dest_cc.timeout << ";";
 
     ss << maybe_add("DATABASE", dest_cc.db);
