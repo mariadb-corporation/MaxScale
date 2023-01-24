@@ -184,6 +184,32 @@ void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::str
     }
 }
 
+void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    // We'll need a table so that the coordinator thread can lock it.
+    const char* TABLE_DEF = "CREATE TABLE test.massive_result(id VARCHAR(1024) PRIMARY KEY) ENGINE=MEMORY";
+
+    auto source = test.repl->get_connection(0);
+    test.expect(source.connect() && source.query(TABLE_DEF),
+                "Failed to create dummy table: %s", source.error());
+
+    auto [ok, res] = etl.run_etl(
+        dsn, "server4", "mariadb", EtlTest::Op::START, 150s,
+        {EtlTable {
+             "test", "massive_result",
+             "",    // If left empty, the ETL will read the CREATE TABLE statement from the server
+             "SELECT REPEAT('a', 1000) FROM test.seq_0_to_5000000",
+             "REPLACE INTO test.massive_result(id) VALUES (?)"
+         }});
+
+    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
+
+    auto dest = test.repl->get_connection(3);
+    dest.connect();
+    source.query("DROP TABLE test.masive_result");
+    dest.query("DROP TABLE test.masive_result");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -226,6 +252,12 @@ int main(int argc, char** argv)
     {
         test.log_printf("test_parallel_datatypes");
         test_parallel_datatypes(test, etl, dsn);
+    }
+
+    if (test.ok())
+    {
+        test.log_printf("massive_result");
+        massive_result(test, etl, dsn);
     }
 
     return test.global_result;

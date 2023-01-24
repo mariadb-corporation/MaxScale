@@ -230,6 +230,7 @@ public:
             auto self = response.at("links/self").get_string();
             self += "?token=" + source_token;
             auto start = mxb::Clock::now();
+            auto sleep_time = 100ms;
 
             while (res.code == 202)
             {
@@ -242,7 +243,8 @@ public:
                 {
                     if (mxb::Clock::now() - start < std::chrono::seconds(timeout))
                     {
-                        std::this_thread::sleep_for(100ms);
+                        std::this_thread::sleep_for(sleep_time);
+                        sleep_time = std::min(sleep_time * 2, std::chrono::milliseconds {5000});
                     }
                     else
                     {
