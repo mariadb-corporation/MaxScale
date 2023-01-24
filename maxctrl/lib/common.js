@@ -185,10 +185,20 @@ function rawCollectionAsTable(arr, fields) {
     header.push(i.name);
   });
 
+  var mapper = function (val, index) {
+    if (val !== null && val !== undefined) {
+      var formatter = fields[index].formatter;
+      return formatter ? formatter(val) : val;
+    }
+    else {
+      return "";
+    }
+  }
+
   var table = getTable(header);
 
   arr.forEach((row) => {
-    table.push(row.map((val) => (val !== null && val !== undefined ? val : "")));
+    table.push(row.map(mapper));
   });
   return tableToString(table);
 }
@@ -605,6 +615,11 @@ function setTlsCerts(args) {
   }
 }
 
+// Helper for expressing a date according to current locale
+function dateToLocaleString(val) {
+  return val ? new Date(val).toLocaleString() : "";
+}
+
 module.exports = {
   _,
   helpMsg,
@@ -629,4 +644,5 @@ module.exports = {
   error,
   warning,
   fieldDescriptions,
+  dateToLocaleString
 };
