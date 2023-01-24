@@ -49,6 +49,13 @@ public:
         START,
     };
 
+    enum class Mode
+    {
+        NORMAL,
+        REPLACE,
+        IGNORE,
+    };
+
     EtlTest(TestConnections& test)
         : m_test(test)
     {
@@ -147,7 +154,9 @@ public:
                                        std::string type,
                                        Op operation,
                                        std::chrono::seconds timeout,
-                                       std::vector<EtlTable> tables)
+                                       std::vector<EtlTable> tables,
+                                       Mode mode = Mode::NORMAL,
+                                       int iterations = 1)
     {
         auto source = connect({
             {"target", "odbc"},
@@ -173,6 +182,15 @@ public:
         mxb::Json js(mxb::Json::Type::OBJECT);
         js.set_string("type", type);
         js.set_string("target", dest_id);
+
+        if (mode == Mode::REPLACE)
+        {
+            js.set_string("create_mode", "replace");
+        }
+        else if (mode == Mode::IGNORE)
+        {
+            js.set_string("create_mode", "ignore");
+        }
 
         for (const auto& t : tables)
         {
@@ -202,43 +220,47 @@ public:
                                 operation == Op::PREPARE ? "prepare" : "start",
                                 "?token=", source_token,
                                 "&target_token=", dest_token);
-
-        auto res = post(etl_url, js);
         bool ok = false;
         mxb::Json response;
-        response.load_string(res.body);
-        auto self = response.at("links/self").get_string();
-        self += "?token=" + source_token;
-        auto start = mxb::Clock::now();
 
-        while (res.code == 202)
+        for (int i = 0; i < iterations; i++)
         {
-            // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
-            res = mxb::http::get(self, "admin", "mariadb");
-            response.reset();
+            auto res = post(etl_url, js);
             response.load_string(res.body);
+            auto self = response.at("links/self").get_string();
+            self += "?token=" + source_token;
+            auto start = mxb::Clock::now();
 
-            if (res.code == 202)
+            while (res.code == 202)
             {
-                if (mxb::Clock::now() - start < timeout)
+                // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
+                res = mxb::http::get(self, "admin", "mariadb");
+                response.reset();
+                response.load_string(res.body);
+
+                if (res.code == 202)
                 {
-                    std::this_thread::sleep_for(100ms);
-                }
-                else
-                {
-                    m_test.add_failure("ETL timed out");
+                    if (mxb::Clock::now() - start < std::chrono::seconds(timeout))
+                    {
+                        std::this_thread::sleep_for(100ms);
+                    }
+                    else
+                    {
+                        m_test.add_failure("ETL timed out");
+                    }
                 }
             }
-        }
 
-        if (res.code == 201)
-        {
-            response.at("data/attributes/results").try_get_bool("ok", &ok);
-        }
-        else
-        {
-            m_test.tprintf("ETL failed:\n%s", res.body.c_str());
-            response.reset();
+            if (res.code == 201)
+            {
+                response.at("data/attributes/results").try_get_bool("ok", &ok);
+            }
+            else
+            {
+                m_test.tprintf("ETL failed:\n%s", res.body.c_str());
+                response.reset();
+                break;
+            }
         }
 
         del(mxb::cat("sql/", source_id, "?token=", source_token));

@@ -98,6 +98,28 @@ void invalid_sql(TestConnections& test, EtlTest& etl, const std::string& dsn)
     source.query("DROP TABLE test.bad_sql");
 }
 
+void reuse_connections(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto source = test.repl->get_connection(0);
+    test.expect(source.connect()
+                && source.query("CREATE TABLE test.reuse_connections(id INT)")
+                && source.query("INSERT INTO test.reuse_connections SELECT seq FROM seq_0_to_100"),
+                "Failed to create test data");
+
+    auto [ok, res] = etl.run_etl(dsn, "server4", "mariadb", EtlTest::Op::START, 15s,
+                                 {EtlTable {"test", "reuse_connections"}},
+                                 EtlTest::Mode::REPLACE, 50);
+
+    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
+    etl.compare_results(dsn, 3, "SELECT COUNT* FROM test.reuse_connections");
+
+    source.query("DROP TABLE test.etl_sanity_check");
+
+    auto dest = test.repl->get_connection(3);
+    dest.connect();
+    dest.query("DROP TABLE test.etl_sanity_check");
+}
+
 void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
     auto source = test.repl->get_connection(0);
@@ -186,6 +208,12 @@ int main(int argc, char** argv)
     {
         test.log_printf("invalid_sql");
         invalid_sql(test, etl, dsn);
+    }
+
+    if (test.ok())
+    {
+        test.log_printf("reuse_connections");
+        reuse_connections(test, etl, dsn);
     }
 
     if (test.ok())
