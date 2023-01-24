@@ -21,7 +21,9 @@ export default {
     state: {
         src_schema_tree: [],
         are_conns_alive: false,
-        migration_objs: [], // store migration objects for prepare, start
+        migration_objs: [], // store migration objects for /etl/prepare
+        etl_prepare_res: {}, // store etl/prepare results
+        etl_res: {}, // etl/start results
     },
     mutations: {
         SET_SRC_SCHEMA_TREE(state, payload) {
@@ -32,6 +34,12 @@ export default {
         },
         SET_MIGRATION_OBJS(state, payload) {
             state.migration_objs = payload
+        },
+        SET_ETL_PREPARE_RES(state, payload) {
+            state.etl_prepare_res = payload
+        },
+        SET_ETL_RES(state, payload) {
+            state.etl_res = payload
         },
     },
     actions: {
@@ -134,14 +142,13 @@ export default {
                     const timestamp = new Date().valueOf()
                     if (results) {
                         const ok = $typy(results, 'ok').safeBoolean
-                        commit('SET_MIGRATION_OBJS', results.tables)
 
                         const {
                             ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
                             ETL_STATUS: { COMPLETE, ERROR },
                         } = rootState.mxsWorkspace.config
 
-                        let status, logMsg
+                        let status, logMsg, mutationName
                         switch (task.active_stage_index) {
                             case MIGR_SCRIPT: {
                                 logMsg = $mxs_t(
@@ -149,7 +156,8 @@ export default {
                                         ? 'info.prepareMigrationScriptSuccessfully'
                                         : 'errors.failedToPrepareMigrationScript'
                                 )
-
+                                mutationName = 'SET_ETL_PREPARE_RES'
+                                commit('SET_ETL_RES', {})
                                 break
                             }
                             case DATA_MIGR: {
@@ -157,14 +165,16 @@ export default {
                                     ok ? 'info.migrateSuccessfully' : 'errors.migrateFailed'
                                 )
                                 status = ok ? COMPLETE : ERROR
+                                mutationName = 'SET_ETL_RES'
                                 break
                             }
                         }
 
                         const error = $typy(results, 'error').safeString
                         if (error) logMsg += ` \n${error}`
-                        EtlTask.dispatch('pushLog', { id, log: { timestamp, name: `${logMsg}` } })
+                        EtlTask.dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
 
+                        commit(mutationName, results)
                         commit(
                             'mxsApp/SET_SNACK_BAR_MESSAGE',
                             { text: [logMsg], type: ok ? 'success' : 'error' },
@@ -189,29 +199,36 @@ export default {
          * @param {String} param.id - etl task id
          * @param {Number} param.stageIdx - Index of ETL stage. Either MIGR_SCRIPT or DATA_MIGR stage index
          */
-        async handleEtlCall({ state, rootState }, { id, stageIdx }) {
+        async handleEtlCall({ state, rootState, getters }, { id, stageIdx }) {
             const { $helpers, $typy, $mxs_t } = this.vue
 
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
 
-            let logName, apiAction, status
+            let logName,
+                apiAction,
+                status,
+                tables,
+                timestamp = new Date().valueOf()
 
             const {
                 ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                ETL_STATUS: { RUNNING },
+                ETL_STATUS: { RUNNING, INITIALIZING },
             } = rootState.mxsWorkspace.config
 
             switch (stageIdx) {
                 case MIGR_SCRIPT: {
                     logName = $mxs_t('info.preparingMigrationScript')
                     apiAction = prepare
+                    status = INITIALIZING
+                    tables = state.migration_objs
                     break
                 }
                 case DATA_MIGR: {
                     logName = $mxs_t('info.startingMigration')
                     apiAction = start
                     status = RUNNING
+                    tables = getters.getMigrationPrepareScript
                     break
                 }
             }
@@ -219,7 +236,8 @@ export default {
                 where: id,
                 data(obj) {
                     obj.meta.is_loading = true
-                    if (status) obj.status = status
+                    obj.status = status
+                    delete obj.meta.async_query_id
                 },
             })
             const [e, res] = await $helpers.to(
@@ -228,7 +246,7 @@ export default {
                     body: {
                         target: destConn.id,
                         type: srcConn.meta.src_type,
-                        tables: state.migration_objs,
+                        tables,
                     },
                 })
             )
@@ -244,8 +262,8 @@ export default {
                 EtlTask.dispatch('pushLog', {
                     id: id,
                     log: {
-                        timestamp: new Date().valueOf(),
-                        name: logName,
+                        timestamp,
+                        name: `-------${logName}-------\n`,
                     },
                 })
             }
@@ -256,6 +274,14 @@ export default {
             const { NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
             const col = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             return `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
+        },
+        getMigrationPrepareScript: state => {
+            const { tables = [] } = state.etl_prepare_res || {}
+            return tables
+        },
+        getMigrationResTable: state => {
+            const { tables = [] } = state.etl_res || {}
+            return tables
         },
     },
 }

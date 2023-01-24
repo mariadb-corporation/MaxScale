@@ -77,7 +77,7 @@
                 class="font-weight-medium px-7 text-capitalize"
                 rounded
                 depressed
-                :disabled="Boolean(errMsg)"
+                :disabled="!Boolean(tables.length)"
                 @click="next"
             >
                 {{ $mxs_t('prepareMigrationScript') }}
@@ -132,11 +132,14 @@ export default {
                     const schema = queryHelper.getSchemaName(o)
                     // TBL_G nodes will be included in selectedObjs if those have no tables
                     if (o.type === this.NODE_GROUP_TYPES.TBL_G) obj.emptySchemas.push(schema)
-                    else obj.etlPrepareTables.push({ schema, table: o.name })
+                    else obj.tables.push({ schema, table: o.name })
                     return obj
                 },
-                { etlPrepareTables: [], emptySchemas: [] }
+                { tables: [], emptySchemas: [] }
             )
+        },
+        tables() {
+            return this.parsedObjs.tables
         },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
@@ -147,12 +150,13 @@ export default {
             deep: true,
             handler(v) {
                 if (v.length) {
-                    const { etlPrepareTables, emptySchemas } = this.parsedObjs
-                    if (etlPrepareTables.length) {
+                    if (this.tables.length) {
                         this.errMsg = ''
-                        if (emptySchemas.length) this.infoMsg = this.$mxs_t('info.ignoreSchemas')
+                        if (this.parsedObjs.emptySchemas.length)
+                            this.infoMsg = this.$mxs_t('info.ignoreSchemas')
                     } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
+                this.SET_MIGRATION_OBJS(this.tables)
             },
         },
     },
@@ -213,24 +217,16 @@ export default {
         },
 
         async next() {
-            await this.validateActiveEtlTaskConns()
-            const { etlPrepareTables = {} } = this.parsedObjs
-            if (!etlPrepareTables.length) this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
-            else {
-                this.SET_MIGRATION_OBJS(etlPrepareTables)
-                if (this.are_conns_alive) {
-                    await this.handleEtlCall({
-                        id: this.activeEtlTask.id,
-                        stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
-                    })
-                    EtlTask.update({
-                        where: this.activeEtlTask.id,
-                        data(obj) {
-                            obj.active_stage_index = obj.active_stage_index + 1
-                        },
-                    })
-                }
-            }
+            EtlTask.update({
+                where: this.activeEtlTask.id,
+                data(obj) {
+                    obj.active_stage_index = obj.active_stage_index + 1
+                },
+            })
+            await this.handleEtlCall({
+                id: this.activeEtlTask.id,
+                stageIdx: this.ETL_STAGE_INDEX.MIGR_SCRIPT,
+            })
         },
     },
 }

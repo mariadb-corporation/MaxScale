@@ -12,7 +12,7 @@
         </v-tab>
         <v-tabs-items v-model="activeStageIdx" class="fill-height">
             <v-tab-item v-for="(stage, stageIdx) in stages" :key="stageIdx" class="fill-height">
-                <component :is="stage.component" v-if="stageIdx === activeStageIdx" />
+                <component :is="stage.component" v-show="stageIdx === activeStageIdx" />
             </v-tab-item>
         </v-tabs-items>
     </v-tabs>
@@ -37,7 +37,7 @@ import EtlConnsStage from '@queryEditorSrc/components/EtlConnsStage.vue'
 import EtlObjSelectStage from '@queryEditorSrc/components/EtlObjSelectStage.vue'
 import EtlMigrationScriptStage from '@queryEditorSrc/components/EtlMigrationScriptStage.vue'
 import EtlMigrationReportStage from '@queryEditorSrc/components/EtlMigrationReportStage.vue'
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-stages',
@@ -50,15 +50,20 @@ export default {
     },
     computed: {
         ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             are_conns_alive: state => state.etlMem.are_conns_alive,
-            migration_objs: state => state.etlMem.migration_objs,
+        }),
+        ...mapGetters({
+            getMigrationPrepareScript: 'etlMem/getMigrationPrepareScript',
+            getMigrationResTable: 'etlMem/getMigrationResTable',
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
-        hasMigrationScript() {
-            return Boolean(this.migration_objs.length)
+        hasMigrationPrepareScript() {
+            return Boolean(this.getMigrationPrepareScript.length)
+        },
+        hasMigrationRes() {
+            return Boolean(this.getMigrationResTable.length)
         },
         stages() {
             return [
@@ -75,21 +80,20 @@ export default {
                 {
                     name: this.$mxs_t('objSelection'),
                     component: 'etl-obj-select-stage',
-                    isDisabled:
-                        !this.are_conns_alive ||
-                        this.activeEtlTask.status !== this.ETL_STATUS.INITIALIZING,
+                    isDisabled: !this.are_conns_alive,
                 },
                 {
                     name: this.$mxs_t('migrationScript'),
                     component: 'etl-migration-script-stage',
-                    isDisabled: !this.are_conns_alive || !this.hasMigrationScript,
+                    isDisabled:
+                        !this.are_conns_alive ||
+                        !this.hasMigrationPrepareScript ||
+                        this.hasMigrationRes,
                 },
                 {
                     name: this.$mxs_t('progress'),
                     component: 'etl-migration-report-stage',
-                    isDisabled:
-                        !this.are_conns_alive ||
-                        this.activeEtlTask.status !== this.ETL_STATUS.RUNNING,
+                    isDisabled: !this.are_conns_alive || !this.hasMigrationRes,
                 },
             ]
         },

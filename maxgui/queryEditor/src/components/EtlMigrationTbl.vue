@@ -52,49 +52,35 @@
  */
 /**
  * Emit:
- * @get-new-migration-objs: array.
+ * @get-activeRow: object
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlTransformCtr from '@queryEditorSrc/components/EtlTransformCtr.vue'
-import { mapState } from 'vuex'
 
 export default {
     name: 'etl-migration-tbl',
     components: { EtlTransformCtr },
     inheritAttrs: false,
     props: {
+        data: { type: Array, required: true },
         headers: { type: Array, required: true },
         stagingMigrationObjs: { type: Array, required: true }, //sync
-        activeItem: { type: Object }, //sync
     },
     data() {
         return {
             tableMaxHeight: 450,
             selectItems: [],
             stagingScriptMap: null,
-            scopeActiveItem: null,
+            activeRow: null,
             tableRows: [],
         }
     },
     computed: {
-        ...mapState({
-            migration_objs: state => state.etlMem.migration_objs,
-        }),
-        activeRow: {
-            get() {
-                if (this.$typy(this.activeItem).isDefined) return this.activeItem
-                return this.scopeActiveItem
-            },
-            set(v) {
-                if (this.$typy(this.activeItem).isDefined) this.$emit('update:activeItem', v)
-                else this.scopeActiveItem = v
-            },
-        },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
         generatedScriptMap() {
-            return this.migration_objs.reduce((map, obj) => {
+            return this.data.reduce((map, obj) => {
                 const id = this.$helpers.uuidv1()
                 map[id] = { ...obj, id }
                 return map
@@ -148,7 +134,9 @@ export default {
         },
         activeRow: {
             deep: true,
+            immediate: true,
             handler(v) {
+                this.$emit('get-activeRow', v)
                 if (v) this.stagingScriptMap[v.id] = v
             },
         },

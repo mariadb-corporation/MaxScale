@@ -12,6 +12,7 @@
         </template>
         <template v-slot:body>
             <etl-migration-tbl
+                :data="getMigrationPrepareScript"
                 :headers="tableHeaders"
                 :stagingMigrationObjs.sync="stagingMigrationObjs"
             />
@@ -79,7 +80,7 @@
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
-import { mapState, mapActions, mapMutations } from 'vuex'
+import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-migration-script-stage',
@@ -97,7 +98,9 @@ export default {
         ...mapState({
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
             are_conns_alive: state => state.etlMem.are_conns_alive,
+            etl_prepare_res: state => state.etlMem.etl_prepare_res,
         }),
+        ...mapGetters({ getMigrationPrepareScript: 'etlMem/getMigrationPrepareScript' }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
@@ -108,14 +111,26 @@ export default {
                 { text: 'TABLE', value: 'table' },
             ]
         },
+        queryId() {
+            return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
+        },
+        isActive() {
+            return this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.MIGR_SCRIPT
+        },
     },
-    async created() {
-        await this.validateActiveEtlTaskConns()
-        await this.getEtlCallRes(this.activeEtlTask.id)
+    watch: {
+        queryId: {
+            immediate: true,
+            async handler(v) {
+                if (v && this.isActive) {
+                    await this.validateActiveEtlTaskConns()
+                    await this.getEtlCallRes(this.activeEtlTask.id)
+                }
+            },
+        },
     },
-
     methods: {
-        ...mapMutations({ SET_MIGRATION_OBJS: 'etlMem/SET_MIGRATION_OBJS' }),
+        ...mapMutations({ SET_ETL_PREPARE_RES: 'etlMem/SET_ETL_PREPARE_RES' }),
         ...mapActions({
             getEtlCallRes: 'etlMem/getEtlCallRes',
             validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
@@ -123,17 +138,17 @@ export default {
         }),
         async next() {
             await this.validateActiveEtlTaskConns()
-            this.SET_MIGRATION_OBJS(this.stagingMigrationObjs)
+            this.SET_ETL_PREPARE_RES({ ...this.etl_prepare_res, tables: this.stagingMigrationObjs })
             if (this.are_conns_alive) {
-                await this.handleEtlCall({
-                    id: this.activeEtlTask.id,
-                    stageIdx: this.ETL_STAGE_INDEX.DATA_MIGR,
-                })
                 EtlTask.update({
                     where: this.activeEtlTask.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },
+                })
+                await this.handleEtlCall({
+                    id: this.activeEtlTask.id,
+                    stageIdx: this.ETL_STAGE_INDEX.DATA_MIGR,
                 })
             }
         },

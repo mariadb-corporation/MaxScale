@@ -29,10 +29,11 @@
         </template>
         <template v-slot:body>
             <etl-migration-tbl
+                :data="getMigrationResTable"
                 :headers="tableHeaders"
                 :stagingMigrationObjs.sync="stagingMigrationObjs"
                 :custom-sort="customSort"
-                :activeItem.sync="activeItem"
+                @get-activeRow="activeItem = $event"
             >
                 <template v-slot:[`item.obj`]="{ item }">
                     {{ customCol(item, 'obj') }}
@@ -81,7 +82,7 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
 import EtlStatusIcon from '@queryEditorSrc/components/EtlStatusIcon.vue'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-migration-report-stage',
@@ -99,7 +100,9 @@ export default {
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
+        ...mapGetters({ getMigrationResTable: 'etlMem/getMigrationResTable' }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
@@ -115,10 +118,23 @@ export default {
         isRunning() {
             return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
         },
+        queryId() {
+            return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
+        },
+        isActive() {
+            return this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
+        },
     },
-    async created() {
-        await this.validateActiveEtlTaskConns()
-        await this.getEtlCallRes(this.activeEtlTask.id)
+    watch: {
+        queryId: {
+            immediate: true,
+            async handler(v) {
+                if (v && this.isActive) {
+                    await this.validateActiveEtlTaskConns()
+                    await this.getEtlCallRes(this.activeEtlTask.id)
+                }
+            },
+        },
     },
     methods: {
         ...mapActions({
