@@ -42,6 +42,11 @@ public:
      */
     Client(MHD_Connection* connection, const char* url, const char* method);
 
+    /**
+     * @brief The destructor logs to audit log if enabled
+     */
+    ~Client();
+
     // Handle HTTP request
     int handle(const std::string& url, const std::string& method,
                const char* upload_data, size_t* upload_data_size);
@@ -118,6 +123,8 @@ private:
     Headers                m_headers;
     HttpRequest            m_request;
     uint                   m_http_response_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+    maxbase::TimePoint     m_start_time;
+    maxbase::TimePoint     m_end_time;
     WebSocket::Handler     m_ws_handler;
 
     HttpResponse generate_token(const HttpRequest& request);
@@ -140,6 +147,7 @@ private:
     int         queue_delayed_response(const HttpResponse::Callback& cb);
     void        set_http_response_code(uint code);
     uint        get_http_response_code() const;
+    void        log_to_audit();
 
     static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                   const char* extra_in, size_t extra_in_size,

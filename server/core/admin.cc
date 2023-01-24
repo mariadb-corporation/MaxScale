@@ -30,11 +30,13 @@
 #include <maxbase/assert.hh>
 #include <maxbase/filesystem.hh>
 #include <maxbase/http.hh>
+#include <maxbase/csv_writer.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
 
 #include "internal/adminusers.hh"
+#include "internal/defaults.hh"
 #include "internal/resource.hh"
 #include "internal/websocket.hh"
 #include "internal/jwt.hh"
@@ -497,6 +499,20 @@ bool is_auth_endpoint(const HttpRequest& request)
 {
     return request.uri_part_count() == 1 && request.uri_segment(0, 1) == "auth";
 }
+
+std::vector<std::string> audit_log_columns {"Timestamp", "Duration", "User",
+                                            "Host", "URI", "Method",
+                                            "Status", "Response code", "Body"};
+
+maxbase::CsvWriter& get_audit_log()
+{
+    // TODO make path and file_name configurable
+    static maxbase::CsvWriter log{cmake_defaults::DEFAULT_DATADIR,
+                                  "rest_audit",
+                                  audit_log_columns};
+
+    return log;
+}
 }
 
 Client::Client(MHD_Connection* connection, const char* url, const char* method)
@@ -504,7 +520,14 @@ Client::Client(MHD_Connection* connection, const char* url, const char* method)
     , m_state(INIT)
     , m_headers(get_headers(connection))
     , m_request(connection, url, method, nullptr)
+    , m_start_time(maxbase::Clock::now())
 {
+}
+
+Client::~Client()
+{
+    m_end_time = maxbase::Clock::now();
+    log_to_audit();
 }
 
 bool Client::is_basic_endpoint() const
@@ -720,6 +743,62 @@ void Client::set_http_response_code(uint code)
 uint Client::get_http_response_code() const
 {
     return m_http_response_code;
+}
+
+void Client::log_to_audit()
+{
+    // TODO to config: enable audit
+    // TODO to config: exclude (or include) methods. HTTP GET could quickly fill the file.
+    // TODO blank out passwords (maybe only in "create user ...")
+
+    // Since REST calls cannot be very frequent, try to rotate
+    // on every call. This also has the benefit that the log file
+    // can be deleted, it will be recreated on the next write.
+    get_audit_log().rotate();
+
+    std::string status{"Unknown"s};
+    switch (m_state)
+    {
+    case Client::OK:
+        // TODO should all codes in the 200s have status OK
+        if (get_http_response_code() >= 200 && get_http_response_code() < 300)
+        {
+            status = "OK";
+        }
+        else
+        {
+            status = "Failed to process";
+        }
+        break;
+
+    case Client::CLOSED:    // TODO change these names. Both mean authentication failed
+    case Client::FAILED:
+        status = "Access denied";
+        break;
+
+    default:    // Client::INIT should never be the status here.
+        mxb_assert(false);
+        break;
+    }
+
+    std::vector<std::string> values
+    {
+        wall_time::to_string(wall_time::Clock::now()),
+        maxbase::to_string(m_end_time - m_start_time),
+        m_user,
+        m_request.host(),
+        m_request.get_uri(),
+        m_request.get_verb(),
+        status,
+        std::to_string(m_http_response_code),
+        m_data
+    };
+
+    if (!get_audit_log().add_row(values))
+    {
+        // TODO maybe only report once.
+        MXB_SERROR("Failed to write to log file " << get_audit_log().full_path());
+    }
 }
 
 // static
