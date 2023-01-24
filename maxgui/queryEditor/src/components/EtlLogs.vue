@@ -2,7 +2,8 @@
     <div class="d-flex flex-column">
         <h6 class="etl-logs-title mxs-color-helper text-navigation mb-4">{{ $mxs_t('msgLog') }}</h6>
         <code
-            class="fill-height log-container mariadb-code-style rounded mxs-color-helper all-border-separator pa-4"
+            ref="logCtr"
+            class="fill-height log-container overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4"
         >
             <div v-for="log in activeEtlTask.logs" :key="log.timestamp" class="d-block text-wrap">
                 <span class="mxs-color-helper text-grayed-out">
@@ -41,6 +42,23 @@ export default {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
     },
+    watch: {
+        'activeEtlTask.logs': {
+            deep: true,
+            handler(v) {
+                if (v.length) this.scrollToBottom()
+            },
+        },
+    },
+    mounted() {
+        this.scrollToBottom()
+    },
+    methods: {
+        scrollToBottom() {
+            let ele = this.$typy(this.$refs, 'logCtr').safeObject
+            if (ele) ele.scrollTop = ele.scrollHeight
+        },
+    },
 }
 </script>
 
@@ -49,7 +67,6 @@ export default {
     line-height: normal;
 }
 .log-container {
-    overflow-y: auto;
     font-size: 0.75rem;
 }
 </style>

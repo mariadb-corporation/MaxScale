@@ -5,17 +5,34 @@
                 <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
                     {{ $mxs_t('migrationScript') }}
                 </h3>
-                <p class="mt-4 migration-script-info mxs-color-helper text-deep-ocean">
-                    {{ $mxs_t('info.migrationScriptInfo') }}
-                </p>
+                <div class="d-flex align-center">
+                    <etl-status-icon v-if="scriptErr" :status="ETL_STATUS.ERROR" />
+                    <p class="mt-4 migration-script-info mxs-color-helper text-deep-ocean">
+                        {{
+                            scriptErr
+                                ? $mxs_t('errors.failedToPrepareMigrationScript')
+                                : $mxs_t('info.migrationScriptInfo')
+                        }}
+                    </p>
+                </div>
             </div>
         </template>
         <template v-slot:body>
-            <etl-migration-tbl
-                :data="getMigrationPrepareScript"
-                :headers="tableHeaders"
-                :stagingMigrationObjs.sync="stagingMigrationObjs"
+            <v-progress-linear
+                v-if="isLoading"
+                indeterminate
+                color="primary"
+                class="align-self-start"
             />
+            <template v-else>
+                <etl-logs v-if="scriptErr" class="fill-height" />
+                <etl-migration-tbl
+                    v-else
+                    :data="getMigrationPrepareScript"
+                    :headers="tableHeaders"
+                    :stagingMigrationObjs.sync="stagingMigrationObjs"
+                />
+            </template>
         </template>
         <template v-slot:footer>
             <div class="btn-ctr">
@@ -54,7 +71,7 @@
                     class="mt-auto font-weight-medium px-7 text-capitalize"
                     rounded
                     depressed
-                    :disabled="!isConfirmed"
+                    :disabled="scriptErr || !isConfirmed"
                     @click="next"
                 >
                     {{ $mxs_t('startMigration') }}
@@ -80,6 +97,8 @@
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
 import EtlMigrationTbl from '@queryEditorSrc/components/EtlMigrationTbl.vue'
+import EtlLogs from '@queryEditorSrc/components/EtlLogs.vue'
+import EtlStatusIcon from '@queryEditorSrc/components/EtlStatusIcon.vue'
 import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 
 export default {
@@ -87,6 +106,8 @@ export default {
     components: {
         EtlStageCtr,
         EtlMigrationTbl,
+        EtlLogs,
+        EtlStatusIcon,
     },
     data() {
         return {
@@ -97,6 +118,7 @@ export default {
     computed: {
         ...mapState({
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             are_conns_alive: state => state.etlMem.are_conns_alive,
             etl_prepare_res: state => state.etlMem.etl_prepare_res,
         }),
@@ -116,6 +138,12 @@ export default {
         },
         isActive() {
             return this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.MIGR_SCRIPT
+        },
+        scriptErr() {
+            return this.$typy(this.etl_prepare_res, 'error').safeString
+        },
+        isLoading() {
+            return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
         },
     },
     watch: {

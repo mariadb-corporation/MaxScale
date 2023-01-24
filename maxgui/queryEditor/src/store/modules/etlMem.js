@@ -129,13 +129,13 @@ export default {
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            EtlTask.update({
-                where: id,
-                data(obj) {
-                    obj.meta.is_loading = true
-                },
-            })
             if (srcConn.id) {
+                EtlTask.update({
+                    where: id,
+                    data(obj) {
+                        obj.meta.is_loading = true
+                    },
+                })
                 const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
                 if (!e) {
                     const results = $typy(res, 'data.data.attributes.results').safeObject
