@@ -231,7 +231,7 @@ export default {
             { commit, rootState },
             { body, binding_type, etl_task_id, meta = {}, showMsg = false }
         ) {
-            const { $mxs_t, $helpers, $typy } = this.vue
+            const { $mxs_t, $helpers } = this.vue
             const { ETL_SRC } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -252,27 +252,33 @@ export default {
                     },
                 })
             }
+            const { src_type = '', dest_name = '' } = meta
+            const target =
+                binding_type === ETL_SRC
+                    ? $mxs_t('source') + `: ${src_type}`
+                    : $mxs_t('destination') + `: ${dest_name}`
+
+            let logMsgs = [$mxs_t('info.connToSuccessfully', [target])]
+
+            if (e)
+                logMsgs = [
+                    $mxs_t('errors.failedToConnectTo', [target]),
+                    ...$helpers.getErrorsArr(e),
+                ]
+
             if (showMsg)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: e ? $helpers.getErrorsArr(e) : [$mxs_t('info.connSuccessfully')],
+                        text: logMsgs,
                         type: e ? 'error' : 'success',
                     },
                     { root: true }
                 )
-            const target =
-                binding_type === ETL_SRC
-                    ? $typy(meta, 'src_type').safeString || $mxs_t('source')
-                    : $typy(meta, 'dest_name').safeString || $mxs_t('destination')
+
             EtlTask.dispatch('pushLog', {
                 id: etl_task_id,
-                log: {
-                    timestamp: new Date().valueOf(),
-                    name: $mxs_t(e ? 'errors.failedToConnectTo' : 'info.connToSuccessfully', [
-                        target,
-                    ]),
-                },
+                log: { timestamp: new Date().valueOf(), name: logMsgs.join('\n') },
             })
         },
         /**

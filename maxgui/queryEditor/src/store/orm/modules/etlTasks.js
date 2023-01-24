@@ -94,7 +94,12 @@ export default {
                     c.binding_type ===
                     rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
             ) || {},
-
+        getActiveDestConn: (state, getters, rootState) =>
+            getters.getActiveEtlConns.find(
+                c =>
+                    c.binding_type ===
+                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
+            ) || {},
         getEtlTaskWithRelationById: () => etl_task_id =>
             EtlTask.query()
                 .whereId(etl_task_id)

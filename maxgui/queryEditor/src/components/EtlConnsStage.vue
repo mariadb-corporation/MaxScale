@@ -28,7 +28,7 @@
                     :loading="isLoading"
                     @click="next"
                 >
-                    {{ $mxs_t(isConnected ? 'selectObjsToMigrate' : 'connect') }}
+                    {{ $mxs_t(hasActiveConns ? 'selectObjsToMigrate' : 'connect') }}
                 </v-btn>
             </template>
         </etl-stage-ctr>
@@ -65,7 +65,6 @@ export default {
             src: { connection_string: '', type: '' },
             dest: { user: '', password: '', db: '', target: '' },
             isLoading: false,
-            isConnected: false,
         }
     },
     computed: {
@@ -82,6 +81,12 @@ export default {
         },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        activeSrcConn() {
+            return EtlTask.getters('getActiveSrcConn')
+        },
+        activeDestConn() {
+            return EtlTask.getters('getActiveDestConn')
         },
         hasActiveConns() {
             return this.$typy(this.activeEtlTask, 'connections').safeArray.length >= 2
@@ -109,33 +114,41 @@ export default {
         async handleOpenConns() {
             const etl_task_id = this.activeEtlTask.id
             this.isLoading = true
-            await QueryConn.dispatch('openEtlConn', {
-                body: {
-                    target: 'odbc',
-                    connection_string: this.src.connection_string,
+            EtlTask.dispatch('pushLog', {
+                id: etl_task_id,
+                log: {
+                    timestamp: new Date().valueOf(),
+                    name: `-------${this.$mxs_t('info.openingConns')}-------\n`,
                 },
-                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
-                etl_task_id,
-                meta: { src_type: this.src.type },
             })
-            await QueryConn.dispatch('openEtlConn', {
-                body: this.dest,
-                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
-                etl_task_id,
-                meta: { dest_name: this.dest.target },
-            })
-            if (this.hasActiveConns)
+            if (!this.activeSrcConn.id)
+                await QueryConn.dispatch('openEtlConn', {
+                    body: {
+                        target: 'odbc',
+                        connection_string: this.src.connection_string,
+                    },
+                    binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                    etl_task_id,
+                    meta: { src_type: this.src.type },
+                })
+            if (!this.activeDestConn.id)
+                await QueryConn.dispatch('openEtlConn', {
+                    body: this.dest,
+                    binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                    etl_task_id,
+                    meta: { dest_name: this.dest.target },
+                })
+            if (this.hasActiveConns) {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('info.connSuccessfully')],
                     type: 'success',
                 })
-
-            this.isConnected = this.hasActiveConns
-            await this.$helpers.delay(300) // UX loading animation
+                await this.$helpers.delay(300) // UX loading animation
+            }
             this.isLoading = false
         },
         async next() {
-            if (this.isConnected)
+            if (this.hasActiveConns)
                 EtlTask.update({
                     where: this.activeEtlTask.id,
                     data(obj) {
