@@ -165,8 +165,8 @@ then
         # Enable it by default
         echo "source /opt/rh/devtoolset-9/enable" >> ~/.bashrc
     else
-        # CentOS 8 only needs ASAN
-        sudo yum -d1 -y install libasan-devel
+        # For everything else, install the default ASAN
+        sudo yum -d1 -y install libasan
     fi
 
     grep "release [78]" /etc/redhat-release
