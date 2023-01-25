@@ -41,15 +41,15 @@ public:
     {
     }
 
-    void start(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
     }
 
-    void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start_thread(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
     }
 
-    void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void threads_started(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
     }
 

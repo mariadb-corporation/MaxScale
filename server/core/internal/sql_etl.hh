@@ -15,6 +15,7 @@
 
 #include <maxbase/ccdefs.hh>
 
+#include <deque>
 #include <vector>
 #include <mutex>
 
@@ -101,7 +102,7 @@ struct Extractor
      * @param source Connection to the source server
      * @param tables Table that are to be imported
      * */
-    virtual void start(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+    virtual void start(mxq::ODBC& source, const std::deque<Table>& tables) = 0;
 
     /**
      * Called whenever a thread is created for dumping data.
@@ -112,7 +113,7 @@ struct Extractor
      * @param source Connection to the source server
      * @param tables The table being imported
      */
-    virtual void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+    virtual void start_thread(mxq::ODBC& source, const std::deque<Table>& tables) = 0;
 
     /**
      * Called after data dump is ready to start
@@ -123,7 +124,7 @@ struct Extractor
      * @param source Connection to the source server
      * @param tables Table that are to be imported
      */
-    virtual void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) = 0;
+    virtual void threads_started(mxq::ODBC& source, const std::deque<Table>& tables) = 0;
 
     /**
      * Get the CREATE TABLE SQL for the given table
@@ -235,7 +236,7 @@ public:
         return m_config;
     }
 
-    std::vector<Table>& tables()
+    std::deque<Table>& tables()
     {
         return m_tables;
     }
@@ -271,7 +272,7 @@ private:
 
     std::string                m_id;
     Config                     m_config;
-    std::vector<Table>         m_tables;
+    std::deque<Table>          m_tables;
     std::unique_ptr<Extractor> m_extractor;
 
     std::mutex m_lock;

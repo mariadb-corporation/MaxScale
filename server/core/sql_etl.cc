@@ -100,7 +100,7 @@ public:
         }
     }
 
-    void start(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         std::ostringstream ss;
         ss << "LOCK TABLE "
@@ -115,7 +115,7 @@ public:
         }
     }
 
-    void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start_thread(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         if (!source.query("START TRANSACTION WITH CONSISTENT SNAPSHOT"))
         {
@@ -123,7 +123,7 @@ public:
         }
     }
 
-    void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void threads_started(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         if (!source.query("UNLOCK TABLES"))
         {
@@ -211,7 +211,7 @@ public:
         }
     }
 
-    void start(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         for (const auto& t : tables)
         {
@@ -242,7 +242,7 @@ public:
         }
     }
 
-    void start_thread(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void start_thread(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         // Taking a shared lock on the tables prevents them from being deleted or modified while the
         // transaction is ongoing. The NOWAIT option is what prevents deadlocks from happening: if an outside
@@ -267,7 +267,7 @@ public:
         }
     }
 
-    void threads_started(mxq::ODBC& source, const std::vector<Table>& tables) override
+    void threads_started(mxq::ODBC& source, const std::deque<Table>& tables) override
     {
         // Tables are unlocked when the transaction ends
     }
