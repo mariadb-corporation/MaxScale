@@ -68,5 +68,6 @@ export default {
 }
 .log-container {
     font-size: 0.75rem;
+    letter-spacing: -0.1px;
 }
 </style>

@@ -5,14 +5,18 @@
                 <v-row class="fill-height">
                     <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
                         <etl-src-conn v-model="src" :drivers="odbc_drivers" class="pb-1" />
-                        <etl-dest-conn
-                            v-model="dest"
-                            :allServers="allServers"
-                            :destTargetType="destTargetType"
-                        />
                     </v-col>
                     <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                        <etl-logs class="fill-height pt-4" />
+                        <div class="d-flex flex-column fill-height">
+                            <div class="d-flex">
+                                <etl-dest-conn
+                                    v-model="dest"
+                                    :allServers="allServers"
+                                    :destTargetType="destTargetType"
+                                />
+                            </div>
+                            <etl-logs class="mt-4 etl-logs overflow-y-auto" />
+                        </div>
                     </v-col>
                 </v-row>
             </template>
@@ -167,5 +171,12 @@ export default {
 <style lang="scss" scoped>
 .form-container {
     overflow-y: auto;
+    .etl-logs {
+        background-color: #fbfbfb;
+        display: flex;
+        flex: 1;
+        min-height: 250px;
+        max-height: 400px;
+    }
 }
 </style>

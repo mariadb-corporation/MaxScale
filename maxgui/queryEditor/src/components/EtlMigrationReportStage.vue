@@ -40,14 +40,18 @@
                         </template>
                     </etl-task-manage>
                 </div>
-                <div class="mt-4 d-flex align-center" :style="{ height: '30px' }">
-                    <etl-status-icon :status="activeEtlTask.status" :isRunning="isRunning" />
+                <div class="mt-4">
+                    <etl-status-icon
+                        :status="activeEtlTask.status"
+                        :isRunning="isRunning"
+                        class="mb-1"
+                    />
                     <span
                         v-if="
                             activeEtlTask.status === ETL_STATUS.ERROR &&
                                 getMigrationStage === ETL_API_STAGES.CREATE
                         "
-                        class="ml-1 mxs-color-helper text-navigation"
+                        class="mxs-color-helper text-navigation"
                     >
                         {{ $mxs_t(`errors.etl_create_stage`) }}
                     </span>
