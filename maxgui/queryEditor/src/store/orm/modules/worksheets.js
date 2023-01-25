@@ -134,7 +134,7 @@ export default {
                 if (!this.vue.$typy(stmt_err_msg_obj).isEmptyObject)
                     queryAction = this.vue.$mxs_t('errors.failedToExeAction', { action })
                 else {
-                    queryAction = this.vue.$mxs_t('info.exeActionSuccessfully', { action })
+                    queryAction = this.vue.$mxs_t('success.exeAction', { action })
                     if (showSnackbar)
                         commit(
                             'mxsApp/SET_SNACK_BAR_MESSAGE',

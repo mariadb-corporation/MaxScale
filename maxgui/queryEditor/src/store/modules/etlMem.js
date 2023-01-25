@@ -73,7 +73,14 @@ export default {
         },
         async fetchSrcSchemas({ getters, commit }) {
             const { $mxs_t, $helpers, $typy } = this.vue
-
+            const active_etl_task_id = EtlTask.getters('getActiveEtlTaskWithRelation').id
+            EtlTask.dispatch('pushLog', {
+                id: active_etl_task_id,
+                log: {
+                    timestamp: new Date().valueOf(),
+                    name: $mxs_t('info.retrievingSchemaObj'),
+                },
+            })
             const [e, res] = await $helpers.to(
                 query({
                     id: EtlTask.getters('getActiveSrcConn').id,
@@ -90,10 +97,10 @@ export default {
                     },
                 })
                 commit('SET_SRC_SCHEMA_TREE', nodes)
-                logName = $mxs_t('info.retrieveSchemaObj')
+                logName = $mxs_t('success.retrieved')
             }
             EtlTask.dispatch('pushLog', {
-                id: EtlTask.getters('getActiveEtlTaskWithRelation').id,
+                id: active_etl_task_id,
                 log: { timestamp: new Date().valueOf(), name: logName },
             })
         },
@@ -158,7 +165,7 @@ export default {
                             case MIGR_SCRIPT: {
                                 logMsg = $mxs_t(
                                     ok
-                                        ? 'info.prepareMigrationScriptSuccessfully'
+                                        ? 'success.prepared'
                                         : 'errors.failedToPrepareMigrationScript'
                                 )
                                 mutationName = 'SET_ETL_PREPARE_RES'
@@ -166,9 +173,7 @@ export default {
                                 break
                             }
                             case DATA_MIGR: {
-                                logMsg = $mxs_t(
-                                    ok ? 'info.migrateSuccessfully' : 'errors.migrateFailed'
-                                )
+                                logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
                                 status = ok ? COMPLETE : ERROR
                                 mutationName = 'SET_ETL_RES'
                                 break
@@ -270,7 +275,7 @@ export default {
                     id: id,
                     log: {
                         timestamp,
-                        name: `-------${logName}-------\n`,
+                        name: logName,
                     },
                 })
             }

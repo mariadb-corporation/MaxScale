@@ -158,7 +158,7 @@ export default {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [$mxs_t('info.connSuccessfully')],
+                        text: [$mxs_t('success.connected')],
                         type: 'success',
                     },
                     { root: true }
@@ -255,10 +255,10 @@ export default {
             const { src_type = '', dest_name = '' } = meta
             const target =
                 binding_type === ETL_SRC
-                    ? $mxs_t('source') + `: ${src_type}`
-                    : $mxs_t('destination') + `: ${dest_name}`
+                    ? $mxs_t('source').toLowerCase() + `: ${src_type}`
+                    : $mxs_t('destination').toLowerCase() + `: ${dest_name}`
 
-            let logMsgs = [$mxs_t('info.connToSuccessfully', [target])]
+            let logMsgs = [$mxs_t('success.connectedTo', [target])]
 
             if (e)
                 logMsgs = [
@@ -292,7 +292,7 @@ export default {
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.vue.$mxs_t('info.disconnSuccessfully')],
+                            text: [this.vue.$mxs_t('success.disconnected')],
                             type: 'success',
                         },
                         { root: true }
@@ -342,7 +342,7 @@ export default {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [this.vue.$mxs_t('info.reconnSuccessfully')],
+                        text: [this.vue.$mxs_t('success.reconnected')],
                         type: 'success',
                     },
                     { root: true }

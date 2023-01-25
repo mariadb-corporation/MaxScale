@@ -55,7 +55,7 @@ export default {
                     commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.vue.$mxs_t('info.etlCanceledSuccessfully')],
+                            text: [this.vue.$mxs_t('success.canceledMigration')],
                             type: 'success',
                         },
                         { root: true }
@@ -75,7 +75,7 @@ export default {
             EtlTask.update({
                 where: id,
                 data(obj) {
-                    obj.logs.push(log)
+                    obj.logs[`${obj.active_stage_index}`].push(log)
                 },
             })
         },

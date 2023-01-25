@@ -89,11 +89,7 @@
                     class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
                 >
                     <template v-if="activeItem">
-                        {{
-                            activeItem.error
-                                ? activeItem.error
-                                : $mxs_t('info.scriptExecSuccessfully')
-                        }}
+                        {{ activeItem.error ? activeItem.error : $mxs_t('success.scriptExec') }}
                     </template>
                 </code>
             </div>
@@ -202,9 +198,7 @@ export default {
                 case 'obj':
                     return `\`${item.schema}\`.\`${item.table}\``
                 case 'result':
-                    return item.error
-                        ? this.$mxs_t('error')
-                        : this.$mxs_t('info.scriptExecSuccessfully')
+                    return item.error ? this.$mxs_t('error') : this.$mxs_t('success.scriptExec')
                 default:
                     return ''
             }

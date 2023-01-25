@@ -122,7 +122,7 @@ export default {
                 id: etl_task_id,
                 log: {
                     timestamp: new Date().valueOf(),
-                    name: `-------${this.$mxs_t('info.openingConns')}-------\n`,
+                    name: this.$mxs_t('info.openingConns'),
                 },
             })
             if (!this.activeSrcConn.id)
@@ -144,7 +144,7 @@ export default {
                 })
             if (this.hasActiveConns) {
                 this.SET_SNACK_BAR_MESSAGE({
-                    text: [this.$mxs_t('info.connSuccessfully')],
+                    text: [this.$mxs_t('success.connected')],
                     type: 'success',
                 })
                 await this.$helpers.delay(300) // UX loading animation

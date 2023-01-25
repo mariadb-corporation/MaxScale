@@ -36,7 +36,12 @@ export default class EtlTask extends Extender {
              * @property {number} timestamp
              * @property {string} name
              */
-            logs: this.attr([]),
+            logs: this.attr({
+                [ETL_STAGE_INDEX.CONN]: [],
+                [ETL_STAGE_INDEX.SRC_OBJ]: [],
+                [ETL_STAGE_INDEX.MIGR_SCRIPT]: [],
+                [ETL_STAGE_INDEX.DATA_MIGR]: [],
+            }),
             created: this.number(Date.now()),
         }
     }

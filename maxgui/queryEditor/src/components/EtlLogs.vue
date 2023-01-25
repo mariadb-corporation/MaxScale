@@ -5,16 +5,16 @@
             ref="logCtr"
             class="fill-height log-container overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4"
         >
-            <div v-for="log in activeEtlTask.logs" :key="log.timestamp" class="d-block text-wrap">
+            <div v-for="log in logs" :key="log.timestamp">
                 <span class="mxs-color-helper text-grayed-out">
                     {{
                         $helpers.dateFormat({
                             value: log.timestamp,
-                            formatType: 'YYYY-MM-DD  HH:mm:ss',
+                            formatType: 'DD-MMM-YYYY  HH:mm:ss',
                         })
-                    }}&nbsp;
+                    }}
                 </span>
-                <span>{{ log.name }}</span>
+                <span class="log-name">{{ log.name }}</span>
             </div>
         </code>
     </div>
@@ -37,9 +37,18 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 
 export default {
     name: 'etl-logs',
+    props: {
+        // Show all logs of all stages at once
+        showAll: { type: Boolean, default: false },
+    },
     computed: {
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        logs() {
+            if (this.showAll) return Object.values(this.activeEtlTask.logs).flat()
+            return this.$typy(this.activeEtlTask, `logs[${this.activeEtlTask.active_stage_index}]`)
+                .safeArray
         },
     },
     watch: {
@@ -69,5 +78,8 @@ export default {
 .log-container {
     font-size: 0.75rem;
     letter-spacing: -0.1px;
+    .log-name {
+        white-space: pre-wrap;
+    }
 }
 </style>
