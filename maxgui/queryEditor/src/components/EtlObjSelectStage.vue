@@ -9,24 +9,12 @@
             <v-row class="fill-height">
                 <v-col cols="12" md="6" class="fill-height">
                     <div class="d-flex flex-column fill-height">
-                        <v-text-field
-                            v-model="filterTxt"
-                            name="searchSchema"
-                            dense
-                            outlined
-                            height="28"
-                            class="vuetify-input--override filter-objects mb-2"
-                            hide-details
-                            :placeholder="$mxs_t('filterSchemaObjects')"
-                        />
-                        <!--  TODO: Add reload feat -->
+                        <etl-create-mode-input class="mb-2" />
                         <mxs-treeview
                             ref="tree"
                             v-model="selectedObjs"
-                            class="mxs-treeview--src-treeview fill-height mxs-color-helper all-border-separator pa-3"
+                            class="mxs-treeview--src-treeview fill-height overflow-y-auto mxs-color-helper all-border-separator pa-2 rounded"
                             :items="src_schema_tree"
-                            :search="filterTxt"
-                            :filter="filter"
                             hoverable
                             dense
                             open-on-click
@@ -44,44 +32,40 @@
                                     >
                                         {{ iconSheet(node) }}
                                     </v-icon>
-                                    <span
-                                        v-mxs-highlighter="{
-                                            keyword: filterTxt,
-                                            txt: node.name,
-                                        }"
-                                        class="ml-1 text-truncate d-inline-block node-name"
-                                    >
+                                    <span class="ml-1 text-truncate d-inline-block node-name">
                                         {{ node.name }}
                                     </span>
                                 </div>
                             </template>
                         </mxs-treeview>
-                        <p v-if="errMsg" class="mt-4 v-messages__message error--text">
-                            {{ errMsg }}
-                        </p>
-                        <p v-else-if="infoMsg" class="mt-4 v-messages__message warning--text">
-                            {{ infoMsg }}
-                        </p>
                     </div>
                 </v-col>
                 <v-col cols="12" md="6" class="fill-height">
-                    <etl-logs class="fill-height" />
+                    <etl-logs class="fill-height" :class="{ 'pt-10': isLarge }" />
                 </v-col>
             </v-row>
         </template>
         <template v-slot:footer>
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="font-weight-medium px-7 text-capitalize"
-                rounded
-                depressed
-                :disabled="!Boolean(tables.length)"
-                @click="next"
-            >
-                {{ $mxs_t('prepareMigrationScript') }}
-            </v-btn>
+            <div class="etl-obj-select-stage-footer relative">
+                <p v-if="errMsg" class="v-messages__message error--text">
+                    {{ errMsg }}
+                </p>
+                <p v-else-if="infoMsg" class="v-messages__message warning--text">
+                    {{ infoMsg }}
+                </p>
+                <v-btn
+                    small
+                    height="36"
+                    color="primary"
+                    class="font-weight-medium px-7 text-capitalize prepare-btn"
+                    rounded
+                    depressed
+                    :disabled="!Boolean(tables.length)"
+                    @click="next"
+                >
+                    {{ $mxs_t('prepareMigrationScript') }}
+                </v-btn>
+            </div>
         </template>
     </etl-stage-ctr>
 </template>
@@ -102,6 +86,7 @@ import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
+import EtlCreateModeInput from '@queryEditorSrc/components/EtlCreateModeInput.vue'
 import EtlLogs from '@queryEditorSrc/components/EtlLogs.vue'
 
 export default {
@@ -109,13 +94,14 @@ export default {
     components: {
         EtlStageCtr,
         EtlLogs,
+        EtlCreateModeInput,
     },
     data() {
         return {
-            filterTxt: '',
             selectedObjs: [],
             errMsg: '',
             infoMsg: '',
+            isLarge: true,
         }
     },
     computed: {
@@ -157,6 +143,12 @@ export default {
                     } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
                 this.SET_MIGRATION_OBJS(this.tables)
+            },
+        },
+        '$vuetify.breakpoint.width': {
+            immediate: true,
+            handler(v) {
+                this.isLarge = v >= 960
             },
         },
     },
@@ -230,12 +222,16 @@ export default {
 </script>
 
 <style lang="scss">
+.etl-obj-select-stage-footer {
+    height: 80px;
+    .prepare-btn {
+        position: absolute;
+        bottom: 0;
+    }
+}
 .mxs-treeview--src-treeview {
-    border-radius: 4px;
-    background-color: #fbfbfb;
     font-size: 0.875rem;
-    overflow-y: auto;
-    min-height: auto;
+    background-color: #fbfbfb;
     .v-treeview-node__content {
         margin-left: 0px;
     }

@@ -181,3 +181,9 @@ export const ETL_API_STAGES = Object.freeze({
     CREATE: 'create',
     LOAD: 'load',
 })
+
+export const ETL_CREATE_MODES = Object.freeze({
+    NORMAL: 'normal',
+    IGNORE: 'ignore',
+    REPLACE: 'replace',
+})

@@ -137,6 +137,7 @@
         "copyToClipboard": "Copy to clipboard",
         "create": "Create",
         "createANew": "Create a new",
+        "createMode": "Create mode",
         "createNew": "Create New",
         "createObjInDest": "Create object in destination",
         "createQuerySnippet": "Create a query snippet",

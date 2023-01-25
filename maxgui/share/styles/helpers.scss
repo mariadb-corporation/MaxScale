@@ -193,8 +193,9 @@ tooltip needs to be disabled.
 }
 
 .field__label {
-    font-size: 0.625rem !important;
+    font-size: 0.75rem !important;
     display: inline-block;
+    margin-bottom: 4px;
     &::first-letter {
         text-transform: uppercase;
     }

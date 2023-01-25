@@ -15,12 +15,14 @@ import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
 import { query, getAsyncResult } from '@queryEditorSrc/api/query'
 import { prepare, start } from '@queryEditorSrc/api/etl'
 import queryHelper from '@queryEditorSrc/store/queryHelper'
+import { ETL_CREATE_MODES } from '@queryEditorSrc/store/config'
 
 export default {
     namespaced: true,
     state: {
         src_schema_tree: [],
         are_conns_alive: false,
+        create_mode: ETL_CREATE_MODES.NORMAL,
         migration_objs: [], // store migration objects for /etl/prepare
         etl_prepare_res: {}, // store etl/prepare results
         etl_res: {}, // etl/start results
@@ -31,6 +33,9 @@ export default {
         },
         SET_ARE_CONNS_ALIVE(state, payload) {
             state.are_conns_alive = payload
+        },
+        SET_CREATE_MODE(state, payload) {
+            state.create_mode = payload
         },
         SET_MIGRATION_OBJS(state, payload) {
             state.migration_objs = payload
@@ -199,7 +204,7 @@ export default {
          * @param {String} param.id - etl task id
          * @param {Array} param.tables - tables for preparing etl or start etl
          */
-        async handleEtlCall({ rootState }, { id, tables }) {
+        async handleEtlCall({ state, rootState }, { id, tables }) {
             const { $helpers, $typy, $mxs_t } = this.vue
 
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
@@ -211,6 +216,12 @@ export default {
                 status,
                 timestamp = new Date().valueOf()
 
+            let body = {
+                target: destConn.id,
+                type: srcConn.meta.src_type,
+                tables,
+            }
+
             const {
                 ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
                 ETL_STATUS: { RUNNING, INITIALIZING },
@@ -221,6 +232,7 @@ export default {
                     logName = $mxs_t('info.preparingMigrationScript')
                     apiAction = prepare
                     status = INITIALIZING
+                    body.create_mode = state.create_mode
                     break
                 }
                 case DATA_MIGR: {
@@ -238,14 +250,11 @@ export default {
                     delete obj.meta.async_query_id
                 },
             })
+
             const [e, res] = await $helpers.to(
                 apiAction({
                     id: srcConn.id,
-                    body: {
-                        target: destConn.id,
-                        type: srcConn.meta.src_type,
-                        tables,
-                    },
+                    body,
                 })
             )
 
