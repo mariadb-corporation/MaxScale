@@ -40,6 +40,26 @@ void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
     }
 }
 
+void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    if (test.expect(!!etl.query_odbc(dsn, "CREATE TABLE public.massive_result(id INT)"),
+                    "Failed to create tables in Postgres"))
+    {
+        auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 150s,
+                                 {EtlTable {"public", "massive_result",
+                                            "CREATE OR REPLACE TABLE test.massive_result(id INT PRIMARY KEY) ENGINE=MEMORY",
+                                            "SELECT 1 id FROM generate_series(0, 10000000)",
+                                            "REPLACE INTO test.massive_result(id) VALUES (?)"
+                                  }});
+
+        test.expect(ok, "ETL failed: %s", res.to_string().c_str());
+
+        test.expect(etl.query_odbc(dsn, "DROP TABLE public.massive_result")
+                    && etl.query_native("server1", "DROP TABLE public.sanity_check"),
+                    "Failed to drop tables in Postgres");
+    }
+}
+
 void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
@@ -54,7 +74,14 @@ void test_main(TestConnections& test)
 
     if (test.ok())
     {
+        test.log_printf("sanity_check");
         sanity_check(test, etl, dsn);
+    }
+
+    if (test.ok())
+    {
+        test.log_printf("massive_result");
+        massive_result(test, etl, dsn);
     }
 }
 
