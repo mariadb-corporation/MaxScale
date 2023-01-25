@@ -690,6 +690,7 @@ Config::CreateMode Table::create_mode() const
 
 mxb::Json Table::to_json() const
 {
+    std::lock_guard guard(m_lock);
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_string("table", m_table);
     obj.set_string("schema", m_schema);
@@ -726,6 +727,7 @@ void Table::read_sql(mxq::ODBC& source)
 {
     try
     {
+        std::lock_guard guard(m_lock);
         auto& extractor = m_etl.extractor();
 
         if (m_create.empty())
@@ -983,6 +985,12 @@ mxb::Json ETL::run_job()
         error = e.what();
     }
 
+    return to_json(error);
+}
+
+mxb::Json ETL::to_json(const std::string error)
+{
+    std::unique_lock guard(m_lock);
     mxb::Json rval(mxb::Json::Type::OBJECT);
     mxb::Json arr(mxb::Json::Type::ARRAY);
     bool ok = !m_have_error;

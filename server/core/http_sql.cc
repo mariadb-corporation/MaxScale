@@ -821,6 +821,10 @@ HttpResponse run_etl_task(const HttpRequest& request)
                 etl->cancel();
             });
 
+            conn->set_status_handler([etl](){
+                return etl->to_json();
+            });
+
             // Ignore any results that have not yet been read
             conn->result.reset();
 
@@ -831,6 +835,7 @@ HttpResponse run_etl_task(const HttpRequest& request)
             mxs::thread_pool().execute([conn, id, etl = move(etl)]() {
                 conn->result = std::invoke(func, *etl);
                 conn->query_end();
+                conn->clear_status_handler();
                 conn->clear_cancel_handler();
                 conn->release();
             }, "etl-" + id_str);

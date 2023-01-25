@@ -209,6 +209,8 @@ private:
     std::string   m_insert;
     std::string   m_error;
     mxb::Duration m_duration {0};
+
+    mutable std::mutex m_lock;
 };
 
 class ETL
@@ -255,11 +257,17 @@ public:
 
     void cancel();
 
+    mxb::Json to_json()
+    {
+        return to_json("");
+    }
+
 private:
     template<auto connect_func, auto run_func, auto interrupt_func>
     mxb::Json run_job();
     void      run_prepare_job(mxq::ODBC& source) noexcept;
     void      run_start_job(std::pair<mxq::ODBC, mxq::ODBC>& connections) noexcept;
+    mxb::Json to_json(const std::string error);
 
     mxq::ODBC connect_to_source();
     void      interrupt_source(mxq::ODBC& source);
