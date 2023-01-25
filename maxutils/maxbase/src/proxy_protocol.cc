@@ -451,10 +451,12 @@ HdrParseResult parse_binary_header(const uint8_t* header)
                     if (remaining_len >= 12)
                     {
                         auto* addr = (sockaddr_in*)&rval.peer_addr;
+                        addr->sin_family = AF_INET;
+
                         auto bytes = sizeof(addr->sin_addr);
                         memcpy(&addr->sin_addr, src_ptr, bytes);
-                        src_ptr += bytes;
-                        memcpy(&addr->sin_port, src_ptr, 2);    // Written in big-endian.
+                        src_ptr += 2 * bytes;                                       // Skip server address
+                        memcpy(&addr->sin_port, src_ptr, sizeof(addr->sin_port));   // Written in big-endian.
 
                         char text_addr[INET_ADDRSTRLEN];
                         if (inet_ntop(AF_INET, &addr->sin_addr, text_addr, sizeof(text_addr)))
@@ -471,10 +473,12 @@ HdrParseResult parse_binary_header(const uint8_t* header)
                     if (remaining_len >= 36)
                     {
                         auto* addr = (sockaddr_in6*)&rval.peer_addr;
+                        addr->sin6_family = AF_INET6;
+
                         auto bytes = sizeof(addr->sin6_addr);
                         memcpy(&addr->sin6_addr, src_ptr, bytes);
-                        src_ptr += bytes;
-                        memcpy(&addr->sin6_port, src_ptr, 2);
+                        src_ptr += 2 * bytes;
+                        memcpy(&addr->sin6_port, src_ptr, sizeof(addr->sin6_port));
 
                         char text_addr[INET6_ADDRSTRLEN];
                         if (inet_ntop(AF_INET6, &addr->sin6_addr, text_addr, sizeof(text_addr)))
@@ -488,8 +492,17 @@ HdrParseResult parse_binary_header(const uint8_t* header)
                 else if (family == 0x31)
                 {
                     // Unix socket.
-                    rval.success = true;
-                    rval.peer_addr.ss_family = AF_UNIX;
+                    if (remaining_len >= 216)
+                    {
+                        auto* addr = (sockaddr_un*)&rval.peer_addr;
+                        addr->sun_family = AF_UNIX;
+
+                        auto bytes = sizeof(addr->sun_path);
+                        memcpy(&addr->sun_path, src_ptr, bytes);
+
+                        rval.success = true;
+                        rval.is_proxy = true;
+                    }
                 }
             }
         }
