@@ -63,6 +63,7 @@ public:
             mxb::TimePoint last_query_started;
             mxb::TimePoint last_query_ended;
             std::string    sql;
+            mxb::Json      status;
         };
 
         Connection(const ConnectionConfig& cnf);
@@ -93,6 +94,10 @@ public:
 
         void clear_cancel_handler();
 
+        void set_status_handler(std::function<mxb::Json()> fn);
+
+        void clear_status_handler();
+
         const Info& info() const;
 
         std::atomic_bool busy {false};
@@ -107,9 +112,10 @@ public:
     private:
         friend class ConnectionManager;
 
-        mutable std::mutex    m_lock;
-        std::function<void()> m_cancel_handler;
-        Info                  m_info;
+        mutable std::mutex         m_lock;
+        std::function<void()>      m_cancel_handler;
+        std::function<mxb::Json()> m_status_handler;
+        Info                       m_info;
     };
 
     class MariaDBConnection : public Connection

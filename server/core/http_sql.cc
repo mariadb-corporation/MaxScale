@@ -643,7 +643,7 @@ HttpResponse query_result(const HttpRequest& request)
         else if (reason == Reason::BUSY)
         {
             auto exec_time = mxb::Clock::now() - info.last_query_started;
-            response = construct_result_response(nullptr, host, self, info.sql, query_id, exec_time);
+            response = construct_result_response(info.status.release(), host, self, info.sql, query_id, exec_time);
             response.set_code(MHD_HTTP_ACCEPTED);
             response.add_header(MHD_HTTP_HEADER_LOCATION, host + "/" + self);
         }

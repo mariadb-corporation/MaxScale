@@ -82,6 +82,11 @@ ConnectionManager::get_connection(const std::string& id)
         {
             std::lock_guard guard(elem->m_lock);
             info = elem->info();
+
+            if (elem->m_status_handler)
+            {
+                info.status = elem->m_status_handler();
+            }
         }
     }
     return {rval, reason, info};
@@ -169,6 +174,18 @@ void ConnectionManager::Connection::clear_cancel_handler()
 {
     std::lock_guard guard(m_lock);
     m_cancel_handler = nullptr;
+}
+
+void ConnectionManager::Connection::set_status_handler(std::function<mxb::Json()> fn)
+{
+    std::lock_guard guard(m_lock);
+    m_status_handler = std::move(fn);
+}
+
+void ConnectionManager::Connection::clear_status_handler()
+{
+    std::lock_guard guard(m_lock);
+    m_status_handler = nullptr;
 }
 
 void ConnectionManager::Connection::query_start(const std::string& sql)
