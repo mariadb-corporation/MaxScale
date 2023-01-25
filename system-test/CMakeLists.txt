@@ -924,6 +924,9 @@ add_test_executable(mxs4440_long_query_keepalive.cc mxs4440_long_query_keepalive
 # MXS-4474: MaxScale hangs when worker writes messages to itself
 add_test_executable(mxs4474_worker_messages.cc mxs4474_worker_messages replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4488: MaxScale hangs when client sends garbage
+add_test_executable(mxs4488_garbage.cc mxs4488_garbage mxs4488_garbage LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

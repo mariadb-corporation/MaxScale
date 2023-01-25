@@ -290,6 +290,8 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     if (maxbytes > 0 && m_readq.length() >= maxbytes)
     {
         // Already have enough data. May have more (either in readq or in socket), so read again later.
+        // Should not happen on first read from the TCP socket (strict limit). Subsequent reads can end up
+        // here even if ReadLimit::STRICT is used.
         read_success = true;
         trigger_again = true;
     }
@@ -340,7 +342,10 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
             rval_buf = move(m_readq);
         }
 
-        if (trigger_again)
+        // If there's extra data left after a ReadLimit::STRICT, a read event is not triggered and the caller
+        // is responsible for emptying the socket. This prevents the use of DCB::read_strict() followed by
+        // a DCB::read() from causing a busy-loop when there's a partial packet in the readq.
+        if (trigger_again && limit_type == ReadLimit::RES_LEN)
         {
             trigger_read_event();
         }
