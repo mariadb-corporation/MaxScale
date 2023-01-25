@@ -16,14 +16,22 @@
 #include <maxbase/json.hh>
 #include <uuid/uuid.h>
 #include <maxbase/string.hh>
+#include <maxsimd/multistmt.hh>
 
 using std::move;
 using LockGuard = std::lock_guard<std::mutex>;
 
 namespace
 {
-std::string wrap_in_atomic_block(std::string_view sql)
+std::string wrap_in_atomic_block(const std::string& sql)
 {
+    maxsimd::Markers markers;
+
+    if (!maxsimd::is_multi_stmt(sql, &markers))
+    {
+        return sql;
+    }
+
     bool have_semicolon = false;
 
     for (auto it = sql.rbegin(); it != sql.rend(); it++)
