@@ -21,6 +21,49 @@ namespace
 using Type = mxb::Json::Type;
 using namespace sql_etl;
 
+// Counts the number of rows in a resultset and updates a variable
+class RowCountObserver : public mxq::Output
+{
+public:
+    RowCountObserver(mxq::Output* output, int64_t& ref)
+        : m_output(output)
+        , m_ref(ref)
+    {
+    }
+
+    bool ok_result(int64_t rows_affected, int64_t warnings) override
+    {
+        return m_output->ok_result(rows_affected, warnings);
+    }
+
+    bool resultset_start(const std::vector<mxq::ColumnInfo>& metadata) override
+    {
+        return m_output->resultset_start(metadata);
+    }
+
+    bool resultset_rows(const std::vector<mxq::ColumnInfo>& metadata,
+                        mxq::ResultBuffer& res,
+                        uint64_t rows_fetched) override
+    {
+        m_ref += rows_fetched;
+        return m_output->resultset_rows(metadata, res, rows_fetched);
+    }
+
+    bool resultset_end(bool ok, bool complete) override
+    {
+        return m_output->resultset_end(ok, complete);
+    }
+
+    bool error_result(int errnum, const std::string& errmsg, const std::string& sqlstate) override
+    {
+        return m_output->error_result(errnum, errmsg, sqlstate);
+    }
+
+private:
+    mxq::Output* m_output;
+    int64_t&     m_ref;
+};
+
 mxb::Json maybe_get(const mxb::Json& json, const std::string& path, mxb::Json::Type type)
 {
     auto elem = json.at(path);
@@ -720,6 +763,11 @@ mxb::Json Table::to_json() const
         obj.set_float("execution_time", mxb::to_secs(m_duration));
     }
 
+    if (m_rows > 0)
+    {
+        obj.set_int("rows", m_rows);
+    }
+
     return obj;
 }
 
@@ -809,7 +857,9 @@ void Table::load_data(mxq::ODBC& source, mxq::ODBC& dest)
         auto start = mxb::Clock::now();
         prepare_sql(source, dest);
 
-        if (!source.execute(dest.as_output()))
+        RowCountObserver observer(dest.as_output(), m_rows);
+
+        if (!source.execute(&observer))
         {
             const char* who = !source.error().empty() ? "Source: " : "Destination: ";
             throw problem("Failed to load data. ", who, source.error(), dest.error());

@@ -209,6 +209,7 @@ private:
     std::string   m_insert;
     std::string   m_error;
     mxb::Duration m_duration {0};
+    int64_t       m_rows{0};
 
     mutable std::mutex m_lock;
 };
