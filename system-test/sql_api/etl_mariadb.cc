@@ -17,6 +17,8 @@
 
 #include "etl_common.hh"
 
+namespace
+{
 void compare_results(TestConnections& test, Connection& source_conn, Connection& dest_conn,
                      const std::string& sql, const sql_generation::SQLType& type)
 {
@@ -50,6 +52,7 @@ void compare_results(TestConnections& test, Connection& source_conn, Connection&
             }
         }
     }
+}
 }
 
 void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
@@ -210,9 +213,8 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
     dest.query("DROP TABLE test.masive_result");
 }
 
-int main(int argc, char** argv)
+void test_main(TestConnections& test)
 {
-    TestConnections test(argc, argv);
     EtlTest etl(test);
     test.repl->stop_slaves();
 
@@ -222,43 +224,20 @@ int main(int argc, char** argv)
        << "PWD=" << test.repl->password() << ";"
        << "SERVER=" << test.repl->ip(0) << ";"
        << "PORT=" << test.repl->port[0] << ";";
-    std::string dsn = ss.str();
 
-    if (test.ok())
-    {
-        test.log_printf("sanity_check");
-        sanity_check(test, etl, dsn);
-    }
+    TestCases test_cases = {
+        TESTCASE(sanity_check),
+        TESTCASE(invalid_sql),
+        TESTCASE(reuse_connections),
+        TESTCASE(test_datatypes),
+        TESTCASE(test_parallel_datatypes),
+        TESTCASE(massive_result),
+    };
 
-    if (test.ok())
-    {
-        test.log_printf("invalid_sql");
-        invalid_sql(test, etl, dsn);
-    }
+    etl.run_tests(ss.str(), test_cases);
+}
 
-    if (test.ok())
-    {
-        test.log_printf("reuse_connections");
-        reuse_connections(test, etl, dsn);
-    }
-
-    if (test.ok())
-    {
-        test.log_printf("test_datatypes");
-        test_datatypes(test, etl, dsn);
-    }
-
-    if (test.ok())
-    {
-        test.log_printf("test_parallel_datatypes");
-        test_parallel_datatypes(test, etl, dsn);
-    }
-
-    if (test.ok())
-    {
-        test.log_printf("massive_result");
-        massive_result(test, etl, dsn);
-    }
-
-    return test.global_result;
+int main(int argc, char** argv)
+{
+    return TestConnections().run_test(argc, argv, test_main);
 }

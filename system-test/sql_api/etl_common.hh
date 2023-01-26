@@ -18,6 +18,12 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 
+#define TESTCASE(a) {a, #a}
+
+class EtlTest;
+using TestFn = void (*)(TestConnections&, EtlTest&, const std::string&);
+using TestCases = std::vector<std::pair<TestFn, const char*>>;
+
 struct EtlTable
 {
     EtlTable(std::string_view sch,
@@ -60,6 +66,19 @@ public:
         : m_test(test)
     {
         static mxb::http::Init initer;
+    }
+
+    void run_tests(const std::string& dsn, const TestCases& test_cases)
+    {
+        for (const auto& [fn, name] : test_cases)
+        {
+            if (m_test.ok())
+            {
+                m_test.log_printf("%s", name);
+                fn(m_test, *this, dsn);
+                m_test.reset_timeout();
+            }
+        }
     }
 
     mxb::http::Response get(std::string_view endpoint)
@@ -160,7 +179,8 @@ public:
     {
         auto source = connect({
             {"target", "odbc"},
-            {"connection_string", source_dsn}
+            {"connection_string", source_dsn},
+            {"timeout", std::to_string(timeout.count())},
         });
 
         m_test.expect(source.valid(), "Failed to create source connection");
@@ -168,7 +188,8 @@ public:
         auto dest = connect({
             {"target", destination},
             {"user", m_test.maxscale->user_name()},
-            {"password", m_test.maxscale->password()}
+            {"password", m_test.maxscale->password()},
+            {"timeout", std::to_string(timeout.count())},
         });
 
         m_test.expect(dest.valid(), "Failed to create destination connection");
@@ -182,6 +203,7 @@ public:
         mxb::Json js(mxb::Json::Type::OBJECT);
         js.set_string("type", type);
         js.set_string("target", dest_id);
+        js.set_int("timeout", timeout.count());
 
         if (mode == Mode::REPLACE)
         {

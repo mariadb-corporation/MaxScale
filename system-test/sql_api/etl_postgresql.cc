@@ -72,17 +72,12 @@ void test_main(TestConnections& test)
                       "SERVER=127.0.0.1;"
                       "PORT=5432;";
 
-    if (test.ok())
-    {
-        test.log_printf("sanity_check");
-        sanity_check(test, etl, dsn);
-    }
+    TestCases test_cases = {
+        TESTCASE(sanity_check),
+        TESTCASE(massive_result),
+    };
 
-    if (test.ok())
-    {
-        test.log_printf("massive_result");
-        massive_result(test, etl, dsn);
-    }
+    etl.run_tests(dsn, test_cases);
 }
 
 int main(int argc, char** argv)
