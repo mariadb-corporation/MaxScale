@@ -103,10 +103,10 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import ConnDlgCtr from './ConnDlgCtr.vue'
-import ReconnDlgCtr from './ReconnDlgCtr.vue'
+import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
+import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
+import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 
 export default {
     name: 'wke-conn-man',

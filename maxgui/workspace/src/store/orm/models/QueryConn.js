@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Extender from '@workspaceSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@workspaceSrc/store/config'
+import Extender from '@wsSrc/store/orm/Extender'
+import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryConn extends Extender {

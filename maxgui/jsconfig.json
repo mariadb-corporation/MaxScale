@@ -4,7 +4,10 @@
         "allowSyntheticDefaultImports": false,
         "paths": {
             "@rootSrc/*": ["src/*"],
-            "@workspaceSrc/*": ["workspace/src/*"],
+            "@wsSrc/*": ["workspace/src/*"],
+            "@wsComps/*": ["workspace/src/components/*"],
+            "@wkeComps/*": ["workspace/src/components/worksheets/*"],
+            "@wsModels/*": ["workspace/src/store/orm/models/*"],
             "@share/*": ["share/*"],
             "@tests/*": ["tests/*"]
         }

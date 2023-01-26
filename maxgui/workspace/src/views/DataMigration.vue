@@ -71,9 +71,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import EtlTasks from '@workspaceSrc/components/EtlTasks.vue'
-import EtlStages from '@workspaceSrc/components/EtlStages.vue'
+import EtlTask from '@wsModels/EtlTask'
+import EtlTasks from '@wsComps/EtlTasks.vue'
+import EtlStages from '@wkeComps/DataMigration'
 
 export default {
     name: 'data-migration',

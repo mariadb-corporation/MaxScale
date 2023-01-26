@@ -24,11 +24,31 @@ describe(`wke-toolbar - mounted hook and child component's interaction tests`, (
     it('Should emit get-total-btn-width evt', () => {
         expect(wrapper.emitted()).to.have.property('get-total-btn-width')
     })
-    const childComps = ['wke-toolbar-left-ctr', 'wke-toolbar-right']
-    childComps.forEach(name => {
-        it(`Should render ${name}`, () => {
-            const comp = wrapper.findComponent({ name })
-            expect(comp.exists()).to.be.true
+    it(`Should call add`, async () => {
+        let isCalled = false
+        let wrapper = mountFactory({
+            computed: { isAddWkeDisabled: () => false },
+            methods: { add: () => (isCalled = true) },
         })
+        await wrapper.find('.add-wke-btn').trigger('click')
+        expect(isCalled).to.be.true
+    })
+
+    it('Should pass accurate data to query-cnf-dlg-ctr via attrs', () => {
+        const cnfDlg = wrapper.findComponent({ name: 'query-cnf-dlg-ctr' })
+        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.queryConfigDialog)
+    })
+    it(`Should popup query setting dialog`, () => {
+        expect(wrapper.vm.queryConfigDialog).to.be.false
+        wrapper.find('.query-setting-btn').trigger('click')
+        expect(wrapper.vm.queryConfigDialog).to.be.true
+    })
+
+    it(`Should call SET_IS_FULLSCREEN mutation`, () => {
+        let wrapper = mountFactory()
+        const spy = sinon.spy(wrapper.vm, 'SET_IS_FULLSCREEN')
+        const btn = wrapper.find('.min-max-btn')
+        btn.trigger('click')
+        spy.should.have.been.calledOnce
     })
 })

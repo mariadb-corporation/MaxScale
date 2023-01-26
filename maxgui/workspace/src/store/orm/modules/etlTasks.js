@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import { cancel } from '@workspaceSrc/api/etl'
+import EtlTask from '@wsModels/EtlTask'
+import { cancel } from '@wsSrc/api/etl'
 
 export default {
     namespaced: true,

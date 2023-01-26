@@ -10,12 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import { query, getAsyncResult } from '@workspaceSrc/api/query'
-import { prepare, start } from '@workspaceSrc/api/etl'
-import queryHelper from '@workspaceSrc/store/queryHelper'
-import { ETL_CREATE_MODES } from '@workspaceSrc/store/config'
+import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
+import { query, getAsyncResult } from '@wsSrc/api/query'
+import { prepare, start } from '@wsSrc/api/etl'
+import queryHelper from '@wsSrc/store/queryHelper'
+import { ETL_CREATE_MODES } from '@wsSrc/store/config'
 
 export default {
     namespaced: true,

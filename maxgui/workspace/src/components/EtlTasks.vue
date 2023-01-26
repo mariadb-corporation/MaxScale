@@ -76,9 +76,9 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import EtlTaskManage from '@workspaceSrc/components/EtlTaskManage.vue'
+import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
+import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
 
 export default {
     name: 'etl-tasks',

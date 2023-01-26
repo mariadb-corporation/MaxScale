@@ -37,7 +37,10 @@ module.exports = {
             .set('@rootSrc', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
             .set('@workspace', path.resolve(__dirname, 'workspace'))
-            .set('@workspaceSrc', path.resolve(__dirname, 'workspace/src'))
+            .set('@wsSrc', path.resolve(__dirname, 'workspace/src'))
+            .set('@wsComps', path.resolve(__dirname, 'workspace/src/components'))
+            .set('@wkeComps', path.resolve(__dirname, 'workspace/src/components/worksheets/'))
+            .set('@wsModels', path.resolve(__dirname, 'workspace/src/store/orm/models'))
             .set('@share', path.resolve(__dirname, 'share'))
 
         const key = process.env.httpsKey

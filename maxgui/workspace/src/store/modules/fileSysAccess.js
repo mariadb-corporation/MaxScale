@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@workspaceSrc/store/orm/models/Editor'
+import Editor from '@wsModels/Editor'
 import { supported } from 'browser-fs-access'
 import localForage from 'localforage'
 

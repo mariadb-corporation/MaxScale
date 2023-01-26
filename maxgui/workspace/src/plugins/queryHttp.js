@@ -13,9 +13,9 @@
 import ax from 'axios'
 import { t } from 'typy'
 import { lodash, getErrorsArr } from '@share/utils/helpers'
-import { MARIADB_NET_ERRNO } from '@workspaceSrc/store/config'
+import { MARIADB_NET_ERRNO } from '@wsSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
+import QueryConn from '@wsModels/QueryConn'
 /**
  *
  * @param {Boolean} param.value - is connection busy

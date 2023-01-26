@@ -15,8 +15,11 @@ import { terser } from 'rollup-plugin-terser'
 
 const projectRoot = path.resolve(__dirname, '../../')
 const rootSrcPath = path.resolve(projectRoot, 'src')
-const workspacePath = path.resolve(__dirname, '../')
-const workspaceSrcPath = `${workspacePath}/src`
+const wsPath = path.resolve(__dirname, '../')
+const wsSrcPath = `${wsPath}/src`
+const wsComponentsPath = `${wsSrcPath}/components`
+const wkeCompsPath = `${wsComponentsPath}/worksheets`
+const wsModelsPath = `${wsPath}/src/store/orm/models`
 const sharePath = path.resolve(projectRoot, 'share')
 
 const monacoConfig = require(`${sharePath}/buildConfig/monaco`)
@@ -30,7 +33,7 @@ const esbrowserslist = fs
 const resolver = resolve({ extensions: ['.js', '.vue', '.json', '.scss'] })
 
 const scssVariables = `@import "${sharePath}/styles/colors.scss";
-                       @import "${workspaceSrcPath}/styles/variables.scss";`
+                       @import "${wsSrcPath}/styles/variables.scss";`
 
 // Refer to https://rollupjs.org/guide/en/#warning-treating-module-as-external-dependency
 const external = [
@@ -67,7 +70,7 @@ function copyrightBanner() {
 // Export config
 export default [
     {
-        input: `${workspacePath}/lib/mxs-workspace.js`,
+        input: `${wsPath}/lib/mxs-workspace.js`,
         output: [
             { file: 'dist/mxs-workspace.esm.js', format: 'esm', exports: 'named' },
             { file: 'dist/mxs-workspace.js', format: 'cjs', exports: 'named' },
@@ -84,8 +87,11 @@ export default [
             alias({
                 entries: [
                     { find: '@rootSrc', replacement: rootSrcPath },
-                    { find: '@workspace', replacement: workspacePath },
-                    { find: '@workspaceSrc', replacement: workspaceSrcPath },
+                    { find: '@workspace', replacement: wsPath },
+                    { find: '@wsSrc', replacement: wsSrcPath },
+                    { find: '@wsComps', replacement: wsComponentsPath },
+                    { find: '@wkeComps', replacement: wkeCompsPath },
+                    { find: '@wsModels', replacement: wsModelsPath },
                     { find: '@share', replacement: sharePath },
                 ],
                 resolver,

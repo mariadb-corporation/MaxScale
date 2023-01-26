@@ -13,8 +13,8 @@
 import Vue from 'vue'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-import workspacePersistPlugin from '@workspaceSrc/store/plugins/persistPlugin'
-import orm from '@workspaceSrc/store/plugins/orm'
+import workspacePersistPlugin from '@wsSrc/store/plugins/persistPlugin'
+import orm from '@wsSrc/store/plugins/orm'
 const appPersistConfig = new VuexPersistence({
     key: 'maxgui-app',
     storage: localForage,

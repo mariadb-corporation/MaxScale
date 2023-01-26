@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as config from '@workspaceSrc/store/config'
+import * as config from '@wsSrc/store/config'
 import commonConfig from '@share/config'
-import initEntities from '@workspaceSrc/store/orm/initEntities'
+import initEntities from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,

@@ -125,7 +125,7 @@
  * $emit('confirm-save', v:object): new cnf data
  */
 import { mapState } from 'vuex'
-import RowLimitCtr from './RowLimitCtr.vue'
+import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 export default {
     name: 'query-cnf-dlg',
     components: {

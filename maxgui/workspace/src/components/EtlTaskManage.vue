@@ -39,8 +39,8 @@
  * Emit:
  * @on-restart: string : etl task id
  */
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
+import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
 import { mapState, mapGetters } from 'vuex'
 
 export default {

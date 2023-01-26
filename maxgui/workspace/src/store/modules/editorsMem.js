@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import { query } from '@workspaceSrc/api/query'
+import QueryConn from '@wsModels/QueryConn'
+import { query } from '@wsSrc/api/query'
 
 export default {
     namespaced: true,

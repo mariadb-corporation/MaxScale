@@ -11,24 +11,24 @@
  * Public License.
  */
 import { Database } from '@vuex-orm/core'
-import Editor from '@workspaceSrc/store/orm/models/Editor'
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import QueryResult from '@workspaceSrc/store/orm/models/QueryResult'
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import SchemaSidebar from '@workspaceSrc/store/orm/models/SchemaSidebar'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
+import Editor from '@wsModels/Editor'
+import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
+import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
 // entities to be stored only in memory
-import QueryTabTmp from '@workspaceSrc/store/orm/models/QueryTabTmp'
-import WorksheetTmp from '@workspaceSrc/store/orm/models/WorksheetTmp'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
-import editors from '@workspaceSrc/store/orm/modules/editors'
-import etlTasks from '@workspaceSrc/store/orm/modules/etlTasks'
-import queryConns from '@workspaceSrc/store/orm/modules/queryConns'
-import queryResults from '@workspaceSrc/store/orm/modules/queryResults'
-import queryTabs from '@workspaceSrc/store/orm/modules/queryTabs'
-import schemaSidebars from '@workspaceSrc/store/orm/modules/schemaSidebars'
-import worksheets from '@workspaceSrc/store/orm/modules/worksheets'
+import editors from '@wsSrc/store/orm/modules/editors'
+import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
+import queryConns from '@wsSrc/store/orm/modules/queryConns'
+import queryResults from '@wsSrc/store/orm/modules/queryResults'
+import queryTabs from '@wsSrc/store/orm/modules/queryTabs'
+import schemaSidebars from '@wsSrc/store/orm/modules/schemaSidebars'
+import worksheets from '@wsSrc/store/orm/modules/worksheets'
 
 const database = new Database()
 database.register(Editor, editors)

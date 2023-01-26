@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Extender from '@workspaceSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@workspaceSrc/store/config'
+import Extender from '@wsSrc/store/orm/Extender'
+import { ORM_PERSISTENT_ENTITIES, EDITOR_MODES } from '@wsSrc/store/config'
 
 export default class Editor extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.EDITORS

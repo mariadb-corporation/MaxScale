@@ -10,11 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import Editor from '@workspaceSrc/store/orm/models/Editor'
-import queryHelper from '@workspaceSrc/store/queryHelper'
-import { query } from '@workspaceSrc/api/query'
+import Worksheet from '@wsModels/Worksheet'
+import QueryConn from '@wsModels/QueryConn'
+import Editor from '@wsModels/Editor'
+import queryHelper from '@wsSrc/store/queryHelper'
+import { query } from '@wsSrc/api/query'
 
 export default {
     namespaced: true,

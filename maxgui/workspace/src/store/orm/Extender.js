@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from '@workspaceSrc/store/queryHelper'
+import queryHelper from '@wsSrc/store/queryHelper'
 import { lodash } from '@share/utils/helpers'
 import { Model } from '@vuex-orm/core'
 

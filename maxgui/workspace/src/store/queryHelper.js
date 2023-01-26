@@ -16,11 +16,11 @@ import {
     NODE_GROUP_CHILD_TYPES,
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
-} from '@workspaceSrc/store/config'
+} from '@wsSrc/store/config'
 import { lodash, to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { getObjectRows } from '@workspaceSrc/utils/helpers'
-import { query } from '@workspaceSrc/api/query'
+import { getObjectRows } from '@wsSrc/utils/helpers'
+import { query } from '@wsSrc/api/query'
 
 /**
  * @public

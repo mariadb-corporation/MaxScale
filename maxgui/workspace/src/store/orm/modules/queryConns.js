@@ -10,20 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryHelper from '@workspaceSrc/store/queryHelper'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import SchemaSidebar from '@workspaceSrc/store/orm/models/SchemaSidebar'
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import {
-    getAliveConns,
-    openConn,
-    cloneConn,
-    reconnect,
-    deleteConn,
-} from '@workspaceSrc/api/connection'
-import { query } from '@workspaceSrc/api/query'
+import queryHelper from '@wsSrc/store/queryHelper'
+import QueryConn from '@wsModels/QueryConn'
+import QueryTab from '@wsModels/QueryTab'
+import Worksheet from '@wsModels/Worksheet'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import EtlTask from '@wsModels/EtlTask'
+import { getAliveConns, openConn, cloneConn, reconnect, deleteConn } from '@wsSrc/api/connection'
+import { query } from '@wsSrc/api/query'
 
 export default {
     namespaced: true,

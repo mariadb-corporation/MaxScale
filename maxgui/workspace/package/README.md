@@ -199,45 +199,15 @@ example are importable.
             @on-cancel="cancelLeave"
         />
         <ReconnDlgCtr :onReconnectCb="onReconnectCb" />
-        <mxs-workspace>
-            <!-- Slot for placing content at the top of the workspace that is above the worksheet
-                 navigation tabs.
-            -->
-            <template v-slot:mxs-workspace-top>
-                <div class="d-flex flex-wrap">
-                    <v-spacer />
-                    <QueryCnfGearBtn />
-                    <MinMaxBtnCtr />
-                </div>
-            </template>
-            <!-- txt-editor-toolbar-right-slot`: Slot for placing content on the right side of
-                 the toolbar below the query navigation tabs in TXT_EDITOR and DDL_EDITOR modes
-            -->
-            <template v-slot:txt-editor-toolbar-right-slot>
-                <div class="d-flex flex-wrap">
-                    <v-spacer />
-                    <QueryCnfGearBtn />
-                    <MinMaxBtnCtr />
-                </div>
-            </template>
-            <template v-slot:ddl-editor-toolbar-right-slot>
-                <div class="d-flex flex-wrap">
-                    <v-spacer />
-                    <QueryCnfGearBtn />
-                    <MinMaxBtnCtr />
-                </div>
-            </template>
-        </mxs-workspace>
+        <mxs-workspace />
     </div>
 </template>
 
 <script>
-import { models, MinMaxBtnCtr, QueryCnfGearBtn, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-workspace'
+import { models, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-workspace'
 export default {
     name: 'query-page',
     components: {
-        QueryCnfGearBtn, // Query configuration button
-        MinMaxBtnCtr, // Toggle full-screen mode button
         ConfirmLeaveDlg, // confirmation on leave dialog
         ReconnDlgCtr, // reconnect dialog
     },

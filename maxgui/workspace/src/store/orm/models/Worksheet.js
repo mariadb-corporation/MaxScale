@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Extender from '@workspaceSrc/store/orm/Extender'
+import Extender from '@wsSrc/store/orm/Extender'
 import { uuidv1 } from '@share/utils/helpers'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@workspaceSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
 
 export default class Worksheet extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS

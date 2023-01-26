@@ -2,9 +2,46 @@
     <div
         class="wke-toolbar d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border px-2"
     >
-        <wke-toolbar-left-ctr @get-total-width="leftBtnsWidth = $event" />
+        <div ref="toolbarLeft" class="d-flex align-center left-buttons fill-height">
+            <v-btn
+                :disabled="isAddWkeDisabled"
+                small
+                class="float-left add-wke-btn"
+                icon
+                @click="add"
+            >
+                <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
+            </v-btn>
+        </div>
         <v-spacer />
-        <wke-toolbar-right @get-total-width="rightBtnsWidth = $event" />
+        <div ref="toobarRight" class="d-flex align-center right-buttons fill-height">
+            <wke-conn-man class="mx-2" />
+            <mxs-tooltip-btn
+                btnClass="query-setting-btn"
+                icon
+                small
+                @click="queryConfigDialog = !queryConfigDialog"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="16" color="accent-dark">$vuetify.icons.mxs_settings</v-icon>
+                    <query-cnf-dlg-ctr v-model="queryConfigDialog" />
+                </template>
+                {{ $mxs_tc('settings', 2) }}
+            </mxs-tooltip-btn>
+            <mxs-tooltip-btn
+                btnClass="min-max-btn"
+                icon
+                small
+                @click="SET_IS_FULLSCREEN(!is_fullscreen)"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="22" color="accent-dark">
+                        mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
+                    </v-icon>
+                </template>
+                {{ is_fullscreen ? $mxs_t('minimize') : $mxs_t('maximize') }}
+            </mxs-tooltip-btn>
+        </div>
     </div>
 </template>
 <script>
@@ -25,15 +62,15 @@
  * Emits
  * $emit('get-total-btn-width', v:number)
  */
-import WkeToolbarLeftCtr from './WkeToolbarLeftCtr.vue'
-import WkeToolbarRight from './WkeToolbarRight.vue'
+import { insertWke } from '@wsSrc/store/orm/initEntities'
+import QueryConn from '@wsModels/QueryConn'
+import { mapMutations, mapState } from 'vuex'
+import QueryCnfDlgCtr from '@wsComps/QueryCnfDlgCtr.vue'
+import WkeConnMan from '@wsComps/WkeConnMan.vue'
 
 export default {
     name: 'wke-toolbar',
-    components: {
-        WkeToolbarLeftCtr,
-        WkeToolbarRight,
-    },
+    components: { WkeConnMan, QueryCnfDlgCtr },
     data() {
         return {
             queryConfigDialog: false,
@@ -42,8 +79,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({ is_fullscreen: state => state.prefAndStorage.is_fullscreen }),
         totalWidth() {
             return this.rightBtnsWidth + this.leftBtnsWidth
+        },
+        isAddWkeDisabled() {
+            return !QueryConn.all().length
         },
     },
     watch: {
@@ -52,6 +93,18 @@ export default {
             handler(v) {
                 this.$emit('get-total-btn-width', v)
             },
+        },
+    },
+    mounted() {
+        this.$nextTick(() => {
+            this.leftBtnsWidth = this.$refs.toolbarLeft.clientWidth
+            this.rightBtnsWidth = this.$refs.toobarRight.clientWidth
+        })
+    },
+    methods: {
+        ...mapMutations({ SET_IS_FULLSCREEN: 'prefAndStorage/SET_IS_FULLSCREEN' }),
+        add() {
+            insertWke()
         },
     },
 }

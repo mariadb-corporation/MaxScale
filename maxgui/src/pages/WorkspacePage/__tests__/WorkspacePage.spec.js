@@ -22,7 +22,7 @@ const allConnsMock = [
         type: 'listeners',
     },
 ]
-const from_route_mock = { name: 'workspace', path: '/query' }
+const from_route_mock = { name: 'workspace', path: '/workspace' }
 const to_route_mock = { name: 'settings', path: '/settings' }
 function mockBeforeRouteLeave(wrapper) {
     const next = sinon.stub()

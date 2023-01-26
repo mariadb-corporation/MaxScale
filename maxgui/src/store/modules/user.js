@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
+import QueryConn from '@wsModels/QueryConn'
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import localForage from 'localforage'

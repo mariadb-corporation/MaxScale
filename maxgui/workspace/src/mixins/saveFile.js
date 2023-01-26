@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import Editor from '@workspaceSrc/store/orm/models/Editor'
+import QueryTab from '@wsModels/QueryTab'
+import Editor from '@wsModels/Editor'
 import { mapGetters, mapActions } from 'vuex'
 
 export default {

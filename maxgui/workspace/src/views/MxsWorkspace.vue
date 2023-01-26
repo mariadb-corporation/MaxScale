@@ -20,13 +20,14 @@
                     :height="wkeNavCtrHeight"
                 />
                 <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
-                    <wke-ctr
+                    <!-- TODO: Show etl-stages based on worksheet type -->
+                    <query-editor
                         v-if="activeWkeId === wke.id && ctrDim.height"
                         ref="wke"
                         :ctrDim="ctrDim"
                     >
                         <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-                    </wke-ctr>
+                    </query-editor>
                 </keep-alive>
             </template>
         </div>
@@ -47,16 +48,16 @@
  * Public License.
  */
 import { mapActions, mapState } from 'vuex'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import '@workspaceSrc/styles/workspace.scss'
-import WkeCtr from '@workspaceSrc/components/WkeCtr.vue'
-import WkeNavCtr from '@workspaceSrc/components/WkeNavCtr.vue'
-import { EventBus } from '@workspaceSrc/components/EventBus'
+import Worksheet from '@wsModels/Worksheet'
+import '@wsSrc/styles/workspace.scss'
+import QueryEditor from '@wkeComps/QueryEditor'
+import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
 export default {
     name: 'mxs-workspace',
     components: {
-        WkeCtr,
+        QueryEditor,
         WkeNavCtr,
     },
     data() {

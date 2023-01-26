@@ -11,13 +11,13 @@
  * Public License.
  */
 import { uuidv1 } from '@share/utils/helpers'
-import Editor from '@workspaceSrc/store/orm/models/Editor'
-import QueryResult from '@workspaceSrc/store/orm/models/QueryResult'
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import SchemaSidebar from '@workspaceSrc/store/orm/models/SchemaSidebar'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import QueryTabTmp from '@workspaceSrc/store/orm/models/QueryTabTmp'
-import WorksheetTmp from '@workspaceSrc/store/orm/models/WorksheetTmp'
+import Editor from '@wsModels/Editor'
+import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 /**
  * Initialize a blank worksheet and its mandatory relational entities

@@ -10,15 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import QueryTabTmp from '@workspaceSrc/store/orm/models/QueryTabTmp'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import Editor from '@workspaceSrc/store/orm/models/Editor'
-import QueryResult from '@workspaceSrc/store/orm/models/QueryResult'
-import { insertQueryTab } from '@workspaceSrc/store/orm/initEntities'
-import queryHelper from '@workspaceSrc/store/queryHelper'
-import { deleteConn } from '@workspaceSrc/api/connection'
+import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import Worksheet from '@wsModels/Worksheet'
+import QueryConn from '@wsModels/QueryConn'
+import Editor from '@wsModels/Editor'
+import QueryResult from '@wsModels/QueryResult'
+import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
+import queryHelper from '@wsSrc/store/queryHelper'
+import { deleteConn } from '@wsSrc/api/connection'
 
 export default {
     namespaced: true,

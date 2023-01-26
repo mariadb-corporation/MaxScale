@@ -12,7 +12,7 @@
  */
 import moment from 'moment'
 import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
-import sqlFormatter from '@workspaceSrc/components/SqlEditor/formatter'
+import sqlFormatter from '@wsComps/SqlEditor/formatter'
 
 export const deepDiff = require('deep-diff')
 

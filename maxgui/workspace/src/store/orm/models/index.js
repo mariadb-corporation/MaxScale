@@ -10,15 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Editor from '@workspaceSrc/store/orm/models/Editor'
-import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import QueryResult from '@workspaceSrc/store/orm/models/QueryResult'
-import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
-import SchemaSidebar from '@workspaceSrc/store/orm/models/SchemaSidebar'
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import QueryTabTmp from '@workspaceSrc/store/orm/models/QueryTabTmp'
-import WorksheetTmp from '@workspaceSrc/store/orm/models/WorksheetTmp'
+import Editor from '@wsModels/Editor'
+import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
+import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsModels/SchemaSidebar'
+import Worksheet from '@wsModels/Worksheet'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
+import WorksheetTmp from '@wsModels/WorksheetTmp'
 
 export default {
     Editor,

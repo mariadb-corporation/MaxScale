@@ -10,14 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MxsWorkspace from '@workspaceSrc/views/MxsWorkspace.vue'
-import DataMigration from '@workspaceSrc/views/DataMigration.vue'
-import workspaceModules from '@workspaceSrc/store/modules'
-import queryHttp from '@workspaceSrc/plugins/queryHttp'
+import MxsWorkspace from '@wsSrc/views/MxsWorkspace.vue'
+import DataMigration from '@wsSrc/views/DataMigration.vue'
+import workspaceModules from '@wsSrc/store/modules'
+import queryHttp from '@wsSrc/plugins/queryHttp'
 
 /**
  * Notice: To make mxs-workspace work in maxgui,
- * '@workspaceSrc/store/persistPlugin' needs to be registered manually because it can not be registered
+ * '@wsSrc/store/persistPlugin' needs to be registered manually because it can not be registered
  * with the `store` object dynamically like `registerModule`.
  */
 export default {

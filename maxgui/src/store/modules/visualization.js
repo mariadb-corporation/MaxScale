@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
-import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
-import { insertWke } from '@workspaceSrc/store/orm/initEntities'
+import Worksheet from '@wsModels/Worksheet'
+import QueryConn from '@wsModels/QueryConn'
+import { insertWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,

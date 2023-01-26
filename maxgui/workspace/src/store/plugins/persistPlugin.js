@@ -12,7 +12,7 @@
  */
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-import { ORM_NAMESPACE, ORM_PERSISTENT_ENTITIES } from '@workspaceSrc/store/config'
+import { ORM_NAMESPACE, ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
 import { lodash } from '@share/utils/helpers'
 
 export default new VuexPersistence({

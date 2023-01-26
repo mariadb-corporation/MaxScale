@@ -11,23 +11,21 @@
  * Public License.
  */
 import MxsWorkspace from './MxsWorkspace.vue'
-import DataMigration from '@workspaceSrc/views/DataMigration.vue'
-import workspaceModules from '@workspaceSrc/store/modules'
-import commonComponents from '@workspaceSrc/components/common'
-import queryHttp from '@workspaceSrc/plugins/queryHttp'
+import DataMigration from '@wsSrc/views/DataMigration.vue'
+import workspaceModules from '@wsSrc/store/modules'
+import commonComponents from '@wsComps/common'
+import queryHttp from '@wsSrc/plugins/queryHttp'
 import helpersPlugin from '@share/plugins/helpers'
-import * as helpers from '@workspaceSrc/utils/helpers'
+import * as helpers from '@wsSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
 
 //TODO: Add more if needed
-export { default as QueryCnfGearBtn } from '@workspaceSrc/components/QueryCnfGearBtn.vue'
-export { default as MinMaxBtnCtr } from '@workspaceSrc/components/MinMaxBtnCtr.vue'
-export { default as ConfirmLeaveDlg } from '@workspaceSrc/components/ConfirmLeaveDlg.vue'
-export { default as ReconnDlgCtr } from '@workspaceSrc/components/ReconnDlgCtr.vue'
-export { default as workspaceStorePlugins } from '@workspaceSrc/store/plugins/index'
-export { default as models } from '@workspaceSrc/store/orm/models'
+export { default as ConfirmLeaveDlg } from '@wsComps/ConfirmLeaveDlg.vue'
+export { default as ReconnDlgCtr } from '@wsComps/ReconnDlgCtr.vue'
+export { default as workspaceStorePlugins } from '@wsSrc/store/plugins/index'
+export { default as models } from '@wsModels'
 export default /*#__PURE__*/ (() => {
     // Get component instance
     const installable = MxsWorkspace

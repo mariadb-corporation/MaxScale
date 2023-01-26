@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { addDaysToNow } from '@workspaceSrc/utils/helpers'
+import { addDaysToNow } from '@wsSrc/utils/helpers'
 
 const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
