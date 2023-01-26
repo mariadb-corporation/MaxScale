@@ -1076,6 +1076,235 @@ private:
     std::vector<std::pair<T, const char*>> m_enumeration;
 };
 
+template<typename T>
+class ParamEnumList : public ConcreteParam<ParamEnumList<T>, std::vector<T>>
+{
+public:
+    using value_type = std::vector<T>;
+
+    ParamEnumList(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
+        : ParamEnumList(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                        enumeration, value_type())
+    {
+    }
+
+    ParamEnumList(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  value_type default_value,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
+        : ParamEnumList(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                        enumeration, default_value)
+    {
+    }
+
+    std::string type() const override;
+    const std::vector<std::pair<T, const char*>>& values() const
+    {
+        return m_enumeration;
+    }
+
+    std::string to_string(value_type value_list) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value_list) const;
+    json_t* to_json() const override;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    ParamEnumList(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  Param::Modifiable modifiable,
+                  Param::Kind kind,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  value_type default_value)
+        : ConcreteParam<ParamEnumList, std::vector<T>>(
+            pSpecification, zName, zDescription, modifiable, kind, default_value)
+        , m_enumeration(enumeration)
+
+    {
+    }
+
+private:
+    std::vector<std::pair<T, const char*>> m_enumeration;
+};
+
+template<typename T>
+std::string ParamEnumList<T>::type() const
+{
+    return "enum list";
+}
+
+template<typename T>
+std::string ParamEnumList<T>::to_string(value_type value_list) const
+{
+    std::string ret;
+    bool first = true;
+    for (const auto& value : value_list)
+    {
+        auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                               [value](const std::pair<T, const char*>& entry) {
+            return entry.first == value;
+        });
+
+        mxb_assert(it != m_enumeration.end());
+
+        if (!first)
+        {
+            ret += ',';
+        }
+        ret += it->second;
+        first = false;
+    }
+
+    return ret;
+}
+
+template<typename T>
+bool ParamEnumList<T>::from_string(const std::string& values_as_string,
+                                   value_type* pValue,
+                                   std::string* pMessage) const
+{
+    bool success = true;
+
+    for (auto value_as_string : mxb::strtok(values_as_string, ","))
+    {
+        maxbase::trim(value_as_string);
+
+        auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                               [value_as_string](const std::pair<T, const char*>& elem) {
+            return value_as_string == elem.second;
+        });
+
+        if (it != m_enumeration.end())
+        {
+            pValue->push_back(it->first);
+        }
+        else if (pMessage)
+        {
+            std::string s;
+            for (size_t i = 0; i < m_enumeration.size(); ++i)
+            {
+                s += "'";
+                s += m_enumeration[i].second;
+                s += "'";
+
+                if (i == m_enumeration.size() - 2)
+                {
+                    s += " and ";
+                }
+                else if (i != m_enumeration.size() - 1)
+                {
+                    s += ", ";
+                }
+            }
+
+            *pMessage = "Invalid enumeration value: ";
+            *pMessage += value_as_string;
+            *pMessage += ", valid values are: ";
+            *pMessage += s;
+            *pMessage += ".";
+
+            success = false;
+            break;
+        }
+    }
+
+    return success;
+}
+
+template<typename T>
+json_t* ParamEnumList<T>::to_json(value_type value_list) const
+{
+    json_t* arr = json_array();
+    for (const auto& value : value_list)
+    {
+        auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                               [value](const std::pair<T, const char*>& entry) {
+            return entry.first == value;
+        });
+
+        if (it != m_enumeration.end())
+        {
+            json_array_append_new(arr, json_string(it->second));
+        }
+        else
+        {
+            mxb_assert(!true);
+            json_array_append_new(arr, json_string("Unknown"));
+        }
+    }
+
+    return arr;
+}
+
+template<typename T>
+bool ParamEnumList<T>::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    bool rv = false;
+
+    std::string values_as_string;
+
+    if (json_is_array(pJson))
+    {
+        size_t index;
+        json_t* elem;
+        bool first = true;
+        json_array_foreach(pJson, index, elem)
+        {
+            if (json_is_string(elem))
+            {
+                if (!first)
+                {
+                    values_as_string += ',';
+                }
+                
+                values_as_string += json_string_value(elem);
+                
+                first = false;
+            }
+            else
+            {
+                *pMessage = "Expected a json array of strings, but array contained a json ";
+                *pMessage += mxb::json_type_to_string(pJson);
+                *pMessage += ".";
+            }
+        }
+    }
+    else if (json_is_string(pJson))
+    {
+        values_as_string = json_string_value(pJson);
+    }
+
+    rv = from_string(values_as_string.c_str(), pValue, pMessage);
+
+    return rv;
+}
+
+template<typename T>
+json_t* ParamEnumList<T>::to_json() const
+{
+    auto rv = ConcreteParam<ParamEnumList<T>, std::vector<T>>::to_json();
+    auto arr = json_array();
+
+    for (const auto& a : m_enumeration)
+    {
+        json_array_append_new(arr, json_string(a.second));
+    }
+
+    json_object_set_new(rv, "enum_values", arr);
+
+    return rv;
+}
+
 /**
  * ParamEnumMask
  */
@@ -3145,6 +3374,12 @@ using Seconds = Duration<std::chrono::seconds>;
  */
 template<class T>
 using Enum = ConcreteType<ParamEnum<T>>;
+
+/**
+ * EnumList
+ */
+template<class T>
+using EnumList = ConcreteType<ParamEnumList<T>>;
 
 /**
  * EnumMask
