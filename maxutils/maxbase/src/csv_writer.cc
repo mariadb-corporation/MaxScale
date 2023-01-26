@@ -19,22 +19,11 @@ namespace maxbase
 {
 
 CsvWriter::CsvWriter(const std::string& path,
-                     const std::string& file_base_name,
                      const std::vector<std::string>& columns)
     : m_path(path)
-    , m_base_name(file_base_name)
     , m_columns(columns)
 {
-    mxb_assert(!path.empty());
-    mxb_assert(!m_base_name.empty());
-    mxb_assert(!m_columns.empty());
-
-    if (m_path.back() != '/')
-    {
-        m_path += '/';
-    }
-
-    m_full_path = m_path + m_base_name + ".csv";
+    mxb_assert(!m_path.empty());
 
     open_file();
 }
@@ -51,16 +40,16 @@ bool CsvWriter::rotate()
     return open_file();
 }
 
-const std::string CsvWriter::full_path() const
+const std::string CsvWriter::path() const
 {
-    return m_full_path;
+    return m_path;
 }
 
 bool CsvWriter::open_file()
 {
     bool ok = true;
 
-    m_file = std::ofstream(m_full_path, std::ios_base::app);
+    m_file = std::ofstream(m_path, std::ios_base::app);
 
     ok = m_file.good();
 

@@ -764,25 +764,18 @@ config::ParamString Config::s_admin_verify_url(
     "URL for third-party verification of client tokens",
     "");
 
-config::ParamBool Config::s_admin_audit_enable(
+config::ParamBool Config::s_admin_audit_enabled(
     &Config::s_specification,
     "admin_audit",
     "Enable REST audit logging",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString Config::s_admin_audit_dir(
+config::ParamString Config::s_admin_audit_file(
     &Config::s_specification,
-    "admin_audit_dir",
+    "admin_audit_file",
     "Directory where REST audit files are stored.",
-    cmake_defaults::DEFAULT_LOGDIR,
-    mxs::config::Param::AT_RUNTIME);
-
-config::ParamString Config::s_admin_audit_file_base(
-    &Config::s_specification,
-    "admin_audit_file_base",
-    "Base name of the REST audit file. \".csv\" will be added",
-    "admin_audit",
+    std::string(cmake_defaults::DEFAULT_LOGDIR) + "/admin_audit.csv"s,
     mxs::config::Param::AT_RUNTIME);
 
 config::ParamEnumList<maxbase::http::Method> Config::s_admin_audit_exclude_methods(
@@ -1042,9 +1035,8 @@ Config::Config(int argc, char** argv)
 }),
     rebalance_window(this, &s_rebalance_window),
     skip_name_resolve(this, &s_skip_name_resolve),
-    admin_audit_enable(this, &s_admin_audit_enable),
-    admin_audit_dir(this, &s_admin_audit_dir),
-    admin_audit_file_base(this, &s_admin_audit_file_base),
+    admin_audit_enabled(this, &s_admin_audit_enabled),
+    admin_audit_file(this, &s_admin_audit_file),
     admin_audit_exclude_methods(this, &s_admin_audit_exclude_methods),
     config_check(false),
     log_target(MXB_LOG_TARGET_DEFAULT),

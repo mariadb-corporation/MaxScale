@@ -504,13 +504,32 @@ std::vector<std::string> audit_log_columns {"Timestamp", "Duration", "User",
                                             "Host", "URI", "Method",
                                             "Status", "Response code", "Body"};
 
-maxbase::CsvWriter& get_audit_log()
+enum class LogAction
 {
-    static maxbase::CsvWriter log(mxs::Config::get().admin_audit_dir.get(),
-        mxs::Config::get().admin_audit_file_base.get(),
-        audit_log_columns);
+    None,
+    CheckRotate
+};
 
-    return log;
+maxbase::CsvWriter& get_audit_log(LogAction action = LogAction::None)
+{
+    auto path = mxs::Config::get().admin_audit_file.get();
+    static maxbase::CsvWriter s_log(path, audit_log_columns);
+    static int s_rotation_count = mxs_get_log_rotation_count();
+
+    if (action == LogAction::CheckRotate)
+    {
+        if (s_log.path() != path)
+        {
+            s_log = maxbase::CsvWriter(path, audit_log_columns);
+        }
+        else if (s_rotation_count != mxs_get_log_rotation_count())
+        {
+            s_rotation_count = mxs_get_log_rotation_count();
+            s_log.rotate();
+        }
+    }
+
+    return s_log;
 }
 }
 
@@ -746,7 +765,7 @@ uint Client::get_http_response_code() const
 
 void Client::log_to_audit()
 {
-    if (!mxs::Config::get().admin_audit_enable.get())
+    if (!mxs::Config::get().admin_audit_enabled.get())
     {
         return;
     }
@@ -763,16 +782,10 @@ void Client::log_to_audit()
         }
     }
 
-    // Since REST calls cannot be very frequent, try to rotate
-    // on every call. This also has the benefit that the log file
-    // can be deleted, it will be recreated on the next write.
-    get_audit_log().rotate();
-
     std::string status{"Unknown"s};
     switch (m_state)
     {
     case Client::OK:
-        // TODO should all codes in the 200s have status OK
         if (get_http_response_code() >= 200 && get_http_response_code() < 300)
         {
             status = "OK";
@@ -809,8 +822,13 @@ void Client::log_to_audit()
     if (!get_audit_log().add_row(values))
     {
         // TODO maybe only report once.
-        MXB_SERROR("Failed to write to log file " << get_audit_log().full_path());
+        MXB_SERROR("Failed to write to log file " << get_audit_log().path());
     }
+
+    // If the path has been runtime changed or rotate issued,
+    // rotate after write so that the API call is logged
+    // to the "current" log.
+    get_audit_log(LogAction::CheckRotate);
 }
 
 // static

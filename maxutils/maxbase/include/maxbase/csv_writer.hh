@@ -27,13 +27,11 @@ public:
      * \brief CsvWriter - Simple class to write csv files. The format
      *                    should work in most spread sheet programs
      *                    (tested Numbers, Libreoffice and Excel).
-     * \param path      - Path to the directory
-     * \param base_name - The full_path becomes: path/base_name.csv
+     * \param path      - Path to the file including the extension
+     *                    (preferably csv).
      * \param columns   - The csv header
      */
-    CsvWriter(const std::string& path,
-              const std::string& base_name,
-              const std::vector<std::string>& columns);
+    CsvWriter(const std::string& path, const std::vector<std::string>& columns);
 
     /**
      * brief add_row
@@ -55,15 +53,13 @@ public:
     bool rotate();
 
     /**
-     * @brief full_path
-     * @return full file path
+     * @brief  path
+     * @return path to the file
      */
-    const std::string full_path() const;
+    const std::string path() const;
 
 private:
     std::string              m_path;
-    std::string              m_base_name;
-    std::string              m_full_path;
     std::vector<std::string> m_columns;
     std::ofstream            m_file;
 

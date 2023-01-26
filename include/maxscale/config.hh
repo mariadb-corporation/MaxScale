@@ -284,9 +284,8 @@ public:
     config::Bool          skip_name_resolve;        /**< Reverse DNS lookups */
     mxs::KeyManager::Type key_manager;
 
-    config::Bool     admin_audit_enable;        /**< Enable logging to audit file */
-    config::String   admin_audit_dir;           /**< Directory for audit files */
-    config::String   admin_audit_file_base;     /**< Base name of audit file, ".csv" will be added */
+    config::Bool     admin_audit_enabled;           /**< Enable logging to audit file */
+    config::String   admin_audit_file;              /**< Audit file path */
     config::EnumList<HttpMethod> admin_audit_exclude_methods;/**< Which methods to exclude (e.g. GET) */
 
     // NON-modifiable automatically configured parameters.
@@ -450,9 +449,8 @@ private:
     static config::ParamString                          s_admin_jwt_key;
     static config::ParamSeconds                         s_admin_jwt_max_age;
     static config::ParamString                          s_admin_oidc_url;
-    static config::ParamBool                            s_admin_audit_enable;
-    static config::ParamString                          s_admin_audit_dir;
-    static config::ParamString                          s_admin_audit_file_base;
+    static config::ParamBool                            s_admin_audit_enabled;
+    static config::ParamString                          s_admin_audit_file;
     static config::ParamEnumList<HttpMethod>            s_admin_audit_exclude_methods;
     static config::ParamString                          s_admin_verify_url;
     static config::ParamString                          s_local_address;
