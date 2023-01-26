@@ -29,6 +29,7 @@
                 class="mt-auto font-weight-medium px-7 text-capitalize"
                 rounded
                 depressed
+                :disabled="disabled"
                 @click="next"
             >
                 {{ $mxs_t('setUpConns') }}
@@ -52,7 +53,7 @@
  */
 import EtlTask from '@queryEditorSrc/store/orm/models/EtlTask'
 import EtlStageCtr from '@queryEditorSrc/components/EtlStageCtr.vue'
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
     name: 'etl-overview-stage',
@@ -60,8 +61,17 @@ export default {
         EtlStageCtr,
     },
     computed: {
+        ...mapState({
+            are_conns_alive: state => state.etlMem.are_conns_alive,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+        }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        disabled() {
+            const { RUNNING, COMPLETE } = this.ETL_STATUS
+            const { status } = this.activeEtlTask
+            return this.are_conns_alive || status === COMPLETE || status === RUNNING
         },
     },
     async created() {

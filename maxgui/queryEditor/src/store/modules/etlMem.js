@@ -150,9 +150,13 @@ export default {
                 })
                 const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
                 if (!e) {
-                    const results = $typy(res, 'data.data.attributes.results').safeObject
-                    const timestamp = new Date().valueOf()
-                    if (results) {
+                    if (res.status === 202)
+                        await this.vue.$helpers
+                            .delay(2000)
+                            .then(async () => await dispatch('getEtlCallRes', id))
+                    else if (res.status === 201) {
+                        const results = $typy(res, 'data.data.attributes.results').safeObject
+                        const timestamp = new Date().valueOf()
                         const ok = $typy(results, 'ok').safeBoolean
 
                         const {
@@ -198,10 +202,7 @@ export default {
                                 if (status) obj.status = status
                             },
                         })
-                    } else
-                        await this.vue.$helpers
-                            .delay(2000)
-                            .then(async () => await dispatch('getEtlCallRes', id))
+                    }
                 }
             }
         },
