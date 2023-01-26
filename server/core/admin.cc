@@ -506,10 +506,9 @@ std::vector<std::string> audit_log_columns {"Timestamp", "Duration", "User",
 
 maxbase::CsvWriter& get_audit_log()
 {
-    // TODO make path and file_name configurable
-    static maxbase::CsvWriter log{cmake_defaults::DEFAULT_DATADIR,
-                                  "rest_audit",
-                                  audit_log_columns};
+    static maxbase::CsvWriter log(mxs::Config::get().admin_audit_dir.get(),
+        mxs::Config::get().admin_audit_file_base.get(),
+        audit_log_columns);
 
     return log;
 }
@@ -747,9 +746,22 @@ uint Client::get_http_response_code() const
 
 void Client::log_to_audit()
 {
-    // TODO to config: enable audit
-    // TODO to config: exclude (or include) methods. HTTP GET could quickly fill the file.
-    // TODO blank out passwords (maybe only in "create user ...")
+    if (!mxs::Config::get().admin_audit_enable.get())
+    {
+        return;
+    }
+
+    // Don't exclude if authentication failed
+    if (!(m_state == Client::CLOSED || m_state == Client::FAILED))
+    {
+        auto method = mxb::http::from_string(m_request.get_verb());
+        auto excludes = mxs::Config::get().admin_audit_exclude_methods.get();
+        auto ite = std::find(begin(excludes), end(excludes), method);
+        if (ite != end(excludes))
+        {
+            return;
+        }
+    }
 
     // Since REST calls cannot be very frequent, try to rotate
     // on every call. This also has the benefit that the log file
