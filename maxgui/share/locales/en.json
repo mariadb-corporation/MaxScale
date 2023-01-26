@@ -203,7 +203,7 @@
             "nonInteger": "Accepts only integer",
             "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Snippets tab and delete some to create more space.",
             "portSocket": "Either port or socket need to be defined",
-            "reconnFailed": "Reconnection failed or connection is already in use",
+            "reconnFailed": "Reconnection attempt failed. Please delete the active query tab and create a new one.",
             "refreshLater": "Please refresh in a few moments",
             "requiredDb": "Database must be defined for the chosen driver.",
             "requiredInput": "{inputName} is required",
