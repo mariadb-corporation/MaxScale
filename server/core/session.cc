@@ -225,7 +225,24 @@ mxb::Json Session::get_memory_statistics() const
 
     size_t total = get_memory_statistics(&connection_buffers, &last_queries, &variables);
 
-    memory.set_int("connection_buffers", connection_buffers);
+    mxb::Json cb;
+    cb.set_int("total", connection_buffers);
+
+    mxb_assert(m_client_conn && m_client_conn->dcb());
+    cb.set_object("client", m_client_conn->dcb()->get_memory_statistics());
+
+    mxb::Json backends;
+    for (const auto* conn : m_backends_conns)
+    {
+        auto* dcb = conn->dcb();
+        mxb_assert(dcb);
+        backends.set_object(dcb->server()->name(), dcb->get_memory_statistics());
+    }
+
+    cb.set_object("backends", std::move(backends));
+
+    memory.set_object("connection_buffers", std::move(cb));
+
     memory.set_int("last_queries", last_queries);
     memory.set_int("variables", variables);
 

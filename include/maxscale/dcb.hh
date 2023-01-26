@@ -21,6 +21,7 @@
 #include <openssl/ssl.h>
 #include <netinet/in.h>
 
+#include <maxbase/json.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
@@ -375,7 +376,7 @@ public:
         return m_writeq.empty();
     }
 
-    const GWBUF& writeq()
+    const GWBUF& writeq() const
     {
         return m_writeq;
     }
@@ -390,6 +391,11 @@ public:
     bool readq_empty()
     {
         return m_readq.empty();
+    }
+
+    const GWBUF& readq() const
+    {
+        return m_readq;
     }
 
     /**
@@ -583,6 +589,8 @@ public:
     {
         return static_size() + varying_size();
     }
+
+    virtual mxb::Json get_memory_statistics() const;
 
 protected:
     DCB(int fd,

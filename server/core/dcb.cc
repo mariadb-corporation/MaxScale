@@ -1733,6 +1733,29 @@ SERVICE* DCB::service() const
     return m_session->service;
 }
 
+mxb::Json DCB::get_memory_statistics() const
+{
+    mxb::Json rv;
+
+    size_t total = 0;
+
+    auto writeq = m_writeq.capacity();
+    total += writeq;
+    rv.set_int("writeq", writeq);
+
+    auto readq = m_readq.capacity();
+    total += readq;
+    rv.set_int("readq", readq);
+
+    auto misc = runtime_size() - total;
+    total += misc;
+    rv.set_int("misc", misc);
+
+    rv.set_int("total", total);
+
+    return rv;
+}
+
 /**
  * ClientDCB
  */
