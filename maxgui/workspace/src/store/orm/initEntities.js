@@ -20,10 +20,10 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 
 /**
- * Initialize a blank worksheet and its mandatory relational entities
+ * Initialize a blank worksheet
  * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
  */
-export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
+export function insertBlankWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
     Worksheet.insert({
         data: {
             id: fields.worksheet_id,
@@ -31,6 +31,14 @@ export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv
         },
     })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
+}
+
+/**
+ * Initialize a worksheet with and its query editor relational entities
+ * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
+ */
+export function insertQueryEditor(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
+    insertBlankWke(fields)
     QueryEditorTmp.insert({ data: { id: fields.worksheet_id } })
     SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
     insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
@@ -80,11 +88,15 @@ function initMemEntities() {
         .with('queryTabs')
         .all()
     worksheets.forEach(w => {
-        QueryEditorTmp.insert({ data: { id: w.id } })
-        w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
+        if (w.active_query_tab_id) {
+            QueryEditorTmp.insert({ data: { id: w.id } })
+            w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
+        } else if (w.active_etl_task_id) {
+            //Init mem entities for ETL
+        }
     })
 }
 export default () => {
-    if (Worksheet.all().length === 0) insertWke()
+    if (Worksheet.all().length === 0) insertBlankWke()
     else initMemEntities()
 }

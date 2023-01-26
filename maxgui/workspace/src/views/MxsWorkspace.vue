@@ -20,14 +20,18 @@
                     :height="wkeNavCtrHeight"
                 />
                 <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
-                    <!-- TODO: Show etl-stages based on worksheet type -->
                     <query-editor
-                        v-if="activeWkeId === wke.id && ctrDim.height"
+                        v-if="
+                            activeWkeId === wke.id &&
+                                !$typy(wke, 'active_query_tab_id').isNull &&
+                                ctrDim.height
+                        "
                         ref="wke"
                         :ctrDim="ctrDim"
                     >
                         <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                     </query-editor>
+                    <!-- TODO: Show blank worksheet: EtlTasks and card nav  -->
                 </keep-alive>
             </template>
         </div>

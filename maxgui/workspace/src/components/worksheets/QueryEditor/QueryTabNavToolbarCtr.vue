@@ -13,6 +13,10 @@
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
         </div>
+        <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3">
+            <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
+            <slot name="query-tab-nav-toolbar-right-slot" />
+        </div>
     </div>
 </template>
 <script>
@@ -34,6 +38,7 @@ import QueryConn from '@wsModels/QueryConn'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
+    components: {},
     computed: {
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
@@ -44,7 +49,11 @@ export default {
     },
     mounted() {
         this.$nextTick(() =>
-            this.$emit('get-total-btn-width', this.$refs.buttonWrapper.clientWidth)
+            this.$emit(
+                'get-total-btn-width',
+                // (24 padding mx-3)
+                this.$refs.buttonWrapper.clientWidth + this.$refs.toolbarRight.clientWidth + 24
+            )
         )
     },
     methods: {

@@ -12,7 +12,7 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { insertWke } from '@wsSrc/store/orm/initEntities'
+import { insertQueryEditor } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -97,12 +97,17 @@ export default {
                 Worksheet.commit(state => (state.active_wke_id = wkeConn.worksheet_id))
             else {
                 const unavailableWkeIds = wkeConns.map(c => c.worksheet_id)
-                const blankWke = Worksheet.query()
-                    .where(w => !unavailableWkeIds.includes(w.id))
+                const blankQueryEditorWke = Worksheet.query()
+                    .where(
+                        w =>
+                            !unavailableWkeIds.includes(w.id) &&
+                            !this.vue.$typy(w, 'active_query_tab_id').isNull
+                    )
                     .first()
-                // Use a blank wke if there is one, otherwise create a new one
-                if (blankWke) Worksheet.commit(state => (state.active_wke_id = blankWke.id))
-                else insertWke()
+                // Use a blank query editor wke if there is one, otherwise create a new one
+                if (blankQueryEditorWke)
+                    Worksheet.commit(state => (state.active_wke_id = blankQueryEditorWke.id))
+                else insertQueryEditor()
                 // call onChangeWkeConn to handle connection binding, otherwise popup connection dialog
                 if (wkeConn) await QueryConn.dispatch('onChangeWkeConn', wkeConn)
                 else

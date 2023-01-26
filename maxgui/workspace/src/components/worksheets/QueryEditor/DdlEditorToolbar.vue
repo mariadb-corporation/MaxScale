@@ -27,7 +27,6 @@
             </template>
             {{ $mxs_t('applyChanges') }}
         </mxs-tooltip-btn>
-        <slot name="ddl-editor-toolbar-right-slot" />
     </div>
 </template>
 

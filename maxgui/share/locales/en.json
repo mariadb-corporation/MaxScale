@@ -345,7 +345,6 @@
         "not": "Not {action}",
         "objMigration": "Objects migration",
         "objSelection": "Objects selection",
-        "runQueries": "Run Queries",
         "openScript": "Open Script",
         "others": "others",
         "outputMsgs": "Output messages",
@@ -395,6 +394,7 @@
         "rowLimit": "Row limit",
         "run": "Run",
         "running": "Running",
+        "runQueries": "Run Queries",
         "runStatements": "Run {quantity} statements",
         "save": "Save",
         "saveScript": "Save Script",
@@ -500,6 +500,10 @@
         "welcome": "Welcome",
         "welcomeTo": "Welcome to",
         "withHeaders": "With headers",
+        "wkeActions": {
+            "delete": "Delete",
+            "rename": "Rename"
+        },
         "workspace": "Workspace",
         "writable": "Writable"
     }

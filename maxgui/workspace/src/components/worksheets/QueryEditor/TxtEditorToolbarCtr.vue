@@ -100,7 +100,6 @@
                 </template>
             </row-limit-ctr>
         </v-form>
-        <slot name="txt-editor-toolbar-right-slot" />
         <mxs-conf-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"

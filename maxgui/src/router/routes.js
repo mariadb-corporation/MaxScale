@@ -27,8 +27,6 @@ const Conf = () => import(/* webpackChunkName: "vis-conf" */ 'pages/Visualizatio
 const Clusters = () => import(/* webpackChunkName: "vis-clusters" */ 'pages/Visualization/Clusters')
 
 const WorkspacePage = () => import(/* webpackChunkName: "workspace-page" */ 'pages/WorkspacePage')
-const DataMigration = () =>
-    import(/* webpackChunkName: "data-migration-page" */ 'pages/DataMigration')
 
 // Other views
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
@@ -177,19 +175,6 @@ export const sideBarRoutes = [
         },
         name: 'workspace',
         label: 'workspace',
-    },
-    // TODO: Remove this route once the workspace page is created
-    {
-        path: '/data-migration',
-        component: DataMigration,
-        meta: {
-            requiresAuth: true,
-            layout: 'app-layout',
-            size: 22,
-            icon: '$vuetify.icons.mxs_dataMigration',
-        },
-        name: 'dataMigration',
-        label: 'dataMigration',
     },
     {
         path: '/users',

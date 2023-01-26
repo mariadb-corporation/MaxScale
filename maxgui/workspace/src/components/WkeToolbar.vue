@@ -15,7 +15,6 @@
         </div>
         <v-spacer />
         <div ref="toobarRight" class="d-flex align-center right-buttons fill-height">
-            <wke-conn-man class="mx-2" />
             <mxs-tooltip-btn
                 btnClass="query-setting-btn"
                 icon
@@ -62,15 +61,14 @@
  * Emits
  * $emit('get-total-btn-width', v:number)
  */
-import { insertWke } from '@wsSrc/store/orm/initEntities'
+import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
 import QueryConn from '@wsModels/QueryConn'
 import { mapMutations, mapState } from 'vuex'
 import QueryCnfDlgCtr from '@wsComps/QueryCnfDlgCtr.vue'
-import WkeConnMan from '@wsComps/WkeConnMan.vue'
 
 export default {
     name: 'wke-toolbar',
-    components: { WkeConnMan, QueryCnfDlgCtr },
+    components: { QueryCnfDlgCtr },
     data() {
         return {
             queryConfigDialog: false,
@@ -104,7 +102,7 @@ export default {
     methods: {
         ...mapMutations({ SET_IS_FULLSCREEN: 'prefAndStorage/SET_IS_FULLSCREEN' }),
         add() {
-            insertWke()
+            insertBlankWke()
         },
     },
 }
