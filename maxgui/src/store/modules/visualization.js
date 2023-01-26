@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@queryEditorSrc/store/orm/models/Worksheet'
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
-import { insertWke } from '@queryEditorSrc/store/orm/initEntities'
+import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
+import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
+import { insertWke } from '@workspaceSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -88,7 +88,7 @@ export default {
          * set it as active and dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
          * @param {String} param.conn_name - connection name
          */
-        async chooseActiveQueryEditorWke({ commit }, { type, conn_name }) {
+        async chooseActiveWorkspaceWke({ commit }, { type, conn_name }) {
             const wkeConns = QueryConn.getters('getWkeConns')
             // Find connection
             const wkeConn = wkeConns.find(c => c.name === conn_name)

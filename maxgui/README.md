@@ -116,16 +116,16 @@ describe the use of id.For examples:
 Use getters only when data needs to be manipulated, processed before returning.
 Getter should be written with prefix starts with 'get'. e.g. getServersMap
 
-## Query Editor structure
+## Workspace structure
 
-Query Editor is divided into two structures, ORM structure, and state modules.
+Workspace is divided into two structures, ORM structure, and state modules.
 
 ### ORM structure
 
-The image below illustrates the ORM structure of the query editor. It is
+The image below illustrates the ORM structure of the workspace. It is
 implemented to have a flat Vuex store architecture using [vuex-orm](https://vuex-orm.org/).
 
-![Query Editor ORM structure diagram](./images/query_editor_ORM_diagram.png)
+![Workspace ORM structure diagram](./images/query_editor_ORM_diagram.png)
 
 All tables are persistent tables except tables with names having `Tmp` as a
 suffix. Those temporary tables store large data that are only needed during
@@ -135,8 +135,8 @@ Temporary tables will be erased when the users refresh the browser.
 ### State modules
 
 Modules that are not part of ORM are defined in this directory
-`maxgui/queryEditor/src/store/modules`. Most of them are kept in-memory except
-`queryPersisted` and `fileSysAccess` modules which are persisted to IndexedDB.
+`maxgui/workspace/src/store/modules`. Most of them are kept in-memory except
+`prefAndStorage` and `fileSysAccess` modules which are persisted to IndexedDB.
 
--   `queryPersisted` persists user preferences and query history/snippets.
+-   `prefAndStorage` persists user preferences and query history/snippets.
 -   `fileSysAccess` persists [FileSystemFileHandle](https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle)

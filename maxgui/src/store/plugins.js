@@ -13,8 +13,8 @@
 import Vue from 'vue'
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-import queryEditorPersistPlugin from '@queryEditorSrc/store/plugins/persistPlugin'
-import orm from '@queryEditorSrc/store/plugins/orm'
+import workspacePersistPlugin from '@workspaceSrc/store/plugins/persistPlugin'
+import orm from '@workspaceSrc/store/plugins/orm'
 const appPersistConfig = new VuexPersistence({
     key: 'maxgui-app',
     storage: localForage,
@@ -31,5 +31,5 @@ export default [
     },
     orm,
     appPersistConfig.plugin,
-    queryEditorPersistPlugin,
+    workspacePersistPlugin,
 ]

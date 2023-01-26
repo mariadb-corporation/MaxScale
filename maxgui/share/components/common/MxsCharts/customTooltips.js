@@ -122,7 +122,7 @@ export function objectTooltip({
         tooltipId,
         position,
         alignTooltipToLeft,
-        className: 'query-editor-chart-tooltip',
+        className: 'mxs-workspace-chart-tooltip',
     })
     // Set Text
     if (tooltipModel.body) {

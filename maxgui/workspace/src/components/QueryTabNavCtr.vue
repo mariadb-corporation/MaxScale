@@ -1,0 +1,75 @@
+<template>
+    <div class="d-flex flex-row">
+        <v-tabs
+            v-model="activeQueryTabId"
+            show-arrows
+            hide-slider
+            :height="height"
+            class="v-tabs--mxs-workspace-style query-tab-nav v-tabs--custom-small-pagination-btn flex-grow-0"
+            :style="{ maxWidth: `calc(100% - ${queryTabNavToolbarWidth + 1}px)` }"
+            center-active
+        >
+            <v-tab
+                v-for="queryTab in queryTabsOfActiveWke"
+                :key="`${queryTab.id}`"
+                :href="`#${queryTab.id}`"
+                class="pa-0 tab-btn text-none"
+                active-class="tab-btn--active"
+            >
+                <query-tab-nav-item :queryTab="queryTab" />
+            </v-tab>
+        </v-tabs>
+        <query-tab-nav-toolbar-ctr @get-total-btn-width="queryTabNavToolbarWidth = $event" />
+    </div>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-11-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import Worksheet from '@workspaceSrc/store/orm/models/Worksheet'
+import QueryTab from '@workspaceSrc/store/orm/models/QueryTab'
+import QueryTabNavToolbarCtr from './QueryTabNavToolbarCtr.vue'
+import QueryTabNavItem from './QueryTabNavItem.vue'
+import saveFile from '@workspaceSrc/mixins/saveFile'
+
+export default {
+    name: 'query-tab-nav-ctr',
+    components: { QueryTabNavToolbarCtr, QueryTabNavItem },
+    mixins: [saveFile],
+    props: { height: { type: Number, required: true } },
+    data() {
+        return {
+            queryTabNavToolbarWidth: 0,
+        }
+    },
+    computed: {
+        activeQueryTabId: {
+            get() {
+                return Worksheet.getters('getActiveQueryTabId')
+            },
+            set(v) {
+                if (v)
+                    Worksheet.update({
+                        where: Worksheet.getters('getActiveWkeId'),
+                        data: {
+                            active_query_tab_id: v,
+                        },
+                    })
+            },
+        },
+        queryTabsOfActiveWke() {
+            return QueryTab.getters('getQueryTabsOfActiveWke')
+        },
+    },
+}
+</script>

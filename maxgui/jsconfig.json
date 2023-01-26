@@ -4,11 +4,11 @@
         "allowSyntheticDefaultImports": false,
         "paths": {
             "@rootSrc/*": ["src/*"],
-            "@queryEditorSrc/*": ["queryEditor/src/*"],
+            "@workspaceSrc/*": ["workspace/src/*"],
             "@share/*": ["share/*"],
             "@tests/*": ["tests/*"]
         }
     },
-    "include": ["src/**/*", "queryEditor/**/*", "share/**/*", "tests/**/*"],
+    "include": ["src/**/*", "workspace/**/*", "share/**/*", "tests/**/*"],
     "exclude": ["node_modules"]
 }

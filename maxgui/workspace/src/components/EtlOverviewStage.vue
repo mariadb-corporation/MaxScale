@@ -1,0 +1,94 @@
+<template>
+    <etl-stage-ctr>
+        <template v-slot:header>
+            <v-icon size="48" color="info" class="mr-5 mt-n1">
+                $vuetify.icons.mxs_dataMigration
+            </v-icon>
+            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+                {{ $mxs_t('dataMigration') }}
+            </h3>
+        </template>
+        <template v-slot:body>
+            <v-row class="fill-height">
+                <v-col cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
+                    <p>
+                        {{ $mxs_t('info.etlOverviewInfo') }}
+                    </p>
+                    <!-- TODO: Add link to the document -->
+                    <a target="_blank" rel="noopener noreferrer" class="rsrc-link">
+                        {{ $mxs_t('info.etlDocLinkText') }}
+                    </a>
+                </v-col>
+            </v-row>
+        </template>
+        <template v-slot:footer>
+            <v-btn
+                small
+                height="36"
+                color="primary"
+                class="mt-auto font-weight-medium px-7 text-capitalize"
+                rounded
+                depressed
+                :disabled="disabled"
+                @click="next"
+            >
+                {{ $mxs_t('setUpConns') }}
+            </v-btn>
+        </template>
+    </etl-stage-ctr>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-11-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import EtlTask from '@workspaceSrc/store/orm/models/EtlTask'
+import EtlStageCtr from '@workspaceSrc/components/EtlStageCtr.vue'
+import { mapActions, mapState } from 'vuex'
+
+export default {
+    name: 'etl-overview-stage',
+    components: {
+        EtlStageCtr,
+    },
+    computed: {
+        ...mapState({
+            are_conns_alive: state => state.etlMem.are_conns_alive,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+        }),
+        activeEtlTask() {
+            return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        disabled() {
+            const { RUNNING, COMPLETE } = this.ETL_STATUS
+            const { status } = this.activeEtlTask
+            return this.are_conns_alive || status === COMPLETE || status === RUNNING
+        },
+    },
+    async created() {
+        await this.validateActiveEtlTaskConns({ silentValidation: true })
+    },
+    methods: {
+        ...mapActions({
+            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
+        }),
+        next() {
+            EtlTask.update({
+                where: this.activeEtlTask.id,
+                data(obj) {
+                    obj.active_stage_index = obj.active_stage_index + 1
+                },
+            })
+        },
+    },
+}
+</script>

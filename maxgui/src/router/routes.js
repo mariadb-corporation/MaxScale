@@ -26,7 +26,7 @@ const Visualization = () => import(/* webpackChunkName: "vis" */ 'pages/Visualiz
 const Conf = () => import(/* webpackChunkName: "vis-conf" */ 'pages/Visualization/Configuration')
 const Clusters = () => import(/* webpackChunkName: "vis-clusters" */ 'pages/Visualization/Clusters')
 
-const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
+const WorkspacePage = () => import(/* webpackChunkName: "workspace-page" */ 'pages/WorkspacePage')
 const DataMigration = () =>
     import(/* webpackChunkName: "data-migration-page" */ 'pages/DataMigration')
 
@@ -167,16 +167,16 @@ export const sideBarRoutes = [
         children: visTabRoutes,
     },
     {
-        path: '/query',
-        component: QueryPage,
+        path: '/workspace',
+        component: WorkspacePage,
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
             size: 22,
-            icon: '$vuetify.icons.mxs_queryEditor',
+            icon: '$vuetify.icons.mxs_workspace',
         },
-        name: 'queryEditor',
-        label: 'queryEditor',
+        name: 'workspace',
+        label: 'workspace',
     },
     // TODO: Remove this route once the workspace page is created
     {

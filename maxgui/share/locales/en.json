@@ -256,7 +256,7 @@
         "inDays": "in days",
         "info": {
             "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
-            "disconnectAll": "There are open database connections from Query Editor. Uncheck the box to keep these connections open.",
+            "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
             "etlConfirm": "If the destination server already has the same objects they will be overwritten and existing data will be lost.",
             "etlDocLinkText": "Read more on our documentation for instruction.",
             "etlOverviewInfo": "MaxScale uses ODBC for extracting and loading from the data source to a server in MaxScale. Make sure you preconfigure the necessary drivers for your data source.",
@@ -345,7 +345,7 @@
         "not": "Not {action}",
         "objMigration": "Objects migration",
         "objSelection": "Objects selection",
-        "openQueryEditor": "Open Query Editor",
+        "runQueries": "Run Queries",
         "openScript": "Open Script",
         "others": "others",
         "outputMsgs": "Output messages",
@@ -366,7 +366,6 @@
         "qualifiedName": "Qualified Name",
         "qualifiedNameQuoted": "Qualified Name (Quoted)",
         "queryConfig": "Query configuration",
-        "queryEditor": "Query Editor",
         "queryHistory": "query history",
         "queryHistoryRetentionPeriod": "Query history retention period",
         "queryResInfo": "Query results information",
@@ -463,9 +462,9 @@
             "killedSession": "Successfully killed session",
             "migration": "Successful migration.",
             "prepared": "Successfully prepared.",
+            "reconnected": "Successfully reconnected",
             "retrieved": "Successfully retrieved.",
-            "scriptExec": "Script executed successfully",
-            "reconnected": "Successfully reconnected"
+            "scriptExec": "Script executed successfully"
         },
         "swap": "Swap",
         "switchToHorizTable": "Switch to horizontal table",
@@ -501,6 +500,7 @@
         "welcome": "Welcome",
         "welcomeTo": "Welcome to",
         "withHeaders": "With headers",
+        "workspace": "Workspace",
         "writable": "Writable"
     }
 }

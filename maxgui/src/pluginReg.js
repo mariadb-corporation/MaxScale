@@ -7,19 +7,19 @@ import shortkey from '@share/plugins/shortkey'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
 import * as maxguiHelpers from '@rootSrc/utils/helpers'
-import * as queryEditorHelpers from '@queryEditorSrc/utils/helpers'
+import * as workspaceHelpers from '@workspaceSrc/utils/helpers'
 import Vuex from 'vuex'
 import PortalVue from 'portal-vue'
 import VueMoment from 'vue-moment'
 import momentDurationFormatSetup from 'moment-duration-format'
 import VueI18n from 'vue-i18n'
-import MaxGuiQueryEditor from '@queryEditor/lib/maxgui-query-editor.js'
+import MaxGuiWorkspace from '@workspace/lib/maxgui-workspace.js'
 
 Vue.use(VueI18n)
 // i18n only available after Vue.use(VueI18n)
 Vue.use(scopingI18n, { i18n: require('@share/plugins/i18n').default })
 Vue.use(Vuetify)
-Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...queryEditorHelpers } })
+Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...workspaceHelpers } })
 Vue.use(typy)
 Vue.use(shortkey)
 Vue.use(logger)
@@ -32,4 +32,4 @@ momentDurationFormatSetup(Vue.moment)
 // store only available after Vue.use(Vuex), so here use require for importing es module
 const store = require('./store/index').default
 Vue.use(require('@share/plugins/http').default, { store })
-Vue.use(MaxGuiQueryEditor, { store })
+Vue.use(MaxGuiWorkspace, { store })

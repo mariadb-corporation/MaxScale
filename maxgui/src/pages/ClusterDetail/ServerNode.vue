@@ -41,14 +41,14 @@
                     <mxs-tooltip-btn
                         small
                         icon
-                        @click="openQueryEditor({ type: 'servers', conn_name: node.id })"
+                        @click="runQueries({ type: 'servers', conn_name: node.id })"
                     >
                         <template v-slot:btn-content>
                             <v-icon size="16" :color="iconColor">
-                                $vuetify.icons.mxs_queryEditor
+                                $vuetify.icons.mxs_workspace
                             </v-icon>
                         </template>
-                        {{ $mxs_t('openQueryEditor') }}
+                        {{ $mxs_t('runQueries') }}
                     </mxs-tooltip-btn>
                     <v-menu
                         v-if="isAdmin"
@@ -259,9 +259,9 @@ export default {
         },
     },
     methods: {
-        ...mapActions({ chooseActiveQueryEditorWke: 'visualization/chooseActiveQueryEditorWke' }),
-        openQueryEditor(param) {
-            this.chooseActiveQueryEditorWke(param)
+        ...mapActions({ chooseActiveWorkspaceWke: 'visualization/chooseActiveWorkspaceWke' }),
+        runQueries(param) {
+            this.chooseActiveWorkspaceWke(param)
             this.$router.push(`/query`)
         },
     },

@@ -31,13 +31,13 @@ module.exports = {
 
         config.resolve.modules
             .add(path.resolve(__dirname, 'src'), 'node_modules')
-            .add(path.resolve(__dirname, 'queryEditor'), 'node_modules')
+            .add(path.resolve(__dirname, 'workspace'), 'node_modules')
 
         config.resolve.alias
             .set('@rootSrc', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
-            .set('@queryEditor', path.resolve(__dirname, 'queryEditor'))
-            .set('@queryEditorSrc', path.resolve(__dirname, 'queryEditor/src'))
+            .set('@workspace', path.resolve(__dirname, 'workspace'))
+            .set('@workspaceSrc', path.resolve(__dirname, 'workspace/src'))
             .set('@share', path.resolve(__dirname, 'share'))
 
         const key = process.env.httpsKey

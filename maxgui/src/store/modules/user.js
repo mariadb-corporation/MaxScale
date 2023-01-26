@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@queryEditorSrc/store/orm/models/QueryConn'
+import QueryConn from '@workspaceSrc/store/orm/models/QueryConn'
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import localForage from 'localforage'
@@ -93,7 +93,7 @@ export default {
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             const { ORM_PERSISTENT_ENTITIES, ORM_NAMESPACE } = rootState.mxsWorkspace.config
 
-            const { mxsApp, queryPersisted, persisted, [ORM_NAMESPACE]: orm } = rootState
+            const { mxsApp, prefAndStorage, persisted, [ORM_NAMESPACE]: orm } = rootState
             // hide snackbar snackbar_message if it is on
             if (mxsApp.snackbar_message.status) {
                 commit(
@@ -113,8 +113,8 @@ export default {
 
             // Clear all but persist some states of some modules
 
-            const queryEditorPersistedState = this.vue.$helpers.lodash.cloneDeep({
-                queryPersisted,
+            const workspacePersistedState = this.vue.$helpers.lodash.cloneDeep({
+                prefAndStorage,
                 [ORM_NAMESPACE]: this.vue.$helpers.lodash.pick(orm, [
                     ...Object.values(ORM_PERSISTENT_ENTITIES),
                     '$name', // not an entity, but it's a reserved key for vuex-orm
@@ -124,7 +124,7 @@ export default {
                 persisted: persisted,
             })
             await localForage.clear()
-            await localForage.setItem('query-editor', queryEditorPersistedState)
+            await localForage.setItem('mxs-workspace', workspacePersistedState)
             await localForage.setItem('maxgui-app', maxguiPersistedState)
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
