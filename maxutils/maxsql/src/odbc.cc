@@ -29,7 +29,8 @@ namespace
 {
 struct ThisUnit
 {
-    bool log_statements {false};
+    bool   log_statements {false};
+    size_t batch_size = 1024 * 1024 * 10;
 };
 
 ThisUnit this_unit;
@@ -218,7 +219,7 @@ ResultBuffer::ResultBuffer(const std::vector<ColumnInfo>& infos, size_t row_limi
     }
 
     mxb_assert(row_size > 0);
-    row_count = MAX_BATCH_SIZE / row_size;
+    row_count = this_unit.batch_size / row_size;
 
     if (row_limit)
     {
@@ -1470,5 +1471,10 @@ std::map<std::string, std::map<std::string, std::string>> ODBC::drivers()
 void odbc_set_log_statements(bool enable)
 {
     this_unit.log_statements = enable;
+}
+
+void odbc_set_batch_size(size_t size)
+{
+    this_unit.batch_size = size;
 }
 }

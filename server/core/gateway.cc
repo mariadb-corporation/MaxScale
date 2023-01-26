@@ -64,6 +64,7 @@
 #include <maxscale/threadpool.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
+#include <maxsql/odbc.hh>
 
 #include "internal/admin.hh"
 #include "internal/adminusers.hh"
@@ -189,6 +190,20 @@ static void finish_base_libraries();
 static bool redirect_stdout_and_stderr(const std::string& path);
 static bool is_maxscale_already_running();
 
+void set_sql_batch_size(const char* arg)
+{
+    uint64_t sz;
+
+    if (get_suffixed_size(arg, &sz) && sz > 0)
+    {
+        mxq::odbc_set_batch_size(sz);
+    }
+    else
+    {
+        printf("Ignoring invalid value for 'sql-batch-size': %s\n", arg);
+    }
+}
+
 namespace
 {
 
@@ -277,6 +292,9 @@ const DEBUG_ARGUMENT debug_arguments[] =
     },
     {
         "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces"
+    },
+    {
+        "sql-batch-size", set_sql_batch_size, "Set maximum batch size for the REST-API (default: 10MiB)"
     },
     {NULL, NULL, NULL}
 };

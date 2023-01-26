@@ -25,6 +25,13 @@
 namespace maxsql
 {
 
+/**
+ * Sets the desired batch size for batch operations
+ *
+ * @param size Size in bytes
+ */
+void odbc_set_batch_size(size_t size);
+
 struct ColumnInfo
 {
     std::string name;               // Column name
@@ -59,10 +66,6 @@ struct ResultBuffer
         std::vector<uint8_t> buffers;       // Buffer that contains the column values
         std::vector<long>    indicators;    // Indicator values for each of the column values
     };
-
-    // TODO: Make this configurable. 10Mb isn't that much when there's only one table and 10Mb is a lot when
-    // there's 1000 tables.
-    static constexpr size_t MAX_BATCH_SIZE = 1024 * 1024 * 10;
 
     ResultBuffer(const std::vector<ColumnInfo>& infos, size_t row_limit = 0);
 
