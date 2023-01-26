@@ -11,7 +11,7 @@
  * Public License.
  */
 import moment from 'moment'
-import { lodash } from '@share/utils/helpers'
+import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
 import sqlFormatter from '@queryEditorSrc/components/SqlEditor/formatter'
 
 export const deepDiff = require('deep-diff')
@@ -116,4 +116,11 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
     const removed = removedIds.map(id => baseMap.get(id))
     resultMap.set('removed', removed)
     return resultMap
+}
+
+export function queryResErrToStr(result) {
+    return Object.keys(result).reduce((msg, key) => {
+        msg += `${capitalizeFirstLetter(key)}: ${result[key]}. `
+        return msg
+    }, '')
 }

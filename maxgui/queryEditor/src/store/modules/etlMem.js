@@ -90,14 +90,20 @@ export default {
             let logName = ''
             if (e) logName = $mxs_t('errors.retrieveSchemaObj')
             else {
-                const { nodes } = queryHelper.genNodeData({
-                    queryResult: $typy(res, 'data.data.attributes.results[0]').safeObject,
-                    nodeAttrs: {
-                        isEmptyChildren: true,
-                    },
-                })
-                commit('SET_SRC_SCHEMA_TREE', nodes)
-                logName = $mxs_t('success.retrieved')
+                const result = $typy(res, 'data.data.attributes.results[0]').safeObject
+                if ($typy(result, 'errno').isDefined) {
+                    logName = $mxs_t('errors.retrieveSchemaObj')
+                    logName += `\n${$helpers.queryResErrToStr(result)}`
+                } else {
+                    const { nodes } = queryHelper.genNodeData({
+                        queryResult: result,
+                        nodeAttrs: {
+                            isEmptyChildren: true,
+                        },
+                    })
+                    commit('SET_SRC_SCHEMA_TREE', nodes)
+                    logName = $mxs_t('success.retrieved')
+                }
             }
             EtlTask.dispatch('pushLog', {
                 id: active_etl_task_id,

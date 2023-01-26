@@ -73,7 +73,7 @@ export default {
             { startTime, connection_name, name, sql, res, queryType }
         ) {
             try {
-                const { capitalizeFirstLetter } = this.vue.$helpers
+                const { queryResErrToStr } = this.vue.$helpers
                 const { execution_time, results } = this.vue.$typy(
                     res,
                     'data.data.attributes'
@@ -92,11 +92,7 @@ export default {
                         ++resSetCount
                         resultData[`Result set ${resSetCount}`] = `${data.length} rows in set.`
                     } else if (this.vue.$typy(errno).isNumber) {
-                        let msg = ''
-                        Object.keys(res).forEach(
-                            key => (msg += `${capitalizeFirstLetter(key)}: ${res[key]}. `)
-                        )
-                        resultData[`Error`] = msg
+                        resultData[`Error`] = queryResErrToStr(res)
                     } else {
                         ++resCount
                         resultData[`Result ${resCount}`] = `${res.affected_rows} rows affected.`
