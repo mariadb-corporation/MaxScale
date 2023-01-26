@@ -65,6 +65,7 @@
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
+#include "internal/defaults.hh"
 
 using std::move;
 using std::set;
@@ -763,6 +764,45 @@ config::ParamString Config::s_admin_verify_url(
     "URL for third-party verification of client tokens",
     "");
 
+config::ParamBool Config::s_admin_audit_enable(
+    &Config::s_specification,
+    "admin_audit",
+    "Enable REST audit logging",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamString Config::s_admin_audit_dir(
+    &Config::s_specification,
+    "admin_audit_dir",
+    "Directory where REST audit files are stored.",
+    cmake_defaults::DEFAULT_LOGDIR,
+    mxs::config::Param::AT_RUNTIME);
+
+config::ParamString Config::s_admin_audit_file_base(
+    &Config::s_specification,
+    "admin_audit_file_base",
+    "Base name of the REST audit file. \".csv\" will be added",
+    "admin_audit",
+    mxs::config::Param::AT_RUNTIME);
+
+config::ParamEnumList<maxbase::http::Method> Config::s_admin_audit_exclude_methods(
+    &Config::s_specification,
+    "admin_audit_exclude_methods",
+    "List of HTTP methods to exclude from audit logging, e.g. \"GET\"",
+    {
+        {maxbase::http::Method::GET, "GET"},
+        {maxbase::http::Method::PUT, "PUT"},
+        {maxbase::http::Method::POST, "POST"},
+        {maxbase::http::Method::PATCH, "PATCH"},
+        {maxbase::http::Method::DELETE, "DELETE"},
+        {maxbase::http::Method::HEAD, "HEAD"},
+        {maxbase::http::Method::CONNECT, "CONNECT"},
+        {maxbase::http::Method::OPTIONS, "OPTIONS"},
+        {maxbase::http::Method::TRACE, "TRACE"},
+    },
+    HttpMethods{maxbase::http::Method::GET},
+    mxs::config::Param::AT_RUNTIME);
+
 config::ParamString Config::s_local_address(
     &Config::s_specification,
     CN_LOCAL_ADDRESS,
@@ -1002,6 +1042,10 @@ Config::Config(int argc, char** argv)
 }),
     rebalance_window(this, &s_rebalance_window),
     skip_name_resolve(this, &s_skip_name_resolve),
+    admin_audit_enable(this, &s_admin_audit_enable),
+    admin_audit_dir(this, &s_admin_audit_dir),
+    admin_audit_file_base(this, &s_admin_audit_file_base),
+    admin_audit_exclude_methods(this, &s_admin_audit_exclude_methods),
     config_check(false),
     log_target(MXB_LOG_TARGET_DEFAULT),
     substitute_variables(false),
