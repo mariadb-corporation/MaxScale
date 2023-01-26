@@ -20,7 +20,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 // entities to be stored only in memory
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 // Store modules
 import editors from '@wsSrc/store/orm/modules/editors'
 import etlTasks from '@wsSrc/store/orm/modules/etlTasks'
@@ -39,6 +39,6 @@ database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
 database.register(QueryTabTmp)
-database.register(WorksheetTmp)
+database.register(QueryEditorTmp)
 
 export default database

@@ -17,7 +17,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 
 /**
  * Initialize a blank worksheet and its mandatory relational entities
@@ -31,7 +31,7 @@ export function insertWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv
         },
     })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
-    WorksheetTmp.insert({ data: { id: fields.worksheet_id } })
+    QueryEditorTmp.insert({ data: { id: fields.worksheet_id } })
     SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
     insertQueryTab(fields.worksheet_id, { query_tab_id: fields.query_tab_id })
 }
@@ -80,7 +80,7 @@ function initMemEntities() {
         .with('queryTabs')
         .all()
     worksheets.forEach(w => {
-        WorksheetTmp.insert({ data: { id: w.id } })
+        QueryEditorTmp.insert({ data: { id: w.id } })
         w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
     })
 }

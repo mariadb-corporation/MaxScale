@@ -13,8 +13,8 @@
 import Extender from '@wsSrc/store/orm/Extender'
 import { ORM_TMP_ENTITIES } from '@wsSrc/store/config'
 
-export default class WorksheetTmp extends Extender {
-    static entity = ORM_TMP_ENTITIES.WORKSHEETS_TMP
+export default class QueryEditorTmp extends Extender {
+    static entity = ORM_TMP_ENTITIES.QUERY_EDITORS_TMP
 
     /**
      * @returns {Object} - return fields that are not key, relational fields

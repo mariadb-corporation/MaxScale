@@ -18,7 +18,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 
 export default {
     Editor,
@@ -29,5 +29,5 @@ export default {
     SchemaSidebar,
     Worksheet,
     QueryTabTmp,
-    WorksheetTmp,
+    QueryEditorTmp,
 }

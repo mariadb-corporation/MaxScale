@@ -11,7 +11,7 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import Editor from '@wsModels/Editor'
@@ -35,7 +35,7 @@ export default {
             entityIds.forEach(id => {
                 Worksheet.delete(id) // delete itself
                 // delete records in its relational tables
-                WorksheetTmp.delete(id)
+                QueryEditorTmp.delete(id)
                 SchemaSidebar.delete(id)
                 QueryConn.delete(c => c.worksheet_id === id)
                 QueryTab.dispatch('cascadeDelete', t => t.worksheet_id === id)
@@ -50,7 +50,7 @@ export default {
             entityIds.forEach(id => {
                 Worksheet.refresh(id) // refresh itself
                 // refresh its relations
-                WorksheetTmp.refresh(id)
+                QueryEditorTmp.refresh(id)
                 SchemaSidebar.refresh(id)
                 // refresh all queryTabs and its relations
                 QueryTab.dispatch('cascadeRefresh', t => t.worksheet_id === id)
@@ -120,7 +120,7 @@ export default {
                 // if multi statement mode, it'll still return only an err msg obj
                 if (errMsgs.length) stmt_err_msg_obj = errMsgs[0]
 
-                WorksheetTmp.update({
+                QueryEditorTmp.update({
                     where: activeWkeId,
                     data: {
                         exe_stmt_result: {
@@ -161,7 +161,7 @@ export default {
         getActiveWkeId: state => state.active_wke_id,
         getActiveWke: (state, getters) => Worksheet.find(getters.getActiveWkeId) || {},
         getActiveQueryTabId: () => Worksheet.getters('getActiveWke').active_query_tab_id,
-        getWorksheetMem: () => WorksheetTmp.find(Worksheet.getters('getActiveWkeId')) || {},
+        getWorksheetMem: () => QueryEditorTmp.find(Worksheet.getters('getActiveWkeId')) || {},
         getExeStmtResult: (state, getters) => getters.getWorksheetMem.exe_stmt_result || {},
     },
 }

@@ -32,7 +32,7 @@ export default class Worksheet extends Extender {
             // relationship fields
             queryTabs: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'worksheet_id'),
             schemaSidebar: this.hasOne(ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS, 'id'),
-            worksheetTmp: this.hasOne(ORM_TMP_ENTITIES.WORKSHEETS_TMP, 'id'),
+            queryEditorTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_EDITORS_TMP, 'id'),
         }
     }
 }

@@ -23,7 +23,7 @@ export const ORM_PERSISTENT_ENTITIES = {
     ETL_TASKS: 'etlTasks',
 }
 export const ORM_TMP_ENTITIES = {
-    WORKSHEETS_TMP: 'worksheetsTmp',
+    QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
 }
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'

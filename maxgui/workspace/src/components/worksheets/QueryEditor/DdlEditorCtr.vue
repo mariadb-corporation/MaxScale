@@ -40,7 +40,7 @@
  * update:execSqlDlg?: (object)
  */
 import Worksheet from '@wsModels/Worksheet'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import Editor from '@wsModels/Editor'
 import DdlEditorFormCtr from '@wkeComps/QueryEditor/DdlEditorFormCtr.vue'
 import DdlEditorToolbar from '@wkeComps/QueryEditor/DdlEditorToolbar.vue'
@@ -426,7 +426,7 @@ export default {
             }
         },
         clearAlterResult() {
-            WorksheetTmp.update({
+            QueryEditorTmp.update({
                 where: Worksheet.getters('getActiveWkeId'),
                 data: { exe_stmt_result: {} },
             })
