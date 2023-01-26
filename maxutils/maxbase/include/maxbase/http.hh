@@ -73,6 +73,32 @@ struct Config
     std::chrono::seconds               timeout = DEFAULT_TIMEOUT;
 };
 
+enum class Method
+{
+    GET,
+    PUT,
+    POST,
+    PATCH,
+    DELETE,
+    HEAD,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    INVALID
+};
+
+/**
+ * @brief to_string - case insensitive string compare to find Method
+ * @return If no conversion is found "Unknown" is returned.
+ */
+std::string to_string(Method);
+/**
+ * @brief from_string - string from Method
+ * @param str
+ * @return If a conversion is not found, Method::INVALID is returned.
+ */
+Method from_string(const std::string& str);
+
 struct Response
 {
     enum Category

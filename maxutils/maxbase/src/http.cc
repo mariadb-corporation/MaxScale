@@ -869,5 +869,44 @@ const char* to_string(Async::status_t status)
     mxb_assert(!true);
     return "Unknown";
 }
+namespace
+{
+using MethodString = std::pair<Method, std::string>;
+std::array method_pairs{MethodString{Method::GET, "GET"},
+                        MethodString{Method::PUT, "PUT"},
+                        MethodString{Method::POST, "POST"},
+                        MethodString{Method::PATCH, "PATCH"},
+                        MethodString{Method::DELETE, "DELETE"},
+                        MethodString{Method::HEAD, "HEAD"},
+                        MethodString{Method::CONNECT, "CONNECT"},
+                        MethodString{Method::OPTIONS, "OPTIONS"},
+                        MethodString{Method::TRACE, "TRACE"}};
+}
+
+std::string to_string(Method method)
+{
+    for (const auto& p : method_pairs)
+    {
+        if (method == p.first)
+        {
+            return p.second;
+        }
+    }
+
+    return "Unknown";
+}
+
+Method from_string(const std::string& str)
+{
+    for (const auto& p : method_pairs)
+    {
+        if (maxbase::upper_case_copy(str) == p.second)
+        {
+            return p.first;
+        }
+    }
+
+    return Method::INVALID;
+}
 }
 }
