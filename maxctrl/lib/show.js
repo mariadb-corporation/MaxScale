@@ -325,6 +325,11 @@ const session_fields = [
     path: "attributes.memory",
     description: "Memory usage (not exhaustive)"
   },
+  {
+    name: "I/O Activity",
+    path: "attributes.io_activity",
+    description: "Number indicating I/O activity"
+  }
 ];
 
 const filter_fields = [

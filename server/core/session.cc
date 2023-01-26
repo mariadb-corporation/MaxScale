@@ -442,6 +442,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     mxb::Json memory = get_memory_statistics();
     json_object_set_new(attr, "memory", memory.release());
+    json_object_set_new(attr, "io_activity", json_integer(io_activity()));
 
     json_t* connection_arr = json_array();
     for (auto conn : backend_connections())
