@@ -398,23 +398,23 @@ json_t* ConnectionManager::Connection::to_json() const
 {
     auto now = mxb::Clock::now();
     double idle = 0;
-    json_t* sql;
+    std::string sql;
 
     if (busy.load(std::memory_order_acquire))
     {
         std::lock_guard guard(m_lock);
-        sql = json_string(m_info.sql.c_str());
+        sql = m_info.sql;
     }
     else
     {
         idle = mxb::to_secs(now - m_info.last_query_ended);
-        sql = json_string(m_info.sql.c_str());
+        sql = m_info.sql;
     }
 
     json_t* obj = json_object();
     json_object_set_new(obj, "thread_id", json_integer(thread_id()));
     json_object_set_new(obj, "seconds_idle", json_real(idle));
-    json_object_set_new(obj, "sql", sql);
+    json_object_set_new(obj, "sql", sql.empty() ? json_null() : json_string(sql.c_str()));
     json_object_set_new(obj, "target", json_string(config.target.c_str()));
     return obj;
 }
