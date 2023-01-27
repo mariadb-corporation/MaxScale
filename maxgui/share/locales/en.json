@@ -500,6 +500,9 @@
         "visualization": "Visualization",
         "visualizedConfig": "{action} visualized configuration",
         "warning": "Warning",
+        "warnings": {
+            "objCreation": "Object is created but no data has been migrated."
+        },
         "welcome": "Welcome",
         "welcomeTo": "Welcome to",
         "withHeaders": "With headers",

@@ -42,17 +42,11 @@
                 </div>
                 <div class="mt-4">
                     <etl-status-icon
-                        :status="activeEtlTask.status"
+                        :icon="activeEtlTask.status"
                         :isRunning="isRunning"
                         class="mb-1"
                     />
-                    <span
-                        v-if="
-                            activeEtlTask.status === ETL_STATUS.ERROR &&
-                                getMigrationStage === ETL_API_STAGES.CREATE
-                        "
-                        class="mxs-color-helper text-navigation"
-                    >
+                    <span v-if="hasErrAtCreationStage" class="mxs-color-helper text-navigation">
                         {{ $mxs_t(`errors.etl_create_stage`) }}
                     </span>
 
@@ -75,7 +69,7 @@
                     {{ customCol(item, 'obj') }}
                 </template>
                 <template v-slot:[`item.result`]="{ item }">
-                    <etl-status-icon :status="objStatus(item)" />
+                    <etl-status-icon :icon="objStatus(item)" />
                     {{ customCol(item, 'result') }}
                 </template>
             </etl-tbl-script>
@@ -89,7 +83,13 @@
                     class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
                 >
                     <template v-if="activeItem">
-                        {{ activeItem.error ? activeItem.error : $mxs_t('success.scriptExec') }}
+                        {{
+                            activeItem.error
+                                ? activeItem.error
+                                : hasErrAtCreationStage
+                                ? $mxs_t('warnings.objCreation')
+                                : $mxs_t('success.scriptExec')
+                        }}
                     </template>
                 </code>
             </div>
@@ -169,6 +169,12 @@ export default {
             const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
             return [CANCEL, DELETE, DISCONNECT, RESTART]
         },
+        hasErrAtCreationStage() {
+            return (
+                this.activeEtlTask.status === this.ETL_STATUS.ERROR &&
+                this.getMigrationStage === this.ETL_API_STAGES.CREATE
+            )
+        },
     },
     watch: {
         queryId: {
@@ -191,14 +197,23 @@ export default {
             await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
         },
         objStatus(item) {
-            return item.error ? this.ETL_STATUS.ERROR : this.ETL_STATUS.COMPLETE
+            return item.error
+                ? this.ETL_STATUS.ERROR
+                : this.hasErrAtCreationStage
+                ? { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }
+                : this.ETL_STATUS.COMPLETE
         },
         customCol(item, key) {
             switch (key) {
                 case 'obj':
                     return `\`${item.schema}\`.\`${item.table}\``
                 case 'result':
-                    return item.error ? this.$mxs_t('error') : this.$mxs_t('success.scriptExec')
+                    return item.error
+                        ? this.$mxs_t('error')
+                        : this.hasErrAtCreationStage
+                        ? this.$mxs_t('warnings.objCreation')
+                        : this.$mxs_t('success.scriptExec')
+
                 default:
                     return ''
             }

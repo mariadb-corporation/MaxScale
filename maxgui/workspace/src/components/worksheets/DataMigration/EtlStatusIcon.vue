@@ -27,7 +27,7 @@ import { mapState } from 'vuex'
 export default {
     name: 'etl-status-icon',
     props: {
-        status: { type: String, required: true },
+        icon: { type: [String, Object], required: true },
         isRunning: { type: Boolean, default: false },
     },
     computed: {
@@ -37,7 +37,7 @@ export default {
         etlStatusIcon() {
             const { RUNNING, CANCELED, ERROR, COMPLETE } = this.ETL_STATUS
             let value, color
-            switch (this.status) {
+            switch (this.icon) {
                 case RUNNING:
                     value = '$vuetify.icons.mxs_loading'
                     color = 'navigation'
@@ -55,6 +55,7 @@ export default {
                     color = 'success'
                     break
             }
+            if (this.$typy(this.icon).isObject) return this.icon
             return { value, color }
         },
     },

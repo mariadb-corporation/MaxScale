@@ -1,5 +1,5 @@
 <template>
-    <div class="stage-wrapper d-flex flex-column fill-height pl-8">
+    <div class="stage-wrapper d-flex flex-column fill-height pt-4 pr-4 pb-8 pl-8">
         <div v-if="$slots['header']" class="stage-wrapper__header d-flex mx-3 pt-2">
             <slot name="header" />
         </div>

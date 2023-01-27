@@ -6,7 +6,7 @@
                     {{ $mxs_t('migrationScript') }}
                 </h3>
                 <div class="d-flex align-center">
-                    <etl-status-icon v-if="scriptErr" :status="ETL_STATUS.ERROR" />
+                    <etl-status-icon v-if="scriptErr" :icon="ETL_STATUS.ERROR" />
                     <p class="mt-4 migration-script-info mxs-color-helper text-deep-ocean">
                         {{
                             scriptErr

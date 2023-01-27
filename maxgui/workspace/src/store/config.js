@@ -155,10 +155,10 @@ export const ETL_ACTIONS = Object.freeze({
 })
 
 export const ETL_STATUS = Object.freeze({
-    INITIALIZING: 'Initializing',
-    RUNNING: 'Running',
-    CANCELED: 'Canceled',
-    ERROR: 'Error',
+    INITIALIZING: 'Initializing', // when etl/start or etl/prepare hasn't been called
+    RUNNING: 'Running', // when calling etl/start and waiting for res
+    CANCELED: 'Canceled', // etl/start is cancelled
+    ERROR: 'Error', // e.g. etl/start stops at `create` stage
     COMPLETE: 'Complete',
 })
 

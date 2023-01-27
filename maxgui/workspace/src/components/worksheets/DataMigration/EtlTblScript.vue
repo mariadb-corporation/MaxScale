@@ -6,7 +6,6 @@
                 <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
                     <mxs-data-table
                         v-model="selectItems"
-                        :headers="headers"
                         :items="tableRows"
                         fixed-header
                         hide-default-footer
@@ -64,7 +63,6 @@ export default {
     inheritAttrs: false,
     props: {
         data: { type: Array, required: true },
-        headers: { type: Array, required: true },
     },
     data() {
         return {

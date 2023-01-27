@@ -163,7 +163,7 @@ export default {
 
                         const {
                             ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                            ETL_STATUS: { COMPLETE, ERROR },
+                            ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
                         } = rootState.mxsWorkspace.config
 
                         let status, logMsg, mutationName
@@ -175,6 +175,7 @@ export default {
                                         : 'errors.failedToPrepareMigrationScript'
                                 )
                                 mutationName = 'SET_ETL_PREPARE_RES'
+                                status = ok ? INITIALIZING : ERROR
                                 commit('SET_ETL_RES', {})
                                 break
                             }
@@ -232,14 +233,14 @@ export default {
 
             const {
                 ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                ETL_STATUS: { RUNNING, INITIALIZING },
+                ETL_STATUS: { RUNNING },
             } = rootState.mxsWorkspace.config
 
             switch (task.active_stage_index) {
                 case MIGR_SCRIPT: {
                     logName = $mxs_t('info.preparingMigrationScript')
                     apiAction = prepare
-                    status = INITIALIZING
+                    status = RUNNING
                     body.create_mode = state.create_mode
                     break
                 }
