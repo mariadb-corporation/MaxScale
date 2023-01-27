@@ -84,39 +84,23 @@ function queryHttp(store) {
             analyzeRes({ res: response, sql_conn_id: getSqlConnId(response.config.url) })
             return response
         },
-        error => {
+        async error => {
             const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
             switch (status) {
                 case null:
                     handleNullStatusCode({ store, error })
                     break
                 case 404:
-                    store.commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: ['Connection expired, please reconnect.'],
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
-
-                    //TODO: Call below function. Refactor validateConns so
-                    // that SkySQL can manage which connections to be validated.
-                    // await QueryConn.dispatch('validateConns', {
-                    //     persistentConns: QueryConn.all(),
-                    //     silentValidation: true,
-                    // })
-
-                    break
                 case 503:
                     store.commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [...getErrorsArr(error), 'Please reconnect'],
+                            text: [...getErrorsArr(error), 'Connection expired, please reconnect.'],
                             type: 'error',
                         },
                         { root: true }
                     )
+                    await QueryConn.dispatch('validateConns', { silentValidation: true })
                     break
                 default:
                     defErrStatusHandler({ store, error })

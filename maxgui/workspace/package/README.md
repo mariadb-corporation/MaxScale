@@ -188,28 +188,32 @@ the `mxs-workspace` component. At the moment, the following components in the be
 example are importable.
 
 ```vue
-<!-- SkyQuery.vue -->
 <template>
-    <div class="mxs-workspace-page">
-        <ConfirmLeaveDlg
+    <div class="mxs-workspace-page fill-height">
+        <mxs-workspace />
+        <confirm-leave-dlg
             v-model="isConfDlgOpened"
             :onSave="onLeave"
             :shouldDelAll.sync="shouldDelAll"
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
-        <ReconnDlgCtr :onReconnectCb="onReconnectCb" />
-        <mxs-workspace />
+        <conn-dlg v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
+        <reconn-dlg-ctr :onReconnectCb="onReconnectCb" />
     </div>
 </template>
 
 <script>
+import ConnDlg from '@components/ConnDlgCtr.vue'
 import { models, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-workspace'
+import { mapState, mapMutations } from 'vuex'
+
 export default {
-    name: 'query-page',
+    name: 'maxscale-workspace',
     components: {
-        ConfirmLeaveDlg, // confirmation on leave dialog
-        ReconnDlgCtr, // reconnect dialog
+        ConfirmLeaveDlg, // built-in confirmation on leave dialog
+        ReconnDlgCtr, // built-in reconnect dialog
+        ConnDlg,
     },
     data() {
         return {
@@ -219,8 +223,19 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            is_conn_dlg_opened: state => state.mxsWorkspace.is_conn_dlg_opened,
+        }),
         allConns() {
             return models.QueryConn.all()
+        },
+        isConnDlgOpened: {
+            get() {
+                return this.is_conn_dlg_opened
+            },
+            set(v) {
+                this.SET_IS_CONN_DLG_OPENED(v)
+            },
         },
     },
     beforeRouteLeave(to, from, next) {
@@ -239,9 +254,15 @@ export default {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
-        await models.QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
+        this.SET_CONNS_TO_BE_VALIDATED(this.allConns)
+        await models.QueryConn.dispatch('validateConns')
     },
     methods: {
+        ...mapActions({ initQueryEditorEntities: 'mxsWorkspace/initQueryEditorEntities' }),
+        ...mapMutations({
+            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
+        }),
         async onLeave() {
             if (this.shouldDelAll) await models.QueryConn.dispatch('disconnectAll')
             this.leavePage()
@@ -254,9 +275,18 @@ export default {
         },
         async onReconnectCb() {
             await models.QueryConn.dispatch('validateConns', {
-                persistentConns: this.allConns,
                 silentValidation: true,
             })
+        },
+        /**
+         * @param {Object} params.body - https://github.com/mariadb-corporation/MaxScale/blob/22.08/Documentation/REST-API/Resources-SQL.md#open-sql-connection-to-server
+         * @param {Object} params.meta - extra info about the connection you want to store
+         */
+        async handleOpenConn(params) {
+            const { body, meta = {} } = params
+            // First initialize QueryEditor orm entities
+            this.initQueryEditorEntities()
+            await models.QueryConn.dispatch('openQueryEditorConn', params)
         },
     },
 }
@@ -264,7 +294,6 @@ export default {
 <style lang="scss" scoped>
 .mxs-workspace-page {
     width: 100%;
-    height: 100%;
 }
 </style>
 ```
@@ -290,7 +319,7 @@ all connections of a MaxScale:
 ```js
 import { models } from 'mxs-workspace'
 /**
- * When creating a connection via `models.QueryConn.dispatch('openWkeConn', { body, meta })`,
+ * When creating a connection via `models.QueryConn.dispatch('openQueryEditorConn', { body, meta })`,
  * The meta field can store information needed to identify which connections belong to which maxscale.
  * To delete all open connections from the workspace, group all connections belong to one maxscale and
  * delete one by one.

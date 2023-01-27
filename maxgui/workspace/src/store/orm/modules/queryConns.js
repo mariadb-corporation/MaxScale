@@ -52,15 +52,15 @@ export default {
             )
         },
         /**
-         * Validate provided persistentConns
-         * @param {Array} param.persistentConns - sql connections stored in indexedDB
+         * Validate mxsWorkspace.conns_to_be_validated
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
-        async validateConns({ commit, dispatch }, { persistentConns, silentValidation = false }) {
+        async validateConns({ commit, dispatch, rootState }, { silentValidation = false } = {}) {
             if (!silentValidation)
                 commit('queryConnsMem/SET_IS_VALIDATING_CONN', true, { root: true })
 
             const { $helpers } = this.vue
+            const persistentConns = rootState.mxsWorkspace.conns_to_be_validated
             const [e, res] = await $helpers.to(getAliveConns())
             const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
             const {
@@ -129,11 +129,10 @@ export default {
             }
         },
         /**
-         * Called by <wke-conn-man/>
          * @param {Object} param.body - request body
          * @param {Object} [param.meta] - meta - connection meta
          */
-        async openWkeConn({ dispatch, commit, rootState }, { body, meta = {} }) {
+        async openQueryEditorConn({ dispatch, commit, rootState }, { body, meta = {} }) {
             const { $helpers, $mxs_t } = this.vue
             const {
                 QUERY_CONN_BINDING_TYPES: { WORKSHEET },

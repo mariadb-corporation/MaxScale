@@ -32,14 +32,10 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTab from '@wsModels/QueryTab'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
-import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
 
 export default {
     name: 'workspace-page',
@@ -101,7 +97,7 @@ export default {
                         break
                     case '/404':
                         this.cancelLeave()
-                        QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
+                        QueryConn.dispatch('validateConns')
                         break
                     default:
                         this.shouldDelAll = true
@@ -121,10 +117,15 @@ export default {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
-        await QueryConn.dispatch('validateConns', { persistentConns: this.allConns })
+        this.SET_CONNS_TO_BE_VALIDATED(this.allConns)
+        await QueryConn.dispatch('validateConns')
     },
     methods: {
-        ...mapMutations({ SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED' }),
+        ...mapActions({ initQueryEditorEntities: 'mxsWorkspace/initQueryEditorEntities' }),
+        ...mapMutations({
+            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
+        }),
         async onLeave() {
             if (this.shouldDelAll) await QueryConn.dispatch('disconnectAll')
             this.leavePage()
@@ -135,30 +136,14 @@ export default {
         cancelLeave() {
             this.to = null
         },
-        /**
-         * Init QueryEditor entities if they aren't existed for
-         * the active worksheet.
-         */
-        initQueryEditorEntities() {
-            if (!QueryEditorTmp.find(this.activeWkeId))
-                QueryEditorTmp.insert({ data: { id: this.activeWkeId } })
-            if (!SchemaSidebar.find(this.activeWkeId))
-                SchemaSidebar.insert({ data: { id: this.activeWkeId } })
-            if (
-                !QueryTab.query()
-                    .where('worksheet_id', this.activeWkeId)
-                    .first()
-            )
-                insertQueryTab(this.activeWkeId)
-        },
         async handleOpenConn(opts) {
             // First initialize QueryEditor orm entities
             this.initQueryEditorEntities()
             /**
-             * TODO: Refactor openWkeConn so initQueryEditorEntities won't have to be call first,
+             * TODO: Refactor openQueryEditorConn so initQueryEditorEntities won't have to be call first,
              * initQueryEditorEntities should be called only after connection is created succesfully
              */
-            await QueryConn.dispatch('openWkeConn', opts)
+            await QueryConn.dispatch('openQueryEditorConn', opts)
         },
 
         async onReconnectCb() {
