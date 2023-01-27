@@ -26,6 +26,7 @@
   when Redis is used as the storage for the cache.
 * Some Cache configuration parameters, most notable the rules, can now be
   changed at runtime.
+* Support for inbound proxy protocol added.
 
 ## MariaDB MaxScale 22.08
 

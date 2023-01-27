@@ -2833,6 +2833,36 @@ authenticator specific documentation for more details.
 Specify the sql mode for the listener similarly to global `sql_mode` setting.
 If both are used this setting will override the global setting for this listener.
 
+### `proxy_protocol_networks`
+
+Define an IP-address or a subnetwork which may send a
+[proxy protocol header](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
+when connecting. The proxy header contains the original client IP-address and
+port, and MaxScale will use that information in its internal bookkeeping.
+This means the client is authenticated as if it was connecting from the host
+in the proxy header. If proxy protocol is also enabled in MaxScale server
+settings, MaxScale will relay the original original client address and port to
+the server. See [server settings](#proxy_protocol) for more information.
+
+This setting may be useful if a compatible load balancer is relaying client
+connections to MaxScale. If proxy headers are used, both MaxScale and the
+backends will know where the client originally came from.
+
+The `proxy_protocol_networks`-setting works similarly to the equivalent setting
+in [MariaDB Server](https://mariadb.com/kb/en/proxy-protocol-support/).
+The value can be a single IP or subnetwork, or a comma-separated list of them.
+Subnetworks are given in CIDR-format, e.g. "192.168.0.0/16". "*" is a valid
+value, allowing anyone to send the header. "localhost" allows proxy headers
+from domain socket connections.
+
+Only trusted IPs should be added to the list, as the proxy header may affect
+authentication results.
+```
+proxy_protocol_networks=192.168.0.1,198.168.0.0/16
+```
+Similar to MariaDB Server, MaxScale will also accept normal connections even
+if `proxy_protocol_networks` is configured for the listener.
+
 ### `connection_init_sql_file`
 
 Path to a text file with sql queries. Any sessions created from the listener

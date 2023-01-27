@@ -24,6 +24,10 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ### [MXS-3003](https://jira.mariadb.org/browse/MXS-3003) Support inbound proxy protocol
 
+MaxScale can read an inbound proxy protocol header and relay the information to
+backends. See [here](../Getting-Started/Configuration-Guide.md#proxy_protocol_networks)
+for more information.
+
 ### [MXS-3262](https://jira.mariadb.org/browse/MXS-3262) Add create-backup and restore-from-backup commands to MariaDB-Monitor
 
 ### [MXS-3269](https://jira.mariadb.org/browse/MXS-3260) Make it possible to change at runtime the number of threads used by MaxScale
