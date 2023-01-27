@@ -106,7 +106,6 @@ export default {
     },
     computed: {
         ...mapState({
-            are_conns_alive: state => state.etlMem.are_conns_alive,
             src_schema_tree: state => state.etlMem.src_schema_tree,
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
@@ -153,13 +152,11 @@ export default {
         },
     },
     async created() {
-        this.validateActiveEtlTaskConns()
-        if (this.are_conns_alive) await this.fetchSrcSchemas()
+        await this.fetchSrcSchemas()
     },
     methods: {
         ...mapMutations({ SET_MIGRATION_OBJS: 'etlMem/SET_MIGRATION_OBJS' }),
         ...mapActions({
-            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             loadChildNodes: 'etlMem/loadChildNodes',
             fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
             handleEtlCall: 'etlMem/handleEtlCall',

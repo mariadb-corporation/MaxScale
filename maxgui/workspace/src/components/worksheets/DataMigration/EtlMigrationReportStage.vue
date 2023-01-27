@@ -138,7 +138,6 @@ export default {
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
             ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
-            are_conns_alive: state => state.etlMem.are_conns_alive,
         }),
         ...mapGetters({
             getMigrationResTable: 'etlMem/getMigrationResTable',
@@ -146,9 +145,6 @@ export default {
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
-        },
-        isLoading() {
-            return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
         },
         tableHeaders() {
             return [
@@ -180,17 +176,13 @@ export default {
         queryId: {
             immediate: true,
             async handler(v) {
-                if (v && this.isActive) {
-                    this.validateActiveEtlTaskConns()
-                    await this.getEtlCallRes(this.activeEtlTask.id)
-                }
+                if (v && this.isActive) await this.getEtlCallRes(this.activeEtlTask.id)
             },
         },
     },
     methods: {
         ...mapActions({
             getEtlCallRes: 'etlMem/getEtlCallRes',
-            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
         async cancel() {
@@ -233,9 +225,7 @@ export default {
              * TODO: Show a dialog with an option for preparing script again. e.g. The users
              * can change `create_mode`
              */
-            this.validateActiveEtlTaskConns()
-            if (this.are_conns_alive)
-                await this.handleEtlCall({ id, tables: this.stagingMigrationScript })
+            await this.handleEtlCall({ id, tables: this.stagingMigrationScript })
         },
     },
 }

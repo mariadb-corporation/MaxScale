@@ -11,6 +11,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import Worksheet from '@wsModels/Worksheet'
 import { query, getAsyncResult } from '@wsSrc/api/query'
 import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -20,7 +21,6 @@ export default {
     namespaced: true,
     state: {
         src_schema_tree: [],
-        are_conns_alive: false,
         create_mode: ETL_CREATE_MODES.NORMAL,
         migration_objs: [], // store migration objects for /etl/prepare
         etl_prepare_res: {}, // store etl/prepare results
@@ -29,9 +29,6 @@ export default {
     mutations: {
         SET_SRC_SCHEMA_TREE(state, payload) {
             state.src_schema_tree = payload
-        },
-        SET_ARE_CONNS_ALIVE(state, payload) {
-            state.are_conns_alive = payload
         },
         SET_CREATE_MODE(state, payload) {
             state.create_mode = payload
@@ -47,26 +44,6 @@ export default {
         },
     },
     actions: {
-        /**
-         * Validate active ETL task connections
-         * @param {Boolean} silentValidation - silent validation (without showing snackbar message)
-         */
-        validateActiveEtlTaskConns({ commit }, { silentValidation = false } = {}) {
-            const { id } = EtlTask.getters('getActiveEtlTaskWithRelation')
-            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
-            const areConnsAlive = Boolean(srcConn.id && destConn.id)
-            commit('SET_ARE_CONNS_ALIVE', areConnsAlive)
-            if (!areConnsAlive && !silentValidation)
-                commit(
-                    'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: [this.vue.$mxs_t('errors.connsExpired')],
-                        type: 'error',
-                    },
-                    { root: true }
-                )
-        },
         async fetchSrcSchemas({ getters, commit }) {
             const { $mxs_t, $helpers, $typy } = this.vue
             const active_etl_task_id = EtlTask.getters('getActiveEtlTaskWithRelation').id
@@ -143,71 +120,67 @@ export default {
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            if (srcConn.id) {
-                EtlTask.update({
-                    where: id,
-                    data(obj) {
-                        obj.meta.is_loading = true
-                    },
-                })
-                const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
-                if (!e) {
-                    if (res.status === 202)
-                        await this.vue.$helpers
-                            .delay(2000)
-                            .then(async () => await dispatch('getEtlCallRes', id))
-                    else if (res.status === 201) {
-                        const results = $typy(res, 'data.data.attributes.results').safeObject
-                        const timestamp = new Date().valueOf()
-                        const ok = $typy(results, 'ok').safeBoolean
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.meta.is_loading = true
+                },
+            })
+            let etlStatus
+            const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
+            if (!e) {
+                if (res.status === 202)
+                    await this.vue.$helpers
+                        .delay(2000)
+                        .then(async () => await dispatch('getEtlCallRes', id))
+                else if (res.status === 201) {
+                    const results = $typy(res, 'data.data.attributes.results').safeObject
+                    const timestamp = new Date().valueOf()
+                    const ok = $typy(results, 'ok').safeBoolean
 
-                        const {
-                            ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                            ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
-                        } = rootState.mxsWorkspace.config
+                    const {
+                        ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
+                        ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
+                    } = rootState.mxsWorkspace.config
 
-                        let status, logMsg, mutationName
-                        switch (task.active_stage_index) {
-                            case MIGR_SCRIPT: {
-                                logMsg = $mxs_t(
-                                    ok
-                                        ? 'success.prepared'
-                                        : 'errors.failedToPrepareMigrationScript'
-                                )
-                                mutationName = 'SET_ETL_PREPARE_RES'
-                                status = ok ? INITIALIZING : ERROR
-                                commit('SET_ETL_RES', {})
-                                break
-                            }
-                            case DATA_MIGR: {
-                                logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
-                                status = ok ? COMPLETE : ERROR
-                                mutationName = 'SET_ETL_RES'
-                                break
-                            }
+                    let logMsg, mutationName
+                    switch (task.active_stage_index) {
+                        case MIGR_SCRIPT: {
+                            logMsg = $mxs_t(
+                                ok ? 'success.prepared' : 'errors.failedToPrepareMigrationScript'
+                            )
+                            mutationName = 'SET_ETL_PREPARE_RES'
+                            etlStatus = ok ? INITIALIZING : ERROR
+                            commit('SET_ETL_RES', {})
+                            break
                         }
-
-                        const error = $typy(results, 'error').safeString
-                        if (error) logMsg += ` \n${error}`
-                        EtlTask.dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
-
-                        commit(mutationName, results)
-                        commit(
-                            'mxsApp/SET_SNACK_BAR_MESSAGE',
-                            { text: [logMsg], type: ok ? 'success' : 'error' },
-                            { root: true }
-                        )
-
-                        EtlTask.update({
-                            where: id,
-                            data(obj) {
-                                obj.meta.is_loading = false
-                                if (status) obj.status = status
-                            },
-                        })
+                        case DATA_MIGR: {
+                            logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
+                            etlStatus = ok ? COMPLETE : ERROR
+                            mutationName = 'SET_ETL_RES'
+                            break
+                        }
                     }
+
+                    const error = $typy(results, 'error').safeString
+                    if (error) logMsg += ` \n${error}`
+                    EtlTask.dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
+
+                    commit(mutationName, results)
+                    commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        { text: [logMsg], type: ok ? 'success' : 'error' },
+                        { root: true }
+                    )
                 }
             }
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.meta.is_loading = false
+                    if (etlStatus) obj.status = etlStatus
+                },
+            })
         },
         /**
          * @param {String} param.id - etl task id
@@ -218,6 +191,7 @@ export default {
 
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
+
             const task = EtlTask.find(id)
 
             let logName,
@@ -254,7 +228,6 @@ export default {
             EtlTask.update({
                 where: id,
                 data(obj) {
-                    obj.meta.is_loading = true
                     obj.status = status
                     delete obj.meta.async_query_id
                 },
@@ -307,6 +280,12 @@ export default {
             const { CREATE } = rootState.mxsWorkspace.config.ETL_API_STAGES
             const { stage = '' } = state.etl_res || {}
             return stage === CREATE
+        },
+        areConnsAlive: () => {
+            const id = Worksheet.getters('getActiveEtlTaskId')
+            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
+            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
+            return Boolean(srcConn.id && destConn.id)
         },
     },
 }

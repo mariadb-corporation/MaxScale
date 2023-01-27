@@ -119,7 +119,6 @@ export default {
         ...mapState({
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            are_conns_alive: state => state.etlMem.are_conns_alive,
             etl_prepare_res: state => state.etlMem.etl_prepare_res,
         }),
         ...mapGetters({ getMigrationPrepareScript: 'etlMem/getMigrationPrepareScript' }),
@@ -151,7 +150,6 @@ export default {
             immediate: true,
             async handler(v) {
                 if (v && this.isActive) {
-                    this.validateActiveEtlTaskConns()
                     await this.getEtlCallRes(this.activeEtlTask.id)
                 }
             },
@@ -161,24 +159,20 @@ export default {
         ...mapMutations({ SET_ETL_PREPARE_RES: 'etlMem/SET_ETL_PREPARE_RES' }),
         ...mapActions({
             getEtlCallRes: 'etlMem/getEtlCallRes',
-            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
         async next() {
-            this.validateActiveEtlTaskConns()
             this.SET_ETL_PREPARE_RES({ ...this.etl_prepare_res, tables: this.stagingScript })
-            if (this.are_conns_alive) {
-                EtlTask.update({
-                    where: this.activeEtlTask.id,
-                    data(obj) {
-                        obj.active_stage_index = obj.active_stage_index + 1
-                    },
-                })
-                await this.handleEtlCall({
-                    id: this.activeEtlTask.id,
-                    tables: this.getMigrationPrepareScript,
-                })
-            }
+            EtlTask.update({
+                where: this.activeEtlTask.id,
+                data(obj) {
+                    obj.active_stage_index = obj.active_stage_index + 1
+                },
+            })
+            await this.handleEtlCall({
+                id: this.activeEtlTask.id,
+                tables: this.getMigrationPrepareScript,
+            })
         },
     },
 }

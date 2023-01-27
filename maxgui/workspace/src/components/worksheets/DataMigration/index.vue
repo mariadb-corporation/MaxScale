@@ -50,12 +50,12 @@ export default {
     },
     computed: {
         ...mapState({
-            are_conns_alive: state => state.etlMem.are_conns_alive,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
         ...mapGetters({
             getMigrationPrepareScript: 'etlMem/getMigrationPrepareScript',
             getMigrationResTable: 'etlMem/getMigrationResTable',
+            areConnsAlive: 'etlMem/areConnsAlive',
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
@@ -78,18 +78,18 @@ export default {
                 {
                     name: this.$mxs_tc('connections', 1),
                     component: 'etl-conns-stage',
-                    isDisabled: this.are_conns_alive || status === COMPLETE || status === RUNNING,
+                    isDisabled: this.areConnsAlive || status === COMPLETE || status === RUNNING,
                 },
                 {
                     name: this.$mxs_t('objSelection'),
                     component: 'etl-obj-select-stage',
-                    isDisabled: !this.are_conns_alive || status === COMPLETE || status === RUNNING,
+                    isDisabled: !this.areConnsAlive || status === COMPLETE || status === RUNNING,
                 },
                 {
                     name: this.$mxs_t('migrationScript'),
                     component: 'etl-migration-script-stage',
                     isDisabled:
-                        !this.are_conns_alive ||
+                        !this.areConnsAlive ||
                         status === COMPLETE ||
                         status === RUNNING ||
                         !this.hasMigrationPrepareScript ||
@@ -98,7 +98,7 @@ export default {
                 {
                     name: this.$mxs_t('progress'),
                     component: 'etl-migration-report-stage',
-                    isDisabled: !this.are_conns_alive || !this.hasMigrationRes,
+                    isDisabled: !this.areConnsAlive || !this.hasMigrationRes,
                 },
             ]
         },

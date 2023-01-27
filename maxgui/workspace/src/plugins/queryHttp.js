@@ -91,6 +91,23 @@ function queryHttp(store) {
                     handleNullStatusCode({ store, error })
                     break
                 case 404:
+                    store.commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: ['Connection expired, please reconnect.'],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+
+                    //TODO: Call below function. Refactor validateConns so
+                    // that SkySQL can manage which connections to be validated.
+                    // await QueryConn.dispatch('validateConns', {
+                    //     persistentConns: QueryConn.all(),
+                    //     silentValidation: true,
+                    // })
+
+                    break
                 case 503:
                     store.commit(
                         'mxsApp/SET_SNACK_BAR_MESSAGE',

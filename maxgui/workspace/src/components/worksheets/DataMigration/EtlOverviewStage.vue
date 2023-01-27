@@ -53,7 +53,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
-import { mapActions, mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'etl-overview-stage',
@@ -61,26 +61,18 @@ export default {
         EtlStageCtr,
     },
     computed: {
-        ...mapState({
-            are_conns_alive: state => state.etlMem.are_conns_alive,
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
+        ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
+        ...mapGetters({ areConnsAlive: 'etlMem/areConnsAlive' }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
         disabled() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
             const { status } = this.activeEtlTask
-            return this.are_conns_alive || status === COMPLETE || status === RUNNING
+            return this.areConnsAlive || status === COMPLETE || status === RUNNING
         },
     },
-    created() {
-        this.validateActiveEtlTaskConns({ silentValidation: true })
-    },
     methods: {
-        ...mapActions({
-            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
-        }),
         next() {
             EtlTask.update({
                 where: this.activeEtlTask.id,

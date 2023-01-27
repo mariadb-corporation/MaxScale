@@ -99,13 +99,11 @@ export default {
     async created() {
         await this.fetchOdbcDrivers()
         await this.fetchRcTargetNames(this.destTargetType)
-        this.validateActiveEtlTaskConns({ silentValidation: true })
     },
     methods: {
         ...mapActions({
             fetchOdbcDrivers: 'queryConnsMem/fetchOdbcDrivers',
             fetchRcTargetNames: 'queryConnsMem/fetchRcTargetNames',
-            validateActiveEtlTaskConns: 'etlMem/validateActiveEtlTaskConns',
         }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',

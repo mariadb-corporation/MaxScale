@@ -164,6 +164,7 @@ export default {
         getActiveWkeId: state => state.active_wke_id,
         getActiveWke: (state, getters) => Worksheet.find(getters.getActiveWkeId) || {},
         getActiveQueryTabId: () => Worksheet.getters('getActiveWke').active_query_tab_id,
+        getActiveEtlTaskId: () => Worksheet.getters('getActiveWke').active_etl_task_id,
         getWorksheetMem: () => QueryEditorTmp.find(Worksheet.getters('getActiveWkeId')) || {},
         getExeStmtResult: (state, getters) => getters.getWorksheetMem.exe_stmt_result || {},
     },
