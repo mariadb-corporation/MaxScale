@@ -62,7 +62,8 @@ Get a single monitor.
                                 "master_server_name": "server1",
                                 "seconds_behind_master": 0,
                                 "slave_io_running": "Yes",
-                                "slave_sql_running": "Yes"
+                                "slave_sql_running": "Yes",
+                                "using_gtid": "No"
                             }
                         ],
                         "state_details": null
@@ -78,6 +79,8 @@ Get a single monitor.
                 "backend_connect_timeout": "3000ms",
                 "backend_read_timeout": "3000ms",
                 "backend_write_timeout": "3000ms",
+                "backup_storage_address": null,
+                "backup_storage_path": null,
                 "cooperative_monitoring_locks": "none",
                 "cs_admin_api_key": null,
                 "cs_admin_base_path": "/cmapi/0.4.0",
@@ -97,7 +100,7 @@ Get a single monitor.
                 "master_conditions": "primary_monitor_master",
                 "master_failure_timeout": "10000ms",
                 "module": "mariadbmon",
-                "monitor_interval": "5000ms",
+                "monitor_interval": "1000ms",
                 "password": "*****",
                 "promotion_sql_file": null,
                 "rebuild_port": 4444,
@@ -125,7 +128,7 @@ Get a single monitor.
                 "type": "static"
             },
             "state": "Running",
-            "ticks": 4
+            "ticks": 12
         },
         "id": "MariaDB-Monitor",
         "links": {
@@ -223,7 +226,8 @@ Get all monitors.
                                     "master_server_name": "server1",
                                     "seconds_behind_master": 0,
                                     "slave_io_running": "Yes",
-                                    "slave_sql_running": "Yes"
+                                    "slave_sql_running": "Yes",
+                                    "using_gtid": "No"
                                 }
                             ],
                             "state_details": null
@@ -239,6 +243,8 @@ Get all monitors.
                     "backend_connect_timeout": "3000ms",
                     "backend_read_timeout": "3000ms",
                     "backend_write_timeout": "3000ms",
+                    "backup_storage_address": null,
+                    "backup_storage_path": null,
                     "cooperative_monitoring_locks": "none",
                     "cs_admin_api_key": null,
                     "cs_admin_base_path": "/cmapi/0.4.0",
@@ -258,7 +264,7 @@ Get all monitors.
                     "master_conditions": "primary_monitor_master",
                     "master_failure_timeout": "10000ms",
                     "module": "mariadbmon",
-                    "monitor_interval": "5000ms",
+                    "monitor_interval": "1000ms",
                     "password": "*****",
                     "promotion_sql_file": null,
                     "rebuild_port": 4444,
@@ -286,7 +292,7 @@ Get all monitors.
                     "type": "static"
                 },
                 "state": "Running",
-                "ticks": 4
+                "ticks": 12
             },
             "id": "MariaDB-Monitor",
             "links": {

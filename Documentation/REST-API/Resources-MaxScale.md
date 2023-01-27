@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Mon, 17 Oct 2022 17:36:00 GMT",
-            "commit": "d6662b78821027046876bedd0d2b687908fef091",
+            "activated_at": "Fri, 27 Jan 2023 13:21:28 GMT",
+            "commit": "1cd89e5840c7f548f1c192f15ff15cf81d3a873c",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -34,12 +34,13 @@ file locations, configuration options and version information.
                 "admin_host": "127.0.0.1",
                 "admin_jwt_algorithm": "auto",
                 "admin_jwt_key": null,
+                "admin_jwt_max_age": "86400000ms",
                 "admin_log_auth_failures": true,
                 "admin_oidc_url": null,
                 "admin_pam_readonly_service": null,
                 "admin_pam_readwrite_service": null,
                 "admin_port": 8989,
-                "admin_secure_gui": true,
+                "admin_secure_gui": false,
                 "admin_ssl_ca": null,
                 "admin_ssl_cert": null,
                 "admin_ssl_key": null,
@@ -87,7 +88,7 @@ file locations, configuration options and version information.
                 "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5004690432,
+                "query_classifier_cache_size": 5004527616,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -100,35 +101,36 @@ file locations, configuration options and version information.
                 "sql_mode": "default",
                 "syslog": false,
                 "threads": 3,
+                "threads_max": 256,
                 "users_refresh_interval": "0ms",
                 "users_refresh_time": "0ms",
-                "writeq_high_water": 16777216,
-                "writeq_low_water": 8192
+                "writeq_high_water": 65536,
+                "writeq_low_water": 1024
             },
-            "process_datadir": "/var/lib/maxscale/data21",
-            "started_at": "Mon, 17 Oct 2022 17:36:00 GMT",
+            "process_datadir": "/var/lib/maxscale/data1",
+            "started_at": "Fri, 27 Jan 2023 13:21:28 GMT",
             "system": {
                 "machine": {
                     "cores_available": 8,
                     "cores_physical": 8,
                     "cores_virtual": 8.0,
-                    "memory_available": 33364602880,
-                    "memory_physical": 33364602880
+                    "memory_available": 33363517440,
+                    "memory_physical": 33363517440
                 },
                 "maxscale": {
-                    "query_classifier_cache_size": 5004690432,
+                    "query_classifier_cache_size": 5004527616,
                     "threads": 3
                 },
                 "os": {
                     "machine": "x86_64",
                     "nodename": "monolith",
-                    "release": "5.19.14-200.fc36.x86_64",
+                    "release": "6.1.6-100.fc36.x86_64",
                     "sysname": "Linux",
-                    "version": "#1 SMP PREEMPT_DYNAMIC Wed Oct 5 21:31:17 UTC 2022"
+                    "version": "#1 SMP PREEMPT_DYNAMIC Sat Jan 14 17:00:40 UTC 2023"
                 }
             },
-            "uptime": 15,
-            "version": "22.08.2"
+            "uptime": 12,
+            "version": "22.08.5"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -184,6 +186,7 @@ value of `threads`.
                 "current_descriptors": 5,
                 "errors": 0,
                 "hangups": 0,
+                "listening": true,
                 "load": {
                     "last_hour": 0,
                     "last_minute": 0,
@@ -205,8 +208,9 @@ value of `threads`.
                     "misses": 0,
                     "size": 0
                 },
-                "reads": 34,
+                "reads": 20,
                 "sessions": 0,
+                "state": "Active",
                 "total_descriptors": 5,
                 "writes": 0,
                 "zombies": 0
@@ -247,6 +251,7 @@ Get the information for all threads. Returns a collection of threads resources.
                     "current_descriptors": 5,
                     "errors": 0,
                     "hangups": 0,
+                    "listening": true,
                     "load": {
                         "last_hour": 0,
                         "last_minute": 0,
@@ -268,8 +273,9 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 35,
+                    "reads": 21,
                     "sessions": 0,
+                    "state": "Active",
                     "total_descriptors": 5,
                     "writes": 0,
                     "zombies": 0
@@ -289,31 +295,33 @@ Get the information for all threads. Returns a collection of threads resources.
                     "current_descriptors": 8,
                     "errors": 0,
                     "hangups": 0,
+                    "listening": true,
                     "load": {
                         "last_hour": 0,
                         "last_minute": 0,
                         "last_second": 0
                     },
-                    "max_event_queue_length": 3,
+                    "max_event_queue_length": 2,
                     "max_exec_time": 0,
                     "max_queue_time": 0,
                     "memory": {
-                        "query_classifier": 448,
-                        "sessions": 69671,
-                        "total": 70119,
+                        "query_classifier": 1618,
+                        "sessions": 70191,
+                        "total": 71809,
                         "zombies": 0
                     },
                     "query_classifier_cache": {
                         "evictions": 0,
                         "hits": 0,
-                        "inserts": 1,
-                        "misses": 2,
-                        "size": 448
+                        "inserts": 3,
+                        "misses": 4,
+                        "size": 1618
                     },
-                    "reads": 47,
+                    "reads": 35,
                     "sessions": 1,
+                    "state": "Active",
                     "total_descriptors": 8,
-                    "writes": 10,
+                    "writes": 17,
                     "zombies": 0
                 }
             },
@@ -331,6 +339,7 @@ Get the information for all threads. Returns a collection of threads resources.
                     "current_descriptors": 5,
                     "errors": 0,
                     "hangups": 0,
+                    "listening": true,
                     "load": {
                         "last_hour": 0,
                         "last_minute": 0,
@@ -352,8 +361,9 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 34,
+                    "reads": 20,
                     "sessions": 0,
+                    "state": "Active",
                     "total_descriptors": 5,
                     "writes": 0,
                     "zombies": 0
@@ -485,22 +495,24 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "37",
-                    "message": "Service 'Read-Connection-Router' started (2/2)",
+                    "id": "42",
+                    "message": "Server 'server2' charset: utf8mb4",
                     "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:00"
+                    "timestamp": "2023-01-27 13:21:32"
                 },
                 {
-                    "id": "38",
-                    "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
+                    "id": "43",
+                    "message": "Server changed state: server2[127.0.0.1:3001]: slave_up. [Auth Error, Down] -> [Slave, Running]",
                     "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:01"
+                    "timestamp": "2023-01-27 13:21:32"
                 },
                 {
-                    "id": "39",
-                    "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
-                    "priority": "notice",
-                    "timestamp": "2022-10-17 17:36:01"
+                    "id": "44",
+                    "message": "The function '=' is not found in the canonical statement 'INSERT INTO test.t1(id) VALUES (?), (?), (?)' created from the statement 'INSERT INTO test.t1(id) VALUES (1), (2), (3)'.",
+                    "module": "qc_sqlite",
+                    "priority": "warning",
+                    "session": "1",
+                    "timestamp": "2023-01-27 13:21:40"
                 }
             ],
             "log_source": "maxlog"
@@ -509,9 +521,9 @@ This endpoint supports the following parameters:
         "type": "log_data"
     },
     "links": {
-        "last": "http://localhost:8989/v1/maxscale/logs/data/?page[size]=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=34&page[size]=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=40&page[size]=3"
+        "last": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bsize%5D=3",
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=39&page%5Bsize%5D=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page%5Bcursor%5D=45&page%5Bsize%5D=3"
     }
 }
 ```
@@ -1247,6 +1259,15 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
+                        "default_value": "86400000ms",
+                        "description": "Maximum age of the JWTs generated by MaxScale",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "admin_jwt_max_age",
+                        "type": "duration",
+                        "unit": "ms"
+                    },
+                    {
                         "default_value": true,
                         "description": "Log admin interface authentication failures.",
                         "mandatory": false,
@@ -1582,7 +1603,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5004690432,
+                        "default_value": 5004527616,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1687,8 +1708,16 @@ one to see the parameters of a module before the object is created.
                         "default_value": 8,
                         "description": "This parameter specifies how many threads will be used for handling the routing.",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "threads",
+                        "type": "count"
+                    },
+                    {
+                        "default_value": 256,
+                        "description": "This parameter specifies a hard maximum for the number of routing threads.",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "threads_max",
                         "type": "count"
                     },
                     {
@@ -1710,7 +1739,7 @@ one to see the parameters of a module before the object is created.
                         "unit": "ms"
                     },
                     {
-                        "default_value": 16777216,
+                        "default_value": 65536,
                         "description": "High water mark of dcb write queue.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1718,7 +1747,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     },
                     {
-                        "default_value": 8192,
+                        "default_value": 1024,
                         "description": "Low water mark of dcb write queue.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1726,7 +1755,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "22.08.2"
+                "version": "22.08.5"
             },
             "id": "maxscale",
             "links": {
@@ -1951,7 +1980,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "22.08.2"
+                "version": "22.08.5"
             },
             "id": "servers",
             "links": {
@@ -1998,8 +2027,68 @@ one to see the parameters of a module before the object is created.
                     {
                         "attributes": {
                             "arg_max": 3,
+                            "arg_min": 3,
+                            "description": "Restore a server from a backup. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Target server",
+                                    "required": true,
+                                    "type": "SERVER"
+                                },
+                                {
+                                    "description": "Backup name",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-restore-from-backup",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-restore-from-backup/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 3,
+                            "arg_min": 3,
+                            "description": "Create a backup with Mariabackup. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Source server",
+                                    "required": true,
+                                    "type": "SERVER"
+                                },
+                                {
+                                    "description": "Backup name",
+                                    "required": true,
+                                    "type": "STRING"
+                                }
+                            ]
+                        },
+                        "id": "async-create-backup",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-create-backup/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 3,
                             "arg_min": 2,
-                            "description": "Rebuild a server with mariabackup. Does not wait for completion.",
+                            "description": "Rebuild a server with Mariabackup. Does not wait for completion.",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2309,7 +2398,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 2,
                             "arg_min": 1,
-                            "description": "Delete slave connections, delete binary logs and set up replication (dangerous). Does not wait for completion.",
+                            "description": "Delete replica connections, delete binary logs and set up replication (dangerous). Does not wait for completion.",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2318,7 +2407,7 @@ one to see the parameters of a module before the object is created.
                                     "type": "MONITOR"
                                 },
                                 {
-                                    "description": "Master server (optional)",
+                                    "description": "Primary server (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 }
@@ -2334,7 +2423,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 2,
                             "arg_min": 1,
-                            "description": "Delete slave connections, delete binary logs and set up replication (dangerous)",
+                            "description": "Delete replica connections, delete binary logs and set up replication (dangerous)",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2343,7 +2432,7 @@ one to see the parameters of a module before the object is created.
                                     "type": "MONITOR"
                                 },
                                 {
-                                    "description": "Master server (optional)",
+                                    "description": "Primary server (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 }
@@ -2409,7 +2498,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 1,
                             "arg_min": 1,
-                            "description": "Schedule master failover. Does not wait for completion.",
+                            "description": "Schedule primary failover. Does not wait for completion.",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2429,7 +2518,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 1,
                             "arg_min": 1,
-                            "description": "Perform master failover",
+                            "description": "Perform primary failover",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2449,7 +2538,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 3,
                             "arg_min": 1,
-                            "description": "Schedule master switchover. Does not wait for completion",
+                            "description": "Schedule primary switchover. Does not wait for completion",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2458,12 +2547,12 @@ one to see the parameters of a module before the object is created.
                                     "type": "MONITOR"
                                 },
                                 {
-                                    "description": "New master (optional)",
+                                    "description": "New primary (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 },
                                 {
-                                    "description": "Current master (optional)",
+                                    "description": "Current primary (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 }
@@ -2479,7 +2568,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 3,
                             "arg_min": 1,
-                            "description": "Perform master switchover",
+                            "description": "Perform primary switchover",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2488,12 +2577,12 @@ one to see the parameters of a module before the object is created.
                                     "type": "MONITOR"
                                 },
                                 {
-                                    "description": "New master (optional)",
+                                    "description": "New primary (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 },
                                 {
-                                    "description": "Current master (optional)",
+                                    "description": "Current primary (optional)",
                                     "required": false,
                                     "type": "[SERVER]"
                                 }
@@ -2506,7 +2595,7 @@ one to see the parameters of a module before the object is created.
                         "type": "module_command"
                     }
                 ],
-                "description": "A MariaDB Master/Slave replication monitor",
+                "description": "A MariaDB Primary/Replica replication monitor",
                 "maturity": "GA",
                 "module_type": "Monitor",
                 "parameters": [
@@ -2533,6 +2622,20 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "auto_rejoin",
                         "type": "bool"
+                    },
+                    {
+                        "description": "Address of backup storage.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "backup_storage_address",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Backup storage directory path.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "backup_storage_path",
+                        "type": "string"
                     },
                     {
                         "default_value": "none",
@@ -2986,6 +3089,13 @@ one to see the parameters of a module before the object is created.
                         "modifiable": false,
                         "name": "protocol",
                         "type": "module"
+                    },
+                    {
+                        "description": "Allowed (sub)networks for proxy protocol connections. Should be a comma-separated list of IPv4 or IPv6 addresses.",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "proxy_protocol_networks",
+                        "type": "string"
                     },
                     {
                         "description": "Service to which the listener connects to",
@@ -4164,7 +4274,6 @@ GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
             "canonical": "SELECT ?",
             "fields": [],
             "functions": [],
-            "has_where_clause": false,
             "operation": "QUERY_OP_SELECT",
             "parse_result": "QC_QUERY_PARSED",
             "type_mask": "QUERY_TYPE_READ"

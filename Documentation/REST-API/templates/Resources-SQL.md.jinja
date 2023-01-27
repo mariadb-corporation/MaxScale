@@ -408,7 +408,8 @@ Fatal connection error:
 DELETE /v1/sql/:id/queries/:query_id
 ```
 
-Erases the latest result of an asynchronously executed query.
+Erases the latest result of an asynchronously executed query. All asynchronous
+results are erased when the connection that owns them is closed.
 
 #### Response
 

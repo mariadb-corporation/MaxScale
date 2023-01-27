@@ -36,6 +36,7 @@ Get a single service.
                             "connection_init_sql_file": null,
                             "port": 4008,
                             "protocol": "MariaDBProtocol",
+                            "proxy_protocol_networks": null,
                             "service": "Read-Connection-Router",
                             "socket": null,
                             "sql_mode": "default",
@@ -119,7 +120,7 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Mon Oct 17 17:36:00 2022",
+            "started": "Fri, 27 Jan 2023 13:21:28 GMT",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -182,7 +183,7 @@ Get a single service.
                     "user": "root"
                 }
             ],
-            "users_last_update": "Mon Oct 17 17:36:01 2022"
+            "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -270,6 +271,7 @@ Get all services.
                                 "connection_init_sql_file": null,
                                 "port": 4006,
                                 "protocol": "MariaDBProtocol",
+                                "proxy_protocol_networks": null,
                                 "service": "RW-Split-Router",
                                 "socket": null,
                                 "sql_mode": "default",
@@ -370,11 +372,11 @@ Get all services.
                 "router_diagnostics": {
                     "avg_sescmd_history_length": 0,
                     "max_sescmd_history_length": 0,
-                    "queries": 2,
+                    "queries": 4,
                     "replayed_transactions": 0,
-                    "ro_transactions": 0,
+                    "ro_transactions": 1,
                     "route_all": 1,
-                    "route_master": 1,
+                    "route_master": 3,
                     "route_slave": 0,
                     "rw_transactions": 0,
                     "server_query_statistics": [
@@ -382,9 +384,9 @@ Get all services.
                             "avg_selects_per_session": 0,
                             "avg_sess_duration": "0ns",
                             "id": "server1",
-                            "read": 2,
-                            "total": 2,
-                            "write": 0
+                            "read": 1,
+                            "total": 4,
+                            "write": 3
                         },
                         {
                             "avg_selects_per_session": 0,
@@ -400,14 +402,14 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Mon Oct 17 17:36:00 2022",
+                "started": "Fri, 27 Jan 2023 13:21:28 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
                     "connections": 1,
                     "failed_auths": 0,
                     "max_connections": 1,
-                    "routed_packets": 2,
+                    "routed_packets": 4,
                     "total_connections": 1
                 },
                 "total_connections": 1,
@@ -463,7 +465,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Mon Oct 17 17:36:01 2022"
+                "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -510,6 +512,7 @@ Get all services.
                                 "connection_init_sql_file": null,
                                 "port": 4008,
                                 "protocol": "MariaDBProtocol",
+                                "proxy_protocol_networks": null,
                                 "service": "Read-Connection-Router",
                                 "socket": null,
                                 "sql_mode": "default",
@@ -593,7 +596,7 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Mon Oct 17 17:36:00 2022",
+                "started": "Fri, 27 Jan 2023 13:21:28 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -656,7 +659,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Mon Oct 17 17:36:01 2022"
+                "users_last_update": "Fri, 27 Jan 2023 13:21:31 GMT"
             },
             "id": "Read-Connection-Router",
             "links": {

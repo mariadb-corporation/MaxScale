@@ -46,7 +46,7 @@ the following form.
 ```javascript
 {
     "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw"
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhY2NvdW50IjoiYWRtaW4iLCJhdWQiOiJhZG1pbiIsImV4cCI6MTY3NDg1NDUwMCwiaWF0IjoxNjc0ODI1NzAwLCJpc3MiOiJtYXhzY2FsZSIsInN1YiI6ImFkbWluIn0.-mUkYmDMTF3BDjxjLJnvBBfEm7i809T_3goDSXbq3bk"
     }
 }
 ```
@@ -78,6 +78,12 @@ GET /v1/auth?max-age=28800
 
 When `max-age` is combined with `persist`, the `Max-Age` cookie option is
 also set to the same value.
+
+The maximum lifetime of the tokens is controlled by the `admin_jwt_max_age`
+parameter. If the configured value is less than 8 hours, the default token
+lifetime is also lowered to it. A request for a token with a lifetime longer
+than `admin_jwt_max_age` will be accepted but the token will have its lifetime
+set to `admin_jwt_max_age`.
 
 To use the token for authentication, the generated token must be presented in
 the Authorization header with the Bearer authentication scheme. For example, the
@@ -223,6 +229,11 @@ the resource documentation.
 
 ## Common Request Parameters
 
+All parameters that use boolean values use the same rules that are used for the
+[boolean values](../Getting-Started/Configuration-Guide.md#booleans) in the
+MaxScale configuration. For example, both `pretty=off` and `pretty=false`
+disable the `pretty` option.
+
 All the resources that return JSON content also support the following
 parameters. Parameters are given in the HTTP query string:
 `https://localhost:8989/v1/servers?pretty=true&fields[servers]=state`.
@@ -277,6 +288,22 @@ parameters. Parameters are given in the HTTP query string:
     `filter=/relationships/services/data/0/id="RW-Split-Router"` parameter can
     be used. Note the double quotes around the `"RW-Split-Router"`, they are
     required to correctly convert strings into JSON values.
+
+- `page[size]`
+
+  - The number of elements that are returned for resource collections. By
+    default all elements in the resource collection are returned. The value must
+    be a valid positive integer, otherwise the parameter is ignored. If
+    pagination is used, the `links` object will have pagination links to the
+    next page if more elements are available.
+
+- `page[number]`
+
+  - How many pages of results to skip. The first page of results starts from 0
+    and each page has no more than `page[size]` elements. If defined,
+    `page[size]` must also be defined, otherwise this parameter is ignored. This
+    should be considered pseudo-pagination as the results are not guaranteed to
+    be consistent between requests.
 
 - `sync`
 

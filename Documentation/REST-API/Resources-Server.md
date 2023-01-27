@@ -24,8 +24,8 @@ Get a single server.
 {
     "data": {
         "attributes": {
-            "gtid_binlog_pos": "0-3000-5",
-            "gtid_current_pos": "0-3000-5",
+            "gtid_binlog_pos": "0-3000-8",
+            "gtid_current_pos": "0-3000-8",
             "last_event": "master_up",
             "lock_held": null,
             "master_group": null,
@@ -94,9 +94,9 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 1,
+                                "count": 0,
                                 "time": "0.001000",
-                                "total": 0.00026678900000000002
+                                "total": 0.0
                             },
                             {
                                 "count": 0,
@@ -160,14 +160,14 @@ Get a single server.
                                 "total": 0.0
                             },
                             {
-                                "count": 0,
+                                "count": 3,
                                 "time": "0.001000",
-                                "total": 0.0
+                                "total": 0.0020629009999999998
                             },
                             {
                                 "count": 1,
                                 "time": "0.010000",
-                                "total": 0.001274311
+                                "total": 0.0012917440000000001
                             },
                             {
                                 "count": 0,
@@ -210,12 +210,12 @@ Get a single server.
                     }
                 },
                 "reused_connections": 0,
-                "routed_packets": 2,
+                "routed_packets": 4,
                 "total_connections": 1
             },
-            "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
-            "uptime": 27,
-            "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
+            "triggered_at": "Fri, 27 Jan 2023 13:21:31 GMT",
+            "uptime": 15,
+            "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
         },
         "id": "server1",
         "links": {
@@ -276,8 +276,8 @@ Response contains a resource collection with all servers.
     "data": [
         {
             "attributes": {
-                "gtid_binlog_pos": "0-3000-5",
-                "gtid_current_pos": "0-3000-5",
+                "gtid_binlog_pos": "0-3000-8",
+                "gtid_current_pos": "0-3000-8",
                 "last_event": "master_up",
                 "lock_held": null,
                 "master_group": null,
@@ -346,9 +346,9 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 1,
+                                    "count": 0,
                                     "time": "0.001000",
-                                    "total": 0.00026678900000000002
+                                    "total": 0.0
                                 },
                                 {
                                     "count": 0,
@@ -412,14 +412,14 @@ Response contains a resource collection with all servers.
                                     "total": 0.0
                                 },
                                 {
-                                    "count": 0,
+                                    "count": 3,
                                     "time": "0.001000",
-                                    "total": 0.0
+                                    "total": 0.0020629009999999998
                                 },
                                 {
                                     "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.001274311
+                                    "total": 0.0012917440000000001
                                 },
                                 {
                                     "count": 0,
@@ -462,12 +462,12 @@ Response contains a resource collection with all servers.
                         }
                     },
                     "reused_connections": 0,
-                    "routed_packets": 2,
+                    "routed_packets": 4,
                     "total_connections": 1
                 },
-                "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
-                "uptime": 27,
-                "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
+                "triggered_at": "Fri, 27 Jan 2023 13:21:31 GMT",
+                "uptime": 15,
+                "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
             },
             "id": "server1",
             "links": {
@@ -507,9 +507,9 @@ Response contains a resource collection with all servers.
         },
         {
             "attributes": {
-                "gtid_binlog_pos": "0-3000-5",
-                "gtid_current_pos": "0-3000-5",
-                "last_event": "slave_up",
+                "gtid_binlog_pos": "0-3001-12",
+                "gtid_current_pos": "0-3001-12",
+                "last_event": "lost_slave",
                 "lock_held": null,
                 "master_group": null,
                 "master_id": 3000,
@@ -540,7 +540,7 @@ Response contains a resource collection with all servers.
                     "ssl_version": "MAX"
                 },
                 "read_only": false,
-                "replication_lag": 0,
+                "replication_lag": -1,
                 "server_id": 3001,
                 "slave_connections": [
                     {
@@ -551,23 +551,23 @@ Response contains a resource collection with all servers.
                         "master_host": "127.0.0.1",
                         "master_port": 3000,
                         "master_server_id": 3000,
-                        "master_server_name": "server1",
-                        "seconds_behind_master": 0,
-                        "slave_io_running": "Yes",
-                        "slave_sql_running": "Yes"
+                        "seconds_behind_master": null,
+                        "slave_io_running": "No",
+                        "slave_sql_running": "No",
+                        "using_gtid": "No"
                     }
                 ],
                 "source": {
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "state": "Slave, Running",
+                "state": "Running",
                 "state_details": null,
                 "statistics": {
                     "active_operations": 0,
                     "adaptive_avg_select_time": "0ns",
                     "connection_pool_empty": 0,
-                    "connections": 1,
+                    "connections": 0,
                     "failed_auths": 0,
                     "max_connections": 1,
                     "max_pool_size": 0,
@@ -598,7 +598,7 @@ Response contains a resource collection with all servers.
                                 {
                                     "count": 1,
                                     "time": "0.010000",
-                                    "total": 0.0018231790000000001
+                                    "total": 0.0018904239999999999
                                 },
                                 {
                                     "count": 0,
@@ -710,9 +710,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Mon, 17 Oct 2022 17:36:00 GMT",
-                "uptime": 27,
-                "version_string": "10.6.8-MariaDB-1:10.6.8+maria~focal-log"
+                "triggered_at": "Fri, 27 Jan 2023 13:21:41 GMT",
+                "uptime": 15,
+                "version_string": "10.6.11-MariaDB-1:10.6.11+maria~ubu2004-log"
             },
             "id": "server2",
             "links": {
