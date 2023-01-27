@@ -55,22 +55,7 @@ Response contains the requested resource.
 `Status: 200 OK`
 
 ```javascript
-{
-    "data": {
-        "id": "5",
-        "links": {
-            "related": "http://localhost:8989/v1/sql/5/queries/",
-            "self": "http://localhost:8989/v1/sql/5/"
-        },
-        "type": "sql"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/5/"
-    },
-    "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1IiwiZXhwIjoxNjIwMjM1Mzc3LCJpYXQiOjE2MjAyMDY1NzcsImlzcyI6Im14cy1xdWVyeSJ9.2CJ8DsEPbGlvs2DrBUC6FJA64VMSU8kbX1U4FSu2-OY"
-    }
-}
+{{get_sql_conn()}}
 ```
 
 ### Get all SQL connections
@@ -86,29 +71,7 @@ Response contains a resource collection with all the open SQL connections.
 `Status: 200 OK`
 
 ```javascript
-{
-    "data": [
-        {
-            "id": "10",
-            "links": {
-                "related": "http://localhost:8989/v1/sql/10/queries/",
-                "self": "http://localhost:8989/v1/sql/10/"
-            },
-            "type": "sql"
-        },
-        {
-            "id": "11",
-            "links": {
-                "related": "http://localhost:8989/v1/sql/11/queries/",
-                "self": "http://localhost:8989/v1/sql/11/"
-            },
-            "type": "sql"
-        }
-    ],
-    "links": {
-        "self": "http://localhost:8989/v1/sql/"
-    }
-}
+{{get_all_sql_conns()}}
 ```
 
 ### Open SQL connection to server
@@ -213,27 +176,7 @@ Connection was opened:
 `Status: 201 Created`
 
 ```javascript
-{
-    "data": {
-        "id": "5",
-        "attributes": {
-            "thread_id": 12,
-            "seconds_idle": 5
-        }
-        "links": {
-                 // The "related" endpoint is the URL to the query endpoint for this connection.
-            "related": "http://localhost:8989/v1/sql/5/queries/",
-            "self": "http://localhost:8989/v1/sql/5/"
-        },
-        "type": "sql"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/5/"
-    },
-    "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1IiwiZXhwIjoxNjIwMjM1Mzc3LCJpYXQiOjE2MjAyMDY1NzcsImlzcyI6Im14cy1xdWVyeSJ9.2CJ8DsEPbGlvs2DrBUC6FJA64VMSU8kbX1U4FSu2-OY"
-    }
-}
+{{post_sql_conn()}}
 ```
 
 Missing or invalid payload:
@@ -356,36 +299,7 @@ responses.
   returns rows (i.e. `SELECT` statements)
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "results": [
-                {
-                    "data": [
-                        [
-                            1
-                        ],
-                        [
-                            2
-                        ],
-                        [
-                            3
-                        ]
-                    ],
-                    "fields": [
-                        "id"
-                    ]
-                }
-            ],
-            "sql": "select * from t1"
-        },
-        "id": "9-1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/9/queries/9-1/"
-    }
-}
+{{get_query_result("SELECT id FROM test.t1")}}
 ```
 
 - An error consists of an object with the `errno` field set to the MariaDB error
@@ -393,25 +307,7 @@ responses.
   `sqlstate` field set to the current SQLSTATE of the connection.
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "results": [
-                {
-                    "errno": 1064,
-                    "message": "You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'table t1' at line 1",
-                    "sqlstate": "42000"
-                }
-            ],
-            "sql": "select syntax_error from table t1"
-        },
-        "id": "4-1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/4/queries/4-1/"
-    }
-}
+{{get_query_result("SELECT syntax_error FROM TABLE test.t1")}}
 ```
 
 - An OK response is returned for any result that completes successfully but not
@@ -421,25 +317,7 @@ responses.
   contains the number of warnings raised by the operation.
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "results": [
-                {
-                    "affected_rows": 0,
-                    "last_insert_id": 0,
-                    "warnings": 0
-                }
-            ],
-            "sql": "drop table t1"
-        },
-        "id": "6-1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/6/queries/6-1/"
-    }
-}
+{{get_query_result("CREATE TABLE test.my_table(id INT)")}}
 ```
 
 It is also possible for the fields of the error response to be present in the
@@ -463,25 +341,7 @@ Query successfully executed:
 `Status: 201 Created`
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "results": [
-                {
-                    "affected_rows": 0,
-                    "last_insert_id": 0,
-                    "warnings": 0
-                }
-            ],
-            "sql": "drop table t1"
-        },
-        "id": "6.1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/6/queries/6.1/"
-    }
-}
+{{get_query_result("SELECT 1")}}
 ```
 
 Query queued for execution:
@@ -489,18 +349,7 @@ Query queued for execution:
 `Status: 202 Accepted`
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "sql": "drop table t1"
-        },
-        "id": "6.1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/6/queries/6.1/"
-    }
-}
+{{get_async_query_result("SELECT 1", False)}}
 ```
 
 Invalid payload or missing connection token:
@@ -534,25 +383,7 @@ Query successfully executed:
 `Status: 201 Created`
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "results": [
-                {
-                    "affected_rows": 0,
-                    "last_insert_id": 0,
-                    "warnings": 0
-                }
-            ],
-            "sql": "drop table t1"
-        },
-        "id": "6.1",
-        "type": "queries"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/sql/6/queries/6.1/"
-    }
-}
+{{get_async_query_result("SELECT 1", True)}}
 ```
 
 Query not yet complete:
@@ -773,7 +604,7 @@ Once complete, the `/v1/sql/:id/queries/:query_id` endpoint will return the
 following result.
 
 ```javascript
-// TODO: Add code that generates the result
+{{do_etl("etl/prepare")}}
 ```
 
 Invalid payload or missing connection token:
@@ -790,7 +621,7 @@ The behavior of this endpoint is identical to the preparation but instead of
 preparing the operation, this endpoint will execute the prepared ETL and load
 the data into MariaDB.
 
-The inteded way of doing an ETL operation is to first prepare it using the
+The intended way of doing an ETL operation is to first prepare it using the
 `/v1/sql/:id/etl/prepare` endpoint to retrieve the SQL statements that define
 the ETL operation. Then if the ETL preparation is successful, the
 `data.attributes.results.tables` value from the response is used as the `tables`
@@ -817,7 +648,7 @@ Once complete, the `/v1/sql/:id/queries/:query_id` endpoint will return the
 following result.
 
 ```javascript
-// TODO: Add code that generates the result
+{{do_etl("etl/start")}}
 ```
 
 Invalid payload or missing connection token:

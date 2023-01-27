@@ -44,11 +44,7 @@ The `/v1/auth` endpoint can be used to generate new tokens which are returned in
 the following form.
 
 ```javascript
-{
-    "meta": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw"
-    }
-}
+{{generate_auth_token()}}
 ```
 
 Note that by default the `/auth` endpoint requires the connection to be
