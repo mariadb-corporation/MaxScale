@@ -151,7 +151,7 @@ export default {
             immediate: true,
             async handler(v) {
                 if (v && this.isActive) {
-                    await this.validateActiveEtlTaskConns()
+                    this.validateActiveEtlTaskConns()
                     await this.getEtlCallRes(this.activeEtlTask.id)
                 }
             },
@@ -165,7 +165,7 @@ export default {
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
         async next() {
-            await this.validateActiveEtlTaskConns()
+            this.validateActiveEtlTaskConns()
             this.SET_ETL_PREPARE_RES({ ...this.etl_prepare_res, tables: this.stagingScript })
             if (this.are_conns_alive) {
                 EtlTask.update({

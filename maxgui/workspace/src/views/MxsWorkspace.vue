@@ -21,13 +21,13 @@
                 />
                 <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
                     <template v-if="activeWkeId === wke.id && ctrDim.height">
+                        <blank-wke v-if="isBlankWke(wke)" :ctrDim="ctrDim" />
                         <!-- query-editor has query-editor-conn-manager slot -->
-                        <query-editor v-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
+                        <query-editor v-else-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
                             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                         </query-editor>
                         <data-migration v-else-if="isEtlWke(wke)" :ctrDim="ctrDim" />
                     </template>
-                    <!-- TODO: Show blank worksheet: EtlTasks and card nav  -->
                 </keep-alive>
             </template>
         </div>
@@ -51,6 +51,7 @@ import { mapActions, mapState } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import '@wsSrc/styles/workspace.scss'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import BlankWke from '@wkeComps/BlankWke'
 import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
@@ -59,6 +60,7 @@ export default {
     name: 'mxs-workspace',
     components: {
         WkeNavCtr,
+        BlankWke,
         QueryEditor,
         DataMigration,
     },
@@ -130,6 +132,9 @@ export default {
         },
         isEtlWke(wke) {
             return Boolean(this.$typy(wke, 'active_etl_task_id').safeString)
+        },
+        isBlankWke(wke) {
+            return !this.isQueryEditorWke(wke) && !this.isEtlWke(wke)
         },
     },
 }

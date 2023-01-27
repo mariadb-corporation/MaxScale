@@ -153,7 +153,7 @@ export default {
         },
     },
     async created() {
-        await this.validateActiveEtlTaskConns()
+        this.validateActiveEtlTaskConns()
         if (this.are_conns_alive) await this.fetchSrcSchemas()
     },
     methods: {

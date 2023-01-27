@@ -1,0 +1,115 @@
+<template>
+    <mxs-data-table
+        :headers="tableHeaders"
+        :items="tableRows"
+        sortBy="created"
+        :items-per-page="-1"
+        fixed-header
+        hide-default-footer
+        :height="height"
+    >
+        <template v-slot:[`item.name`]="{ item }">
+            <span class="mxs-color-helper pointer text-anchor" @click="viewTask(item)">
+                {{ item.name }}
+            </span>
+        </template>
+
+        <template v-slot:[`item.meta`]="{ meta }">
+            <div class="d-flex">
+                {{ parseMeta(meta).from }}
+                <span class="mx-1 dashed-arrow d-inline-flex align-center">
+                    <span class="line"></span>
+                    <v-icon color="primary" size="12" class="arrow rotate-right">
+                        $vuetify.icons.mxs_arrowHead
+                    </v-icon>
+                </span>
+                {{ parseMeta(meta).to }}
+            </div>
+        </template>
+        <template v-slot:[`item.menu`]="{ value }">
+            <etl-task-manage
+                :id="value"
+                :types="actionTypes"
+                content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+            >
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon v-bind="attrs" v-on="on">
+                        <v-icon size="18" color="deep-ocean">
+                            mdi-dots-horizontal
+                        </v-icon>
+                    </v-btn>
+                </template>
+            </etl-task-manage>
+        </template>
+    </mxs-data-table>
+</template>
+
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-11-16
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import { mapState } from 'vuex'
+import EtlTask from '@wsModels/EtlTask'
+import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
+
+export default {
+    name: 'etl-tasks',
+    components: { EtlTaskManage },
+    props: {
+        height: { type: Number, required: true },
+    },
+    computed: {
+        ...mapState({
+            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
+        }),
+        tableHeaders() {
+            return [
+                { text: 'Task Name', value: 'name' },
+                { text: 'Status', value: 'status' },
+                { text: 'Created', value: 'created' },
+                { text: 'From->To', value: 'meta' },
+                { text: '', value: 'menu', sortable: false, width: '1px' },
+            ]
+        },
+        tableRows() {
+            return EtlTask.all().map(t => ({
+                ...t,
+                created: this.$helpers.dateFormat({ value: t.created }),
+                menu: t.id,
+            }))
+        },
+        actionTypes() {
+            const { CANCEL, DELETE, DISCONNECT, VIEW } = this.ETL_ACTIONS
+            return [CANCEL, DELETE, DISCONNECT, VIEW]
+        },
+    },
+    methods: {
+        parseMeta(meta) {
+            return {
+                from: this.$typy(meta, 'src_type').safeString || 'Unknown',
+                to: this.$typy(meta, 'dest_name').safeString || 'Unknown',
+            }
+        },
+        viewTask(item) {
+            EtlTask.dispatch('viewEtlTask', item)
+        },
+    },
+}
+</script>
+<style lang="scss" scoped>
+.dashed-arrow {
+    .line {
+        border-bottom: 2px dashed $primary;
+        width: 22px;
+    }
+}
+</style>

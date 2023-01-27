@@ -99,7 +99,7 @@ export default {
     async created() {
         await this.fetchOdbcDrivers()
         await this.fetchRcTargetNames(this.destTargetType)
-        await this.validateActiveEtlTaskConns({ silentValidation: true })
+        this.validateActiveEtlTaskConns({ silentValidation: true })
     },
     methods: {
         ...mapActions({

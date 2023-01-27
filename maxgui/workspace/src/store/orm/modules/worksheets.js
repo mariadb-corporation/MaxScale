@@ -34,11 +34,14 @@ export default {
             const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
             entityIds.forEach(id => {
                 Worksheet.delete(id) // delete itself
-                // delete records in its relational tables
-                QueryEditorTmp.delete(id)
-                SchemaSidebar.delete(id)
-                QueryConn.delete(c => c.worksheet_id === id)
-                QueryTab.dispatch('cascadeDelete', t => t.worksheet_id === id)
+                const { active_query_tab_id } = Worksheet.find(id) || {}
+                if (active_query_tab_id) {
+                    // delete records in its relational tables
+                    QueryEditorTmp.delete(id)
+                    SchemaSidebar.delete(id)
+                    QueryConn.delete(c => c.worksheet_id === id)
+                    QueryTab.dispatch('cascadeDelete', t => t.worksheet_id === id)
+                }
             })
         },
         /**

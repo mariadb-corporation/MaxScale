@@ -121,13 +121,10 @@ export default {
          * @param {Object} param.task - task
          */
         async actionHandler(action) {
-            const { CANCEL, CREATE, DELETE, DISCONNECT, VIEW, RESTART } = this.ETL_ACTIONS
+            const { CANCEL, DELETE, DISCONNECT, VIEW, RESTART } = this.ETL_ACTIONS
             switch (action.type) {
                 case CANCEL:
                     await EtlTask.dispatch('cancelEtlTask', this.task.id)
-                    break
-                case CREATE:
-                    await EtlTask.dispatch('insertEtlTask')
                     break
                 case DELETE:
                     await this.disconnectConnsFromTask()

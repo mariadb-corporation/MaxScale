@@ -175,7 +175,7 @@ export default {
             immediate: true,
             async handler(v) {
                 if (v && this.isActive) {
-                    await this.validateActiveEtlTaskConns()
+                    this.validateActiveEtlTaskConns()
                     await this.getEtlCallRes(this.activeEtlTask.id)
                 }
             },
@@ -218,7 +218,7 @@ export default {
              * TODO: Show a dialog with an option for preparing script again. e.g. The users
              * can change `create_mode`
              */
-            await this.validateActiveEtlTaskConns()
+            this.validateActiveEtlTaskConns()
             if (this.are_conns_alive)
                 await this.handleEtlCall({ id, tables: this.stagingMigrationScript })
         },

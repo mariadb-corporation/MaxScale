@@ -11,13 +11,11 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import Worksheet from '@wsModels/Worksheet'
 import { cancel } from '@wsSrc/api/etl'
 
 export default {
     namespaced: true,
-    state: {
-        active_etl_task_id: null,
-    },
     actions: {
         async insertEtlTask({ dispatch, rootState }, name) {
             const timestamp = Date.now()
@@ -68,8 +66,13 @@ export default {
             }
         },
         viewEtlTask(_, task) {
-            EtlTask.commit(state => (state.active_etl_task_id = task.id))
-            //TODO: Detect ETL task form mode (view or edit, depends on the status of the task)
+            Worksheet.update({
+                where: Worksheet.getters('getActiveWkeId'),
+                data: {
+                    active_etl_task_id: task.id,
+                    name: task.name,
+                },
+            })
         },
         pushLog(_, { id, log }) {
             EtlTask.update({
@@ -81,9 +84,9 @@ export default {
         },
     },
     getters: {
-        getActiveEtlTaskWithRelation: state =>
+        getActiveEtlTaskWithRelation: () =>
             EtlTask.query()
-                .whereId(state.active_etl_task_id)
+                .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
                 .with('connections')
                 .first() || {},
         getActiveEtlConns: (state, getters) =>

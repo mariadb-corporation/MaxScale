@@ -11,7 +11,6 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsModels/QueryConn'
 import { query, getAsyncResult } from '@wsSrc/api/query'
 import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -52,10 +51,7 @@ export default {
          * Validate active ETL task connections
          * @param {Boolean} silentValidation - silent validation (without showing snackbar message)
          */
-        async validateActiveEtlTaskConns({ commit }, { silentValidation = false } = {}) {
-            await QueryConn.dispatch('validateConns', {
-                persistentConns: EtlTask.getters('getActiveEtlConns'),
-            })
+        validateActiveEtlTaskConns({ commit }, { silentValidation = false } = {}) {
             const { id } = EtlTask.getters('getActiveEtlTaskWithRelation')
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
             const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)

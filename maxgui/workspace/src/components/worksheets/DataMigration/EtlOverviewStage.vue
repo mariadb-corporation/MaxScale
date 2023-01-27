@@ -74,8 +74,8 @@ export default {
             return this.are_conns_alive || status === COMPLETE || status === RUNNING
         },
     },
-    async created() {
-        await this.validateActiveEtlTaskConns({ silentValidation: true })
+    created() {
+        this.validateActiveEtlTaskConns({ silentValidation: true })
     },
     methods: {
         ...mapActions({
