@@ -11,7 +11,6 @@
  * Public License.
  */
 import MxsWorkspace from '@wsSrc/views/MxsWorkspace.vue'
-import DataMigration from '@wsSrc/views/DataMigration.vue'
 import workspaceModules from '@wsSrc/store/modules'
 import queryHttp from '@wsSrc/plugins/queryHttp'
 
@@ -29,7 +28,6 @@ export default {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
         // Register components globally
         Vue.component('mxs-workspace', MxsWorkspace)
-        Vue.component('data-migration', DataMigration)
         // Register workspace vuex modules
         Object.keys(workspaceModules).forEach(key => {
             // mxsApp exists in maxgui already

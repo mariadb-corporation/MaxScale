@@ -7,9 +7,7 @@
                 :disableApply="!hasValidChanges"
                 @on-revert="revertChanges"
                 @on-apply="applyChanges"
-            >
-                <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-            </ddl-editor-toolbar>
+            />
             <ddl-editor-form-ctr
                 v-model="formData"
                 :initialData="initialData"

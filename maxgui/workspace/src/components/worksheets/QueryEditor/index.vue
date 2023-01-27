@@ -30,18 +30,14 @@
                                 ref="editor"
                                 :queryTab="queryTab"
                                 :dim="editorDim"
-                            >
-                                <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-                            </txt-editor-ctr>
+                            />
                             <ddl-editor-ctr
                                 v-else
                                 ref="editor"
                                 :dim="editorDim"
                                 :execSqlDlg.sync="execSqlDlg"
                                 :isExecFailed="isExecFailed"
-                            >
-                                <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-                            </ddl-editor-ctr>
+                            />
                         </template>
                     </keep-alive>
                     <file-dlg-ctr />
@@ -68,6 +64,9 @@
             @after-close="$typy(execSqlDlg, 'onAfterClose').safeFunction()"
             @after-cancel="$typy(execSqlDlg, 'onAfterCancel').safeFunction()"
         />
+        <slot name="query-editor-conn-manager">
+            <conn-man />
+        </slot>
     </div>
 </template>
 
@@ -96,6 +95,7 @@ import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import ExecuteSqlDialog from '@wkeComps/QueryEditor/ExecuteSqlDialog.vue'
 import FileDlgCtr from '@wkeComps/QueryEditor/FileDlgCtr.vue'
+import ConnMan from '@wkeComps/QueryEditor/ConnMan.vue'
 
 export default {
     name: 'query-editor',
@@ -106,6 +106,7 @@ export default {
         QueryTabNavCtr,
         ExecuteSqlDialog,
         FileDlgCtr,
+        ConnMan,
     },
     props: {
         ctrDim: { type: Object, required: true },

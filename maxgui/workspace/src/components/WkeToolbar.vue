@@ -3,13 +3,7 @@
         class="wke-toolbar d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border px-2"
     >
         <div ref="toolbarLeft" class="d-flex align-center left-buttons fill-height">
-            <v-btn
-                :disabled="isAddWkeDisabled"
-                small
-                class="float-left add-wke-btn"
-                icon
-                @click="add"
-            >
+            <v-btn small class="float-left add-wke-btn" icon @click="add">
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
         </div>
@@ -62,7 +56,6 @@
  * $emit('get-total-btn-width', v:number)
  */
 import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
-import QueryConn from '@wsModels/QueryConn'
 import { mapMutations, mapState } from 'vuex'
 import QueryCnfDlgCtr from '@wsComps/QueryCnfDlgCtr.vue'
 
@@ -80,9 +73,6 @@ export default {
         ...mapState({ is_fullscreen: state => state.prefAndStorage.is_fullscreen }),
         totalWidth() {
             return this.rightBtnsWidth + this.leftBtnsWidth
-        },
-        isAddWkeDisabled() {
-            return !QueryConn.all().length
         },
     },
     watch: {

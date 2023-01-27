@@ -8,7 +8,6 @@
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
-        <conn-man v-if="isActiveQueryEditorWorksheet" />
     </div>
 </template>
 
@@ -26,13 +25,11 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
-import Worksheet from '@wsModels/Worksheet'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
-import ConnMan from '@wkeComps/QueryEditor/ConnMan.vue'
 
 export default {
     name: 'workspace-page',
-    components: { ConfirmLeaveDlg, ConnMan },
+    components: { ConfirmLeaveDlg },
     data() {
         return {
             isConfDlgOpened: false,
@@ -43,9 +40,6 @@ export default {
     computed: {
         allConns() {
             return QueryConn.all()
-        },
-        isActiveQueryEditorWorksheet() {
-            return !this.$typy(Worksheet.getters('getActiveWke'), 'active_query_tab_id').isNull
         },
     },
     beforeRouteLeave(to, from, next) {

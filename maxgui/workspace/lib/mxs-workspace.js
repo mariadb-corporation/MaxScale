@@ -11,7 +11,6 @@
  * Public License.
  */
 import MxsWorkspace from './MxsWorkspace.vue'
-import DataMigration from '@wsSrc/views/DataMigration.vue'
 import workspaceModules from '@wsSrc/store/modules'
 import commonComponents from '@wsComps/common'
 import queryHttp from '@wsSrc/plugins/queryHttp'
@@ -44,7 +43,6 @@ export default /*#__PURE__*/ (() => {
         Object.keys(commonComponents).forEach(name => Vue.component(name, commonComponents[name]))
         // Register components globally
         Vue.component('mxs-workspace', MxsWorkspace)
-        Vue.component('data-migration', DataMigration)
         // Register workspace vuex modules
         Object.keys(workspaceModules).forEach(key => {
             store.registerModule(key, workspaceModules[key])

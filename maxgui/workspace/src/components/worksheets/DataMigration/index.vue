@@ -40,7 +40,7 @@ import EtlMigrationReportStage from '@wkeComps/DataMigration/EtlMigrationReportS
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-    name: 'etl-stages',
+    name: 'data-migration',
     components: {
         EtlOverviewStage,
         EtlConnsStage,

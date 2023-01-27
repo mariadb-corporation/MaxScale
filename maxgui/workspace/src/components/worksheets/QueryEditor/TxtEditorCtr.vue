@@ -6,9 +6,7 @@
             :height="txtEditorToolbarHeight"
             :queryTab="queryTab"
             @disable-tab-move-focus="toggleTabMoveFocus"
-        >
-            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-        </txt-editor-toolbar-ctr>
+        />
         <!-- Main panel contains editor pane and chart-config -->
         <mxs-split-pane
             :value="mainPanePct"

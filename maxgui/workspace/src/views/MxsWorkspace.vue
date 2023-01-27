@@ -20,17 +20,13 @@
                     :height="wkeNavCtrHeight"
                 />
                 <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
-                    <query-editor
-                        v-if="
-                            activeWkeId === wke.id &&
-                                !$typy(wke, 'active_query_tab_id').isNull &&
-                                ctrDim.height
-                        "
-                        ref="wke"
-                        :ctrDim="ctrDim"
-                    >
-                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-                    </query-editor>
+                    <template v-if="activeWkeId === wke.id && ctrDim.height">
+                        <!-- query-editor has query-editor-conn-manager slot -->
+                        <query-editor v-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
+                            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                        </query-editor>
+                        <data-migration v-else-if="isEtlWke(wke)" :ctrDim="ctrDim" />
+                    </template>
                     <!-- TODO: Show blank worksheet: EtlTasks and card nav  -->
                 </keep-alive>
             </template>
@@ -54,15 +50,17 @@
 import { mapActions, mapState } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import '@wsSrc/styles/workspace.scss'
-import QueryEditor from '@wkeComps/QueryEditor'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import QueryEditor from '@wkeComps/QueryEditor'
+import DataMigration from '@wkeComps/DataMigration'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
 export default {
     name: 'mxs-workspace',
     components: {
-        QueryEditor,
         WkeNavCtr,
+        QueryEditor,
+        DataMigration,
     },
     data() {
         return {
@@ -126,6 +124,12 @@ export default {
                 const { height } = this.$refs.workspaceTopSlot.getBoundingClientRect()
                 this.workspaceTopSlotHeight = height
             }
+        },
+        isQueryEditorWke(wke) {
+            return Boolean(this.$typy(wke, 'active_query_tab_id').safeString)
+        },
+        isEtlWke(wke) {
+            return Boolean(this.$typy(wke, 'active_etl_task_id').safeString)
         },
     },
 }
