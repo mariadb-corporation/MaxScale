@@ -108,11 +108,6 @@ export default {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
         }),
-        /**
-         * TODO: handle shown connections open error.
-         * Right now it's shown automatically in app snackbar because the requests
-         * are called via $queryHttp axios
-         */
         async handleOpenConns() {
             const etl_task_id = this.activeEtlTask.id
             this.isLoading = true

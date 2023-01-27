@@ -8,7 +8,7 @@
                     </h3>
 
                     <etl-task-manage
-                        :id="activeEtlTask.id"
+                        :id="$typy(activeEtlTask, 'id').safeString"
                         v-model="isMenuOpened"
                         :types="actionTypes"
                         content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
@@ -42,7 +42,7 @@
                 </div>
                 <div class="mt-4">
                     <etl-status-icon
-                        :icon="activeEtlTask.status"
+                        :icon="$typy(activeEtlTask, 'status').safeString"
                         :isRunning="isRunning"
                         class="mb-1"
                     />
@@ -51,7 +51,7 @@
                     </span>
 
                     <span v-else class="mxs-color-helper text-navigation">
-                        {{ $mxs_t(activeEtlTask.status.toLowerCase()) }}
+                        {{ $mxs_t($typy(activeEtlTask, 'status').safeString.toLowerCase()) }}
                         <span v-if="isRunning">...</span>
                     </span>
                 </div>

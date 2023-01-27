@@ -45,10 +45,15 @@ export default {
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
+        etlLog() {
+            return this.$typy(this.activeEtlTask, 'logs').safeObjectOrEmpty
+        },
+        activeStageIdx() {
+            return this.$typy(this.activeEtlTask, 'active_stage_index').safeNumber
+        },
         logs() {
-            if (this.showAll) return Object.values(this.activeEtlTask.logs).flat()
-            return this.$typy(this.activeEtlTask, `logs[${this.activeEtlTask.active_stage_index}]`)
-                .safeArray
+            if (this.showAll) return Object.values(this.etlLog).flat()
+            return this.$typy(this.etlLog, `[${this.activeStageIdx}]`).safeArray
         },
     },
     watch: {
