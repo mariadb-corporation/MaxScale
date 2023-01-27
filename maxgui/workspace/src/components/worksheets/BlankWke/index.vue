@@ -51,12 +51,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
 import Worksheet from '@wsModels/Worksheet'
+import EtlTask from '@wsModels/EtlTask'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import { insertQueryTab } from '@wsSrc/store/orm/initEntities'
+import { mapMutations } from 'vuex'
 
 export default {
     name: 'blank-wke',
@@ -79,7 +77,7 @@ export default {
                     text: this.$mxs_t('runQueries'),
                     icon: '$vuetify.icons.mxs_workspace',
                     iconSize: 26,
-                    click: async () => await this.runQueries(),
+                    click: () => this.SET_IS_CONN_DLG_OPENED(true),
                 },
                 {
                     text: this.$mxs_t('dataMigration'),
@@ -103,17 +101,13 @@ export default {
         this.setTaskCardCtrHeight()
     },
     methods: {
+        ...mapMutations({ SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED' }),
         setTaskCardCtrHeight() {
             const { height } = this.$refs.taskCardCtr.getBoundingClientRect()
             this.taskCardCtrHeight = height
         },
         async createEtlTask() {
             await EtlTask.dispatch('insertEtlTask')
-        },
-        runQueries() {
-            QueryEditorTmp.insert({ data: { id: this.activeWkeId } })
-            SchemaSidebar.insert({ data: { id: this.activeWkeId } })
-            insertQueryTab(this.activeWkeId)
         },
     },
 }

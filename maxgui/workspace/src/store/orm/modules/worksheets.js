@@ -33,7 +33,6 @@ export default {
         cascadeDelete(_, payload) {
             const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
             entityIds.forEach(id => {
-                Worksheet.delete(id) // delete itself
                 const { active_query_tab_id } = Worksheet.find(id) || {}
                 if (active_query_tab_id) {
                     // delete records in its relational tables
@@ -42,6 +41,7 @@ export default {
                     QueryConn.delete(c => c.worksheet_id === id)
                     QueryTab.dispatch('cascadeDelete', t => t.worksheet_id === id)
                 }
+                Worksheet.delete(id) // delete itself
             })
         },
         /**

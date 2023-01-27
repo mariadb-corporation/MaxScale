@@ -55,7 +55,7 @@ export default {
         'activeEtlTask.logs': {
             deep: true,
             handler(v) {
-                if (v.length) this.scrollToBottom()
+                if (v && v.length) this.scrollToBottom()
             },
         },
     },

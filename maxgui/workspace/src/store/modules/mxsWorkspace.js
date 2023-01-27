@@ -20,6 +20,7 @@ export default {
         config: { ...config, COMMON_CONFIG: commonConfig },
         hidden_comp: [''],
         axios_opts: {},
+        is_conn_dlg_opened: false, // control showing connection dialog. Useful for SkySQL
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
@@ -27,6 +28,9 @@ export default {
         },
         SET_AXIOS_OPTS(state, payload) {
             state.axios_opts = payload
+        },
+        SET_IS_CONN_DLG_OPENED(state, payload) {
+            state.is_conn_dlg_opened = payload
         },
     },
     actions: {

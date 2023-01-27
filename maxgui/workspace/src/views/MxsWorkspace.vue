@@ -22,7 +22,7 @@
                 <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
                     <template v-if="activeWkeId === wke.id && ctrDim.height">
                         <blank-wke v-if="isBlankWke(wke)" :ctrDim="ctrDim" />
-                        <!-- query-editor has query-editor-conn-manager slot -->
+                        <!-- query-editor has query-tab-nav-toolbar-right-slot used by SkySQL -->
                         <query-editor v-else-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
                             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                         </query-editor>
@@ -112,7 +112,6 @@ export default {
     mounted() {
         this.$nextTick(() => this.setDim(), this.setWorkspaceTopSlotHeight())
     },
-
     methods: {
         ...mapActions({
             handleAutoClearQueryHistory: 'prefAndStorage/handleAutoClearQueryHistory',
