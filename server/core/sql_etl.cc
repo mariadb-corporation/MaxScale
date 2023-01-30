@@ -358,16 +358,17 @@ SELECT '`' || a.attname || '` ' ||
   CASE
     WHEN a.attndims > 0 THEN 'JSON'
     WHEN t.typname IN ('jsonb', 'json', 'hstore') THEN 'JSON'
-    WHEN t.typname LIKE 'timestamp%' THEN 'TIMESTAMP'
+    WHEN t.typname LIKE 'timestamp%' THEN 'DATETIME(6)'
     WHEN t.typname LIKE 'time%' THEN 'TIME'
     WHEN t.typname IN ('line', 'lseg', 'box', 'circle', 'cidr', 'macaddr', 'macaddr8') THEN 'TEXT'
     WHEN t.typname = 'geometry' THEN 'GEOMETRY'
     WHEN t.typname = 'inet' THEN 'INET6'
+    WHEn t.typname = 'bytea' THEN 'LONGBLOB'
     ELSE UPPER(pg_catalog.format_type(a.atttypid, a.atttypmod))
   END ||
   CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
   CASE
-    WHEN pg_catalog.pg_get_serial_sequence(c.relname, a.attname) IS NOT NULL
+    WHEN pg_catalog.pg_get_serial_sequence(QUOTE_IDENT(n.nspname) || '.' || QUOTE_IDENT(c.relname), QUOTE_IDENT(a.attname)) IS NOT NULL
       THEN ' AUTO_INCREMENT'
     WHEN pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) LIKE 'NULL::%'
       THEN ' DEFAULT NULL'
