@@ -175,6 +175,11 @@ const list_sessions_fields = [
     name: "Memory",
     path: "attributes.memory.total",
     description: "Memory usage (not exhaustive)"
+  },
+  {
+    name: "I/O-Activity",
+    path: "attributes.io_activity",
+    description: "The number of I/O events handled during the last 30 seconds"
   }
 ];
 
