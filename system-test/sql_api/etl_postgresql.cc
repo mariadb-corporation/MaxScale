@@ -123,7 +123,8 @@ void test_main(TestConnections& test)
                       "UID=maxskysql;"
                       "PWD=skysql;"
                       "SERVER=127.0.0.1;"
-                      "PORT=5432;";
+                      "PORT=5432;"
+                      "BoolsAsChar=0;";
 
     TestCases test_cases = {
         TESTCASE(sanity_check),

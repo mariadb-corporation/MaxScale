@@ -19,6 +19,18 @@
 
 namespace
 {
+
+std::array boolean_types
+{
+    "BOOLEAN",
+};
+
+std::array boolean_values
+{
+    "TRUE",
+    "FALSE",
+};
+
 std::array integer_types
 {
     "SMALLINT",
@@ -165,6 +177,7 @@ static std::vector<sql_generation::SQLType> init()
     sql_generation::impl::add_test(serial_types, serial_values, rval, q);
     sql_generation::impl::add_test(json_types, json_values, rval, q);
     sql_generation::impl::add_test(inet6_types, inet6_values, rval, q);
+    sql_generation::impl::add_test(boolean_types, boolean_values, rval, q);
 
     return rval;
 }
