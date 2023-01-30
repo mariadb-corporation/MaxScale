@@ -531,6 +531,60 @@ maxbase::CsvWriter& get_audit_log(LogAction action = LogAction::None)
 
     return s_log;
 }
+
+json_t* hide_passwords(json_t* pJson)
+{
+    if (json_is_array(pJson))
+    {
+        size_t index{};
+        json_t* pElem;
+        json_array_foreach(pJson, index, pElem)
+        {
+            hide_passwords(pElem);
+        }
+    }
+    else if (json_is_object(pJson))
+    {
+        const char* key;
+        json_t* ignored;
+        json_object_foreach(pJson, key, ignored)
+        {
+            if (strcasecmp(key, "password") == 0)
+            {
+                json_object_set_new(pJson, key, json_string("****"));
+            }
+            else
+            {
+                json_t* pElem = json_object_get(pJson, key);
+                hide_passwords(pElem);
+            }
+        }
+    }
+
+    return pJson;
+}
+
+std::string hide_passwords_in_json(const std::string& json_str)
+{
+    if (json_str.empty())
+    {
+        return json_str;
+    }
+
+    std::string ret;
+    json_t* pJson = json_loads(json_str.c_str(), 0, nullptr);
+    if (!pJson)
+    {
+        ret = "invalid";
+    }
+    else
+    {
+        hide_passwords(pJson);
+        ret = json_dumps(pJson, 0);
+        json_decref(pJson);
+    }
+    return ret;
+}
 }
 
 Client::Client(MHD_Connection* connection, const char* url, const char* method)
@@ -806,6 +860,8 @@ void Client::log_to_audit()
         break;
     }
 
+    auto body = hide_passwords_in_json(m_data);
+
     std::vector<std::string> values
     {
         wall_time::to_string(wall_time::Clock::now()),
@@ -816,20 +872,20 @@ void Client::log_to_audit()
         m_request.get_verb(),
         status,
         std::to_string(m_http_response_code),
-        m_data
+        body
     };
 
     if (!get_audit_log().add_row(values))
     {
-        if (!m_admin_log_error_reported)
+        if (!s_admin_log_error_reported)
         {
-            m_admin_log_error_reported = true;
+            s_admin_log_error_reported = true;
             MXB_SERROR("Failed to write to admin audit file: " << get_audit_log().path());
         }
     }
     else
     {
-        m_admin_log_error_reported = false;
+        s_admin_log_error_reported = false;
     }
 
     // If the path has been runtime changed or rotate issued,
@@ -838,7 +894,7 @@ void Client::log_to_audit()
     get_audit_log(LogAction::CheckRotate);
 }
 
-bool Client::m_admin_log_error_reported = false;
+bool Client::s_admin_log_error_reported = false;
 
 // static
 void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,

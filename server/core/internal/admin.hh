@@ -126,7 +126,7 @@ private:
     maxbase::TimePoint     m_start_time;
     maxbase::TimePoint     m_end_time;
     WebSocket::Handler     m_ws_handler;
-    static bool            m_admin_log_error_reported;
+    static bool            s_admin_log_error_reported;
 
     HttpResponse generate_token(const HttpRequest& request);
     bool         auth_with_token(const std::string& token, const char* method, const char* url);
