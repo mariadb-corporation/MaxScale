@@ -162,11 +162,48 @@ public:
            << "PWD={" << m_test.maxscale->password() << "}";
 
         auto source = query_odbc(dsn, sql).at("data/attributes/results");
-        auto dest = query_odbc(ss.str(), sql).at("data/attributes/results");
+
+        // The connection requires some setup to be usable with the same SQL on both the source and the
+        // destination. The most important of these is SQL_MODE=ANSI_QUOTES which makes MariaDB behave like
+        // other databases when it comes to quoting identifiers.
+        mxb::Json dest(mxb::Json::Type::UNDEFINED);
+
+        if (auto conn = connect({
+            {"target", "odbc"},
+            {"connection_string", ss.str()}
+        }))
+        {
+            auto id = conn.at("data/id").get_string();
+            auto token = conn.at("meta/token").get_string();
+
+            mxb::Json payload(mxb::Json::Type::OBJECT);
+            payload.set_string("sql", "SET SQL_MODE='ANSI_QUOTES'");
+            post(mxb::cat("sql/", id, "/queries/?token=", token), payload);
+
+            payload.set_string("sql", sql);
+            auto res = post(mxb::cat("sql/", id, "/queries/?token=", token), payload);
+            mxb::Json js(mxb::Json::Type::UNDEFINED);
+
+            if (js.load_string(res.body))
+            {
+                dest = js.at("data/attributes/results");
+            }
+
+            del("sql/" + id + "?token=" + token);
+        }
 
         return m_test.expect(source.valid() == dest.valid() && source == dest,
-                             "Result mismatch. Source %s\n Destination: %s",
-                             source.to_string().c_str(), dest.to_string().c_str());
+                             "Result mismatch for '%s'. Source %s\n Destination: %s",
+                             sql.c_str(), source.to_string().c_str(), dest.to_string().c_str());
+    }
+
+    // Checks that a query did not return an error
+    void check_odbc_result(const std::string& dsn, const std::string& sql)
+    {
+        auto res = query_odbc(dsn, sql);
+        m_test.expect(res.at("data/attributes/results/0/errno").get_int() <= 0,
+                      "Failed execute query '%s': %s",
+                      sql.c_str(), res.to_string().c_str());
     }
 
     std::pair<bool, mxb::Json> run_etl(std::string source_dsn,

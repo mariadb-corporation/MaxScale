@@ -15,6 +15,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/string.hh>
 
 #include <vector>
 #include <string>
@@ -62,4 +63,86 @@ struct SQLType
  * @return The MariaDB types
  */
 const std::vector<SQLType>& mariadb_types();
+
+/**
+ * Get SQL for creating most PostgreSQL data types
+ *
+ * Things like OIDs etc. are not included.
+ *
+ * @return The PostgreSQL types
+ */
+const std::vector<SQLType>& postgres_types();
+
+// Internal implementation namespace
+namespace impl
+{
+static inline std::string type_to_table_name(std::string_view type)
+{
+    std::string name = mxb::cat("type_", type);
+    size_t offset = name.find('(');
+
+    if (offset != std::string::npos)
+    {
+        name[offset] = '_';
+
+        offset = name.find(')');
+
+        if (offset != std::string::npos)
+        {
+            name = name.substr(0, offset);
+        }
+
+        offset = name.find(',');
+
+        if (offset != std::string::npos)
+        {
+            name = name.substr(0, offset);
+        }
+    }
+
+    offset = name.find(' ');
+
+    if (offset != std::string::npos)
+    {
+        name = name.substr(0, offset);
+    }
+
+    return name;
+}
+
+template<class Types, class Values>
+void add_test(Types&& types,
+              Values&& values,
+              std::vector<sql_generation::SQLType>& output,
+              const char* quote = "")
+{
+    constexpr const std::string_view DATABASE_NAME = "test";
+    constexpr const std::string_view FIELD_NAME = "a";
+
+    for (const auto& type : types)
+    {
+        sql_generation::SQLType sql_type;
+        std::string name = type_to_table_name(type);
+        sql_type.field_name = FIELD_NAME;
+        sql_type.database_name = DATABASE_NAME;
+        sql_type.table_name = name;
+        sql_type.full_name = mxb::cat(quote, DATABASE_NAME, quote, ".", quote, name, quote);
+        sql_type.type_name = type;
+
+        sql_type.create_sql = mxb::cat("CREATE TABLE ", sql_type.full_name,
+                                       " (", FIELD_NAME, " ", type, ")");
+        sql_type.drop_sql = mxb::cat("DROP TABLE ", sql_type.full_name);
+
+        for (const auto& value : values)
+        {
+            sql_generation::SQLTypeValue sql_value;
+            sql_value.value = value;
+            sql_value.insert_sql = mxb::cat("INSERT INTO ", sql_type.full_name, " VALUES (", value, ")");
+            sql_type.values.push_back(std::move(sql_value));
+        }
+
+        output.push_back(std::move(sql_type));
+    }
+}
+}
 }

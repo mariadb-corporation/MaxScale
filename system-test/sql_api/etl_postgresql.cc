@@ -18,6 +18,14 @@
 #include <maxtest/docker.hh>
 
 #include "etl_common.hh"
+namespace
+{
+std::string_view unquote(std::string_view str)
+{
+    return str.size() >= 2 && str.front() == '\'' && str.back() == '\'' ?
+           str.substr(1, str.size() - 2) : str;
+}
+}
 
 void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
@@ -61,6 +69,50 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
     }
 }
 
+void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    etl.check_odbc_result(dsn, "CREATE SCHEMA test");
+    auto dest = test.repl->get_connection(0);
+    test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+    dest.query("SET SQL_MODE='ANSI_QUOTES'");
+
+    for (const auto& t : sql_generation::postgres_types())
+    {
+        for (const auto& val : t.values)
+        {
+            etl.check_odbc_result(dsn, t.create_sql);
+            etl.check_odbc_result(dsn, val.insert_sql);
+
+            auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                         {EtlTable {t.database_name, t.table_name}});
+
+            if (test.expect(ok, "ETL failed for %s %s: %s", t.type_name.c_str(), val.value.c_str(),
+                            res.to_string().c_str()))
+            {
+                if (t.type_name == "TIMESTAMP")
+                {
+                    // MariaDB formats datetime values with trailing zeroes differently than Postgres does and
+                    // thus the results will never match. For now, just check that the values in the database
+                    // is what we expected to add there.
+                    auto inserted_val = dest.field("SELECT * FROM " + t.full_name);
+                    std::string raw_value(unquote(val.value));
+
+                    test.expect(inserted_val.find(raw_value) != std::string::npos
+                                || (inserted_val.empty() && val.value == "NULL"),
+                                "TIMESTAMP mismatch: %s != %s", raw_value.c_str(), inserted_val.c_str());
+                }
+                else
+                {
+                    etl.compare_results(dsn, 0, "SELECT * FROM " + t.full_name);
+                }
+            }
+
+            etl.check_odbc_result(dsn, t.drop_sql);
+            test.expect(dest.query(t.drop_sql), "Failed to drop: %s", dest.error());
+        }
+    }
+}
+
 void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
@@ -76,6 +128,7 @@ void test_main(TestConnections& test)
     TestCases test_cases = {
         TESTCASE(sanity_check),
         TESTCASE(massive_result),
+        TESTCASE(test_datatypes),
     };
 
     etl.run_tests(dsn, test_cases);

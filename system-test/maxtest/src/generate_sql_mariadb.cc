@@ -227,87 +227,23 @@ std::array inet6_values
     "NULL",
 };
 
-const std::string_view DATABASE_NAME = "test";
-const std::string_view FIELD_NAME = "a";
-
-std::string type_to_table_name(std::string_view type)
-{
-    std::string name = mxb::cat("type_", type);
-    size_t offset = name.find('(');
-
-    if (offset != std::string::npos)
-    {
-        name[offset] = '_';
-
-        offset = name.find(')');
-
-        if (offset != std::string::npos)
-        {
-            name = name.substr(0, offset);
-        }
-
-        offset = name.find(',');
-
-        if (offset != std::string::npos)
-        {
-            name = name.substr(0, offset);
-        }
-    }
-
-    offset = name.find(' ');
-
-    if (offset != std::string::npos)
-    {
-        name = name.substr(0, offset);
-    }
-
-    return name;
-}
-
 std::vector<sql_generation::SQLType> init()
 {
     std::vector<sql_generation::SQLType> rval;
 
-    auto add_test = [&](auto types, auto values){
-        for (const auto& type : types)
-        {
-            sql_generation::SQLType sql_type;
-            std::string name = type_to_table_name(type);
-            sql_type.field_name = FIELD_NAME;
-            sql_type.database_name = DATABASE_NAME;
-            sql_type.table_name = name;
-            sql_type.full_name = mxb::cat(DATABASE_NAME, ".", name);
-            sql_type.type_name = type;
-
-            sql_type.create_sql = mxb::cat("CREATE TABLE ", sql_type.full_name,
-                                           " (", FIELD_NAME, " ", type, ")");
-            sql_type.drop_sql = mxb::cat("DROP TABLE ", sql_type.full_name);
-
-            for (const auto& value : values)
-            {
-                sql_generation::SQLTypeValue sql_value;
-                sql_value.value = value;
-                sql_value.insert_sql = mxb::cat("INSERT INTO ", sql_type.full_name, " VALUES (", value, ")");
-                sql_type.values.push_back(std::move(sql_value));
-            }
-
-            rval.push_back(std::move(sql_type));
-        }
-    };
-
-    add_test(integer_types, integer_values);
-    add_test(decimal_types, decimal_values);
-    add_test(string_types, string_values);
-    add_test(binary_types, binary_values);
-    add_test(datetime_types, datetime_values);
-    add_test(timestamp_types, timestamp_values);
-    add_test(date_types, date_values);
-    add_test(time_types, time_values);
-    add_test(datetime2_types, datetime2_values);
-    add_test(timestamp2_types, timestamp2_values);
-    add_test(serial_types, serial_values);
-    add_test(json_types, json_values);
-    add_test(inet6_types, inet6_values);
+    sql_generation::impl::add_test(integer_types, integer_values, rval);
+    sql_generation::impl::add_test(decimal_types, decimal_values, rval);
+    sql_generation::impl::add_test(string_types, string_values, rval);
+    sql_generation::impl::add_test(binary_types, binary_values, rval);
+    sql_generation::impl::add_test(datetime_types, datetime_values, rval);
+    sql_generation::impl::add_test(timestamp_types, timestamp_values, rval);
+    sql_generation::impl::add_test(date_types, date_values, rval);
+    sql_generation::impl::add_test(time_types, time_values, rval);
+    sql_generation::impl::add_test(datetime2_types, datetime2_values, rval);
+    sql_generation::impl::add_test(timestamp2_types, timestamp2_values, rval);
+    sql_generation::impl::add_test(serial_types, serial_values, rval);
+    sql_generation::impl::add_test(json_types, json_values, rval);
+    sql_generation::impl::add_test(inet6_types, inet6_values, rval);
 
     return rval;
 }
