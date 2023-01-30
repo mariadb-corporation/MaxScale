@@ -773,9 +773,10 @@ void Table::read_sql(mxq::ODBC& source)
 
         if (m_create.empty())
         {
+            std::string create = extractor.create_table(source, *this);
             m_create = "CREATE DATABASE IF NOT EXISTS `" + m_schema + "`;\n";
             m_create += "USE `" + m_schema + "`;\n";
-            m_create += extractor.create_table(source, *this);
+            m_create += create;
         }
 
         if (m_select.empty())
