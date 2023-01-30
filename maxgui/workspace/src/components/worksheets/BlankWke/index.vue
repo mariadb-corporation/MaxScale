@@ -52,7 +52,6 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import EtlTask from '@wsModels/EtlTask'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
 import { mapMutations } from 'vuex'
 
@@ -83,7 +82,7 @@ export default {
                     text: this.$mxs_t('dataMigration'),
                     icon: '$vuetify.icons.mxs_dataMigration',
                     iconSize: 32,
-                    click: async () => await this.createEtlTask(),
+                    click: () => this.SET_IS_MIGR_DLG_OPENED(true),
                 },
                 /*  {
                     text: this.$mxs_t('createAnErd'),
@@ -101,13 +100,13 @@ export default {
         this.setTaskCardCtrHeight()
     },
     methods: {
-        ...mapMutations({ SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED' }),
+        ...mapMutations({
+            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+            SET_IS_MIGR_DLG_OPENED: 'mxsWorkspace/SET_IS_MIGR_DLG_OPENED',
+        }),
         setTaskCardCtrHeight() {
             const { height } = this.$refs.taskCardCtr.getBoundingClientRect()
             this.taskCardCtrHeight = height
-        },
-        async createEtlTask() {
-            await EtlTask.dispatch('insertEtlTask')
         },
     },
 }

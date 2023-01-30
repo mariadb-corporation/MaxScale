@@ -30,6 +30,7 @@
                     </template>
                 </keep-alive>
             </template>
+            <migr-creation-dlg />
         </div>
     </div>
 </template>
@@ -54,6 +55,7 @@ import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke'
 import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
+import MigrCreationDlg from '@wkeComps/BlankWke/MigrCreationDlg'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
 export default {
@@ -61,6 +63,7 @@ export default {
     components: {
         WkeNavCtr,
         BlankWke,
+        MigrCreationDlg,
         QueryEditor,
         DataMigration,
     },

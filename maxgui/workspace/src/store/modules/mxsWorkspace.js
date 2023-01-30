@@ -24,6 +24,7 @@ export default {
         config: { ...config, COMMON_CONFIG: commonConfig },
         hidden_comp: [''],
         axios_opts: {},
+        is_migr_dlg_opened: false,
         //Below states needed for the workspace package so it can be used in SkySQL
         is_conn_dlg_opened: false, // control showing connection dialog
         /* SkySQL has multiple maxscales, so this state keeps the connections of
@@ -37,6 +38,9 @@ export default {
         },
         SET_AXIOS_OPTS(state, payload) {
             state.axios_opts = payload
+        },
+        SET_IS_MIGR_DLG_OPENED(state, payload) {
+            state.is_migr_dlg_opened = payload
         },
         SET_IS_CONN_DLG_OPENED(state, payload) {
             state.is_conn_dlg_opened = payload

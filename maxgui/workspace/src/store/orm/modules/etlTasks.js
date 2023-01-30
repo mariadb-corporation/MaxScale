@@ -18,10 +18,8 @@ export default {
     namespaced: true,
     actions: {
         async insertEtlTask({ dispatch, rootState }, name) {
-            const timestamp = Date.now()
-            const date = this.vue.$helpers.dateFormat({ value: timestamp })
             const entities = await EtlTask.insert({
-                data: { name: name || `ETL - ${date}`, created: timestamp },
+                data: { name: name, created: Date.now() },
             })
             const {
                 ORM_PERSISTENT_ENTITIES: { ETL_TASKS },
