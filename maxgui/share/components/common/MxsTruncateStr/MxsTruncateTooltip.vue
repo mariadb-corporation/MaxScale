@@ -11,13 +11,13 @@
         offset-y
         top
         transition="slide-y-transition"
-        content-class="shadow-drop"
+        content-class="shadow-drop rounded-sm"
         :max-width="600"
         :max-height="600"
         allow-overflow
     >
         <v-sheet
-            class="py-2 px-4 text-body-2 mxs-color-helper text-navigation"
+            class="mxs-truncate-tooltip-menu py-2 px-4 text-body-2"
             :class="[$typy(truncate_tooltip_item, 'contentClass').safeString]"
         >
             <pre>{{ truncate_tooltip_item.txt }}</pre>
@@ -47,3 +47,11 @@ export default {
     },
 }
 </script>
+
+<style lang="scss">
+.mxs-truncate-tooltip-menu {
+    background: #303033 !important;
+    opacity: 0.9;
+    color: #d9dae0 !important;
+}
+</style>

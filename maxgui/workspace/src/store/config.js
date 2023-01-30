@@ -187,8 +187,3 @@ export const ETL_CREATE_MODES = Object.freeze({
     IGNORE: 'ignore',
     REPLACE: 'replace',
 })
-
-export const WKE_ACTION_TYPES = Object.freeze({
-    DELETE: 'delete',
-    RENAME: 'rename',
-})

@@ -16,11 +16,10 @@
                 class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active"
             >
-                <wke-nav-tab :wke="wke" @on-choose-action="actionHandler" />
+                <wke-nav-tab :wke="wke" />
             </v-tab>
         </v-tabs>
         <wke-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
-        <!-- TODO: Add rename dialog -->
     </div>
 </template>
 <script>
@@ -39,8 +38,6 @@
 import Worksheet from '@wsModels/Worksheet'
 import WkeToolbar from './WkeToolbar.vue'
 import WkeNavTab from './WkeNavTab.vue'
-import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
-import { mapState } from 'vuex'
 
 export default {
     name: 'wke-nav-ctr',
@@ -51,14 +48,9 @@ export default {
     data() {
         return {
             pageToolbarBtnWidth: 128,
-            targetWke: {},
-            isRenameDlgOpened: false,
         }
     },
     computed: {
-        ...mapState({
-            WKE_ACTION_TYPES: state => state.mxsWorkspace.config.WKE_ACTION_TYPES,
-        }),
         activeWkeID: {
             get() {
                 return Worksheet.getters('getActiveWkeId')
@@ -69,26 +61,6 @@ export default {
         },
         allWorksheets() {
             return Worksheet.all()
-        },
-    },
-
-    methods: {
-        showRenameDlg(wke) {
-            this.isRenameDlgOpened = true
-            this.targetWke = wke
-        },
-        async actionHandler({ type, wke }) {
-            const { DELETE, RENAME } = this.WKE_ACTION_TYPES
-            switch (type) {
-                case DELETE:
-                    await Worksheet.dispatch('handleDeleteWke', wke.id)
-                    //Auto insert a new blank wke
-                    if (Worksheet.all().length === 0) insertBlankWke()
-                    break
-                case RENAME:
-                    this.showRenameDlg(wke)
-                    break
-            }
         },
     },
 }

@@ -131,7 +131,6 @@
             "unlink": "Are you sure you want to unlink <b>{targetId}</b>?"
         },
         "connect": "connect",
-        "connectedTo": "Connected to",
         "connections": "Connection | connections",
         "connectTo": "Connect to",
         "connStr": "Connection String",
@@ -505,10 +504,6 @@
         "welcome": "Welcome",
         "welcomeTo": "Welcome to",
         "withHeaders": "With headers",
-        "wkeActions": {
-            "delete": "Delete",
-            "rename": "Rename"
-        },
         "workspace": "Workspace",
         "writable": "Writable"
     }
