@@ -44,7 +44,6 @@ import Worksheet from '@wsModels/Worksheet'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
-import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     name: 'wke-nav-tab',
@@ -75,8 +74,6 @@ export default {
     methods: {
         async onDelete() {
             await Worksheet.dispatch('handleDeleteWke', this.wke.id)
-            //Auto insert a new blank wke
-            if (Worksheet.all().length === 0) insertBlankWke()
         },
     },
 }

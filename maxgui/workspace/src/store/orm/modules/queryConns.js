@@ -343,6 +343,15 @@ export default {
                 await SchemaSidebar.dispatch('initialFetch')
             }
         },
+        async disconnectConnsFromTask(_, taskId) {
+            await this.vue.$helpers.to(
+                Promise.all(
+                    EtlTask.getters('getEtlConnsByTaskId')(taskId).map(({ id }) =>
+                        QueryConn.dispatch('disconnect', { id })
+                    )
+                )
+            )
+        },
         async disconnectAll({ getters, dispatch }) {
             for (const { id } of getters.getWkeConns)
                 await dispatch('cascadeDisconnectWkeConn', { showSnackbar: false, id })

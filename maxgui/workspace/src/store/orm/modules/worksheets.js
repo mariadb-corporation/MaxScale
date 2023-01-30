@@ -18,6 +18,7 @@ import Editor from '@wsModels/Editor'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { query } from '@wsSrc/api/query'
+import { insertBlankWke } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
@@ -92,6 +93,8 @@ export default {
             // delete the wke connection and its clones (query tabs)
             if (wkeConnId) await QueryConn.dispatch('cascadeDisconnectWkeConn', { id: wkeConnId })
             dispatch('cascadeDelete', id)
+            //Auto insert a new blank wke
+            if (Worksheet.all().length === 0) insertBlankWke()
         },
         changeWkeName({ getters }, name) {
             Worksheet.update({ where: getters.getActiveWkeId, data: { name } })

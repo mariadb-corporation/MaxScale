@@ -36,8 +36,8 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import WkeToolbar from './WkeToolbar.vue'
-import WkeNavTab from './WkeNavTab.vue'
+import WkeToolbar from '@wsComps/WkeToolbar.vue'
+import WkeNavTab from '@wsComps/WkeNavTab.vue'
 
 export default {
     name: 'wke-nav-ctr',

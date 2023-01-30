@@ -107,15 +107,6 @@ export default {
         },
     },
     methods: {
-        async disconnectConnsFromTask() {
-            await this.$helpers.to(
-                Promise.all(
-                    EtlTask.getters('getEtlConnsByTaskId')(this.task.id).map(({ id }) =>
-                        QueryConn.dispatch('disconnect', { id })
-                    )
-                )
-            )
-        },
         /**
          * @param {String} param.type - delete||cancel
          * @param {Object} param.task - task
@@ -127,11 +118,11 @@ export default {
                     await EtlTask.dispatch('cancelEtlTask', this.task.id)
                     break
                 case DELETE:
-                    await this.disconnectConnsFromTask()
+                    await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)
                     EtlTask.delete(this.task.id)
                     break
                 case DISCONNECT:
-                    await this.disconnectConnsFromTask()
+                    await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)
                     break
                 case VIEW:
                     EtlTask.dispatch('viewEtlTask', this.task)
