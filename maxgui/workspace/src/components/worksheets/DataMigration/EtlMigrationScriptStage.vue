@@ -19,7 +19,7 @@
         </template>
         <template v-slot:body>
             <v-progress-linear
-                v-if="isLoading"
+                v-if="isRunning"
                 indeterminate
                 color="primary"
                 class="align-self-start"
@@ -112,8 +112,8 @@ export default {
         scriptErr() {
             return this.$typy(this.etl_prepare_res, 'error').safeString
         },
-        isLoading() {
-            return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
+        isRunning() {
+            return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
         },
     },
     watch: {

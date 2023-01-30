@@ -467,8 +467,7 @@
             "migration": "Successful migration.",
             "prepared": "Successfully prepared.",
             "reconnected": "Successfully reconnected",
-            "retrieved": "Successfully retrieved.",
-            "scriptExec": "Script executed successfully"
+            "retrieved": "Successfully retrieved."
         },
         "swap": "Swap",
         "switchToHorizTable": "Switch to horizontal table",

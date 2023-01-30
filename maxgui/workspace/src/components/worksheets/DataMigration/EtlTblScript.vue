@@ -1,38 +1,33 @@
 <template>
     <v-row v-resize.quiet="setTblMaxHeight" class="fill-height">
-        <v-progress-linear v-if="isLoading" indeterminate color="primary" />
-        <template v-else>
-            <v-col cols="12" md="6" class="fill-height pt-0">
-                <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
-                    <mxs-data-table
-                        v-model="selectItems"
-                        :items="tableRows"
-                        fixed-header
-                        hide-default-footer
-                        :items-per-page="-1"
-                        :height="tableMaxHeight"
-                        v-bind="{ ...$attrs }"
-                        @click:row="selectItems = [$event]"
-                        v-on="$listeners"
-                    >
-                        <template
-                            v-for="slot in Object.keys($scopedSlots)"
-                            v-slot:[slot]="slotData"
-                        >
-                            <slot :name="slot" v-bind="slotData" />
-                        </template>
-                    </mxs-data-table>
-                </div>
-            </v-col>
-            <v-col cols="12" md="6" class="fill-height pt-0">
-                <etl-script-editors
-                    v-if="activeRow && !isLoading"
-                    v-model="activeRow"
-                    :hasRowChanged="hasRowChanged"
-                    @on-discard="discard"
-                />
-            </v-col>
-        </template>
+        <v-col cols="12" md="6" class="fill-height pt-0">
+            <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
+                <mxs-data-table
+                    :value="isRunning ? [] : selectItems"
+                    :items="tableRows"
+                    fixed-header
+                    hide-default-footer
+                    :items-per-page="-1"
+                    :height="tableMaxHeight"
+                    v-bind="{ ...$attrs }"
+                    @input="isRunning ? null : (selectItems = $event)"
+                    @click:row="isRunning ? null : (selectItems = [$event])"
+                    v-on="$listeners"
+                >
+                    <template v-for="slot in Object.keys($scopedSlots)" v-slot:[slot]="slotData">
+                        <slot :name="slot" v-bind="slotData" />
+                    </template>
+                </mxs-data-table>
+            </div>
+        </v-col>
+        <v-col cols="12" md="6" class="fill-height pt-0">
+            <etl-script-editors
+                v-if="activeRow && !isRunning"
+                v-model="activeRow"
+                :hasRowChanged="hasRowChanged"
+                @on-discard="discard"
+            />
+        </v-col>
     </v-row>
 </template>
 
@@ -56,6 +51,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlScriptEditors from '@wkeComps/DataMigration/EtlScriptEditors.vue'
+import { mapState } from 'vuex'
 
 export default {
     name: 'etl-tbl-script',
@@ -72,6 +68,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+        }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
@@ -89,8 +88,8 @@ export default {
             }
             return false
         },
-        isLoading() {
-            return this.$typy(this.activeEtlTask, 'meta.is_loading').safeBoolean
+        isRunning() {
+            return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
         },
         activeRowId() {
             return this.$typy(this.activeRow, 'id').safeString

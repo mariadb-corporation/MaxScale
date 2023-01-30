@@ -69,12 +69,15 @@
                     {{ customCol(item, 'obj') }}
                 </template>
                 <template v-slot:[`item.result`]="{ item }">
-                    <etl-status-icon :icon="objStatus(item)" />
-                    {{ customCol(item, 'result') }}
+                    <etl-status-icon
+                        :icon="objMigrationStatus(item).icon"
+                        :isRunning="objMigrationStatus(item).isRunning"
+                    />
+                    {{ objMigrationStatus(item).txt }}
                 </template>
             </etl-tbl-script>
         </template>
-        <template v-slot:footer>
+        <template v-if="!isRunning" v-slot:footer>
             <div class="etl-migration-report-stage__footer d-flex flex-column flex-grow-1">
                 <h6 class="mxs-color-helper text-navigation">
                     {{ $mxs_t('outputMsgs') }}
@@ -88,7 +91,7 @@
                                 ? activeItem.error
                                 : hasErrAtCreationStage
                                 ? $mxs_t('warnings.objCreation')
-                                : $mxs_t('success.scriptExec')
+                                : objMigrationStatus(activeItem).txt
                         }}
                     </template>
                 </code>
@@ -188,24 +191,30 @@ export default {
         async cancel() {
             await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
         },
-        objStatus(item) {
-            return item.error
-                ? this.ETL_STATUS.ERROR
-                : this.hasErrAtCreationStage
-                ? { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }
-                : this.ETL_STATUS.COMPLETE
+        objMigrationStatus(item) {
+            let icon = this.ETL_STATUS.RUNNING,
+                isRunning = true,
+                txt = `${item.rows || 0} rows migrated`
+            if (item.error) {
+                icon = this.ETL_STATUS.ERROR
+                isRunning = false
+                txt = this.$mxs_t('error')
+            } else if (item.execution_time) {
+                icon = this.ETL_STATUS.COMPLETE
+                isRunning = false
+                if (this.hasErrAtCreationStage) {
+                    icon = { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }
+                    txt = this.$mxs_t('warnings.objCreation')
+                }
+            }
+            return { icon, isRunning, txt }
         },
         customCol(item, key) {
             switch (key) {
                 case 'obj':
                     return `\`${item.schema}\`.\`${item.table}\``
                 case 'result':
-                    return item.error
-                        ? this.$mxs_t('error')
-                        : this.hasErrAtCreationStage
-                        ? this.$mxs_t('warnings.objCreation')
-                        : this.$mxs_t('success.scriptExec')
-
+                    return this.objMigrationStatus(item).txt
                 default:
                     return ''
             }

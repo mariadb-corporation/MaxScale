@@ -29,7 +29,6 @@ export default class EtlTask extends Extender {
              * @property {string} src_type  - mariadb||postgresql||generic
              * @property {string} dest_name - server name in MaxScale
              * @property {string} async_query_id - query_id of async query
-             * @property {boolean} is_loading - is loading etl prepare or  start result
              */
             meta: this.attr({}),
             /**

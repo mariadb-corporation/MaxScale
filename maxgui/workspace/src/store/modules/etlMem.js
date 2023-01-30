@@ -120,36 +120,40 @@ export default {
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            EtlTask.update({
-                where: id,
-                data(obj) {
-                    obj.meta.is_loading = true
-                },
-            })
             let etlStatus
             const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
             if (!e) {
-                if (res.status === 202)
+                const {
+                    ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
+                    ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
+                } = rootState.mxsWorkspace.config
+                const results = $typy(res, 'data.data.attributes.results').safeObject
+                let logMsg, mutationName
+                switch (task.active_stage_index) {
+                    case MIGR_SCRIPT:
+                        mutationName = 'SET_ETL_PREPARE_RES'
+                        commit('SET_ETL_RES', {})
+                        break
+                    case DATA_MIGR:
+                        mutationName = 'SET_ETL_RES'
+                        break
+                }
+
+                if (res.status === 202) {
+                    commit(mutationName, results)
                     await this.vue.$helpers
                         .delay(2000)
                         .then(async () => await dispatch('getEtlCallRes', id))
-                else if (res.status === 201) {
-                    const results = $typy(res, 'data.data.attributes.results').safeObject
+                } else if (res.status === 201) {
                     const timestamp = new Date().valueOf()
                     const ok = $typy(results, 'ok').safeBoolean
 
-                    const {
-                        ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                        ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
-                    } = rootState.mxsWorkspace.config
-
-                    let logMsg, mutationName
                     switch (task.active_stage_index) {
                         case MIGR_SCRIPT: {
                             logMsg = $mxs_t(
                                 ok ? 'success.prepared' : 'errors.failedToPrepareMigrationScript'
                             )
-                            mutationName = 'SET_ETL_PREPARE_RES'
+
                             etlStatus = ok ? INITIALIZING : ERROR
                             commit('SET_ETL_RES', {})
                             break
@@ -157,7 +161,6 @@ export default {
                         case DATA_MIGR: {
                             logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
                             etlStatus = ok ? COMPLETE : ERROR
-                            mutationName = 'SET_ETL_RES'
                             break
                         }
                     }
@@ -172,7 +175,6 @@ export default {
             EtlTask.update({
                 where: id,
                 data(obj) {
-                    obj.meta.is_loading = false
                     if (etlStatus) obj.status = etlStatus
                 },
             })
