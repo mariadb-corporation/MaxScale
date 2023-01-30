@@ -2511,9 +2511,9 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
 void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
 {
-    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
+    if (mxs_mysql_is_binlog_dump(m_reply.command()))
     {
-        // Treat COM_BINLOG_DUMP like a response that never ends
+        // Treat a binlog dump like a response that never ends
     }
     else if (m_reply.command() == MXS_COM_STATISTICS)
     {

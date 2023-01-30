@@ -871,7 +871,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         MXB_INFO("Primary '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
-        if (reply.command() == MXS_COM_BINLOG_DUMP || reply.command() == MXS_COM_REGISTER_SLAVE)
+        if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
         {
             MXB_INFO("Session is a replication client, closing connection immediately.");
             m_pSession->kill();     // Not sending an error causes the replication client to connect again

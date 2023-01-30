@@ -2960,7 +2960,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         }
     }
 
-    if (m_command == MXS_COM_BINLOG_DUMP)
+    if (mxs_mysql_is_binlog_dump(m_command))
     {
         // A COM_BINLOG_DUMP is treated as an endless result. Stop counting the expected responses as the data
         // isn't in the normal result format we expect it to be in. The protocol could go into a more special

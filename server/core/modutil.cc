@@ -338,6 +338,9 @@ const char* STRPACKETTYPE(int p)
 
     case MXS_COM_MULTI:
         return "COM_MULTI";
+
+    case MXS_COM_XPAND_REPL:
+        return "COM_XPAND_REPL";
     }
 
     snprintf(unknow_type, sizeof(unknow_type), format_str, static_cast<unsigned char>(p));

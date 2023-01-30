@@ -138,6 +138,11 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
         MXB_INFO("Client is registering as Replica server with ID %u", m_serverid);
         break;
 
+    case MXS_COM_XPAND_REPL:
+        MXB_ERROR("XPand replication is not supported.");
+        gwbuf_free(pPacket);
+        return false;
+
     case MXS_COM_BINLOG_DUMP:
         // Connected Slave server is waiting for binlog events
         m_state = BINLOG_MODE;
