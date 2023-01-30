@@ -19,16 +19,21 @@
                     v-if="!hidden_comp.includes('wke-nav-ctr')"
                     :height="wkeNavCtrHeight"
                 />
-                <keep-alive v-for="wke in allWorksheets" :key="wke.id" max="15">
-                    <template v-if="activeWkeId === wke.id && ctrDim.height">
-                        <blank-wke v-if="isBlankWke(wke)" :ctrDim="ctrDim" />
+                <template v-if="ctrDim.height">
+                    <blank-wke v-if="isBlankWke(activeWke)" :key="activeWkeId" :ctrDim="ctrDim" />
+                    <data-migration
+                        v-if="isEtlWke(activeWke)"
+                        :key="activeWkeId"
+                        :ctrDim="ctrDim"
+                    />
+                    <!-- Keep alive QueryEditor worksheets -->
+                    <keep-alive v-for="wke in queryEditorWorksheets" :key="wke.id" max="15">
                         <!-- query-editor has query-tab-nav-toolbar-right-slot used by SkySQL -->
-                        <query-editor v-else-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
+                        <query-editor v-if="activeWkeId === wke.id" ref="wke" :ctrDim="ctrDim">
                             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                         </query-editor>
-                        <data-migration v-else-if="isEtlWke(wke)" :ctrDim="ctrDim" />
-                    </template>
-                </keep-alive>
+                    </keep-alive>
+                </template>
             </template>
             <migr-creation-dlg />
         </div>
@@ -80,11 +85,16 @@ export default {
             QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
             hidden_comp: state => state.mxsWorkspace.hidden_comp,
         }),
-        allWorksheets() {
-            return Worksheet.all()
+        queryEditorWorksheets() {
+            return Worksheet.query()
+                .where(wke => this.isQueryEditorWke(wke))
+                .get()
         },
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
+        },
+        activeWke() {
+            return Worksheet.getters('getActiveWke')
         },
         wkeNavCtrHeight() {
             return this.hidden_comp.includes('wke-nav-ctr') ? 0 : 32
