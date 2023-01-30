@@ -821,8 +821,15 @@ void Client::log_to_audit()
 
     if (!get_audit_log().add_row(values))
     {
-        // TODO maybe only report once.
-        MXB_SERROR("Failed to write to log file " << get_audit_log().path());
+        if (!m_admin_log_error_reported)
+        {
+            m_admin_log_error_reported = true;
+            MXB_SERROR("Failed to write to admin audit file: " << get_audit_log().path());
+        }
+    }
+    else
+    {
+        m_admin_log_error_reported = false;
     }
 
     // If the path has been runtime changed or rotate issued,
@@ -830,6 +837,8 @@ void Client::log_to_audit()
     // to the "current" log.
     get_audit_log(LogAction::CheckRotate);
 }
+
+bool Client::m_admin_log_error_reported = false;
 
 // static
 void Client::handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
