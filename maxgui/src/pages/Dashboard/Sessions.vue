@@ -1,6 +1,6 @@
 <template>
     <sessions-table
-        :headers="tableHeaders"
+        :extraHeaders="[{ text: 'Service', value: 'serviceIds' }]"
         :items="tableRows"
         :server-items-length="getTotalSessions"
         @get-data-from-api="fetchSessions"
@@ -45,14 +45,6 @@ export default {
     name: 'sessions',
     data() {
         return {
-            tableHeaders: [
-                { text: 'ID', value: 'id' },
-                { text: 'Client', value: 'user' },
-                { text: 'Connected', value: 'connected' },
-                { text: 'IDLE (s)', value: 'idle' },
-                { text: 'Memory', value: 'memory' },
-                { text: 'Service', value: 'serviceIds' },
-            ],
             servicesLength: 0,
         }
     },
@@ -70,7 +62,7 @@ export default {
             this.current_sessions.forEach(session => {
                 const {
                     id,
-                    attributes: { idle, connected, user, remote, memory },
+                    attributes: { idle, connected, user, remote, memory, io_activity },
                     relationships: { services: { data: associatedServices = [] } = {} },
                 } = session || {}
 
@@ -87,6 +79,7 @@ export default {
                     connected: this.$helpers.dateFormat({ value: connected }),
                     idle: idle,
                     memory,
+                    io_activity,
                     serviceIds: serviceIds,
                 })
             })

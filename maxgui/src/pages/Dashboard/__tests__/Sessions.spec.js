@@ -16,15 +16,6 @@ import Sessions from '@rootSrc/pages/Dashboard/Sessions'
 
 import { dummy_all_sessions, getUniqueResourceNamesStub } from '@tests/unit/utils'
 
-const expectedTableHeaders = [
-    { text: 'ID', value: 'id' },
-    { text: 'Client', value: 'user' },
-    { text: 'Connected', value: 'connected' },
-    { text: 'IDLE (s)', value: 'idle' },
-    { text: 'Memory', value: 'memory' },
-    { text: 'Service', value: 'serviceIds' },
-]
-
 describe('Dashboard Sessions tab', () => {
     let wrapper, axiosStub
 
@@ -58,7 +49,9 @@ describe('Dashboard Sessions tab', () => {
 
     it(`Should pass expected table headers to sessions-table`, () => {
         const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
-        expect(sessionsTable.vm.$attrs.headers).to.be.deep.equals(expectedTableHeaders)
+        expect(sessionsTable.vm.$props.extraHeaders).to.be.deep.equals([
+            { text: 'Service', value: 'serviceIds' },
+        ])
     })
 
     it(`Should get total number of unique service names accurately`, () => {

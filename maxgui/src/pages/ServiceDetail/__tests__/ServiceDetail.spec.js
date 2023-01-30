@@ -196,11 +196,10 @@ describe('ServiceDetail index', () => {
             const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
             expect(sessionsTable.exists()).to.be.true
             const { search, sortDesc, sortBy } = sessionsTable.vm.$attrs
-            const { collapsible, delayLoading, rows, headers } = sessionsTable.vm.$props
-            const { search_keyword, sessionsTableRows, sessionsTableHeader } = wrapper.vm
+            const { collapsible, delayLoading, rows } = sessionsTable.vm.$props
+            const { search_keyword, sessionsTableRows } = wrapper.vm
             expect(search).to.be.equals(search_keyword)
             expect(rows).to.be.eql(sessionsTableRows)
-            expect(headers).to.be.eql(sessionsTableHeader)
             expect(collapsible).to.be.true
             expect(delayLoading).to.be.true
             expect(sortDesc).to.be.true

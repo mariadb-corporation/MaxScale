@@ -82,7 +82,6 @@
                                 <sessions-table
                                     collapsible
                                     delayLoading
-                                    :headers="sessionsTableHeader"
                                     :items="sessionsTableRows"
                                     :server-items-length="getTotalFilteredSessions"
                                     @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
@@ -139,13 +138,6 @@ export default {
             routingTargetsTableRows: [],
             listenersTableRows: [],
             filtersTableRows: [],
-            sessionsTableHeader: [
-                { text: 'ID', value: 'id' },
-                { text: 'Client', value: 'user' },
-                { text: 'Connected', value: 'connected' },
-                { text: 'IDLE (s)', value: 'idle' },
-                { text: 'Memory', value: 'memory' },
-            ],
         }
     },
     computed: {
@@ -183,12 +175,13 @@ export default {
         },
         sessionsTableRows() {
             return this.filtered_sessions.map(
-                ({ id, attributes: { idle, connected, user, remote, memory } }) => ({
+                ({ id, attributes: { idle, connected, user, remote, memory, io_activity } }) => ({
                     id,
                     user: `${user}@${remote}`,
                     connected: this.$helpers.dateFormat({ value: connected }),
                     idle,
                     memory,
+                    io_activity,
                 })
             )
         },

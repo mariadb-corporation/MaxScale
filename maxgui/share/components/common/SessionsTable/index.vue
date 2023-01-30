@@ -18,6 +18,7 @@
             :options.sync="pagination"
             disable-sort
             :footer-props="footerOpts"
+            :headers="headers"
             v-bind="{ ...$attrs }"
         >
             <!-- Pass on all scopedSlots of data-table -->
@@ -25,7 +26,7 @@
                 <slot :name="slot" v-bind="slotData" />
             </template>
             <template
-                v-if="$attrs.headers.find(h => h.value === 'memory')"
+                v-if="headers.find(h => h.value === 'memory')"
                 v-slot:[`item.memory`]="{ value: memory }"
             >
                 <memory-cell :data="memory" />
@@ -99,10 +100,10 @@ export default {
     components: { MemoryCell },
     mixins: [asyncEmit],
     inheritAttrs: false, // bind $attrs to data-table
-
     props: {
         collapsible: { type: Boolean, default: false },
         delayLoading: { type: Boolean, default: false },
+        extraHeaders: { type: Array, default: () => [] },
     },
     data() {
         return {
@@ -119,6 +120,17 @@ export default {
             pagination_config: state => state.session.pagination_config,
         }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
+        headers() {
+            return [
+                { text: 'ID', value: 'id' },
+                { text: 'Client', value: 'user' },
+                { text: 'Connected', value: 'connected' },
+                { text: 'IDLE (s)', value: 'idle' },
+                { text: 'Memory', value: 'memory' },
+                { text: 'I/O activity', value: 'io_activity' },
+                ...this.extraHeaders,
+            ]
+        },
         isLoading() {
             if (!this.delayLoading) return false
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
@@ -132,7 +144,7 @@ export default {
             }
         },
         lastHeader() {
-            return this.$attrs.headers.at(-1)
+            return this.headers.at(-1)
         },
         // API page starts at 0, vuetify page starts at 1
         pagination: {

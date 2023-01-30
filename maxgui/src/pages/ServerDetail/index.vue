@@ -45,7 +45,6 @@
                                 <sessions-table
                                     collapsible
                                     delayLoading
-                                    :headers="sessionsTableHeader"
                                     :items="sessionsTableRow"
                                     :server-items-length="getTotalFilteredSessions"
                                     @get-data-from-api="fetchSessionsWithFilter(filterSessionParam)"
@@ -119,13 +118,6 @@ export default {
                 { name: `${this.$mxs_tc('parameters', 2)} & ${this.$mxs_tc('diagnostics', 2)}` },
             ],
             serviceTableRow: [],
-            sessionsTableHeader: [
-                { text: 'ID', value: 'id' },
-                { text: 'Client', value: 'user' },
-                { text: 'Connected', value: 'connected' },
-                { text: 'IDLE (s)', value: 'idle' },
-                { text: 'Memory', value: 'memory' },
-            ],
         }
     },
     computed: {
@@ -153,7 +145,7 @@ export default {
             this.filtered_sessions.forEach(session => {
                 const {
                     id,
-                    attributes: { idle, connected, user, remote, memory },
+                    attributes: { idle, connected, user, remote, memory, io_activity },
                 } = session
 
                 tableRows.push({
@@ -162,6 +154,7 @@ export default {
                     connected: this.$helpers.dateFormat({ value: connected }),
                     idle: idle,
                     memory,
+                    io_activity,
                 })
             })
             return tableRows
