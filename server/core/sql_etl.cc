@@ -620,14 +620,6 @@ std::unique_ptr<ETL> create(std::string_view id, const mxb::Json& json,
     }
     else if (type_str == "postgresql")
     {
-        // The Postgres ODBC driver by default wraps all SQL statements in their own SAVEPOINT commands in
-        // order to be able to roll them back. We don't want them as they interfere with the
-        // pg_export_snapshot() functionality. Postgres 7.4 implemented the protocol version 3 and the -0 at
-        // the end of the Protocol option is what disables the SAVEPOINT functionality.
-        src += ";Protocol=7.4-0";
-        // It also emulates cursors by default which end up causing the whole resultset to be read
-        // into memory. This would cause MaxScale to run out of memory so we need to use real cursors.
-        src += ";UseDeclareFetch=1";
         extractor = std::make_unique<PostgresqlExtractor>();
     }
     else if (type_str == "generic")

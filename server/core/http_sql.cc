@@ -160,75 +160,6 @@ bool is_zero_address(const std::string& ip)
         return inet_pton(AF_INET6, ip.c_str(), &addr) == 1 && memcmp(addr.s6_addr, zero, sizeof(zero)) == 0;
     }
 }
-
-// Processes the given ODBC connection string into something more suitable for our use. More of a best-effort
-// attempt at providing a more usable environment for the query editor in the GUI.
-std::string process_connection_string(std::string str, int64_t timeout)
-{
-    bool is_maria = false;
-    bool no_option = true;
-    bool no_timeout = true;
-    uint64_t option = 0;
-
-    // The MariaDB ODBC connector reads the whole resultset into memory by default. This is obviously very
-    // bad if we read a large result. This was added into C/ODBC 3.1.17 which means we still risk running
-    // out of memory if an old version is used.
-    uint64_t extra_flags = mxq::ODBC::FORWARDONLY | mxq::ODBC::NO_CACHE;
-
-    // The MariaDB ODBC connector also requires this value to make multi-statment SQL work. Otherwise the
-    // server will just return syntax errors for otherwise valid SQL.
-    extra_flags |= mxq::ODBC::MULTI_STMT;
-
-    for (auto tok : mxb::strtok(str, ";"))
-    {
-        auto [key, value] = mxb::split(tok, "=");
-
-        if (mxb::sv_case_eq(key, "driver"))
-        {
-            if (value.find("libmaodbc.so") != std::string_view::npos
-                || mxb::lower_case_copy(value).find("mariadb") != std::string::npos)
-            {
-                is_maria = true;
-            }
-            else
-            {
-                break;
-            }
-        }
-        else if (mxb::sv_case_eq(key, "option"))
-        {
-            option = strtoul(std::string(value).c_str(), nullptr, 10);
-
-            if ((option & extra_flags) == extra_flags)
-            {
-                // All the required flags are in the OPTIONS value
-                no_option = false;
-            }
-        }
-
-        else if (mxb::sv_case_eq(key, "conn_timeout"))
-        {
-            no_timeout = false;
-        }
-    }
-
-    if (is_maria)
-    {
-        if (no_option)
-        {
-            str += ";OPTION=" + std::to_string(option | extra_flags);
-        }
-
-        if (no_timeout && timeout > 0)
-        {
-            // The MariaDB ODBC driver currently does not support timeouts set via the ODBC APIs. This means
-            // we'll have to inject it into the connection string.
-            str += ";CONN_TIMEOUT=" + std::to_string(timeout);
-        }
-    }
-
-    return str;
-}
 }
 
 namespace
@@ -959,17 +890,11 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
     }
     else
     {
-        std::string dsn = process_connection_string(config.odbc_string, config.timeout);
-        mxq::ODBC odbc(dsn, std::chrono::seconds{config.timeout});
+        mxq::ODBC odbc(config.odbc_string, std::chrono::seconds{config.timeout});
 
         if (odbc.connect())
         {
             elem = std::make_unique<HttpSql::ConnectionManager::ODBCConnection>(move(odbc), config);
-
-            // The return value from process_connection_string() can be different from the original connection
-            // string. The options must propagate to any cloned connections which means the configuration must
-            // be updated to contain the resulting connection string, not the original one.
-            elem->config.odbc_string = dsn;
         }
         else
         {

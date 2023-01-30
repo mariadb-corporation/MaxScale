@@ -55,6 +55,98 @@ int fix_sql_type(int data_type)
 
     return data_type;
 }
+
+// Processes the given ODBC connection string into something more suitable for our use. More of a best-effort
+// attempt at providing a more usable environment for the query editor in the GUI.
+std::string process_connection_string(std::string str, int64_t timeout)
+{
+    bool is_maria = false;
+    bool is_postgres = false;
+    bool no_option = true;
+    bool no_timeout = true;
+    uint64_t option = 0;
+
+    // The MariaDB ODBC connector reads the whole resultset into memory by default. This is obviously very
+    // bad if we read a large result. This was added into C/ODBC 3.1.17 which means we still risk running
+    // out of memory if an old version is used.
+    uint64_t extra_flags = mxq::ODBC::FORWARDONLY | mxq::ODBC::NO_CACHE;
+
+    // The MariaDB ODBC connector also requires this value to make multi-statment SQL work. Otherwise the
+    // server will just return syntax errors for otherwise valid SQL.
+    extra_flags |= mxq::ODBC::MULTI_STMT;
+
+    for (auto tok : mxb::strtok(str, ";"))
+    {
+        auto [key, value] = mxb::split(tok, "=");
+
+        if (mxb::sv_case_eq(key, "driver"))
+        {
+            if (value.find("libmaodbc.so") != std::string_view::npos
+                || mxb::lower_case_copy(value).find("mariadb") != std::string::npos)
+            {
+                is_maria = true;
+            }
+            else if (value.find("psqlodbcw.so") != std::string_view::npos
+                     || value.find("psqlodbca.so") != std::string_view::npos
+                     || mxb::lower_case_copy(value).find("postgres") != std::string::npos)
+            {
+                is_postgres = true;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else if (mxb::sv_case_eq(key, "option"))
+        {
+            option = strtoul(std::string(value).c_str(), nullptr, 10);
+
+            if ((option & extra_flags) == extra_flags)
+            {
+                // All the required flags are in the OPTIONS value
+                no_option = false;
+            }
+        }
+
+        else if (mxb::sv_case_eq(key, "conn_timeout"))
+        {
+            no_timeout = false;
+        }
+    }
+
+    if (is_maria)
+    {
+        if (no_option)
+        {
+            str += ";OPTION=" + std::to_string(option | extra_flags);
+        }
+
+        if (no_timeout && timeout > 0)
+        {
+            // The MariaDB ODBC driver currently does not support timeouts set via the ODBC APIs. This means
+            // we'll have to inject it into the connection string.
+            str += ";CONN_TIMEOUT=" + std::to_string(timeout);
+        }
+    }
+    else if (is_postgres)
+    {
+        // The Postgres ODBC driver by default wraps all SQL statements in their own SAVEPOINT commands in
+        // order to be able to roll them back. We don't want them as they interfere with the
+        // pg_export_snapshot() functionality. Postgres 7.4 implemented the protocol version 3 and the -0 at
+        // the end of the Protocol option is what disables the SAVEPOINT functionality.
+        str += ";Protocol=7.4-0";
+        // It also emulates cursors by default which end up causing the whole resultset to be read
+        // into memory. This would cause MaxScale to run out of memory so we need to use real cursors.
+        // To make it a little bit faster, fetch 1000 rows instead of the default 100 rows.
+        str += ";UseDeclareFetch=1;Fetch=1000";
+        // Disable parsing in the driver, let the server deal with everything.
+        str += ";Parse=0";
+        // Prefer SSL if it's available
+        str += ";SSLMode=prefer";
+    }
+
+    return str;
+}
 }
 
 namespace maxsql
@@ -602,7 +694,7 @@ std::optional<std::string> TextResult::get_field(size_t field, size_t row, size_
 }
 
 ODBCImp::ODBCImp(std::string dsn, std::chrono::seconds timeout)
-    : m_dsn(std::move(dsn))
+    : m_dsn(process_connection_string(dsn, timeout.count()))
     , m_timeout(timeout)
 {
     if (SQL_SUCCEEDED(SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &m_env)))
