@@ -36,34 +36,6 @@
         </template>
         <template v-slot:footer>
             <div class="btn-ctr">
-                <v-checkbox
-                    v-model="isConfirmed"
-                    color="primary"
-                    class="mb-4 v-checkbox--mariadb"
-                    hide-details
-                >
-                    <template v-slot:label>
-                        <v-tooltip top transition="slide-y-transition" max-width="340">
-                            <template v-slot:activator="{ on }">
-                                <div class="d-flex align-center" v-on="on">
-                                    <label
-                                        class="v-label ml-1 mxs-color-helper text-deep-ocean confirm-label"
-                                    >
-                                        {{ $mxs_t('etlConfirmMigration') }}
-                                    </label>
-                                    <v-icon
-                                        class="ml-1 material-icons-outlined pointer"
-                                        size="16"
-                                        color="warning"
-                                    >
-                                        $vuetify.icons.mxs_statusWarning
-                                    </v-icon>
-                                </div>
-                            </template>
-                            <span>{{ $mxs_t('info.etlConfirm') }}</span>
-                        </v-tooltip>
-                    </template>
-                </v-checkbox>
                 <v-btn
                     small
                     height="36"
@@ -71,7 +43,7 @@
                     class="mt-auto font-weight-medium px-7 text-capitalize"
                     rounded
                     depressed
-                    :disabled="Boolean(scriptErr) || !isConfirmed"
+                    :disabled="Boolean(scriptErr)"
                     @click="next"
                 >
                     {{ $mxs_t('startMigration') }}
@@ -111,7 +83,6 @@ export default {
     },
     data() {
         return {
-            isConfirmed: false,
             stagingScript: [],
         }
     },

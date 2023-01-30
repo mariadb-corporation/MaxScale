@@ -46,13 +46,42 @@
             </v-row>
         </template>
         <template v-slot:footer>
-            <div class="etl-obj-select-stage-footer relative">
+            <div class="etl-obj-select-stage-footer d-flex flex-column justify-end">
                 <p v-if="errMsg" class="v-messages__message error--text">
                     {{ errMsg }}
                 </p>
                 <p v-else-if="infoMsg" class="v-messages__message warning--text">
                     {{ infoMsg }}
                 </p>
+                <v-checkbox
+                    v-if="showConfirm"
+                    v-model="isConfirmed"
+                    color="primary"
+                    class="mt-0 mb-4 v-checkbox--mariadb"
+                    hide-details
+                >
+                    <template v-slot:label>
+                        <v-tooltip top transition="slide-y-transition" max-width="340">
+                            <template v-slot:activator="{ on }">
+                                <div class="d-flex align-center" v-on="on">
+                                    <label
+                                        class="v-label ml-1 mxs-color-helper text-deep-ocean confirm-label"
+                                    >
+                                        {{ $mxs_t('etlConfirmMigration') }}
+                                    </label>
+                                    <v-icon
+                                        class="ml-1 material-icons-outlined pointer"
+                                        size="16"
+                                        color="warning"
+                                    >
+                                        $vuetify.icons.mxs_statusWarning
+                                    </v-icon>
+                                </div>
+                            </template>
+                            <span>{{ $mxs_t('info.etlConfirm') }}</span>
+                        </v-tooltip>
+                    </template>
+                </v-checkbox>
                 <v-btn
                     small
                     height="36"
@@ -60,7 +89,7 @@
                     class="font-weight-medium px-7 text-capitalize prepare-btn"
                     rounded
                     depressed
-                    :disabled="!Boolean(tables.length)"
+                    :disabled="disabled"
                     @click="next"
                 >
                     {{ $mxs_t('prepareMigrationScript') }}
@@ -102,6 +131,7 @@ export default {
             errMsg: '',
             infoMsg: '',
             isLarge: true,
+            isConfirmed: false,
         }
     },
     computed: {
@@ -110,6 +140,8 @@ export default {
             NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
             NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
             migration_objs: state => state.etlMem.migration_objs,
+            ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
+            create_mode: state => state.etlMem.create_mode,
         }),
         parsedObjs() {
             return this.selectedObjs.reduce(
@@ -128,6 +160,13 @@ export default {
         },
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        disabled() {
+            if (this.tables.length) return this.showConfirm ? !this.isConfirmed : false
+            return !this.tables.length
+        },
+        showConfirm() {
+            return this.create_mode === this.ETL_CREATE_MODES.REPLACE
         },
     },
     watch: {
@@ -220,10 +259,8 @@ export default {
 
 <style lang="scss">
 .etl-obj-select-stage-footer {
-    height: 80px;
     .prepare-btn {
-        position: absolute;
-        bottom: 0;
+        width: 215px;
     }
 }
 .mxs-treeview--src-treeview {
