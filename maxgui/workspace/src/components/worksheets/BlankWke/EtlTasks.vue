@@ -14,16 +14,16 @@
             </span>
         </template>
 
-        <template v-slot:[`item.meta`]="{ meta }">
+        <template v-slot:[`item.meta`]="{ value }">
             <div class="d-flex">
-                {{ parseMeta(meta).from }}
+                {{ parseMeta(value).from }}
                 <span class="mx-1 dashed-arrow d-inline-flex align-center">
                     <span class="line"></span>
                     <v-icon color="primary" size="12" class="arrow rotate-right">
                         $vuetify.icons.mxs_arrowHead
                     </v-icon>
                 </span>
-                {{ parseMeta(meta).to }}
+                {{ parseMeta(value).to }}
             </div>
         </template>
         <template v-slot:[`item.menu`]="{ value }">
