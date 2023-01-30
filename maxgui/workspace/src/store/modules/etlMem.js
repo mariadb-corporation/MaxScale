@@ -167,11 +167,6 @@ export default {
                     EtlTask.dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
 
                     commit(mutationName, results)
-                    commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        { text: [logMsg], type: ok ? 'success' : 'error' },
-                        { root: true }
-                    )
                 }
             }
             EtlTask.update({
