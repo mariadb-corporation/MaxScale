@@ -116,6 +116,7 @@
             "clear": "Are you sure you want to clear current state of <b>{targetId}</b>?",
             "createSnippet": "Create a query snippet with the following statements?",
             "delete": "Are you sure you want to delete <b>{targetId}</b>?",
+            "deleteEtl": "Are you sure you want to delete this migration task?",
             "deleteQueryTab": "<b>{targetId}</b> tab has unsaved changes, would you like to save it before deleting?",
             "destroy": "Are you sure you want to destroy <b>{targetId}</b>?",
             "disconnect": "Are you sure you want to disconnect from <b>{targetId}</b>?",
@@ -256,6 +257,7 @@
         "inDays": "in days",
         "info": {
             "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
+            "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
             "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
             "etlConfirm": "If the destination server already has the same objects they will be overwritten and existing data will be lost.",
             "etlDocLinkText": "Read more on our documentation for instruction.",

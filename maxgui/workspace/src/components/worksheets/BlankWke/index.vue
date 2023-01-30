@@ -53,7 +53,7 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
-import { mapMutations } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'blank-wke',
@@ -67,6 +67,7 @@ export default {
         }
     },
     computed: {
+        ...mapState({ MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES }),
         activeWkeId() {
             return Worksheet.getters('getActiveWkeId')
         },
@@ -82,7 +83,8 @@ export default {
                     text: this.$mxs_t('dataMigration'),
                     icon: '$vuetify.icons.mxs_dataMigration',
                     iconSize: 32,
-                    click: () => this.SET_IS_MIGR_DLG_OPENED(true),
+                    click: () =>
+                        this.SET_MIGR_DLG({ type: this.MIGR_DLG_TYPES.CREATE, is_opened: true }),
                 },
                 /*  {
                     text: this.$mxs_t('createAnErd'),
@@ -102,7 +104,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
-            SET_IS_MIGR_DLG_OPENED: 'mxsWorkspace/SET_IS_MIGR_DLG_OPENED',
+            SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG',
         }),
         setTaskCardCtrHeight() {
             const { height } = this.$refs.taskCardCtr.getBoundingClientRect()

@@ -41,7 +41,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-task-manage',
@@ -54,6 +54,7 @@ export default {
         ...mapState({
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+            MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
         }),
         ...mapGetters({ hasErrAtCreation: 'etlMem/hasErrAtCreation' }),
         actionMap() {
@@ -107,6 +108,7 @@ export default {
         },
     },
     methods: {
+        ...mapMutations({ SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG' }),
         /**
          * @param {String} param.type - delete||cancel
          * @param {Object} param.task - task
@@ -118,8 +120,11 @@ export default {
                     await EtlTask.dispatch('cancelEtlTask', this.task.id)
                     break
                 case DELETE:
-                    await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)
-                    EtlTask.delete(this.task.id)
+                    this.SET_MIGR_DLG({
+                        etl_task_id: this.task.id,
+                        type: this.MIGR_DLG_TYPES.DELETE,
+                        is_opened: true,
+                    })
                     break
                 case DISCONNECT:
                     await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)

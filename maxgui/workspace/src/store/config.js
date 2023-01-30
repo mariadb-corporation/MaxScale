@@ -187,3 +187,8 @@ export const ETL_CREATE_MODES = Object.freeze({
     IGNORE: 'ignore',
     REPLACE: 'replace',
 })
+
+export const MIGR_DLG_TYPES = Object.freeze({
+    CREATE: 'create',
+    DELETE: 'delete',
+})
