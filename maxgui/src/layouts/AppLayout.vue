@@ -20,6 +20,7 @@
             <span class="footer-text color text-code-color align-center text-truncate">
                 MariaDB Corporation <span class="footer__separator" />
                 Copyright © 2020 MariaDB ab. All rights reserved.
+                Copyright © 202023 MariaDB plc, Finnish Branch
                 <span class="footer__separator" />
                 <a target="_blank" rel="noopener" href="https://mariadb.com/privacy-policy/">
                     Privacy Policy</a
@@ -40,6 +41,7 @@
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
+ * Copyright (c) 2023 MariaDB plc, Finnish Branch
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.

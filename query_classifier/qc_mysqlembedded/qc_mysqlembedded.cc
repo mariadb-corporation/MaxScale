@@ -17,6 +17,7 @@
  * 02110-1301 USA.
  *
  * Copyright (c) MariaDB Corporation Ab
+ * Copyright (c) 2023 MariaDB plc, Finnish Branch
  *
  * @file
  *
