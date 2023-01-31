@@ -1,5 +1,6 @@
 <template>
     <mxs-data-table
+        class="etl-tasks-table"
         :headers="tableHeaders"
         :items="tableRows"
         sortBy="created"
@@ -12,6 +13,14 @@
             <span class="mxs-color-helper pointer text-anchor" @click="viewTask(item)">
                 {{ item.name }}
             </span>
+        </template>
+
+        <template v-slot:[`item.status`]="{ value }">
+            <div class="d-flex align-center">
+                <etl-status-icon :icon="value" :isRunning="value === ETL_STATUS.RUNNING" />
+                {{ value }}
+                <span v-if="value === ETL_STATUS.RUNNING">...</span>
+            </div>
         </template>
 
         <template v-slot:[`item.meta`]="{ value }">
@@ -31,9 +40,17 @@
                 :id="value"
                 :types="actionTypes"
                 content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
+                @input="activeItemMenu = $event ? value : null"
             >
                 <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon v-bind="attrs" v-on="on">
+                    <v-btn
+                        icon
+                        small
+                        class="etl-task-menu-btn"
+                        :class="{ 'etl-task-menu-btn--visible': activeItemMenu === value }"
+                        v-bind="attrs"
+                        v-on="on"
+                    >
                         <v-icon size="18" color="deep-ocean">
                             mdi-dots-horizontal
                         </v-icon>
@@ -61,16 +78,23 @@
 import { mapState } from 'vuex'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
+import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 
 export default {
     name: 'etl-tasks',
-    components: { EtlTaskManage },
+    components: { EtlTaskManage, EtlStatusIcon },
     props: {
         height: { type: Number, required: true },
+    },
+    data() {
+        return {
+            activeItemMenu: null,
+        }
     },
     computed: {
         ...mapState({
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
         tableHeaders() {
             return [
@@ -111,6 +135,19 @@ export default {
     .line {
         border-bottom: 2px dashed $primary;
         width: 22px;
+    }
+}
+.etl-tasks-table {
+    .etl-task-menu-btn {
+        visibility: hidden;
+        &--visible {
+            visibility: visible;
+        }
+    }
+    tbody tr:hover {
+        .etl-task-menu-btn {
+            visibility: visible;
+        }
     }
 }
 </style>
