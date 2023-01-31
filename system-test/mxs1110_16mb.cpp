@@ -20,10 +20,11 @@ int main(int argc, char* argv[])
     std::string masking_rules = src_dir + "/masking/masking_user/masking_rules.json";
     std::string cache_rules = src_dir + "/cache/cache_basic/cache_rules.json";
     std::string fw_rules = src_dir + "/fw";
+    std::string home = Test->maxscale->access_homedir();
 
-    Test->maxscale->copy_to_node(masking_rules.c_str(), "~/");
+    Test->maxscale->copy_to_node(masking_rules.c_str(), home.c_str());
 
-    Test->maxscale->copy_to_node(cache_rules.c_str(), "~/");
+    Test->maxscale->copy_to_node(cache_rules.c_str(), home.c_str());
 
     Test->maxscale->ssh_node("chmod a+rw *.json", true);
 

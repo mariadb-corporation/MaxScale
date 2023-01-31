@@ -190,6 +190,14 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
 
 bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
 {
+    if (dest == "~" || dest == "~/")
+    {
+        log().add_failure("Don't rely on tilde expansion in copy_to_node, "
+                          "using it will not work if scp uses the SFTP protocol. "
+                          "Replace it with the actual path to the file.");
+        return false;
+    }
+
     string cmd;
     if (m_type == NodeType::LOCAL)
     {
@@ -209,11 +217,6 @@ bool mxt::VMNode::copy_to_node(const string& src, const string& dest)
                        m_name.c_str(), cmd.c_str(), rc);
     }
     return rc == 0;
-}
-
-int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
-{
-    return copy_to_node(i, src, dest);
 }
 
 int Nodes::copy_from_node(int i, const char* src, const char* dest)
