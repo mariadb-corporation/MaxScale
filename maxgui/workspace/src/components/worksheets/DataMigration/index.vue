@@ -99,7 +99,7 @@ export default {
                 {
                     name: this.$mxs_t('progress'),
                     component: 'etl-migration-report-stage',
-                    isDisabled: !this.areConnsAlive || !this.hasMigrationRes,
+                    isDisabled: !this.hasMigrationRes,
                 },
             ]
         },

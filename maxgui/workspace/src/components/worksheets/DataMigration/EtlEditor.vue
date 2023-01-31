@@ -5,12 +5,11 @@
         </code>
         <sql-editor
             v-model="sql"
-            :class="`${editorClass} fill-height`"
+            :class="`${editorClass} fill-height etl-editor`"
             :options="{
                 contextmenu: false,
                 wordWrap: 'on',
             }"
-            :colors="{ 'editor.background': '#fbfbfb' }"
             :skipRegCompleters="skipRegEditorCompleters"
         />
     </div>
@@ -64,6 +63,16 @@ export default {
     background-color: #fbfbfb;
     .editor-comment {
         color: #60a0b0;
+    }
+}
+</style>
+
+<style lang="scss">
+.transform-editor .etl-editor {
+    .margin,
+    .editor-scrollable,
+    .monaco-editor-background {
+        background-color: #fbfbfb !important;
     }
 }
 </style>

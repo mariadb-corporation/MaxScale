@@ -21,7 +21,6 @@ export default {
         completionItems: { type: Array, default: () => [] },
         readOnly: { type: Boolean, default: false },
         options: { type: Object, default: () => {} },
-        colors: { type: Object, default: () => {} },
         isKeptAlive: { type: Boolean, default: false },
         skipRegCompleters: { type: Boolean, default: false },
         isTabMoveFocus: { type: Boolean, default: false }, // sync
@@ -152,7 +151,6 @@ export default {
                     'editorSuggestWidget.selectedBackground': '#0e9bc0',
                     'editorSuggestWidget.highlightForeground': '#0e9bc0',
                     'editor.lineHighlightBackground': '#ffffff',
-                    ...this.colors,
                 },
             })
 
