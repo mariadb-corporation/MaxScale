@@ -65,13 +65,19 @@ export default {
             }
         },
         viewEtlTask(_, task) {
+            let wkeId = Worksheet.getters('getActiveWkeId')
+            const wke = Worksheet.query()
+                .where('active_etl_task_id', task.id)
+                .first()
+            if (wke) wkeId = wke.id
             Worksheet.update({
-                where: Worksheet.getters('getActiveWkeId'),
+                where: wkeId,
                 data: {
                     active_etl_task_id: task.id,
                     name: task.name,
                 },
             })
+            Worksheet.commit(state => (state.active_wke_id = wkeId))
         },
         pushLog(_, { id, log }) {
             EtlTask.update({
