@@ -33,8 +33,16 @@ int main(int argc, char** argv)
     master.query("USE some_db");
     master.query("CREATE TABLE t2(id int)");
 
+    // Also test that the ignoring mechanism works
+    master.query("CREATE DATABASE ignore_this");
+    master.query("CREATE TABLE ignore_this.t1(id int)");
+    master.query("INSERT INTO ignore_this.t1 VALUES(123)");
+
+    master.query("CREATE TABLE test.ignore_this(id int)");
+    master.query("INSERT INTO test.ignore_this VALUES(456)");
+
     slave.query("START SLAVE");
-    slave.query("SELECT MASTER_GTID_WAIT('" + master.field("SELECT @@last_gtid") + "', 120)");
+    slave.query("SELECT MASTER_GTID_WAIT('" + master.field("SELECT @@last_gtid") + "', 30)");
 
     // The filter does s/test_[a-z0-9_]*/$1_rewritten/g
     test.expect(slave.query("SELECT * FROM test_db1_rewritten.t1 LIMIT 1"),
@@ -50,11 +58,30 @@ int main(int argc, char** argv)
     test.expect(slave.query("SELECT * FROM some_db.t2 LIMIT 1"),
                 "Query to some_db.t2 should work: %s", slave.error());
 
+    test.expect(!slave.query("SELECT * FROM ignore_this.t1"), "Query to ignore_this.t1 should fail");
+    test.expect(!slave.query("SELECT * FROM test.ignore_this"), "Query to test.ignore_this should fail");
+
+    auto c = test.repl->backend(1)->open_connection();
+    auto res = c->query("SHOW SLAVE STATUS");
+
+    while (res->next_row())
+    {
+        test.expect(res->get_string("Slave_IO_Running") == "Yes",
+                    "Slave_IO_Running is not Yes: %s",
+                    res->get_string("Last_IO_Error").c_str());
+        test.expect(res->get_string("Slave_SQL_Running") == "Yes",
+                    "Slave_SQL_Running is not Yes: %s",
+                    res->get_string("Last_IO_Error").c_str());
+    }
+
+    master.query("DROP DATABASE ignore_this");
+    master.query("DROP table test.ignore_this");
+
     master.query("DROP DATABASE test_db1");
     master.query("DROP DATABASE test_db2");
     master.query("DROP DATABASE some_db");
 
-    slave.query("SELECT MASTER_GTID_WAIT('" + master.field("SELECT @@last_gtid") + "', 120)");
+    slave.query("SELECT MASTER_GTID_WAIT('" + master.field("SELECT @@last_gtid") + "', 30)");
 
     return test.global_result;
 }
