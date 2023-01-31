@@ -741,6 +741,10 @@ The request body must be a JSON object consisting of the following fields:
       not as accurate as the specialized versions but it can serve as a good
       starting point from which manual modifications to the SQL can be done.
 
+      This ETL type requires that the table catalog is provided at the top level
+      with the `catalog` field. The meaning of the catalog differs between
+      database implementations.
+
 - `tables`
 
   An array of objects, each of which must define a `table` and a `schema`
@@ -783,6 +787,11 @@ The request body must be a JSON object consisting of the following fields:
   If set to `replace`, the tables are created with `CREATE OR REPLACE TABLE`
   which will cause existing tables to be dropped if they exist. This is not a
   reversible process so caution should be taken when this mode is used.
+
+- `catalog`
+
+  The catalog for the tables. This is only used when `type` is set to
+  `generic`. In all other cases this value is ignored.
 
 Here is an example payload that prepares the table `test.t1` for extraction from
 a MariaDB server.
