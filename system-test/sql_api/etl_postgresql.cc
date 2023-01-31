@@ -20,6 +20,16 @@
 #include "etl_common.hh"
 namespace
 {
+std::string TIMESTAMP_SELECT =
+    "SELECT "
+    "CAST(EXTRACT(YEAR FROM a) AS INT) y, "
+    "CAST(EXTRACT(MONTH FROM a) AS INT) m, "
+    "CAST(EXTRACT(DAY FROM a) AS INT) d, "
+    "CAST(EXTRACT(HOUR FROM a) AS INT) h, "
+    "CAST(EXTRACT(MINUTE FROM a) AS INT) min, "
+    "CAST(EXTRACT(SECOND FROM a) AS INT) sec "
+    " FROM ";
+
 std::string_view unquote(std::string_view str)
 {
     return str.size() >= 2 && str.front() == '\'' && str.back() == '\'' ?
@@ -71,7 +81,6 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
 
 void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
-    etl.check_odbc_result(dsn, "CREATE SCHEMA test");
     auto dest = test.repl->get_connection(0);
     test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
     dest.query("SET SQL_MODE='ANSI_QUOTES'");
@@ -91,15 +100,7 @@ void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
             {
                 if (t.type_name == "TIMESTAMP")
                 {
-                    // MariaDB formats datetime values with trailing zeroes differently than Postgres does and
-                    // thus the results will never match. For now, just check that the values in the database
-                    // is what we expected to add there.
-                    auto inserted_val = dest.field("SELECT * FROM " + t.full_name);
-                    std::string raw_value(unquote(val.value));
-
-                    test.expect(inserted_val.find(raw_value) != std::string::npos
-                                || (inserted_val.empty() && val.value == "NULL"),
-                                "TIMESTAMP mismatch: %s != %s", raw_value.c_str(), inserted_val.c_str());
+                    etl.compare_results(dsn, 0, TIMESTAMP_SELECT + t.full_name);
                 }
                 else
                 {
@@ -110,6 +111,50 @@ void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
             etl.check_odbc_result(dsn, t.drop_sql);
             test.expect(dest.query(t.drop_sql), "Failed to drop: %s", dest.error());
         }
+    }
+}
+
+void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto dest = test.repl->get_connection(0);
+    test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+    dest.query("SET SQL_MODE='ANSI_QUOTES'");
+
+    std::vector<EtlTable> tables;
+
+    for (const auto& t : sql_generation::postgres_types())
+    {
+
+        etl.check_odbc_result(dsn, t.create_sql);
+
+        for (const auto& val : t.values)
+        {
+            etl.check_odbc_result(dsn, val.insert_sql);
+        }
+
+
+        tables.emplace_back(t.database_name, t.table_name);
+    }
+
+
+    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                 tables);
+
+    test.expect(ok, "ETL failed: %s", res.to_string().c_str());
+
+    for (const auto& t : sql_generation::postgres_types())
+    {
+        if (t.type_name == "TIMESTAMP")
+        {
+            etl.compare_results(dsn, 0, TIMESTAMP_SELECT + t.full_name);
+        }
+        else
+        {
+            etl.compare_results(dsn, 0, "SELECT * FROM " + t.full_name);
+        }
+
+        etl.check_odbc_result(dsn, t.drop_sql);
+        test.expect(dest.query(t.drop_sql), "Failed to drop: %s", dest.error());
     }
 }
 
@@ -130,7 +175,10 @@ void test_main(TestConnections& test)
         TESTCASE(sanity_check),
         TESTCASE(massive_result),
         TESTCASE(test_datatypes),
+        TESTCASE(test_parallel_datatypes),
     };
+
+    etl.check_odbc_result(dsn, "CREATE SCHEMA test");
 
     etl.run_tests(dsn, test_cases);
 }
