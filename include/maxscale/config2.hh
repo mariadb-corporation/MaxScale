@@ -1174,7 +1174,8 @@ bool ParamEnumList<T>::from_string(const std::string& values_as_string,
                                    std::string* pMessage) const
 {
     bool success = true;
-
+    bool value_NONE_seen = false;
+    std::string invalid_value;
     for (auto value_as_string : mxb::strtok(values_as_string, ","))
     {
         maxbase::trim(value_as_string);
@@ -1188,33 +1189,58 @@ bool ParamEnumList<T>::from_string(const std::string& values_as_string,
         {
             pValue->push_back(it->first);
         }
-        else if (pMessage)
+        else if (value_as_string == "NONE")
         {
-            std::string s;
-            for (size_t i = 0; i < m_enumeration.size(); ++i)
-            {
-                s += "'";
-                s += m_enumeration[i].second;
-                s += "'";
-
-                if (i == m_enumeration.size() - 2)
-                {
-                    s += " and ";
-                }
-                else if (i != m_enumeration.size() - 1)
-                {
-                    s += ", ";
-                }
-            }
-
-            *pMessage = "Invalid enumeration value: ";
-            *pMessage += value_as_string;
-            *pMessage += ", valid values are: ";
-            *pMessage += s;
-            *pMessage += ".";
-
+            value_NONE_seen = true;
+            continue;
+        }
+        else
+        {
+            invalid_value = value_as_string;
             success = false;
             break;
+        }
+    }
+
+
+    if (!success || (value_NONE_seen && !pValue->empty()))
+    {
+        success = false;
+        pValue->clear();
+
+        bool enumeration_NONE_exists = false;
+        std::string valid_values;
+        for (size_t i = 0; i < m_enumeration.size(); ++i)
+        {
+            if (std::string(m_enumeration[i].second) == "NONE")
+            {
+                enumeration_NONE_exists = true;
+            }
+
+            valid_values += "'";
+            valid_values += m_enumeration[i].second;
+            valid_values += "'";
+
+            if (i == m_enumeration.size() - 2)
+            {
+                valid_values += " and ";
+            }
+            else if (i != m_enumeration.size() - 1)
+            {
+                valid_values += ", ";
+            }
+        }
+
+        *pMessage = "Invalid entry: '";
+        *pMessage += invalid_value.empty() ? values_as_string : invalid_value;
+        *pMessage += "'. Valid values are: ";
+        *pMessage += valid_values;
+        *pMessage += '.';
+
+        if (!enumeration_NONE_exists)
+        {
+            *pMessage += " NOTE: 'NONE' is not an enumeration value in this enumeration, but can be"
+                         " used as the only value to indicate an empty list.";
         }
     }
 
@@ -1266,9 +1292,9 @@ bool ParamEnumList<T>::from_json(const json_t* pJson, value_type* pValue, std::s
                 {
                     values_as_string += ',';
                 }
-                
+
                 values_as_string += json_string_value(elem);
-                
+
                 first = false;
             }
             else
