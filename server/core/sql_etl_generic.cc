@@ -445,8 +445,6 @@ std::string GenericExtractor::insert(mxq::ODBC& source, const Table& table)
     std::ostringstream ss;
     ss << "INSERT INTO `" << table.schema() << "`.`" << table.table() << "`"
        << "(" << mxb::join(names, ",", "`") << ") VALUES (" << mxb::join(placeholders, ",") << ")";
-    std::string sql = ss.str();
-    MXB_NOTICE("%s", sql.c_str());
-    return sql;
+    return ss.str();
 }
 }
