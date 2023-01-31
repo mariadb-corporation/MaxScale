@@ -33,24 +33,32 @@ bool build_redis(TestConnections& test)
 
     if (rv == 0)
     {
-        test.tprintf("Cloning redis.");
-        rv = maxscale->ssh_node_f(false, "cd %s; git clone https://github.com/redis/redis.git",
-                                  maxscale->access_homedir());
-        test.expect(rv == 0, "Could not clone redis.");
+        test.tprintf("Installing git.");
+
+        rv = maxscale->ssh_node_f(true, "yum install -y git");
+        test.expect(rv == 0, "Could not install git.");
 
         if (rv == 0)
         {
-            test.tprintf("Checking out 6.2.8.");
-            rv = maxscale->ssh_node_f(false, "cd %s/redis; git checkout 6.2.8",
+            test.tprintf("Cloning redis.");
+            rv = maxscale->ssh_node_f(false, "cd %s; git clone https://github.com/redis/redis.git",
                                       maxscale->access_homedir());
-            test.expect(rv == 0, "Could not checkout 6.2.8.");
+            test.expect(rv == 0, "Could not clone redis.");
 
             if (rv == 0)
             {
-                test.tprintf("Building redis.");
-                rv = maxscale->ssh_node_f(false, "cd %s/redis; make BUILD_TLS=yes",
+                test.tprintf("Checking out 6.2.8.");
+                rv = maxscale->ssh_node_f(false, "cd %s/redis; git checkout 6.2.8",
                                           maxscale->access_homedir());
-                test.expect(rv == 0, "Could not build redis.");
+                test.expect(rv == 0, "Could not checkout 6.2.8.");
+
+                if (rv == 0)
+                {
+                    test.tprintf("Building redis.");
+                    rv = maxscale->ssh_node_f(false, "cd %s/redis; make BUILD_TLS=yes",
+                                              maxscale->access_homedir());
+                    test.expect(rv == 0, "Could not build redis.");
+                }
             }
         }
     }
