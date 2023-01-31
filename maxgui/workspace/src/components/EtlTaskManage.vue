@@ -42,7 +42,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
-import { mapState, mapGetters, mapMutations } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-task-manage',
@@ -57,7 +57,6 @@ export default {
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
         }),
-        ...mapGetters({ hasErrAtCreation: 'etlMem/hasErrAtCreation' }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
                 const value = this.ETL_ACTIONS[key]
@@ -84,7 +83,7 @@ export default {
             const types = Object.values(this.actionMap).filter(o => this.types.includes(o.type))
             const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
             const status = this.task.status
-            const { RUNNING } = this.ETL_STATUS
+            const { INITIALIZING, RUNNING, COMPLETE } = this.ETL_STATUS
             return types.map(o => {
                 let disabled = false
                 switch (o.type) {
@@ -100,8 +99,8 @@ export default {
                             EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
                         break
                     case RESTART:
-                        // hasErrAtCreation works for active etl task only
-                        disabled = status === RUNNING || !this.hasErrAtCreation
+                        disabled =
+                            status === RUNNING || status === COMPLETE || status === INITIALIZING
                         break
                 }
                 return { ...o, disabled }

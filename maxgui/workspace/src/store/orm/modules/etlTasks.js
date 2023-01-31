@@ -35,7 +35,7 @@ export default {
         async cancelEtlTask({ commit, getters, rootState }, id) {
             const { id: srcConnId } = getters.getSrcConnByEtlTaskId(id)
             if (srcConnId) {
-                const [e, res] = await this.vue.$helpers.to(cancel(srcConnId))
+                const [e] = await this.vue.$helpers.to(cancel(srcConnId))
                 const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
                 let etlStatus = CANCELED
                 if (e) {
@@ -45,15 +45,6 @@ export default {
                         {
                             text: [this.vue.$mxs_t('error.etlCanceledFailed')],
                             type: 'error',
-                        },
-                        { root: true }
-                    )
-                } else if (res.status === 200) {
-                    commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.vue.$mxs_t('success.canceledMigration')],
-                            type: 'success',
                         },
                         { root: true }
                     )

@@ -458,7 +458,6 @@
         "stop": "Stop",
         "stopStatements": "Stop statements",
         "success": {
-            "canceledMigration": "Successfully canceled migration.",
             "connected": "Successfully connected",
             "connectedTo": "Successfully connected to {0}.",
             "disconnected": "Successfully disconnected",
@@ -501,6 +500,7 @@
         "visualizedConfig": "{action} visualized configuration",
         "warning": "Warning",
         "warnings": {
+            "migrationCanceled": "Migration is canceled.",
             "objCreation": "Object is created but no data has been migrated."
         },
         "welcome": "Welcome",

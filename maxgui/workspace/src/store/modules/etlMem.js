@@ -115,11 +115,16 @@ export default {
         /**
          * @param {String} id - etl task id
          */
-        async getEtlCallRes({ dispatch, commit, rootState }, id) {
+        async getEtlCallRes({ getters, dispatch, commit, rootState }, id) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
+
+            const {
+                ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
+                ETL_STATUS: { INITIALIZING, COMPLETE, ERROR, CANCELED },
+            } = rootState.mxsWorkspace.config
 
             let etlStatus,
                 migrationRes,
@@ -127,10 +132,6 @@ export default {
 
             const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
             if (!e) {
-                const {
-                    ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                    ETL_STATUS: { INITIALIZING, COMPLETE, ERROR },
-                } = rootState.mxsWorkspace.config
                 const results = $typy(res, 'data.data.attributes.results').safeObject
                 let logMsg, mutationName
                 switch (task.active_stage_index) {
@@ -165,6 +166,10 @@ export default {
                         case DATA_MIGR: {
                             logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
                             etlStatus = ok ? COMPLETE : ERROR
+                            if (getters.getIsEtlCancelledById(id)) {
+                                logMsg = $mxs_t('warnings.migrationCanceled')
+                                etlStatus = CANCELED
+                            }
                             migrationRes = {
                                 ...results,
                                 tables: results.tables.map(obj =>
@@ -291,13 +296,13 @@ export default {
             const { stage = ' []' } = state.etl_res || getters.getPersistedEtlRes
             return stage
         },
-        hasErrAtCreation: (state, getters, rootState) => {
-            const { CREATE } = rootState.mxsWorkspace.config.ETL_API_STAGES
-            const { stage = '' } = state.etl_res || getters.getPersistedEtlRes
-            return stage === CREATE
-        },
         isSrcAlive: () => Boolean(EtlTask.getters('getActiveSrcConn').id),
         isDestAlive: () => Boolean(EtlTask.getters('getActiveDestConn').id),
         areConnsAlive: (state, getters) => getters.isSrcAlive && getters.isDestAlive,
+        getIsEtlCancelledById: (state, getters, rootState) => id => {
+            const { CANCELED } = rootState.mxsWorkspace.config.ETL_STATUS
+            const { status } = EtlTask.find(id) || {}
+            return status === CANCELED
+        },
     },
 }
