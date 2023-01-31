@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2023 MariaDB plc
+# Copyright (c) 2023 MariaDB plc, Finnish Branch
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+# Change Date: 2026-12-27
+#
+# On the date above, in accordance with the Business Source License, use
+# of this software will be governed by version 2 or later of the General
+# Public License.
+#
+
+import getopt
+import os
+import re
+import shutil
+import sys
+import tempfile
+
+# A string literal would be a match and cause an unintended modification.
+pattern="Copyright "
+pattern+=".*"
+pattern+="MariaDB .*"
+
+# The Copyright should be in the blurb at the beginning. We will not
+# do modifications after this threshold.
+line_threshold=20
+
+recd=re.compile(pattern)
+
+def print_usage_and_exit(name, code):
+    print("usage: " + name + " -c copyright [path]+")
+    print()
+    print("Add a specfic copyright line after the \"MariaDB\"")
+    print("copyright line. If path is a directory, the copyright will ")
+    print("recursively be added to all files in that directory hierarchy.")
+    print()
+    print("Example: " + name + " -c \"2023 MariaDB plc, Finnish Branch\" somefile.cc")
+    sys.exit(code)
+
+def update_copyright_in_file(copyright, filename):
+    print(filename)
+    tmp=tempfile.mkstemp()
+    fout=os.fdopen(tmp[0], "w")
+    with open(filename) as fin:
+        modified=False
+        try:
+            line=fin.readline()
+            line_number=1
+            while line:
+                match=recd.search(line)
+                if match:
+                    # Some MaxGui files (namely Vue templates) are forced to
+                    # have the license blurb after actual code.
+                    if line_number <= line_threshold or filename.endswith('.vue'):
+                        next_line=''
+                        while True:
+                            fout.write(line)
+                            next_line=fin.readline()
+                            line_number=line_number + 1
+                            if next_line:
+                                next_match=recd.search(next_line)
+                                if next_match:
+                                    line=next_line
+                                    match=next_match
+                                    continue
+                                else:
+                                    break
+                            else:
+                                break
+
+                        # 14 is the length of "Copyright (c) " that an existing MariaDB copyright
+                        # is assumed to begin with.
+                        cutoff=match.span()[0] + 14
+                        prefix=line[0:cutoff]
+                        suffix=line[cutoff:]
+                        if suffix != copyright + "\n":
+                            new_line=prefix + copyright + "\n"
+                            fout.write(new_line)
+                            modified=True
+                        if next_line:
+                            fout.write(next_line)
+                    else:
+                        print("WARNING: Ignoring 'Copyright' encountered on line " + str(line_number) + ".")
+                        fout.write(line)
+                else:
+                    fout.write(line)
+                line = fin.readline()
+                line_number=line_number + 1
+        except UnicodeDecodeError:
+            print("WARNING: Could not decode file, ignoring.")
+            modified=False
+        except:
+            print("WARNING: Could not read file, ignoring.")
+            modified=False
+
+        fin.close()
+        fout.close()
+
+        if modified:
+            shutil.copyfile(tmp[1], filename)
+
+        os.remove(tmp[1])
+
+def update_copyright_in_dir(copyright, dir):
+    for file in os.listdir(dir):
+        path=dir + "/" + file
+        update_copyright_in_path(copyright, path)
+
+def update_copyright_in_path(copyright, path):
+    if not os.path.exists(path):
+        print("WARNING: " + path + " does not exist.")
+    elif os.path.isdir(path):
+        update_copyright_in_dir(copyright, path)
+    elif os.path.isfile(path):
+        update_copyright_in_file(copyright, path)
+    else:
+        print("WARNING: '" + path + "' is not a regular file or directory, ignoring.")
+
+def update_copyright_in_paths(copyright, paths):
+    for path in paths:
+        update_copyright_in_path(copyright, path)
+
+def main(argv):
+    name=argv[0]
+    try:
+        opts, args = getopt.getopt(argv[1:], "hc:")
+    except getopt.GetoptError:
+        print_usage_and_exit(name, 1)
+
+    copyright=''
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print_usage_and_exit(name, 0)
+        elif opt == '-c':
+            copyright = arg
+
+    if copyright == '':
+        print_usage_and_exit(name, 1)
+
+    update_copyright_in_paths(copyright, args)
+
+if __name__ == "__main__":
+    main(sys.argv)

@@ -16,7 +16,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab
+ * Copyright (c) MariaDB Corporation Ab
+ * Copyright (c) 2023 MariaDB plc, Finnish Branch
  *
  * @file
  *
