@@ -3,7 +3,7 @@
         <div v-if="$slots['header']" class="stage-wrapper__header d-flex mx-3 pt-2">
             <slot name="header" />
         </div>
-        <div v-if="$slots['body']" class="stage-wrapper__body pb-2">
+        <div v-if="$slots['body']" class="stage-wrapper__body">
             <v-container fluid class="fill-height">
                 <slot name="body" />
             </v-container>

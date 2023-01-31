@@ -162,15 +162,17 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .form-container {
     overflow-y: auto;
     .etl-logs {
-        background-color: #fbfbfb;
         display: flex;
         flex: 1;
         min-height: 250px;
         max-height: 400px;
+        .log-container {
+            background-color: #fbfbfb !important;
+        }
     }
 }
 </style>

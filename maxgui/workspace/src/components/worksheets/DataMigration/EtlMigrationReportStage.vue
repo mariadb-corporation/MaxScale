@@ -119,7 +119,7 @@ import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-migration-report-stage',
@@ -146,9 +146,13 @@ export default {
         ...mapGetters({
             getMigrationResTable: 'etlMem/getMigrationResTable',
             getMigrationStage: 'etlMem/getMigrationStage',
+            isSrcAlive: 'etlMem/isSrcAlive',
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
+        },
+        activeEtlTaskId() {
+            return this.activeEtlTask.id
         },
         tableHeaders() {
             return [
@@ -180,7 +184,14 @@ export default {
         queryId: {
             immediate: true,
             async handler(v) {
-                if (v && this.isActive) await this.getEtlCallRes(this.activeEtlTask.id)
+                if (v && this.isActive && this.isSrcAlive)
+                    await this.getEtlCallRes(this.activeEtlTask.id)
+            },
+        },
+        activeEtlTaskId: {
+            immediate: true,
+            handler() {
+                this.SET_ETL_RES(null)
             },
         },
     },
@@ -189,6 +200,7 @@ export default {
             getEtlCallRes: 'etlMem/getEtlCallRes',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
+        ...mapMutations({ SET_ETL_RES: 'etlMem/SET_ETL_RES' }),
         async cancel() {
             await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
         },

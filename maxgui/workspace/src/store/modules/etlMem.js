@@ -12,7 +12,6 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import Worksheet from '@wsModels/Worksheet'
 import { query, getAsyncResult } from '@wsSrc/api/query'
 import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -24,8 +23,8 @@ export default {
         src_schema_tree: [],
         create_mode: ETL_CREATE_MODES.NORMAL,
         migration_objs: [], // store migration objects for /etl/prepare
-        etl_prepare_res: {}, // store etl/prepare results
-        etl_res: {}, // etl/start results
+        etl_prepare_res: null, // store etl/prepare results
+        etl_res: null, // etl/start results
     },
     mutations: {
         SET_SRC_SCHEMA_TREE(state, payload) {
@@ -121,7 +120,11 @@ export default {
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
             const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            let etlStatus
+
+            let etlStatus,
+                migrationRes,
+                ignoreKeys = ['create', 'insert', 'select']
+
             const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
             if (!e) {
                 const {
@@ -133,7 +136,7 @@ export default {
                 switch (task.active_stage_index) {
                     case MIGR_SCRIPT:
                         mutationName = 'SET_ETL_PREPARE_RES'
-                        commit('SET_ETL_RES', {})
+                        commit('SET_ETL_RES', null)
                         break
                     case DATA_MIGR:
                         mutationName = 'SET_ETL_RES'
@@ -156,12 +159,21 @@ export default {
                             )
 
                             etlStatus = ok ? INITIALIZING : ERROR
-                            commit('SET_ETL_RES', {})
+                            commit('SET_ETL_RES', null)
                             break
                         }
                         case DATA_MIGR: {
                             logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
                             etlStatus = ok ? COMPLETE : ERROR
+                            migrationRes = {
+                                ...results,
+                                tables: results.tables.map(obj =>
+                                    $helpers.lodash.pickBy(
+                                        obj,
+                                        (v, key) => !ignoreKeys.includes(key)
+                                    )
+                                ),
+                            }
                             break
                         }
                     }
@@ -177,6 +189,7 @@ export default {
                 where: id,
                 data(obj) {
                     if (etlStatus) obj.status = etlStatus
+                    if (migrationRes) obj.res = migrationRes
                 },
             })
         },
@@ -266,24 +279,25 @@ export default {
             const { tables = [] } = state.etl_prepare_res || {}
             return tables
         },
-        getMigrationResTable: state => {
-            const { tables = [] } = state.etl_res || {}
+        getPersistedEtlRes: () => {
+            const { res = {} } = EtlTask.getters('getActiveEtlTaskWithRelation')
+            return res
+        },
+        getMigrationResTable: (state, getters) => {
+            const { tables = [] } = state.etl_res || getters.getPersistedEtlRes
             return tables
         },
-        getMigrationStage: state => {
-            const { stage = ' []' } = state.etl_res || {}
+        getMigrationStage: (state, getters) => {
+            const { stage = ' []' } = state.etl_res || getters.getPersistedEtlRes
             return stage
         },
         hasErrAtCreation: (state, getters, rootState) => {
             const { CREATE } = rootState.mxsWorkspace.config.ETL_API_STAGES
-            const { stage = '' } = state.etl_res || {}
+            const { stage = '' } = state.etl_res || getters.getPersistedEtlRes
             return stage === CREATE
         },
-        areConnsAlive: () => {
-            const id = Worksheet.getters('getActiveEtlTaskId')
-            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
-            return Boolean(srcConn.id && destConn.id)
-        },
+        isSrcAlive: () => Boolean(EtlTask.getters('getActiveSrcConn').id),
+        isDestAlive: () => Boolean(EtlTask.getters('getActiveDestConn').id),
+        areConnsAlive: (state, getters) => getters.isSrcAlive && getters.isDestAlive,
     },
 }

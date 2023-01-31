@@ -22,7 +22,7 @@
         </v-col>
         <v-col cols="12" md="6" class="fill-height pt-0">
             <etl-script-editors
-                v-if="activeRow && !isRunning"
+                v-if="activeRow && !isRunning && hasScriptFields"
                 v-model="activeRow"
                 :hasRowChanged="hasRowChanged"
                 @on-discard="discard"
@@ -116,6 +116,13 @@ export default {
         },
         firstErrObj() {
             return this.tableRows.find(o => o.error)
+        },
+        hasScriptFields() {
+            return (
+                this.$typy(this.activeRow, 'insert').isDefined &&
+                this.$typy(this.activeRow, 'create').isDefined &&
+                this.$typy(this.activeRow, 'select').isDefined
+            )
         },
     },
     watch: {

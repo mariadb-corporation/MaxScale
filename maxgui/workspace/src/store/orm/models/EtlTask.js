@@ -32,6 +32,7 @@ export default class EtlTask extends Extender {
              * @property {string} async_query_id - query_id of async query
              */
             meta: this.attr({}),
+            res: this.attr({}), // only store migration results; scripts are not stored
             /**
              * @property {number} timestamp
              * @property {string} name
