@@ -19,6 +19,7 @@
 #include <utility>
 
 #include <maxbase/assert.hh>
+#include <maxbase/hexdump.hh>
 #include <maxscale/config.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>
@@ -665,43 +666,7 @@ void mxs::Buffer::hexdump(int log_level) const
 
 void mxs::Buffer::hexdump_pretty(int log_level) const
 {
-    constexpr const char as_hex[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-    std::string result = "\n";
-    std::string hexed;
-    std::string readable;
-    auto it = begin();
-
-    while (it != end())
-    {
-        for (int i = 0; i < 16 && it != end(); i++)
-        {
-            uint8_t c = *it;
-            hexed += as_hex[c >> 4];
-            hexed += as_hex[c & 0x0f];
-            hexed += ' ';
-            readable += isprint(c) && (!isspace(c) || c == ' ') ? (char)c : '.';
-            ++it;
-        }
-
-        if (readable.length() < 16)
-        {
-            hexed.append(48 - hexed.length(), ' ');
-            readable.append(16 - readable.length(), ' ');
-        }
-
-        mxb_assert(hexed.length() == readable.length() * 3);
-        result += hexed.substr(0, 24);
-        result += "  ";
-        result += hexed.substr(24);
-        result += "  ";
-        result += readable;
-        result += '\n';
-
-        hexed.clear();
-        readable.clear();
-    }
-
-    MXB_LOG_MESSAGE(log_level, "%s", result.c_str());
+    MXB_LOG_MESSAGE(log_level, "%s", mxb::hexdump(data(), length()).c_str());
 }
 
 uint8_t* maxscale::Buffer::data()
