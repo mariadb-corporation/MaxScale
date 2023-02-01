@@ -82,4 +82,11 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
 
     return out;
 }
+
+std::string hexdump(const void* pBytes, int len)
+{
+    std::ostringstream ss;
+    hexdump(ss, pBytes, len);
+    return ss.str();
+}
 }
