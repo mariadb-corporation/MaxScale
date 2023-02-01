@@ -12,7 +12,7 @@
                 <v-icon
                     :class="[isCollapsed ? 'rotate-right' : 'rotate-down']"
                     size="24"
-                    color="deep-ocean"
+                    color="navigation"
                 >
                     mdi-chevron-down
                 </v-icon>
@@ -43,9 +43,16 @@
                     :maxWidth="maxVisWidth * 0.85"
                 />
             </div>
-            <mxs-tooltip-btn btnClass="ml-2" width="24" height="24" icon @click="handleUngroup">
+            <mxs-tooltip-btn
+                btnClass="ml-2"
+                width="24"
+                height="24"
+                icon
+                color="primary"
+                @click="handleUngroup"
+            >
                 <template v-slot:btn-content>
-                    <v-icon size="10" color="deep-ocean"> $vuetify.icons.mxs_close</v-icon>
+                    <v-icon size="10"> $vuetify.icons.mxs_close</v-icon>
                 </template>
                 {{ $mxs_t('ungroup') }}
             </mxs-tooltip-btn>

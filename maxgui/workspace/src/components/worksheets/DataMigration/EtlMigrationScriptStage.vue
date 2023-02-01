@@ -7,7 +7,10 @@
                 </h3>
                 <div class="d-flex align-center">
                     <etl-status-icon v-if="scriptErr" :icon="ETL_STATUS.ERROR" />
-                    <p class="mt-4 migration-script-info mxs-color-helper text-deep-ocean">
+                    <p
+                        class="mt-4 migration-script-info mxs-color-helper"
+                        :class="[scriptErr ? 'text-error' : 'text-navigation']"
+                    >
                         {{
                             scriptErr
                                 ? $mxs_t('errors.failedToPrepareMigrationScript')

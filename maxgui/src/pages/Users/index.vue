@@ -24,7 +24,7 @@
                     class="ml-4 text-capitalize px-8 font-weight-medium"
                     depressed
                     small
-                    color="accent-dark"
+                    color="primary"
                     @click="actionHandler({ type: USER_ADMIN_ACTIONS.ADD })"
                 >
                     + {{ userAdminActions[USER_ADMIN_ACTIONS.ADD].text }}
@@ -53,10 +53,11 @@
                             ]"
                             :key="action.text"
                             icon
+                            :color="action.color"
                             @click="actionHandler({ type: action.type, user: item })"
                         >
                             <template v-slot:btn-content>
-                                <v-icon size="18" :color="action.color"> {{ action.icon }} </v-icon>
+                                <v-icon size="18"> {{ action.icon }} </v-icon>
                             </template>
                             {{ action.text }}
                         </mxs-tooltip-btn>

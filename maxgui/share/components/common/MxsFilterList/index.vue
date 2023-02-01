@@ -14,17 +14,17 @@
                     class="text-capitalize font-weight-medium"
                     outlined
                     depressed
-                    color="accent-dark"
+                    color="primary"
                     v-bind="attrs"
                     v-on="on"
                 >
-                    <v-icon size="12" color="accent-dark" class="mr-1">
+                    <v-icon size="12" color="primary" class="mr-1">
                         $vuetify.icons.mxs_filter
                     </v-icon>
                     {{ label }}
                     <v-icon
                         size="24"
-                        color="accent-dark"
+                        color="primary"
                         :class="[value ? 'rotate-up' : 'rotate-down']"
                     >
                         mdi-menu-down

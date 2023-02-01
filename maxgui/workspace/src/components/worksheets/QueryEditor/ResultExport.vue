@@ -4,11 +4,11 @@
         x-small
         outlined
         depressed
-        color="accent-dark"
+        color="primary"
         @click="openConfigDialog"
     >
         <template v-slot:btn-content>
-            <v-icon size="14" color="accent-dark">mdi-download</v-icon>
+            <v-icon size="14">mdi-download</v-icon>
             <mxs-dlg
                 v-model="isConfigDialogOpened"
                 :onSave="onExport"
@@ -136,7 +136,7 @@
                                                     <v-icon
                                                         class="ml-1 pointer"
                                                         size="16"
-                                                        color="#9DB4BB"
+                                                        color="info"
                                                         v-on="on"
                                                     >
                                                         mdi-information-outline

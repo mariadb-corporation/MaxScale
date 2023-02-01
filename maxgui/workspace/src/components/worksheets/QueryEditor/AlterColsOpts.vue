@@ -21,7 +21,7 @@
                 x-small
                 outlined
                 depressed
-                color="accent-dark"
+                color="primary"
                 @click="addNewCol"
             >
                 <template v-slot:btn-content>
@@ -41,11 +41,11 @@
                 x-small
                 outlined
                 depressed
-                color="accent-dark"
+                color="primary"
                 @click="isVertTable = !isVertTable"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="14" color="accent-dark" :class="{ 'rotate-left': !isVertTable }">
+                    <v-icon size="14" :class="{ 'rotate-left': !isVertTable }">
                         mdi-format-rotate-90
                     </v-icon>
                 </template>

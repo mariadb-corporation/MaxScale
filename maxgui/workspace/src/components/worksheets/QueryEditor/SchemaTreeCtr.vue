@@ -26,7 +26,7 @@
                     :class="{ 'cursor--grab': node.draggable }"
                     @mousedown="node.draggable ? onNodeDragStart($event) : null"
                 >
-                    <v-icon class="mr-1" size="12" color="deep-ocean">
+                    <v-icon class="mr-1" size="12" color="blue-azure">
                         {{ iconSheet(node) }}
                     </v-icon>
                     <span
@@ -50,7 +50,7 @@
                     x-small
                     @click="e => handleOpenCtxMenu({ e, node })"
                 >
-                    <v-icon size="12" color="deep-ocean">mdi-dots-horizontal</v-icon>
+                    <v-icon size="12" color="navigation">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
         </mxs-treeview>

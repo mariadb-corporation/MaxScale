@@ -233,7 +233,7 @@ export default {
                 [ADD]: {
                     text: scope.$mxs_t(`userOps.actions.${ADD}`),
                     type: ADD,
-                    color: 'accent-dark',
+                    color: 'primary',
                 },
             })
         },

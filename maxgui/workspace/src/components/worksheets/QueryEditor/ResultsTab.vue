@@ -13,7 +13,7 @@
                     </template>
                     <template v-slot:icon>
                         &nbsp;
-                        <v-icon color="accent-dark" size="16">$vuetify.icons.mxs_running</v-icon>
+                        <v-icon color="primary" size="16">$vuetify.icons.mxs_running</v-icon>
                         &nbsp;
                     </template>
                 </i18n>

@@ -2,9 +2,9 @@
     <div class="chart-pane fill-height">
         <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
-            <mxs-tooltip-btn small icon depressed color="accent-dark" @click="exportToJpeg">
+            <mxs-tooltip-btn small icon depressed color="primary" @click="exportToJpeg">
                 <template v-slot:btn-content>
-                    <v-icon size="16" color="accent-dark"> mdi-download </v-icon>
+                    <v-icon size="16"> mdi-download </v-icon>
                 </template>
                 {{ $mxs_t('exportChart') }}
             </mxs-tooltip-btn>
@@ -12,10 +12,11 @@
                 small
                 icon
                 depressed
+                color="primary"
                 @click="chartOpt.isMaximized = !chartOpt.isMaximized"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="18" color="accent-dark">
+                    <v-icon size="18">
                         mdi-fullscreen{{ chartOpt.isMaximized ? '-exit' : '' }}
                     </v-icon>
                 </template>
@@ -26,11 +27,11 @@
                 small
                 icon
                 depressed
-                color="accent-dark"
+                color="primary"
                 @click="$emit('close-chart')"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="12" color="accent-dark"> $vuetify.icons.mxs_close</v-icon>
+                    <v-icon size="12"> $vuetify.icons.mxs_close</v-icon>
                 </template>
                 {{ $mxs_t('close') }}
             </mxs-tooltip-btn>

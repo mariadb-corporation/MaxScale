@@ -17,10 +17,11 @@
                     icon
                     small
                     :disabled="reloadDisabled"
+                    :color="reloadDisabled ? '' : 'primary'"
                     @click="fetchSchemas"
                 >
                     <template v-slot:btn-content>
-                        <v-icon size="12" :color="reloadDisabled ? '' : 'deep-ocean'">
+                        <v-icon size="12">
                             $vuetify.icons.mxs_reload
                         </v-icon>
                     </template>
@@ -30,12 +31,12 @@
                     btnClass="toggle-sidebar"
                     icon
                     small
+                    color="primary"
                     @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
                 >
                     <template v-slot:btn-content>
                         <v-icon
                             size="22"
-                            color="deep-ocean"
                             class="collapse-icon"
                             :class="[is_sidebar_collapsed ? 'rotate-right' : 'rotate-left']"
                         >

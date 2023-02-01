@@ -6,7 +6,7 @@
         <mxs-tooltip-btn
             :btnClass="['toolbar-square-btn', isExecuting ? 'stop-btn' : 'run-btn']"
             text
-            color="accent-dark"
+            color="primary"
             :disabled="isExecuting ? hasKillFlag : isRunBtnDisabled"
             :loading="hasKillFlag"
             @click="
@@ -40,7 +40,7 @@
             btnClass="visualize-btn toolbar-square-btn"
             :depressed="isVisSidebarShown"
             :text="!isVisSidebarShown"
-            :color="isVisSidebarShown ? 'primary' : 'accent-dark'"
+            :color="isVisSidebarShown ? 'primary' : 'primary'"
             :disabled="isVisBtnDisabled"
             @click="toggleVisSidebar"
         >
@@ -56,7 +56,7 @@
         <mxs-tooltip-btn
             btnClass="create-snippet-btn toolbar-square-btn"
             text
-            color="accent-dark"
+            color="primary"
             :disabled="!queryTxt"
             @click="openSnippetDlg"
         >
@@ -73,7 +73,7 @@
             v-if="tab_moves_focus"
             btnClass="disable-tab-move-focus-mode-btn mr-1 text-capitalize"
             text
-            color="accent-dark"
+            color="primary"
             x-small
             @click="$emit('disable-tab-move-focus')"
         >

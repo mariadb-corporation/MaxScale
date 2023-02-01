@@ -80,10 +80,11 @@
                     x-small
                     icon
                     depressed
+                    color="primary"
                     @click="handleVisFilters"
                 >
                     <template v-slot:btn-content>
-                        <v-icon color="primary" size="14">$vuetify.icons.mxs_reports </v-icon>
+                        <v-icon size="14">$vuetify.icons.mxs_reports </v-icon>
                     </template>
                     {{ $mxs_t('visFilters') }}
                 </mxs-tooltip-btn>

@@ -28,7 +28,7 @@
                 class="mr-2 pa-1 text-capitalize font-weight-medium"
                 outlined
                 depressed
-                color="accent-dark"
+                color="primary"
                 @click="handleEdit"
             >
                 {{ isEditing ? $mxs_t('doneEditing') : $mxs_t('edit') }}
@@ -64,12 +64,12 @@
                 x-small
                 outlined
                 depressed
-                color="accent-dark"
+                color="primary"
                 :disabled="isGrouping"
                 @click="isVertTable = !isVertTable"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="14" color="accent-dark" :class="{ 'rotate-left': !isVertTable }">
+                    <v-icon size="14" :class="{ 'rotate-left': !isVertTable }">
                         mdi-format-rotate-90
                     </v-icon>
                 </template>

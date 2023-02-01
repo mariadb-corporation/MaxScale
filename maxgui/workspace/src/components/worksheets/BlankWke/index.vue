@@ -27,7 +27,7 @@
                 </v-card>
             </v-col>
         </v-row>
-        <v-row justify="center">
+        <v-row v-if="hasEtlTasks" justify="center">
             <v-col cols="12" md="10">
                 <h6 class="mxs-color-helper text-navigation font-weight-regular">
                     {{ $mxs_t('migrationTasks') }}
@@ -53,6 +53,7 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
+import EtlTask from '@wsModels/EtlTask'
 import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
 import { mapMutations, mapState } from 'vuex'
 
@@ -97,6 +98,9 @@ export default {
         },
         migrationTaskTblHeight() {
             return this.ctrDim.height - this.taskCardCtrHeight - 12 - 24 - 80 // minus grid padding
+        },
+        hasEtlTasks() {
+            return Boolean(EtlTask.all().length)
         },
     },
     mounted() {

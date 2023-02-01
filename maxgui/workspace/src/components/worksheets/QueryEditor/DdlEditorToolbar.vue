@@ -6,7 +6,7 @@
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
             text
-            color="accent-dark"
+            color="primary"
             :disabled="disableRevert"
             @click="$emit('on-revert')"
         >
@@ -18,7 +18,7 @@
         <mxs-tooltip-btn
             btnClass="toolbar-square-btn"
             text
-            color="accent-dark"
+            color="primary"
             :disabled="disableApply"
             @click="$emit('on-apply')"
         >

@@ -19,7 +19,9 @@
                 <query-tab-nav-item :queryTab="queryTab" />
             </v-tab>
         </v-tabs>
-        <query-tab-nav-toolbar-ctr @get-total-btn-width="queryTabNavToolbarWidth = $event" />
+        <query-tab-nav-toolbar-ctr @get-total-btn-width="queryTabNavToolbarWidth = $event">
+            <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+        </query-tab-nav-toolbar-ctr>
     </div>
 </template>
 

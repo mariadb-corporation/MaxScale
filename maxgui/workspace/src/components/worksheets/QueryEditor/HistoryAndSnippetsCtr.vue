@@ -152,7 +152,7 @@
                 </template>
                 <template v-slot:icon>
                     &nbsp;
-                    <v-icon color="accent-dark" size="16">mdi-star-plus-outline</v-icon>
+                    <v-icon color="primary" size="16">mdi-star-plus-outline</v-icon>
                     &nbsp;
                 </template>
             </i18n>

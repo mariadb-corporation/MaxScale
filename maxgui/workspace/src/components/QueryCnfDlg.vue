@@ -74,7 +74,7 @@
                                         <v-icon
                                             class="ml-1 material-icons-outlined pointer"
                                             size="16"
-                                            color="#9DB4BB"
+                                            color="info"
                                             v-on="on"
                                         >
                                             mdi-information-outline

@@ -21,7 +21,7 @@
                         <v-icon
                             :class="[isContentVisible ? 'rotate-down' : 'rotate-right']"
                             size="32"
-                            color="deep-ocean"
+                            color="navigation"
                         >
                             mdi-chevron-down
                         </v-icon>

@@ -27,7 +27,7 @@
                                 <div class="d-flex align-center">
                                     <v-icon
                                         size="18"
-                                        color="deep-ocean"
+                                        color="blue-azure"
                                         :class="{ 'ml-1': iconSheet(node) }"
                                     >
                                         {{ iconSheet(node) }}

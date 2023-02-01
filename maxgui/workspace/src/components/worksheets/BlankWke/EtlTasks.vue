@@ -51,7 +51,7 @@
                         v-bind="attrs"
                         v-on="on"
                     >
-                        <v-icon size="18" color="deep-ocean">
+                        <v-icon size="18" color="navigation">
                             mdi-dots-horizontal
                         </v-icon>
                     </v-btn>

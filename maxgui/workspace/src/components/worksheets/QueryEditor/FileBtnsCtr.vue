@@ -4,10 +4,11 @@
             btnClass="toolbar-square-btn load-sql-btn"
             text
             type="file"
+            color="primary"
             @click="handleFileOpen"
         >
             <template v-slot:btn-content>
-                <v-icon size="18" color="accent-dark">
+                <v-icon size="18">
                     {{
                         hasFileSystemReadOnlyAccess ? 'mdi-file-outline' : 'mdi-file-upload-outline'
                     }}
@@ -23,10 +24,11 @@
             btnClass="toolbar-square-btn save-sql-btn"
             text
             :disabled="isSaveFileDisabled"
+            color="primary"
             @click="saveFileToDisk(queryTab)"
         >
             <template v-slot:btn-content>
-                <v-icon size="20" color="accent-dark">mdi-content-save-outline</v-icon>
+                <v-icon size="20">mdi-content-save-outline</v-icon>
             </template>
             {{ $mxs_t('saveScript') }}
             <br />
@@ -36,10 +38,11 @@
             btnClass="toolbar-square-btn save-sql-btn"
             text
             :disabled="isSaveFileAsDisabled"
+            color="primary"
             @click="handleSaveFileAs(queryTab)"
         >
             <template v-slot:btn-content>
-                <v-icon size="20" color="accent-dark">mdi-content-save-edit-outline</v-icon>
+                <v-icon size="20">mdi-content-save-edit-outline</v-icon>
             </template>
             {{ $mxs_t('saveScriptAs') }}
             <br />

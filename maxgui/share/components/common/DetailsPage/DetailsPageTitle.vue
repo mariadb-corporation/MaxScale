@@ -7,7 +7,7 @@
                         class="mr-1"
                         style="transform:rotate(90deg)"
                         size="28"
-                        color="deep-ocean"
+                        color="navigation"
                     >
                         $vuetify.icons.mxs_arrowDown
                     </v-icon>

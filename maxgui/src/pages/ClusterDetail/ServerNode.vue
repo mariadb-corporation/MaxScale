@@ -41,10 +41,11 @@
                     <mxs-tooltip-btn
                         small
                         icon
+                        :color="iconColor"
                         @click="runQueries({ type: 'servers', conn_name: node.id })"
                     >
                         <template v-slot:btn-content>
-                            <v-icon size="16" :color="iconColor">
+                            <v-icon size="16">
                                 $vuetify.icons.mxs_workspace
                             </v-icon>
                         </template>
@@ -58,8 +59,8 @@
                         content-class="v-menu--mariadb v-menu--mariadb-full-border"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn small class="gear-btn" icon v-on="on">
-                                <v-icon size="16" :color="iconColor">
+                            <v-btn small class="gear-btn" icon :color="iconColor" v-on="on">
+                                <v-icon size="16">
                                     $vuetify.icons.mxs_settings
                                 </v-icon>
                             </v-btn>

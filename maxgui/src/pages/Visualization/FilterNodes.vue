@@ -5,10 +5,11 @@
             x-small
             icon
             depressed
+            color="error"
             @click="handleVisFilters"
         >
             <template v-slot:btn-content>
-                <v-icon size="10" color="error"> $vuetify.icons.mxs_close</v-icon>
+                <v-icon size="10"> $vuetify.icons.mxs_close</v-icon>
             </template>
             {{ $mxs_t('hideFilters') }}
         </mxs-tooltip-btn>

@@ -109,13 +109,13 @@
             :close-on-content-click="false"
             open-on-hover
             offset-y
-            content-class="shadow-drop mxs-color-helper text-navigation"
+            content-class="shadow-drop mxs-color-helper text-navigation rounded-sm"
             :max-height="600"
             :activator="
                 `.row-${truncatedMenu.rowIndex}_cell-${truncatedMenu.cellIndex}_${componentId}`
             "
         >
-            <v-sheet v-if="truncatedMenu.item" class="pa-4">
+            <v-sheet v-if="truncatedMenu.item" class="mxs-truncate-tooltip-menu pa-4">
                 <span class="text-body-2">
                     {{ getValue(truncatedMenu.item, truncatedMenu.header) }}
                 </span>

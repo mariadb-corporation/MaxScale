@@ -10,10 +10,10 @@
                 icon
                 @click="add({ worksheet_id: activeWkeId })"
             >
-                <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
+                <v-icon size="18" color="blue-azure">mdi-plus</v-icon>
             </v-btn>
         </div>
-        <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3">
+        <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3 fill-height">
             <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
             <slot name="query-tab-nav-toolbar-right-slot" />
         </div>

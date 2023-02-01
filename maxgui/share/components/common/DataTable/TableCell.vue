@@ -29,7 +29,7 @@
                 <v-icon
                     :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
                     size="24"
-                    color="deep-ocean"
+                    color="navigation"
                 >
                     mdi-chevron-down
                 </v-icon>

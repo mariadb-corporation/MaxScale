@@ -22,7 +22,9 @@
             </template>
             <template slot="pane-right">
                 <div class="d-flex flex-column fill-height">
-                    <query-tab-nav-ctr :height="queryTabCtrHeight" />
+                    <query-tab-nav-ctr :height="queryTabCtrHeight">
+                        <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
+                    </query-tab-nav-ctr>
                     <keep-alive v-for="queryTab in allQueryTabs" :key="queryTab.id" :max="20">
                         <template v-if="activeQueryTabId === queryTab.id">
                             <txt-editor-ctr

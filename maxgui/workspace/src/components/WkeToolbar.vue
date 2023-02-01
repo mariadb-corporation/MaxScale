@@ -4,7 +4,7 @@
     >
         <div ref="toolbarLeft" class="d-flex align-center left-buttons fill-height">
             <v-btn small class="float-left add-wke-btn" icon @click="add">
-                <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
+                <v-icon size="18" color="blue-azure">mdi-plus</v-icon>
             </v-btn>
         </div>
         <v-spacer />
@@ -13,10 +13,11 @@
                 btnClass="query-setting-btn"
                 icon
                 small
+                color="primary"
                 @click="queryConfigDialog = !queryConfigDialog"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="16" color="accent-dark">$vuetify.icons.mxs_settings</v-icon>
+                    <v-icon size="16">$vuetify.icons.mxs_settings</v-icon>
                     <query-cnf-dlg-ctr v-model="queryConfigDialog" />
                 </template>
                 {{ $mxs_tc('settings', 2) }}
@@ -25,12 +26,11 @@
                 btnClass="min-max-btn"
                 icon
                 small
+                color="primary"
                 @click="SET_IS_FULLSCREEN(!is_fullscreen)"
             >
                 <template v-slot:btn-content>
-                    <v-icon size="22" color="accent-dark">
-                        mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
-                    </v-icon>
+                    <v-icon size="22"> mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }} </v-icon>
                 </template>
                 {{ is_fullscreen ? $mxs_t('minimize') : $mxs_t('maximize') }}
             </mxs-tooltip-btn>

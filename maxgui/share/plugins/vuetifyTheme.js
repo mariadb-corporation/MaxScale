@@ -23,7 +23,6 @@ export default {
             success: '#7dd012', //override vuetify
             anchor: '#2d9cdb', //override vuetify
             warning: '#f59d34',
-            ['accent-dark']: '#0b718c',
             navigation: '#424F62',
             ['deep-ocean']: '#003545',
             ['blue-azure']: '#0e6488',

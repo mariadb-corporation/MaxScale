@@ -40,10 +40,10 @@
                         v-bind="slotData"
                     />
                     <memory-cell v-else :data="slotData.value" />
-                    <mxs-tooltip-btn icon @click="onKillSession(slotData.item)">
+                    <mxs-tooltip-btn color="error" icon @click="onKillSession(slotData.item)">
                         <template v-slot:btn-content>
                             <!-- TODO: only show when table row is hovered -->
-                            <v-icon size="18" color="error"> $vuetify.icons.mxs_unlink</v-icon>
+                            <v-icon size="18"> $vuetify.icons.mxs_unlink</v-icon>
                         </template>
                         {{ $mxs_t('killSession') }}
                     </mxs-tooltip-btn>
