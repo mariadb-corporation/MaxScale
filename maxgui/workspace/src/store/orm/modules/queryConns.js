@@ -133,13 +133,14 @@ export default {
          * @param {Object} param.body - request body
          * @param {Object} param.meta - meta - connection meta
          */
-        async openQueryEditorConn({ dispatch, commit, rootState }, { body, meta }) {
+        async openQueryEditorConn({ dispatch, commit, getters, rootState }, { body, meta }) {
             const { $helpers, $mxs_t } = this.vue
             const {
                 QUERY_CONN_BINDING_TYPES: { WORKSHEET },
             } = rootState.mxsWorkspace.config
 
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
+            const activeWkeConn = getters.getActiveWkeConn
 
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -154,6 +155,10 @@ export default {
                     meta,
                 }
                 QueryConn.insert({ data: wkeConn })
+
+                // clean up previous conn after binding the new one
+                if (activeWkeConn.id)
+                    await QueryConn.dispatch('cascadeDisconnectWkeConn', { id: activeWkeConn.id })
 
                 // Initialize QueryEditor orm entities
                 dispatch('mxsWorkspace/initQueryEditorEntities', {}, { root: true })
