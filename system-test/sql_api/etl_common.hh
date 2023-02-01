@@ -19,6 +19,8 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 
+#include <map>
+
 #define TESTCASE(a) {a, #a}
 
 class EtlTest;
@@ -243,6 +245,11 @@ public:
         js.set_string("target", dest_id);
         js.set_int("timeout", timeout.count());
 
+        for (const auto& [k, v] : m_extra)
+        {
+            js.set_string(k.c_str(), v);
+        }
+
         if (mode == Mode::REPLACE)
         {
             js.set_string("create_mode", "replace");
@@ -331,6 +338,11 @@ public:
         return {ok, response};
     }
 
+    void set_extra(std::map<std::string, std::string> extras)
+    {
+        m_extra = std::move(extras);
+    }
+
 private:
 
     std::string url(std::string_view endpoint)
@@ -338,5 +350,6 @@ private:
         return mxb::cat("http://", m_test.maxscale->ip(), ":8989/v1/", endpoint);
     }
 
-    TestConnections& m_test;
+    TestConnections&                   m_test;
+    std::map<std::string, std::string> m_extra;
 };
