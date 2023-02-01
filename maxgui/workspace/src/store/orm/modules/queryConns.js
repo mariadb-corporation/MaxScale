@@ -131,32 +131,20 @@ export default {
         },
         /**
          * @param {Object} param.body - request body
-         * @param {Object} [param.meta] - meta - connection meta
+         * @param {Object} param.meta - meta - connection meta
          */
-        async openQueryEditorConn({ dispatch, commit, rootState }, { body, meta = {} }) {
+        async openQueryEditorConn({ dispatch, commit, rootState }, { body, meta }) {
             const { $helpers, $mxs_t } = this.vue
             const {
                 QUERY_CONN_BINDING_TYPES: { WORKSHEET },
             } = rootState.mxsWorkspace.config
 
             const activeWorksheetId = Worksheet.getters('getActiveWkeId')
-            const queryTabIdsOfActiveWke = QueryTab.query()
-                .where('worksheet_id', activeWorksheetId)
-                .get()
-                .map(t => t.id)
 
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 dispatch('unbindConn')
-                commit(
-                    'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: [$mxs_t('success.connected')],
-                        type: 'success',
-                    },
-                    { root: true }
-                )
                 const wkeConn = {
                     id: res.data.data.id,
                     attributes: res.data.data.attributes,
@@ -167,13 +155,30 @@ export default {
                 }
                 QueryConn.insert({ data: wkeConn })
 
-                if (queryTabIdsOfActiveWke.length)
+                // Initialize QueryEditor orm entities
+                dispatch('mxsWorkspace/initQueryEditorEntities', {}, { root: true })
+
+                const queryTabIdsOfActiveWke = QueryTab.query()
+                    .where('worksheet_id', activeWorksheetId)
+                    .get()
+                    .map(t => t.id)
+
+                if (queryTabIdsOfActiveWke.length) {
                     await dispatch('cloneWkeConnToQueryTabs', {
                         queryTabIds: queryTabIdsOfActiveWke,
                         wkeConn,
                     })
+                    if (body.db) await dispatch('useDb', body.db)
+                }
 
-                if (body.db) await dispatch('useDb', body.db)
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [$mxs_t('success.connected')],
+                        type: 'success',
+                    },
+                    { root: true }
+                )
                 commit('queryConnsMem/SET_CONN_ERR_STATE', false, { root: true })
             }
         },

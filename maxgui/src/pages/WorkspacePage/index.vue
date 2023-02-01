@@ -32,7 +32,7 @@ import QueryConn from '@wsModels/QueryConn'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
-import { mapState, mapMutations, mapActions } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'workspace-page',
@@ -118,7 +118,6 @@ export default {
         await QueryConn.dispatch('validateConns')
     },
     methods: {
-        ...mapActions({ initQueryEditorEntities: 'mxsWorkspace/initQueryEditorEntities' }),
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
             SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
@@ -134,12 +133,6 @@ export default {
             this.to = null
         },
         async handleOpenConn(opts) {
-            // First initialize QueryEditor orm entities
-            this.initQueryEditorEntities()
-            /**
-             * TODO: Refactor openQueryEditorConn so initQueryEditorEntities won't have to be call first,
-             * initQueryEditorEntities should be called only after connection is created succesfully
-             */
             await QueryConn.dispatch('openQueryEditorConn', opts)
         },
 

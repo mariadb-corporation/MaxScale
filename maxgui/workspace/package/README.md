@@ -257,7 +257,6 @@ export default {
         await models.QueryConn.dispatch('validateConns')
     },
     methods: {
-        ...mapActions({ initQueryEditorEntities: 'mxsWorkspace/initQueryEditorEntities' }),
         ...mapMutations({
             SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
             SET_CONNS_TO_BE_VALIDATED: 'mxsWorkspace/SET_CONNS_TO_BE_VALIDATED',
@@ -279,12 +278,10 @@ export default {
         },
         /**
          * @param {Object} params.body - https://github.com/mariadb-corporation/MaxScale/blob/22.08/Documentation/REST-API/Resources-SQL.md#open-sql-connection-to-server
-         * @param {Object} params.meta - extra info about the connection you want to store
+         * @param {Object} params.meta - extra info about the connection.
+         * @param {String} params.meta.name - connection name.
          */
         async handleOpenConn(params) {
-            const { body, meta = {} } = params
-            // First initialize QueryEditor orm entities
-            this.initQueryEditorEntities()
             await models.QueryConn.dispatch('openQueryEditorConn', params)
         },
     },
