@@ -32,6 +32,11 @@ for more information.
 
 ### [MXS-3269](https://jira.mariadb.org/browse/MXS-3260) Make it possible to change at runtime the number of threads used by MaxScale
 
+It is now possible to change at runtime the number of threads MaxScale
+uses for routing client traffic. See
+[here](../Getting-Started/Configuration-Guide.md#threads-1)
+for more information.
+
 ### [MXS-3708](https://jira.mariadb.org/browse/MXS-3708) Cache runtime modification
 
 Some configuration parameters, most notable the
@@ -53,6 +58,11 @@ cache. See
 [here](../Filters/Cache.md#storage_redis) for more information.
 
 ### [MXS-4182](https://jira.mariadb.org/browse/MXS-4182) Session load indicator
+
+`maxctrl (list|show) sessions` and _MaxGUI_ now show for each session an
+_i/o activity_ number that gives an indication of the load of a particular
+session. The number is the count of I/O operations performed for the session
+during the previous 30 seconds.
 
 ### [MXS-4270](https://jira.mariadb.org/browse/MXS-4270) ed25519 authentication support
 
