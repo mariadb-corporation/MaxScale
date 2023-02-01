@@ -42,7 +42,6 @@ const mountFactory = opts =>
                 component: ConnDlgCtr,
                 propsData: {
                     value: true, // open dialog by default
-                    wkeConnOpts: [],
                     handleSave: sinon.stub(),
                 },
             },
@@ -161,17 +160,6 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
             await wrapper.setData({ resourceType: type })
             expect(wrapper.vm.resourceItems).to.be.deep.equals(dummy_rc_target_names_map[type])
         })
-        it(`Should not return resources that have been connected
-        for resourceItems computed property if resourceType is ${type}`, () => {
-            const resources = dummy_rc_target_names_map[type]
-            // assume first resource are connected already
-            const dummy_connOptions = [{ ...resources[0], name: resources[0].id, id: 0 }]
-            wrapper = mountFactory({
-                propsData: { wkeConnOpts: dummy_connOptions },
-                computed: { rc_target_names_map: () => dummy_rc_target_names_map },
-            })
-            expect(wrapper.vm.resourceItems).to.not.include(resources[0])
-        })
     })
     it(`Should use value from pre_select_conn_rsrc to assign it to resourceType`, () => {
         wrapper = mountFactory({
@@ -197,25 +185,6 @@ describe(`ConnDlgCtr - methods and computed properties tests `, () => {
         })
         wrapper.vm.handleChooseDefRsrc('listeners')
         expect(wrapper.vm.$data.selectedResource).to.be.eql(dummy_rc_target_names_map.listeners[0])
-    })
-    it(`Should assign error message to errRsrcMsg if all resources
-      have been connected`, async () => {
-        const resources = dummy_rc_target_names_map.listeners
-        const dummy_connOptions = resources.map((rsrc, i) => ({
-            ...rsrc,
-            name: rsrc.id,
-            id: i,
-        }))
-        wrapper = mountFactory({
-            propsData: { wkeConnOpts: dummy_connOptions },
-            computed: { rc_target_names_map: () => dummy_rc_target_names_map },
-        })
-        await wrapper.vm.$nextTick()
-        expect(wrapper.vm.$data.errRsrcMsg).to.be.equals(
-            wrapper.vm.$mxs_t('errors.existingRsrcConnection', {
-                resourceType: wrapper.vm.$data.resourceTypes[0],
-            })
-        )
     })
     it(`Should call handleSave with accurate arguments`, () => {
         let handleSaveArgs

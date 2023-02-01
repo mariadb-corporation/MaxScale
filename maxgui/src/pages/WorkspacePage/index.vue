@@ -8,11 +8,7 @@
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         />
-        <conn-dlg-ctr
-            v-model="isConnDlgOpened"
-            :wkeConnOpts="wkeConnOpts"
-            :handleSave="handleOpenConn"
-        />
+        <conn-dlg-ctr v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
         <reconn-dlg-ctr :onReconnectCb="onReconnectCb" />
     </div>
 </template>

@@ -14,6 +14,21 @@
             </v-btn>
         </div>
         <div ref="toolbarRight" class="ml-auto d-flex align-center mx-3 fill-height">
+            <mxs-tooltip-btn
+                :tooltipProps="{ disabled: !connectedServerName }"
+                x-small
+                text
+                color="primary"
+                @click="SET_IS_CONN_DLG_OPENED(true)"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="14" color="primary" class="mr-1">
+                        mdi-server
+                    </v-icon>
+                    {{ connectedServerName ? connectedServerName : $mxs_t('connect') }}
+                </template>
+                {{ $mxs_t('changeConn') }}
+            </mxs-tooltip-btn>
             <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
             <slot name="query-tab-nav-toolbar-right-slot" />
         </div>
@@ -36,6 +51,7 @@
 import Worksheet from '@wsModels/Worksheet'
 import QueryTab from '@wsModels/QueryTab'
 import QueryConn from '@wsModels/QueryConn'
+import { mapMutations } from 'vuex'
 
 export default {
     name: 'query-tab-nav-toolbar-ctr',
@@ -47,17 +63,34 @@ export default {
         activeQueryTabConn() {
             return QueryConn.getters('getActiveQueryTabConn')
         },
+        activeWkeConn() {
+            return QueryConn.getters('getActiveWkeConn')
+        },
+        connectedServerName() {
+            return this.$typy(this.activeWkeConn, 'meta.name').safeString
+        },
+    },
+    watch: {
+        connectedServerName() {
+            this.calcWidth()
+        },
     },
     mounted() {
-        this.$nextTick(() =>
-            this.$emit(
-                'get-total-btn-width',
-                // (24 padding mx-3)
-                this.$refs.buttonWrapper.clientWidth + this.$refs.toolbarRight.clientWidth + 24
-            )
-        )
+        this.calcWidth()
     },
     methods: {
+        ...mapMutations({
+            SET_IS_CONN_DLG_OPENED: 'mxsWorkspace/SET_IS_CONN_DLG_OPENED',
+        }),
+        calcWidth() {
+            this.$nextTick(() =>
+                this.$emit(
+                    'get-total-btn-width',
+                    // (24 padding mx-3)
+                    this.$refs.buttonWrapper.clientWidth + this.$refs.toolbarRight.clientWidth + 24
+                )
+            )
+        },
         add(param) {
             QueryTab.dispatch('handleAddQueryTab', param)
         },

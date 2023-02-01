@@ -90,11 +90,12 @@ export default {
          * @param {String} param.conn_name - connection name
          */
         async chooseActiveWorkspaceWke({ commit }, { type, conn_name }) {
+            const { $typy } = this.vue
             const wkeConns = QueryConn.getters('getWkeConns')
             // Find connection
-            const wkeConn = wkeConns.find(c => c.name === conn_name)
+            const wkeConn = wkeConns.find(c => $typy(c, 'meta.name').safeString === conn_name)
             // If it is already bound to a worksheet, set that worksheet as active
-            if (this.vue.$typy(wkeConn, 'worksheet_id').safeString)
+            if ($typy(wkeConn, 'worksheet_id').safeString)
                 Worksheet.commit(state => (state.active_wke_id = wkeConn.worksheet_id))
             else {
                 const unavailableWkeIds = wkeConns.map(c => c.worksheet_id)
@@ -102,7 +103,7 @@ export default {
                     .where(
                         w =>
                             !unavailableWkeIds.includes(w.id) &&
-                            !this.vue.$typy(w, 'active_query_tab_id').isNull
+                            !$typy(w, 'active_query_tab_id').isNull
                     )
                     .first()
                 // Use a blank query editor wke if there is one, otherwise create a new one

@@ -144,7 +144,6 @@ export default {
     components: { DbInput, PwdInput, UidInput },
     props: {
         value: { type: Boolean, required: true },
-        wkeConnOpts: { type: Array, required: true },
         handleSave: { type: Function, required: true },
     },
     data() {
@@ -177,13 +176,7 @@ export default {
             },
         },
         resourceItems() {
-            const selectedRsrcType = this.resourceType
-            // worksheet connection name is also resource id
-            const wkeConnNames = this.wkeConnOpts.map(c => c.name)
-            const allRsrcs = this.rc_target_names_map[selectedRsrcType] || []
-            // Keep only resources that have not been connected
-            const availRsrcs = allRsrcs.filter(rsrc => !wkeConnNames.includes(rsrc.id))
-            return availRsrcs
+            return this.rc_target_names_map[this.resourceType] || []
         },
         hasSavingErr() {
             return this.conn_err_state
@@ -230,17 +223,21 @@ export default {
          * It chooses the first item in resourceItems if pre_select_conn_rsrc has no value
          * @param {String} resourceType - resource type
          */
-        handleChooseDefRsrc(resourceType) {
+        handleChooseDefRsrc() {
             if (this.resourceItems.length) {
                 if (this.pre_select_conn_rsrc) this.selectedResource = this.pre_select_conn_rsrc
                 else this.selectedResource = this.resourceItems[0]
                 this.errRsrcMsg = ''
-            } else this.errRsrcMsg = this.$mxs_t('errors.existingRsrcConnection', { resourceType })
+            } else this.errRsrcMsg = ''
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
             await this.handleSave({
                 body: { target: resourceName, ...this.body },
+                /* In SkySQL, meta.name is used for storing service name because server name is hidden from the user.
+                 * To avoid duplicated code in SkySQL, this also stores target connection name in meta.name
+                 */
+                meta: { name: resourceName },
             })
         },
     },
