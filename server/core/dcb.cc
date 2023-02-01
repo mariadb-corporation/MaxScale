@@ -46,6 +46,7 @@
 #include <atomic>
 
 #include <maxbase/alloc.hh>
+#include <maxbase/hexdump.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
@@ -436,6 +437,7 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
         m_stats.n_reads++;
         if (ret > 0)
         {
+            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
             if (ret < (int64_t)read_limit)
@@ -978,6 +980,7 @@ void DCB::socket_write()
         auto res = ::write(m_fd, m_writeq.data(), writable_bytes);
         if (res > 0)
         {
+            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
             m_writeq.consume(res);
             total_written += res;
 
