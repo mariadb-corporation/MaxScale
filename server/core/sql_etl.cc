@@ -364,6 +364,7 @@ SELECT '`' || a.attname || '` ' ||
     WHEN t.typname = 'geometry' THEN 'GEOMETRY'
     WHEN t.typname = 'inet' THEN 'INET6'
     WHEn t.typname = 'bytea' THEN 'LONGBLOB'
+    WHEn t.typname = 'xml' THEN 'LONGTEXT'
     ELSE UPPER(pg_catalog.format_type(a.atttypid, a.atttypmod))
   END ||
   CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||

@@ -164,6 +164,28 @@ std::array inet6_values
     "NULL",
 };
 
+std::array uuid_types
+{
+    "UUID",
+};
+
+std::array uuid_values
+{
+    "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'",
+    "NULL",
+};
+
+std::array xml_types
+{
+    "XML",
+};
+
+std::array xml_values
+{
+    "'<hello><world>Some value</world></hello>'",
+    "NULL",
+};
+
 static std::vector<sql_generation::SQLType> init()
 {
     std::vector<sql_generation::SQLType> rval;
@@ -178,6 +200,8 @@ static std::vector<sql_generation::SQLType> init()
     sql_generation::impl::add_test(json_types, json_values, rval, q);
     sql_generation::impl::add_test(inet6_types, inet6_values, rval, q);
     sql_generation::impl::add_test(boolean_types, boolean_values, rval, q);
+    sql_generation::impl::add_test(uuid_types, uuid_values, rval, q);
+    sql_generation::impl::add_test(xml_types, xml_values, rval, q);
 
     return rval;
 }

@@ -20,15 +20,31 @@
 #include "etl_common.hh"
 namespace
 {
-std::string TIMESTAMP_SELECT =
-    "SELECT "
-    "CAST(EXTRACT(YEAR FROM a) AS INT) y, "
-    "CAST(EXTRACT(MONTH FROM a) AS INT) m, "
-    "CAST(EXTRACT(DAY FROM a) AS INT) d, "
-    "CAST(EXTRACT(HOUR FROM a) AS INT) h, "
-    "CAST(EXTRACT(MINUTE FROM a) AS INT) min, "
-    "CAST(EXTRACT(SECOND FROM a) AS INT) sec "
-    " FROM ";
+void compare_values(EtlTest& etl, const std::string& dsn, const sql_generation::SQLType& t)
+{
+    if (t.type_name == "TIMESTAMP")
+    {
+        std::string TIMESTAMP_SELECT =
+            "SELECT "
+            "CAST(EXTRACT(YEAR FROM a) AS INT) y, "
+            "CAST(EXTRACT(MONTH FROM a) AS INT) m, "
+            "CAST(EXTRACT(DAY FROM a) AS INT) d, "
+            "CAST(EXTRACT(HOUR FROM a) AS INT) h, "
+            "CAST(EXTRACT(MINUTE FROM a) AS INT) min, "
+            "CAST(EXTRACT(SECOND FROM a) AS INT) sec "
+            " FROM " + t.full_name;
+
+        etl.compare_results(dsn, 0, TIMESTAMP_SELECT);
+    }
+    else if (t.type_name == "UUID")
+    {
+        etl.compare_results(dsn, 0, "SELECT LOWER(CAST(a AS VARCHAR(200))) uuid_lower FROM " + t.full_name);
+    }
+    else
+    {
+        etl.compare_results(dsn, 0, "SELECT * FROM " + t.full_name);
+    }
+}
 
 std::string_view unquote(std::string_view str)
 {
@@ -98,14 +114,7 @@ void test_datatypes(TestConnections& test, EtlTest& etl, const std::string& dsn)
             if (test.expect(ok, "ETL failed for %s %s: %s", t.type_name.c_str(), val.value.c_str(),
                             res.to_string().c_str()))
             {
-                if (t.type_name == "TIMESTAMP")
-                {
-                    etl.compare_results(dsn, 0, TIMESTAMP_SELECT + t.full_name);
-                }
-                else
-                {
-                    etl.compare_results(dsn, 0, "SELECT * FROM " + t.full_name);
-                }
+                compare_values(etl, dsn, t);
             }
 
             etl.check_odbc_result(dsn, t.drop_sql);
@@ -144,15 +153,7 @@ void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::str
 
     for (const auto& t : sql_generation::postgres_types())
     {
-        if (t.type_name == "TIMESTAMP")
-        {
-            etl.compare_results(dsn, 0, TIMESTAMP_SELECT + t.full_name);
-        }
-        else
-        {
-            etl.compare_results(dsn, 0, "SELECT * FROM " + t.full_name);
-        }
-
+        compare_values(etl, dsn, t);
         etl.check_odbc_result(dsn, t.drop_sql);
         test.expect(dest.query(t.drop_sql), "Failed to drop: %s", dest.error());
     }
