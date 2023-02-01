@@ -429,8 +429,7 @@ static bool should_skip_query(const BinlogConfig::Values& config,
         // Not a transaction management related command
         for (const auto& t : tables)
         {
-            std::string db = !t.db.empty() ? std::string(t.db) : db;
-            std::string name = db + '.' + std::string(t.table);
+            std::string name = mxb::cat(!t.db.empty() ? t.db : db, '.', t.table);
 
             if (should_skip(config, name))
             {
