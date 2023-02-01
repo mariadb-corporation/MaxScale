@@ -14,7 +14,11 @@
 
 #include <maxtest/testconnections.hh>
 #include <string>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/un.h>
 #include <maxbase/format.hh>
+#include <maxbase/proxy_protocol.hh>
 
 using std::string;
 using SslMode = mxt::MariaDBServer::SslMode;
@@ -25,6 +29,7 @@ void test_main(TestConnections& test);
 void check_conn(TestConnections& test, mxt::MariaDB* conn, bool expect_conn_success,
                 const string& expected_ip);
 void check_port(TestConnections& test, mxt::MariaDB* conn, int expected_port);
+void addr_helper(TestConnections& test, int family, const string& addr_str, int port, sockaddr_storage& out);
 }
 
 int main(int argc, char* argv[])
@@ -161,9 +166,9 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             // Test MXS-3003: inbound proxy protocol
-
+            enum class ProxyMode {TEXT, BIN};
             auto prepare_conn = [&test](const string& user, const string& pw, SslMode ssl,
-                                        const string& proxy_ip, int proxy_port) {
+                                        ProxyMode mode, const string& proxy_ip, int proxy_port) {
                 auto conn = std::make_unique<mxt::MariaDB>(test.logger());
                 auto& sett = conn->connection_settings();
                 sett.user = user;
@@ -177,22 +182,41 @@ void test_main(TestConnections& test)
                     sett.ssl.enabled = true;
                 }
 
-                string header;
                 if (proxy_ip.empty())
                 {
-                    header = "PROXY UNKNOWN\r\n";
+                    if (mode == ProxyMode::TEXT)
+                    {
+                        conn->set_local_text_proxy_header();
+                    }
+                    else
+                    {
+                        conn->set_local_bin_proxy_header();
+                    }
                 }
                 else
                 {
-                    const char* protocol = (proxy_ip.find(':') == string::npos) ? "TCP4" : "TCP6";
-                    header = mxb::string_printf("PROXY %s %s %s %i %i\r\n", protocol,
-                                                proxy_ip.c_str(), test.maxscale->ip(), proxy_port,
-                                                test.maxscale->rwsplit_port);
+                    std::vector<uint8_t> header_bytes;
+                    if (mode == ProxyMode::TEXT)
+                    {
+                        const char* protocol = (proxy_ip.find(':') == string::npos) ? "TCP4" : "TCP6";
+                        string header = mxb::string_printf("PROXY %s %s %s %i %i\r\n", protocol,
+                                                           proxy_ip.c_str(), test.maxscale->ip(), proxy_port,
+                                                           test.maxscale->rwsplit_port);
+                        auto ptr = reinterpret_cast<const uint8_t*>(header.data());
+                        header_bytes.assign(ptr, ptr + header.size());
+                    }
+                    else
+                    {
+                        int family = (proxy_ip.find('/') != string::npos) ? AF_UNIX :
+                            (proxy_ip.find(':') != string::npos) ? AF_INET6 : AF_INET;
+                        sockaddr_storage peer_addr;
+                        addr_helper(test, family, proxy_ip, proxy_port, peer_addr);
+                        sockaddr_storage server_addr;   // ignored
+                        auto header = mxb::proxy_protocol::gen_binary_header(peer_addr, server_addr);
+                        header_bytes.assign(header.header, header.header + header.len);
+                    }
+                    conn->set_custom_proxy_header(std::move(header_bytes));
                 }
-                std::vector<uint8_t> header_bytes;
-                auto ptr = reinterpret_cast<const uint8_t*>(header.data());
-                header_bytes.assign(ptr, ptr + header.size());
-                conn->set_custom_proxy_header(std::move(header_bytes));
 
                 return conn;
             };
@@ -224,7 +248,8 @@ void test_main(TestConnections& test)
                 check_conn(test, conn.get(), true, client_ip);
 
                 test.tprintf("Check that sending a proxy header to a listener not configured for it fails.");
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    client_ip, fake_port);
                 conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
                 check_conn(test, conn.get(), false, "");
 
@@ -233,18 +258,37 @@ void test_main(TestConnections& test)
                 check_conn(test, conn.get(), true, client_ip);
 
                 test.tprintf("Check that proxy connection to a proxy enabled listener works.");
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    client_ip, fake_port);
                 conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
                 check_conn(test, conn.get(), true, client_ip);
 
                 test.tprintf("Check that proxy connection from another ip to a proxy enabled "
                              "listener works.");
                 const string fake_client_ip = "111.222.192.251";
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
                 conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
                 // Check that server sees the fake port.
                 check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::BIN,
+                                    fake_client_ip, fake_port);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Test empty proxy header (local connection).");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT, "", 0);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Test empty binary proxy header (local connection).");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::BIN, "", 0);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
             }
 
             if (test.ok())
@@ -255,7 +299,8 @@ void test_main(TestConnections& test)
 
                 test.tprintf("Check that sending a proxy header + SSL to a listener not configured for it "
                              "fails.");
-                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, client_ip, fake_port);
+                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT,
+                                         client_ip, fake_port);
                 conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
                 check_conn(test, conn.get(), false, "");
 
@@ -265,17 +310,36 @@ void test_main(TestConnections& test)
                 check_conn(test, conn.get(), true, client_ip);
 
                 test.tprintf("Check that SSL proxy connection to a proxy enabled listener works.");
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT,
+                                    client_ip, fake_port);
                 conn->open(mxs_ip4, ssl_proxy_port, "");
                 check_conn(test, conn.get(), true, client_ip);
 
                 test.tprintf("Check that SSL proxy connection from another ip to a proxy enabled "
                              "listener works.");
                 const string fake_client_ip = "121.202.191.222";
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
                 conn->open(mxs_ip4, ssl_proxy_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
                 check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::BIN,
+                                    fake_client_ip, fake_port);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Test empty proxy header with SSL.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT, "", 0);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Test empty binary proxy header with SSL.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::BIN, "", 0);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, client_ip);
             }
 
             if (test.ok())
@@ -292,13 +356,15 @@ void test_main(TestConnections& test)
                 const string fake_client_ip = "123.101.202.123";
                 int fake_port = 1111;
                 test.tprintf("Check that sending a proxy header to a listener not configured for it fails.");
-                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                auto conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                         fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), false, "");
 
                 test.tprintf("Check that listener works after configuring proxy networks.");
                 set_proxy_nws(client_ip);
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
                 check_port(test, conn.get(), fake_port);
@@ -306,7 +372,8 @@ void test_main(TestConnections& test)
                 test.tprintf("Check that listener works after configuring proxy networks to ipv6.");
                 string new_proxy_nws = "::ffff:" + client_ip;
                 set_proxy_nws(new_proxy_nws);
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
                 check_port(test, conn.get(), fake_port);
@@ -315,7 +382,8 @@ void test_main(TestConnections& test)
                              "normal login works.");
                 new_proxy_nws = fake_client_ip;
                 set_proxy_nws(new_proxy_nws);
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), false, "");
 
@@ -331,7 +399,15 @@ void test_main(TestConnections& test)
                 set_proxy_nws(altered_client_ip);
                 test.tprintf("Proxy networks configured to '%s'", altered_client_ip.c_str());
                 test.tprintf("Checking that logging in with proxy header works.");
-                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, fake_client_ip, fake_port);
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fake_client_ip, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::BIN,
+                                    fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
                 check_port(test, conn.get(), fake_port);
@@ -419,6 +495,44 @@ void check_port(TestConnections& test, mxt::MariaDB* conn, int expected_port)
     else
     {
         test.add_failure("Query '%s' failed or returned nothing.", host_query.c_str());
+    }
+}
+
+void addr_helper(TestConnections& test, int family, const string& addr_str, int port, sockaddr_storage& out)
+{
+    if (family == AF_INET)
+    {
+        auto* dst = (sockaddr_in*)&out;
+        auto* dst_addr = &dst->sin_addr;
+        if (inet_pton(family, addr_str.c_str(), dst_addr) == 1)
+        {
+            dst->sin_family = family;
+            dst->sin_port = htons(port);
+        }
+        else
+        {
+            test.add_failure("inet_pton() failed for '%s'", addr_str.c_str());
+        }
+    }
+    else if (family == AF_INET6)
+    {
+        auto* dst = (sockaddr_in6*)&out;
+        auto* dst_addr = &dst->sin6_addr;
+        if (inet_pton(family, addr_str.c_str(), dst_addr) == 1)
+        {
+            dst->sin6_family = family;
+            dst->sin6_port = htons(port);
+        }
+        else
+        {
+            test.add_failure("inet_pton() failed for '%s'", addr_str.c_str());
+        }
+    }
+    else if (family == AF_UNIX)
+    {
+        auto* dst = (sockaddr_un*)&out;
+        strcpy(dst->sun_path, addr_str.c_str());
+        dst->sun_family = family;
     }
 }
 }
