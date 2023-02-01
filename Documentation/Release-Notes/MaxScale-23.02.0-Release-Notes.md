@@ -20,11 +20,21 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
+### [MXS-2709](https://jira.mariadb.org/browse/MXS-2709) ETL/Data Migration Service
+
+### [MXS-3003](https://jira.mariadb.org/browse/MXS-3003) Support inbound proxy protocol
+
+### [MXS-3262](https://jira.mariadb.org/browse/MXS-3262) Add create-backup and restore-from-backup commands to MariaDB-Monitor
+
+### [MXS-3269](https://jira.mariadb.org/browse/MXS-3260) Make it possible to change at runtime the number of threads used by MaxScale
+
 ### [MXS-3708](https://jira.mariadb.org/browse/MXS-3708) Cache runtime modification
 
 Some configuration parameters, most notable the
 [rules](../Filters/Cache.md#rules),
 can now be changed at runtime.
+
+### [MXS-3827](https://jira.mariadb.org/browse/MXS-3827) Audit log for the REST API
 
 ### [MXS-4106](https://jira.mariadb.org/browse/MXS-4106) Redis authentication
 
@@ -38,6 +48,8 @@ the Redis server when the latter is used as the storage for the
 cache. See
 [here](../Filters/Cache.md#storage_redis) for more information.
 
+### [MXS-4182](https://jira.mariadb.org/browse/MXS-4182) Session load indicator
+
 ### [MXS-4270](https://jira.mariadb.org/browse/MXS-4270) ed25519 authentication support
 
 MariaDB Server ed25519 authentication plugin support added. See
@@ -47,6 +59,9 @@ MariaDB Server ed25519 authentication plugin support added. See
 
 The maxctrl `list` and `show` commands now display timestamps using the
 locale and timezone of the client computer.
+
+### [MXS-4330](https://jira.mariadb.org/browse/MXS-4330) Xpand parallel replication does not work with maxscale
+
 
 ### MaxGUI
 
