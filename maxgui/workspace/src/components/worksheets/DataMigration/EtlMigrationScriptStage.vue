@@ -46,7 +46,7 @@
                     class="mt-auto font-weight-medium px-7 text-capitalize"
                     rounded
                     depressed
-                    :disabled="Boolean(scriptErr)"
+                    :disabled="Boolean(scriptErr) || isRunning"
                     @click="next"
                 >
                     {{ $mxs_t('startMigration') }}

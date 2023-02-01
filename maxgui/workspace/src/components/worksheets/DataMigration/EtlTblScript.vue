@@ -142,6 +142,7 @@ export default {
                 // Select the first row as active or the first object has error field
                 if (this.tableRows.length)
                     this.selectItems = [this.firstErrObj || this.tableRows[0]]
+                this.$helpers.doubleRAF(() => this.setTblMaxHeight())
             },
         },
         activeRow: {
@@ -154,9 +155,6 @@ export default {
                 }
             },
         },
-    },
-    mounted() {
-        this.$helpers.doubleRAF(() => this.setTblMaxHeight())
     },
     methods: {
         setTblMaxHeight() {
