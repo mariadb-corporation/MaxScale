@@ -876,7 +876,7 @@ std::string create_connection(const ConnectionConfig& config, std::string* err)
         sett.ssl = config.ssl;
         if (config.proxy_protocol)
         {
-            conn.set_local_proxy_header_v1();
+            conn.set_local_text_proxy_header();
         }
 
         if (conn.open(config.host, config.port, config.db))

@@ -1255,7 +1255,7 @@ void ConfigManager::connect()
         cfg.ssl = server->ssl_config();
         if (server->proxy_protocol())
         {
-            m_conn.set_local_proxy_header_v1();
+            m_conn.set_local_text_proxy_header();
         }
 
         if (!m_conn.open(server->address(), server->port()))

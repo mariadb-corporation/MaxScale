@@ -486,7 +486,7 @@ void ConnectionManager::MariaDBConnection::do_cancel()
     sett.ssl = config.ssl;
     if (config.proxy_protocol)
     {
-        other.set_local_proxy_header_v1();
+        other.set_local_text_proxy_header();
     }
 
     if (other.open(config.host, config.port, config.db))

@@ -189,8 +189,11 @@ void test_main(TestConnections& test)
                                                 proxy_ip.c_str(), test.maxscale->ip(), proxy_port,
                                                 test.maxscale->rwsplit_port);
                 }
+                std::vector<uint8_t> header_bytes;
                 auto ptr = reinterpret_cast<const uint8_t*>(header.data());
-                sett.proxy_header.assign(ptr, ptr + header.size());
+                header_bytes.assign(ptr, ptr + header.size());
+                conn->set_custom_proxy_header(std::move(header_bytes));
+
                 return conn;
             };
 

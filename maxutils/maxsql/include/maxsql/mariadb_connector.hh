@@ -45,6 +45,8 @@ public:
 
     struct ConnectionSettings
     {
+        friend class MariaDB;
+
         std::string user;
         std::string password;
 
@@ -59,8 +61,13 @@ public:
         bool auto_reconnect {false};
         bool clear_sql_mode {false};
 
-        std::string          charset;
-        std::vector<uint8_t> proxy_header;
+        std::string charset;
+
+    private:
+        enum class ProxyHeaderMode {NONE, LOCAL_TEXT, LOCAL_BIN, CUSTOM};
+        ProxyHeaderMode proxy_header_mode {ProxyHeaderMode::NONE};
+
+        std::vector<uint8_t> custom_proxy_header;
     };
 
     struct VersionInfo
@@ -196,9 +203,21 @@ public:
 
     /**
      * Set proxy header to indicate a non-proxied connection. Useful when connecting to a server which
-     * demands a proxy header.
+     * demands a proxy header. Sends a text header (V1).
      */
-    void set_local_proxy_header_v1();
+    void set_local_text_proxy_header();
+
+    /**
+     * Sends a binary mode (V2) local proxy header.
+     */
+    void set_local_bin_proxy_header();
+
+    /**
+     * Set a custom proxy header.
+     *
+     * @param header The proxy protocol header
+     */
+    void set_custom_proxy_header(std::vector<uint8_t>&& header);
 
     VersionInfo version_info() const;
     bool        is_open() const;
