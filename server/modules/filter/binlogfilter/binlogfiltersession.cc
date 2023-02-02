@@ -513,6 +513,29 @@ void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size, const RE
  */
 void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
 {
+    if (hdr.event_type == QUERY_EVENT)
+    {
+        uint8_t* event = GWBUF_DATA(*ppPacket) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+        uint32_t event_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
+
+        int db_name_len = event[4 + 4];
+        int var_block_len_offset = 4 + 4 + 1 + 2;
+        int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
+        int static_size = 4 + 4 + 1 + 2 + 2;
+        int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
+        uint8_t* sql_start = event + static_size + var_block_len + db_name_len + 1;
+        memset(sql_start, ' ', statement_len);
+
+        // Add a comment if we have enough space and use that to display that the event was ignored. This will
+        // be helpful for verifying that events are filtered and for debugging if any problems arise.
+        if (statement_len >= 3)
+        {
+            const char msg[] = "-- Event ignored";
+            memcpy(sql_start, msg, std::min(sizeof(msg) - 1, (size_t)statement_len));
+        }
+
+        return;
+    }
 
     uint32_t buf_len = gwbuf_length(*ppPacket);
     uint32_t orig_event_type = 0;

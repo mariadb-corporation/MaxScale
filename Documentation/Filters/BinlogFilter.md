@@ -14,6 +14,12 @@ are replicated. If a binlog event does not match or is excluded, the event is
 replaced with an empty data event. The empty event is always 35 bytes which
 translates to a space reduction in most cases.
 
+When statement-based replication is used, any query events that are filtered out
+are replaced with a SQL comment. This causes the query event to do nothing and
+thus the event will not modify the contents of the database. The GTID position
+of the replicating database will still advance which means that downstream
+servers replicating from it keep functioning correctly.
+
 The filter works with both row based and statement based replication but we
 recommend using row based replication with the binlogfilter. This guarantees
 that there are no ambiguities in the event filtering.
