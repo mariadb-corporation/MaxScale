@@ -11,7 +11,7 @@
                     :maxWidth="110"
                 />
                 <v-progress-circular
-                    v-if="isWkeLoadingQueryResult"
+                    v-if="isRunning"
                     class="ml-2"
                     size="16"
                     width="2"
@@ -19,8 +19,15 @@
                     indeterminate
                 />
             </div>
-            <v-btn v-show="isHovered" class="ml-1" icon x-small @click.stop.prevent="onDelete">
-                <v-icon :size="8" :color="isConnBusy ? '' : 'error'">
+            <v-btn
+                v-if="!isRunning"
+                v-show="isHovered"
+                class="del-tab-btn ml-1"
+                icon
+                x-small
+                @click.stop.prevent="onDelete"
+            >
+                <v-icon :size="8" color="error">
                     $vuetify.icons.mxs_close
                 </v-icon>
             </v-btn>
@@ -43,8 +50,9 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryTab from '@wsModels/QueryTab'
-import QueryConn from '@wsModels/QueryConn'
+import EtlTask from '@wsModels/EtlTask'
 import QueryResult from '@wsModels/QueryResult'
+import { mapState } from 'vuex'
 
 export default {
     name: 'wke-nav-tab',
@@ -52,10 +60,13 @@ export default {
         wke: { type: Object, required: true },
     },
     computed: {
+        ...mapState({
+            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+        }),
         wkeId() {
             return this.wke.id
         },
-        isWkeLoadingQueryResult() {
+        isOneOfQueryTabRunning() {
             const queryTabs = QueryTab.getters('getQueryTabsByWkeId')(this.wkeId)
             let isLoading = false
             for (const { id } of queryTabs) {
@@ -66,10 +77,12 @@ export default {
             }
             return isLoading
         },
-        isConnBusy() {
-            return QueryConn.getters('getIsConnBusyByQueryTabId')(
-                Worksheet.getters('getActiveQueryTabId')
-            )
+        isRunningETL() {
+            const etlTask = EtlTask.find(this.$typy(this.wke, 'active_etl_task_id').safeString)
+            return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
+        },
+        isRunning() {
+            return this.isOneOfQueryTabRunning || this.isRunningETL
         },
     },
     methods: {

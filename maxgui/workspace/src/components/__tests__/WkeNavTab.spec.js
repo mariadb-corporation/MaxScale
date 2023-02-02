@@ -37,36 +37,18 @@ describe('wke-nav-tab', () => {
         wrapper = mountFactory({
             computed: {
                 wkeId: () => dummyWke.id,
-                wkeConn: () => ({}),
-                isWkeLoadingQueryResult: () => false,
-                totalWorksheets: () => 1,
+                isRunning: () => false,
             },
         })
     })
 
     it('Should show delete worksheet button', () => {
-        wrapper = mountFactory({ computed: { totalWorksheets: () => 2 } })
+        wrapper = mountFactory()
         expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(true)
     })
 
-    it('Should not show delete worksheet button if totalWorksheets <= 1', () => {
-        expect(wrapper.find('.del-tab-btn').exists()).to.be.equal(false)
-    })
-
-    it('Should not show a tooltip when hovering a worksheet tab has no connection', () => {
-        expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.true
-    })
-
-    it('Should show a tooltip when hovering a worksheet tab has a connection', () => {
-        wrapper = mountFactory({
-            computed: {
-                wkeConn: () => ({
-                    id: '0',
-                    name: 'server_0',
-                    type: 'servers',
-                }),
-            },
-        })
-        expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.false
+    it('Should show loading icon', () => {
+        wrapper = mountFactory({ computed: { iRunning: () => true } })
+        expect(wrapper.findComponent({ name: 'v-progress-circular' }.exists())).to.be.true
     })
 })
