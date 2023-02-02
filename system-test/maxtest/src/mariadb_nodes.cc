@@ -768,21 +768,24 @@ void MariaDBCluster::reset_server_settings(int node)
     string cnf_dir = m_test_dir + "/mdbci/cnf/";
     string cnf_file = get_srv_cnf_filename(node);
     string cnf_path = cnf_dir + cnf_file;
+    string home = access_homedir(node);
 
     // Note: This is a CentOS specific path
     ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
 
-    copy_to_node(node, cnf_path.c_str(), access_homedir(node));
+    copy_to_node(node, cnf_path.c_str(), home.c_str());
     ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf_file.c_str());
+    ssh_node_f(node, false, "mkdir %s/ssl-cert/", home.c_str());
 
     // Always configure the backend for SSL
     std::string ssl_dir = m_test_dir + "/ssl-cert";
     std::string ssl_cnf = m_test_dir + "/ssl.cnf";
-    copy_to_node_legacy(ssl_dir.c_str(), access_homedir(node), node);
-    copy_to_node_legacy(ssl_cnf.c_str(), access_homedir(node), node);
 
-    ssh_node_f(node, true, "cp %s/ssl.cnf /etc/my.cnf.d/", access_homedir(node));
-    ssh_node_f(node, true, "cp -r %s/ssl-cert /etc/", access_homedir(node));
+    copy_to_node(node, ssl_dir.c_str(), home.c_str());
+    copy_to_node(node, ssl_cnf.c_str(), home.c_str());
+
+    ssh_node_f(node, true, "cp %s/ssl.cnf /etc/my.cnf.d/", home.c_str());
+    ssh_node_f(node, true, "cp -r %s/ssl-cert /etc/", home.c_str());
     ssh_node_f(node, true, "chown mysql:mysql -R /etc/ssl-cert");
 }
 

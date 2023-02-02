@@ -169,6 +169,13 @@ bool VMNode::copy_to_node(const string& src, const string& dest)
     {
         log().log_msgf("Tried to copy file '%s' to %s. Copying files is not supported in local mode.",
                        src.c_str(), m_name.c_str());
+    }
+
+    if (dest == "~" || dest == "~/")
+    {
+        log().add_failure("Don't rely on tilde expansion in copy_to_node, "
+                          "using it will not work if scp uses the SFTP protocol. "
+                          "Replace it with the actual path to the file.");
         return false;
     }
 
@@ -205,11 +212,6 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
         return 1;
     }
     return m_vms[i]->copy_to_node(src, dest) ? 0 : 1;
-}
-
-int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
-{
-    return copy_to_node(i, src, dest);
 }
 
 int Nodes::copy_from_node(int i, const char* src, const char* dest)
@@ -335,9 +337,9 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 void VMNode::write_node_env_vars()
 {
     auto write_env_var = [this](const string& suffix, const string& val) {
-            string env_var_name = m_name + suffix;
-            setenv(env_var_name.c_str(), val.c_str(), 1);
-        };
+        string env_var_name = m_name + suffix;
+        setenv(env_var_name.c_str(), val.c_str(), 1);
+    };
 
     write_env_var("_network", m_ip4);
     write_env_var("_network6", m_ip6);
