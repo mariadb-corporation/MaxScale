@@ -96,23 +96,13 @@
                     </v-col>
 
                     <v-col cols="12" md="6" class="pa-1">
-                        <db-input v-model.trim="body.db" />
+                        <mxs-txt-field-with-label
+                            v-model.trim="body.db"
+                            :label="$mxs_t('database')"
+                        />
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
-                        <label class="field__label mxs-color-helper text-small-text">
-                            {{ $mxs_t('timeout') }}
-                        </label>
-                        <v-text-field
-                            v-model.number="body.timeout"
-                            type="number"
-                            class="vuetify-input--override error--text__bottom timeout"
-                            name="timeout"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            outlined
-                            required
-                        />
+                        <timeout-input v-model.number="body.timeout" />
                     </v-col>
                 </v-row>
             </v-container>
@@ -135,13 +125,13 @@
  * Public License.
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
-import DbInput from '@wkeComps/DbInput.vue'
+import TimeoutInput from '@wkeComps/TimeoutInput.vue'
 import PwdInput from '@wkeComps/PwdInput.vue'
 import UidInput from '@wkeComps/UidInput.vue'
 
 export default {
     name: 'conn-dlg-ctr',
-    components: { DbInput, PwdInput, UidInput },
+    components: { TimeoutInput, PwdInput, UidInput },
     props: {
         value: { type: Boolean, required: true },
         handleSave: { type: Function, required: true },

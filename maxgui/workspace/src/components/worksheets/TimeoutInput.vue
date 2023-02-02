@@ -1,7 +1,10 @@
 <template>
     <mxs-txt-field-with-label
         v-bind="{ ...$attrs }"
-        :label="$mxs_t('database')"
+        :label="$mxs_t('timeout')"
+        name="timeout"
+        type="number"
+        :required="true"
         v-on="$listeners"
     />
 </template>
@@ -21,7 +24,7 @@
  * Public License.
  */
 export default {
-    name: 'db-input',
+    name: 'timeout-input',
     inheritAttrs: false,
 }
 </script>

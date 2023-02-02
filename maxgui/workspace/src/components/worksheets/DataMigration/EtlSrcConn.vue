@@ -5,7 +5,7 @@
                 {{ $mxs_t('source') }}
             </h3>
         </v-col>
-        <v-col cols="12" class="pa-1">
+        <v-col cols="12" md="6" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $mxs_t('databaseType') }}
             </label>
@@ -30,11 +30,14 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
+            <timeout-input v-model.number="src.timeout" />
+        </v-col>
+        <v-col cols="12" md="6" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $mxs_t('driver') }}
             </label>
             <v-select
-                v-model="driver"
+                v-model="src.driver"
                 :items="drivers"
                 item-text="id"
                 item-value="id"
@@ -56,17 +59,20 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <db-input
-                v-model.trim="db"
-                :required="shouldRequireDb"
-                :customErrMsg="$mxs_t('errors.requiredDb')"
+            <mxs-txt-field-with-label
+                v-model.trim="src.db"
+                :label="isGeneric ? $mxs_t('catalog') : $mxs_t('database')"
+                :required="shouldRequireField"
+                :customErrMsg="
+                    isGeneric ? $mxs_t('errors.requiredCatalog') : $mxs_t('errors.requiredDb')
+                "
                 :validate-on-blur="true"
                 :disabled="isAdvanced"
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <mxs-txt-field-with-label
-                v-model.trim="server"
+                v-model.trim="src.server"
                 :label="$mxs_t('hostname/IP')"
                 :required="true"
                 :disabled="isAdvanced"
@@ -74,17 +80,17 @@
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <mxs-txt-field-with-label
-                v-model.trim="port"
+                v-model.trim="src.port"
                 :label="$mxs_t('port')"
                 :required="true"
                 :disabled="isAdvanced"
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <uid-input v-model.trim="user" :disabled="isAdvanced" name="etl-src-uid" />
+            <uid-input v-model.trim="src.user" :disabled="isAdvanced" name="etl-src-uid" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <pwd-input v-model.trim="password" :disabled="isAdvanced" name="etl-src-pwd" />
+            <pwd-input v-model.trim="src.password" :disabled="isAdvanced" name="etl-src-pwd" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <v-switch
@@ -94,7 +100,7 @@
                 hide-details
             />
         </v-col>
-        <v-col cols="12" class="pa-1">
+        <v-col v-if="isAdvanced" cols="12" class="pa-1">
             <label class="field__label mxs-color-helper text-small-text label-required">
                 {{ $mxs_t('connStr') }}
             </label>
@@ -126,52 +132,56 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import DbInput from '@wkeComps/DbInput.vue'
 import PwdInput from '@wkeComps/PwdInput.vue'
 import UidInput from '@wkeComps/UidInput.vue'
+import TimeoutInput from '@wkeComps/TimeoutInput.vue'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { mapState } from 'vuex'
 
 export default {
     name: 'etl-src-conn',
-    components: { DbInput, PwdInput, UidInput },
+    components: { PwdInput, UidInput, TimeoutInput },
     props: {
-        /**
-         * @property {string} type - database type
-         * @property {string} connection_string
-         */
-        value: { type: Object, required: true }, // connection_string
+        value: { type: Object, required: true },
         drivers: { type: Array, required: true },
     },
     data() {
         return {
             isAdvanced: false,
-            driver: '',
-            server: '',
-            port: '',
-            user: '',
-            password: '',
-            db: '',
+            src: {
+                type: '',
+                timeout: 30,
+                driver: '',
+                server: '',
+                port: '',
+                user: '',
+                password: '',
+                db: '',
+                connection_string: '',
+            },
         }
     },
     computed: {
         ...mapState({
             ETL_SUPPORT_DB_TYPES: state => state.mxsWorkspace.config.ETL_SUPPORT_DB_TYPES,
         }),
-        src: {
-            get() {
-                return this.value
-            },
-            set(v) {
-                this.$emit('input', v)
-            },
-        },
-        shouldRequireDb() {
-            if (this.src.type === 'postgresql') return true
+        shouldRequireField() {
+            const { type } = this.src
+            if (type === 'postgresql' || this.isGeneric) return true
             return false
         },
+        isGeneric() {
+            return this.src.type === 'generic'
+        },
         generatedConnStr() {
-            const { driver = '', server = '', port = '', user = '', password = '', db = '' } = this
+            const {
+                driver = '',
+                server = '',
+                port = '',
+                user = '',
+                password = '',
+                db = '',
+            } = this.src
             return queryHelper.genConnStr({ driver, server, port, user, password, db })
         },
     },
@@ -180,6 +190,13 @@ export default {
             immediate: true,
             handler(v) {
                 this.src.connection_string = v
+            },
+        },
+        src: {
+            immediate: true,
+            deep: true,
+            handler(v) {
+                this.$emit('input', v)
             },
         },
     },

@@ -43,7 +43,7 @@
             />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
-            <db-input v-model.trim="dest.db" />
+            <timeout-input v-model.number="dest.timeout" />
         </v-col>
         <v-col cols="12" md="6" class="pa-1">
             <uid-input v-model.trim="dest.user" name="db-user" />
@@ -68,30 +68,28 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import DbInput from '@wkeComps/DbInput.vue'
 import PwdInput from '@wkeComps/PwdInput.vue'
 import UidInput from '@wkeComps/UidInput.vue'
+import TimeoutInput from '@wkeComps/TimeoutInput.vue'
 
 export default {
     name: 'etl-dest-conn',
-    components: { DbInput, PwdInput, UidInput },
+    components: { PwdInput, UidInput, TimeoutInput },
     props: {
-        /**
-         * @property {string} user
-         * @property {string} password
-         * @property {string} db
-         * @property {string} target
-         */
         value: { type: Object, required: true },
         allServers: { type: Array, required: true },
         destTargetType: { type: String, required: true },
     },
-    computed: {
+    data() {
+        return {
+            dest: { user: '', password: '', timeout: 30, target: '' },
+        }
+    },
+    watch: {
         dest: {
-            get() {
-                return this.value
-            },
-            set(v) {
+            immediate: true,
+            deep: true,
+            handler(v) {
                 this.$emit('input', v)
             },
         },

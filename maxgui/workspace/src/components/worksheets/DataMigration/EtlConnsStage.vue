@@ -67,8 +67,8 @@ export default {
     data() {
         return {
             isFormValid: false,
-            src: { connection_string: '', type: '' },
-            dest: { user: '', password: '', db: '', target: '' },
+            src: {},
+            dest: {},
             isLoading: false,
         }
     },
@@ -124,9 +124,16 @@ export default {
                     body: {
                         target: 'odbc',
                         connection_string: this.src.connection_string,
+                        timeout: this.src.timeout,
                     },
                     binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
                     etl_task_id,
+                    /**
+                     * TODO: Extract the value of `Database` in connection_string and store it
+                     * to meta. If the user defines this, it will be used for fetching only tables
+                     * inside that schema. Apart from that, if type is generic, this is needed for
+                     * prepare step.
+                     */
                     meta: { src_type: this.src.type },
                 })
             if (!this.activeDestConn.id)
