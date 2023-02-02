@@ -86,21 +86,26 @@ function queryHttp(store) {
             return response
         },
         async error => {
-            const { response: { status = null, config: { url = '' } = {} } = {} } = error || {}
+            const { response: { status = null, config: { url = '', method } = {} } = {} } =
+                error || {}
             switch (status) {
                 case null:
                     handleNullStatusCode({ store, error })
                     break
                 case 404:
                 case 503:
-                    store.commit(
-                        'mxsApp/SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [...getErrorsArr(error), 'Connection expired, please reconnect.'],
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
+                    if (method !== 'delete')
+                        store.commit(
+                            'mxsApp/SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [
+                                    ...getErrorsArr(error),
+                                    'Connection expired, please reconnect.',
+                                ],
+                                type: 'error',
+                            },
+                            { root: true }
+                        )
                     await QueryConn.dispatch('validateConns', { silentValidation: true })
                     break
                 default:
