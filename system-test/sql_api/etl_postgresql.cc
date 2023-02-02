@@ -45,6 +45,16 @@ void compare_values(EtlTest& etl, const std::string& dsn, const sql_generation::
     }
 }
 
+std::string big_number(int n, int d)
+{
+    mxb_assert(d < n);
+    std::string rval(n + (d ? 1 : 0), '0');
+    rval.front() = '1';
+    rval[n - d] = '.';
+    rval.back() = '1';
+    return rval;
+}
+
 std::string_view unquote(std::string_view str)
 {
     return str.size() >= 2 && str.front() == '\'' && str.back() == '\'' ?
@@ -158,6 +168,40 @@ void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::str
     }
 }
 
+void big_numbers(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    // The arguments to DECIMAL are the precision and the scale: the total amount of numbers on both sides of
+    // the decimal point and how many numbers can appear after the decimal point.
+    etl.check_odbc_result(dsn, "CREATE TABLE public.big_numbers(a DECIMAL(65,38))");
+
+    std::string sql;
+
+    for (int i = 1; i < (65 - 38) && test.ok(); i++)
+    {
+        for (int d = 0; d <= 38 && d < i && test.ok(); d++)
+        {
+            sql += "INSERT INTO public.big_numbers VALUES (" + big_number(i, d) + ");";
+        }
+    }
+
+    etl.check_odbc_result(dsn, sql);
+
+    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                 {EtlTable {"public", "big_numbers"}});
+
+    if (test.expect(ok, "ETL failed: %s", res.to_string().c_str()))
+    {
+        etl.compare_results(dsn, 0, "SELECT * FROM public.big_numbers");
+    }
+
+    auto dest = test.repl->get_connection(0);
+    test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+
+    const auto DROP_SQL = "DROP TABLE public.big_numbers";
+    etl.check_odbc_result(dsn, DROP_SQL);
+    dest.query(DROP_SQL);
+}
+
 void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
@@ -176,6 +220,7 @@ void test_main(TestConnections& test)
         TESTCASE(massive_result),
         TESTCASE(test_datatypes),
         TESTCASE(test_parallel_datatypes),
+        TESTCASE(big_numbers),
     };
 
     etl.check_odbc_result(dsn, "CREATE SCHEMA test");
