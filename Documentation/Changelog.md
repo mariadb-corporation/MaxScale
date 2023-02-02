@@ -8,6 +8,12 @@
   settings and command output the traditional terminology is still used.
   Conceptually,  _master/slave_ and _primary/replica_ are completely
   interchangable.
+
+* MariaDBMonitor now preserves the MASTER_USE_GTID-setting of a replica when
+  redirecting one during switchover and failover. When starting a new
+  replication connection on a previous replica, Slave_Pos is used. When starting
+  a new replication connection on a previous primary, Current_Pos is used.
+
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
   have been removed.
 * The obsolete `maxctrl drain` command has been removed. Use `maxctrl set server
@@ -15,18 +21,20 @@
 * The `maxctrl cluster` commands have been removed. Use the built-in
   [configuration synchronization](Getting-Started/Configuration-Guide.md#configuration-synchronization)
   to synchronize the configurations of multiple MaxScale instances.
-* MariaDBMonitor now preserves the MASTER_USE_GTID-setting of a replica when
-  redirecting one during switchover and failover. When starting a new
-  replication connection on a previous replica, Slave_Pos is used. When starting
-  a new replication connection on a previous primary, Current_Pos is used.
-* Ed25519Auth-plugin added. The plugin enables authentication with the
-  MariaDB Server ed25519 authentication plugin.
+
+* ETL
+* Create-Backup Restore-From-Backup
+* Audit-Log
+* Xpand parallell replication
 * Authentication can now be enabled when Redis is used as the cache storage.
 * SSL/TLS can now be used in the communication between MaxScale and Redis
   when Redis is used as the storage for the cache.
 * Some Cache configuration parameters, most notable the rules, can now be
   changed at runtime.
 * Support for inbound proxy protocol added.
+* Ed25519Auth-plugin added. The plugin enables authentication with the
+  MariaDB Server ed25519 authentication plugin.
+* MaxGUI
 
 ## MariaDB MaxScale 22.08
 

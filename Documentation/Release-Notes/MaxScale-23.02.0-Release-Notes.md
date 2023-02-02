@@ -10,13 +10,24 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-### ...
+### MariaDBMonitor
+
+MariaDBMonitor now preserves the `MASTER_USE_GTID`-setting of a replica when
+redirecting one during switchover and failover. When starting a new
+replication connection on a previous replica, `Slave_Pos` is used. When starting
+a new replication connection on a previous primary, `Current_Pos` is used.
 
 ## Dropped Features
 
-### ...
+### The `csmon` monitor has been dropped.
 
-## ...
+Was deprecated in 22.08.2.
+
+### The `auroramon` monitor has been dropped.
+
+### `maxctrl cluster` commands have been removed.
+
+Was deprecated in 22.08.2.
 
 ## New Features
 
