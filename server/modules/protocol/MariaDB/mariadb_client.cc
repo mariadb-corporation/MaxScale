@@ -3355,6 +3355,9 @@ mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthTy
 
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_header(bool ssl_on)
 {
+    namespace proxy = mxb::proxy_protocol;
+    using Type = proxy::PreParseResult::Type;
+
     bool read_ok;
     GWBUF buffer;
     if (ssl_on)
@@ -3371,134 +3374,60 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
     if (!buffer.empty())
     {
         // Have at least 4 bytes. This is enough to check if the packet looks like a proxy protocol header.
-        if (mxb::proxy_protocol::packet_hdr_maybe_proxy(buffer.data()))
+        if (proxy::packet_hdr_maybe_proxy(buffer.data()))
         {
-            if (mxb::proxy_protocol::is_proxy_protocol_allowed(
-                m_dcb->ip(), m_session->listener_data()->m_proxy_networks))
+            if (proxy::is_proxy_protocol_allowed(m_dcb->ip(), m_session->listener_data()->m_proxy_networks))
             {
-                /*
-                 * Need to read the entire proxy header out of the socket for parsing. Problem is, we don't
-                 * know how long it is and also have to be careful not to read out any SSL data. May need to
-                 * read multiple times.
-                 */
-
-                // Helper function for reading more data. Returns -1 on error, 0 if nothing was read and 1 on
-                // success.
-                auto read_more = [this, &buffer, ssl_on](size_t readlen) {
-                    GWBUF temp;
-                    int rval = -1;
-                    bool read_ok = false;
-
-                    if (ssl_on)
-                    {
-                        // Cannot read more than 36 bytes, as the client may have sent SSLRequest and SSL
-                        // data after proxy header. Known binary header length overrides this limit.
-                        auto read_limit = std::max((size_t)SSL_REQUEST_PACKET_SIZE, readlen);
-                        std::tie(read_ok, temp) = m_dcb->read_strict(0, read_limit);
-                    }
-                    else
-                    {
-                        auto read_limit = std::max((size_t)NORMAL_HS_RESP_MAX_SIZE, readlen);
-                        std::tie(read_ok, temp) = m_dcb->read(0, NORMAL_HS_RESP_MAX_SIZE);
-                    }
-                    if (!temp.empty())
-                    {
-                        buffer.merge_back(std::move(temp));
-                        rval = 1;
-                    }
-                    else if (read_ok)
-                    {
-                        rval = 0;
-                    }
-                    return rval;
-                };
-
-                auto send_hdr_error = [this]() {
-                    send_mysql_err_packet(1105, "HY000", "Failed to parse proxy header");
-                };
-
-                using Type = mxb::proxy_protocol::PreParseResult::Type;
-                mxb::proxy_protocol::PreParseResult header_res;
-
-                do
+                bool socket_alive = true;
+                if (ssl_on)
                 {
-                    header_res = mxb::proxy_protocol::pre_parse_header(buffer.data(), buffer.length());
-                    if (header_res.type == Type::NEED_MORE)
-                    {
-                        // Try to read some more data, then check again. Binary headers have length info.
-                        size_t read_limit = 0;
-                        if (header_res.len > 0)
-                        {
-                            mxb_assert(header_res.len > (int)buffer.length());
-                            read_limit = header_res.len - buffer.length();
-                        }
-
-                        int read_res = read_more(read_limit);
-                        if (read_res == 0)
-                        {
-                            // Inconclusive, try again later.
-                            break;
-                        }
-                        else if (read_res < 0)
-                        {
-                            // Read failed. Do not send error message.
-                            header_res.type = Type::ERROR;
-                            break;
-                        }
-                    }
-                    else if (header_res.type == Type::ERROR)
-                    {
-                        // Header is ill-formed.
-                        send_hdr_error();
-                    }
+                    // In ssl-mode, the entire proxy header may not have been read out yet due to the low
+                    // read limit. Attempt to read more. Since this requires io-ops, the connection may fail.
+                    socket_alive = read_proxy_hdr_ssl_safe(buffer);
                 }
-                while (header_res.type == Type::NEED_MORE);
 
-                auto set_client_info = [this](mxb::proxy_protocol::HdrParseResult&& new_info) {
-                    string text_addr_copy = new_info.peer_addr_str;
-                    m_dcb->set_remote_ip_port(new_info.peer_addr,
-                                              std::move(new_info.peer_addr_str));
-                    m_session->set_host(std::move(text_addr_copy));
-                };
-                if (header_res.type == Type::TEXT)
+                if (socket_alive)
                 {
-                    auto parse_res = mxb::proxy_protocol::parse_text_header((const char*)buffer.data(),
-                                                                            header_res.len);
-                    if (parse_res.success)
-                    {
-                        rval = StateMachineRes::DONE;
-                        buffer.consume(header_res.len);
-                        m_dcb->unread(std::move(buffer));
+                    auto send_hdr_error = [this]() {
+                        send_mysql_err_packet(1105, "HY000", "Failed to parse proxy header");
+                    };
 
-                        // If client sent "PROXY UNKNOWN" then nothing needs to be done.
-                        if (parse_res.is_proxy)
+                    auto pre_parse = proxy::pre_parse_header(buffer.data(), buffer.length());
+                    if (pre_parse.type == Type::TEXT || pre_parse.type == Type::BINARY)
+                    {
+                        // Have the entire header, parse it fully.
+                        auto parse_res = (pre_parse.type == Type::TEXT) ?
+                            proxy::parse_text_header((const char*)buffer.data(), pre_parse.len) :
+                            proxy::parse_binary_header(buffer.data());
+                        if (parse_res.success)
                         {
-                            set_client_info(std::move(parse_res));
+                            rval = StateMachineRes::DONE;
+                            buffer.consume(pre_parse.len);
+                            m_dcb->unread(std::move(buffer));
+
+                            // If client sent "PROXY UNKNOWN" then nothing needs to be done.
+                            if (parse_res.is_proxy)
+                            {
+                                string text_addr_copy = parse_res.peer_addr_str;
+                                m_dcb->set_remote_ip_port(parse_res.peer_addr,
+                                                          std::move(parse_res.peer_addr_str));
+                                m_session->set_host(std::move(text_addr_copy));
+                            }
                         }
+                        else
+                        {
+                            send_hdr_error();
+                        }
+                    }
+                    else if (pre_parse.type == Type::INCOMPLETE)
+                    {
+                        rval = StateMachineRes::IN_PROGRESS;
+                        m_dcb->unread(std::move(buffer));
                     }
                     else
                     {
                         send_hdr_error();
                     }
-                }
-                else if (header_res.type == Type::BINARY)
-                {
-                    auto parse_res = mxb::proxy_protocol::parse_binary_header(buffer.data());
-                    if (parse_res.success)
-                    {
-                        rval = StateMachineRes::DONE;
-                        buffer.consume(header_res.len);
-                        m_dcb->unread(std::move(buffer));
-
-                        if (parse_res.is_proxy)
-                        {
-                            set_client_info(std::move(parse_res));
-                        }
-                    }
-                }
-                else if (header_res.type == Type::NEED_MORE)
-                {
-                    rval = StateMachineRes::IN_PROGRESS;
                 }
             }
             else
@@ -3522,5 +3451,74 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
         rval = StateMachineRes::IN_PROGRESS;
     }
 
+    return rval;
+}
+
+/**
+ * Try to read the entire proxy header out of the socket without reading ssl-data. The caller should check
+ * the data for completeness afterwards, as the entire header may not have been available yet.
+ *
+ * @param buffer Buffer for read data.
+ * @return False on IO error. True otherwise.
+ */
+bool MariaDBClientConnection::read_proxy_hdr_ssl_safe(GWBUF& buffer)
+{
+    /*
+     * The length of the proxy header may be unknown and also have to be careful not to read out any
+     * SSL data. May need to read multiple times.
+     */
+
+    // Helper function for reading more data.
+    auto read_more = [this, &buffer](size_t readlen) {
+        // Cannot read more than 36 bytes, as the client may have sent SSLRequest and SSL
+        // data after proxy header. Known binary header length overrides this limit.
+        auto read_limit = std::max((size_t)SSL_REQUEST_PACKET_SIZE, readlen);
+        auto [read_ok, temp_buf] = m_dcb->read_strict(0, read_limit);
+
+        int rval = -1;
+        if (!temp_buf.empty())
+        {
+            buffer.merge_back(std::move(temp_buf));
+            rval = 1;
+        }
+        else if (read_ok)
+        {
+            rval = 0;
+        }
+        return rval;
+    };
+
+    auto rval = true;
+    auto INCOMPLETE = mxb::proxy_protocol::PreParseResult::Type::INCOMPLETE;
+    mxb::proxy_protocol::PreParseResult header_res;
+
+    do
+    {
+        header_res = mxb::proxy_protocol::pre_parse_header(buffer.data(), buffer.length());
+        if (header_res.type == INCOMPLETE)
+        {
+            // Try to read some more data, then check again. Binary headers have length info.
+            size_t read_limit = 0;
+            if (header_res.len > 0)
+            {
+                mxb_assert(header_res.len > (int)buffer.length());
+                read_limit = header_res.len - buffer.length();
+            }
+
+            auto read_res = read_more(read_limit);
+            if (read_res == 0)
+            {
+                // Inconclusive, try again later.
+                break;
+            }
+            else if (read_res < 0)
+            {
+                // Read failed. Do not send error message.
+                rval = false;
+                break;
+            }
+        }
+    }
+    while (header_res.type == INCOMPLETE);
     return rval;
 }

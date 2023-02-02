@@ -194,6 +194,7 @@ private:
 
     bool large_query_continues(const GWBUF& buffer) const;
     bool require_ssl() const;
+    bool read_proxy_hdr_ssl_safe(GWBUF& buffer);
 
     void update_user_account_entry(mariadb::AuthenticationData& auth_data);
     void assign_backend_authenticator(mariadb::AuthenticationData& auth_data);

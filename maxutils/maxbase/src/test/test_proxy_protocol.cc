@@ -163,14 +163,14 @@ int test_header_preparse()
 
     std::vector<Test> tests =
         {
-            Test {"ABC", 3, Type::NEED_MORE,                -1},
+            Test {"ABC", 3, Type::INCOMPLETE,               -1},
             Test {"ABCDE", 5, Type::ERROR,                  -1},
-            Test {"PROXY UNKNOWN", 13, Type::NEED_MORE,     -1},
+            Test {"PROXY UNKNOWN", 13, Type::INCOMPLETE,    -1},
             Test {"PROXY UNKNOWN\r\n BLAH", 20, Type::TEXT, 15},
             Test {BIN_SIG "\x11\x22\x00\x02\x01\x01", 18, Type::BINARY, 18},
-            Test {BIN_SIG "\xFF\xFF\x00\x03", 16, Type::NEED_MORE, 12 + 4 + 3},
+            Test {BIN_SIG "\xFF\xFF\x00\x03", 16, Type::INCOMPLETE, 12 + 4 + 3},
             Test {BIN_SIG "\xFF\xFF\x00\x03\0x00\0x00\0x00\0x01", 20, Type::BINARY, 12 + 4 + 3},
-            Test {"\x0D\x0A\x0D\x0A\x00", 5, Type::NEED_MORE, -1}
+            Test {"\x0D\x0A\x0D\x0A\x00", 5, Type::INCOMPLETE, -1}
         };
 
     int fails = 0;

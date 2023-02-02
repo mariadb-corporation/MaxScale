@@ -299,7 +299,7 @@ PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
             else if (datalen < TEXT_HDR_MAX_LEN)
             {
                 // Need more to determine length.
-                rval.type = PreParseResult::NEED_MORE;
+                rval.type = PreParseResult::INCOMPLETE;
             }
         }
         else
@@ -324,19 +324,19 @@ PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
                         // Even if we don't have the full header ready, return the length.
                         rval.len = total_len;
                         rval.type = (datalen >= total_len) ? PreParseResult::BINARY :
-                            PreParseResult::NEED_MORE;
+                            PreParseResult::INCOMPLETE;
                     }
                 }
                 else
                 {
-                    rval.type = PreParseResult::NEED_MORE;
+                    rval.type = PreParseResult::INCOMPLETE;
                 }
             }
         }
     }
     else
     {
-        rval.type = PreParseResult::NEED_MORE;
+        rval.type = PreParseResult::INCOMPLETE;
     }
 
     return rval;

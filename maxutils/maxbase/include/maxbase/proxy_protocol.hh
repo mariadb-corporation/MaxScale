@@ -44,7 +44,7 @@ bool packet_hdr_maybe_proxy(const uint8_t* header);
 
 struct PreParseResult
 {
-    enum Type {ERROR, NEED_MORE, TEXT, BINARY};
+    enum Type {ERROR, INCOMPLETE, TEXT, BINARY};
     Type type {Type::ERROR};
     int  len {-1};
 };
@@ -54,7 +54,7 @@ struct PreParseResult
  *
  * @param data Header data
  * @param datalen Data length. At least four bytes should be available to get some results.
- * @return Result structure. Type set to NEED_MORE if entire header was not available in the data.
+ * @return Result structure. Type set to INCOMPLETE if entire header was not available in the data.
  */
 PreParseResult pre_parse_header(const uint8_t* data, size_t datalen);
 
