@@ -342,6 +342,11 @@ public:
         m_extra = std::move(extras);
     }
 
+    TestConnections& test()
+    {
+        return m_test;
+    }
+
 private:
 
     std::string url(std::string_view endpoint)

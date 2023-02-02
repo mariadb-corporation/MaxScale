@@ -60,28 +60,38 @@ std::string_view unquote(std::string_view str)
     return str.size() >= 2 && str.front() == '\'' && str.back() == '\'' ?
            str.substr(1, str.size() - 2) : str;
 }
+
+void run_simple_test(EtlTest& etl, const std::string& dsn, std::string schema, std::string table,
+                     std::string create, std::string insert, std::string select, std::string drop)
+{
+    etl.check_odbc_result(dsn, create);
+    etl.check_odbc_result(dsn, insert);
+
+    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                 {EtlTable {schema, table}});
+
+    if (etl.test().expect(ok, "ETL failed: %s", res.to_string().c_str()))
+    {
+        etl.compare_results(dsn, 0, select);
+    }
+
+    auto dest = etl.test().repl->get_connection(0);
+    etl.test().expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+
+    etl.check_odbc_result(dsn, drop);
+    dest.query(drop);
+}
 }
 
 void sanity_check(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
     // By default the tables are created in the public schema of the user's own default database. In our case
     // the database name is maxskysql.
-    if (test.expect(etl.query_odbc(dsn, "CREATE TABLE public.sanity_check(id INT)")
-                    && etl.query_odbc(dsn, "INSERT INTO public.sanity_check VALUES (1), (2), (3)"),
-                    "Failed to create tables in Postgres"))
-    {
-        auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
-                                     {EtlTable {"public", "sanity_check"}});
-
-        if (test.expect(ok, "ETL failed: %s", res.to_string().c_str()))
-        {
-            etl.compare_results(dsn, 0, "SELECT id FROM public.sanity_check ORDER BY id");
-        }
-
-        test.expect(etl.query_odbc(dsn, "DROP TABLE public.sanity_check")
-                    && etl.query_native("server1", "DROP TABLE public.sanity_check"),
-                    "Failed to drop tables in Postgres");
-    }
+    run_simple_test(etl, dsn, "public", "sanity_check",
+                    "CREATE TABLE public.sanity_check(id INT)",
+                    "INSERT INTO public.sanity_check VALUES (1), (2), (3)",
+                    "SELECT id FROM public.sanity_check ORDER BY id",
+                    "DROP TABLE public.sanity_check");
 }
 
 void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
@@ -170,36 +180,59 @@ void test_parallel_datatypes(TestConnections& test, EtlTest& etl, const std::str
 
 void big_numbers(TestConnections& test, EtlTest& etl, const std::string& dsn)
 {
-    // The arguments to DECIMAL are the precision and the scale: the total amount of numbers on both sides of
-    // the decimal point and how many numbers can appear after the decimal point.
-    etl.check_odbc_result(dsn, "CREATE TABLE public.big_numbers(a DECIMAL(65,38))");
-
-    std::string sql;
+    std::string insert;
 
     for (int i = 1; i < (65 - 38) && test.ok(); i++)
     {
         for (int d = 0; d <= 38 && d < i && test.ok(); d++)
         {
-            sql += "INSERT INTO public.big_numbers VALUES (" + big_number(i, d) + ");";
+            insert += "INSERT INTO public.big_numbers VALUES (" + big_number(i, d) + ");";
         }
     }
 
-    etl.check_odbc_result(dsn, sql);
+    // The arguments to DECIMAL are the precision and the scale: the total amount of numbers on both sides of
+    // the decimal point and how many numbers can appear after the decimal point.
+    run_simple_test(etl, dsn, "public", "big_numbers",
+                    "CREATE TABLE public.big_numbers(a DECIMAL(65,38))",
+                    insert,
+                    "SELECT * FROM public.big_numbers",
+                    "DROP TABLE public.big_numbers");
+}
 
-    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
-                                 {EtlTable {"public", "big_numbers"}});
+void default_values(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto insert = "INSERT INTO public.default_values(a, b, c) VALUES "
+                  "(1, 1, 3), (2, DEFAULT, DEFAULT), (3, NULL, NULL), (4, 4, 4)";
+    run_simple_test(etl, dsn, "public", "default_values",
+                    "CREATE TABLE public.default_values(a INT, b INT DEFAULT 4, c INT DEFAULT NULL)",
+                    insert,
+                    "SELECT * FROM public.default_values",
+                    "DROP TABLE public.default_values");
+}
 
-    if (test.expect(ok, "ETL failed: %s", res.to_string().c_str()))
-    {
-        etl.compare_results(dsn, 0, "SELECT * FROM public.big_numbers");
-    }
+void generated_columns(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    run_simple_test(etl, dsn, "public", "generated_columns",
+                    "CREATE TABLE public.generated_columns(a INT, b INT GENERATED ALWAYS AS (a + 1) STORED)",
+                    "INSERT INTO public.generated_columns(a) VALUES (1), (2), (NULL), (0), (-1)",
+                    "SELECT * FROM public.generated_columns",
+                    "DROP TABLE public.generated_columns");
+}
 
+void sequences(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    // We need to pre-create the sequence in MariaDB in order for it to work.
     auto dest = test.repl->get_connection(0);
     test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+    dest.query("CREATE DATABASE IF NOT EXISTS public;CREATE SEQUENCE public.s1;");
 
-    const auto DROP_SQL = "DROP TABLE public.big_numbers";
-    etl.check_odbc_result(dsn, DROP_SQL);
-    dest.query(DROP_SQL);
+    run_simple_test(etl, dsn, "public", "sequences",
+                    "CREATE SEQUENCE s1; CREATE TABLE public.sequences(a INT, b INT DEFAULT NEXTVAL('s1'))",
+                    "INSERT INTO public.sequences(a) SELECT generate_series(0, 1000)",
+                    "SELECT * FROM public.sequences",
+                    "DROP TABLE public.sequences");
+
+    dest.query("DROP SEQUENCE public.s1");
 }
 
 void test_main(TestConnections& test)
@@ -221,6 +254,9 @@ void test_main(TestConnections& test)
         TESTCASE(test_datatypes),
         TESTCASE(test_parallel_datatypes),
         TESTCASE(big_numbers),
+        TESTCASE(default_values),
+        TESTCASE(generated_columns),
+        TESTCASE(sequences),
     };
 
     etl.check_odbc_result(dsn, "CREATE SCHEMA test");
