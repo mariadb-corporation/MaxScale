@@ -648,6 +648,16 @@ will roll back the ETL operation. Any tables that were created during the ETL
 operation are not deleted on the destination server and must be manually cleaned
 up.
 
+If the ETL fails to extract the SQL from the source server or an error was
+encountered during table creation, the response will have the `"ok"` field set
+to false. Both the top-level object as well as the individual tables can have
+the `"error"` field set to the error message. This field is filled during the
+ETL operation which means errors are visible even if the ETL is still ongoing.
+
+During the ETL operation, tables that have been fully processed will have a
+`"execution_time"` field. This field has the total time in seconds it took to
+execute the data loading step.
+
 #### Response
 
 ETL operation started:
