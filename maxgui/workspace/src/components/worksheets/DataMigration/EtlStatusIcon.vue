@@ -3,7 +3,7 @@
         size="14"
         :color="etlStatusIcon.color"
         class="mr-1"
-        :class="{ 'etl-status-icon--running': isRunning }"
+        :class="{ 'etl-status-icon--spinning': spinning }"
     >
         {{ etlStatusIcon.value }}
     </v-icon>
@@ -29,7 +29,7 @@ export default {
     name: 'etl-status-icon',
     props: {
         icon: { type: [String, Object], required: true },
-        isRunning: { type: Boolean, default: false },
+        spinning: { type: Boolean, default: false },
     },
     computed: {
         ...mapState({
@@ -72,7 +72,7 @@ export default {
         transform: rotate(360deg);
     }
 }
-.etl-status-icon--running {
+.etl-status-icon--spinning {
     animation: rotating 1.5s linear infinite;
 }
 </style>

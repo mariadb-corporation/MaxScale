@@ -43,7 +43,7 @@
                 <div class="mt-4">
                     <etl-status-icon
                         :icon="$typy(activeEtlTask, 'status').safeString"
-                        :isRunning="isRunning"
+                        :spinning="isRunning"
                         class="mb-1"
                     />
                     <span v-if="hasErrAtCreationStage" class="mxs-color-helper text-navigation">
@@ -71,7 +71,7 @@
                 <template v-slot:[`item.result`]="{ item }">
                     <etl-status-icon
                         :icon="objMigrationStatus(item).icon"
-                        :isRunning="objMigrationStatus(item).isRunning"
+                        :spinning="objMigrationStatus(item).isSpinning"
                     />
                     {{ objMigrationStatus(item).txt }}
                 </template>
@@ -206,21 +206,21 @@ export default {
         },
         objMigrationStatus(item) {
             let icon = this.ETL_STATUS.RUNNING,
-                isRunning = true,
+                isSpinning = this.isRunning,
                 txt = `${item.rows || 0} rows migrated`
             if (item.error) {
                 icon = this.ETL_STATUS.ERROR
-                isRunning = false
+                isSpinning = false
                 txt = this.$mxs_t('error')
             } else if (item.execution_time) {
                 icon = this.ETL_STATUS.COMPLETE
-                isRunning = false
+                isSpinning = false
                 if (this.hasErrAtCreationStage) {
                     icon = { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }
                     txt = this.$mxs_t('warnings.objCreation')
                 }
             }
-            return { icon, isRunning, txt }
+            return { icon, isSpinning, txt }
         },
         customCol(item, key) {
             switch (key) {

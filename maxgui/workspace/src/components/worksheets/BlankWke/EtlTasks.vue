@@ -17,7 +17,7 @@
 
         <template v-slot:[`item.status`]="{ value }">
             <div class="d-flex align-center">
-                <etl-status-icon :icon="value" :isRunning="value === ETL_STATUS.RUNNING" />
+                <etl-status-icon :icon="value" :spinning="value === ETL_STATUS.RUNNING" />
                 {{ value }}
                 <span v-if="value === ETL_STATUS.RUNNING">...</span>
             </div>
