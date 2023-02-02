@@ -49,15 +49,16 @@ export default {
         },
         async fetchSchemas({ getters, rootState }) {
             const activeWkeId = Worksheet.getters('getActiveWkeId')
-            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
-            const connId = activeQueryTabConn.id
+            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
+                'getActiveQueryTabConn'
+            )
             QueryEditorTmp.update({
                 where: activeWkeId,
                 data: { loading_db_tree: true },
             })
 
             const [e, res] = await this.vue.$helpers.to(
-                query({ id: connId, body: { sql: getters.getDbSql } })
+                query({ id, body: { sql: getters.getDbSql } })
             )
             if (e)
                 QueryEditorTmp.update({
@@ -80,7 +81,7 @@ export default {
                                 data: newData,
                                 completionItems: newCompletionItems,
                             } = await queryHelper.getNewTreeData({
-                                connId,
+                                connId: id,
                                 nodeGroup,
                                 data,
                                 completionItems: completion_items,
@@ -94,7 +95,7 @@ export default {
                         data(obj) {
                             obj.loading_db_tree = false
                             obj.completion_items = completion_items
-                            obj.db_tree_of_conn = activeQueryTabConn.name
+                            obj.db_tree_of_conn = connection_name
                             obj.db_tree = data
                         },
                     })

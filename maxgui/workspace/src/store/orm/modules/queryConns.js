@@ -389,7 +389,7 @@ export default {
          * @param {String} db - database name
          */
         async useDb({ commit, dispatch, getters, rootState }, db) {
-            const { id, name: connName } = getters.getActiveQueryTabConn
+            const { id, meta: { name: connection_name } = {} } = getters.getActiveQueryTabConn
             const now = new Date().valueOf()
             const escapedDb = this.vue.$helpers.escapeIdentifiers(db)
             const sql = `USE ${escapedDb};`
@@ -421,7 +421,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name: connName,
+                        connection_name,
                         queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }

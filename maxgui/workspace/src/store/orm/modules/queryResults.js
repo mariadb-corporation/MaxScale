@@ -25,7 +25,9 @@ export default {
          * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
          */
         async fetchPrvw({ rootState, dispatch }, { qualified_name, query_mode }) {
-            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
+            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
+                'getActiveQueryTabConn'
+            )
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const request_sent_time = new Date().valueOf()
             let field, sql, queryName
@@ -51,10 +53,7 @@ export default {
                 },
             })
             const [e, res] = await this.vue.$helpers.to(
-                query({
-                    id: activeQueryTabConn.id,
-                    body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
-                })
+                query({ id, body: { sql, max_rows: rootState.prefAndStorage.query_row_limit } })
             )
             if (e)
                 QueryTabTmp.update({
@@ -81,7 +80,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name: activeQueryTabConn.name,
+                        connection_name,
                         queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
@@ -92,7 +91,9 @@ export default {
          * @param {String} sql - SQL string
          */
         async fetchUserQuery({ dispatch, getters, rootState }, sql) {
-            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
+            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
+                'getActiveQueryTabConn'
+            )
             const request_sent_time = new Date().valueOf()
             const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
             const abort_controller = new AbortController()
@@ -110,7 +111,7 @@ export default {
 
             let [e, res] = await this.vue.$helpers.to(
                 query({
-                    id: activeQueryTabConn.id,
+                    id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
                     config: { signal: abort_controller.signal },
                 })
@@ -135,7 +136,7 @@ export default {
                         },
                     })
                     QueryConn.update({
-                        where: activeQueryTabConn.id,
+                        where: id,
                         /**
                          * This is done automatically in queryHttp.interceptors.response.
                          * However, because the request is aborted, is_busy needs to be set manually.
@@ -170,7 +171,7 @@ export default {
                         startTime: now,
                         sql,
                         res,
-                        connection_name: activeQueryTabConn.name,
+                        connection_name,
                         queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.USER_LOGS,
                     },
                     { root: true }

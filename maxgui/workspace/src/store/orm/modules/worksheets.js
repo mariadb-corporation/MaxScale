@@ -67,14 +67,17 @@ export default {
          */
         async handleInitialFetch({ dispatch }) {
             try {
-                const { id: connId, name: connName } = QueryConn.getters('getActiveQueryTabConn')
+                const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
+                    'getActiveQueryTabConn'
+                )
                 const hasConnId = Boolean(connId)
                 const isSchemaTreeEmpty = SchemaSidebar.getters('getDbTreeData').length === 0
-                const hasSchemaTreeAlready = SchemaSidebar.getters('getDbTreeOfConn') === connName
+                const hasSchemaTreeAlready =
+                    SchemaSidebar.getters('getDbTreeOfConn') === connection_name
                 if (hasConnId) {
                     if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
                         await SchemaSidebar.dispatch('initialFetch')
-                        dispatch('changeWkeName', connName)
+                        dispatch('changeWkeName', connection_name)
                     }
                     if (Editor.getters('getIsDDLEditor'))
                         await dispatch('editorsMem/queryAlterTblSuppData', {}, { root: true })
@@ -110,15 +113,14 @@ export default {
          * @param {Boolean} payload.showSnackbar - show successfully snackbar message
          */
         async exeStmtAction({ rootState, dispatch, commit }, { sql, action, showSnackbar = true }) {
-            const activeQueryTabConn = QueryConn.getters('getActiveQueryTabConn')
+            const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
+                'getActiveQueryTabConn'
+            )
             const activeWkeId = Worksheet.getters('getActiveWkeId')
             const request_sent_time = new Date().valueOf()
             let stmt_err_msg_obj = {}
             const [e, res] = await this.vue.$helpers.to(
-                query({
-                    id: activeQueryTabConn.id,
-                    body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
-                })
+                query({ id, body: { sql, max_rows: rootState.prefAndStorage.query_row_limit } })
             )
             if (e) this.vue.$logger.error(e)
             else {
@@ -156,7 +158,7 @@ export default {
                         name: queryAction,
                         sql,
                         res,
-                        connection_name: activeQueryTabConn.name,
+                        connection_name,
                         queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
