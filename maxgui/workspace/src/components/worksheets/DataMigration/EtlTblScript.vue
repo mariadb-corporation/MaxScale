@@ -24,7 +24,7 @@
             <etl-script-editors
                 v-if="activeRow && !isRunning && hasScriptFields"
                 v-model="activeRow"
-                :hasRowChanged="hasRowChanged"
+                :hasChanged="hasChanged"
                 @on-discard="discard"
             />
         </v-col>
@@ -82,7 +82,7 @@ export default {
                 return map
             }, {})
         },
-        hasRowChanged() {
+        hasChanged() {
             if (this.activeRowId) {
                 const defRow = this.$typy(this.defDataMap, `[${this.activeRowId}]`).safeObject
                 return !this.$helpers.lodash.isEqual(defRow, this.activeRow)

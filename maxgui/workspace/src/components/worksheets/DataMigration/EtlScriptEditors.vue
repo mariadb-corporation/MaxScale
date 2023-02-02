@@ -30,6 +30,7 @@
                 </span>
                 <v-spacer />
                 <v-btn
+                    v-if="hasChanged"
                     small
                     height="36"
                     color="primary"
@@ -37,22 +38,9 @@
                     rounded
                     outlined
                     depressed
-                    :disabled="!hasRowChanged"
                     @click="$emit('on-discard')"
                 >
                     {{ $mxs_t('discard') }}
-                </v-btn>
-                <v-btn
-                    small
-                    height="36"
-                    color="primary"
-                    class="font-weight-medium px-7 text-capitalize"
-                    rounded
-                    depressed
-                    :disabled="isInErrState || !hasStagingRowChanged"
-                    @click="apply"
-                >
-                    {{ $mxs_t('apply') }}
                 </v-btn>
             </div>
         </div>
@@ -84,35 +72,20 @@ export default {
          * @property {string} insert
          */
         value: { type: Object, required: true },
-        hasRowChanged: { type: Boolean, required: true }, // Using for the discard btn
-    },
-    data() {
-        return {
-            stagingRow: { select: '', create: '', insert: '' },
-        }
+        hasChanged: { type: Boolean, required: true },
     },
     computed: {
         isInErrState() {
             const { select, create, insert } = this.stagingRow
             return Boolean(!select || !create || !insert)
         },
-        // Using for the apply btn
-        hasStagingRowChanged() {
-            return !this.$helpers.lodash.isEqual(this.value, this.stagingRow)
-        },
-    },
-    watch: {
-        value: {
-            deep: true,
-            immediate: true,
-            handler() {
-                this.stagingRow = this.$helpers.lodash.cloneDeep(this.value)
+        stagingRow: {
+            get() {
+                return this.value
             },
-        },
-    },
-    methods: {
-        apply() {
-            this.$emit('input', this.stagingRow)
+            set(v) {
+                this.$emit('input', v)
+            },
         },
     },
 }
