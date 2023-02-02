@@ -350,6 +350,12 @@ public:
          *   a generated column.
          *
          * - CHECK constrains are extracted as-is which means they must be compatible with MariaDB.
+         *
+         * - The internal PostgreSQL OID and XID types convert to BIGINT
+         *
+         * - The name and pg_node_tree types are converted into text
+         *
+         * - The internal "char" type is converted to an actual CHAR(1) type
          */
         std::ostringstream ss;
         ss <<
@@ -360,11 +366,13 @@ SELECT '`' || a.attname || '` ' ||
     WHEN t.typname IN ('jsonb', 'json', 'hstore') THEN 'JSON'
     WHEN t.typname LIKE 'timestamp%' THEN 'DATETIME(6)'
     WHEN t.typname LIKE 'time%' THEN 'TIME'
-    WHEN t.typname IN ('line', 'lseg', 'box', 'circle', 'cidr', 'macaddr', 'macaddr8') THEN 'TEXT'
+    WHEN t.typname IN ('line', 'lseg', 'box', 'circle', 'cidr', 'macaddr', 'macaddr8', 'name', 'pg_node_tree') THEN 'TEXT'
     WHEN t.typname = 'geometry' THEN 'GEOMETRY'
     WHEN t.typname = 'inet' THEN 'INET6'
-    WHEn t.typname = 'bytea' THEN 'LONGBLOB'
-    WHEn t.typname = 'xml' THEN 'LONGTEXT'
+    WHEN t.typname = 'bytea' THEN 'LONGBLOB'
+    WHEN t.typname = 'xml' THEN 'LONGTEXT'
+    WHEN t.typname IN ('oid', 'xid') THEN 'BIGINT'
+    WHEN UPPER(pg_catalog.format_type(a.atttypid, a.atttypmod)) = '"CHAR"' THEN 'CHAR(1)'
     ELSE UPPER(pg_catalog.format_type(a.atttypid, a.atttypmod))
   END ||
   CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
@@ -510,13 +518,13 @@ SELECT
   STRING_AGG(
     '  ' ||
     CASE
-    WHEN data_type IN ('point', 'path', 'polygon', 'geometry')
+    WHEN LOWER(data_type) IN ('point', 'path', 'polygon', 'geometry')
       THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY)) ' || QUOTE_IDENT(column_name)
-    WHEN udt_name IN ('hstore')
+    WHEN LOWER(udt_name) IN ('hstore')
       THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
-    WHEN data_type = 'array'
+    WHEN LOWER(data_type) = 'array'
       THEN 'array_to_json(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
-    WHEN data_type = 'inet'
+    WHEN LOWER(data_type) = 'inet'
       THEN 'CASE FAMILY(' || QUOTE_IDENT(column_name) || ') WHEN 4 THEN ''::ffff:'' ELSE '''' END || HOST(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     ELSE
       QUOTE_IDENT(column_name)
