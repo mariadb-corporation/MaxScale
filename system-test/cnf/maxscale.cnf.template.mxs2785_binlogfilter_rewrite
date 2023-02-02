@@ -18,6 +18,11 @@ module=binlogfilter
 rewrite_src=test_[a-z0-9]*
 rewrite_dest=$0_rewritten
 
+[blf2]
+type=filter
+module=binlogfilter
+exclude=/ignore_this/
+
 [Read-Connection-Router]
 type=service
 router=readconnroute
@@ -25,7 +30,7 @@ router_options=master
 servers=###server_line###
 user=maxskysql
 password=skysql
-filters=blf
+filters=blf|blf2
 
 [Read-Connection-Listener]
 type=listener
