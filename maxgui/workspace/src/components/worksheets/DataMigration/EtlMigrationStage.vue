@@ -95,6 +95,16 @@
                                     ? $mxs_t('warnings.objCreation')
                                     : objMigrationStatus(activeItem).txt
                             }}
+                            <br />
+                            <template v-if="$typy(activeItem, 'execution_time').isDefined">
+                                {{ $mxs_t('exeTime') }}:
+
+                                {{
+                                    $mxs_tc('seconds', activeItem.execution_time === 1 ? 1 : 2, {
+                                        value: activeItem.execution_time,
+                                    })
+                                }}
+                            </template>
                         </template>
                     </code>
                 </template>

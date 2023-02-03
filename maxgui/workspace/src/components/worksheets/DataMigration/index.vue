@@ -50,7 +50,6 @@ export default {
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            etl_res: state => state.etlMem.etl_res,
         }),
         ...mapGetters({
             getEtlResTable: 'etlMem/getEtlResTable',
@@ -60,7 +59,7 @@ export default {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
         hasEtlRes() {
-            return Boolean(this.etl_res)
+            return Boolean(this.getEtlResTable.length)
         },
         isMigrationDisabled() {
             const { is_prepare_etl = false } = this.activeEtlTask

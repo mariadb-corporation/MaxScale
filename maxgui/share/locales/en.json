@@ -227,7 +227,7 @@
             }
         },
         "execute": "Execute",
-        "exeTime": "Execution Time",
+        "exeTime": "Execution time",
         "expand": "Expand",
         "export": "Export",
         "exportChart": "Export chart",
@@ -476,7 +476,7 @@
         "tabMovesFocus": "Tab moves Focus",
         "termsOfUse": "Terms of Use",
         "timeout": "Timeout",
-        "totalDuration": "Total Duration",
+        "totalDuration": "Total duration",
         "type": "type",
         "ungroup": "Ungroup",
         "unHealthy": "Unhealthy",
