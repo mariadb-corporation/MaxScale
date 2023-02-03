@@ -149,7 +149,6 @@ export default {
                 const wkeConn = {
                     id: res.data.data.id,
                     attributes: res.data.data.attributes,
-                    name: body.target,
                     binding_type: WORKSHEET,
                     worksheet_id: activeWorksheetId,
                     meta,
@@ -228,39 +227,45 @@ export default {
          * @param {String} param.connection_string - connection_string
          * @param {String} param.binding_type - QUERY_CONN_BINDING_TYPES: Either ETL_SRC or ETL_DEST
          * @param {String} param.etl_task_id - EtlTask ID
-         * @param {Object} [param.meta] - connection meta
+         * @param {Object} param.connMeta - connection meta
+         * @param {Object} param.taskMeta - etl task meta
          * @param {Boolean} [param.showMsg] - show message related to connection in a snackbar
          */
         async openEtlConn(
             { commit, rootState },
-            { body, binding_type, etl_task_id, meta = {}, showMsg = false }
+            { body, binding_type, etl_task_id, connMeta = {}, taskMeta = {}, showMsg = false }
         ) {
             const { $mxs_t, $helpers } = this.vue
-            const { ETL_SRC } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            let target
             const [e, res] = await $helpers.to(openConn(body))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
-                QueryConn.insert({
-                    data: {
-                        id: res.data.data.id,
-                        attributes: res.data.data.attributes,
-                        binding_type,
-                        meta,
-                        etl_task_id,
-                    },
-                })
+                let connData = {
+                    id: res.data.data.id,
+                    attributes: res.data.data.attributes,
+                    binding_type,
+                    meta: connMeta,
+                    etl_task_id,
+                }
+                const { src_type = '', dest_name = '' } = taskMeta
+                switch (binding_type) {
+                    case ETL_SRC:
+                        target = $mxs_t('source').toLowerCase() + `: ${src_type}`
+                        connData.active_db = queryHelper.getDatabase(body.connection_string)
+                        break
+                    case ETL_DEST:
+                        target = $mxs_t('destination').toLowerCase() + `: ${dest_name}`
+                        break
+                }
+                QueryConn.insert({ data: connData })
                 EtlTask.update({
                     where: etl_task_id,
                     data(obj) {
-                        obj.meta = { ...obj.meta, ...meta }
+                        obj.meta = { ...obj.meta, ...taskMeta }
                     },
                 })
             }
-            const { src_type = '', dest_name = '' } = meta
-            const target =
-                binding_type === ETL_SRC
-                    ? $mxs_t('source').toLowerCase() + `: ${src_type}`
-                    : $mxs_t('destination').toLowerCase() + `: ${dest_name}`
 
             let logMsgs = [$mxs_t('success.connectedTo', [target])]
 
@@ -273,10 +278,7 @@ export default {
             if (showMsg)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: logMsgs,
-                        type: e ? 'error' : 'success',
-                    },
+                    { text: logMsgs, type: e ? 'error' : 'success' },
                     { root: true }
                 )
 

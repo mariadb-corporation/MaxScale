@@ -217,7 +217,7 @@ export default {
 
             let body = {
                 target: destConn.id,
-                type: srcConn.meta.src_type,
+                type: task.meta.src_type,
                 tables,
             }
 

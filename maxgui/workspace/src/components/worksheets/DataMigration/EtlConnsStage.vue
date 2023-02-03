@@ -128,20 +128,16 @@ export default {
                     },
                     binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
                     etl_task_id,
-                    /**
-                     * TODO: Extract the value of `Database` in connection_string and store it
-                     * to meta. If the user defines this, it will be used for fetching only tables
-                     * inside that schema. Apart from that, if type is generic, this is needed for
-                     * prepare step.
-                     */
-                    meta: { src_type: this.src.type },
+                    taskMeta: { src_type: this.src.type },
+                    connMeta: { name: this.src.type },
                 })
             if (!this.activeDestConn.id)
                 await QueryConn.dispatch('openEtlConn', {
                     body: this.dest,
                     binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
                     etl_task_id,
-                    meta: { dest_name: this.dest.target },
+                    taskMeta: { dest_name: this.dest.target },
+                    connMeta: { name: this.dest.target },
                 })
             if (this.hasActiveConns) {
                 this.SET_SNACK_BAR_MESSAGE({

@@ -26,7 +26,9 @@ export default class QueryConn extends Extender {
             active_db: this.string(''),
             attributes: this.attr({}),
             binding_type: this.string(''),
-            name: this.string(''),
+            /**
+             * @property {string} name - connection name
+             */
             meta: this.attr({}),
             clone_of_conn_id: this.attr(null).nullable(),
             is_busy: this.boolean(false),

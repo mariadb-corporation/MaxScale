@@ -440,6 +440,15 @@ function genConnStr({ driver, server, port, user, password, db }) {
     if (db) connStr += `;DATABASE=${db}`
     return connStr
 }
+/**
+ * @param {String} connection_string
+ * @returns {String} Database name
+ */
+function getDatabase(connection_string) {
+    const matches = connection_string.match(/(database=)\w+/gi) || ['']
+    const matched = matches[0]
+    return matched.replace(/(database=)+/gi, '')
+}
 
 export default {
     getSchemaName,
@@ -453,4 +462,5 @@ export default {
     filterEntity,
     categorizeSqlConns,
     genConnStr,
+    getDatabase,
 }
