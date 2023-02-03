@@ -545,9 +545,9 @@ GROUP BY table_schema, table_name;
         const char* format =
             R"(
 SELECT
-  'INSERT INTO `%s`.`%s` (' ||
-  STRING_AGG( '`' || column_name || '`', ',' ORDER BY ordinal_position)
-  || ') VALUES (' || STRING_AGG('?', ',') || ')'
+  E'INSERT INTO `%s`.`%s` (\n' ||
+  STRING_AGG( '  `' || column_name || '`', E',\n' ORDER BY ordinal_position)
+  || E'\n) VALUES (' || STRING_AGG('?', ',') || ')'
 FROM information_schema.columns
 WHERE table_schema = '%s' AND table_name = '%s' AND is_generated = 'NEVER'
 GROUP BY table_schema, table_name;
