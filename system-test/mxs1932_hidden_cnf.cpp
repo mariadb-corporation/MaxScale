@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     cnf.close();
 
     // Copy the configuration to MaxScale
-    test.maxscale->copy_to_node("hidden.cnf", "~");
+    test.maxscale->copy_to_node("hidden.cnf", test.maxscale->access_homedir());
 
     // Move it into the maxscale.cnf.d directory and make it a hidden file
     test.maxscale->ssh_node_f(true,
