@@ -6,7 +6,7 @@
     "license": "SEE LICENSE IN ../LICENSE.TXT",
     "scripts": {
         "serve": "vue-cli-service serve --mode development",
-        "build": "vue-cli-service build",
+        "build": "if [ $(node -v | cut -c 2,3) -ge 17 ]; then export NODE_OPTIONS=--openssl-legacy-provider; fi; vue-cli-service build",
         "test:unit": "NODE_OPTIONS=--max_old_space_size=4096 vue-cli-service --mode test test:unit -t 5000 -i tests/unit/bootstrap.js -c --recursive 'src/**/*.spec.js'",
         "test:share": "NODE_OPTIONS=--max_old_space_size=4096 vue-cli-service --mode test test:unit -t 5000 -i tests/unit/bootstrap.js -c --recursive 'share/**/*.spec.js'",
         "test:workspace": "NODE_OPTIONS=--max_old_space_size=4096 vue-cli-service --mode test test:unit -t 5000 -i tests/unit/bootstrap.js -c --recursive 'workspace/**/*.spec.js'",
