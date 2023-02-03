@@ -794,7 +794,7 @@ config::ParamEnumList<maxbase::http::Method> Config::s_admin_audit_exclude_metho
         {maxbase::http::Method::OPTIONS, "OPTIONS"},
         {maxbase::http::Method::TRACE, "TRACE"},
     },
-    HttpMethods{maxbase::http::Method::GET},
+    {},
     mxs::config::Param::AT_RUNTIME);
 
 config::ParamString Config::s_local_address(
