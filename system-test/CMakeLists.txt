@@ -1037,6 +1037,9 @@ add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND GALERA
 # MXS-2441: Add support for read-only slaves to galeramon
 add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_galera_slaves LABELS REPL_BACKEND GALERA_BACKEND)
 
+# MXS-3827: admin audit
+add_test_executable(admin_audit.cpp admin_audit admin_audit LABELS LIGHT CONFIG)
+
 ############################################
 # END: Galera tests                        #
 ############################################
