@@ -250,6 +250,7 @@ export default {
                 where: this.activeEtlTask.id,
                 data(obj) {
                     obj.active_stage_index = obj.active_stage_index + 1
+                    obj.is_prepare_etl = true
                 },
             })
             await this.handleEtlCall({ id: this.activeEtlTask.id, tables: this.migration_objs })
@@ -262,6 +263,9 @@ export default {
 .etl-obj-select-stage-footer {
     .prepare-btn {
         width: 215px;
+    }
+    .confirm-label {
+        font-size: 0.875rem;
     }
 }
 .mxs-treeview--src-treeview {

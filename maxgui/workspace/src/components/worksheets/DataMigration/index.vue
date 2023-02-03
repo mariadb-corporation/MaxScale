@@ -36,8 +36,7 @@ import EtlTask from '@wsModels/EtlTask'
 import EtlOverviewStage from '@wkeComps/DataMigration/EtlOverviewStage.vue'
 import EtlConnsStage from '@wkeComps/DataMigration/EtlConnsStage.vue'
 import EtlObjSelectStage from '@wkeComps/DataMigration/EtlObjSelectStage.vue'
-import EtlMigrationScriptStage from '@wkeComps/DataMigration/EtlMigrationScriptStage.vue'
-import EtlMigrationReportStage from '@wkeComps/DataMigration/EtlMigrationReportStage.vue'
+import EtlMigrationStage from '@wkeComps/DataMigration/EtlMigrationStage.vue'
 import { mapState, mapGetters } from 'vuex'
 
 export default {
@@ -46,26 +45,27 @@ export default {
         EtlOverviewStage,
         EtlConnsStage,
         EtlObjSelectStage,
-        EtlMigrationScriptStage,
-        EtlMigrationReportStage,
+        EtlMigrationStage,
     },
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+            etl_res: state => state.etlMem.etl_res,
         }),
         ...mapGetters({
-            getMigrationPrepareScript: 'etlMem/getMigrationPrepareScript',
-            getMigrationResTable: 'etlMem/getMigrationResTable',
+            getEtlResTable: 'etlMem/getEtlResTable',
             areConnsAlive: 'etlMem/areConnsAlive',
         }),
         activeEtlTask() {
             return EtlTask.getters('getActiveEtlTaskWithRelation')
         },
-        hasMigrationPrepareScript() {
-            return Boolean(this.getMigrationPrepareScript.length)
+        hasEtlRes() {
+            return Boolean(this.etl_res)
         },
-        hasMigrationRes() {
-            return Boolean(this.getMigrationResTable.length)
+        isMigrationDisabled() {
+            const { is_prepare_etl = false } = this.activeEtlTask
+            if (is_prepare_etl) return !this.areConnsAlive
+            return !this.hasEtlRes
         },
         stages() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
@@ -87,19 +87,9 @@ export default {
                     isDisabled: !this.areConnsAlive || status === COMPLETE || status === RUNNING,
                 },
                 {
-                    name: this.$mxs_t('migrationScript'),
-                    component: 'etl-migration-script-stage',
-                    isDisabled:
-                        !this.areConnsAlive ||
-                        status === COMPLETE ||
-                        status === RUNNING ||
-                        !this.hasMigrationPrepareScript ||
-                        this.hasMigrationRes,
-                },
-                {
-                    name: this.$mxs_t('progress'),
-                    component: 'etl-migration-report-stage',
-                    isDisabled: !this.hasMigrationRes,
+                    name: this.$mxs_t('migration'),
+                    component: 'etl-migration-stage',
+                    isDisabled: this.isMigrationDisabled,
                 },
             ]
         },

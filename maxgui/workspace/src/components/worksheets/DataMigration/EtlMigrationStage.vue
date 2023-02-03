@@ -1,13 +1,13 @@
 <template>
     <etl-stage-ctr>
         <template v-slot:header>
-            <div class="etl-migration-script-stage__header">
+            <div class="etl-migration-stage__header">
                 <div class="d-flex align-center">
                     <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
-                        {{ $mxs_t('migrationProgress') }}
+                        {{ $mxs_t('migration') }}
                     </h3>
-
                     <etl-task-manage
+                        v-if="!isPrepareEtl"
                         :id="$typy(activeEtlTask, 'id').safeString"
                         v-model="isMenuOpened"
                         :types="actionTypes"
@@ -40,17 +40,34 @@
                         </template>
                     </etl-task-manage>
                 </div>
-                <div class="mt-4">
+                <div class="header-text my-4">
                     <etl-status-icon
                         :icon="$typy(activeEtlTask, 'status').safeString"
                         :spinning="isRunning"
                         class="mb-1"
                     />
-                    <span v-if="hasErrAtCreationStage" class="mxs-color-helper text-navigation">
+                    <span
+                        v-if="isPrepareEtl && !isRunning"
+                        class="mxs-color-helper text-navigation"
+                    >
+                        {{
+                            $mxs_t(
+                                isInErrState
+                                    ? 'errors.failedToPrepareMigrationScript'
+                                    : 'info.migrationScriptInfo'
+                            )
+                        }}
+                    </span>
+                    <span v-if="generalErr" class="mxs-color-helper text-navigation">
+                        {{ generalErr }}
+                    </span>
+                    <span
+                        v-else-if="hasErrAtCreationStage"
+                        class="mxs-color-helper text-navigation"
+                    >
                         {{ $mxs_t(`errors.etl_create_stage`) }}
                     </span>
-
-                    <span v-else class="mxs-color-helper text-navigation">
+                    <span v-else-if="!isPrepareEtl" class="mxs-color-helper text-navigation">
                         {{ $mxs_t($typy(activeEtlTask, 'status').safeString.toLowerCase()) }}
                         <span v-if="isRunning">...</span>
                     </span>
@@ -58,8 +75,16 @@
             </div>
         </template>
         <template v-slot:body>
+            <v-progress-linear
+                v-if="isPrepareEtl && isRunning"
+                indeterminate
+                color="primary"
+                class="align-self-start"
+            />
+            <etl-logs v-else-if="!getEtlResTable.length && isInErrState" class="fill-height" />
             <etl-tbl-script
-                :data="getMigrationResTable"
+                v-else
+                :data="getEtlResTable"
                 :headers="tableHeaders"
                 :custom-sort="customSort"
                 @get-activeRow="activeItem = $event"
@@ -77,24 +102,43 @@
                 </template>
             </etl-tbl-script>
         </template>
+
         <template v-if="!isRunning" v-slot:footer>
-            <div class="etl-migration-report-stage__footer d-flex flex-column flex-grow-1">
-                <h6 class="mxs-color-helper text-navigation">
-                    {{ $mxs_t('outputMsgs') }}
-                </h6>
-                <code
-                    class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
+            <div
+                class="etl-migration-stage__footer d-flex flex-column flex-grow-1"
+                :class="{ 'etl-migration-stage__footer--with-log': showOutputLog }"
+            >
+                <template v-if="showOutputLog">
+                    <h6 class="mxs-color-helper text-navigation">
+                        {{ $mxs_t('outputMsgs') }}
+                    </h6>
+                    <code
+                        class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap msg-log-ctr"
+                    >
+                        <template v-if="activeItem">
+                            {{
+                                activeItem.error
+                                    ? activeItem.error
+                                    : hasErrAtCreationStage
+                                    ? $mxs_t('warnings.objCreation')
+                                    : objMigrationStatus(activeItem).txt
+                            }}
+                        </template>
+                    </code>
+                </template>
+                <v-btn
+                    v-if="isPrepareEtl && !showOutputLog"
+                    small
+                    height="36"
+                    color="primary"
+                    class="mt-auto font-weight-medium px-7 text-capitalize start-btn"
+                    rounded
+                    depressed
+                    :disabled="Boolean(generalErr) || isRunning || isInErrState"
+                    @click="start"
                 >
-                    <template v-if="activeItem">
-                        {{
-                            activeItem.error
-                                ? activeItem.error
-                                : hasErrAtCreationStage
-                                ? $mxs_t('warnings.objCreation')
-                                : objMigrationStatus(activeItem).txt
-                        }}
-                    </template>
-                </code>
+                    {{ $mxs_t('startMigration') }}
+                </v-btn>
             </div>
         </template>
     </etl-stage-ctr>
@@ -119,15 +163,17 @@ import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
+import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
 import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 
 export default {
-    name: 'etl-migration-report-stage',
+    name: 'etl-migration-stage',
     components: {
         EtlStageCtr,
         EtlTblScript,
         EtlStatusIcon,
         EtlTaskManage,
+        EtlLogs,
     },
     data() {
         return {
@@ -139,12 +185,12 @@ export default {
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
             ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
+            etl_res: state => state.etlMem.etl_res,
         }),
         ...mapGetters({
-            getMigrationResTable: 'etlMem/getMigrationResTable',
+            getEtlResTable: 'etlMem/getEtlResTable',
             getMigrationStage: 'etlMem/getMigrationStage',
             isSrcAlive: 'etlMem/isSrcAlive',
         }),
@@ -155,10 +201,15 @@ export default {
             return this.activeEtlTask.id
         },
         tableHeaders() {
-            return [
-                { text: 'OBJECT', value: 'obj' },
-                { text: 'RESULT', value: 'result' },
-            ]
+            return this.isPrepareEtl
+                ? [
+                      { text: 'SCHEMA', value: 'schema' },
+                      { text: 'TABLE', value: 'table' },
+                  ]
+                : [
+                      { text: 'OBJECT', value: 'obj' },
+                      { text: 'RESULT', value: 'result' },
+                  ]
         },
         isRunning() {
             return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
@@ -166,26 +217,35 @@ export default {
         queryId() {
             return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
         },
-        isActive() {
-            return this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
+        isPrepareEtl() {
+            return this.$typy(this.activeEtlTask, 'is_prepare_etl').safeBoolean
         },
         actionTypes() {
             const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
             return [CANCEL, DELETE, DISCONNECT, RESTART]
         },
+        isInErrState() {
+            return this.activeEtlTask.status === this.ETL_STATUS.ERROR
+        },
         hasErrAtCreationStage() {
-            return (
-                this.activeEtlTask.status === this.ETL_STATUS.ERROR &&
-                this.getMigrationStage === this.ETL_API_STAGES.CREATE
-            )
+            return this.isInErrState && this.getMigrationStage === this.ETL_API_STAGES.CREATE
+        },
+        generalErr() {
+            return this.$typy(this.etl_res, 'error').safeString
+        },
+        showOutputLog() {
+            if (this.isPrepareEtl) {
+                if (!this.$typy(this.etl_res, 'ok').isDefined) return false
+                return !this.$typy(this.etl_res, 'ok').safeBoolean
+            }
+            return true
         },
     },
     watch: {
         queryId: {
             immediate: true,
             async handler(v) {
-                if (v && this.isActive && this.isSrcAlive)
-                    await this.getEtlCallRes(this.activeEtlTask.id)
+                if (v && this.isSrcAlive) await this.getEtlCallRes(this.activeEtlTask.id)
             },
         },
         activeEtlTaskId: {
@@ -200,7 +260,9 @@ export default {
             getEtlCallRes: 'etlMem/getEtlCallRes',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
-        ...mapMutations({ SET_ETL_RES: 'etlMem/SET_ETL_RES' }),
+        ...mapMutations({
+            SET_ETL_RES: 'etlMem/SET_ETL_RES',
+        }),
         async cancel() {
             await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
         },
@@ -228,6 +290,10 @@ export default {
                     return `\`${item.schema}\`.\`${item.table}\``
                 case 'result':
                     return this.objMigrationStatus(item).txt
+                case 'schema':
+                    return item.schema
+                case 'table':
+                    return item.table
                 default:
                     return ''
             }
@@ -243,22 +309,41 @@ export default {
             })
         },
         async onRestart(id) {
-            /**
-             * TODO: Show a dialog with an option for preparing script again. e.g. The users
-             * can change `create_mode`
-             */
             await this.handleEtlCall({ id, tables: this.stagingMigrationScript })
+        },
+        async start() {
+            EtlTask.update({
+                where: this.activeEtlTask.id,
+                data(obj) {
+                    obj.is_prepare_etl = false
+                },
+            })
+            await this.handleEtlCall({
+                id: this.activeEtlTask.id,
+                tables: this.stagingMigrationScript,
+            })
         },
     },
 }
 </script>
 <style lang="scss" scoped>
-.etl-migration-report-stage__footer {
-    min-height: 150px;
-    max-height: 200px;
-    .msg-log-ctr {
-        font-size: 0.75rem;
-        flex: 1 1 auto;
+.etl-migration-stage__header {
+    .header-text {
+        font-size: 0.875rem;
+    }
+}
+.etl-migration-stage__footer {
+    &--with-log {
+        min-height: 150px;
+        max-height: 200px;
+        .msg-log-ctr {
+            font-size: 0.75rem;
+            flex: 1 1 auto;
+        }
+    }
+
+    .start-btn {
+        width: 135px;
     }
 }
 </style>

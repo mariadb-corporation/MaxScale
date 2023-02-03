@@ -1,5 +1,6 @@
 <template>
     <v-icon
+        v-if="etlStatusIcon.value"
         size="14"
         :color="etlStatusIcon.color"
         class="mr-1"

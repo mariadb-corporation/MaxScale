@@ -26,6 +26,8 @@ export default class EtlTask extends Extender {
             name: this.string(''),
             status: this.string(ETL_STATUS.INITIALIZING),
             active_stage_index: this.number(ETL_STAGE_INDEX.OVERVIEW),
+            // help to differentiate stage of migration in etl-migration-stage
+            is_prepare_etl: this.boolean(false),
             /**
              * @property {string} src_type  - mariadb||postgresql||generic
              * @property {string} dest_name - server name in MaxScale
@@ -40,7 +42,6 @@ export default class EtlTask extends Extender {
             logs: this.attr({
                 [ETL_STAGE_INDEX.CONN]: [],
                 [ETL_STAGE_INDEX.SRC_OBJ]: [],
-                [ETL_STAGE_INDEX.MIGR_SCRIPT]: [],
                 [ETL_STAGE_INDEX.DATA_MIGR]: [],
             }),
             created: this.number(Date.now()),

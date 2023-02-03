@@ -167,8 +167,7 @@ export const ETL_STAGE_INDEX = Object.freeze({
     OVERVIEW: 0,
     CONN: 1,
     SRC_OBJ: 2,
-    MIGR_SCRIPT: 3,
-    DATA_MIGR: 4,
+    DATA_MIGR: 3,
 })
 
 export const ETL_SUPPORT_DB_TYPES = [
