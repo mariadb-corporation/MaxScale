@@ -223,7 +223,7 @@ export default {
 
             const {
                 ETL_STAGE_INDEX: { MIGR_SCRIPT, DATA_MIGR },
-                ETL_STATUS: { RUNNING },
+                ETL_STATUS: { RUNNING, ERROR },
             } = rootState.mxsWorkspace.config
 
             switch (task.active_stage_index) {
@@ -249,30 +249,24 @@ export default {
                     delete obj.meta.async_query_id
                 },
             })
+            const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body }))
+            if (e) {
+                status = ERROR
+                logName = `${$mxs_t(
+                    'errors.failedToPrepareMigrationScript'
+                )} ${$helpers.getErrorsArr(e).join('. ')}`
+            }
 
-            const [e, res] = await $helpers.to(
-                apiAction({
-                    id: srcConn.id,
-                    body,
-                })
-            )
-
-            if (!e) {
-                EtlTask.update({
-                    where: id,
-                    data(obj) {
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.status = status
+                    if (!e)
                         // Persist query id
                         obj.meta.async_query_id = $typy(res, 'data.data.id').safeString
-                    },
-                })
-                EtlTask.dispatch('pushLog', {
-                    id: id,
-                    log: {
-                        timestamp,
-                        name: logName,
-                    },
-                })
-            }
+                },
+            })
+            EtlTask.dispatch('pushLog', { id: id, log: { timestamp, name: logName } })
         },
     },
     getters: {
