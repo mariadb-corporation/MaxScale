@@ -851,6 +851,10 @@ bool MariaDBCluster::reset_server(int i)
     {
         logger().add_failure("Database process start failed on '%s' after reset.", namec);
     }
+    else if (reset_ok)
+    {
+        vm.run_cmd_sudo("mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql");
+    }
     return reset_ok && started;
 }
 
