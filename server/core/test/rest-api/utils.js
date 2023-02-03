@@ -419,7 +419,7 @@ module.exports = function() {
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
     this.credentials = "admin:mariadb"
-    this.host = "localhost:8989/v1"
+    this.host = "127.0.0.1:8989/v1"
     this.base_url = "http://" + this.credentials + "@" + this.host
     this.startMaxScale = function(done) {
         child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {

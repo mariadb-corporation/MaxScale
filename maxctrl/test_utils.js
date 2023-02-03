@@ -15,7 +15,7 @@ module.exports = function() {
     chai.use(chaiAsPromised)
     this.should = chai.should()
     this.expect = chai.expect
-    this.host = 'http://localhost:8989/v1/'
+    this.host = 'http://127.0.0.1:8989/v1/'
 
     this.primary_host = '127.0.0.1:8989'
     this.secondary_host = '127.0.0.1:8990'
