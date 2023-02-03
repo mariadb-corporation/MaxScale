@@ -221,6 +221,7 @@
                 "create": "Create",
                 "delete": "Delete",
                 "disconnect": "Disconnect",
+                "migrateOtherObjs": "Migrate other objects",
                 "restart": "Restart",
                 "view": "View"
             }

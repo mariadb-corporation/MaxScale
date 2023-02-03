@@ -56,6 +56,7 @@ export default {
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
@@ -75,13 +76,16 @@ export default {
                     .first() || {}
             )
         },
+        hasNoConn() {
+            return EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+        },
         /**
          * @param {Object} task
          * @returns {Array} - etl actions
          */
         actions() {
             const types = Object.values(this.actionMap).filter(o => this.types.includes(o.type))
-            const { CANCEL, DELETE, DISCONNECT, RESTART } = this.ETL_ACTIONS
+            const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = this.ETL_ACTIONS
             const status = this.task.status
             const { INITIALIZING, RUNNING, COMPLETE } = this.ETL_STATUS
             return types.map(o => {
@@ -94,9 +98,10 @@ export default {
                         if (status === RUNNING) disabled = true
                         break
                     case DISCONNECT:
-                        disabled =
-                            status === RUNNING ||
-                            EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+                        disabled = status === RUNNING || this.hasNoConn
+                        break
+                    case MIGR_OTHER_OBJS:
+                        disabled = status === RUNNING || this.hasNoConn
                         break
                     case RESTART:
                         disabled =
@@ -114,7 +119,8 @@ export default {
          * @param {Object} param.task - task
          */
         async actionHandler(action) {
-            const { CANCEL, DELETE, DISCONNECT, VIEW, RESTART } = this.ETL_ACTIONS
+            const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW, RESTART } = this.ETL_ACTIONS
+            const { SRC_OBJ } = this.ETL_STAGE_INDEX
             switch (action.type) {
                 case CANCEL:
                     await EtlTask.dispatch('cancelEtlTask', this.task.id)
@@ -128,6 +134,14 @@ export default {
                     break
                 case DISCONNECT:
                     await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)
+                    break
+                case MIGR_OTHER_OBJS:
+                    EtlTask.update({
+                        where: this.task.id,
+                        data(obj) {
+                            obj.active_stage_index = SRC_OBJ
+                        },
+                    })
                     break
                 case VIEW:
                     EtlTask.dispatch('viewEtlTask', this.task)

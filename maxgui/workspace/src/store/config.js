@@ -151,6 +151,7 @@ export const ETL_ACTIONS = Object.freeze({
     CREATE: 'create',
     DELETE: 'delete',
     DISCONNECT: 'disconnect',
+    MIGR_OTHER_OBJS: 'migrateOtherObjs',
     RESTART: 'restart',
     VIEW: 'view',
 })

@@ -1,6 +1,6 @@
 <template>
     <v-row v-resize.quiet="setTblMaxHeight" class="fill-height">
-        <v-col cols="12" md="6" class="fill-height pt-0">
+        <v-col cols="12" md="6" class="fill-height py-0">
             <div ref="tableWrapper" class="fill-height migration-tbl-wrapper">
                 <mxs-data-table
                     :value="isRunning ? [] : selectItems"
@@ -20,7 +20,7 @@
                 </mxs-data-table>
             </div>
         </v-col>
-        <v-col cols="12" md="6" class="fill-height pt-0">
+        <v-col cols="12" md="6" class="fill-height py-0">
             <etl-script-editors
                 v-if="activeRow && !isRunning && hasScriptFields"
                 v-model="activeRow"
