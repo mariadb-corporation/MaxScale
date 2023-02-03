@@ -16,9 +16,7 @@
             inset
         >
             <span class="footer-text mxs-color-helper text-code-color align-center text-truncate">
-                MariaDB Corporation <span class="footer__separator" />
-                Copyright © 2020 MariaDB ab. All rights reserved.
-                Copyright © 202023 MariaDB plc, Finnish Branch
+                {{ $mxs_t('mariadbCopyright') }}
                 <span class="footer__separator" />
                 <a
                     target="_blank"
@@ -26,8 +24,8 @@
                     href="https://mariadb.com/privacy-policy/"
                     class="rsrc-link"
                 >
-                    Privacy Policy</a
-                >
+                    {{ $mxs_t('privacyPolicy') }}
+                </a>
                 <span class="footer__separator" />
                 <a
                     target="_blank"
@@ -35,7 +33,7 @@
                     href="https://mariadb.com/product-terms-condition/"
                     class="rsrc-link"
                 >
-                    Terms of Use
+                    {{ $mxs_t('termsOfUse') }}
                 </a>
             </span>
         </v-footer>
