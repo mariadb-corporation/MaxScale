@@ -6,7 +6,7 @@
     "license": "SEE LICENSE IN ../LICENSE.TXT",
     "scripts": {
         "serve": "vue-cli-service serve --mode development",
-        "build": "vue-cli-service build",
+        "build": "if [ $(node -v | cut -c 2,3) -ge 17 ]; then export NODE_OPTIONS=--openssl-legacy-provider; fi; vue-cli-service build",
         "test:unit": "NODE_OPTIONS=--max_old_space_size=2048 vue-cli-service test:unit -t 5000 -r tests/unit/bootstrap.js **/src/*/**/*.spec.js",
         "lint": "vue-cli-service lint",
         "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'",
