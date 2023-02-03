@@ -241,6 +241,7 @@ export default {
                     break
                 }
             }
+            if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
             EtlTask.update({
                 where: id,
                 data(obj) {
