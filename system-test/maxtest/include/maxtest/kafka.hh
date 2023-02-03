@@ -111,7 +111,10 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
             return false;
         }
 
-        if (!m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz"))
+        std::string file = m_test.maxscale->access_homedir();
+        file += "/kafka_2.13-2.7.0.tgz";
+
+        if (!m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", file.c_str()))
         {
             m_test.add_failure("Failed to copy kafka sources to node.");
             return false;
