@@ -21,23 +21,34 @@ namespace
 
 const int PORT_RWS_REDIS = 4006;
 
+bool install_dependency(TestConnections& test, const char* zDependency)
+{
+    test.tprintf("Installing %s.", zDependency);
+
+    int rv = test.maxscale->ssh_node_f(true, "yum install -y %s", zDependency);
+    test.expect(rv == 0, "Could not install %s.", zDependency);
+
+    return rv == 0;
+}
+
 bool build_redis(TestConnections& test)
 {
     auto maxscale = test.maxscale;
 
-    int rv;
+    int rv = 0;
 
-    test.tprintf("Removing possible old redis installation.");
-    rv = maxscale->ssh_node_f(false, "cd %s; rm -rf redis",
-                              maxscale->access_homedir());
-    test.expect(rv == 0, "Could not remove old redis installation.");
+    rv += !install_dependency(test, "git");
+    rv += !install_dependency(test, "make");
+    rv += !install_dependency(test, "gcc");
+    rv += !install_dependency(test, "jemalloc-devel");
+    rv += !install_dependency(test, "openssl-devel");
 
     if (rv == 0)
     {
-        test.tprintf("Installing git.");
-
-        rv = maxscale->ssh_node_f(true, "yum install -y git");
-        test.expect(rv == 0, "Could not install git.");
+        test.tprintf("Removing possible old redis installation.");
+        rv = maxscale->ssh_node_f(false, "cd %s; rm -rf redis",
+                                  maxscale->access_homedir());
+        test.expect(rv == 0, "Could not remove old redis installation.");
 
         if (rv == 0)
         {
