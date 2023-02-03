@@ -42,14 +42,14 @@ void test_reads(TestConnections& test)
     }
 }
 
-void test_queries(TestConnections& test, std::initializer_list<std::string> before,
+void test_queries(TestConnections& test, const char* func, std::initializer_list<std::string> before,
                   std::initializer_list<std::string> after, bool ignore_errors = false)
 {
     std::string table = "test.t" + std::to_string(id++);
     auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT)"),
-                "Table creation should work: %u, %s", conn.thread_id(), conn.error());
+                "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
     conn.disconnect();
 
     for (int i = 0; i < 100 && running && test.ok(); i++)
@@ -59,58 +59,59 @@ void test_queries(TestConnections& test, std::initializer_list<std::string> befo
 
         for (const auto& query : before)
         {
-            test.expect(conn.query(query),
-                        "%s should work: %u, %s", query.c_str(), conn.thread_id(), conn.error());
+            test.expect(conn.query(query), "%s: %s should work: %u, %s",
+                        func, query.c_str(), conn.thread_id(), conn.error());
         }
 
         bool ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
         bool ro_error = conn.errnum() == ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION && ignore_errors;
-        test.expect(ok || ignore_errors, "INSERT should work: %u, %s", conn.thread_id(), conn.error());
+        test.expect(ok || ignore_errors, "%s: INSERT should work: %u, %s",
+                    func, conn.thread_id(), conn.error());
         auto first_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(first_count == i + 1 || ro_error, "Missing %d rows.", (i + 1) - first_count);
+        test.expect(first_count == i + 1 || ro_error, "%s: Missing %d rows.", func, (i + 1) - first_count);
 
 
         for (const auto& query : after)
         {
-            test.expect(conn.query(query),
-                        "%s should work: %u, %s", query.c_str(), conn.thread_id(), conn.error());
+            test.expect(conn.query(query), "%s: %s should work: %u, %s",
+                        func, query.c_str(), conn.thread_id(), conn.error());
         }
 
         conn.disconnect();
         conn.connect();
         auto second_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
-        test.expect(second_count == i + 1 || ro_error, "Missing %d rows.", (i + 1) - second_count);
+        test.expect(second_count == i + 1 || ro_error, "%s: Missing %d rows.", func, (i + 1) - second_count);
         conn.disconnect();
     }
 }
 
 void test_no_trx(TestConnections& test)
 {
-    test_queries(test, {}, {});
+    test_queries(test, __func__, {}, {});
 }
 
 void test_rw_trx(TestConnections& test)
 {
-    test_queries(test, {"START TRANSACTION"}, {"COMMIT"});
+    test_queries(test, __func__, {"START TRANSACTION"}, {"COMMIT"});
 }
 
 void test_autocommit_on(TestConnections& test)
 {
-    test_queries(test, {"SET autocommit=1"}, {});
+    test_queries(test, __func__, {"SET autocommit=1"}, {});
 }
 
 void test_autocommit_off(TestConnections& test)
 {
-    test_queries(test, {"SET autocommit=0"}, {"COMMIT"});
+    test_queries(test, __func__, {"SET autocommit=0"}, {"COMMIT"});
 }
 
 void test_ro_trx(TestConnections& test)
 {
-    test_queries(test, {"START TRANSACTION READ ONLY"}, {"COMMIT"}, true);
+    test_queries(test, __func__, {"START TRANSACTION READ ONLY"}, {"COMMIT"}, true);
 }
 void test_ro_trx_set_trx(TestConnections& test)
 {
-    test_queries(test, {"SET TRANSACTION READ ONLY", "START TRANSACTION"}, {"COMMIT"}, true);
+    test_queries(test, __func__, {"SET TRANSACTION READ ONLY", "START TRANSACTION"}, {"COMMIT"}, true);
 }
 
 int main(int argc, char** argv)
