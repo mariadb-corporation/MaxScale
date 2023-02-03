@@ -129,7 +129,16 @@ separate user credentials database. By default, that database contains the user
 
 Note that if MaxCtrl is invoked without explicitly providing a user and password
 then it will by default use `admin` and `mariadb`. That means that when the
-default user is removed, the credentials must always be provded.
+default user is removed, the credentials must always be provided.
+
+## Administration audit file
+
+The REST API calls to MaxScale can be logged
+by enabling [admin_audit](#admin_audit).
+
+For more detail see the admin audit configuration values `admin_audit`,
+`admin_audit_file` and `admin_audit_exclude_methods` below
+and [Administration Tutorial](../Tutorials/Administration-Tutorial.md#Administration audit file).
 
 ## Static Configuration Parameters
 
@@ -1561,6 +1570,43 @@ cannot be reached.
 By delegating the authentication and authorization of the REST API to an
 external server, users can implement custom access control systems for the
 MaxScale REST API.
+
+### `admin_audit`
+
+- **Type**: [boolean](#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
+Enable logging of incoming REST API calls.
+
+### `admin_audit_file`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: `admin_audit.csv` in [logdir](#logdir)
+
+If specified, the absolute path must be given, e.g.
+`/var/log/maxscale/audit_files/audit.csv`, the directory
+`/var/log/maxscale/audit_files` must exist.
+
+### `admin_audit_exclude_methods`
+
+- **Type**: [enum](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `GET`, `PUT`, `POST`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `CONNECT`, `TRACE`
+- **Default**: No exclusions
+
+List of comma separated HTTP methods to exclude from logging
+Currently MaxScale does not use `CONNECT` or `TRACE`.
+
+Resetting to log all methods can be done in the configuration file by
+writing `admin_audit_exclude_methods=` or at runtime with
+`maxctrl alter maxscale admin_audit_exclude_methods=`.
+Remember that once a runtime change has been made, the entry for that
+setting is ignored in the main configuration file (usually maxscale.cnf).
 
 ### `config_sync_cluster`
 
