@@ -1849,16 +1849,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                     const string& name = kv.first;
                     const string& value = kv.second.value;
 
-                    if (is_empty_string(value))
-                    {
-                        MXB_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
-                                  name.c_str(), type_to_str(source_type), source_file.c_str());
-                        errors++;
-                    }
-                    else
-                    {
-                        params_out.set(name, value);
-                    }
+                    params_out.set(name, value);
                 }
             }
             else
