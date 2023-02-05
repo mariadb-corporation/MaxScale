@@ -68,6 +68,10 @@ public:
         : m_test(test)
     {
         static mxb::http::Init initer;
+
+        // TODO: Replace this with something universal
+        auto res = m_test.maxscale->ssh_output("yum -y install postgresql-odbc");
+        m_test.expect(res.rc == 0, "Failed to install ODBC drivers: %s", res.output.c_str());
     }
 
     void run_tests(const std::string& dsn, const TestCases& test_cases)
