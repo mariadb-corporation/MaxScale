@@ -398,7 +398,7 @@ module.exports = function () {
   this.ajv.addMetaSchema(draft6MetaSchema);
   this.validate_func = ajv.compile(json_api_schema);
   this.validate = validate_json;
-  this.host = "localhost:8989/v1";
+  this.host = "127.0.0.1:8989/v1";
   this.base_url = "http://" + this.host;
   this.credentials = { username: "admin", password: "mariadb" };
   this.db_credentials = { user: "maxuser", password: "maxpwd" };
