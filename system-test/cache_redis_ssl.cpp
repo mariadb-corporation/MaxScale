@@ -84,10 +84,19 @@ bool generate_certificates(TestConnections& test)
 
     int rv;
 
+    const char* zHome = maxscale->access_homedir();
+
     test.tprintf("Generating certificates.");
-    rv = maxscale->ssh_node_f(false, "cd %s/redis; ./utils/gen-test-certs.sh",
-                              maxscale->access_homedir());
+    rv = maxscale->ssh_node_f(false, "cd %s/redis; ./utils/gen-test-certs.sh", zHome);
     test.expect(rv == 0, "Could not generate certificates.");
+
+    rv = maxscale->ssh_node_f(true,
+                              "chmod o+x %s/redis;"
+                              "chmod o+x %s/redis/tests;"
+                              "chmod o+x %s/redis/tests/tls;"
+                              "chmod o+r %s/redis/tests/tls/*",
+                              zHome, zHome, zHome, zHome);
+    test.expect(rv == 0, "Could not change mode on files.");
 
     return rv == 0;
 }
