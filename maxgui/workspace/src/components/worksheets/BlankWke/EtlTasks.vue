@@ -35,9 +35,9 @@
                 {{ parseMeta(value).to }}
             </div>
         </template>
-        <template v-slot:[`item.menu`]="{ value }">
+        <template v-slot:[`item.menu`]="{ item, value }">
             <etl-task-manage
-                :id="value"
+                :task="item"
                 :types="actionTypes"
                 content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
                 @input="activeItemMenu = $event ? value : null"

@@ -8,7 +8,7 @@
                     </h3>
                     <etl-migration-manage
                         v-if="!isPrepareEtl"
-                        :taskId="$typy(activeEtlTask, 'id').safeString"
+                        :task="activeEtlTask"
                         @on-restart="onRestart"
                     />
                 </div>

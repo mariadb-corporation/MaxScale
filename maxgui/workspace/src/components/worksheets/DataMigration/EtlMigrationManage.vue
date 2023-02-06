@@ -1,7 +1,22 @@
 <template>
+    <v-btn
+        v-if="isRunning || isDone"
+        small
+        height="30"
+        :color="standaloneBtnData.type === ETL_ACTIONS.DELETE ? 'error' : 'primary'"
+        class="ml-4 font-weight-medium px-4 text-capitalize"
+        rounded
+        depressed
+        outlined
+        :disabled="isStandaloneBtnDisabled"
+        @click="standaloneBtnHandler"
+    >
+        {{ standaloneBtnData.txt }}
+    </v-btn>
     <etl-task-manage
-        :id="taskId"
+        v-else
         v-model="isMenuOpened"
+        :task="task"
         :types="actionTypes"
         content-class="v-menu--mariadb v-menu--mariadb-with-shadow-no-border"
         v-on="$listeners"
@@ -46,6 +61,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
 import { mapState } from 'vuex'
 
@@ -53,11 +69,12 @@ export default {
     name: 'etl-migration-manage',
     components: { EtlTaskManage },
     props: {
-        taskId: { type: String, required: true },
+        task: { type: Object, required: true },
     },
     data() {
         return {
             isMenuOpened: false,
+            isStandaloneBtnDisabled: false,
         }
     },
     computed: {
@@ -68,6 +85,33 @@ export default {
         actionTypes() {
             const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = this.ETL_ACTIONS
             return [CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART]
+        },
+        hasNoConn() {
+            return EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+        },
+        isRunning() {
+            return this.task.status === this.ETL_STATUS.RUNNING
+        },
+        // No longer able to do anything else except deleting the task
+        isDone() {
+            return this.hasNoConn && this.task.status === this.ETL_STATUS.COMPLETE
+        },
+        standaloneBtnData() {
+            const { CANCEL, DELETE } = this.ETL_ACTIONS
+            let type
+            if (this.isRunning) type = CANCEL
+            else if (this.isDone) type = DELETE
+            return { type, txt: this.$mxs_t(`etlOps.actions.${type}`) }
+        },
+    },
+    methods: {
+        async standaloneBtnHandler() {
+            this.isStandaloneBtnDisabled = true
+            await EtlTask.dispatch('actionHandler', {
+                type: this.standaloneBtnData.type,
+                task: this.task,
+            })
+            this.isStandaloneBtnDisabled = false
         },
     },
 }

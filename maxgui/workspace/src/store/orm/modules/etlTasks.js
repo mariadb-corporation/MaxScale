@@ -13,6 +13,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import Worksheet from '@wsModels/Worksheet'
+import QueryConn from '@wsModels/QueryConn'
 import { cancel } from '@wsSrc/api/etl'
 
 export default {
@@ -77,6 +78,46 @@ export default {
                     obj.logs[`${obj.active_stage_index}`].push(log)
                 },
             })
+        },
+        /**
+         * @param {String} param.type - ETL_ACTIONS
+         * @param {Object} param.task - etl task
+         */
+        async actionHandler({ rootState, commit, dispatch }, { type, task }) {
+            const {
+                ETL_ACTIONS: { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW },
+                ETL_STAGE_INDEX: { SRC_OBJ },
+                MIGR_DLG_TYPES,
+            } = rootState.mxsWorkspace.config
+
+            switch (type) {
+                case CANCEL:
+                    await dispatch('cancelEtlTask', task.id)
+                    break
+                case DELETE:
+                    commit(
+                        'mxsWorkspace/SET_MIGR_DLG',
+                        {
+                            etl_task_id: task.id,
+                            type: MIGR_DLG_TYPES.DELETE,
+                            is_opened: true,
+                        },
+                        { root: true }
+                    )
+                    break
+                case DISCONNECT:
+                    await QueryConn.dispatch('disconnectConnsFromTask', task.id)
+                    break
+                case MIGR_OTHER_OBJS:
+                    EtlTask.update({
+                        where: task.id,
+                        data: { active_stage_index: SRC_OBJ },
+                    })
+                    break
+                case VIEW:
+                    dispatch('viewEtlTask', task)
+                    break
+            }
         },
     },
     getters: {

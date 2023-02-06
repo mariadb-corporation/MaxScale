@@ -8,7 +8,7 @@
                 v-for="action in actions"
                 :key="action.text"
                 :disabled="action.disabled"
-                @click="actionHandler(action)"
+                @click="handler(action.type)"
             >
                 <v-list-item-title
                     class="mxs-color-helper"
@@ -41,22 +41,19 @@
  * @on-restart: string : etl task id
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsModels/QueryConn'
-import { mapState, mapMutations } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'etl-task-manage',
     inheritAttrs: false,
     props: {
-        id: { type: String, required: true },
+        task: { type: Object, required: true },
         types: { type: Array, required: true },
     },
     computed: {
         ...mapState({
             ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
@@ -68,16 +65,11 @@ export default {
                 return obj
             }, {})
         },
-        task() {
-            return (
-                EtlTask.query()
-                    .whereId(this.id)
-                    .with('connections')
-                    .first() || {}
-            )
-        },
         hasNoConn() {
             return EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+        },
+        isRunning() {
+            return this.task.status === this.ETL_STATUS.RUNNING
         },
         /**
          * @param {Object} task
@@ -87,25 +79,24 @@ export default {
             const types = Object.values(this.actionMap).filter(o => this.types.includes(o.type))
             const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = this.ETL_ACTIONS
             const status = this.task.status
-            const { INITIALIZING, RUNNING, COMPLETE } = this.ETL_STATUS
+            const { INITIALIZING, COMPLETE } = this.ETL_STATUS
             return types.map(o => {
                 let disabled = false
                 switch (o.type) {
                     case CANCEL:
-                        if (status !== RUNNING) disabled = true
+                        disabled = !this.isRunning
                         break
                     case DELETE:
-                        if (status === RUNNING) disabled = true
+                        disabled = this.isRunning
                         break
                     case DISCONNECT:
-                        disabled = status === RUNNING || this.hasNoConn
+                        disabled = this.isRunning || this.hasNoConn
                         break
                     case MIGR_OTHER_OBJS:
-                        disabled = status === RUNNING || this.hasNoConn
+                        disabled = this.isRunning || this.hasNoConn
                         break
                     case RESTART:
-                        disabled =
-                            status === RUNNING || status === COMPLETE || status === INITIALIZING
+                        disabled = this.isRunning || status === COMPLETE || status === INITIALIZING
                         break
                 }
                 return { ...o, disabled }
@@ -113,43 +104,9 @@ export default {
         },
     },
     methods: {
-        ...mapMutations({ SET_MIGR_DLG: 'mxsWorkspace/SET_MIGR_DLG' }),
-        /**
-         * @param {String} param.type - delete||cancel
-         * @param {Object} param.task - task
-         */
-        async actionHandler(action) {
-            const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW, RESTART } = this.ETL_ACTIONS
-            const { SRC_OBJ } = this.ETL_STAGE_INDEX
-            switch (action.type) {
-                case CANCEL:
-                    await EtlTask.dispatch('cancelEtlTask', this.task.id)
-                    break
-                case DELETE:
-                    this.SET_MIGR_DLG({
-                        etl_task_id: this.task.id,
-                        type: this.MIGR_DLG_TYPES.DELETE,
-                        is_opened: true,
-                    })
-                    break
-                case DISCONNECT:
-                    await QueryConn.dispatch('disconnectConnsFromTask', this.task.id)
-                    break
-                case MIGR_OTHER_OBJS:
-                    EtlTask.update({
-                        where: this.task.id,
-                        data(obj) {
-                            obj.active_stage_index = SRC_OBJ
-                        },
-                    })
-                    break
-                case VIEW:
-                    EtlTask.dispatch('viewEtlTask', this.task)
-                    break
-                case RESTART:
-                    this.$emit('on-restart', this.task.id)
-                    break
-            }
+        async handler(type) {
+            if (type === this.ETL_ACTIONS.RESTART) this.$emit('on-restart', this.task.id)
+            else await EtlTask.dispatch('actionHandler', { type, task: this.task })
         },
     },
 }
