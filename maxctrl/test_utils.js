@@ -14,7 +14,7 @@ const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 const should = chai.should();
 const expect = chai.expect;
-const host = "http://localhost:8989/v1/";
+const host = "http://127.0.0.1:8989/v1/";
 
 const primary_host = "127.0.0.1:8989";
 let secondary_host = "127.0.0.1:8990";

@@ -246,9 +246,6 @@ describe("Service", function () {
   });
 
   const listener = {
-    links: {
-      self: "http://localhost:8989/v1/services/RW-Split-Router/listeners",
-    },
     data: {
       attributes: {
         parameters: {
