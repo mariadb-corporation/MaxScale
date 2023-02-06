@@ -170,3 +170,45 @@ can be influenced with the server priority mechanic described in the
 ## Router limitations
 
 Refer to individual router documentation for a list of their limitations.
+
+# ETL Limitations
+
+The ETL feature in MaxScale always uses the MariaDB Connector/ODBC driver to
+perform the data loading into MariaDB. The recommended minimum version of the
+connector is 3.1.18. Older versions of the driver suffer from problems that may
+manifest as crashes or memory leaks. The driver must be installed on the system
+in order for the ETL feature to work.
+
+The data loading into MariaDB is done with `autocommit`, `unique_checks` and
+`foreign_key_checks` disabled inside of a single transaction. This is done to
+leverage the optimizations done for InnoDB that allows faster insertions into
+empty tables. When loading data into MariaDB versions 10.5 or older, this can
+translate into long rollback times in case the ETL operation fails.
+
+## ETL Limitations with PostgreSQL as the Source
+
+For ETL operations that migrate data from PostgreSQL, we recommend using the
+official PostgreSQL ODBC driver. Use of other PostgreSQL ODBC drivers is
+possible but not recommended: correct configuration of the driver is necessary
+to prevent the driver from consuming too much memory.
+
+### Limitations in Automatic SQL Generation
+
+* Triggers on tables are not migrated automatically.
+
+* Check constraints are defined using the native PostgreSQL
+  syntax. Incompatibilities must be manually fixed.
+
+* All indexes specific to PostgreSQL will be converted into normal indexes in
+  MariaDB.
+
+* User-defined or composite data types are not converted into any MariaDB
+  types. The correct type in MariaDB must be selected manually.
+
+## ETL Limitations with Generic ODBC Targets
+
+It is the responsibility of the end-user to correctly configure the ODBC
+driver. Some drivers read the whole resultset into memory by default which will
+result in MaxScale running out of memory
+
+* ETL operations that operate on more than one catalog are not supported.
