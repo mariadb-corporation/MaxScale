@@ -157,7 +157,9 @@ public:
         }, sql);
     }
 
-    bool compare_results(const std::string& dsn, int node, const std::string& sql)
+    bool compare_results(const std::string& dsn, int node,
+                         const std::string& sql_src,
+                         const std::string& sql_dest)
     {
         std::ostringstream ss;
         ss << "DRIVER=libmaodbc.so;"
@@ -166,7 +168,7 @@ public:
            << "UID=" << m_test.maxscale->user_name() << ";"
            << "PWD={" << m_test.maxscale->password() << "}";
 
-        auto source = query_odbc(dsn, sql).at("data/attributes/results");
+        auto source = query_odbc(dsn, sql_src).at("data/attributes/results");
 
         // The connection requires some setup to be usable with the same SQL on both the source and the
         // destination. The most important of these is SQL_MODE=ANSI_QUOTES which makes MariaDB behave like
@@ -185,7 +187,7 @@ public:
             payload.set_string("sql", "SET SQL_MODE='ANSI_QUOTES'");
             post(mxb::cat("sql/", id, "/queries/?token=", token), payload);
 
-            payload.set_string("sql", sql);
+            payload.set_string("sql", sql_dest);
             auto res = post(mxb::cat("sql/", id, "/queries/?token=", token), payload);
             mxb::Json js(mxb::Json::Type::UNDEFINED);
 
@@ -199,7 +201,12 @@ public:
 
         return m_test.expect(source.valid() == dest.valid() && source == dest,
                              "Result mismatch for '%s'. Source %s\n Destination: %s",
-                             sql.c_str(), source.to_string().c_str(), dest.to_string().c_str());
+                             sql_dest.c_str(), source.to_string().c_str(), dest.to_string().c_str());
+    }
+
+    bool compare_results(const std::string& dsn, int node, const std::string& sql)
+    {
+        return compare_results(dsn, node, sql, sql);
     }
 
     // Checks that a query did not return an error

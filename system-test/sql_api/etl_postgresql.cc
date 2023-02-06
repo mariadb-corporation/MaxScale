@@ -235,6 +235,33 @@ void sequences(TestConnections& test, EtlTest& etl, const std::string& dsn)
     dest.query("DROP SEQUENCE public.s1");
 }
 
+void user_defined_types(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto create =
+        R"(
+CREATE TYPE my_type AS (a int, b text, c real);
+CREATE TABLE user_defined_types(a my_type, b my_type);
+INSERT INTO user_defined_types VALUES ((1, 'hello', 3), (2, 'world', 4));
+    )";
+
+    etl.check_odbc_result(dsn, create);
+
+    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                 {EtlTable {"public", "user_defined_types"}});
+
+    if (test.expect(ok, "ETL failed: %s", res.to_string().c_str()))
+    {
+        etl.compare_results(dsn, 0, "SELECT TO_JSON(a) a, TO_JSON(b) b FROM public.user_defined_types",
+                            "SELECT a, b FROM public.user_defined_types");
+    }
+
+    etl.check_odbc_result(dsn, "DROP TABLE public.user_defined_types; DROP TYPE my_type;");
+
+    auto dest = test.repl->get_connection(0);
+    test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+    test.expect(dest.query("DROP TABLE public.user_defined_types;"), "Failed to drop: %s", dest.error());
+}
+
 void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
@@ -257,6 +284,7 @@ void test_main(TestConnections& test)
         TESTCASE(default_values),
         TESTCASE(generated_columns),
         TESTCASE(sequences),
+        TESTCASE(user_defined_types),
     };
 
     etl.check_odbc_result(dsn, "CREATE SCHEMA test");
