@@ -65,7 +65,7 @@ export default {
         ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
         ...mapGetters({ areConnsAlive: 'etlMem/areConnsAlive' }),
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         disabled() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS

@@ -160,7 +160,7 @@ export default {
             return this.parsedObjs.tables
         },
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         disabled() {
             if (this.tables.length) return this.showConfirm ? !this.isConfirmed : false

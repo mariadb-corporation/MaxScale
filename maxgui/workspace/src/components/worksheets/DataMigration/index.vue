@@ -56,7 +56,7 @@ export default {
             areConnsAlive: 'etlMem/areConnsAlive',
         }),
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         hasEtlRes() {
             return Boolean(this.getEtlResTable.length)

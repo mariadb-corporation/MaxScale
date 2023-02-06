@@ -44,7 +44,7 @@ export default {
     },
     computed: {
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         etlLog() {
             return this.$typy(this.activeEtlTask, 'logs').safeObjectOrEmpty

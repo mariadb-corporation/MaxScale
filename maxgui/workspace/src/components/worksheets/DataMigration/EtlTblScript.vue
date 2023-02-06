@@ -73,7 +73,7 @@ export default {
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         defDataMap() {
             return this.data.reduce((map, obj) => {

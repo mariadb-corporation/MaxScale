@@ -85,16 +85,16 @@ export default {
             return this.rc_target_names_map[this.destTargetType] || []
         },
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         activeSrcConn() {
-            return EtlTask.getters('getActiveSrcConn')
+            return QueryConn.getters('getActiveSrcConn')
         },
         activeDestConn() {
-            return EtlTask.getters('getActiveDestConn')
+            return QueryConn.getters('getActiveDestConn')
         },
         hasActiveConns() {
-            return this.$typy(this.activeEtlTask, 'connections').safeArray.length >= 2
+            return QueryConn.getters('getActiveEtlConns').length >= 2
         },
     },
     async created() {

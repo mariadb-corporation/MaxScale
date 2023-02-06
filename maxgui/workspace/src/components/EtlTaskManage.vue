@@ -41,6 +41,7 @@
  * @on-restart: string : etl task id
  */
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
 import { mapState } from 'vuex'
 
 export default {
@@ -66,7 +67,7 @@ export default {
             }, {})
         },
         hasNoConn() {
-            return EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+            return QueryConn.getters('getEtlConnsByTaskId')(this.task.id).length === 0
         },
         isRunning() {
             return this.task.status === this.ETL_STATUS.RUNNING

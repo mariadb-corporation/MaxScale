@@ -62,6 +62,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
 import { mapState } from 'vuex'
 
@@ -87,7 +88,7 @@ export default {
             return [CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART]
         },
         hasNoConn() {
-            return EtlTask.getters('getEtlConnsByTaskId')(this.task.id).length === 0
+            return QueryConn.getters('getEtlConnsByTaskId')(this.task.id).length === 0
         },
         isRunning() {
             return this.task.status === this.ETL_STATUS.RUNNING

@@ -12,6 +12,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsModels/QueryConn'
 import { query, getAsyncResult } from '@wsSrc/api/query'
 import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -42,7 +43,7 @@ export default {
     actions: {
         async fetchSrcSchemas({ getters, commit }) {
             const { $mxs_t, $helpers, $typy } = this.vue
-            const active_etl_task_id = EtlTask.getters('getActiveEtlTaskWithRelation').id
+            const active_etl_task_id = EtlTask.getters('getActiveEtlTask').id
             EtlTask.dispatch('pushLog', {
                 id: active_etl_task_id,
                 log: {
@@ -52,7 +53,7 @@ export default {
             })
             const [e, res] = await $helpers.to(
                 query({
-                    id: EtlTask.getters('getActiveSrcConn').id,
+                    id: QueryConn.getters('getActiveSrcConn').id,
                     body: { sql: getters.getSchemaSql },
                 })
             )
@@ -84,7 +85,7 @@ export default {
          * @param {Object} nodeGroup - TBL_G node
          */
         async loadChildNodes({ state, rootState, commit }, nodeGroup) {
-            const { id: connId } = EtlTask.getters('getActiveSrcConn')
+            const { id: connId } = QueryConn.getters('getActiveSrcConn')
             const {
                 NODE_GROUP_TYPES: { TBL_G },
             } = rootState.mxsWorkspace.config
@@ -115,7 +116,7 @@ export default {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
-            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
+            const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const {
                 INITIALIZING,
                 COMPLETE,
@@ -183,8 +184,8 @@ export default {
             const { $helpers, $typy, $mxs_t } = this.vue
             const { RUNNING, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
 
-            const srcConn = EtlTask.getters('getSrcConnByEtlTaskId')(id)
-            const destConn = EtlTask.getters('getDestConnByEtlTaskId')(id)
+            const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
+            const destConn = QueryConn.getters('getDestConnByEtlTaskId')(id)
 
             const task = EtlTask.find(id)
 
@@ -245,7 +246,7 @@ export default {
             return `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
         },
         getPersistedEtlRes: () => {
-            const { res = {} } = EtlTask.getters('getActiveEtlTaskWithRelation')
+            const { res = {} } = EtlTask.getters('getActiveEtlTask')
             return res
         },
         getEtlResTable: (state, getters) => {
@@ -256,8 +257,8 @@ export default {
             const { stage = ' []' } = state.etl_res || getters.getPersistedEtlRes
             return stage
         },
-        isSrcAlive: () => Boolean(EtlTask.getters('getActiveSrcConn').id),
-        isDestAlive: () => Boolean(EtlTask.getters('getActiveDestConn').id),
+        isSrcAlive: () => Boolean(QueryConn.getters('getActiveSrcConn').id),
+        isDestAlive: () => Boolean(QueryConn.getters('getActiveDestConn').id),
         areConnsAlive: (state, getters) => getters.isSrcAlive && getters.isDestAlive,
         getIsEtlCancelledById: (state, getters, rootState) => id => {
             const { CANCELED } = rootState.mxsWorkspace.config.ETL_STATUS

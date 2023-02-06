@@ -175,7 +175,7 @@ export default {
             isSrcAlive: 'etlMem/isSrcAlive',
         }),
         activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTaskWithRelation')
+            return EtlTask.getters('getActiveEtlTask')
         },
         activeEtlTaskId() {
             return this.activeEtlTask.id

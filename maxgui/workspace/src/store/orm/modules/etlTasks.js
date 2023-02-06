@@ -33,8 +33,8 @@ export default {
         /**
          * @param {String} id - etl task id
          */
-        async cancelEtlTask({ commit, getters, rootState }, id) {
-            const { id: srcConnId } = getters.getSrcConnByEtlTaskId(id)
+        async cancelEtlTask({ commit, rootState }, id) {
+            const { id: srcConnId } = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             if (srcConnId) {
                 const [e] = await this.vue.$helpers.to(cancel(srcConnId))
                 const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
@@ -121,47 +121,19 @@ export default {
         },
     },
     getters: {
+        getActiveEtlTask: () =>
+            EtlTask.query()
+                .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
+                .first() || {},
         getActiveEtlTaskWithRelation: () =>
             EtlTask.query()
                 .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
                 .with('connections')
                 .first() || {},
-        getActiveEtlConns: (state, getters) =>
-            getters.getActiveEtlTaskWithRelation.connections || [],
-        getActiveSrcConn: (state, getters, rootState) =>
-            getters.getActiveEtlConns.find(
-                c =>
-                    c.binding_type ===
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-            ) || {},
-        getActiveDestConn: (state, getters, rootState) =>
-            getters.getActiveEtlConns.find(
-                c =>
-                    c.binding_type ===
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
-            ) || {},
         getEtlTaskWithRelationById: () => etl_task_id =>
             EtlTask.query()
                 .whereId(etl_task_id)
                 .with('connections')
                 .first() || {},
-        getEtlConnsByTaskId: (state, getters) => etl_task_id =>
-            getters.getEtlTaskWithRelationById(etl_task_id).connections || [],
-        getSrcConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
-            getters
-                .getEtlConnsByTaskId(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-                ) || {},
-        getDestConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
-            getters
-                .getEtlConnsByTaskId(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
-                ) || {},
     },
 }
