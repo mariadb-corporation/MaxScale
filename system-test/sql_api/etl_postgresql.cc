@@ -262,6 +262,32 @@ INSERT INTO user_defined_types VALUES ((1, 'hello', 3), (2, 'world', 4));
     test.expect(dest.query("DROP TABLE public.user_defined_types;"), "Failed to drop: %s", dest.error());
 }
 
+void array_types(TestConnections& test, EtlTest& etl, const std::string& dsn)
+{
+    auto create =
+        R"(
+CREATE TABLE array_type(a int[], b text[]);
+INSERT INTO array_type VALUES ('{1, 2, 3}', '{''hello'', ''world''}');
+    )";
+
+    etl.check_odbc_result(dsn, create);
+
+    auto [ok, res] = etl.run_etl(dsn, "server1", "postgresql", EtlTest::Op::START, 15s,
+                                 {EtlTable {"public", "array_type"}});
+
+    if (test.expect(ok, "ETL failed: %s", res.to_string().c_str()))
+    {
+        etl.compare_results(dsn, 0, "SELECT TO_JSON(a) a, TO_JSON(b) b FROM public.array_type",
+                            "SELECT a, b FROM public.array_type");
+    }
+
+    etl.check_odbc_result(dsn, "DROP TABLE public.array_type;");
+
+    auto dest = test.repl->get_connection(0);
+    test.expect(dest.connect(), "Failed to connect to node 0: %s", dest.error());
+    test.expect(dest.query("DROP TABLE public.array_type;"), "Failed to drop: %s", dest.error());
+}
+
 void test_main(TestConnections& test)
 {
     mxt::Docker docker(test, "postgres:14", "pg", {5432},
@@ -285,6 +311,7 @@ void test_main(TestConnections& test)
         TESTCASE(generated_columns),
         TESTCASE(sequences),
         TESTCASE(user_defined_types),
+        TESTCASE(array_types),
     };
 
     etl.check_odbc_result(dsn, "CREATE SCHEMA test");
