@@ -2848,8 +2848,15 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
         break;
 
     default:
-        // Not a query, just a command which does not require special handling.
-        success = route_statement(move(buffer));
+        if (mxs_mysql_is_valid_command(m_command))
+        {
+            // Not a query, just a command which does not require special handling.
+            success = route_statement(move(buffer));
+        }
+        else
+        {
+            success = write(mariadb::create_error_packet(1, 1047, "08S01", "Unknown command"));
+        }
         break;
     }
 

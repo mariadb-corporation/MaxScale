@@ -433,6 +433,15 @@ GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnu
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 
 /**
+ * @brief Check if the given command byte is valid
+ *
+ * @param command Command to inspect
+ *
+ * @return True if the command is valid
+ */
+bool mxs_mysql_is_valid_command(uint8_t command);
+
+/**
  * @brief Check if the buffer contains an OK packet
  *
  * @param buffer Buffer containing a complete MySQL packet

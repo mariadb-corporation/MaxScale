@@ -41,6 +41,56 @@ bool only_one_packet(const GWBUF& buffer)
     auto buffer_len = buffer.length();
     return header.pl_length + MYSQL_HEADER_LEN == buffer_len;
 }
+
+// Lookup table for the set of valid commands
+constexpr std::array<bool, std::numeric_limits<uint8_t>::max()> create_command_lut()
+{
+    std::array<bool, std::numeric_limits<uint8_t>::max()> commands{};
+
+    commands[MXS_COM_SLEEP] = true;
+    commands[MXS_COM_QUIT] = true;
+    commands[MXS_COM_INIT_DB] = true;
+    commands[MXS_COM_QUERY] = true;
+    commands[MXS_COM_FIELD_LIST] = true;
+    commands[MXS_COM_CREATE_DB] = true;
+    commands[MXS_COM_DROP_DB] = true;
+    commands[MXS_COM_REFRESH] = true;
+    commands[MXS_COM_SHUTDOWN] = true;
+    commands[MXS_COM_STATISTICS] = true;
+    commands[MXS_COM_PROCESS_INFO] = true;
+    commands[MXS_COM_CONNECT] = true;
+    commands[MXS_COM_PROCESS_KILL] = true;
+    commands[MXS_COM_DEBUG] = true;
+    commands[MXS_COM_PING] = true;
+    commands[MXS_COM_TIME] = true;
+    commands[MXS_COM_DELAYED_INSERT] = true;
+    commands[MXS_COM_CHANGE_USER] = true;
+    commands[MXS_COM_BINLOG_DUMP] = true;
+    commands[MXS_COM_TABLE_DUMP] = true;
+    commands[MXS_COM_CONNECT_OUT] = true;
+    commands[MXS_COM_REGISTER_SLAVE] = true;
+    commands[MXS_COM_STMT_PREPARE] = true;
+    commands[MXS_COM_STMT_EXECUTE] = true;
+    commands[MXS_COM_STMT_SEND_LONG_DATA] = true;
+    commands[MXS_COM_STMT_CLOSE] = true;
+    commands[MXS_COM_STMT_RESET] = true;
+    commands[MXS_COM_SET_OPTION] = true;
+    commands[MXS_COM_STMT_FETCH] = true;
+    commands[MXS_COM_DAEMON] = true;
+    commands[MXS_COM_UNSUPPORTED] = true;
+    commands[MXS_COM_RESET_CONNECTION] = true;
+    commands[MXS_COM_XPAND_REPL] = true;
+    commands[MXS_COM_STMT_BULK_EXECUTE] = true;
+    commands[MXS_COM_MULTI] = true;
+
+    return commands;
+}
+
+constexpr const auto s_valid_commands = create_command_lut();
+
+static_assert(s_valid_commands[MXS_COM_QUERY], "COM_QUERY should be valid");
+static_assert(s_valid_commands[MXS_COM_PING], "COM_PING should be valid");
+static_assert(!s_valid_commands[0x50], "0x50 should not be a valid command");
 }
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
                              int packet_number)
@@ -268,6 +318,11 @@ uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const u
     *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
     mxs_mysql_calculate_hash(scramble, passwd, payload);
     return payload + GW_MYSQL_SCRAMBLE_SIZE;
+}
+
+bool mxs_mysql_is_valid_command(uint8_t command)
+{
+    return s_valid_commands[command];
 }
 
 bool mxs_mysql_is_ok_packet(GWBUF* buffer)
