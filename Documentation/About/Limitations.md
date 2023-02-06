@@ -202,9 +202,6 @@ to prevent the driver from consuming too much memory.
 * All indexes specific to PostgreSQL will be converted into normal indexes in
   MariaDB.
 
-* User-defined or composite data types are not converted into any MariaDB
-  types. The correct type in MariaDB must be selected manually.
-
 ## ETL Limitations with Generic ODBC Targets
 
 It is the responsibility of the end-user to correctly configure the ODBC

@@ -356,6 +356,8 @@ public:
          * - The name and pg_node_tree types are converted into text
          *
          * - The internal "char" type is converted to an actual CHAR(1) type
+         *
+         * - Composite and user-defined types are converted into JSON
          */
         std::ostringstream ss;
         ss <<
@@ -363,7 +365,7 @@ public:
 SELECT '`' || a.attname || '` ' ||
   CASE
     WHEN a.attndims > 0 THEN 'JSON'
-    WHEN t.typname IN ('jsonb', 'json', 'hstore') THEN 'JSON'
+    WHEN t.typname IN ('jsonb', 'json', 'hstore') OR t.typtype = 'c' THEN 'JSON'
     WHEN t.typname LIKE 'timestamp%' THEN 'DATETIME(6)'
     WHEN t.typname LIKE 'time%' THEN 'TIME'
     WHEN t.typname IN ('line', 'lseg', 'box', 'circle', 'cidr', 'macaddr', 'macaddr8', 'name', 'pg_node_tree') THEN 'TEXT'
@@ -522,8 +524,8 @@ SELECT
       THEN 'ST_AsText(CAST(' || QUOTE_IDENT(column_name) || ' AS GEOMETRY)) ' || QUOTE_IDENT(column_name)
     WHEN LOWER(udt_name) IN ('hstore')
       THEN 'hstore_to_json_loose(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
-    WHEN LOWER(data_type) = 'array'
-      THEN 'array_to_json(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
+    WHEN LOWER(data_type) IN ('array', 'user-defined')
+      THEN 'to_json(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     WHEN LOWER(data_type) = 'inet'
       THEN 'CASE FAMILY(' || QUOTE_IDENT(column_name) || ') WHEN 4 THEN ''::ffff:'' ELSE '''' END || HOST(' || QUOTE_IDENT(column_name) || ') ' || QUOTE_IDENT(column_name)
     ELSE
