@@ -53,7 +53,11 @@ export default {
         cascadeRefresh(_, payload) {
             const entityIds = queryHelper.filterEntity(Worksheet, payload).map(entity => entity.id)
             entityIds.forEach(id => {
+                const { active_query_tab_id } = Worksheet.find(id) || {}
                 Worksheet.refresh(id) // refresh itself
+                // if the worksheet is for QueryEditor, rename it
+                if (active_query_tab_id)
+                    Worksheet.update({ where: id, data: { name: 'QUERY EDITOR' } })
                 // refresh its relations
                 QueryEditorTmp.refresh(id)
                 SchemaSidebar.refresh(id)
