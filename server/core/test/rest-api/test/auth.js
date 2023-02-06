@@ -143,7 +143,7 @@ describe("Authentication", function () {
       await c.get("/auth?persist=yes", { auth: credentials });
 
       // The cookies are stored based on the hostname. For some reason the first URI component is included in it as well.
-      var cookies = c.defaults.jar.getCookiesSync("http://localhost/v1/");
+      var cookies = c.defaults.jar.getCookiesSync("http://127.0.0.1/");
       expect(cookies).to.not.be.empty;
 
       var keys = cookies.map((cookie) => cookie.key);
