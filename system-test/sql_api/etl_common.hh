@@ -293,7 +293,7 @@ public:
         bool ok = false;
         mxb::Json response;
 
-        for (int i = 0; i < iterations; i++)
+        for (int i = 0; i < iterations && m_test.ok(); i++)
         {
             auto res = post(etl_url, js);
             response.load_string(res.body);
@@ -302,7 +302,7 @@ public:
             auto start = mxb::Clock::now();
             auto sleep_time = 100ms;
 
-            while (res.code == 202)
+            while (res.code == 202 && m_test.ok())
             {
                 // Use a raw mxb::http:get(), the `self` already includes the hostname and port.
                 res = mxb::http::get(self, "admin", "mariadb");
