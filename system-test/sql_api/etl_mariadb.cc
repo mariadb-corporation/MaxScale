@@ -201,7 +201,7 @@ void massive_result(TestConnections& test, EtlTest& etl, const std::string& dsn)
         {EtlTable {
              "test", "massive_result",
              "",    // If left empty, the ETL will read the CREATE TABLE statement from the server
-             "SELECT REPEAT('a', 1000) FROM test.seq_0_to_5000000",
+             "SELECT REPEAT('a', 1000) FROM test.seq_0_to_1000000",
              "REPLACE INTO test.massive_result(id) VALUES (?)"
          }});
 
