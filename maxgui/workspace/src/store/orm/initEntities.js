@@ -24,13 +24,10 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
  * Initialize a blank worksheet
  * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
  */
-export function insertBlankWke(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
-    Worksheet.insert({
-        data: {
-            id: fields.worksheet_id,
-            name: 'WORKSHEET',
-        },
-    })
+export function insertBlankWke(
+    fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1(), name: 'WORKSHEET' }
+) {
+    Worksheet.insert({ data: { id: fields.worksheet_id, name: fields.name } })
     Worksheet.commit(state => (state.active_wke_id = fields.worksheet_id))
 }
 
@@ -38,7 +35,9 @@ export function insertBlankWke(fields = { worksheet_id: uuidv1(), query_tab_id: 
  * Initialize a worksheet with and its query editor relational entities
  * @param {Object} [fields = { worksheet_id = uuidv1(), query_tab_id : uuidv1()}] - fields
  */
-export function insertQueryEditor(fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1() }) {
+export function insertQueryEditor(
+    fields = { worksheet_id: uuidv1(), query_tab_id: uuidv1(), name: 'QUERY EDITOR' }
+) {
     insertBlankWke(fields)
     QueryEditorTmp.insert({ data: { id: fields.worksheet_id } })
     SchemaSidebar.insert({ data: { id: fields.worksheet_id } })
