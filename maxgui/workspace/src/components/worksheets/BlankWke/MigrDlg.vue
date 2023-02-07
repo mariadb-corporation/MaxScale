@@ -100,7 +100,7 @@ export default {
             const { type, etl_task_id } = this.migr_dlg
             switch (type) {
                 case CREATE:
-                    await EtlTask.dispatch('insertEtlTask', this.name)
+                    EtlTask.dispatch('createEtlTask', this.name)
                     break
                 case DELETE: {
                     await QueryConn.dispatch('disconnectConnsFromTask', etl_task_id)
@@ -108,7 +108,7 @@ export default {
                         .where('active_etl_task_id', etl_task_id)
                         .first()
                     if (wke) await Worksheet.dispatch('handleDeleteWke', wke.id)
-                    EtlTask.delete(etl_task_id)
+                    EtlTask.dispatch('cascadeDelete', etl_task_id)
                     break
                 }
             }

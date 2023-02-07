@@ -26,6 +26,7 @@ export const ORM_PERSISTENT_ENTITIES = {
 export const ORM_TMP_ENTITIES = {
     QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
+    ETL_TASKS_TMP: 'etlTasksTmp',
 }
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'

@@ -19,6 +19,8 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import EtlTask from '@wsModels/EtlTask'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 
 /**
  * Initialize a blank worksheet
@@ -81,6 +83,16 @@ export function insertQueryTab(worksheet_id, fields = { query_tab_id: uuidv1() }
 }
 
 /**
+ * Initialize a blank EtlTask and its mandatory relational entities
+ * @param {String} param.id - etl task id
+ * @param {String} param.name - etl task name
+ */
+export function insertEtlTask({ id, name }) {
+    EtlTask.insert({ data: { id, name, created: Date.now() } })
+    EtlTaskTmp.insert({ data: { id } })
+}
+
+/**
  * Initialize entities that will be kept only in memory for all worksheets and queryTabs
  */
 function initMemEntities() {
@@ -91,9 +103,7 @@ function initMemEntities() {
         if (w.active_query_tab_id) {
             QueryEditorTmp.insert({ data: { id: w.id } })
             w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
-        } else if (w.active_etl_task_id) {
-            //Init mem entities for ETL
-        }
+        } else if (w.active_etl_task_id) EtlTaskTmp.insert({ data: { id: w.active_etl_task_id } })
     })
 }
 export default () => {

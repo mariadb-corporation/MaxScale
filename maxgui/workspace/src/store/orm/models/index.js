@@ -13,6 +13,7 @@
  */
 import Editor from '@wsModels/Editor'
 import EtlTask from '@wsModels/EtlTask'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
@@ -24,6 +25,7 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 export default {
     Editor,
     EtlTask,
+    EtlTaskTmp,
     QueryConn,
     QueryResult,
     QueryTab,

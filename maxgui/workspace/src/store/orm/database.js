@@ -20,6 +20,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 // entities to be stored only in memory
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 // Store modules
@@ -39,6 +40,7 @@ database.register(QueryResult, queryResults)
 database.register(QueryTab, queryTabs)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
+database.register(EtlTaskTmp)
 database.register(QueryTabTmp)
 database.register(QueryEditorTmp)
 

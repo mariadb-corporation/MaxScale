@@ -12,7 +12,12 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ETL_STATUS, ETL_STAGE_INDEX } from '@wsSrc/store/config'
+import {
+    ORM_PERSISTENT_ENTITIES,
+    ORM_TMP_ENTITIES,
+    ETL_STATUS,
+    ETL_STAGE_INDEX,
+} from '@wsSrc/store/config'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class EtlTask extends Extender {
@@ -53,6 +58,7 @@ export default class EtlTask extends Extender {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
             connections: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_CONNS, 'etl_task_id'),
+            etlTaskTmp: this.hasOne(ORM_TMP_ENTITIES.ETL_TASKS_TMP, 'id'),
         }
     }
 }

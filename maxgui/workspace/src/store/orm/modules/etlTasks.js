@@ -12,23 +12,33 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { cancel } from '@wsSrc/api/etl'
+import queryHelper from '@wsSrc/store/queryHelper'
+import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
 
 export default {
     namespaced: true,
     actions: {
-        async insertEtlTask({ dispatch, rootState }, name) {
-            const entities = await EtlTask.insert({
-                data: { name: name, created: Date.now() },
+        /**
+         * If a record is deleted, then the corresponding records in the child
+         * tables will be automatically deleted
+         * @param {String|Function} payload - either an ETL task id or a callback function that return Boolean (filter)
+         */
+        cascadeDelete(_, payload) {
+            const entityIds = queryHelper.filterEntity(EtlTask, payload).map(entity => entity.id)
+            entityIds.forEach(id => {
+                EtlTask.delete(id) // delete itself
+                // delete record in its the relational tables
+                EtlTaskTmp.delete(id)
             })
-            const {
-                ORM_PERSISTENT_ENTITIES: { ETL_TASKS },
-            } = rootState.mxsWorkspace.config
-
-            const task = entities[ETL_TASKS].at(-1)
-            dispatch('viewEtlTask', task)
+        },
+        createEtlTask({ dispatch, getters }, name) {
+            const id = this.vue.$helpers.uuidv1()
+            insertEtlTask({ id, name })
+            dispatch('viewEtlTask', getters.getEtlTaskById(id))
         },
         /**
          * @param {String} id - etl task id
@@ -122,9 +132,8 @@ export default {
     },
     getters: {
         getActiveEtlTask: () =>
-            EtlTask.query()
-                .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
-                .first() || {},
+            EtlTask.find(Worksheet.getters('getActiveWke').active_etl_task_id) || {},
+        getEtlTaskById: () => id => EtlTask.find(id) || {},
         getActiveEtlTaskWithRelation: () =>
             EtlTask.query()
                 .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
