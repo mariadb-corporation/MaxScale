@@ -2124,11 +2124,9 @@ int TestConnections::count_tcp_time_wait() const
 int TestConnections::run_test(int argc, char* argv[], const std::function<void(TestConnections&)>& testfunc)
 {
     int init_rc = prepare_for_test(argc, argv);
-    int test_errors = 0;
     if (init_rc == 0)
     {
         testfunc(*this);
-        test_errors = global_result;
     }
     int cleanup_rc = cleanup();
 
@@ -2144,7 +2142,7 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<void(T
     }
     else
     {
-        rval = test_errors;
+        rval = global_result;
     }
     return rval;
 }
