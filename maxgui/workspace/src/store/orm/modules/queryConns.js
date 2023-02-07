@@ -302,8 +302,8 @@ export default {
                         },
                         { root: true }
                     )
-                dispatch('cascadeRefreshOnDelete', id)
             }
+            dispatch('cascadeRefreshOnDelete', id)
         },
         /**
          * This handles delete the worksheet connection and its query tab connections.
@@ -324,31 +324,29 @@ export default {
         },
         /**
          * @param {Object} param.ids - connections to be reconnected
-         * @param {Boolean} param.isQueryEditor - connections to be reconnected are QueryEditor connections
          * @param {Function} param.onSuccess - on success callback
+         * @param {Function} param.onError - on error callback
          */
-        async reconnectConns({ commit, dispatch }, { ids, isQueryEditor, onSuccess }) {
+        async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
             const [e, allRes] = await this.vue.$helpers.to(
                 Promise.all(ids.map(id => reconnect(id)))
             )
             // call validateConns to get new thread ID
             await dispatch('validateConns', { silentValidation: true })
-            if (e)
+            if (e) {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
                         text: [
-                            this.vue.$mxs_t(
-                                `errors.${
-                                    isQueryEditor ? 'queryTabReconnFailed' : 'etlReconnFailed'
-                                }`
-                            ),
+                            ...this.vue.$helpers.getErrorsArr(e),
+                            this.vue.$mxs_t('errors.reconnFailed'),
                         ],
                         type: 'error',
                     },
                     { root: true }
                 )
-            else if (allRes.length && allRes.every(promise => promise.status === 204)) {
+                await this.vue.$typy(onError).safeFunction()
+            } else if (allRes.length && allRes.every(promise => promise.status === 204)) {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {

@@ -121,7 +121,7 @@ export default {
         async handleReconnect() {
             await QueryConn.dispatch('reconnectConns', {
                 ids: this.connIdsToBeReconnected,
-                isQueryEditor: this.isActiveQueryEditorWke,
+                onError: async () => await this.deleteConns(),
                 onSuccess: async () => {
                     if (this.isActiveQueryEditorWke) await Worksheet.dispatch('handleInitialFetch')
                     else if (this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ)
