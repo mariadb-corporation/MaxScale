@@ -114,8 +114,6 @@ constexpr char CN_SKIP_NAME_RESOLVE[] = "skip_name_resolve";
 constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
 constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
-constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
-constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
 
 static int64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
@@ -275,7 +273,8 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
     {
         if (whw <= wlw)
         {
-            MXB_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            MXB_ERROR("Invalid configuration. %s should be greater than %s or both should be zero.",
+                      CN_WRITEQ_HIGH_WATER, CN_WRITEQ_LOW_WATER);
             rv = false;
         }
     }

@@ -48,16 +48,15 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/hexdump.hh>
 #include <maxscale/clock.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
-#include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.hh>
 
-#include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/session.hh"
 
@@ -68,11 +67,8 @@ using std::move;
 using mxs::ClientConnection;
 using mxs::BackendConnection;
 
-#define DCB_THROTTLING_ENABLED(x) ((x)->m_high_water && (x)->m_low_water)
-
 namespace
 {
-
 static struct THIS_UNIT
 {
     std::atomic<uint64_t> uid_generator {0};
@@ -827,8 +823,7 @@ void DCB::writeq_drain()
         }
     }
 
-    // TODO: should m_low_water = 0 be allowed as a default value?
-    if (m_high_water_reached && m_low_water > 0 && m_writeq.length() < m_low_water)
+    if (m_high_water_reached && m_writeq.length() <= m_low_water)
     {
         call_callback(Reason::LOW_WATER);
         m_high_water_reached = false;
@@ -1082,41 +1077,6 @@ bool DCB::add_callback(Reason reason,
     }
 
     return true;
-}
-
-bool DCB::remove_callback(Reason reason,
-                          int (* callback)(DCB*, Reason, void*),
-                          void* userdata)
-{
-    bool rval = false;
-
-    CALLBACK* pcb = NULL;
-    CALLBACK* cb = m_callbacks;
-
-    while (cb)
-    {
-        if (cb->reason == reason
-            && cb->cb == callback
-            && cb->userdata == userdata)
-        {
-            if (pcb != NULL)
-            {
-                pcb->next = cb->next;
-            }
-            else
-            {
-                m_callbacks = cb->next;
-            }
-
-            MXB_FREE(cb);
-            rval = true;
-            break;
-        }
-        pcb = cb;
-        cb = cb->next;
-    }
-
-    return rval;
 }
 
 void DCB::remove_callbacks()
@@ -1633,29 +1593,29 @@ bool DCB::disable_events()
  */
 static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata)
 {
-    auto session = dcb->session();
-    auto client_dcb = session->client_connection()->dcb();
+    mxb_assert(dcb->role() == DCB::Role::BACKEND);
+    auto* be_dcb = static_cast<BackendDCB*>(dcb);
+    auto* session = static_cast<Session*>(be_dcb->session());
+    auto* client_dcb = session->client_connection()->dcb();
 
-    // The fd is removed manually here due to the fact that poll_add_dcb causes the DCB to be added to the
-    // worker's list of DCBs but poll_remove_dcb doesn't remove it from it. This is due to the fact that the
-    // DCBs are only removed from the list when they are closed.
     if (reason == DCB::Reason::HIGH_WATER && client_dcb->state() == DCB::State::POLLING)
     {
-        MXB_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
-                 session->user().c_str(), client_dcb->remote().c_str());
-
         client_dcb->disable_events();
+        MXB_INFO("Write buffer size of connection to server %s reached %s. Pausing reading from client %s "
+                 "until buffer size falls to %s.", be_dcb->server()->name(), CN_WRITEQ_HIGH_WATER,
+                 session->user_and_host().c_str(), CN_WRITEQ_LOW_WATER);
     }
     else if (reason == DCB::Reason::LOW_WATER && client_dcb->state() == DCB::State::NOPOLLING)
     {
-        MXB_INFO("Low water mark hit for '%s'@'%s', accepting new data",
-                 session->user().c_str(), client_dcb->remote().c_str());
-
-        if (!client_dcb->enable_events())
+        if (client_dcb->enable_events())
         {
-            MXB_ERROR("Could not re-enable I/O events for client connection whose I/O events "
-                      "earlier were disabled due to the high water mark having been hit. "
-                      "Closing session.");
+            MXB_INFO("Write buffer size of connection to server %s fell to %s. Resuming reading from client "
+                     "%s.", be_dcb->server()->name(), CN_WRITEQ_LOW_WATER, session->user_and_host().c_str());
+        }
+        else
+        {
+            MXB_ERROR("Could not re-enable I/O events for connection to client %s. Closing session.",
+                      session->user_and_host().c_str());
             client_dcb->trigger_hangup_event();
         }
     }
@@ -1663,70 +1623,72 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     return 0;
 }
 
-bool backend_dcb_remove_func(DCB* dcb, void* data)
-{
-    MXS_SESSION* session = (MXS_SESSION*)data;
-
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND
-        && dcb->state() == DCB::State::POLLING)
-    {
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        MXB_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
-                 "mark is hit", backend_dcb->server()->name(),
-                 session->user().c_str(), session->client_remote().c_str());
-
-        backend_dcb->disable_events();
-    }
-
-    return true;
-}
-
-bool backend_dcb_add_func(DCB* dcb, void* data)
-{
-    MXS_SESSION* session = (MXS_SESSION*)data;
-
-    if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND
-        && dcb->state() == DCB::State::NOPOLLING)
-    {
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_dcb = session->client_connection()->dcb();
-        MXB_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
-                 backend_dcb->server()->name(),
-                 session->user().c_str(), client_dcb->remote().c_str());
-
-        if (!backend_dcb->enable_events())
-        {
-            MXB_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
-                      "earlier were disabled due to the high water mark having been hit. "
-                      "Closing session.");
-            client_dcb->trigger_hangup_event();
-        }
-    }
-
-    return true;
-}
-
 /**
- * @brief DCB callback for downstream throtting
- * Called by client dcb when its writeq is above high water mark or
- * it has reached high water mark and now it is below low water mark,
- * Calling `poll_remove_dcb` or `poll_add_dcb' on all backend dcbs to
- * throttle network traffic from server to mxs.
+ * Called by client dcb when its writeq reaches high or low water mark. Pauses or resumes
+ * backend connections.
  *
  * @param dcb      client dcb
  * @param reason   Why the callback was called
- * @param userdata Data provided when the callback was added
+ * @param userdata Unused
  * @return Always 0
  */
 static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata)
 {
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
+    auto* session = static_cast<Session*>(dcb->session());
+    auto& be_conns = session->backend_connections();
+
     if (reason == DCB::Reason::HIGH_WATER)
     {
-        dcb_foreach_local(backend_dcb_remove_func, dcb->session());
+        // Disable events for backend dcbs of the session.
+        int dcbs_paused = 0;
+        for (auto& be_conn : be_conns)
+        {
+            auto* be_dcb = be_conn->dcb();
+            if (be_dcb->state() == DCB::State::POLLING)
+            {
+                if (be_dcb->disable_events())
+                {
+                    dcbs_paused++;
+                }
+            }
+        }
+
+        if (dcbs_paused > 0)
+        {
+            MXB_INFO("Write buffer size of connection to client %s reached %s. Pausing reading from %i "
+                     "backend connections until buffer size falls to %s.", session->user_and_host().c_str(),
+                     CN_WRITEQ_HIGH_WATER, dcbs_paused, CN_WRITEQ_LOW_WATER);
+        }
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
-        dcb_foreach_local(backend_dcb_add_func, dcb->session());
+        // Enable events for backend dcbs of the session.
+        int dcbs_resumed = 0;
+        for (auto& be_conn : be_conns)
+        {
+            auto* be_dcb = be_conn->dcb();
+            if (be_dcb->state() == DCB::State::NOPOLLING)
+            {
+                if (be_dcb->enable_events())
+                {
+                    dcbs_resumed++;
+                }
+                else
+                {
+                    MXB_ERROR("Could not re-enable I/O events for connection to server %s. Closing "
+                              "session of %s.", be_dcb->server()->name(), session->user_and_host().c_str());
+                    dcb->trigger_hangup_event();
+                }
+            }
+        }
+
+        if (dcbs_resumed > 0)
+        {
+            MXB_INFO("Write buffer size of connection to client %s fell to %s. Resuming reading from %i "
+                     "backend connections.", session->user_and_host().c_str(), CN_WRITEQ_LOW_WATER,
+                     dcbs_resumed);
+        }
     }
 
     return 0;
@@ -1806,7 +1768,7 @@ ClientDCB::ClientDCB(int fd,
     , m_ip(ip)
     , m_protocol(std::move(protocol))
 {
-    if (DCB_THROTTLING_ENABLED(this))
+    if (m_high_water)
     {
         add_callback(Reason::HIGH_WATER, downstream_throttle_callback, NULL);
         add_callback(Reason::LOW_WATER, downstream_throttle_callback, NULL);
@@ -2036,7 +1998,7 @@ void BackendDCB::reset(MXS_SESSION* session)
     m_last_write = mxs_clock();
     m_session = session;
 
-    if (DCB_THROTTLING_ENABLED(this))
+    if (m_high_water)
     {
         // Register upstream throttling callbacks
         add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
@@ -2184,7 +2146,7 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
 {
     mxb_assert(m_server);
 
-    if (DCB_THROTTLING_ENABLED(this))
+    if (m_high_water)
     {
         // Register upstream throttling callbacks
         add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);

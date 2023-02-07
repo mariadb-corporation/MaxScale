@@ -1220,9 +1220,8 @@ is not the kernel TCP send buffer. This means that the total amount of buffered
 data is determined by both the kernel TCP buffers and the value of
 `writeq_high_water`.
 
-Network throttling is only enabled when both `writeq_high_water` and
-`writeq_low_water` have a non-zero value. To disable throttling, set the value
-to 0.
+Network throttling is only enabled when `writeq_high_water` is non-zero. In
+MaxScale 23.02 and earlier, also `writeq_low_water` had to be non-zero.
 
 ### `writeq_low_water`
 
@@ -1233,10 +1232,6 @@ default value is 1024 bytes (was 8192 bytes before 22.08.4).
 
 The value of `writeq_high_water` must always be greater than the value of
 `writeq_low_water`.
-
-Network throttling is only enabled when both `writeq_high_water` and
-`writeq_low_water` have a non-zero value. To disable throttling, set the value
-to 0.
 
 ### `persist_runtime_changes`
 
