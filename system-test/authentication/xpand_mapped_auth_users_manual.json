@@ -6,7 +6,7 @@
             "global_db_priv": true,
             "proxy_priv": true,
             "plugin": "pam",
-            "authentication_string": "passwd"
+            "authentication_string": "pam_config_simple"
         },
         {
             "user": "alpha",
@@ -24,7 +24,7 @@
             "user": "gamma",
             "host": "%",
             "plugin": "pam",
-            "authentication_string": "passwd"
+            "authentication_string": "pam_config_simple"
         },
         {
             "user": "db-user",
