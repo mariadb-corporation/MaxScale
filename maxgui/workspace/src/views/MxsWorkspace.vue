@@ -36,6 +36,7 @@
                 </template>
             </template>
             <migr-dlg />
+            <reconn-dlg-ctr />
         </div>
     </div>
 </template>
@@ -62,6 +63,7 @@ import BlankWke from '@wkeComps/BlankWke'
 import QueryEditor from '@wkeComps/QueryEditor'
 import DataMigration from '@wkeComps/DataMigration'
 import MigrDlg from '@wkeComps/BlankWke/MigrDlg'
+import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
 export default {
@@ -72,6 +74,7 @@ export default {
         MigrDlg,
         QueryEditor,
         DataMigration,
+        ReconnDlgCtr,
     },
     data() {
         return {

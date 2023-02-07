@@ -9,7 +9,6 @@
             @on-cancel="cancelLeave"
         />
         <conn-dlg-ctr v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
-        <reconn-dlg-ctr :onReconnectCb="onReconnectCb" />
     </div>
 </template>
 
@@ -31,12 +30,11 @@ import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlgCtr from '@wkeComps/QueryEditor/ConnDlgCtr.vue'
-import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import { mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'workspace-page',
-    components: { ConfirmLeaveDlg, ConnDlgCtr, ReconnDlgCtr },
+    components: { ConfirmLeaveDlg, ConnDlgCtr },
     data() {
         return {
             isConfDlgOpened: false,
@@ -109,12 +107,18 @@ export default {
                 if (v) await this.handlePreSelectConnRsrc()
             },
         },
+        allConns: {
+            deep: true,
+            immediate: true,
+            handler(v) {
+                this.SET_CONNS_TO_BE_VALIDATED(v)
+            },
+        },
     },
     async beforeCreate() {
         await this.$store.dispatch('mxsWorkspace/initWorkspace')
     },
     async created() {
-        this.SET_CONNS_TO_BE_VALIDATED(this.allConns)
         await QueryConn.dispatch('validateConns')
     },
     methods: {
@@ -135,14 +139,6 @@ export default {
         async handleOpenConn(opts) {
             await QueryConn.dispatch('openQueryEditorConn', opts)
         },
-
-        async onReconnectCb() {
-            await QueryConn.dispatch('validateConns', {
-                persistentConns: QueryConn.all(),
-                silentValidation: true,
-            })
-        },
-
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
          * bind it to the current worksheet. otherwise open dialog

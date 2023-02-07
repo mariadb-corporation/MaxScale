@@ -14,7 +14,7 @@
 import ax from 'axios'
 import { t } from 'typy'
 import { lodash, getErrorsArr } from '@share/utils/helpers'
-import { MARIADB_NET_ERRNO } from '@wsSrc/store/config'
+import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@wsSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
 /**
@@ -29,22 +29,19 @@ function updateConnBusyStatus({ value, sql_conn_id }) {
     })
 }
 /**
- * This function helps to check if there is a lost connection error that has either
- * 2006 or 2013 errno value and update the corresponding error message object to lost_cnn_err_msg_obj_map state
+ * This function helps to check if there is a lost connection error and store the error
+ * to lost_cnn_err.
  * @param {Object} param.res - response of every request from queryHttp axios instance
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
 function analyzeRes({ res, sql_conn_id }) {
-    const results = t(res, 'data.data.attributes.results').safeArray
-    const lostCnnErrMsgs = results.filter(res => {
-        const errno = t(res, 'errno').safeNumber
-        return MARIADB_NET_ERRNO.includes(errno)
-    })
-
-    if (lostCnnErrMsgs.length) {
+    const result = t(res, 'data.data.attributes.results[0]').safeObject
+    const errno = t(result, 'errno').safeNumber
+    const sqlState = t(result, 'sqlstate').safeString
+    if (MARIADB_NET_ERRNO.includes(errno) || ODBC_NET_ERR_SQLSTATE.includes(sqlState)) {
         QueryConn.update({
             where: sql_conn_id,
-            data: { lost_cnn_err: lostCnnErrMsgs[0] },
+            data: { lost_cnn_err: result },
         })
     }
 }

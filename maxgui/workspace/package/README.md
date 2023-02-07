@@ -198,20 +198,18 @@ example are importable.
             @on-cancel="cancelLeave"
         />
         <conn-dlg v-model="isConnDlgOpened" :handleSave="handleOpenConn" />
-        <reconn-dlg-ctr :onReconnectCb="onReconnectCb" />
     </div>
 </template>
 
 <script>
 import ConnDlg from '@components/ConnDlgCtr.vue'
-import { models, ConfirmLeaveDlg, ReconnDlgCtr } from 'mxs-workspace'
+import { models, ConfirmLeaveDlg } from 'mxs-workspace'
 import { mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'maxscale-workspace',
     components: {
         ConfirmLeaveDlg, // built-in confirmation on leave dialog
-        ReconnDlgCtr, // built-in reconnect dialog
         ConnDlg,
     },
     data() {
@@ -270,11 +268,6 @@ export default {
         },
         cancelLeave() {
             this.to = null
-        },
-        async onReconnectCb() {
-            await models.QueryConn.dispatch('validateConns', {
-                silentValidation: true,
-            })
         },
         /**
          * @param {Object} params.body - https://github.com/mariadb-corporation/MaxScale/blob/22.08/Documentation/REST-API/Resources-SQL.md#open-sql-connection-to-server

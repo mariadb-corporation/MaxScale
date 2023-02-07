@@ -23,7 +23,6 @@ import txtHighlighter from '@share/plugins/txtHighlighter'
 
 //TODO: Add more if needed
 export { default as ConfirmLeaveDlg } from '@wsComps/ConfirmLeaveDlg.vue'
-export { default as ReconnDlgCtr } from '@wsComps/ReconnDlgCtr.vue'
 export { default as workspaceStorePlugins } from '@wsSrc/store/plugins/index'
 export { default as models } from '@wsModels'
 export default /*#__PURE__*/ (() => {

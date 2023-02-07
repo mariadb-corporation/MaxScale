@@ -15,7 +15,6 @@ import queryHelper from '@wsSrc/store/queryHelper'
 import QueryConn from '@wsModels/QueryConn'
 import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import EtlTask from '@wsModels/EtlTask'
 import { getAliveConns, openConn, cloneConn, reconnect, deleteConn } from '@wsSrc/api/connection'
 import { query } from '@wsSrc/api/query'
@@ -323,23 +322,28 @@ export default {
                 await dispatch('disconnect', { id, showSnackbar })
             }
         },
-        async cascadeReconnectWkeConn({ commit, getters }) {
-            const activeQueryTabConn = getters.getActiveQueryTabConn
-
-            let connIds = []
-            const wkeConnId = this.vue.$typy(getters.getActiveWkeConn, 'id').safeString
-            const queryTabConnId = this.vue.$typy(activeQueryTabConn, 'id').safeString
-            if (wkeConnId) connIds.push(wkeConnId)
-            if (queryTabConnId) connIds.push(queryTabConnId)
-
+        /**
+         * @param {Object} param.ids - connections to be reconnected
+         * @param {Boolean} param.isQueryEditor - connections to be reconnected are QueryEditor connections
+         * @param {Function} param.onSuccess - on success callback
+         */
+        async reconnectConns({ commit, dispatch }, { ids, isQueryEditor, onSuccess }) {
             const [e, allRes] = await this.vue.$helpers.to(
-                Promise.all(connIds.map(id => reconnect(id)))
+                Promise.all(ids.map(id => reconnect(id)))
             )
+            // call validateConns to get new thread ID
+            await dispatch('validateConns', { silentValidation: true })
             if (e)
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [this.vue.$mxs_t('errors.reconnFailed')],
+                        text: [
+                            this.vue.$mxs_t(
+                                `errors.${
+                                    isQueryEditor ? 'queryTabReconnFailed' : 'etlReconnFailed'
+                                }`
+                            ),
+                        ],
                         type: 'error',
                     },
                     { root: true }
@@ -353,7 +357,7 @@ export default {
                     },
                     { root: true }
                 )
-                await SchemaSidebar.dispatch('initialFetch')
+                await this.vue.$typy(onSuccess).safeFunction()
             }
         },
         async disconnectConnsFromTask({ getters }, taskId) {
@@ -433,10 +437,15 @@ export default {
     },
     getters: {
         // QueryTab connection getters
-        getActiveQueryTabConn: () =>
-            QueryConn.query()
-                .where('query_tab_id', Worksheet.getters('getActiveQueryTabId'))
-                .first() || {},
+        getActiveQueryTabConn: () => {
+            const activeQueryTabId = Worksheet.getters('getActiveQueryTabId')
+            if (!activeQueryTabId) return {}
+            return (
+                QueryConn.query()
+                    .where('query_tab_id', activeQueryTabId)
+                    .first() || {}
+            )
+        },
         getQueryTabConnByQueryTabId: () => query_tab_id =>
             QueryConn.query()
                 .where('query_tab_id', query_tab_id)
@@ -445,8 +454,6 @@ export default {
             getters.getActiveQueryTabConn.is_busy || false,
         getIsConnBusyByQueryTabId: (state, getters) => query_tab_id =>
             getters.getQueryTabConnByQueryTabId(query_tab_id).is_busy || false,
-        getLostCnnErrByActiveQueryTab: (state, getters) =>
-            getters.getActiveQueryTabConn.lost_cnn_err || {},
         // Worksheet connection getters
         getActiveWkeConn: () =>
             QueryConn.query()
