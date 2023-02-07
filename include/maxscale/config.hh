@@ -285,7 +285,7 @@ public:
     mxs::KeyManager::Type key_manager;
 
     config::Bool     admin_audit_enabled;           /**< Enable logging to audit file */
-    config::Path     admin_audit_file;              /**< Audit file path */
+    config::String   admin_audit_file;              /**< Audit file path */
     config::EnumList<HttpMethod> admin_audit_exclude_methods;/**< Which methods to exclude (e.g. GET) */
 
     // NON-modifiable automatically configured parameters.
@@ -450,7 +450,7 @@ private:
     static config::ParamSeconds                         s_admin_jwt_max_age;
     static config::ParamString                          s_admin_oidc_url;
     static config::ParamBool                            s_admin_audit_enabled;
-    static config::ParamPath                            s_admin_audit_file;
+    static config::ParamString                          s_admin_audit_file;
     static config::ParamEnumList<HttpMethod>            s_admin_audit_exclude_methods;
     static config::ParamString                          s_admin_verify_url;
     static config::ParamString                          s_local_address;

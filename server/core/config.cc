@@ -771,11 +771,10 @@ config::ParamBool Config::s_admin_audit_enabled(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamPath Config::s_admin_audit_file(
+config::ParamString Config::s_admin_audit_file(
     &Config::s_specification,
     "admin_audit_file",
-    "Path to admin audit file",
-    config::ParamPath::R | config::ParamPath::W,
+    "Full path to admin audit file",
     std::string(cmake_defaults::DEFAULT_LOGDIR) + "/admin_audit.csv"s,
     mxs::config::Param::AT_RUNTIME);
 
