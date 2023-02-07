@@ -189,7 +189,7 @@ export default {
             },
         },
     },
-    async created() {
+    async activated() {
         await this.fetchSrcSchemas()
     },
     methods: {
@@ -197,7 +197,6 @@ export default {
         ...mapActions({
             loadChildNodes: 'etlMem/loadChildNodes',
             fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
-            handleEtlCall: 'etlMem/handleEtlCall',
         }),
         ...mapMutations({ SET_SRC_SCHEMA_TREE: 'etlMem/SET_SRC_SCHEMA_TREE' }),
         filter(node, search, textKey) {
@@ -251,7 +250,10 @@ export default {
                     obj.is_prepare_etl = true
                 },
             })
-            await this.handleEtlCall({ id: this.task.id, tables: this.migration_objs })
+            await EtlTask.dispatch('handleEtlCall', {
+                id: this.task.id,
+                tables: this.migration_objs,
+            })
         },
     },
 }

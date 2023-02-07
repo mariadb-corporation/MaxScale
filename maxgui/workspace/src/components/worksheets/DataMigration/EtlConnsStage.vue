@@ -103,6 +103,7 @@ export default {
         ...mapActions({
             fetchOdbcDrivers: 'queryConnsMem/fetchOdbcDrivers',
             fetchRcTargetNames: 'queryConnsMem/fetchRcTargetNames',
+            fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
         }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
@@ -147,14 +148,15 @@ export default {
             this.isLoading = false
         },
         async next() {
-            if (this.hasActiveConns)
+            if (this.hasActiveConns) {
+                await this.fetchSrcSchemas()
                 EtlTask.update({
                     where: this.task.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },
                 })
-            else {
+            } else {
                 await this.$refs.form.validate()
                 if (this.isFormValid) await this.handleOpenConns()
             }

@@ -54,14 +54,14 @@
                 class="align-self-start"
             />
             <etl-logs
-                v-else-if="!getEtlResTable.length && isInErrState"
+                v-else-if="!etlResTable.length && isInErrState"
                 :task="task"
                 class="fill-height"
             />
             <etl-tbl-script
                 v-else
                 :task="task"
-                :data="getEtlResTable"
+                :data="etlResTable"
                 :headers="tableHeaders"
                 :custom-sort="customSort"
                 @get-activeRow="activeItem = $event"
@@ -151,7 +151,7 @@ import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-migration-stage',
@@ -173,15 +173,20 @@ export default {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
-            etl_res: state => state.etlMem.etl_res,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
-        ...mapGetters({
-            getEtlResTable: 'etlMem/getEtlResTable',
-            getMigrationStage: 'etlMem/getMigrationStage',
-            isSrcAlive: 'etlMem/isSrcAlive',
-        }),
+        ...mapGetters({ isSrcAlive: 'etlMem/isSrcAlive' }),
         taskId() {
             return this.task.id
+        },
+        etlRes() {
+            return EtlTask.getters('getEtlTaskResById')(this.taskId)
+        },
+        etlResTable() {
+            return EtlTask.getters('getEtlResTableById')(this.taskId)
+        },
+        migrationStage() {
+            return EtlTask.getters('getMigrationStageById')(this.taskId)
         },
         tableHeaders() {
             return this.isPrepareEtl
@@ -207,17 +212,20 @@ export default {
             return this.$typy(this.task, 'is_prepare_etl').safeBoolean
         },
         hasErrAtCreationStage() {
-            return this.isInErrState && this.getMigrationStage === this.ETL_API_STAGES.CREATE
+            return this.isInErrState && this.migrationStage === this.ETL_API_STAGES.CREATE
         },
         generalErr() {
-            return this.$typy(this.etl_res, 'error').safeString
+            return this.$typy(this.etlRes, 'error').safeString
         },
         showOutputLog() {
             if (this.isPrepareEtl) {
-                if (!this.$typy(this.etl_res, 'ok').isDefined) return false
-                return !this.$typy(this.etl_res, 'ok').safeBoolean
+                if (!this.$typy(this.etlRes, 'ok').isDefined) return false
+                return !this.$typy(this.etlRes, 'ok').safeBoolean
             }
             return true
+        },
+        isActive() {
+            return this.task.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
         },
     },
     activated() {
@@ -226,17 +234,18 @@ export default {
     deactivated() {
         this.$typy(this.unwatch_queryId).safeFunction()
     },
-
     methods: {
-        ...mapActions({
-            getEtlCallRes: 'etlMem/getEtlCallRes',
-            handleEtlCall: 'etlMem/handleEtlCall',
-        }),
         watch_queryId() {
             this.unwatch_queryId = this.$watch(
                 'queryId',
                 async v => {
-                    if (v && this.isSrcAlive) await this.getEtlCallRes(this.task.id)
+                    /**
+                     * DataMigration worksheets are placed inside <keep-alive/>, so all
+                     * stages are also cached, `this.isActive` is used for preventing
+                     * this watcher from being triggered when component is activated
+                     */
+                    if (v && this.isSrcAlive && this.isActive)
+                        await EtlTask.dispatch('getEtlCallRes', this.task.id)
                 },
                 { immediate: true }
             )
@@ -287,19 +296,17 @@ export default {
             })
         },
         async onRestart(id) {
-            await this.handleEtlCall({ id, tables: this.stagingScript })
+            await EtlTask.dispatch('handleEtlCall', { id, tables: this.stagingScript })
         },
         async start() {
+            const id = this.task.id
             EtlTask.update({
-                where: this.task.id,
+                where: id,
                 data(obj) {
                     obj.is_prepare_etl = false
                 },
             })
-            await this.handleEtlCall({
-                id: this.task.id,
-                tables: this.stagingScript,
-            })
+            await EtlTask.dispatch('handleEtlCall', { id, tables: this.stagingScript })
         },
     },
 }

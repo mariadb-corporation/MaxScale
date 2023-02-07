@@ -16,6 +16,8 @@ import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { cancel } from '@wsSrc/api/etl'
+import { getAsyncResult } from '@wsSrc/api/query'
+import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
 
@@ -129,6 +131,135 @@ export default {
                     break
             }
         },
+        /**
+         * @param {String} param.id - etl task id
+         * @param {Array} param.tables - tables for preparing etl or start etl
+         */
+        async handleEtlCall({ getters, dispatch, rootState }, { id, tables }) {
+            const { $helpers, $typy, $mxs_t } = this.vue
+            const { RUNNING, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
+
+            const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
+            const destConn = QueryConn.getters('getDestConnByEtlTaskId')(id)
+
+            const task = getters.getEtlTaskById(id)
+
+            let logName,
+                apiAction,
+                status,
+                timestamp = new Date().valueOf()
+
+            let body = {
+                target: destConn.id,
+                type: task.meta.src_type,
+                tables,
+            }
+
+            if (task.is_prepare_etl) {
+                logName = $mxs_t('info.preparingMigrationScript')
+                apiAction = prepare
+                status = RUNNING
+                body.create_mode = rootState.etlMem.create_mode
+            } else {
+                logName = $mxs_t('info.startingMigration')
+                apiAction = start
+                status = RUNNING
+            }
+            if (body.type === 'generic') body.catalog = $typy(srcConn, 'active_db').safeString
+
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.status = status
+                    delete obj.meta.async_query_id
+                },
+            })
+            const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body }))
+            if (e) {
+                status = ERROR
+                logName = `${$mxs_t(
+                    'errors.failedToPrepareMigrationScript'
+                )} ${$helpers.getErrorsArr(e).join('. ')}`
+            }
+            const queryId = $typy(res, 'data.data.id').safeString
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    obj.status = status
+                    if (!e) obj.meta.async_query_id = queryId // Persist query id
+                },
+            })
+            dispatch('pushLog', { id, log: { timestamp, name: logName } })
+            if (queryId) await dispatch('getEtlCallRes', id)
+        },
+        /**
+         * @param {String} id - etl task id
+         */
+        async getEtlCallRes({ getters, dispatch, rootState }, id) {
+            const { $helpers, $typy, $mxs_t } = this.vue
+            const task = EtlTask.find(id)
+            const queryId = $typy(task, 'meta.async_query_id').safeString
+            const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
+            const {
+                INITIALIZING,
+                COMPLETE,
+                ERROR,
+                CANCELED,
+            } = rootState.mxsWorkspace.config.ETL_STATUS
+
+            let etlStatus,
+                migrationRes,
+                ignoreKeys = ['create', 'insert', 'select']
+
+            const [e, res] = await $helpers.to(getAsyncResult({ id: srcConn.id, queryId }))
+            if (!e) {
+                const results = $typy(res, 'data.data.attributes.results').safeObject
+                let logMsg
+                if (res.status === 202) {
+                    EtlTaskTmp.update({ where: id, data: { etl_res: results } })
+                    await this.vue.$helpers
+                        .delay(2000)
+                        .then(async () => await dispatch('getEtlCallRes', id))
+                } else if (res.status === 201) {
+                    const timestamp = new Date().valueOf()
+                    const ok = $typy(results, 'ok').safeBoolean
+
+                    if (task.is_prepare_etl) {
+                        logMsg = $mxs_t(
+                            ok ? 'success.prepared' : 'errors.failedToPrepareMigrationScript'
+                        )
+                        etlStatus = ok ? INITIALIZING : ERROR
+                    } else {
+                        logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
+                        etlStatus = ok ? COMPLETE : ERROR
+                        if (getters.getIsEtlCancelledById(id)) {
+                            logMsg = $mxs_t('warnings.migrationCanceled')
+                            etlStatus = CANCELED
+                        }
+                        migrationRes = {
+                            ...results,
+                            tables: results.tables.map(obj =>
+                                $helpers.lodash.pickBy(obj, (v, key) => !ignoreKeys.includes(key))
+                            ),
+                        }
+                    }
+
+                    const error = $typy(results, 'error').safeString
+                    if (error) logMsg += ` \n${error}`
+
+                    dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
+
+                    EtlTaskTmp.update({ where: id, data: { etl_res: results } })
+                }
+            }
+            EtlTask.update({
+                where: id,
+                data(obj) {
+                    if (etlStatus) obj.status = etlStatus
+                    if (migrationRes) obj.res = migrationRes
+                },
+            })
+        },
     },
     getters: {
         getActiveEtlTask: () =>
@@ -144,5 +275,22 @@ export default {
                 .whereId(etl_task_id)
                 .with('connections')
                 .first() || {},
+        getIsEtlCancelledById: (state, getters, rootState) => id =>
+            getters.getEtlTaskById(id).status === rootState.mxsWorkspace.config.ETL_STATUS.CANCELED,
+        getPersistedEtlResById: (state, getters) => id => getters.getEtlTaskById(id).res || {},
+        getEtlTaskResById: () => id => {
+            const { etl_res = null } = EtlTaskTmp.find(id) || {}
+            return etl_res
+        },
+        getEtlResTableById: (state, getters) => id => {
+            const { tables = [] } =
+                getters.getEtlTaskResById(id) || getters.getPersistedEtlResById(id)
+            return tables
+        },
+        getMigrationStageById: (state, getters) => id => {
+            const { stage = '' } =
+                getters.getEtlTaskResById(id) || getters.getPersistedEtlResById(id)
+            return stage
+        },
     },
 }
