@@ -478,22 +478,42 @@ void test_main(TestConnections& test)
         {
             // The user needs to be recreated on the MaxScale node.
             mxs_vm.add_linux_user(pam_user, pam_pw);
+            // Using the standard password service 'passwd' is unreliable, as it can change between
+            // distributions. Copy a minimal pam config and use it.
+            const char pam_min_cfg[] = "pam_config_simple";
+            string pam_min_cfg_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_min_cfg);
+            string pam_min_cfg_dst = mxb::string_printf("/etc/pam.d/%s", pam_min_cfg);
+            mxs_vm.copy_to_node_sudo(pam_min_cfg_src, pam_min_cfg_dst);
+            // Copy to VMs.
+            for (int i = 0; i < N; i++)
+            {
+                test.repl->backend(i)->vm_node().copy_to_node_sudo(pam_min_cfg_src, pam_min_cfg_dst);
+            }
 
-            cout << "Testing listener with " << setting_val << "\n";
+            test.tprintf("Testing listener with '%s'.", setting_val.c_str());
             MYSQL* conn = test.repl->nodes[0];
-            test.try_query(conn, create_pam_user_fmt, pam_user, "passwd");
-            // Try to login with wrong pw to ensure user data is updated.
+            test.try_query(conn, create_pam_user_fmt, pam_user, pam_min_cfg);
+            // Try to log in with wrong pw to ensure user data is updated.
             sleep(1);
             bool login_success = test_pam_login(test, cleartext_port, "wrong", "wrong", "");
             test.expect(!login_success, "Login succeeded when it should not have.");
             sleep(1);
             login_success = test_pam_login(test, cleartext_port, pam_user, pam_pw, "");
-            test.expect(login_success, "Login with %s failed", setting_name.c_str());
-            if (test.ok())
+            if (login_success)
             {
-                cout << setting_name << " works.\n";
+                test.tprintf("'%s' works.", setting_name.c_str());
+            }
+            else
+            {
+                test.add_failure("Login with %s failed", setting_name.c_str());
             }
             test.try_query(conn, "DROP USER '%s'@'%%';", pam_user);
+
+            mxs_vm.delete_from_node(pam_min_cfg_dst);
+            for (int i = 0; i < N; i++)
+            {
+                test.repl->backend(i)->vm_node().delete_from_node(pam_min_cfg_dst);
+            }
         }
 
         cout << "Disabling " << setting_val << " on all backends.\n";
