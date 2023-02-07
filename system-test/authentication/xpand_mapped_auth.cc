@@ -57,6 +57,7 @@ void test_main(TestConnections& test)
     const char users_file2[] = "xpand_mapped_auth_users_manual.json";
     const char pwds_file[] = "xpand_mapped_auth_pwds.json";
     const char mapping_file[] = "xpand_mapped_auth_user_map.json";
+    const char pam_config[] = "pam_config_simple";
 
     auto test_dir = mxt::SOURCE_DIR;
     auto& mxs = *test.maxscale;
@@ -80,6 +81,11 @@ void test_main(TestConnections& test)
     string mapping_file_src = mxb::string_printf(auth_dir_fmt, test_dir, mapping_file);
     string mapping_file_dst = mxb::string_printf(tmp_dir_fmt, mapping_file);
     mxs_vm.copy_to_node(mapping_file_src, mapping_file_dst);
+
+    // Copy basic pam config to MaxScale VM.
+    string pam_cfg_src = mxb::string_printf(auth_dir_fmt, test_dir, pam_config);
+    string pam_cfg_dst = mxb::string_printf("/etc/pam.d/%s", pam_config);
+    mxs_vm.copy_to_node_sudo(pam_cfg_src, pam_cfg_dst);
 
     copy_secrets(test);
     mxs.start_and_check_started();
@@ -251,6 +257,7 @@ void test_main(TestConnections& test)
     mxs_vm.delete_from_node(accounts_file_dst);
     mxs_vm.delete_from_node(passwords_file_dst);
     mxs_vm.delete_from_node(accounts_file2_dst);
+    mxs_vm.delete_from_node(pam_cfg_dst);
     mxs_vm.delete_from_node(mapping_file_dst);
     mxs_vm.delete_from_node(secrets_file_dst);
 }
