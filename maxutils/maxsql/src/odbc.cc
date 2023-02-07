@@ -702,9 +702,11 @@ ODBCImp::ODBCImp(std::string dsn, std::chrono::seconds timeout)
         SQLSetEnvAttr(m_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
         // The DBC handler must be allocated after the ODBC version is set, otherwise the SQLConnect
         // function returns SQL_INVALID_HANDLE.
-        SQLAllocHandle(SQL_HANDLE_DBC, m_env, &m_conn);
-        SQLSetConnectAttr(m_conn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
-        SQLSetConnectAttr(m_conn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
+        if (SQL_SUCCEEDED(SQLAllocHandle(SQL_HANDLE_DBC, m_env, &m_conn)))
+        {
+            SQLSetConnectAttr(m_conn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
+            SQLSetConnectAttr(m_conn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)timeout.count(), 0);
+        }
     }
 }
 
@@ -765,6 +767,12 @@ bool ODBCImp::connect()
 void ODBCImp::disconnect()
 {
     SQLDisconnect(m_conn);
+
+    if (m_stmt != SQL_NULL_HANDLE)
+    {
+        SQLFreeHandle(SQL_HANDLE_STMT, m_stmt);
+        m_stmt = SQL_NULL_HANDLE;
+    }
 }
 
 const std::string& ODBCImp::error() const
