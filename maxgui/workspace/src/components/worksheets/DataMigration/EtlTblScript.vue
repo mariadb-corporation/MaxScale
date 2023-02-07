@@ -50,7 +50,6 @@
  * @get-activeRow: object
  * @get-staging-data: array
  */
-import EtlTask from '@wsModels/EtlTask'
 import EtlScriptEditors from '@wkeComps/DataMigration/EtlScriptEditors.vue'
 import { mapState } from 'vuex'
 
@@ -59,6 +58,7 @@ export default {
     components: { EtlScriptEditors },
     inheritAttrs: false,
     props: {
+        task: { type: Object, required: true },
         data: { type: Array, required: true },
     },
     data() {
@@ -72,9 +72,6 @@ export default {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
-        },
         defDataMap() {
             return this.data.reduce((map, obj) => {
                 const id = this.$helpers.uuidv1()
@@ -90,7 +87,7 @@ export default {
             return false
         },
         isRunning() {
-            return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
+            return this.task.status === this.ETL_STATUS.RUNNING
         },
         activeRowId() {
             return this.$typy(this.activeRow, 'id').safeString

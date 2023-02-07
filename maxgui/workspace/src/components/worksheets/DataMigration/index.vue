@@ -12,7 +12,11 @@
         </v-tab>
         <v-tabs-items v-model="activeStageIdx" class="fill-height">
             <v-tab-item v-for="(stage, stageIdx) in stages" :key="stageIdx" class="fill-height">
-                <component :is="stage.component" v-show="stageIdx === activeStageIdx" />
+                <component
+                    :is="stage.component"
+                    v-show="stageIdx === activeStageIdx"
+                    :task="task"
+                />
             </v-tab-item>
         </v-tabs-items>
     </v-tabs>
@@ -47,6 +51,7 @@ export default {
         EtlObjSelectStage,
         EtlMigrationStage,
     },
+    props: { taskId: { type: String, required: true } },
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
@@ -55,20 +60,20 @@ export default {
             getEtlResTable: 'etlMem/getEtlResTable',
             areConnsAlive: 'etlMem/areConnsAlive',
         }),
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
+        task() {
+            return EtlTask.getters('getEtlTaskById')(this.taskId)
         },
         hasEtlRes() {
             return Boolean(this.getEtlResTable.length)
         },
         isMigrationDisabled() {
-            const { is_prepare_etl = false } = this.activeEtlTask
+            const { is_prepare_etl = false } = this.task
             if (is_prepare_etl) return !this.areConnsAlive
             return !this.hasEtlRes
         },
         stages() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
-            const { status } = this.activeEtlTask
+            const { status } = this.task
             return [
                 {
                     name: this.$mxs_t('overview'),
@@ -94,11 +99,11 @@ export default {
         },
         activeStageIdx: {
             get() {
-                return this.activeEtlTask.active_stage_index
+                return this.task.active_stage_index
             },
             set(v) {
                 EtlTask.update({
-                    where: this.activeEtlTask.id,
+                    where: this.task.id,
                     data: { active_stage_index: v },
                 })
             },

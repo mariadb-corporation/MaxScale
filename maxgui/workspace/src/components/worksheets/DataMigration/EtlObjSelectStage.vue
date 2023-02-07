@@ -41,7 +41,7 @@
                     </div>
                 </v-col>
                 <v-col cols="12" md="6" class="fill-height">
-                    <etl-logs class="fill-height" :class="{ 'pt-10': isLarge }" />
+                    <etl-logs :task="task" class="fill-height" :class="{ 'pt-10': isLarge }" />
                 </v-col>
             </v-row>
         </template>
@@ -126,6 +126,7 @@ export default {
         EtlLogs,
         EtlCreateModeInput,
     },
+    props: { task: { type: Object, required: true } },
     data() {
         return {
             selectedObjs: [],
@@ -158,9 +159,6 @@ export default {
         },
         tables() {
             return this.parsedObjs.tables
-        },
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
         },
         disabled() {
             if (this.tables.length) return this.showConfirm ? !this.isConfirmed : false
@@ -247,13 +245,13 @@ export default {
 
         async next() {
             EtlTask.update({
-                where: this.activeEtlTask.id,
+                where: this.task.id,
                 data(obj) {
                     obj.active_stage_index = obj.active_stage_index + 1
                     obj.is_prepare_etl = true
                 },
             })
-            await this.handleEtlCall({ id: this.activeEtlTask.id, tables: this.migration_objs })
+            await this.handleEtlCall({ id: this.task.id, tables: this.migration_objs })
         },
     },
 }

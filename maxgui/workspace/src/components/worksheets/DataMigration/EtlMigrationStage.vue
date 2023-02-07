@@ -8,13 +8,13 @@
                     </h3>
                     <etl-migration-manage
                         v-if="!isPrepareEtl"
-                        :task="activeEtlTask"
+                        :task="task"
                         @on-restart="onRestart"
                     />
                 </div>
                 <div class="header-text my-4">
                     <etl-status-icon
-                        :icon="$typy(activeEtlTask, 'status').safeString"
+                        :icon="$typy(task, 'status').safeString"
                         :spinning="isRunning"
                         class="mb-1"
                     />
@@ -40,7 +40,7 @@
                         {{ $mxs_t(`errors.etl_create_stage`) }}
                     </span>
                     <span v-else-if="!isPrepareEtl" class="mxs-color-helper text-navigation">
-                        {{ $mxs_t($typy(activeEtlTask, 'status').safeString.toLowerCase()) }}
+                        {{ $mxs_t($typy(task, 'status').safeString.toLowerCase()) }}
                         <span v-if="isRunning">...</span>
                     </span>
                 </div>
@@ -53,9 +53,14 @@
                 color="primary"
                 class="align-self-start"
             />
-            <etl-logs v-else-if="!getEtlResTable.length && isInErrState" class="fill-height" />
+            <etl-logs
+                v-else-if="!getEtlResTable.length && isInErrState"
+                :task="task"
+                class="fill-height"
+            />
             <etl-tbl-script
                 v-else
+                :task="task"
                 :data="getEtlResTable"
                 :headers="tableHeaders"
                 :custom-sort="customSort"
@@ -146,7 +151,7 @@ import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
-import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'etl-migration-stage',
@@ -157,6 +162,7 @@ export default {
         EtlMigrationManage,
         EtlLogs,
     },
+    props: { task: { type: Object, required: true } },
     data() {
         return {
             stagingScript: [],
@@ -174,11 +180,8 @@ export default {
             getMigrationStage: 'etlMem/getMigrationStage',
             isSrcAlive: 'etlMem/isSrcAlive',
         }),
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
-        },
-        activeEtlTaskId() {
-            return this.activeEtlTask.id
+        taskId() {
+            return this.task.id
         },
         tableHeaders() {
             return this.isPrepareEtl
@@ -192,16 +195,16 @@ export default {
                   ]
         },
         isRunning() {
-            return this.activeEtlTask.status === this.ETL_STATUS.RUNNING
+            return this.task.status === this.ETL_STATUS.RUNNING
         },
         isInErrState() {
-            return this.activeEtlTask.status === this.ETL_STATUS.ERROR
+            return this.task.status === this.ETL_STATUS.ERROR
         },
         queryId() {
-            return this.$typy(this.activeEtlTask, 'meta.async_query_id').safeString
+            return this.$typy(this.task, 'meta.async_query_id').safeString
         },
         isPrepareEtl() {
-            return this.$typy(this.activeEtlTask, 'is_prepare_etl').safeBoolean
+            return this.$typy(this.task, 'is_prepare_etl').safeBoolean
         },
         hasErrAtCreationStage() {
             return this.isInErrState && this.getMigrationStage === this.ETL_API_STAGES.CREATE
@@ -217,30 +220,29 @@ export default {
             return true
         },
     },
-    watch: {
-        queryId: {
-            immediate: true,
-            async handler(v) {
-                if (v && this.isSrcAlive) await this.getEtlCallRes(this.activeEtlTask.id)
-            },
-        },
-        activeEtlTaskId: {
-            immediate: true,
-            handler() {
-                this.SET_ETL_RES(null)
-            },
-        },
+    activated() {
+        this.watch_queryId()
     },
+    deactivated() {
+        this.$typy(this.unwatch_queryId).safeFunction()
+    },
+
     methods: {
         ...mapActions({
             getEtlCallRes: 'etlMem/getEtlCallRes',
             handleEtlCall: 'etlMem/handleEtlCall',
         }),
-        ...mapMutations({
-            SET_ETL_RES: 'etlMem/SET_ETL_RES',
-        }),
+        watch_queryId() {
+            this.unwatch_queryId = this.$watch(
+                'queryId',
+                async v => {
+                    if (v && this.isSrcAlive) await this.getEtlCallRes(this.task.id)
+                },
+                { immediate: true }
+            )
+        },
         async cancel() {
-            await EtlTask.dispatch('cancelEtlTask', this.activeEtlTask.id)
+            await EtlTask.dispatch('cancelEtlTask', this.task.id)
         },
         objMigrationStatus(item) {
             let icon = this.ETL_STATUS.RUNNING,
@@ -289,13 +291,13 @@ export default {
         },
         async start() {
             EtlTask.update({
-                where: this.activeEtlTask.id,
+                where: this.task.id,
                 data(obj) {
                     obj.is_prepare_etl = false
                 },
             })
             await this.handleEtlCall({
-                id: this.activeEtlTask.id,
+                id: this.task.id,
                 tables: this.stagingScript,
             })
         },

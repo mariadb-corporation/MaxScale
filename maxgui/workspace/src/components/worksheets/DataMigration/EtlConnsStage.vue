@@ -15,7 +15,7 @@
                                     :destTargetType="destTargetType"
                                 />
                             </div>
-                            <etl-logs class="mt-4 etl-logs overflow-y-auto" />
+                            <etl-logs :task="task" class="mt-4 etl-logs overflow-y-auto" />
                         </div>
                     </v-col>
                 </v-row>
@@ -64,6 +64,7 @@ import { mapActions, mapState, mapMutations } from 'vuex'
 export default {
     name: 'etl-conns-stage',
     components: { EtlStageCtr, EtlSrcConn, EtlDestConn, EtlLogs },
+    props: { task: { type: Object, required: true } },
     data() {
         return {
             isFormValid: false,
@@ -83,9 +84,6 @@ export default {
         },
         allServers() {
             return this.rc_target_names_map[this.destTargetType] || []
-        },
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
         },
         activeSrcConn() {
             return QueryConn.getters('getActiveSrcConn')
@@ -110,7 +108,7 @@ export default {
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
         }),
         async handleOpenConns() {
-            const etl_task_id = this.activeEtlTask.id
+            const etl_task_id = this.task.id
             this.isLoading = true
             EtlTask.dispatch('pushLog', {
                 id: etl_task_id,
@@ -151,7 +149,7 @@ export default {
         async next() {
             if (this.hasActiveConns)
                 EtlTask.update({
-                    where: this.activeEtlTask.id,
+                    where: this.task.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },

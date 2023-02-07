@@ -34,23 +34,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
-
 export default {
     name: 'etl-logs',
     props: {
+        task: { type: Object, required: true },
         // Show all logs of all stages at once
         showAll: { type: Boolean, default: false },
     },
     computed: {
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
-        },
         etlLog() {
-            return this.$typy(this.activeEtlTask, 'logs').safeObjectOrEmpty
+            return this.$typy(this.task, 'logs').safeObjectOrEmpty
         },
         activeStageIdx() {
-            return this.$typy(this.activeEtlTask, 'active_stage_index').safeNumber
+            return this.$typy(this.task, 'active_stage_index').safeNumber
         },
         logs() {
             if (this.showAll) return Object.values(this.etlLog).flat()
@@ -58,7 +54,7 @@ export default {
         },
     },
     watch: {
-        'activeEtlTask.logs': {
+        'task.logs': {
             deep: true,
             handler(v) {
                 if (v && v.length) this.scrollToBottom()

@@ -58,25 +58,21 @@ import { mapGetters, mapState } from 'vuex'
 
 export default {
     name: 'etl-overview-stage',
-    components: {
-        EtlStageCtr,
-    },
+    components: { EtlStageCtr },
+    props: { task: { type: Object, required: true } },
     computed: {
         ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
         ...mapGetters({ areConnsAlive: 'etlMem/areConnsAlive' }),
-        activeEtlTask() {
-            return EtlTask.getters('getActiveEtlTask')
-        },
         disabled() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
-            const { status } = this.activeEtlTask
+            const { status } = this.task
             return this.areConnsAlive || status === COMPLETE || status === RUNNING
         },
     },
     methods: {
         next() {
             EtlTask.update({
-                where: this.activeEtlTask.id,
+                where: this.task.id,
                 data(obj) {
                     obj.active_stage_index = obj.active_stage_index + 1
                 },
