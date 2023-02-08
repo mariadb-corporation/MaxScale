@@ -29,8 +29,9 @@ export default class Worksheet extends Extender {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
+            etl_task_id: this.attr(null).nullable(),
+            //TODO: Add query_editor_id and move below fields to a new model called QueryEditor
             active_query_tab_id: this.attr(null).nullable(),
-            active_etl_task_id: this.attr(null).nullable(),
             // Below relationship fields are for QueryEditor when active_query_tab_id has value
             queryTabs: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'worksheet_id'),
             schemaSidebar: this.hasOne(ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS, 'id'),

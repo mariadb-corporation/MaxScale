@@ -105,7 +105,7 @@ export default {
                 case DELETE: {
                     await QueryConn.dispatch('disconnectConnsFromTask', etl_task_id)
                     const wke = Worksheet.query()
-                        .where('active_etl_task_id', etl_task_id)
+                        .where('etl_task_id', etl_task_id)
                         .first()
                     if (wke) await Worksheet.dispatch('handleDeleteWke', wke.id)
                     EtlTask.dispatch('cascadeDelete', etl_task_id)

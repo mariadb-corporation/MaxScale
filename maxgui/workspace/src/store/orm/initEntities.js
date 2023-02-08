@@ -103,7 +103,7 @@ function initMemEntities() {
         if (w.active_query_tab_id) {
             QueryEditorTmp.insert({ data: { id: w.id } })
             w.queryTabs.forEach(t => QueryTabTmp.insert({ data: { id: t.id } }))
-        } else if (w.active_etl_task_id) EtlTaskTmp.insert({ data: { id: w.active_etl_task_id } })
+        } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
     })
 }
 export default () => {

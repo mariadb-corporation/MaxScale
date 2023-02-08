@@ -78,7 +78,7 @@ export default {
             return isLoading
         },
         isRunningETL() {
-            const etlTask = EtlTask.find(this.$typy(this.wke, 'active_etl_task_id').safeString)
+            const etlTask = EtlTask.find(this.$typy(this.wke, 'etl_task_id').safeString)
             return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
         },
         isRunning() {

@@ -71,13 +71,13 @@ export default {
         viewEtlTask(_, task) {
             let wkeId = Worksheet.getters('getActiveWkeId')
             const wke = Worksheet.query()
-                .where('active_etl_task_id', task.id)
+                .where('etl_task_id', task.id)
                 .first()
             if (wke) wkeId = wke.id
             Worksheet.update({
                 where: wkeId,
                 data: {
-                    active_etl_task_id: task.id,
+                    etl_task_id: task.id,
                     name: task.name,
                 },
             })
@@ -262,12 +262,11 @@ export default {
         },
     },
     getters: {
-        getActiveEtlTask: () =>
-            EtlTask.find(Worksheet.getters('getActiveWke').active_etl_task_id) || {},
+        getActiveEtlTask: () => EtlTask.find(Worksheet.getters('getActiveWke').etl_task_id) || {},
         getEtlTaskById: () => id => EtlTask.find(id) || {},
         getActiveEtlTaskWithRelation: () =>
             EtlTask.query()
-                .whereId(Worksheet.getters('getActiveWke').active_etl_task_id)
+                .whereId(Worksheet.getters('getActiveWke').etl_task_id)
                 .with('connections')
                 .first() || {},
         getEtlTaskWithRelationById: () => etl_task_id =>

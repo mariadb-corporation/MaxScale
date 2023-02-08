@@ -25,11 +25,7 @@
                             <query-editor v-if="isQueryEditorWke(wke)" :ctrDim="ctrDim">
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
-                            <data-migration
-                                v-else
-                                :ctrDim="ctrDim"
-                                :taskId="wke.active_etl_task_id"
-                            />
+                            <data-migration v-else :ctrDim="ctrDim" :taskId="wke.etl_task_id" />
                         </template>
                     </keep-alive>
                 </template>
@@ -139,7 +135,7 @@ export default {
             return Boolean(this.$typy(wke, 'active_query_tab_id').safeString)
         },
         isEtlWke(wke) {
-            return Boolean(this.$typy(wke, 'active_etl_task_id').safeString)
+            return Boolean(this.$typy(wke, 'etl_task_id').safeString)
         },
         isBlankWke(wke) {
             return !this.isQueryEditorWke(wke) && !this.isEtlWke(wke)

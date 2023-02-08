@@ -118,11 +118,11 @@ export default {
         getExpandedNodes: (state, getters) => getters.getSchemaSidebar.expanded_nodes || [],
         getFilterTxt: (state, getters) => getters.getSchemaSidebar.filter_txt || '',
         // Getters for mem states
-        getLoadingDbTree: () => Worksheet.getters('getWorksheetMem').loading_db_tree || false,
+        getLoadingDbTree: () => Worksheet.getters('getQueryEditorTmp').loading_db_tree || false,
         getSchemaCompletionItems: () =>
-            lodash.uniqBy(Worksheet.getters('getWorksheetMem').completion_items || [], 'label'),
-        getDbTreeOfConn: () => Worksheet.getters('getWorksheetMem').db_tree_of_conn || '',
-        getDbTreeData: () => Worksheet.getters('getWorksheetMem').db_tree || {},
+            lodash.uniqBy(Worksheet.getters('getQueryEditorTmp').completion_items || [], 'label'),
+        getDbTreeOfConn: () => Worksheet.getters('getQueryEditorTmp').db_tree_of_conn || '',
+        getDbTreeData: () => Worksheet.getters('getQueryEditorTmp').db_tree || {},
         getActivePrvwNode: () => QueryTab.getters('getActiveQueryTabMem').active_prvw_node || {},
         getActivePrvwNodeFQN: (state, getters) => getters.getActivePrvwNode.qualified_name || '',
     },
