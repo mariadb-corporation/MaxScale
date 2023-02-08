@@ -1013,10 +1013,10 @@ add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_whe
 add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
-add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute
-        REPL_BACKEND GALERA_BACKEND)
-add_test_derived(mxs1110_16mb_ssl mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute
-        REPL_BACKEND GALERA_BACKEND LISTENER_SSL BACKEND_SSL)
+add_test_executable(mxs1110_16mb.cpp mxs1110_16mb mxs1110_16mb LABELS readwritesplit readconnroute
+        REPL_BACKEND)
+add_test_derived(mxs1110_16mb_ssl mxs1110_16mb mxs1110_16mb LABELS readwritesplit readconnroute
+        REPL_BACKEND LISTENER_SSL BACKEND_SSL)
 
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
 add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
