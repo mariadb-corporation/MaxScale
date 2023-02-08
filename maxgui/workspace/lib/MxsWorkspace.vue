@@ -1,8 +1,8 @@
 <template>
     <div class="mxs-workspace">
-        <mxs-workspace ref="workspace" v-on="$listeners">
+        <workspace-ctr>
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
-        </mxs-workspace>
+        </workspace-ctr>
         <v-fade-transition>
             <loading-transparent-overlay
                 v-if="transparentLoading"
@@ -36,12 +36,12 @@ import '@share/styles/chartTooltip.scss'
 import LoadingTransparentOverlay from '@share/components/overlay/LoadingTransparentOverlay'
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import Snackbars from '@share/components/Snackbars'
-import MxsWorkspace from '@wsSrc/views/MxsWorkspace.vue'
+import WorkspaceCtr from '@wsSrc/WorkspaceCtr.vue'
 import { mapState } from 'vuex'
 
 export default /*#__PURE__*/ {
     name: 'mxs-workspace',
-    components: { MxsWorkspace, LoadingTransparentOverlay, Snackbars },
+    components: { WorkspaceCtr, LoadingTransparentOverlay, Snackbars },
     computed: {
         ...mapState({
             snackbar_message: state => state.mxsApp.snackbar_message,

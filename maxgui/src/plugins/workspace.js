@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MxsWorkspace from '@wsSrc/views/MxsWorkspace.vue'
+import WorkspaceCtr from '@wsSrc/WorkspaceCtr.vue'
 import workspaceModules from '@wsSrc/store/modules'
 import queryHttp from '@wsSrc/plugins/queryHttp'
 
@@ -28,7 +28,7 @@ export default {
     install: (Vue, { store }) => {
         if (!store) throw new Error('Please initialize plugin with a Vuex store.')
         // Register components globally
-        Vue.component('mxs-workspace', MxsWorkspace)
+        Vue.component('mxs-workspace', WorkspaceCtr)
         // Register workspace vuex modules
         Object.keys(workspaceModules).forEach(key => {
             // mxsApp exists in maxgui already

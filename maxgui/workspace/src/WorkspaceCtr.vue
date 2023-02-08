@@ -10,9 +10,6 @@
             class="fill-height d-flex flex-column"
             :class="{ 'mxs-workspace--fullscreen': is_fullscreen }"
         >
-            <div v-if="$slots['mxs-workspace-top']" ref="workspaceTopSlot">
-                <slot name="mxs-workspace-top" />
-            </div>
             <v-progress-linear v-if="is_validating_conn" indeterminate color="primary" />
             <template v-else>
                 <wke-nav-ctr
@@ -25,7 +22,7 @@
                     <keep-alive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
                         <template v-if="activeWkeId === wke.id">
                             <!-- query-editor has query-tab-nav-toolbar-right-slot used by SkySQL -->
-                            <query-editor v-if="isQueryEditorWke(wke)" ref="wke" :ctrDim="ctrDim">
+                            <query-editor v-if="isQueryEditorWke(wke)" :ctrDim="ctrDim">
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
                             <data-migration
@@ -69,7 +66,7 @@ import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
 import { EventBus } from '@wkeComps/QueryEditor/EventBus'
 
 export default {
-    name: 'mxs-workspace',
+    name: 'workspace-ctr',
     components: {
         WkeNavCtr,
         BlankWke,
@@ -81,7 +78,6 @@ export default {
     data() {
         return {
             dim: {},
-            workspaceTopSlotHeight: 0,
         }
     },
     computed: {
@@ -108,7 +104,7 @@ export default {
         ctrDim() {
             return {
                 width: this.dim.width,
-                height: this.dim.height - this.wkeNavCtrHeight - this.workspaceTopSlotHeight,
+                height: this.dim.height - this.wkeNavCtrHeight,
             }
         },
         eventBus() {
@@ -129,7 +125,7 @@ export default {
         this.handleAutoClearQueryHistory()
     },
     mounted() {
-        this.$nextTick(() => this.setDim(), this.setWorkspaceTopSlotHeight())
+        this.$nextTick(() => this.setDim())
     },
     methods: {
         ...mapActions({
@@ -138,12 +134,6 @@ export default {
         setDim() {
             const { width, height } = this.$refs.queryViewCtr.getBoundingClientRect()
             this.dim = { width, height }
-        },
-        setWorkspaceTopSlotHeight() {
-            if (this.$refs.workspaceTopSlot) {
-                const { height } = this.$refs.workspaceTopSlot.getBoundingClientRect()
-                this.workspaceTopSlotHeight = height
-            }
         },
         isQueryEditorWke(wke) {
             return Boolean(this.$typy(wke, 'active_query_tab_id').safeString)

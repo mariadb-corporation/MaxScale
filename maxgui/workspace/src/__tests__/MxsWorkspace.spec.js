@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import MxsWorkspace from '../MxsWorkspace.vue'
+import WorkspaceCtr from '../WorkspaceCtr.vue'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>
@@ -21,7 +21,7 @@ const mountFactory = opts =>
         lodash.merge(
             {
                 shallow: true,
-                component: MxsWorkspace,
+                component: WorkspaceCtr,
                 computed: {
                     is_validating_conn: () => false,
                     allWorksheets: () => [{ id: 'WORKSHEET_123' }],
@@ -36,10 +36,10 @@ const mountFactory = opts =>
             opts
         )
     )
-describe('MxsWorkspace', () => {
+describe('WorkspaceCtr', () => {
     let wrapper
 
-    describe('MxsWorkspace created hook tests', () => {
+    describe('WorkspaceCtr created hook tests', () => {
         let handleAutoClearQueryHistoryCallCount = 0
 
         before(() => {
