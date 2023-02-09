@@ -1,6 +1,6 @@
 # Changelog
 
-# MariaDB MaxScale 23.02
+## MariaDB MaxScale 23.02
 
 * A transition from the traditional _master/slave_ terminology to the
   _primary/replica_ terminology has been started. In the documentation
@@ -16,16 +16,25 @@
 
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
   have been removed.
+
 * The obsolete `maxctrl drain` command has been removed. Use `maxctrl set server
   <name> drain` to use the built-in draining mechanism.
+
 * The `maxctrl cluster` commands have been removed. Use the built-in
   [configuration synchronization](Getting-Started/Configuration-Guide.md#configuration-synchronization)
   to synchronize the configurations of multiple MaxScale instances.
 
-* ETL
+* The REST-API is now supports ODBC-type connections in the `/sql`
+  endpoints. The `/sql/` endpoints also supports ETL operations from ODBC data
+  sources into MariaDB servers. For more information on the new API functions,
+  refer to the [REST-API documentation](./REST-API/API.md).
+
 * Create-Backup Restore-From-Backup
 * Audit-Log
-* Xpand parallell replication
+
+* MaxScale now supports Xpand parallel replication streams that go through
+  MaxScale.
+
 * Authentication can now be enabled when Redis is used as the cache storage.
 * SSL/TLS can now be used in the communication between MaxScale and Redis
   when Redis is used as the storage for the cache.
