@@ -232,7 +232,7 @@ class MaskingRulesTester
 public:
     static int test_parsing()
     {
-        int rc = EXIT_SUCCESS;
+        int rv = 0;
 
         for (size_t i = 0; i < nRule_tests; i++)
         {
@@ -242,16 +242,16 @@ public:
 
             if ((sRules.get() && !test.valid) || (!sRules.get() && test.valid))
             {
-                rc = EXIT_FAILURE;
+                ++rv;
             }
         }
 
-        return rc;
+        return rv;
     }
 
     static int test_account_handling()
     {
-        int rc = EXIT_SUCCESS;
+        int rv = 0;
 
         using std::shared_ptr;
         auto_ptr<MaskingRules> sRules = MaskingRules::parse(valid_users);
@@ -277,7 +277,7 @@ public:
             if (user != account.zUser)
             {
                 cout << j << ": Expected \"" << account.zUser << "\", got \"" << user << "\"." << endl;
-                rc = EXIT_FAILURE;
+                ++rv;
             }
 
             string host = (*i)->host();
@@ -285,29 +285,71 @@ public:
             if (host != account.zHost)
             {
                 cout << j << ": Expected \"" << account.zHost << "\", got \"" << host << "\"." << endl;
-                rc = EXIT_FAILURE;
+                ++rv;
             }
 
             ++j;
         }
 
-        return rc;
+        return rv;
+    }
+
+    static int test_account_matching()
+    {
+        int rv = 0;
+
+        struct TestCase
+        {
+            const char* zAccount;
+            const char* zSuccess;
+            const char* zFailure;
+        } test_cases[] =
+          {
+              "'alice'@'127.0.0.%'",
+              "127.0.0.42",
+              "127.0.1.0"
+          };
+
+        const int nTest_cases = sizeof(test_cases)/sizeof(test_cases[0]);
+
+        for (int i = 0; i < nTest_cases; ++i)
+        {
+            auto& tc = test_cases[i];
+
+            auto sAccount = MaskingRules::Rule::Account::create(tc.zAccount);
+            mxb_assert(sAccount);
+
+            if (!sAccount->matches("alice", tc.zSuccess))
+            {
+                cout << "Rule \"" << tc.zAccount << "\" did not match \"" << tc.zSuccess
+                     << "\" although expected to." << endl;
+                ++rv;
+            }
+
+            if (sAccount->matches("alice", tc.zFailure))
+            {
+                cout << "Rule \"" << tc.zAccount << "\" matched \"" << tc.zFailure
+                     << "\" although not expected to." << endl;
+                ++rv;
+            }
+        }
+
+        return rv;
     }
 };
 
 int main()
 {
-    int rc = EXIT_SUCCESS;
+    int rv = 0;
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
     {
-        rc = (MaskingRulesTester::test_parsing() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
-        if (!rc)
-        {
-            rc = (MaskingRulesTester::test_account_handling() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
-        }
+        rv += MaskingRulesTester::test_parsing();
+        rv += MaskingRulesTester::test_account_handling();
+        rv += MaskingRulesTester::test_account_matching();
+
         mxs_log_finish();
     }
 
-    return rc;
+    return rv == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
