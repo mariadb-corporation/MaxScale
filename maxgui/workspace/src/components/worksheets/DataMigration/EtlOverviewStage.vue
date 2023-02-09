@@ -14,9 +14,21 @@
                     <p>
                         {{ $mxs_t('info.etlOverviewInfo') }}
                     </p>
-                    <!-- TODO: Add link to the document -->
-                    <a target="_blank" rel="noopener noreferrer" class="rsrc-link">
+                    <a
+                        target="_blank"
+                        href="https://mariadb.com/kb/en/mariadb-maxscale-2302-sql-resource/#prepare-etl-operation"
+                        rel="noopener noreferrer"
+                        class="rsrc-link"
+                    >
                         {{ $mxs_t('info.etlDocLinkText') }}
+                    </a>
+                    <a
+                        target="_blank"
+                        href="https://mariadb.com/kb/en/mariadb-maxscale-2302-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations"
+                        rel="noopener noreferrer"
+                        class="d-block rsrc-link"
+                    >
+                        {{ $mxs_t('limitations') }}
                     </a>
                 </v-col>
             </v-row>

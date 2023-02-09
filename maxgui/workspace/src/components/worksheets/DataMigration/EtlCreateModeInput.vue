@@ -3,20 +3,21 @@
         <label class="field__label">
             {{ $mxs_t('createMode') }}
         </label>
-        <!-- TODO: Add link to create_mode document -->
-        <v-btn
-            icon
-            x-small
-            color="primary"
-            class="ml-1"
-            target="_blank"
-            rel="noopener noreferrer"
-            href=""
-        >
-            <v-icon size="14" color="primary">
-                $vuetify.icons.mxs_questionCircle
-            </v-icon>
-        </v-btn>
+        <v-tooltip top transition="slide-y-transition">
+            <template v-slot:activator="{ on }">
+                <v-icon v-on="on" class="ml-1 pointer" size="14" color="primary">
+                    $vuetify.icons.mxs_questionCircle
+                </v-icon>
+            </template>
+
+            <span>{{ $mxs_t('modesForCreatingTbl') }}</span>
+            <table>
+                <tr v-for="(v, key) in ETL_CREATE_MODES" :key="`${key}`">
+                    <td>{{ v }}:</td>
+                    <td class="font-weight-bold">{{ $mxs_t(`info.etlCreateMode.${v}`) }}</td>
+                </tr>
+            </table>
+        </v-tooltip>
         <v-select
             v-model="createMode"
             :items="Object.values(ETL_CREATE_MODES)"

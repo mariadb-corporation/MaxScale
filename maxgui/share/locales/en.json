@@ -263,6 +263,11 @@
             "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
             "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",
             "etlConfirm": "If the destination server already has the same objects they will be overwritten and existing data will be lost.",
+            "etlCreateMode": {
+                "ignore": "CREATE TABLE IF NOT EXIST",
+                "normal": "CREATE TABLE",
+                "replace": "CREATE OR REPLACE TABLE"
+            },
             "etlDocLinkText": "Read more on our documentation for instruction.",
             "etlOverviewInfo": "MaxScale uses ODBC for extracting and loading from the data source to a server in MaxScale. Make sure you preconfigure the necessary drivers for your data source.",
             "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
@@ -288,6 +293,7 @@
         "killSession": "Kill session",
         "lag": "Lag",
         "last_event": "Last Event",
+        "limitations": "Limitations",
         "linesTerminatedBy": "Lines terminated by",
         "listeners": "listener | listeners",
         "load": "Load",
@@ -307,6 +313,7 @@
         "migration": "Migration",
         "migrationTasks": "Migration tasks",
         "minimize": "Minimize",
+        "modesForCreatingTbl": "Modes for creating tables",
         "module": "module | modules",
         "monitorDiagnostics": "Monitor Diagnostics",
         "monitorOps": {

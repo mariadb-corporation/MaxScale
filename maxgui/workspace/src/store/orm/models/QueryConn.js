@@ -40,13 +40,10 @@ export default class QueryConn extends Extender {
         return {
             id: this.uid(() => uuidv1()),
             ...this.getNonKeyFields(),
-            //FK EtlTask
+            //FK
             etl_task_id: this.attr(null).nullable(),
-            //FK, one to one inverse
             query_tab_id: this.attr(null).nullable(),
             query_editor_id: this.attr(null).nullable(),
-            queryTab: this.belongsTo(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'query_tab_id'),
-            queryEditor: this.belongsTo(ORM_PERSISTENT_ENTITIES.QUERY_EDITORS, 'query_editor_id'),
         }
     }
 }
