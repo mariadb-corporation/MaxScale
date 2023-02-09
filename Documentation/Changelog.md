@@ -34,7 +34,9 @@
 * Support for inbound proxy protocol added.
 * Ed25519Auth-plugin added. The plugin enables authentication with the
   MariaDB Server ed25519 authentication plugin.
-* MaxGUI
+* MaxGUI Query Editor has been renamed to "Workspace," and its internal storage
+  key has been modified. As a result, the query history, snippets, and user
+  preferences settings are restored to their default values.
 
 ## MariaDB MaxScale 22.08
 
