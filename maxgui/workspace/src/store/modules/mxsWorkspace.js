@@ -22,6 +22,7 @@ export default {
         hidden_comp: [''],
         axios_opts: {},
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
+        etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
         is_conn_dlg_opened: false, // control showing connection dialog
         /* SkySQL has multiple maxscales, so this state keeps the connections of
@@ -38,6 +39,9 @@ export default {
         },
         SET_MIGR_DLG(state, payload) {
             state.migr_dlg = payload
+        },
+        SET_ETL_POLLING_INTERVAL(state, payload) {
+            state.etl_polling_interval = payload
         },
         SET_IS_CONN_DLG_OPENED(state, payload) {
             state.is_conn_dlg_opened = payload

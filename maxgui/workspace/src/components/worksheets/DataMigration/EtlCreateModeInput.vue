@@ -5,7 +5,7 @@
         </label>
         <v-tooltip top transition="slide-y-transition">
             <template v-slot:activator="{ on }">
-                <v-icon v-on="on" class="ml-1 pointer" size="14" color="primary">
+                <v-icon class="ml-1 pointer" size="14" color="primary" v-on="on">
                     $vuetify.icons.mxs_questionCircle
                 </v-icon>
             </template>
@@ -51,27 +51,27 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import EtlTask from '@wsModels/EtlTask'
+import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import { mapState } from 'vuex'
 
 export default {
     name: 'etl-create-mode-input',
+    props: {
+        taskId: { type: String, required: true },
+    },
     computed: {
         ...mapState({
             ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
-            create_mode: state => state.etlMem.create_mode,
         }),
         createMode: {
             get() {
-                return this.create_mode
+                return EtlTask.getters('getCreateMode')(this.taskId)
             },
             set(v) {
-                this.SET_CREATE_MODE(v)
+                EtlTaskTmp.update({ where: this.taskId, data: { create_mode: v } })
             },
         },
-    },
-
-    methods: {
-        ...mapMutations({ SET_CREATE_MODE: 'etlMem/SET_CREATE_MODE' }),
     },
 }
 </script>

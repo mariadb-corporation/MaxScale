@@ -146,12 +146,13 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsSrc/store/orm/models/QueryConn'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
-import { mapState, mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'etl-migration-stage',
@@ -175,18 +176,17 @@ export default {
             ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
             ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
-        ...mapGetters({ isSrcAlive: 'etlMem/isSrcAlive' }),
         taskId() {
             return this.task.id
         },
         etlRes() {
-            return EtlTask.getters('getEtlTaskResById')(this.taskId)
+            return EtlTask.getters('getTmpRes')(this.taskId)
         },
         etlResTable() {
-            return EtlTask.getters('getEtlResTableById')(this.taskId)
+            return EtlTask.getters('getResTbl')(this.taskId)
         },
         migrationStage() {
-            return EtlTask.getters('getMigrationStageById')(this.taskId)
+            return EtlTask.getters('getResStage')(this.taskId)
         },
         tableHeaders() {
             return this.isPrepareEtl
@@ -244,7 +244,7 @@ export default {
                      * stages are also cached, `this.isActive` is used for preventing
                      * this watcher from being triggered when component is activated
                      */
-                    if (v && this.isSrcAlive && this.isActive)
+                    if (v && QueryConn.getters('getIsActiveEtlSrcAlive') && this.isActive)
                         await EtlTask.dispatch('getEtlCallRes', this.task.id)
                 },
                 { immediate: true }

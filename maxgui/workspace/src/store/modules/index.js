@@ -12,7 +12,6 @@
  * Public License.
  */
 import editorsMem from './editorsMem'
-import etlMem from './etlMem'
 import fileSysAccess from './fileSysAccess'
 import mxsApp from '@share/store/mxsApp'
 import queryConnsMem from './queryConnsMem'
@@ -21,7 +20,6 @@ import prefAndStorage from './prefAndStorage'
 
 export default {
     editorsMem,
-    etlMem,
     fileSysAccess,
     mxsApp,
     queryConnsMem,

@@ -37,11 +37,12 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
+import QueryConn from '@wsSrc/store/orm/models/QueryConn'
 import EtlOverviewStage from '@wkeComps/DataMigration/EtlOverviewStage.vue'
 import EtlConnsStage from '@wkeComps/DataMigration/EtlConnsStage.vue'
 import EtlObjSelectStage from '@wkeComps/DataMigration/EtlObjSelectStage.vue'
 import EtlMigrationStage from '@wkeComps/DataMigration/EtlMigrationStage.vue'
-import { mapState, mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'data-migration',
@@ -56,14 +57,14 @@ export default {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
         }),
-        ...mapGetters({
-            areConnsAlive: 'etlMem/areConnsAlive',
-        }),
         task() {
-            return EtlTask.getters('getEtlTaskById')(this.taskId)
+            return EtlTask.getters('getEtlTask')(this.taskId)
         },
         hasEtlRes() {
-            return Boolean(EtlTask.getters('getEtlResTableById')(this.taskId).length)
+            return Boolean(EtlTask.getters('getResTbl')(this.taskId).length)
+        },
+        areConnsAlive() {
+            return QueryConn.getters('getAreActiveEtlConnsAlive')
         },
         isMigrationDisabled() {
             const { is_prepare_etl = false } = this.task

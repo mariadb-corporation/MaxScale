@@ -103,7 +103,6 @@ export default {
         ...mapActions({
             fetchOdbcDrivers: 'queryConnsMem/fetchOdbcDrivers',
             fetchRcTargetNames: 'queryConnsMem/fetchRcTargetNames',
-            fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
         }),
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE',
@@ -149,7 +148,7 @@ export default {
         },
         async next() {
             if (this.hasActiveConns) {
-                await this.fetchSrcSchemas()
+                await EtlTask.dispatch('fetchSrcSchemas')
                 EtlTask.update({
                     where: this.task.id,
                     data(obj) {

@@ -9,12 +9,12 @@
             <v-row class="fill-height">
                 <v-col cols="12" md="6" class="fill-height">
                     <div class="d-flex flex-column fill-height">
-                        <etl-create-mode-input class="mb-2" />
+                        <etl-create-mode-input :taskId="task.id" class="mb-2" />
                         <mxs-treeview
                             ref="tree"
                             v-model="selectedObjs"
                             class="mxs-treeview--src-treeview fill-height overflow-y-auto mxs-color-helper all-border-separator pa-2 rounded"
-                            :items="src_schema_tree"
+                            :items="srcSchemaTree"
                             hoverable
                             dense
                             open-on-click
@@ -113,7 +113,8 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import { mapActions, mapMutations, mapState } from 'vuex'
+import EtlTaskTmp from '@wsSrc/store/orm/models/EtlTaskTmp'
+import { mapState } from 'vuex'
 import queryHelper from '@wsSrc/store/queryHelper'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput.vue'
@@ -138,13 +139,17 @@ export default {
     },
     computed: {
         ...mapState({
-            src_schema_tree: state => state.etlMem.src_schema_tree,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            migration_objs: state => state.etlMem.migration_objs,
             ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
-            create_mode: state => state.etlMem.create_mode,
+            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
+            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
+            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
         }),
+        srcSchemaTree() {
+            return EtlTask.getters('getSrcSchemaTree')(this.task.id)
+        },
+        createMode() {
+            return EtlTask.getters('getCreateMode')(this.task.id)
+        },
         parsedObjs() {
             return this.selectedObjs.reduce(
                 (obj, o) => {
@@ -165,7 +170,10 @@ export default {
             return !this.tables.length
         },
         showConfirm() {
-            return this.create_mode === this.ETL_CREATE_MODES.REPLACE
+            return this.createMode === this.ETL_CREATE_MODES.REPLACE
+        },
+        isActive() {
+            return this.task.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ
         },
     },
     watch: {
@@ -179,7 +187,8 @@ export default {
                             this.infoMsg = this.$mxs_t('info.ignoreSchemas')
                     } else this.errMsg = this.$mxs_t('errors.invalidChosenSchemas')
                 } else this.errMsg = this.$mxs_t('errors.emptyMigrationObj')
-                this.SET_MIGRATION_OBJS(this.tables)
+
+                EtlTaskTmp.update({ where: this.task.id, data: { migration_objs: this.tables } })
             },
         },
         '$vuetify.breakpoint.width': {
@@ -189,16 +198,11 @@ export default {
             },
         },
     },
+
     async activated() {
-        await this.fetchSrcSchemas()
+        if (this.isActive) await EtlTask.dispatch('fetchSrcSchemas')
     },
     methods: {
-        ...mapMutations({ SET_MIGRATION_OBJS: 'etlMem/SET_MIGRATION_OBJS' }),
-        ...mapActions({
-            loadChildNodes: 'etlMem/loadChildNodes',
-            fetchSrcSchemas: 'etlMem/fetchSrcSchemas',
-        }),
-        ...mapMutations({ SET_SRC_SCHEMA_TREE: 'etlMem/SET_SRC_SCHEMA_TREE' }),
         filter(node, search, textKey) {
             return this.$helpers.ciStrIncludes(node[textKey], search)
         },
@@ -219,10 +223,13 @@ export default {
          */
         addGroupNode({ node, groupNode }) {
             const tree = queryHelper.deepReplaceNode({
-                treeData: this.src_schema_tree,
+                treeData: this.srcSchemaTree,
                 node: { ...node, children: [groupNode] },
             })
-            this.SET_SRC_SCHEMA_TREE(tree)
+            EtlTaskTmp.update({
+                where: this.task.id,
+                data: { src_schema_tree: tree },
+            })
         },
         /**
          * For now, only TBL nodes can be migrated, so when expanding a SCHEMA node
@@ -236,7 +243,7 @@ export default {
                     type: this.NODE_GROUP_TYPES.TBL_G,
                 })
                 this.addGroupNode({ node, groupNode: tblGroupNode })
-                await this.loadChildNodes(tblGroupNode)
+                await EtlTask.dispatch('loadChildNodes', tblGroupNode)
                 // expand TBL_G node automatically after fetching its child
                 this.$refs.tree.updateOpen(tblGroupNode.id, true)
             }
@@ -252,7 +259,7 @@ export default {
             })
             await EtlTask.dispatch('handleEtlCall', {
                 id: this.task.id,
-                tables: this.migration_objs,
+                tables: EtlTask.getters('getMigrationObjs')(this.task.id),
             })
         },
     },

@@ -16,7 +16,7 @@ import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { cancel } from '@wsSrc/api/etl'
-import { getAsyncResult } from '@wsSrc/api/query'
+import { query, getAsyncResult } from '@wsSrc/api/query'
 import { prepare, start } from '@wsSrc/api/etl'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { insertEtlTask } from '@wsSrc/store/orm/initEntities'
@@ -40,7 +40,7 @@ export default {
         createEtlTask({ dispatch, getters }, name) {
             const id = this.vue.$helpers.uuidv1()
             insertEtlTask({ id, name })
-            dispatch('viewEtlTask', getters.getEtlTaskById(id))
+            dispatch('viewEtlTask', getters.getEtlTask(id))
         },
         /**
          * @param {String} id - etl task id
@@ -91,6 +91,80 @@ export default {
                 },
             })
         },
+        async fetchSrcSchemas({ dispatch, getters }) {
+            const { $mxs_t, $helpers, $typy } = this.vue
+            const taskId = getters.getActiveEtlTask.id
+            if (!getters.getSrcSchemaTree(taskId).length) {
+                dispatch('pushLog', {
+                    id: taskId,
+                    log: {
+                        timestamp: new Date().valueOf(),
+                        name: $mxs_t('info.retrievingSchemaObj'),
+                    },
+                })
+                const [e, res] = await $helpers.to(
+                    query({
+                        id: QueryConn.getters('getActiveSrcConn').id,
+                        body: { sql: getters.getSchemaSql },
+                    })
+                )
+                let logName = ''
+                if (e) logName = $mxs_t('errors.retrieveSchemaObj')
+                else {
+                    const result = $typy(res, 'data.data.attributes.results[0]').safeObject
+                    if ($typy(result, 'errno').isDefined) {
+                        logName = $mxs_t('errors.retrieveSchemaObj')
+                        logName += `\n${$helpers.queryResErrToStr(result)}`
+                    } else {
+                        const { nodes } = queryHelper.genNodeData({
+                            queryResult: result,
+                            nodeAttrs: {
+                                isEmptyChildren: true,
+                            },
+                        })
+                        EtlTaskTmp.update({
+                            where: taskId,
+                            data: { src_schema_tree: nodes },
+                        })
+                        logName = $mxs_t('success.retrieved')
+                    }
+                }
+                dispatch('pushLog', {
+                    id: taskId,
+                    log: { timestamp: new Date().valueOf(), name: logName },
+                })
+            }
+        },
+        /**
+         * For now, only TBL nodes can be migrated, so the nodeGroup must be a TBL_G node
+         * @param {Object} nodeGroup - TBL_G node
+         */
+        async loadChildNodes({ rootState, getters }, nodeGroup) {
+            const { id: connId } = QueryConn.getters('getActiveSrcConn')
+            const taskId = getters.getActiveEtlTask.id
+            const {
+                NODE_GROUP_TYPES: { TBL_G },
+            } = rootState.mxsWorkspace.config
+            switch (nodeGroup.type) {
+                case TBL_G: {
+                    const { nodes } = await queryHelper.getChildNodeData({
+                        connId,
+                        nodeGroup,
+                        nodeAttrs: {
+                            onlyName: true,
+                            isLeaf: true,
+                            activatable: false,
+                        },
+                    })
+                    const tree = queryHelper.deepReplaceNode({
+                        treeData: getters.getSrcSchemaTree(taskId),
+                        node: { ...nodeGroup, children: nodes },
+                    })
+                    EtlTaskTmp.update({ where: taskId, data: { src_schema_tree: tree } })
+                    break
+                }
+            }
+        },
         /**
          * @param {String} param.type - ETL_ACTIONS
          * @param {Object} param.task - etl task
@@ -121,7 +195,7 @@ export default {
                     await QueryConn.dispatch('disconnectConnsFromTask', task.id)
                     break
                 case MIGR_OTHER_OBJS:
-                    await dispatch('etlMem/fetchSrcSchemas', {}, { root: true })
+                    await dispatch('fetchSrcSchemas')
                     EtlTask.update({
                         where: task.id,
                         data: { active_stage_index: SRC_OBJ },
@@ -143,7 +217,7 @@ export default {
             const srcConn = QueryConn.getters('getSrcConnByEtlTaskId')(id)
             const destConn = QueryConn.getters('getDestConnByEtlTaskId')(id)
 
-            const task = getters.getEtlTaskById(id)
+            const task = getters.getEtlTask(id)
 
             let logName,
                 apiAction,
@@ -160,7 +234,7 @@ export default {
                 logName = $mxs_t('info.preparingMigrationScript')
                 apiAction = prepare
                 status = RUNNING
-                body.create_mode = rootState.etlMem.create_mode
+                body.create_mode = getters.getCreateMode(id)
             } else {
                 logName = $mxs_t('info.startingMigration')
                 apiAction = start
@@ -216,15 +290,15 @@ export default {
                 let logMsg
                 if (res.status === 202) {
                     EtlTaskTmp.update({ where: id, data: { etl_res: results } })
-                    const { polling_interval } = rootState.etlMem
-                    const newInterval = polling_interval * 2
+                    const { etl_polling_interval } = rootState.mxsWorkspace
+                    const newInterval = etl_polling_interval * 2
                     commit(
-                        'etlMem/SET_POLLING_INTERVAL',
+                        'mxsWorkspace/SET_ETL_POLLING_INTERVAL',
                         newInterval <= 4000 ? newInterval : 5000,
                         { root: true }
                     )
                     await this.vue.$helpers
-                        .delay(polling_interval)
+                        .delay(etl_polling_interval)
                         .then(async () => await dispatch('getEtlCallRes', id))
                 } else if (res.status === 201) {
                     const timestamp = new Date().valueOf()
@@ -238,7 +312,7 @@ export default {
                     } else {
                         logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
                         etlStatus = ok ? COMPLETE : ERROR
-                        if (getters.getIsEtlCancelledById(id)) {
+                        if (getters.getIsEtlCancelled(id)) {
                             logMsg = $mxs_t('warnings.migrationCanceled')
                             etlStatus = CANCELED
                         }
@@ -256,7 +330,9 @@ export default {
                     dispatch('pushLog', { id, log: { timestamp, name: logMsg } })
 
                     EtlTaskTmp.update({ where: id, data: { etl_res: results } })
-                    commit('etlMem/SET_POLLING_INTERVAL', ETL_DEF_POLLING_INTERVAL, { root: true })
+                    commit('mxsWorkspace/SET_ETL_POLLING_INTERVAL', ETL_DEF_POLLING_INTERVAL, {
+                        root: true,
+                    })
                 }
             }
             EtlTask.update({
@@ -269,33 +345,38 @@ export default {
         },
     },
     getters: {
+        getSchemaSql: (state, getters, rootState) => {
+            const { NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
+            const col = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
+            return `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
+        },
         getActiveEtlTask: () => EtlTask.find(Worksheet.getters('getActiveWke').etl_task_id) || {},
-        getEtlTaskById: () => id => EtlTask.find(id) || {},
+        getEtlTask: () => id => EtlTask.find(id) || {},
         getActiveEtlTaskWithRelation: () =>
             EtlTask.query()
                 .whereId(Worksheet.getters('getActiveWke').etl_task_id)
                 .with('connections')
                 .first() || {},
-        getEtlTaskWithRelationById: () => etl_task_id =>
+        getEtlTaskWithRelation: () => etl_task_id =>
             EtlTask.query()
                 .whereId(etl_task_id)
                 .with('connections')
                 .first() || {},
-        getIsEtlCancelledById: (state, getters, rootState) => id =>
-            getters.getEtlTaskById(id).status === rootState.mxsWorkspace.config.ETL_STATUS.CANCELED,
-        getPersistedEtlResById: (state, getters) => id => getters.getEtlTaskById(id).res || {},
-        getEtlTaskResById: () => id => {
-            const { etl_res = null } = EtlTaskTmp.find(id) || {}
-            return etl_res
-        },
-        getEtlResTableById: (state, getters) => id => {
-            const { tables = [] } =
-                getters.getEtlTaskResById(id) || getters.getPersistedEtlResById(id)
+        getIsEtlCancelled: (state, getters, rootState) => id =>
+            getters.getEtlTask(id).status === rootState.mxsWorkspace.config.ETL_STATUS.CANCELED,
+        getPersistedRes: (state, getters) => id => getters.getEtlTask(id).res || {},
+        // EtlTaskTmp getters
+        getEtlTaskTmp: () => id => EtlTaskTmp.find(id) || {},
+        getTmpRes: (state, getters) => id => getters.getEtlTaskTmp(id).etl_res,
+        getSrcSchemaTree: (state, getters) => id => getters.getEtlTaskTmp(id).src_schema_tree,
+        getCreateMode: (state, getters) => id => getters.getEtlTaskTmp(id).create_mode,
+        getMigrationObjs: (state, getters) => id => getters.getEtlTaskTmp(id).migration_objs,
+        getResTbl: (state, getters) => id => {
+            const { tables = [] } = getters.getTmpRes(id) || getters.getPersistedRes(id)
             return tables
         },
-        getMigrationStageById: (state, getters) => id => {
-            const { stage = '' } =
-                getters.getEtlTaskResById(id) || getters.getPersistedEtlResById(id)
+        getResStage: (state, getters) => id => {
+            const { stage = '' } = getters.getTmpRes(id) || getters.getPersistedRes(id)
             return stage
         },
     },

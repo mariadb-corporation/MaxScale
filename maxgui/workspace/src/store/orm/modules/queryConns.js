@@ -430,7 +430,7 @@ export default {
                     rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
             ) || {},
         getEtlConnsByTaskId: () => etl_task_id =>
-            EtlTask.getters('getEtlTaskWithRelationById')(etl_task_id).connections || [],
+            EtlTask.getters('getEtlTaskWithRelation')(etl_task_id).connections || [],
         getSrcConnByEtlTaskId: (state, getters, rootState) => etl_task_id =>
             getters
                 .getEtlConnsByTaskId(etl_task_id)
@@ -447,5 +447,9 @@ export default {
                         c.binding_type ===
                         rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
                 ) || {},
+        getIsActiveEtlSrcAlive: (state, getters) => Boolean(getters.getActiveSrcConn.id),
+        getIsActiveEtlDestAlive: (state, getters) => Boolean(getters.getActiveDestConn.id),
+        getAreActiveEtlConnsAlive: (state, getters) =>
+            getters.getIsActiveEtlSrcAlive && getters.getIsActiveEtlDestAlive,
     },
 }

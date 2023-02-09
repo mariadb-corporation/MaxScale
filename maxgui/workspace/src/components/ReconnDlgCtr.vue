@@ -44,7 +44,7 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
-import { mapState, mapActions } from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
     name: 'reconn-dlg-ctr',
@@ -111,7 +111,6 @@ export default {
         },
     },
     methods: {
-        ...mapActions({ fetchSrcSchemas: 'etlMem/fetchSrcSchemas' }),
         async deleteConns() {
             if (this.isActiveQueryEditorWke)
                 await QueryConn.dispatch('cascadeDisconnect', {
@@ -130,7 +129,7 @@ export default {
                     if (this.isActiveQueryEditorWke)
                         await QueryEditor.dispatch('handleInitialFetch')
                     else if (this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ)
-                        await this.fetchSrcSchemas()
+                        await EtlTask.dispatch('fetchSrcSchemas')
                 },
             })
         },
