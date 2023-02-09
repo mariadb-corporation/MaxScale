@@ -379,7 +379,7 @@ SELECT '`' || a.attname || '` ' ||
   END ||
   CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
   CASE
-    WHEN pg_catalog.pg_get_serial_sequence(QUOTE_IDENT(n.nspname) || '.' || QUOTE_IDENT(c.relname), QUOTE_IDENT(a.attname)) IS NOT NULL
+    WHEN pg_catalog.pg_get_serial_sequence(QUOTE_IDENT(n.nspname) || '.' || QUOTE_IDENT(c.relname), a.attname) IS NOT NULL
       THEN ' AUTO_INCREMENT'
     WHEN pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) LIKE 'NULL::%'
       THEN ' DEFAULT NULL'
