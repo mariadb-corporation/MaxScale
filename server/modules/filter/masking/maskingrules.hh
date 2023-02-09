@@ -66,6 +66,15 @@ public:
              * @return True, if the data should be masked.
              */
             virtual bool matches(const char* zUser, const char* zHost) const = 0;
+
+            /**
+             * Create instance
+             *
+             * @param zAccount  The account name as specified in the JSON rules file.
+             *
+             * @return An account or null if @c zAccount is not valid.
+             */
+            static std::shared_ptr<MaskingRules::Rule::Account> create(const char* zAccount);
         };
 
         typedef std::shared_ptr<Account> SAccount;

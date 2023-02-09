@@ -205,80 +205,6 @@ private:
 };
 
 /**
- * Create MaxskingRules::Rule::Account instance
- *
- * @param zAccount  The account name as specified in the JSON rules file.
- *
- * @return Either an AccountVerbatim or AccountRegexp, depending on whether
- *         the provided account name contains wildcards or not.
- */
-shared_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
-{
-    shared_ptr<MaskingRules::Rule::Account> sAccount;
-
-    size_t len = strlen(zAccount);
-    char account[len + 1];
-    strcpy(account, zAccount);
-
-    char* zAt = strchr(account, '@');
-    char* zUser = account;
-    char* zHost = NULL;
-
-    if (zAt)
-    {
-        *zAt = 0;
-        zHost = zAt + 1;
-    }
-
-    if (mxs_mysql_trim_quotes(zUser))
-    {
-        char pcre_host[2 * len + 1];    // Surely enough
-
-        mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
-
-        if (zHost)
-        {
-            if (mxs_mysql_trim_quotes(zHost))
-            {
-                rv = mxs_mysql_name_to_pcre(pcre_host, zHost, MXS_PCRE_QUOTE_WILDCARD);
-
-                if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
-                {
-                    zHost = pcre_host;
-                }
-            }
-            else
-            {
-                MXS_ERROR("Could not trim quotes from host part of %s.", zAccount);
-                zHost = NULL;
-            }
-        }
-        else
-        {
-            zHost = const_cast<char*>("");
-        }
-
-        if (zHost)
-        {
-            if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
-            {
-                sAccount = AccountRegexp::create(zUser, zHost);
-            }
-            else
-            {
-                sAccount = AccountVerbatim::create(zUser, zHost);
-            }
-        }
-    }
-    else
-    {
-        MXS_ERROR("Could not trim quotes from user part of %s.", zAccount);
-    }
-
-    return sAccount;
-}
-
-/**
  * Converts a list of account names into a vector of Account instances.
  *
  * @param zName     The key of the JSON array we are processing (error reporting).
@@ -305,7 +231,8 @@ bool get_accounts(const char* zName,
 
         if (json_is_string(pString))
         {
-            shared_ptr<MaskingRules::Rule::Account> sAccount = create_account(json_string_value(pString));
+            shared_ptr<MaskingRules::Rule::Account> sAccount =
+                MaskingRules::Rule::Account::create(json_string_value(pString));
 
             if (sAccount)
             {
@@ -454,6 +381,72 @@ MaskingRules::Rule::Account::Account()
 
 MaskingRules::Rule::Account::~Account()
 {
+}
+
+shared_ptr<MaskingRules::Rule::Account> MaskingRules::Rule::Account::create(const char* zAccount)
+{
+    shared_ptr<MaskingRules::Rule::Account> sAccount;
+
+    size_t len = strlen(zAccount);
+    char account[len + 1];
+    strcpy(account, zAccount);
+
+    char* zAt = strchr(account, '@');
+    char* zUser = account;
+    char* zHost = NULL;
+
+    if (zAt)
+    {
+        *zAt = 0;
+        zHost = zAt + 1;
+    }
+
+    if (mxs_mysql_trim_quotes(zUser))
+    {
+        char pcre_host[2 * len + 1];    // Surely enough
+
+        mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
+
+        if (zHost)
+        {
+            if (mxs_mysql_trim_quotes(zHost))
+            {
+                rv = mxs_mysql_name_to_pcre(pcre_host, zHost, MXS_PCRE_QUOTE_WILDCARD);
+
+                if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
+                {
+                    zHost = pcre_host;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Could not trim quotes from host part of %s.", zAccount);
+                zHost = NULL;
+            }
+        }
+        else
+        {
+            zHost = const_cast<char*>("");
+        }
+
+        if (zHost)
+        {
+            if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
+            {
+                sAccount = AccountRegexp::create(zUser, zHost);
+            }
+            else
+            {
+                sAccount = AccountVerbatim::create(zUser, zHost);
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not trim quotes from user part of %s.", zAccount);
+    }
+
+    return sAccount;
 }
 
 //
